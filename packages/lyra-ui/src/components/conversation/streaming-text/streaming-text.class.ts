@@ -47,6 +47,10 @@ export function looksLikeMarkdown(text: string): boolean {
 
 export type StreamingTextContentMode = 'auto' | 'plain' | 'markdown';
 
+export interface LyraStreamingTextEventMap {
+  'lr-content-settled': CustomEvent<null>;
+}
+
 /**
  * `<lr-streaming-text>` — a token-coalescing incremental text renderer for
  * streaming assistant output, with an optional blinking cursor and
@@ -106,12 +110,22 @@ export type StreamingTextContentMode = 'auto' | 'plain' | 'markdown';
  * without reaching across `<lr-markdown>`'s own shadow boundary isn't a
  * tractable general solution, so this component doesn't attempt it.
  *
- * Purely presentational: no events, driven entirely by its properties. It
- * also doesn't announce anything to assistive tech itself -- a host that
- * needs streamed text announced already has `<lr-live-region>` for that
- * (composed, for example, inside `<lr-chat-message>`).
+ * Driven entirely by its properties -- it doesn't announce anything to assistive tech itself (a
+ * host that needs streamed text announced already has `<lr-live-region>` for that, composed, for
+ * example, inside `<lr-chat-message>`). It does fire one signal-only event: `lr-content-settled`,
+ * composed and bubbling, whenever newly-coalesced `displayedContent` actually reaches the
+ * rendered DOM. A consumer that composes this element inside a free-form container -- e.g.
+ * `<lr-thinking-panel>`'s default slot -- listens for that event to drive its own auto-scroll,
+ * since this component renders into its own shadow root and a plain light-DOM
+ * `MutationObserver` on the container can never see that update happen. In `markdown` mode
+ * (forced or auto-detected) this element does not emit the event itself -- the composed
+ * `<lr-markdown>` it delegates rendering to already emits its own `lr-content-settled` at its own
+ * settle point, and that event is composed, so it bubbles out through this element unmodified;
+ * emitting a second one here would double-fire every listener.
  *
  * @customElement lr-streaming-text
+ * @event lr-content-settled - Fired after newly-coalesced content actually reaches the rendered
+ *   DOM (plain-text mode only -- see the class doc). `detail: null`.
  * @csspart base - The root container.
  * @csspart cursor - The blinking (or, under reduced motion, static) cursor bar. Only rendered while `streaming` is `true`.
  * @cssprop [--lr-inline-cursor-width=var(--lr-size-0-125rem)] - Shared width of the inline cursor
@@ -120,7 +134,7 @@ export type StreamingTextContentMode = 'auto' | 'plain' | 'markdown';
  * @status stable
  * @since 4.0.0
  */
-export class LyraStreamingText extends LyraElement {
+export class LyraStreamingText extends LyraElement<LyraStreamingTextEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** The full current text so far -- always the complete string, never a
@@ -233,6 +247,19 @@ export class LyraStreamingText extends LyraElement {
     }
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    // Only the plain-text path emits its own settle signal. In markdown mode the composed
+    // `<lr-markdown>` this template renders emits its own `lr-content-settled` at its own settle
+    // point, and -- being composed -- that event already bubbles out through this element's
+    // shadow boundary unmodified (see stopOwnedEvent(), which deliberately does NOT intercept
+    // this one the way it intercepts lr-markdown's other events). Emitting here too would
+    // double-fire every listener for the same coalesced content.
+    if (changed.has('displayedContent') && !this.effectiveMarkdown) {
+      this.emit('lr-content-settled', null);
+    }
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.coalescer.cancel();
@@ -261,7 +288,9 @@ export class LyraStreamingText extends LyraElement {
   override render(): TemplateResult {
     return html`
       <div part="base">
-        ${this.effectiveMarkdown
+        ${// lr-markdown's own lr-content-settled is deliberately left unstopped here -- see
+        // updated()'s comment above -- so it bubbles straight out through this element.
+        this.effectiveMarkdown
           ? html`<lr-markdown
               .content=${this.displayedContent}
               .streaming=${this.streaming}

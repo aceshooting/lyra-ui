@@ -80,3 +80,12 @@ navigation.
 as of 16.0.0 both are composed `<lr-icon-button>`s, so `--lr-icon-button-*` retunes them and the
 toolbar's roving tab stop is leased on the native control rather than the host), and `feedback` (the
 embedded `lr-message-feedback`).
+
+The toolbar has no `size`/`compact` property: every built-in's hit area is `<lr-icon-button>`'s
+shared `--lr-icon-button-size` floor (2.5rem/40px), same as everywhere else in the library. For a
+dense action row, lower `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every
+`LyraElement` re-declares on its own `:host` and so never reaches a composed child) on this element
+or an ancestor, or reach a built-in's composed native control directly through
+`::part(regenerate-button__control)` / `::part(edit-button__control)`. A coarse-pointer/no-hover
+media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
+override lowered it, so the shrink is safe on a touch device.

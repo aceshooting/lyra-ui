@@ -142,6 +142,59 @@ Some **bold** text with a [link](https://example.com/docs).
     expect(root.querySelector('[part="table"]')).to.exist;
   });
 
+  describe("lr-content-settled", () => {
+    it("fires a composed, bubbling, null-detail event once a fresh parse reaches [part='content']", async () => {
+      const el = (await fixture(html`<lr-markdown-core></lr-markdown-core>`)) as LyraMarkdownCore;
+      const pending = oneEvent(el, "lr-content-settled");
+      el.content = "Hello **world**";
+      const event = (await pending) as CustomEvent<null>;
+      expect(event.detail).to.equal(null);
+      expect(event.bubbles).to.be.true;
+      expect(event.composed).to.be.true;
+      await waitUntil(
+        () => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute("data-fallback")
+      );
+    });
+
+    it("fires on the very first update too, via fixtureSync()'s pre-first-update listener attach window", async () => {
+      const el = fixtureSync(
+        html`<lr-markdown-core content="hi"></lr-markdown-core>`
+      ) as LyraMarkdownCore;
+      const pending = oneEvent(el, "lr-content-settled");
+      const event = (await pending) as CustomEvent<null>;
+      expect(event.detail).to.equal(null);
+    });
+
+    it("fires again once streaming ends and the deferred parse actually renders", async () => {
+      const el = (await fixture(
+        html`<lr-markdown-core streaming content="partial **markdown"></lr-markdown-core>`
+      )) as LyraMarkdownCore;
+      await el.updateComplete;
+      const pending = oneEvent(el, "lr-content-settled");
+      el.streaming = false;
+      await pending;
+      await waitUntil(
+        () => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute("data-fallback")
+      );
+    });
+
+    it("does not fire when a re-render leaves rendered content unchanged", async () => {
+      const el = (await fixture(
+        html`<lr-markdown-core content="stable text"></lr-markdown-core>`
+      )) as LyraMarkdownCore;
+      await waitUntil(
+        () => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute("data-fallback")
+      );
+      let count = 0;
+      el.addEventListener("lr-content-settled", () => {
+        count += 1;
+      });
+      el.requestUpdate();
+      await el.updateComplete;
+      expect(count).to.equal(0);
+    });
+  });
+
   for (const htmlMode of ["sanitize", "escape", "trusted"] as const) {
     it(`gives each disabled GFM task checkbox its own primary inline-text label in ${htmlMode} mode`, async () => {
       const el = (await fixture(

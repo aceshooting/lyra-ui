@@ -75,7 +75,7 @@ import type { LyraPushToTalk, LyraPushToTalkEventMap } from './components/conver
 import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './components/conversation/realtime-session/realtime-session.class.js';
 import type { LyraSelectionToolbar, LyraSelectionToolbarEventMap } from './components/conversation/selection-toolbar/selection-toolbar.class.js';
 import type { LyraStreamStatus, LyraStreamStatusEventMap } from './components/conversation/stream-status/stream-status.class.js';
-import type { LyraStreamingText } from './components/conversation/streaming-text/streaming-text.class.js';
+import type { LyraStreamingText, LyraStreamingTextEventMap } from './components/conversation/streaming-text/streaming-text.class.js';
 import type { LyraSuggestionChips, LyraSuggestionChipsEventMap } from './components/conversation/suggestion-chips/suggestion-chips.class.js';
 import type { LyraThreadList, LyraThreadListEventMap } from './components/conversation/thread-list/thread-list.class.js';
 import type { LyraTranscriptFeed, LyraTranscriptFeedEventMap } from './components/conversation/transcript-feed/transcript-feed.class.js';
@@ -771,7 +771,7 @@ export type LyraAppRailGroupVueProps = LyraVueCustomElement<
   | '--lr-app-rail-group-padding-block',
   {
     'heading-level'?: LyraAppRailGroup['headingLevel'];
-    'icon-only'?: LyraUnknownAttributeValue;
+    'icon-only'?: LyraAttributeValue<boolean>;
   }
 >;
 
@@ -5412,7 +5412,7 @@ export type LyraIconButtonVueProps = LyraVueCustomElement<
     'aria-expanded'?: LyraAttributeValue<string | null>;
     'aria-haspopup'?: LyraAttributeValue<string | null>;
     'aria-label'?: LyraIconButton['accessibleLabel'];
-    'aria-labelledby'?: LyraUnknownAttributeValue;
+    'aria-labelledby'?: LyraAttributeValue<string | null>;
     'aria-pressed'?: LyraAttributeValue<string | null>;
   }
 >;
@@ -6251,6 +6251,7 @@ export type LyraMarkdownVueProps = LyraVueCustomElement<
   {},
   LyraMarkdownEventMap,
   | 'lr-anchor-result'
+  | 'lr-content-settled'
   | 'lr-highlight-activate'
   | 'lr-link-click'
   | 'lr-render-error'
@@ -6303,6 +6304,7 @@ export type LyraMarkdownCoreVueProps = LyraVueCustomElement<
   {},
   LyraMarkdownCoreEventMap,
   | 'lr-anchor-result'
+  | 'lr-content-settled'
   | 'lr-highlight-activate'
   | 'lr-link-click'
   | 'lr-render-error'
@@ -9660,8 +9662,8 @@ export type LyraStreamingTextVueProps = LyraVueCustomElement<
   | 'streaming'
   | 'strings',
   {},
-  {},
-never,
+  LyraStreamingTextEventMap,
+  | 'lr-content-settled',
   | '--lr-inline-cursor-height'
   | '--lr-inline-cursor-width',
   {

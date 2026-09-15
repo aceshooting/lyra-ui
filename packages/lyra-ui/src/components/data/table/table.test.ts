@@ -3970,6 +3970,119 @@ describe('expandable rows', () => {
     // shifted left into the spacer's place.
     expect(footerCells[footerCells.length - 1]!.textContent!.trim()).to.equal('4');
   });
+
+  it('leaves expandedRowKeys untouched on click under the default expansionMode="none" (unset-regression)', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+    expect(el.expansionMode).to.equal('none');
+
+    let requestFired = false;
+    el.addEventListener('lr-row-expand-request', () => (requestFired = true));
+    const firstToggleButton = el.shadowRoot!.querySelector('[part="expand-toggle-cell"] button') as HTMLButtonElement;
+    setTimeout(() => firstToggleButton.click());
+    const ev = await oneEvent(el, 'lr-row-expand-toggle');
+    expect(ev.detail.expanded).to.equal(true);
+    expect(requestFired, 'lr-row-expand-request is only emitted under a self-managed mode').to.be.false;
+    expect(el.expandedRowKeys.size, 'the default mode never writes expandedRowKeys itself').to.equal(0);
+  });
+
+  it('self-manages expandedRowKeys under expansionMode="multiple" with no host-side handler', async () => {
+    const el = (await fixture(html`<lr-table expansion-mode="multiple"></lr-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+
+    const firstToggleButton = el.shadowRoot!.querySelector('[part="expand-toggle-cell"] button') as HTMLButtonElement;
+    setTimeout(() => firstToggleButton.click());
+    const opened = await oneEvent(el, 'lr-row-expand-toggle');
+    expect(opened.detail).to.deep.equal({ row: rows[0], rowKey: 'a', expanded: true });
+    expect(Object.isFrozen(opened.detail)).to.equal(true);
+    expect([...el.expandedRowKeys]).to.deep.equal(['a']);
+    expect(el.shadowRoot!.querySelector('[part="expanded-row"]')).to.exist;
+
+    // Clicking the same toggle again collapses it -- still with no host handler.
+    setTimeout(() => firstToggleButton.click());
+    const closed = await oneEvent(el, 'lr-row-expand-toggle');
+    expect(closed.detail).to.deep.equal({ row: rows[0], rowKey: 'a', expanded: false });
+    expect(el.expandedRowKeys.size).to.equal(0);
+    expect((el.shadowRoot!.querySelector('[part="expanded-row"]')) == null).to.be.true;
+  });
+
+  it('honors a vetoed lr-row-expand-request under a self-managed mode, leaving expandedRowKeys untouched', async () => {
+    const el = (await fixture(html`<lr-table expansion-mode="multiple"></lr-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+
+    let toggles = 0;
+    el.addEventListener('lr-row-expand-request', (event) => {
+      expect((event as CustomEvent).detail).to.deep.equal({ row: rows[0], rowKey: 'a', expanded: true });
+      expect(event.cancelable).to.equal(true);
+      event.preventDefault();
+    });
+    el.addEventListener('lr-row-expand-toggle', () => toggles++);
+
+    const firstToggleButton = el.shadowRoot!.querySelector('[part="expand-toggle-cell"] button') as HTMLButtonElement;
+    firstToggleButton.click();
+    await el.updateComplete;
+
+    expect(el.expandedRowKeys.size, 'a vetoed request must not write expandedRowKeys').to.equal(0);
+    expect(toggles, 'a vetoed request must not announce a commit either').to.equal(0);
+    expect((el.shadowRoot!.querySelector('[part="expanded-row"]')) == null).to.be.true;
+  });
+
+  it('keeps at most one row open under expansionMode="single", reporting the displaced row before the accepted one', async () => {
+    const el = (await fixture(html`<lr-table expansion-mode="single"></lr-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+
+    const [firstToggleButton, secondToggleButton] = [
+      ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="expand-toggle-cell"] button'),
+    ];
+    setTimeout(() => firstToggleButton!.click());
+    await oneEvent(el, 'lr-row-expand-toggle');
+    expect([...el.expandedRowKeys]).to.deep.equal(['a']);
+
+    const details: Array<{ row: Row; rowKey: string; expanded: boolean }> = [];
+    el.addEventListener('lr-row-expand-toggle', (event) => details.push((event as CustomEvent).detail));
+    secondToggleButton!.click();
+    await el.updateComplete;
+
+    expect(details).to.deep.equal([
+      { row: rows[0], rowKey: 'a', expanded: false },
+      { row: rows[1], rowKey: 'b', expanded: true },
+    ]);
+    expect([...el.expandedRowKeys]).to.deep.equal(['b']);
+  });
+
+  it('coerces an already-larger expandedRowKeys down to its first key when expansionMode becomes "single"', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    el.expansionMode = 'multiple';
+    el.expandedRowKeys = new Set(['a', 'b']);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(2);
+
+    el.expansionMode = 'single';
+    await el.updateComplete;
+
+    expect([...el.expandedRowKeys]).to.deep.equal(['a']);
+    expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(1);
+  });
 });
 
 // Proves each localize()-routed key actually reaches its rendered DOM node under a

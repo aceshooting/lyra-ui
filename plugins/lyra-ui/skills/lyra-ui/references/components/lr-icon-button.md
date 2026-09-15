@@ -126,7 +126,13 @@ than it grows the button and keeps its own aspect ratio; a small glyph pads out 
 library-wide token (declared on `:root` by the token layer, and the shared minimum tappable size
 that several other components size their icon-only controls against), so overriding
 `--lr-theme-icon-button-size` globally resizes all of them together. Keep the resolved value at or
-above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
+above 24px — see `llms/shared.md`. Lowering the floor for a dense action row (directly via
+`--lr-icon-button-size`, or via `--lr-theme-icon-button-size` on an ancestor to reach a
+`<lr-icon-button>` composed inside another component, e.g. `<lr-copy-button>`/
+`<lr-message-actions>`) is safe even below 24px: a coarse-pointer/no-hover media rule floors the
+RENDERED hit area back at 2.75rem/44px regardless of how far the override lowered it, so the
+control stays comfortably tappable the moment the pointer reaching it is a finger rather than a
+mouse. `--lr-icon-button-radius` (default `--lr-radius`) is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
 counterpart to it. The internal control sets `font: inherit`, so an `em`-sized slotted glyph takes

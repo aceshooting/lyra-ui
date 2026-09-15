@@ -211,6 +211,56 @@ it("parses GFM tables, code blocks, links, headings, and blockquotes with part a
   ).to.be.false;
 });
 
+describe("lr-content-settled", () => {
+  it("fires a composed, bubbling, null-detail event once a fresh parse reaches [part='content']", async () => {
+    const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+    const pending = oneEvent(el, "lr-content-settled");
+    el.content = "Hello **world**";
+    const event = (await pending) as CustomEvent<null>;
+    expect(event.detail).to.equal(null);
+    expect(event.bubbles).to.be.true;
+    expect(event.composed).to.be.true;
+    await waitUntil(() => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute("data-fallback"));
+  });
+
+  it("fires on the very first update too, via fixtureSync()'s pre-first-update listener attach window", async () => {
+    // fixtureSync() connects but does not await the first Lit update (see the
+    // 'repaintHighlights no-ops...' test's own precondition comment above for the same idiom),
+    // so the listener below is attached before that first update -- whether it paints the
+    // transient plain-text fallback or (once the shared parser cache is warm, per the class doc)
+    // an already-resolved parse -- has a chance to run.
+    const el = fixtureSync(html`<lr-markdown content="hi"></lr-markdown>`) as LyraMarkdown;
+    const pending = oneEvent(el, "lr-content-settled");
+    const event = (await pending) as CustomEvent<null>;
+    expect(event.detail).to.equal(null);
+  });
+
+  it("fires again once streaming ends and the deferred parse actually renders", async () => {
+    const el = (await fixture(
+      html`<lr-markdown streaming content="partial **markdown"></lr-markdown>`
+    )) as LyraMarkdown;
+    await el.updateComplete;
+    const pending = oneEvent(el, "lr-content-settled");
+    el.streaming = false;
+    await pending;
+    await waitUntil(() => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute("data-fallback"));
+  });
+
+  it("does not fire when a re-render leaves rendered content unchanged", async () => {
+    const el = (await fixture(html`<lr-markdown content="stable text"></lr-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute("data-fallback"));
+    let count = 0;
+    el.addEventListener("lr-content-settled", () => {
+      count += 1;
+    });
+    // Forces a re-render with an empty changed-properties map -- neither `content` nor
+    // `renderedHtml` actually changes.
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(count).to.equal(0);
+  });
+});
+
 for (const htmlMode of ["sanitize", "escape", "trusted"] as const) {
   it(`gives each disabled GFM task checkbox its own primary inline-text label in ${htmlMode} mode`, async () => {
     const el = (await fixture(

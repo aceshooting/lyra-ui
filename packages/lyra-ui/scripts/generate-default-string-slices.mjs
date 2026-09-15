@@ -450,7 +450,15 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
   return found;
 }
 
-export function catalogEntries(source, file = 'localization.ts') {
+/**
+ * Reads a top-level `const <name>: ... = { ... }` object literal into `Map<key, rawSourceText>`,
+ * in source order, preserving each value's exact source text (never re-serialized) so a caller that
+ * relocates entries between files -- `generate-translation-slices.mjs` moving a locale's messages
+ * into per-family slices -- reproduces byte-identical values. `name` defaults to `DEFAULT_STRINGS`
+ * for the original English-catalog caller; translation catalogs pass their own `strings` (or
+ * per-slice) identifier.
+ */
+export function catalogEntries(source, file = 'localization.ts', name = 'DEFAULT_STRINGS') {
   const program = parseProgram(file, source);
   let object;
   visitAst(program, (node) => {
@@ -458,22 +466,22 @@ export function catalogEntries(source, file = 'localization.ts') {
       !object &&
       node.type === 'VariableDeclarator' &&
       node.id?.type === 'Identifier' &&
-      node.id.name === 'DEFAULT_STRINGS' &&
+      node.id.name === name &&
       node.init?.type === 'ObjectExpression'
     ) {
       object = node.init;
     }
   });
-  if (!object) throw new Error(`${file} does not declare DEFAULT_STRINGS as an object literal`);
+  if (!object) throw new Error(`${file} does not declare ${name} as an object literal`);
   const entries = new Map();
   for (const property of object.properties) {
     if (property.type !== 'Property') continue;
     const key = propertyName(property);
-    if (!key) throw new Error(`${file}: DEFAULT_STRINGS contains an unsupported computed key`);
+    if (!key) throw new Error(`${file}: ${name} contains an unsupported computed key`);
     if (!/^[$A-Z_a-z][$\w]*$/.test(key)) {
       throw new Error(`${file}: default-string key ${JSON.stringify(key)} is not an identifier`);
     }
-    if (entries.has(key)) throw new Error(`${file}: duplicate DEFAULT_STRINGS key ${key}`);
+    if (entries.has(key)) throw new Error(`${file}: duplicate ${name} key ${key}`);
     entries.set(key, source.slice(property.value.start, property.value.end));
   }
   return entries;
@@ -807,6 +815,68 @@ async function assertSourceSnapshotUnchanged(packageDir, file, snapshot) {
     `${packageRelativePath(packageDir, file)} changed while default-string slices were being ` +
       'generated; refusing to overwrite it',
   );
+}
+
+/**
+ * Aggregates the SAME per-class-file key-reachability walk `generateDefaultStringSlices()` uses
+ * (`sourceFiles()` + `reachableCatalogKeys()` + `applyConfiguredExclusions()`, over the same
+ * `DEFAULT_STRINGS` catalog) by component FAMILY -- the directory segment directly under
+ * `src/components/` (`src/components/forms/button/button.class.ts` -> `forms`) -- instead of by
+ * class. This is deliberately not a re-derivation: `generate-translation-slices.mjs` imports this
+ * function rather than re-walking the component tree, so a key's family assignment can never drift
+ * from the per-component reachability data `check-localization-slices.mjs` already proves correct.
+ *
+ * Returns both directions: `familyToKeys` (what a per-family translation slice must contain) and
+ * `keyToFamilies` (used to route a key reachable from more than one family into the cross-cutting
+ * `shared` slice instead of duplicating it into every family that touches it).
+ */
+export async function computeFamilyKeyIndex({
+  packageDir = defaultPackageDir,
+  exclusions = DEFAULT_STRING_SLICE_EXCLUSIONS,
+} = {}) {
+  const catalogFile = path.join(packageDir, 'src', 'internal', 'localization.ts');
+  const catalogSource = await readFile(catalogFile, 'utf8');
+  const entries = catalogEntries(catalogSource, catalogFile);
+  const catalogKeys = new Set(entries.keys());
+  const componentsDir = path.join(packageDir, 'src', 'components');
+  const files = (await sourceFiles(componentsDir)).sort();
+  validateConfiguredExclusions(
+    exclusions,
+    catalogKeys,
+    new Set(files.map((file) => packageRelativePath(packageDir, file))),
+  );
+  const sourceRoot = path.join(packageDir, 'src');
+  const sourceCache = new Map();
+  const familyToKeys = new Map();
+  const keyToFamilies = new Map();
+  for (const file of files) {
+    let source = sourceCache.get(file);
+    if (source === undefined) {
+      source = await readFile(file, 'utf8');
+      sourceCache.set(file, source);
+    }
+    const discoveredKeys = await reachableCatalogKeys(file, catalogKeys, sourceRoot, sourceCache);
+    const keys = applyConfiguredExclusions({
+      packageDir,
+      file,
+      source,
+      keys: discoveredKeys,
+      catalogKeys,
+      exclusions,
+    });
+    const relative = packageRelativePath(packageDir, file);
+    const family = relative.split('/')[2];
+    if (!family) throw new Error(`${relative}: could not determine component family`);
+    const familyKeys = familyToKeys.get(family) ?? new Set();
+    for (const key of keys) {
+      familyKeys.add(key);
+      const families = keyToFamilies.get(key) ?? new Set();
+      families.add(family);
+      keyToFamilies.set(key, families);
+    }
+    familyToKeys.set(family, familyKeys);
+  }
+  return { familyToKeys, keyToFamilies, catalogKeys };
 }
 
 export async function generateDefaultStringSlices({

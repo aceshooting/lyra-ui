@@ -5,6 +5,7 @@ import { styles } from './icon-button.styles.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraIconButton } from './icon-button.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
 interface WindowWithSvgElement extends Window {
   SVGElement: typeof SVGElement;
@@ -114,6 +115,44 @@ it('keeps the visual glyph independent from the icon button hit target', async (
   expect(button.getBoundingClientRect().width).to.equal(40);
   expect(button.getBoundingClientRect().height).to.equal(40);
   expect(getComputedStyle(icon).inlineSize).to.equal('20px');
+});
+
+it('grows the rendered hit target to the platform touch-target floor under a coarse pointer', async () => {
+  const el = await fixture<LyraIconButton>(
+    html`<lr-icon-button icon="search" aria-label="Search"></lr-icon-button>`,
+  );
+  const button = el.shadowRoot!.querySelector('button')!;
+  const restore = forceCoarsePointer(el);
+  try {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(button.getBoundingClientRect().width).to.equal(44);
+    expect(button.getBoundingClientRect().height).to.equal(44);
+  } finally {
+    restore();
+  }
+});
+
+it('grows a dense row deliberately shrunk below the floor back up under a coarse pointer', async () => {
+  // The documented dense-row opt-out (icon-button.class.ts's own doc block, and
+  // copy-button/message-actions's size-ladder gotchas): an ancestor lowers
+  // --lr-theme-icon-button-size below the ordinary 2.5rem/40px floor for a fine-pointer layout.
+  // The coarse-pointer safety net must still win once the pointer is a finger.
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-icon-button-size: 1.5rem">
+      <lr-icon-button icon="search" aria-label="Search"></lr-icon-button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-icon-button') as LyraIconButton;
+  const button = el.shadowRoot!.querySelector('button')!;
+  expect(button.getBoundingClientRect().width, 'shrunk on a fine pointer').to.equal(24);
+  const restore = forceCoarsePointer(el);
+  try {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(button.getBoundingClientRect().width, 'grown back under a coarse pointer').to.equal(44);
+    expect(button.getBoundingClientRect().height, 'grown back under a coarse pointer').to.equal(44);
+  } finally {
+    restore();
+  }
 });
 
 it('renders exactly one resolved lr-icon and no stray slot wrapper for a named glyph', async () => {

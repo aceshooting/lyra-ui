@@ -54,6 +54,7 @@ const katexState = createMarkdownKatexState();
 export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-link-click': CustomEvent<{ href: string }>;
+  'lr-content-settled': CustomEvent<null>;
 }
 
 /**
@@ -152,6 +153,12 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  *   `null` if the selection couldn't be anchored.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
+ * @event lr-content-settled - Fired whenever newly-rendered content actually reaches
+ *   `[part="content"]` -- including a transient plain-text fallback frame and a later async
+ *   syntax-highlight upgrade, not only a final parsed render. `detail: null`. Composed and
+ *   bubbling, so a host composing this element inside a free-form container (e.g.
+ *   `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll; see that
+ *   component's own docs.
  * @csspart content - The wrapper around the rendered (or plain-text
  *   fallback) output.
  * @csspart heading - Every rendered `<h1>`–`<h6>` (shifted by

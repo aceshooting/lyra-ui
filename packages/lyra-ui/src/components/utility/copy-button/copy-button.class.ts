@@ -145,6 +145,19 @@ export interface LyraCopyButtonEventMap {
  * glyph, announces itself through the live region, and emits both `lr-error` and the retained,
  * detailed `lr-copy-error` alias.
  *
+ * This trigger has no `size` property of its own: it composes `<lr-icon-button>`, so the built-in
+ * trigger's hit area is that component's shared `--lr-icon-button-size` floor (2.5rem/40px), same
+ * as everywhere else in the library. For a dense action row (e.g. several copy buttons packed into
+ * a toolbar) where 40px is more than the layout can afford, lower `--lr-theme-icon-button-size` --
+ * NOT `--lr-icon-button-size` itself, which every `LyraElement` re-declares on its own `:host` and
+ * so never reaches a composed child (`internal/tokens.test.ts` proves this) -- on this element or
+ * any ancestor of it; `::part(base__control)` also reaches the same composed native control
+ * directly for a one-off override. Either way the shrink is local to the elements it targets, not
+ * a library-wide floor change. A coarse-pointer/no-hover safety net (`internal/tokens.styles.ts`'s
+ * `baseTokens`) then floors the rendered hit area back at 2.75rem/44px regardless of how far the
+ * dense-row override lowered it, so an intentionally cramped desktop toolbar is still comfortably
+ * tappable the moment the pointer reaching it is a finger rather than a mouse.
+ *
  * @customElement lr-copy-button
  * @slot - A custom trigger. When present, it replaces the built-in icon button.
  * @slot copy-icon - Resting copy icon for the built-in button.

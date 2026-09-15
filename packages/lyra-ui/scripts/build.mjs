@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from './compact-build-css.mjs';
 import { compactBuildDeclarations } from './compact-build-declarations.mjs';
 import { compactBuildJavaScript } from './compact-build-js.mjs';
-import { checkLocalizationSlices } from './check-localization-slices.mjs';
+import { checkLocalizationSlices, checkTranslationSlices } from './check-localization-slices.mjs';
 import { createMigrationRuntimeInventory } from './migrate-wa.mjs';
 import {
   assertNormalizedMixinCount,
@@ -117,3 +117,6 @@ console.log(
 
 await checkLocalizationSlices(packageDir);
 console.log('Unbundled localization slice imports and public fallback catalog verified.');
+
+await checkTranslationSlices(packageDir);
+console.log('Per-family translation catalog slices and unchanged aggregate imports verified.');

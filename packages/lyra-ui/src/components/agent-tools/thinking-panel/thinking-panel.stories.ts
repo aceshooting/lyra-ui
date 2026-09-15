@@ -2,7 +2,9 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
 import './thinking-panel.js';
+import '../../conversation/streaming-text/streaming-text.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
+import type { LyraStreamingText } from '../../conversation/streaming-text/streaming-text.js';
 
 const meta: Meta = {
   title: 'ThinkingPanel',
@@ -235,6 +237,98 @@ export const LiveStreamingDemo: Story = {
         <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
           While streaming, scroll the panel up to read earlier lines -- new chunks stop auto-scrolling
           until you scroll back near the bottom yourself.
+        </p>
+      </div>
+    `;
+  },
+};
+
+export const LiveComposedStreamingTextDemo: Story = {
+  name: 'Live demo (composed lr-streaming-text, property-driven -- lr-content-settled)',
+  render: () => {
+    // Unlike LiveStreamingDemo above (a plain light-DOM <span>, detected by this panel's own
+    // MutationObserver), <lr-streaming-text> renders into its own shadow root and takes new text
+    // as a property assignment -- a change the MutationObserver alone can never see. Auto-follow
+    // here is driven entirely by the composed lr-content-settled event <lr-streaming-text> emits
+    // at its own settle point; see this component's own class doc and llms/agent-tools.md.
+    const chunks = [
+      'The user wants a summary of the incident timeline. ',
+      'Let me walk through the log entries in order. ',
+      'At 14:02 the first error spike appears in the payments service. ',
+      'At 14:05 the on-call engineer was paged. ',
+      'At 14:11 a rollback of the previous deploy was initiated. ',
+      'At 14:18 error rates returned to baseline. ',
+      'I should present this as a short timeline rather than a wall of log lines. ',
+      'Drafting the final summary now.',
+    ];
+
+    const panelRef = createRef<LyraThinkingPanel>();
+    const streamingTextRef = createRef<LyraStreamingText>();
+    const statusRef = createRef<HTMLElement>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let start = 0;
+    let i = 0;
+    let text = '';
+    const tick = (): void => {
+      const panel = panelRef.value;
+      const streamingText = streamingTextRef.value;
+      const status = statusRef.value;
+      if (!panel || !streamingText || !status) {
+        timer = undefined;
+        return;
+      }
+      if (i >= chunks.length) {
+        streamingText.streaming = false;
+        panel.mode = 'post-hoc';
+        panel.durationMs = Math.round(performance.now() - start);
+        status.textContent = 'Complete.';
+        timer = undefined;
+        return;
+      }
+      text += chunks[i]!;
+      streamingText.content = text; // property assignment -- never a light-DOM mutation
+      i++;
+      status.textContent = `Streaming… (${i}/${chunks.length})`;
+      timer = setTimeout(tick, 350);
+    };
+    const startStreaming = (): void => {
+      const panel = panelRef.value;
+      const streamingText = streamingTextRef.value;
+      const status = statusRef.value;
+      if (!panel || !streamingText || !status) return;
+      if (timer !== undefined) clearTimeout(timer);
+      text = '';
+      streamingText.content = '';
+      streamingText.streaming = true;
+      panel.mode = 'live';
+      panel.durationMs = undefined;
+      panel.expanded = true;
+      start = performance.now();
+      i = 0;
+      status.textContent = 'Streaming…';
+      timer = setTimeout(tick, 350);
+    };
+
+    return html`
+      <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
+        <lr-thinking-panel ${ref(panelRef)} mode="live">
+          <lr-streaming-text ${ref(streamingTextRef)} content-mode="plain"></lr-streaming-text>
+        </lr-thinking-panel>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <button
+            data-start
+            @click=${startStreaming}
+            style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); background:var(--lr-color-surface); cursor:pointer;"
+          >
+            Start streaming
+          </button>
+          <span ${ref(statusRef)} data-status style="font-size:0.8125rem; color:var(--lr-color-text-quiet);"></span>
+        </div>
+        <p style="margin:0; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
+          The composed lr-streaming-text takes every chunk as a content property assignment, not a
+          light-DOM mutation -- this panel follows it via the composed lr-content-settled event, not
+          its MutationObserver. Scroll up mid-stream to confirm stickiness is still released the same
+          way.
         </p>
       </div>
     `;

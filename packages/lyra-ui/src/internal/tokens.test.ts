@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
 import { setForcedColors } from '../../test/wtr-media.js';
+import { forceCoarsePointer } from '../../test/coarse-pointer-media.js';
 import { tag } from './prefix.js';
 import { specialistTokens } from './specialist-tokens.styles.js';
 import { tokens } from './tokens.styles.js';
@@ -254,6 +255,39 @@ it('cannot be rethemed through the --lr-* token itself, which is why the --lr-th
   expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size: 3rem')).to.equal('2.5rem');
   expect(await probeNestedVar('--lr-focus-ring-width', '--lr-focus-ring-width: 4px')).to.equal('2px');
   expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-focus-ring-offset: 5px')).to.equal('2px');
+});
+
+// `TokenProbe` composes only `[palette, tokens]`, so `forceCoarsePointer` (test/coarse-pointer-
+// media.ts) forcing EVERY matching rule -- not just the first -- reduces to forcing the one rule
+// tokens.styles.ts's baseTokens declares; see icon-button.test.ts / sizes.styles.test.ts for cases
+// that reach more than one.
+
+it('grows --lr-icon-button-size to the platform touch-target floor under a coarse pointer', async () => {
+  const el = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
+  const restore = forceCoarsePointer(el);
+  try {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(getComputedStyle(el).getPropertyValue('--lr-icon-button-size').trim()).to.equal(
+      'max(2.5rem, 2.75rem)',
+    );
+  } finally {
+    restore();
+  }
+});
+
+it('leaves an explicit --lr-theme-icon-button-size at or above the touch floor untouched under a coarse pointer', async () => {
+  const el = (await fixture(
+    html`<lr-token-probe style="--lr-theme-icon-button-size: 3rem"></lr-token-probe>`,
+  )) as TokenProbe;
+  const restore = forceCoarsePointer(el);
+  try {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(getComputedStyle(el).getPropertyValue('--lr-icon-button-size').trim()).to.equal(
+      'max(3rem, 2.75rem)',
+    );
+  } finally {
+    restore();
+  }
 });
 
 it('defines the shared typography, chart, layer, and overlay token surface', async () => {

@@ -116,6 +116,41 @@ describe('production theme rendering', () => {
       document.adoptedStyleSheets = originalSheets;
     }
   });
+
+  it('routes a production-runtime danger/success accent, mixed against a supplied surface, through the real palette chain', async () => {
+    const sheet = await productionThemeSheet();
+    const originalSheets = document.adoptedStyleSheets;
+    document.adoptedStyleSheets = [...originalSheets, sheet];
+    try {
+      setLyraTheme({
+        mode: 'dark',
+        accent: { danger: '#c81e3a', success: '#1f9d55' },
+        surface: '#101418',
+      });
+      const probe = await renderedProbe();
+      const rootStyle = getComputedStyle(document.documentElement);
+      const probeStyle = getComputedStyle(probe);
+      const failures: string[] = [];
+
+      for (const role of ['danger', 'success'] as const) {
+        for (const channel of ['fill', 'border', 'on'] as const) {
+          for (const emphasis of ['quiet', 'normal', 'loud'] as const) {
+            const token = `--lr-color-${role}-${channel}-${emphasis}`;
+            const input = `--lr-theme-color-${role}-${channel}-${emphasis}`;
+            const expected = rootStyle.getPropertyValue(input).trim();
+            const actual = probeStyle.getPropertyValue(token).trim();
+            if (!expected) failures.push(`${input} resolved empty`);
+            if (actual !== expected) failures.push(`${token} = ${actual}; expected ${expected}`);
+          }
+        }
+      }
+      expect(failures.join('\n')).to.equal('');
+    } finally {
+      setLyraTheme({ mode: 'unset', accent: null, surface: null });
+      localStorage.removeItem('lyra-theme');
+      document.adoptedStyleSheets = originalSheets;
+    }
+  });
 });
 
 // 11.0.0 added `--lr-focus-ring` as a composite outline shorthand, explicitly to replace the Web

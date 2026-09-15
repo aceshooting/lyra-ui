@@ -20,13 +20,23 @@
 // application asking the library which direction a locale needs. So: an existing file's meta
 // argument is carried across verbatim, and a brand-new RTL catalog is scaffolded WITH one rather
 // than leaving the direction to a runtime that may not know it.
+// Since 16.0.0 the emitted SHAPE is the per-family sliced one, not a single monolithic file: one
+// `src/translations/<tag>/<family>.ts` per component family (plus a `shared` slice for keys more
+// than one family reaches) and a thin `src/translations/<tag>.ts` re-export aggregate, matching
+// what `scripts/generate-translation-slices.mjs` produces for an already-shipped locale. A locale
+// scaffolded fresh is therefore authored directly in the sliced shape -- there is no longer an
+// intermediate monolith to migrate later. Family membership reuses the exact per-component
+// key-reachability data `generate-default-string-slices.mjs` already computes
+// (`computeFamilyKeyIndex()`), never re-derived.
+//
 // Run: node scripts/scaffold-translation.mjs <tag> [--force]
 //      node scripts/scaffold-translation.mjs --report
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const localizationFile = join(packageRoot, 'src/internal/localization.ts');
@@ -129,25 +139,33 @@ function deriveMeta(tag) {
   return `{ dir: 'rtl'${name ? `, name: ${quote(name)}` : ''} }`;
 }
 
-/** The meta argument the file being overwritten already declared, verbatim, or undefined. */
-function readExistingMeta(file) {
-  if (!existsSync(file)) return undefined;
-  const source = readFileSync(file, 'utf8');
-  const program = parseSync(file, source).program;
-  let meta;
-  visit(program, (node) => {
-    if (meta !== undefined) return;
-    if (node.type !== 'CallExpression') return;
-    if (node.callee?.type !== 'Identifier' || node.callee.name !== 'registerLyraLocale') return;
-    const argument = node.arguments?.[2];
-    if (argument) meta = source.slice(argument.start, argument.end).trim();
-  });
-  return meta;
+/** The meta argument an existing target (sliced directory, or a still-monolithic file) already
+ *  declared, verbatim, or undefined. Every slice of a sliced locale carries the same meta (each
+ *  must be independently self-sufficient for direction/name when imported alone), so the first one
+ *  found is authoritative. */
+function readExistingMeta(tag) {
+  const sliceDir = join(translationsRoot, tag);
+  const candidates = existsSync(sliceDir)
+    ? readdirSync(sliceDir).filter((entry) => entry.endsWith('.ts')).map((entry) => join(sliceDir, entry))
+    : [join(translationsRoot, `${tag}.ts`)].filter(existsSync);
+  for (const file of candidates) {
+    const source = readFileSync(file, 'utf8');
+    const program = parseSync(file, source).program;
+    let meta;
+    visit(program, (node) => {
+      if (meta !== undefined) return;
+      if (node.type !== 'CallExpression') return;
+      if (node.callee?.type !== 'Identifier' || node.callee.name !== 'registerLyraLocale') return;
+      const argument = node.arguments?.[2];
+      if (argument) meta = source.slice(argument.start, argument.end).trim();
+    });
+    if (meta !== undefined) return meta;
+  }
+  return undefined;
 }
 
-function emit(tag, entries, meta) {
-  const categories = new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
-  const lines = entries.map(([key, message]) => {
+function messageLines(entries, categories) {
+  return entries.map(([key, message]) => {
     if (typeof message === 'string') return `  ${key}: ${quote(message)},`;
     // A locale gets exactly its own categories: seeding a Russian catalog with English's
     // {one, other} is the precise bug the plural rework existed to remove, since every count from
@@ -156,6 +174,9 @@ function emit(tag, entries, meta) {
     const body = categories.map((category) => `    ${category}: ${quote(message[category] ?? fallback)},`);
     return [`  ${key}: {`, ...body, '  },'].join('\n');
   });
+}
+
+function emitSlice(tag, family, entries, categories, meta) {
   const registration = meta
     ? [
         '',
@@ -165,21 +186,79 @@ function emit(tag, entries, meta) {
         `registerLyraLocale('${tag}', strings, ${meta});`,
       ].join('\n')
     : `\nregisterLyraLocale('${tag}', strings);`;
-  return `// ${tag} translation catalog for @aceshooting/lyra-ui.
+  const familyProse =
+    family === 'shared'
+      ? 'cross-cutting strings reachable from more than one component family'
+      : `strings owned exclusively by \`src/components/${family}/**\``;
+  return `// The \`${family}\` slice of the ${tag} translation catalog for @aceshooting/lyra-ui: ${familyProse}.
 // A side-effect-only module: a consumer writes a bare
-// \`import '@aceshooting/lyra-ui/translations/${tag}';\` and reads nothing from it. Keep the keys in
-// DEFAULT_STRINGS order -- \`scripts/check-translations.mjs\` enforces coverage, order, placeholder
-// names and the plural-category set for this locale, and a catalog that cannot be diffed against
-// another line-for-line is a catalog nobody will review.
+// \`import '@aceshooting/lyra-ui/translations/${tag}/${family}';\` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- \`scripts/check-translations.mjs\` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
 // Regenerate the SHAPE (never the translations) with:
 //   node scripts/scaffold-translation.mjs ${tag} --force
-import { registerLyraLocale, type LyraLocaleStrings } from '../internal/localization.js';
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-${lines.join('\n')}
+${messageLines(entries, categories).join('\n')}
 };
 ${registration}
 `;
+}
+
+function emitAggregate(tag, sliceNames) {
+  const imports = sliceNames.map((name) => `import './${tag}/${name}.js';`).join('\n');
+  return `// ${tag} translation catalog for @aceshooting/lyra-ui.
+//
+// Back-compat aggregate: importing this file registers every family slice below. An application
+// that only uses a handful of components can import the family slice(s) it actually needs instead
+// -- e.g. \`@aceshooting/lyra-ui/translations/${tag}/forms\` -- for a smaller bundle. To translate,
+// edit the slice file under \`./${tag}/\`, never this file.
+${imports}
+`;
+}
+
+function relativeish(path) {
+  return path.slice(packageRoot.length);
+}
+
+/** Every `[key, message]` a locale currently has, read from its sliced directory when one exists
+ *  and from the still-monolithic file otherwise. */
+function readCurrentEntries(tag) {
+  const sliceDir = join(translationsRoot, tag);
+  const files = existsSync(sliceDir)
+    ? readdirSync(sliceDir)
+        .filter((entry) => entry.endsWith('.ts') && !entry.endsWith('.test.ts'))
+        .map((entry) => join(sliceDir, entry))
+    : [join(translationsRoot, `${tag}.ts`)].filter(existsSync);
+  const entries = [];
+  for (const file of files) {
+    const source = readFileSync(file, 'utf8');
+    const program = parseSync(file, source).program;
+    let object;
+    visit(program, (node) => {
+      if (object) return;
+      if (
+        node.type === 'VariableDeclarator' &&
+        node.id?.name === 'strings' &&
+        node.init?.type === 'ObjectExpression'
+      ) {
+        object = node.init;
+      }
+    });
+    if (!object) continue;
+    for (const property of object.properties) {
+      const key = propName(property);
+      const text = literal(property.value);
+      const value = text !== undefined
+        ? text
+        : Object.fromEntries(property.value.properties.map((v) => [propName(v), literal(v.value)]));
+      entries.push([key, value]);
+    }
+  }
+  return entries;
 }
 
 const args = process.argv.slice(2);
@@ -189,26 +268,25 @@ if (args.includes('--report')) {
   const english = new Map(entries);
   const flatten = (message) => (typeof message === 'string' ? [message] : Object.values(message));
   const rows = [];
-  for (const file of existsSync(translationsRoot) ? readdirSync(translationsRoot) : []) {
-    if (!file.endsWith('.ts')) continue;
-    const tag = file.replace(/\.ts$/, '');
-    const source = readFileSync(join(translationsRoot, file), 'utf8');
-    const program = parseSync(file, source).program;
-    let object;
-    visit(program, (node) => {
-      if (object) return;
-      if (node.type === 'VariableDeclarator' && node.id?.name === 'strings') object = node.init;
-    });
-    if (!object) {
-      rows.push(`${tag}: could not read its \`strings\` object`);
+  // Same top-level `.ts` file enumeration the original tool used: a real catalog always keeps its
+  // `<tag>.ts` aggregate (sliced or still-monolithic), so this never needs to also walk bare
+  // directories -- which would wrongly pick up `pseudo/`, a directory with no `<tag>.ts` sibling.
+  const tags = existsSync(translationsRoot)
+    ? readdirSync(translationsRoot, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts'))
+        .map((entry) => entry.name.replace(/\.ts$/, ''))
+        .sort()
+    : [];
+  for (const tag of tags) {
+    const currentEntries = readCurrentEntries(tag);
+    if (currentEntries.length === 0) {
+      rows.push(`${tag}: could not read its catalog entries`);
       continue;
     }
     let total = 0;
     let untranslated = 0;
-    for (const property of object.properties) {
-      const key = propName(property);
-      const text = literal(property.value);
-      const values = text !== undefined ? [text] : property.value.properties.map((v) => literal(v.value));
+    for (const [key, value] of currentEntries) {
+      const values = flatten(value);
       const source = new Set(flatten(english.get(key) ?? ''));
       total += 1;
       if (values.every((value) => source.has(value))) untranslated += 1;
@@ -225,21 +303,41 @@ if (!tag) {
   console.error('usage: node scripts/scaffold-translation.mjs <tag> [--force]  |  --report');
   process.exit(1);
 }
-const target = join(translationsRoot, `${tag}.ts`);
-if (existsSync(target) && !args.includes('--force')) {
-  console.error(`${relativeish(target)} already exists; pass --force to overwrite its SHAPE (translations are lost)`);
+const sliceDir = join(translationsRoot, tag);
+const flatTarget = join(translationsRoot, `${tag}.ts`);
+const alreadyExists = existsSync(sliceDir) || existsSync(flatTarget);
+if (alreadyExists && !args.includes('--force')) {
+  console.error(`${relativeish(sliceDir)}/ already exists; pass --force to overwrite its SHAPE (translations are lost)`);
   process.exit(1);
-}
-function relativeish(path) {
-  return path.slice(packageRoot.length);
 }
 // Preserved meta beats derived meta: the catalog that is already on disk is the authority on its
 // own direction and endonym, and a reshape may not overwrite a hand-corrected one.
-const meta = readExistingMeta(target) ?? deriveMeta(tag);
-writeFileSync(target, emit(tag, entries, meta), 'utf8');
+const meta = readExistingMeta(tag) ?? deriveMeta(tag);
+const categories = new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
+
+const { keyToFamilies, familyToKeys } = await computeFamilyKeyIndex({ packageDir: packageRoot });
+const sliceNames = [...familyToKeys.keys()].sort();
+const bySlice = new Map(sliceNames.map((name) => [name, []]));
+bySlice.set('shared', []);
+for (const [key, message] of entries) {
+  const owners = keyToFamilies.get(key);
+  const sliceName = owners && owners.size === 1 ? [...owners][0] : 'shared';
+  bySlice.get(sliceName).push([key, message]);
+}
+const emittedSliceNames = [...sliceNames, 'shared'].filter((name) => bySlice.get(name).length > 0);
+
+mkdirSync(sliceDir, { recursive: true });
+for (const name of emittedSliceNames) {
+  writeFileSync(
+    join(sliceDir, `${name}.ts`),
+    emitSlice(tag, name, bySlice.get(name), categories, meta),
+    'utf8',
+  );
+}
+writeFileSync(join(translationsRoot, `${tag}.ts`), emitAggregate(tag, emittedSliceNames), 'utf8');
 console.log(
-  `wrote ${relativeish(target)}: ${entries.length} keys, plural categories ` +
-    `[${new Intl.PluralRules(tag).resolvedOptions().pluralCategories.join(', ')}]` +
+  `wrote ${relativeish(sliceDir)}/ (${emittedSliceNames.length} slices) and ${relativeish(flatTarget)}: ` +
+    `${entries.length} keys, plural categories [${categories.join(', ')}]` +
     (meta ? `, meta ${meta}` : ''),
 );
 

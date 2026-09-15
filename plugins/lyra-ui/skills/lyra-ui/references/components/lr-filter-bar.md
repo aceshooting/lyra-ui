@@ -347,3 +347,16 @@ const filters: LyraFilterBarFilterDefinition[] = [
 
 The custom renderer returns a Lit `TemplateResult`; the filter bar places it in its
 `filter-control` part and re-renders it whenever the controlled value or validation state changes.
+
+**TypeScript:** `LyraFilterBar<Defs extends readonly LyraFilterBarFilterDefinition[] =
+readonly LyraFilterBarFilterDefinition[]>` — `value` and the `lr-input`/`lr-reset` detail `value`
+narrow to a record keyed per `filterId`, whose value type follows that filter's own definition (a
+`'select'`, a non-`multiple` `'combobox'`, `'text'`, `'date'`, and `'date-range'` narrow to
+`string`; a `'checkbox-menu'` and a `multiple: true` `'combobox'` narrow to `readonly string[]`; a
+`'custom'` filter keeps the full unconstrained field value). Declare the schema with `as const
+satisfies readonly LyraFilterBarFilterDefinition[]` and type the element as
+`LyraFilterBar<typeof FILTERS>` to pick it up. Types only; the runtime is unchanged, and an untyped
+`<lr-filter-bar>` keeps today's `LyraFilterBarValue` (`Readonly<Record<string, string | readonly
+string[] | boolean | undefined>>`). `LyraFilterBarValueFor<Defs>` is the standalone alias for the
+narrowed record, and `LyraFilterBarInputEvent<Defs>`/`LyraFilterBarResetEvent<Defs>` are stable
+per-event aliases so a handler can name one event's type without restating the detail shape.

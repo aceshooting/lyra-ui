@@ -91,21 +91,26 @@ const NEAR_BOTTOM_PX = 48;
  * always resets this to "anchored" and jumps to the latest content, the same
  * way a chat app's own transcript does when you re-open it.
  *
- * New content is detected via a `MutationObserver` on this element's own
- * light DOM (`childList`+`subtree`+`characterData`) rather than the default
- * slot's `slotchange` event, because `slotchange` only fires when the set of
- * top-level assigned nodes changes — never for a text node mutating *inside*
- * an already-slotted element, which is the more likely shape for streamed
- * reasoning (a consumer appending chunks to an existing node's `textContent`
- * rather than re-slotting a whole new element per token). The one thing this
- * can't see is a mutation entirely inside a slotted custom element's own
- * shadow root (e.g. a `<lr-markdown>` re-rendering its shadow tree after a
- * `content` property change) — Shadow DOM encapsulation blocks that by
- * design, and there is no way for this component to reach across that
- * boundary. A slotted element whose *own* internal updates should drive this
- * panel's auto-scroll needs to append/mutate visible light-DOM text itself
- * (as `<lr-streaming-text>` is expected to), or the host can call this
- * panel's own `scrollToBottom()` directly.
+ * New content is detected two ways, both feeding the same coalesced scroll-to-bottom (a mutation
+ * and a settle event landing in the same animation frame never double-scroll):
+ * - A `MutationObserver` on this element's own light DOM (`childList`+`subtree`+`characterData`)
+ *   rather than the default slot's `slotchange` event, because `slotchange` only fires when the
+ *   set of top-level assigned nodes changes — never for a text node mutating *inside* an
+ *   already-slotted element, which is the shape a consumer literally appending chunks to a plain
+ *   light-DOM node produces. This cannot see a mutation entirely inside a slotted custom
+ *   element's own shadow root (e.g. `<lr-markdown>` re-rendering its shadow tree after a
+ *   `content` property change) — Shadow DOM encapsulation blocks that by design.
+ * - A listener for `lr-content-settled`, a composed, bubbling, signal-only event
+ *   (`detail: null`) this library's own streaming renderers — `<lr-streaming-text>`,
+ *   `<lr-markdown>`, `<lr-markdown-core>` — emit at their own settle points. Being composed, it
+ *   crosses exactly the shadow boundary the `MutationObserver` above cannot, covering every
+ *   property- or attribute-driven producer that renders into its own shadow root instead of
+ *   mutating visible light-DOM text.
+ *
+ * A slotted element that is neither a plain light-DOM text producer nor one of this library's own
+ * streaming renderers — a bespoke custom element that re-renders its own shadow tree from a
+ * property change — needs to append/mutate visible light-DOM text itself, emit its own
+ * `lr-content-settled`, or have the host call this panel's own `scrollToBottom()` directly.
  *
  * `aria-controls` linking the header to the body region uses `nextId()`
  * (`../../internal/a11y.js`) for a collision-safe id, the same convention
@@ -233,10 +238,21 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     // here, as this element's children. See the class doc for why this
     // (rather than `slotchange`) is what detects streamed-in content.
     this.armContentObserver();
+    // The second, complementary content-change signal: a composed `lr-content-settled` from a
+    // first-party streaming renderer (`<lr-streaming-text>`, `<lr-markdown>`,
+    // `<lr-markdown-core>`) slotted here, covering exactly the property-driven, shadow-DOM-
+    // rendered case the light-DOM MutationObserver above cannot see -- see the class doc. Reuses
+    // the same handler (and therefore the same rAF coalescing) as the observer, so a mutation and
+    // a settle event landing in the same frame still trigger only one scroll. The listener
+    // function reference is stable across the element's lifetime, so re-adding it on every
+    // connect (mirroring `armContentObserver()`'s own per-connect re-arm) is a safe no-op per the
+    // DOM spec's duplicate-listener dedup, not a leak.
+    this.addEventListener('lr-content-settled', this.onContentMutated);
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.removeEventListener('lr-content-settled', this.onContentMutated);
     this.resetOwnerRealmWork();
   }
 
@@ -325,6 +341,12 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     this.emit('lr-follow-change', { following });
   };
 
+  /** Shared content-change handler for both detection mechanisms -- the light-DOM
+   *  `MutationObserver` armed by `armContentObserver()` (plain text producers) and the
+   *  `lr-content-settled` listener armed in `connectedCallback()` (first-party shadow-DOM
+   *  renderers). Whichever fires first schedules the coalesced rAF below; the other's call
+   *  within the same frame is then a no-op via the `scrollRafId` guard, so a mutation and a
+   *  settle event landing together never produce a double scroll. */
   private onContentMutated = (): void => {
     if (this.mode !== 'live' || !this.expanded || !this.follow) return;
     // Coalesce to at most one scroll-to-bottom per animation frame -- a fast

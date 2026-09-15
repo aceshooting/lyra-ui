@@ -3,6 +3,7 @@ import './copy-button.js';
 import type { LyraCopyButton } from './copy-button.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -1089,5 +1090,57 @@ describe('lr-copy-button clipboard failure', () => {
       );
       await expect(el).to.be.accessible();
     });
+  });
+});
+
+describe('dense-row hit-area override and its coarse-pointer safety net', () => {
+  it('renders the ordinary 40px floor with no override', async () => {
+    const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
+    expect(paintedControl(el).getBoundingClientRect().width).to.equal(40);
+    expect(paintedControl(el).getBoundingClientRect().height).to.equal(40);
+  });
+
+  it('shrinks below the ordinary floor when an ancestor lowers --lr-theme-icon-button-size, for a dense row', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-theme-icon-button-size: 1.5rem">
+        <lr-copy-button value="hello"></lr-copy-button>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-copy-button') as LyraCopyButton;
+    expect(paintedControl(el).getBoundingClientRect().width).to.equal(24);
+    expect(paintedControl(el).getBoundingClientRect().height).to.equal(24);
+  });
+
+  it('reaches the same composed control directly through the forwarded base__control part', async () => {
+    const style = document.createElement('style');
+    style.textContent = 'lr-copy-button.dense::part(base__control) { min-inline-size: 24px; min-block-size: 24px; }';
+    document.head.append(style);
+    try {
+      const el = (await fixture(
+        html`<lr-copy-button class="dense" value="hello"></lr-copy-button>`,
+      )) as LyraCopyButton;
+      expect(paintedControl(el).getBoundingClientRect().width).to.equal(24);
+      expect(paintedControl(el).getBoundingClientRect().height).to.equal(24);
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('grows a dense row back to the platform touch-target floor under a coarse pointer', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-theme-icon-button-size: 1.5rem">
+        <lr-copy-button value="hello"></lr-copy-button>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-copy-button') as LyraCopyButton;
+    expect(paintedControl(el).getBoundingClientRect().width, 'shrunk on a fine pointer').to.equal(24);
+    const restore = forceCoarsePointer(baseButton(el));
+    try {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      expect(paintedControl(el).getBoundingClientRect().width, 'grown back under a coarse pointer').to.equal(44);
+      expect(paintedControl(el).getBoundingClientRect().height, 'grown back under a coarse pointer').to.equal(44);
+    } finally {
+      restore();
+    }
   });
 });

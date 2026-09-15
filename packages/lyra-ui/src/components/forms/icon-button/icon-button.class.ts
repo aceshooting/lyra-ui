@@ -124,6 +124,14 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * accessibility trade-off it is. Scaling the glyph inside that floor is a separate concern and
  * already has its own inherited input, `--lr-icon-size`.
  *
+ * Lowering `--lr-icon-button-size` directly on this element (or `--lr-theme-icon-button-size` on
+ * an ancestor, which reaches a `<lr-icon-button>` composed inside another component -- see
+ * `internal/tokens.test.ts`) is safe for a dense action row even below the ordinary 2.5rem/40px
+ * floor: a coarse-pointer/no-hover media rule in `internal/tokens.styles.ts`'s `baseTokens` floors
+ * the RENDERED hit area back at 2.75rem/44px regardless of how far that override lowered it, so
+ * the control is still comfortably tappable the moment the pointer reaching it is a finger rather
+ * than a mouse.
+ *
  * @customElement lr-icon-button
  * @event focus - Native focus relayed once from the internal button.
  * @event blur - Native blur relayed once from the internal button.

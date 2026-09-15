@@ -38,7 +38,7 @@ describe('theme presets', () => {
     expect(Object.isFrozen(preset.theme)).to.equal(true);
 
     applyLyraThemePreset(preset);
-    expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: '#22d3ee' });
+    expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: '#22d3ee', surface: null });
     expect(document.documentElement.dataset['lrThemePreset']).to.equal('application-ocean');
     expect(
       document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud'),
@@ -50,7 +50,7 @@ describe('theme presets', () => {
     applyLyraThemePreset('sapphire');
     const detail = (await event as CustomEvent).detail;
     expect(detail.id).to.equal('sapphire');
-    expect(detail.theme).to.deep.equal({ mode: 'auto', accent: '#4f8ff7' });
+    expect(detail.theme).to.deep.equal({ mode: 'auto', accent: '#4f8ff7', surface: null });
     expect(detail.theme).to.deep.equal(getLyraTheme());
     expect(getLyraTheme().accent).to.equal('#4f8ff7');
   });
@@ -66,7 +66,7 @@ describe('theme presets', () => {
         id: 'invalid-accent',
         theme: { mode: 'dark', accent: 'definitely-not-a-color' },
       });
-      expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: null });
+      expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: null, surface: null });
       expect(document.documentElement.hasAttribute('data-lr-theme-preset')).to.be.false;
       expect(presetEvents).to.equal(0);
     } finally {
@@ -95,11 +95,51 @@ describe('theme presets', () => {
       id: 'bad-record',
       theme: [] as never,
     })).to.throw(TypeError);
+    expect(() => defineLyraThemePreset({
+      id: 'bad-surface',
+      theme: { surface: 42 as never },
+    })).to.throw(TypeError);
+    expect(() => defineLyraThemePreset({
+      id: 'bad-accent-array',
+      theme: { accent: [] as never },
+    })).to.throw(TypeError);
   });
 
   it('keeps direct theme calls available independently of presets', () => {
     applyLyraThemePreset('light');
     setLyraTheme({ mode: 'dark' });
     expect(getLyraTheme().mode).to.equal('dark');
+  });
+
+  it('accepts a per-role accent map and a surface reference in an application preset', () => {
+    const preset = defineLyraThemePreset({
+      id: 'application-semantic',
+      theme: { mode: 'dark', accent: { brand: '#22d3ee', danger: '#c81e3a' }, surface: '#101418' },
+    });
+    applyLyraThemePreset(preset);
+    expect(getLyraTheme()).to.deep.equal({
+      mode: 'dark',
+      accent: { brand: '#22d3ee', danger: '#c81e3a' },
+      surface: '#101418',
+    });
+    expect(document.documentElement.dataset['lrThemePreset']).to.equal('application-semantic');
+    expect(
+      document.documentElement.style.getPropertyValue('--lr-theme-color-danger-fill-loud'),
+    ).to.not.equal('');
+  });
+
+  it('accepts a per-mode { light, dark } accent in an application preset and applies the branch matching the resolved mode', () => {
+    const preset = defineLyraThemePreset({
+      id: 'application-day-night',
+      theme: { mode: 'dark', accent: { brand: { light: '#2563eb', dark: '#f59e0b' } } },
+    });
+    applyLyraThemePreset(preset);
+    expect(getLyraTheme()).to.deep.equal({
+      mode: 'dark',
+      accent: { brand: { light: '#2563eb', dark: '#f59e0b' } },
+      surface: null,
+    });
+    expect(document.documentElement.dataset['lrThemePreset']).to.equal('application-day-night');
+    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('#f59e0b');
   });
 });

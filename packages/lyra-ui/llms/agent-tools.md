@@ -772,19 +772,30 @@ user has manually scrolled up to re-read earlier content (tracked via a `scroll`
 `[part="body"]`: every user-driven scroll records whether the body was left within 48px of its own
 max scroll position, and only a mutation that arrives while that's still true triggers a follow-up
 scroll). Opening an already-`'live'` panel — or a still-`expanded` panel later becoming `'live'` —
-always resets this to "anchored" and jumps to the latest content. New content is detected via a `MutationObserver` on this element's own light DOM
-(`childList`+`subtree`+`characterData`), not `slotchange`, since streamed reasoning typically
-appends chunks to an existing node's `textContent` rather than re-slotting a whole new element per
-token; scroll-to-bottom calls are coalesced to at most one per animation frame under a fast token
-stream.
+always resets this to "anchored" and jumps to the latest content. New content is detected two
+ways, both feeding the same coalesced (at most one per animation frame) scroll-to-bottom:
+
+- A `MutationObserver` on this element's own light DOM (`childList`+`subtree`+`characterData`),
+  not `slotchange`, since a plain-text producer typically appends chunks to an existing node's
+  `textContent` rather than re-slotting a whole new element per token. This cannot see a mutation
+  that happens entirely inside a slotted custom element's own shadow root.
+- A listener for `lr-content-settled`, a composed, bubbling, signal-only event this library's own
+  streaming renderers (`<lr-streaming-text>`, `<lr-markdown>`, `<lr-markdown-core>`) emit at their
+  own settle points. Being composed, it crosses exactly the shadow boundary the
+  `MutationObserver` cannot, covering every property- or attribute-driven producer that renders
+  into its own shadow root instead of mutating visible light-DOM text — which is exactly what the
+  example above's `<lr-streaming-text content="…">` does, and why composing it there auto-follows
+  correctly.
 
 **Known gotchas:**
 
-- The `MutationObserver` only watches this element's own light-DOM subtree — it cannot see a
+- The `MutationObserver` half only watches this element's own light-DOM subtree — it cannot see a
   mutation that happens entirely inside a slotted custom element's own shadow root (e.g. a
-  `<lr-markdown>` re-rendering its shadow tree after a `content` change). A slotted element whose
-  own internal updates should drive auto-scroll needs to append/mutate visible light-DOM text
-  itself (as `<lr-streaming-text>` does), or the host can call `scrollToBottom()` directly.
+  `<lr-markdown>` re-rendering its shadow tree after a `content` change). That gap is exactly what
+  the `lr-content-settled` listener covers for this library's own streaming renderers (see above).
+  A bespoke slotted element that is neither a plain light-DOM text producer nor one of those three
+  needs to append/mutate visible light-DOM text itself, emit its own `lr-content-settled`, or have
+  the host call `scrollToBottom()` directly.
 - Either half of the pair can trigger the jump-to-bottom/reset-stickiness behavior, as long as the
   _other_ half already holds: an `expanded` transition to `true` while `mode` is already `'live'`,
   **or** a `mode` transition to `'live'` while the panel is already `expanded`, both jump to the

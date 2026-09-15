@@ -4,6 +4,7 @@ import type { LyraXmlViewer } from './xml-viewer.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
 const SIMPLE_XML = '<root><item id="1">First</item><item id="2">Second</item></root>';
 const RSS_XML = '<rss><channel><title>Feed</title><item><link href="https://a.test">A</link></item></channel></rss>';
@@ -1653,22 +1654,12 @@ it('keeps the per-node copy button visible in coarse/no-hover mode instead of de
     html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`,
   )) as LyraXmlViewer;
   await el.updateComplete;
-  const mediaRule = el
-    .shadowRoot!.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules])
-    .find(
-      (rule): rule is CSSMediaRule =>
-        rule instanceof CSSMediaRule &&
-        rule.conditionText.includes('hover: none') &&
-        rule.conditionText.includes('pointer: coarse'),
-    );
-  expect(mediaRule !== undefined, 'the coarse/no-hover media rule must exist').to.be.true;
-  const original = mediaRule!.media.mediaText;
+  const restore = forceCoarsePointer(el);
   try {
-    mediaRule!.media.mediaText = 'all';
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const button = el.shadowRoot!.querySelector('.row [part="copy-button"]') as HTMLElement;
     expect(getComputedStyle(button).opacity).to.equal('1');
   } finally {
-    mediaRule!.media.mediaText = original;
+    restore();
   }
 });

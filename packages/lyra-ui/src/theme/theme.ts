@@ -11,7 +11,7 @@
 const STORAGE_KEY = 'lyra-theme';
 
 export interface LyraThemeBootstrapOptions {
-  /** The localStorage key holding a `{ mode, accent }` theme record. */
+  /** The localStorage key holding a `{ mode, accent, surface }` theme record. */
   storageKey?: string;
 }
 
@@ -22,12 +22,49 @@ export interface LyraThemeBootstrapOptions {
  */
 export type LyraThemeMode = 'light' | 'dark' | 'auto' | 'unset';
 
-/** Persisted theme selection and optional brand accent. */
+/**
+ * A semantic role the runtime can derive a contrast-checked quiet/normal/loud/on-* ramp for.
+ * Mirrors the five roles `--lr-color-<role>-*` already exposes in the static palette
+ * (`src/internal/tokens/palette.styles.ts`): only `'brand'` also drives `--lr-theme-color-focus`.
+ */
+export type LyraThemeSemanticRole = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
+
+/**
+ * One semantic role's accent input: an absolute CSS color, `null` to clear that role back to the
+ * palette default, or `{ light?, dark? }` to derive the role's ramp from a *different* base color
+ * per resolved mode (each branch independently absolute-CSS-color-or-`null`, defaulting to `null`
+ * when omitted). A bare string/`null` applies to both modes uniformly, matching every pre-16.0.0
+ * per-role value unchanged.
+ */
+export type LyraThemeAccentValue = string | null | { readonly light?: string | null; readonly dark?: string | null };
+
+/**
+ * Absolute CSS color input for the accent ramp(s). A bare string is shorthand for
+ * `{ brand: <that string> }`, matching every pre-16.0.0 caller unchanged. An object supplies a
+ * `LyraThemeAccentValue` per semantic role -- only the roles present are (re)derived; omitted
+ * roles keep whatever the shipped/inherited palette already provides. `null` (at either level)
+ * clears that role back to the palette default.
+ */
+export type LyraThemeAccent =
+  | string
+  | null
+  | { readonly [role in LyraThemeSemanticRole]?: LyraThemeAccentValue };
+
+/** Persisted theme selection, optional per-role accent, and optional surface reference. */
 export interface LyraTheme {
   /** Requested selection mode; `auto` remains distinct from its resolved light/dark value. */
   mode: LyraThemeMode;
-  /** Absolute CSS brand color, or `null` to use the active stylesheet palette. */
-  accent: string | null;
+  /**
+   * Absolute CSS brand color, a per-role `LyraThemeAccentValue` map (each role optionally
+   * per-mode via `{ light?, dark? }`), or `null` to use the active stylesheet palette.
+   */
+  accent: LyraThemeAccent;
+  /**
+   * Absolute CSS color used as the ramp mix base instead of the shipped light/dark surface
+   * defaults (`#1a1a1a` dark / `#ffffff` light). `null` keeps those defaults. An alpha channel in
+   * the supplied color is composited against the default surface for that mode before use.
+   */
+  surface: string | null;
 }
 
 /** Snapshot carried by the global `lr-theme-change` event. */
@@ -39,24 +76,31 @@ declare global {
   }
 }
 
-const DEFAULT_THEME: Readonly<LyraTheme> = Object.freeze({ mode: 'auto', accent: null });
+const DEFAULT_THEME: Readonly<LyraTheme> = Object.freeze({ mode: 'auto', accent: null, surface: null });
 
 type ResolvedThemeMode = 'light' | 'dark';
 type Rgb = readonly [red: number, green: number, blue: number];
 
 const COLOR_SCHEME_QUERY = '(prefers-color-scheme: dark)';
-const BRAND_RAMP_PROPERTIES = [
-  '--lr-theme-color-brand-fill-quiet',
-  '--lr-theme-color-brand-fill-normal',
-  '--lr-theme-color-brand-fill-loud',
-  '--lr-theme-color-brand-border-quiet',
-  '--lr-theme-color-brand-border-normal',
-  '--lr-theme-color-brand-border-loud',
-  '--lr-theme-color-brand-on-quiet',
-  '--lr-theme-color-brand-on-normal',
-  '--lr-theme-color-brand-on-loud',
+
+/** Every role the runtime knows how to derive a ramp for, in the order applied and cleared. */
+const SEMANTIC_ROLES: readonly LyraThemeSemanticRole[] = ['brand', 'success', 'warning', 'danger', 'neutral'];
+const RAMP_CHANNELS = ['fill', 'border', 'on'] as const;
+const RAMP_TIERS = ['quiet', 'normal', 'loud'] as const;
+
+function roleRampProperties(role: LyraThemeSemanticRole): string[] {
+  const properties: string[] = [];
+  for (const channel of RAMP_CHANNELS) {
+    for (const tier of RAMP_TIERS) properties.push(`--lr-theme-color-${role}-${channel}-${tier}`);
+  }
+  return properties;
+}
+
+/** Every custom property any role's ramp can write, plus the brand-only focus token. */
+const ALL_RAMP_PROPERTIES: readonly string[] = [
+  ...SEMANTIC_ROLES.flatMap(roleRampProperties),
   '--lr-theme-color-focus',
-] as const;
+];
 
 /**
  * The last theme this module applied. `localStorage` is the source of truth whenever it is
@@ -92,7 +136,8 @@ function isThemeMode(value: unknown): value is LyraThemeMode {
   return value === 'light' || value === 'dark' || value === 'auto' || value === 'unset';
 }
 
-function normalizeAccent(value: unknown): string | null {
+/** Syntax-level validation shared by a bare accent string, a per-role accent value, and `surface`. */
+function normalizeColor(value: unknown): string | null {
   if (typeof value !== 'string' || !value.trim()) return null;
   const candidate = value.trim();
   // Relative and CSS-wide values cannot be converted into a deterministic semantic ramp.
@@ -109,6 +154,69 @@ function normalizeAccent(value: unknown): string | null {
   const probe = document.createElement('span');
   probe.style.color = candidate;
   return probe.style.color ? candidate : null;
+}
+
+/**
+ * Normalizes one role's accent input (`normalizeAccent`'s per-role element): a bare color string,
+ * `null`, or a `{ light?, dark? }` per-mode map. A per-mode map with both branches unresolvable
+ * (missing key, malformed color) collapses to `null` -- same "nothing to offer" meaning as a bare
+ * `null`, so callers never need to distinguish an empty per-mode object from an absent role.
+ */
+function normalizeAccentValue(value: unknown): LyraThemeAccentValue {
+  if (typeof value === 'string' || value === null) return normalizeColor(value);
+  if (typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (!('light' in record) && !('dark' in record)) return null;
+  const light = normalizeColor(record['light']);
+  const dark = normalizeColor(record['dark']);
+  return light || dark ? { light, dark } : null;
+}
+
+/** Normalizes a whole `accent` field: a bare color string, a per-role accent-value map, or `null`. */
+function normalizeAccent(value: unknown): LyraThemeAccent {
+  if (typeof value === 'string') return normalizeColor(value);
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const result: Partial<Record<LyraThemeSemanticRole, LyraThemeAccentValue>> = {};
+  let hasRole = false;
+  for (const role of SEMANTIC_ROLES) {
+    if (!(role in record)) continue;
+    hasRole = true;
+    result[role] = normalizeAccentValue(record[role]);
+  }
+  return hasRole ? result : null;
+}
+
+/** Resolves one role's (possibly per-mode) accent value to the concrete color for `mode`. */
+function resolveAccentValueForMode(value: LyraThemeAccentValue, mode: ResolvedThemeMode): string | null {
+  if (typeof value === 'string') return value;
+  return value ? value[mode] ?? null : null;
+}
+
+/** Structural equality for one role's `LyraThemeAccentValue`. */
+function accentValueEqual(left: LyraThemeAccentValue, right: LyraThemeAccentValue): boolean {
+  if (left === right) return true;
+  if (typeof left === 'string' || typeof right === 'string' || left === null || right === null) return false;
+  return (left['light'] ?? null) === (right['light'] ?? null) && (left['dark'] ?? null) === (right['dark'] ?? null);
+}
+
+/**
+ * @internal Structural equality for `LyraThemeAccent`, since the object form is rebuilt on every
+ * apply. Exported (not published -- see the `@internal` tag) so `presets.ts` can tell a
+ * genuinely-changed accent apart from a freshly reconstructed object with the same role/color
+ * pairs when deciding whether a preset's snapshot still matches. This is package-internal wiring
+ * between two of this module's own siblings, not a capability an application needs to compare its
+ * own accent values -- so, like `menu-shared.ts`'s `menuItemOwner`/`submenuPanelController` and
+ * `reorder-owner.ts`'s owner-state helpers, it stays out of the public source-contract census
+ * instead of becoming permanent public API nobody asked for.
+ */
+export function accentsEqual(left: LyraThemeAccent, right: LyraThemeAccent): boolean {
+  if (left === right) return true;
+  if (typeof left === 'string' || typeof right === 'string' || left === null || right === null) return false;
+  const leftKeys = Object.keys(left) as LyraThemeSemanticRole[];
+  const rightKeys = Object.keys(right) as LyraThemeSemanticRole[];
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every((role) => accentValueEqual(left[role] as LyraThemeAccentValue, right[role] as LyraThemeAccentValue));
 }
 
 function parseResolvedRgb(value: string, background: Rgb): Rgb | null {
@@ -185,32 +293,59 @@ function ensureSurfaceContrast(color: Rgb, background: Rgb): Rgb {
   return target;
 }
 
-function createAccentRamp(accent: string, mode: ResolvedThemeMode): Record<string, string> | null {
-  const background: Rgb = mode === 'dark' ? [26, 26, 26] : [255, 255, 255];
-  const resolvedAccent = parseResolvedRgb(accent, background);
-  if (!resolvedAccent) return null;
-  const quiet = mixRgb(background, resolvedAccent, mode === 'dark' ? 0.24 : 0.14);
-  const normal = mixRgb(background, resolvedAccent, mode === 'dark' ? 0.62 : 0.55);
-  const loud = resolvedAccent;
+/** The shipped light/dark surface default a ramp mixes against when no `surface` is supplied. */
+function defaultBackground(mode: ResolvedThemeMode): Rgb {
+  return mode === 'dark' ? [26, 26, 26] : [255, 255, 255];
+}
+
+/**
+ * Resolves the mix base for every ramp: the supplied `surface` reference (its alpha, if any,
+ * composited against the mode's own default surface), or that default surface unchanged.
+ */
+function resolveBackground(mode: ResolvedThemeMode, surface: string | null): Rgb {
+  const fallback = defaultBackground(mode);
+  if (!surface) return fallback;
+  return parseResolvedRgb(surface, fallback) ?? fallback;
+}
+
+/**
+ * Derives one role's contrast-checked quiet/normal/loud fill/border/on-* ramp (plus, for
+ * `'brand'` only, the focus token) against a resolved mix base. Returns `null` when `base` cannot
+ * be resolved to a concrete color at all (malformed syntax already filtered by `normalizeColor`,
+ * or a canvas failure at paint time).
+ */
+function createRoleRamp(
+  role: LyraThemeSemanticRole,
+  base: string,
+  mode: ResolvedThemeMode,
+  background: Rgb,
+): Record<string, string> | null {
+  const resolved = parseResolvedRgb(base, background);
+  if (!resolved) return null;
+  const quiet = mixRgb(background, resolved, mode === 'dark' ? 0.24 : 0.14);
+  const normal = mixRgb(background, resolved, mode === 'dark' ? 0.62 : 0.55);
+  const loud = resolved;
   const borderTarget: Rgb = mode === 'dark' ? [255, 255, 255] : [0, 0, 0];
-  const borderQuiet = mixRgb(background, resolvedAccent, mode === 'dark' ? 0.46 : 0.38);
+  const borderQuiet = mixRgb(background, resolved, mode === 'dark' ? 0.46 : 0.38);
   const borderNormal = ensureSurfaceContrast(
-    mixRgb(background, resolvedAccent, mode === 'dark' ? 0.78 : 0.72),
+    mixRgb(background, resolved, mode === 'dark' ? 0.78 : 0.72),
     background,
   );
-  const borderLoud = ensureSurfaceContrast(mixRgb(resolvedAccent, borderTarget, 0.2), background);
-  return {
-    '--lr-theme-color-brand-fill-quiet': serializeRgb(quiet),
-    '--lr-theme-color-brand-fill-normal': serializeRgb(normal),
-    '--lr-theme-color-brand-fill-loud': serializeRgb(loud),
-    '--lr-theme-color-brand-border-quiet': serializeRgb(borderQuiet),
-    '--lr-theme-color-brand-border-normal': serializeRgb(borderNormal),
-    '--lr-theme-color-brand-border-loud': serializeRgb(borderLoud),
-    '--lr-theme-color-brand-on-quiet': serializeRgb(contrastForeground(quiet)),
-    '--lr-theme-color-brand-on-normal': serializeRgb(contrastForeground(normal)),
-    '--lr-theme-color-brand-on-loud': serializeRgb(contrastForeground(loud)),
-    '--lr-theme-color-focus': serializeRgb(ensureSurfaceContrast(resolvedAccent, background)),
+  const borderLoud = ensureSurfaceContrast(mixRgb(resolved, borderTarget, 0.2), background);
+  const prefix = `--lr-theme-color-${role}`;
+  const ramp: Record<string, string> = {
+    [`${prefix}-fill-quiet`]: serializeRgb(quiet),
+    [`${prefix}-fill-normal`]: serializeRgb(normal),
+    [`${prefix}-fill-loud`]: serializeRgb(loud),
+    [`${prefix}-border-quiet`]: serializeRgb(borderQuiet),
+    [`${prefix}-border-normal`]: serializeRgb(borderNormal),
+    [`${prefix}-border-loud`]: serializeRgb(borderLoud),
+    [`${prefix}-on-quiet`]: serializeRgb(contrastForeground(quiet)),
+    [`${prefix}-on-normal`]: serializeRgb(contrastForeground(normal)),
+    [`${prefix}-on-loud`]: serializeRgb(contrastForeground(loud)),
   };
+  if (role === 'brand') ramp['--lr-theme-color-focus'] = serializeRgb(ensureSurfaceContrast(resolved, background));
+  return ramp;
 }
 
 function detachAutoListener(): void {
@@ -238,9 +373,21 @@ function writeResolvedMode(mode: ResolvedThemeMode | null): void {
   }
 }
 
-function writeAccent(accent: string | null, mode: ResolvedThemeMode | null): string | null {
+/**
+ * Clears every ramp property, then (re)derives whichever roles `accent` supplies against `surface`
+ * (or the mode default). Returns the accent value actually applied -- `null` when nothing could be
+ * resolved, a bare string when the single brand ramp applied, or an object of only the roles that
+ * resolved (or, for a `{ light, dark }` role value, still carry an unpainted branch for the other
+ * mode), so callers can tell a total failure apart from what was requested and so a later mode
+ * change can still resolve a branch that the active mode did not paint.
+ */
+function writeAccent(
+  accent: LyraThemeAccent,
+  surface: string | null,
+  mode: ResolvedThemeMode | null,
+): LyraThemeAccent {
   const rootStyle = document.documentElement.style;
-  for (const property of BRAND_RAMP_PROPERTIES) rootStyle.removeProperty(property);
+  for (const property of ALL_RAMP_PROPERTIES) rootStyle.removeProperty(property);
   if (!accent) {
     rootStyle.removeProperty('--lr-theme-accent');
     return null;
@@ -249,14 +396,42 @@ function writeAccent(accent: string | null, mode: ResolvedThemeMode | null): str
     rootStyle.removeProperty('--lr-theme-accent');
     return accent;
   }
-  const ramp = createAccentRamp(accent, mode);
-  if (!ramp) {
-    rootStyle.removeProperty('--lr-theme-accent');
-    return null;
+  const background = resolveBackground(mode, surface);
+  if (typeof accent === 'string') {
+    const ramp = createRoleRamp('brand', accent, mode, background);
+    if (!ramp) {
+      rootStyle.removeProperty('--lr-theme-accent');
+      return null;
+    }
+    rootStyle.setProperty('--lr-theme-accent', accent);
+    for (const [property, value] of Object.entries(ramp)) rootStyle.setProperty(property, value);
+    return accent;
   }
-  rootStyle.setProperty('--lr-theme-accent', accent);
-  for (const [property, value] of Object.entries(ramp)) rootStyle.setProperty(property, value);
-  return accent;
+  const applied: Partial<Record<LyraThemeSemanticRole, LyraThemeAccentValue>> = {};
+  let appliedBrandColor: string | null = null;
+  for (const role of SEMANTIC_ROLES) {
+    const value = accent[role];
+    if (!value) continue;
+    const isPerMode = typeof value !== 'string';
+    const base = resolveAccentValueForMode(value, mode);
+    let painted = false;
+    if (base) {
+      const ramp = createRoleRamp(role, base, mode, background);
+      if (ramp) {
+        for (const [property, propertyValue] of Object.entries(ramp)) rootStyle.setProperty(property, propertyValue);
+        painted = true;
+        if (role === 'brand') appliedBrandColor = base;
+      }
+    }
+    // A bare string that failed to paint (rare canvas failure) drops from `applied`, exactly like
+    // pre-16.0.0 behaviour; a `{ light, dark }` value is retained regardless of whether the active
+    // mode's own branch painted, so the *other* mode's branch survives a later mode change/flip
+    // instead of being silently dropped from persisted/reported state.
+    if (painted || isPerMode) applied[role] = value;
+  }
+  if (appliedBrandColor) rootStyle.setProperty('--lr-theme-accent', appliedBrandColor);
+  else rootStyle.removeProperty('--lr-theme-accent');
+  return Object.keys(applied).length > 0 ? applied : null;
 }
 
 function readStoredTheme(): LyraTheme {
@@ -281,6 +456,7 @@ function readStoredTheme(): LyraTheme {
     return {
       mode: isThemeMode(parsed.mode) ? parsed.mode : 'auto',
       accent: normalizeAccent(parsed.accent),
+      surface: normalizeColor(parsed.surface),
     };
   } catch {
     // Readable storage holding garbage (another tool wrote the key, a truncated write): also a
@@ -292,7 +468,7 @@ function readStoredTheme(): LyraTheme {
 function applyTheme(theme: LyraTheme): void {
   detachAutoListener();
   let resolvedMode = resolveThemeMode(theme.mode);
-  const accent = writeAccent(theme.accent, resolvedMode);
+  const accent = writeAccent(theme.accent, theme.surface, resolvedMode);
   lastApplied = { ...theme, accent };
   writeResolvedMode(resolvedMode);
 
@@ -301,7 +477,7 @@ function applyTheme(theme: LyraTheme): void {
   autoMediaListener = (event) => {
     resolvedMode = event.matches ? 'dark' : 'light';
     writeResolvedMode(resolvedMode);
-    writeAccent(lastApplied.accent, resolvedMode);
+    writeAccent(lastApplied.accent, lastApplied.surface, resolvedMode);
     window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: { ...lastApplied } }));
   };
   if (typeof autoMediaQuery.addEventListener === 'function') {
@@ -312,20 +488,28 @@ function applyTheme(theme: LyraTheme): void {
 }
 
 /**
- * Sets the persisted theme mode/accent, applies it to `document.documentElement` (via
- * `data-lr-theme`/`data-theme` and a complete `--lr-theme-color-brand-*` ramp), and dispatches
- * `lr-theme-change` on `window` with `detail: { mode, accent }`. Unspecified fields keep their
- * current value. Never throws -- a `localStorage` failure (private browsing, quota, sandboxed
- * iframe) degrades to apply-without-persist, and unspecified fields still keep their value across
- * calls in that state, because the merge falls back to the last applied theme rather than to the
- * default. Accent values must be absolute CSS colors; malformed, CSS-wide, relative, and
- * unresolved `var()` values fail closed to `null`. Each generated fill receives a black or white
- * foreground with at least 4.5:1 contrast; normal/loud borders and the focus color have at least
- * 3:1 contrast against the shipped light/dark surface defaults.
+ * Sets the persisted theme mode/accent/surface, applies it to `document.documentElement` (via
+ * `data-lr-theme`/`data-theme` and a complete `--lr-theme-color-<role>-*` ramp per role `accent`
+ * supplies), and dispatches `lr-theme-change` on `window` with `detail: { mode, accent, surface }`.
+ * Unspecified fields keep their current value. Never throws -- a `localStorage` failure (private
+ * browsing, quota, sandboxed iframe) degrades to apply-without-persist, and unspecified fields
+ * still keep their value across calls in that state, because the merge falls back to the last
+ * applied theme rather than to the default.
+ *
+ * `accent` is either an absolute CSS color (shorthand for `{ brand: <color> }`), a per-role
+ * `{ brand?, success?, warning?, danger?, neutral? }` map, or `null`. Each role's value is in turn
+ * either a bare CSS color/`null` (applied to both resolved modes) or a `{ light?, dark? }` map
+ * deriving that role's ramp from a *different* base color per resolved mode -- e.g.
+ * `{ brand: { light: '#2563eb', dark: '#60a5fa' } }`. `surface` is an absolute CSS color used as
+ * every ramp's mix base instead of the shipped light/dark defaults, or `null` to keep those
+ * defaults. Malformed, CSS-wide, relative, and unresolved `var()` values fail closed to `null` at
+ * the field (or, for a per-role/per-mode value, the individual role/branch) they appear in. Each
+ * generated fill receives a black or white foreground with at least 4.5:1 contrast; normal/loud
+ * borders and the brand focus color have at least 3:1 contrast against the resolved surface.
  */
 export function setLyraTheme(theme: Partial<LyraTheme>): void {
-  // A direct mode/accent edit is no longer exactly the named preset that may have produced the
-  // previous state. applyLyraThemePreset() writes its marker back after this call completes.
+  // A direct mode/accent/surface edit is no longer exactly the named preset that may have produced
+  // the previous state. applyLyraThemePreset() writes its marker back after this call completes.
   document.documentElement.removeAttribute('data-lr-theme-preset');
   const current = readStoredTheme();
   const next: LyraTheme = {
@@ -335,6 +519,7 @@ export function setLyraTheme(theme: Partial<LyraTheme>): void {
         ? theme.mode
         : 'auto',
     accent: theme.accent === undefined ? current.accent : normalizeAccent(theme.accent),
+    surface: theme.surface === undefined ? current.surface : normalizeColor(theme.surface),
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -346,9 +531,10 @@ export function setLyraTheme(theme: Partial<LyraTheme>): void {
     persistenceFailed = true;
   }
   applyTheme(next);
-  // applyTheme can fail a computed color closed even after the syntax-level check above.
+  // applyTheme can fail a computed color (or one role of it) closed even after the syntax-level
+  // check above.
   const applied = lastApplied;
-  if (applied.accent !== next.accent) {
+  if (!accentsEqual(applied.accent, next.accent)) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(applied));
       persistenceFailed = false;
@@ -360,10 +546,10 @@ export function setLyraTheme(theme: Partial<LyraTheme>): void {
 }
 
 /**
- * Reads the current theme mode/accent, defaulting to `{ mode: 'auto', accent: null }` when
- * nothing has been set or the stored value is malformed. Storage is re-read on every call --
- * there is no in-memory cache -- so a value written by another tab or a previous session is
- * picked up cold.
+ * Reads the current theme mode/accent/surface, defaulting to
+ * `{ mode: 'auto', accent: null, surface: null }` when nothing has been set or the stored value is
+ * malformed. Storage is re-read on every call -- there is no in-memory cache -- so a value written
+ * by another tab or a previous session is picked up cold.
  *
  * When `localStorage` is unreadable or unwritable this reports the theme this module last
  * applied, not the default: the returned value always describes what the document is actually
@@ -377,12 +563,12 @@ export function getLyraTheme(): LyraTheme {
 function applyStoredThemeBeforePaint(storageKey: string, modeAttributes: readonly string[]): void {
   try {
     const raw = localStorage.getItem(storageKey);
-    let theme: { mode?: unknown; accent?: unknown } = {};
+    let theme: { mode?: unknown; accent?: unknown; surface?: unknown } = {};
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as unknown;
         if (parsed && typeof parsed === 'object') {
-          theme = parsed as { mode?: unknown; accent?: unknown };
+          theme = parsed as { mode?: unknown; accent?: unknown; surface?: unknown };
         }
       } catch {
         // A corrupt record has the same automatic default as the module getter.
@@ -402,36 +588,63 @@ function applyStoredThemeBeforePaint(storageKey: string, modeAttributes: readonl
     }
 
     const style = document.documentElement.style;
-    const properties = [
-      '--lr-theme-color-brand-fill-quiet',
-      '--lr-theme-color-brand-fill-normal',
-      '--lr-theme-color-brand-fill-loud',
-      '--lr-theme-color-brand-border-quiet',
-      '--lr-theme-color-brand-border-normal',
-      '--lr-theme-color-brand-border-loud',
-      '--lr-theme-color-brand-on-quiet',
-      '--lr-theme-color-brand-on-normal',
-      '--lr-theme-color-brand-on-loud',
-      '--lr-theme-color-focus',
-    ];
+    const roles = ['brand', 'success', 'warning', 'danger', 'neutral'];
+    const channels = ['fill', 'border', 'on'];
+    const tiers = ['quiet', 'normal', 'loud'];
+    const properties: string[] = [];
+    for (const role of roles) {
+      for (const channel of channels) {
+        for (const tier of tiers) properties.push(`--lr-theme-color-${role}-${channel}-${tier}`);
+      }
+    }
+    properties.push('--lr-theme-color-focus');
     for (const property of properties) style.removeProperty(property);
-    const accent = typeof theme.accent === 'string' ? theme.accent.trim() : '';
-    const unsupportedAccent = /^(?:inherit|initial|revert(?:-layer)?|unset)$/i.test(accent)
-      || /^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(accent)
-      || /\bcurrentcolor\b/i.test(accent)
-      || /\bvar\s*\(/i.test(accent)
-      || /\blight-dark\s*\(/i.test(accent)
-      || /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\(\s*from\b/i.test(accent);
-    if (!accent || !resolvedMode || unsupportedAccent) {
+
+    const unsupported = (value: string) =>
+      /^(?:inherit|initial|revert(?:-layer)?|unset)$/i.test(value)
+        || /^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(value)
+        || /\bcurrentcolor\b/i.test(value)
+        || /\bvar\s*\(/i.test(value)
+        || /\blight-dark\s*\(/i.test(value)
+        || /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\(\s*from\b/i.test(value);
+
+    const normalize = (raw: unknown): string | null => {
+      if (typeof raw !== 'string') return null;
+      const trimmed = raw.trim();
+      if (!trimmed || unsupported(trimmed)) return null;
+      const syntaxProbe = document.createElement('span');
+      syntaxProbe.style.color = trimmed;
+      return syntaxProbe.style.color ? trimmed : null;
+    };
+
+    // A role's raw value is a bare color, `null`, or a `{ light, dark }` per-mode map -- resolves
+    // to the branch matching `resolvedMode` (mirroring theme.ts's own `resolveAccentValueForMode`)
+    // before the same syntax-level `normalize` every other color passes through.
+    const resolveRoleAccent = (raw: unknown): string | null => {
+      if (typeof raw === 'string') return normalize(raw);
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+      const perMode = raw as Record<string, unknown>;
+      if (!resolvedMode || (!('light' in perMode) && !('dark' in perMode))) return null;
+      return normalize(perMode[resolvedMode]);
+    };
+
+    const accentRoles: Record<string, string> = {};
+    const rawAccent = theme.accent;
+    if (typeof rawAccent === 'string') {
+      const normalized = normalize(rawAccent);
+      if (normalized) accentRoles['brand'] = normalized;
+    } else if (rawAccent && typeof rawAccent === 'object' && !Array.isArray(rawAccent)) {
+      for (const role of roles) {
+        const normalized = resolveRoleAccent((rawAccent as Record<string, unknown>)[role]);
+        if (normalized) accentRoles[role] = normalized;
+      }
+    }
+
+    if (!resolvedMode || Object.keys(accentRoles).length === 0) {
       style.removeProperty('--lr-theme-accent');
       return;
     }
-    const syntaxProbe = document.createElement('span');
-    syntaxProbe.style.color = accent;
-    if (!syntaxProbe.style.color) {
-      style.removeProperty('--lr-theme-accent');
-      return;
-    }
+
     const canvas = document.createElement('canvas');
     canvas.width = 1;
     canvas.height = 1;
@@ -440,15 +653,20 @@ function applyStoredThemeBeforePaint(storageKey: string, modeAttributes: readonl
       style.removeProperty('--lr-theme-accent');
       return;
     }
-    context.clearRect(0, 0, 1, 1);
-    context.fillStyle = accent;
-    context.fillRect(0, 0, 1, 1);
-    const channels = [...context.getImageData(0, 0, 1, 1).data];
-    const background = resolvedMode === 'dark' ? [26, 26, 26] : [255, 255, 255];
-    const alpha = (channels[3] ?? 0) / 255;
-    const color = channels.slice(0, 3).map((channel, index) =>
-      Math.round(channel * alpha + (background[index] ?? 0) * (1 - alpha)),
-    );
+
+    const paintRgb = (value: string, background: number[]): number[] | null => {
+      try {
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = value;
+        context.fillRect(0, 0, 1, 1);
+        const channelsData = [...context.getImageData(0, 0, 1, 1).data];
+        const alpha = (channelsData[3] ?? 0) / 255;
+        return channelsData.slice(0, 3).map((channel, index) =>
+          Math.round(channel * alpha + (background[index] ?? 0) * (1 - alpha)));
+      } catch {
+        return null;
+      }
+    };
     const mix = (base: number[], foreground: number[], weight: number) =>
       base.map((channel, index) =>
         Math.round(channel * (1 - weight) + (foreground[index] ?? 0) * weight));
@@ -471,10 +689,7 @@ function applyStoredThemeBeforePaint(storageKey: string, modeAttributes: readonl
     const black = [0, 0, 0];
     const white = [255, 255, 255];
     const on = (fill: number[]) => contrast(fill, black) >= contrast(fill, white) ? black : white;
-    const quiet = mix(background, color, resolvedMode === 'dark' ? 0.24 : 0.14);
-    const normal = mix(background, color, resolvedMode === 'dark' ? 0.62 : 0.55);
-    const borderTarget = resolvedMode === 'dark' ? white : black;
-    const ensureContrast = (value: number[]) => {
+    const ensureContrast = (value: number[], background: number[]) => {
       if (contrast(value, background) >= 3) return value;
       const target = contrast(background, black) >= contrast(background, white) ? black : white;
       for (let step = 1; step <= 10; step += 1) {
@@ -483,41 +698,65 @@ function applyStoredThemeBeforePaint(storageKey: string, modeAttributes: readonl
       }
       return target;
     };
-    const borderNormal = ensureContrast(
-      mix(background, color, resolvedMode === 'dark' ? 0.78 : 0.72),
-    );
-    const borderLoud = ensureContrast(mix(color, borderTarget, 0.2));
     const rgb = (value: number[]) => `rgb(${value.join(' ')})`;
-    const ramp: Record<string, number[]> = {
-      '--lr-theme-color-brand-fill-quiet': quiet,
-      '--lr-theme-color-brand-fill-normal': normal,
-      '--lr-theme-color-brand-fill-loud': color,
-      '--lr-theme-color-brand-border-quiet': mix(background, color, resolvedMode === 'dark' ? 0.46 : 0.38),
-      '--lr-theme-color-brand-border-normal': borderNormal,
-      '--lr-theme-color-brand-border-loud': borderLoud,
-      '--lr-theme-color-brand-on-quiet': on(quiet),
-      '--lr-theme-color-brand-on-normal': on(normal),
-      '--lr-theme-color-brand-on-loud': on(color),
-      '--lr-theme-color-focus': ensureContrast(color),
-    };
-    style.setProperty('--lr-theme-accent', accent);
-    for (const [property, value] of Object.entries(ramp)) style.setProperty(property, rgb(value));
+
+    const defaultSurface = resolvedMode === 'dark' ? [26, 26, 26] : [255, 255, 255];
+    const surface = normalize(theme.surface);
+    const background = (surface && paintRgb(surface, defaultSurface)) || defaultSurface;
+
+    let appliedBrand: string | null = null;
+    for (const role of roles) {
+      const base = accentRoles[role];
+      if (!base) continue;
+      const color = paintRgb(base, background);
+      if (!color) continue;
+      const quiet = mix(background, color, resolvedMode === 'dark' ? 0.24 : 0.14);
+      const normal = mix(background, color, resolvedMode === 'dark' ? 0.62 : 0.55);
+      const borderTarget = resolvedMode === 'dark' ? white : black;
+      const borderQuiet = mix(background, color, resolvedMode === 'dark' ? 0.46 : 0.38);
+      const borderNormal = ensureContrast(
+        mix(background, color, resolvedMode === 'dark' ? 0.78 : 0.72),
+        background,
+      );
+      const borderLoud = ensureContrast(mix(color, borderTarget, 0.2), background);
+      const prefix = `--lr-theme-color-${role}`;
+      style.setProperty(`${prefix}-fill-quiet`, rgb(quiet));
+      style.setProperty(`${prefix}-fill-normal`, rgb(normal));
+      style.setProperty(`${prefix}-fill-loud`, rgb(color));
+      style.setProperty(`${prefix}-border-quiet`, rgb(borderQuiet));
+      style.setProperty(`${prefix}-border-normal`, rgb(borderNormal));
+      style.setProperty(`${prefix}-border-loud`, rgb(borderLoud));
+      style.setProperty(`${prefix}-on-quiet`, rgb(on(quiet)));
+      style.setProperty(`${prefix}-on-normal`, rgb(on(normal)));
+      style.setProperty(`${prefix}-on-loud`, rgb(on(color)));
+      if (role === 'brand') {
+        style.setProperty('--lr-theme-color-focus', rgb(ensureContrast(color, background)));
+        appliedBrand = base;
+      }
+    }
+    if (appliedBrand) style.setProperty('--lr-theme-accent', appliedBrand);
+    else style.removeProperty('--lr-theme-accent');
   } catch {
     // A no-flash bootstrap must never block the rest of the document head.
   }
 }
 
+// Built via String.fromCharCode rather than a \uXXXX regex escape so the source bytes are
+// unambiguous regardless of how this file is transmitted/edited.
+const LINE_SEPARATOR = String.fromCharCode(0x2028);
+const PARAGRAPH_SEPARATOR = String.fromCharCode(0x2029);
+
 function serializeInlineScriptData(value: string | readonly string[]): string {
   return JSON.stringify(value)
     .replace(/</g, '\\u003c')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
+    .replace(new RegExp(LINE_SEPARATOR, 'g'), '\\u2028')
+    .replace(new RegExp(PARAGRAPH_SEPARATOR, 'g'), '\\u2029');
 }
 
 /**
  * Creates a self-contained IIFE body, safe to inline into a `<script>` tag placed before any
- * stylesheet in `<head>`, that applies a persisted `{ mode, accent }` theme before first paint.
- * Missing and malformed records use the runtime's automatic/no-accent default.
+ * stylesheet in `<head>`, that applies a persisted `{ mode, accent, surface }` theme before first
+ * paint. Missing and malformed records use the runtime's automatic/no-accent default.
  * The serialized options escape HTML script terminators and JavaScript line separators.
  * Pass an application-owned `storageKey` to reuse the no-flash bootstrap independently of this
  * module's `setLyraTheme()`/`getLyraTheme()` persistence key.

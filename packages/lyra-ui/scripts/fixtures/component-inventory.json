@@ -52096,13 +52096,13 @@
         "events": [
           {
             "name": "lr-input",
-            "type": "CustomEvent<LyraFilterBarInputDetail>",
+            "type": "CustomEvent<LyraFilterBarInputDetail<Defs>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-reset",
-            "type": "CustomEvent<LyraFilterBarResetDetail>",
+            "type": "CustomEvent<LyraFilterBarResetDetail<Defs>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -72813,6 +72813,14 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-content-settled",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
             "name": "lr-highlight-activate",
             "type": "CustomEvent<HighlightActivateDetail>",
             "cancelable": "never",
@@ -73400,6 +73408,14 @@
             "type": "CustomEvent<AnchorResultDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-content-settled",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
           },
           {
             "name": "lr-highlight-activate",
@@ -115131,7 +115147,14 @@
           }
         ],
         "slots": [],
-        "events": [],
+        "events": [
+          {
+            "name": "lr-content-settled",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
         "parts": [
           {
             "name": "base",

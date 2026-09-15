@@ -294,9 +294,62 @@ export type LyraFilterBarFilterDefinition =
  */
 export type LyraFilterBarValue = Readonly<Record<string, LyraFilterBarFieldValue>>;
 
-export interface LyraFilterBarInputDetail {
+/**
+ * The `value` field shape one filter definition implies, at the type level only -- the same
+ * per-definition narrowing `LyraPickerValue<Multiple>` (`picker-value.ts`) does for
+ * `<lr-select>`/`<lr-combobox>`, applied to `<lr-filter-bar>`'s per-`filterId` value record
+ * instead of a single control's own `value`. A `'checkbox-menu'` (always `string[]`, exactly like
+ * a `multiple` `'combobox'`) and a `'combobox'` with `multiple: true` narrow to `readonly
+ * string[]`; every other `'combobox'` and every `'select'`/`'text'`/`'date'`/`'date-range'` narrow
+ * to `string`; a `'custom'` definition keeps the full unconstrained `LyraFilterBarFieldValue`,
+ * since its adapter is free to use either boolean meaning (see `LyraFilterBarCustomControlAdapter`).
+ */
+export type LyraFilterBarDefinitionValue<D extends LyraFilterBarFilterDefinition> =
+  D extends LyraFilterBarCheckboxMenuDefinition
+    ? readonly string[]
+    : D extends LyraFilterBarComboboxDefinition
+      ? D extends { multiple: true }
+        ? readonly string[]
+        : string
+      : D extends LyraFilterBarCustomDefinition
+        ? LyraFilterBarFieldValue
+        : string;
+
+/**
+ * `LyraFilterBarValue` narrowed to a keyed record whose per-`filterId` value type follows the
+ * matching entry in `Defs` -- the filter-bar analogue of `LyraPickerValue<Multiple>`.
+ *
+ * `readonly LyraFilterBarFilterDefinition[] extends Defs` is true only for that unnarrowed
+ * default (mirroring the `boolean extends Multiple` check `LyraPickerValue` uses), so an untyped
+ * `<lr-filter-bar>` -- every shipped call site -- keeps exactly today's `LyraFilterBarValue` and
+ * compiles unchanged. A literal `Defs` (typically declared with `as const satisfies readonly
+ * LyraFilterBarFilterDefinition[]`) instead narrows each key to its own definition's value type.
+ * This is deliberately types-only: the runtime shape (`LyraFilterBarFieldValue` per key) is
+ * unchanged either way.
+ *
+ * ```ts
+ * const FILTERS = [
+ *   { filterId: 'status', label: 'Status', type: 'select', options: [...] },
+ *   { filterId: 'tags', label: 'Tags', type: 'combobox', multiple: true, options: [...] },
+ * ] as const satisfies readonly LyraFilterBarFilterDefinition[];
+ * declare const bar: LyraFilterBar<typeof FILTERS>;
+ * bar.value.status;  // string | undefined
+ * bar.value.tags;    // readonly string[] | undefined
+ * ```
+ */
+export type LyraFilterBarValueFor<
+  Defs extends readonly LyraFilterBarFilterDefinition[],
+> = readonly LyraFilterBarFilterDefinition[] extends Defs
+  ? LyraFilterBarValue
+  : Readonly<{
+      [D in Defs[number] as D['filterId']]?: LyraFilterBarDefinitionValue<D>;
+    }>;
+
+export interface LyraFilterBarInputDetail<
+  Defs extends readonly LyraFilterBarFilterDefinition[] = readonly LyraFilterBarFilterDefinition[],
+> {
   /** The full current value of every filter, not just the one that changed. */
-  readonly value: LyraFilterBarValue;
+  readonly value: LyraFilterBarValueFor<Defs>;
   /** The filter that changed, or `undefined` when every filter changed at once (a `reset()`). */
   readonly filterId?: string;
   /** For a `'date-range'` filter committed from its quick-range row: the `presets` entry that
@@ -319,15 +372,32 @@ export interface LyraFilterBarValidityDetail {
   readonly invalidFilterIds: readonly string[];
 }
 
-export interface LyraFilterBarResetDetail {
-  readonly value: LyraFilterBarValue;
+export interface LyraFilterBarResetDetail<
+  Defs extends readonly LyraFilterBarFilterDefinition[] = readonly LyraFilterBarFilterDefinition[],
+> {
+  readonly value: LyraFilterBarValueFor<Defs>;
 }
 
-export interface LyraFilterBarEventMap {
-  'lr-input': CustomEvent<LyraFilterBarInputDetail>;
+export interface LyraFilterBarEventMap<
+  Defs extends readonly LyraFilterBarFilterDefinition[] = readonly LyraFilterBarFilterDefinition[],
+> {
+  'lr-input': CustomEvent<LyraFilterBarInputDetail<Defs>>;
   'lr-validity-change': CustomEvent<LyraEventDetailSnapshot<LyraFilterBarValidityDetail>>;
-  'lr-reset': CustomEvent<LyraFilterBarResetDetail>;
+  'lr-reset': CustomEvent<LyraFilterBarResetDetail<Defs>>;
 }
+
+/**
+ * Stable per-event aliases, so a host can name one event's type without restating the detail
+ * schema (or re-deriving it from `LyraFilterBarEventMap`). Each narrows with the same `Defs`
+ * parameter the component does: `LyraFilterBarInputEvent<typeof FILTERS>`'s `detail.value.status`
+ * follows that `filterId`'s own definition.
+ */
+export type LyraFilterBarInputEvent<
+  Defs extends readonly LyraFilterBarFilterDefinition[] = readonly LyraFilterBarFilterDefinition[],
+> = LyraFilterBarEventMap<Defs>['lr-input'];
+export type LyraFilterBarResetEvent<
+  Defs extends readonly LyraFilterBarFilterDefinition[] = readonly LyraFilterBarFilterDefinition[],
+> = LyraFilterBarEventMap<Defs>['lr-reset'];
 
 const MAX_FILTER_COLLECTION_ENTRIES = 10_000;
 const MAX_FILTER_COLLECTION_NODES = 50_000;
@@ -810,7 +880,9 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * @status stable
  * @since 4.1.0
  */
-export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
+export class LyraFilterBar<
+  Defs extends readonly LyraFilterBarFilterDefinition[] = readonly LyraFilterBarFilterDefinition[],
+> extends LyraElement<LyraFilterBarEventMap<Defs>> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -889,19 +961,30 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
    * nested collection entries are deeply snapshotted and frozen; reassign after changing them.
    * `null`/`undefined` is treated as an empty array rather than throwing. Choice options require
    * string value/label data fields; malformed entries are omitted independently. Custom definitions
-   * require a callable renderer and adapter. Exceptions thrown by admitted renderers propagate. */
-  get filters(): readonly LyraFilterBarFilterDefinition[] {
-    return this._filters;
+   * require a callable renderer and adapter. Exceptions thrown by admitted renderers propagate.
+   *
+   * `Defs` narrows this element's `value` to a keyed record typed per `filterId` -- see
+   * `LyraFilterBarValueFor`; the unnarrowed default resolves to the published `readonly
+   * LyraFilterBarFilterDefinition[]` below, which is why the manifest type is pinned here rather
+   * than left to the class's own type parameter.
+   * @type {readonly LyraFilterBarFilterDefinition[]} */
+  get filters(): Defs {
+    return this._filters as Defs;
   }
-  set filters(next: readonly LyraFilterBarFilterDefinition[] | null | undefined) {
+  set filters(next: Defs | null | undefined) {
     const old = this._filters;
+    // Pinned to the un-narrowed class: inside the class body `Defs` is an unresolved type
+    // parameter, which leaves it opaque to every concrete array below -- the same reason
+    // `LyraSelect`'s `assignValue()`/`emitValueEvents()` widen through a `Multiple`-resolved
+    // `self` first. The constraint already guarantees the runtime shape.
+    const widened = next as readonly LyraFilterBarFilterDefinition[] | null | undefined;
     // A queued text edit belongs to the exact schema that rendered its control. Even a same-filterId
     // replacement may change type/defaults/debounce semantics, so a schema assignment cancels all
     // drafts before the new controls are reconciled.
     this.cancelDebounce();
     this.renewSchemaContext();
     const seen = new Set<string>();
-    this._filters = Object.freeze(snapshotFilterDefinitions(next).filter((definition) => {
+    this._filters = Object.freeze(snapshotFilterDefinitions(widened).filter((definition) => {
       try {
         if (
           !definition ||
@@ -946,21 +1029,29 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
    *  writes clone and freeze the record and each string-array field, bounded to 10,000 keys and
    *  10,000 array entries, so mutations never affect this component's state or a subsequent
    *  `lr-input` detail. Reassign after changes. `null`/`undefined` writes clear to the canonical
-   *  empty record while reads stay non-null. */
-  get value(): LyraFilterBarValue {
-    return cloneFilterValue(this._value);
+   *  empty record while reads stay non-null.
+   *
+   *  `LyraFilterBarValueFor<Defs>` narrows each key to the value type the matching entry in
+   *  `filters` implies (see `LyraFilterBarDefinitionValue`) when this element is typed with a
+   *  literal `Defs`; the unnarrowed default resolves to the published record below, which is why
+   *  the manifest type is pinned here rather than left to the inferred alias name.
+   *  @type {LyraFilterBarValue} */
+  get value(): LyraFilterBarValueFor<Defs> {
+    return cloneFilterValue(this._value) as LyraFilterBarValueFor<Defs>;
   }
-  set value(next: LyraFilterBarValue | null | undefined) {
+  set value(next: LyraFilterBarValueFor<Defs> | null | undefined) {
     const old = this._value;
+    // Pinned to the un-narrowed class -- see the `filters` setter's identical note.
+    const widened = next as LyraFilterBarValue | null | undefined;
     // Best-effort, defensively-guarded: this snapshot only feeds `filters`'s later re-derivation
     // (below), so a hostile/unclonable `next` must still leave `_value` itself computed exactly as
     // before (never throwing, never changed by this snapshot's own field-dropping rules).
     try {
-      this.rawValue = cloneFilterValue(next ?? EMPTY_VALUE);
+      this.rawValue = cloneFilterValue(widened ?? EMPTY_VALUE);
     } catch {
       this.rawValue = EMPTY_VALUE;
     }
-    this._value = this.normalizeValue(next);
+    this._value = this.normalizeValue(widened);
     this.requestUpdate('value', old);
   }
 
@@ -1053,13 +1144,19 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     // immediately overwrite the freshly-restored value with the discarded draft.
     this.cancelDebounce();
     this.touchedFilters = new Set();
-    this.value = this.resetValue;
-    this.emit('lr-input', Object.freeze({
-      value: this.value,
+    // Pinned to the un-narrowed class. Inside the class body `Defs` is an unresolved type
+    // parameter, which leaves the detail type an unresolved conditional that no concrete argument
+    // list can be checked against -- the same reason `<lr-select>`'s own `emitValueEvents()`
+    // resolves through a `Multiple`-widened `self` first. The constraint already guarantees the
+    // payload's shape.
+    const self = this as unknown as LyraFilterBar;
+    self.value = self.resetValue;
+    self.emit('lr-input', Object.freeze({
+      value: self.value,
       filterId: undefined,
       appliedPreset: undefined,
     }));
-    this.emit('lr-reset', Object.freeze({ value: this.value }));
+    self.emit('lr-reset', Object.freeze({ value: self.value }));
   }
 
   private get resetValue(): LyraFilterBarValue {
@@ -1086,9 +1183,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     const next: Record<string, LyraFilterBarFieldValue> = { ...this._value };
     if (this.isEmpty(definition, value)) delete next[id];
     else defineFilterValueEntry(next, id, value);
-    this.value = next;
-    this.emit('lr-input', Object.freeze({
-      value: this.value,
+    // Pinned to the un-narrowed class -- see `reset()`'s identical note.
+    const self = this as unknown as LyraFilterBar;
+    self.value = next;
+    self.emit('lr-input', Object.freeze({
+      value: self.value,
       filterId: id,
       appliedPreset,
     }));

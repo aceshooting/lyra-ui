@@ -1,6 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './thinking-panel.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
+import '../../conversation/streaming-text/streaming-text.js';
+import '../../conversation/markdown/markdown.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
@@ -544,6 +546,147 @@ describe('live-mode auto-scroll', () => {
       body.scrollTop,
       'must not be yanked back to the bottom -- the reader scrolled away before this frame fired',
     ).to.equal(0);
+  });
+});
+
+describe('live-mode auto-scroll via composed lr-content-settled (property-driven shadow-DOM producers)', () => {
+  // Forces a tiny scrollable body -- identical helper to the describe block above, duplicated
+  // locally since that one is not exported.
+  async function forceSmallBody(el: LyraThinkingPanel): Promise<HTMLElement> {
+    el.style.setProperty('--lr-thinking-panel-max-block-size', '48px');
+    el.expanded = true;
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  }
+
+  const longChunk =
+    'A chunk of streamed reasoning content long enough to wrap across more than one row. '.repeat(20);
+
+  it("auto-scrolls when a composed <lr-streaming-text>'s content PROPERTY changes -- a change the light-DOM MutationObserver alone cannot see", async () => {
+    const el = await fixture<LyraThinkingPanel>(html`
+      <lr-thinking-panel mode="live">
+        <lr-streaming-text content-mode="plain" coalesce-ms="0"></lr-streaming-text>
+      </lr-thinking-panel>
+    `);
+    const body = await forceSmallBody(el);
+    expect(body.scrollTop).to.equal(0);
+    const streamingText = el.querySelector('lr-streaming-text') as unknown as { content: string };
+
+    const settled = oneEvent(el, 'lr-content-settled');
+    streamingText.content = longChunk;
+    await settled;
+    await twoFrames();
+
+    expect(body.scrollTop, 'should have followed the composed child to the bottom').to.be.greaterThan(0);
+    expect(body.scrollHeight - body.scrollTop - body.clientHeight).to.be.lessThan(2);
+  });
+
+  it("triggers a follow-scroll attempt when a composed <lr-markdown>'s content PROPERTY changes -- the same property-driven case the class doc's own example composes", async () => {
+    // Asserts that the mechanism actually ran (scrollToBottom() was invoked), the same
+    // observable this suite's own "does not double-scroll" test below uses, rather than exact
+    // post-scroll pixel math -- <lr-markdown> can settle more than once for one content
+    // assignment (a transient plain-text fallback frame, then the real parsed render; see its own
+    // class doc), and the browser's own scroll-anchoring can additionally nudge a tiny, capped
+    // scrollable region as that multi-step layout settles, making an exact final scrollTop/
+    // scrollHeight assertion here flaky in a way this component's own behavior is not responsible
+    // for. lr-content-settled's own emission points are covered directly by markdown.test.ts and
+    // streaming-text.test.ts.
+    const el = await fixture<LyraThinkingPanel>(html`
+      <lr-thinking-panel mode="live">
+        <lr-markdown></lr-markdown>
+      </lr-thinking-panel>
+    `);
+    await forceSmallBody(el);
+    // Lets the native 'scroll' event from forceSmallBody()'s own initial (near-empty) jump-to-
+    // bottom resolve before the assertion-relevant content change below -- the browser dispatches
+    // that event asynchronously, and an unrelated content growth landing in between can leave it
+    // reading a stale scrollTop against the new scrollHeight, misreading a followed panel as
+    // scrolled-away.
+    await twoFrames();
+    const markdown = el.querySelector('lr-markdown')!;
+
+    let scrollCalls = 0;
+    const originalScrollToBottom = el.scrollToBottom.bind(el);
+    el.scrollToBottom = () => {
+      scrollCalls += 1;
+      originalScrollToBottom();
+    };
+
+    const settled = oneEvent(el, 'lr-content-settled');
+    (markdown as unknown as { content: string }).content = longChunk;
+    await settled;
+    await twoFrames();
+
+    expect(
+      scrollCalls,
+      'the composed lr-markdown settle should have triggered at least one follow-scroll attempt',
+    ).to.be.greaterThan(0);
+  });
+
+  it('does not force-scroll when the reader has scrolled away, even though the new content arrived via the composed event', async () => {
+    const el = await fixture<LyraThinkingPanel>(html`
+      <lr-thinking-panel mode="live">
+        <lr-streaming-text content-mode="plain" coalesce-ms="0" .content=${longChunk}></lr-streaming-text>
+      </lr-thinking-panel>
+    `);
+    const body = await forceSmallBody(el);
+    expect(body.scrollHeight - body.scrollTop - body.clientHeight).to.be.lessThan(2);
+
+    body.scrollTop = 0;
+    body.dispatchEvent(new Event('scroll'));
+    const scrollTopBefore = body.scrollTop;
+    expect(scrollTopBefore).to.equal(0);
+
+    const streamingText = el.querySelector('lr-streaming-text') as unknown as { content: string };
+    const settled = oneEvent(el, 'lr-content-settled');
+    streamingText.content = `${longChunk}A brand new chunk that arrives while scrolled up. `;
+    await settled;
+    await twoFrames();
+
+    expect(body.scrollTop, 'must not have been yanked back down to the bottom').to.equal(scrollTopBefore);
+  });
+
+  it('never auto-scrolls in post-hoc mode even when a composed child emits lr-content-settled', async () => {
+    const el = await fixture<LyraThinkingPanel>(html`
+      <lr-thinking-panel mode="post-hoc" expanded>
+        <lr-streaming-text content-mode="plain" coalesce-ms="0"></lr-streaming-text>
+      </lr-thinking-panel>
+    `);
+    const body = await forceSmallBody(el);
+    expect(body.scrollTop).to.equal(0);
+    const streamingText = el.querySelector('lr-streaming-text') as unknown as { content: string };
+
+    const settled = oneEvent(el, 'lr-content-settled');
+    streamingText.content = longChunk;
+    await settled;
+    await twoFrames();
+
+    expect(body.scrollTop, 'post-hoc mode must never auto-scroll, per the class doc').to.equal(0);
+  });
+
+  it('does not double-scroll when the light-DOM MutationObserver and a composed lr-content-settled both fire within the same frame', async () => {
+    const el = await fixture<LyraThinkingPanel>(html`
+      <lr-thinking-panel mode="live">
+        <lr-streaming-text content-mode="plain" coalesce-ms="0"></lr-streaming-text>
+      </lr-thinking-panel>
+    `);
+    await forceSmallBody(el);
+    const streamingText = el.querySelector('lr-streaming-text') as unknown as { content: string };
+
+    let scrollCalls = 0;
+    el.scrollToBottom = () => {
+      scrollCalls += 1;
+    };
+
+    const settled = oneEvent(el, 'lr-content-settled');
+    // Both signals land in the same turn: a direct light-DOM text append (observed by the
+    // MutationObserver) and the composed child's own property-driven settle.
+    el.appendChild(document.createTextNode('Plain light-DOM chunk. '));
+    streamingText.content = 'Composed shadow-DOM chunk. ';
+    await settled;
+    await twoFrames();
+
+    expect(scrollCalls, 'both signals landing in one frame must still coalesce to a single scroll').to.equal(1);
   });
 });
 

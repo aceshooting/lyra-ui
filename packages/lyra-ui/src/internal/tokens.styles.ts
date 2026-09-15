@@ -344,6 +344,34 @@ const baseTokens = css`
     --lr-safe-area-inline-start: env(safe-area-inset-right, 0px);
     --lr-safe-area-inline-end: env(safe-area-inset-left, 0px);
   }
+
+  /* TOUCH_TARGET_FLOOR -- the coarse-pointer safety net behind every intentionally-shrunk
+     dense action row (see icon-button.class.ts's "No size attribute" doc block and
+     copy-button.class.ts / message-actions.class.ts's own size-ladder gotchas).
+     --lr-icon-button-size is a WCAG 2.5.8 floor, not a fixed size, and it is declared exactly
+     once, here, then re-derived on every component's own :host -- so growing it in this ONE
+     place under a coarse pointer (touch, no hover) reaches every consumer of the token without
+     touching each component's own stylesheet individually. 2.75rem (44px) matches the iOS HIG /
+     Android Material touch-target convention, ABOVE the 2.5rem default and comfortably above an
+     author's deliberately-lowered --lr-theme-icon-button-size for a dense mouse-only row: a
+     dense copy button or message-actions toolbar that opts out of the ordinary floor for a
+     fine-pointer layout still grows back to a comfortably tappable box the moment the pointer
+     that reaches it is a finger rather than a mouse. max() leaves an explicit
+     --lr-theme-icon-button-size that is ALREADY at or above 2.75rem untouched, and stacks
+     correctly on top of the --lr-theme-icon-button-size bridge above (that one changes the
+     UNCONDITIONAL default; this one raises a floor under it for a coarse pointer regardless of
+     which value fed into it). */
+  @media (hover: none), (pointer: coarse) {
+    :host {
+      /* Reads --lr-theme-icon-button-size directly (with its own 2.5rem fallback) rather than
+         var(--lr-icon-button-size): the latter would make this declaration reference the very
+         property it assigns, on the same :host selector, which the Custom Properties spec treats
+         as a cycle -- the winning declaration would compute to its guaranteed-invalid value (the
+         property falls back to whatever it inherits, undoing the floor) rather than the intended
+         44px, regardless of the non-winning declaration above looking like a reasonable fallback. */
+      --lr-icon-button-size: max(var(--lr-theme-icon-button-size, 2.5rem), 2.75rem);
+    }
+  }
 `;
 
 /**

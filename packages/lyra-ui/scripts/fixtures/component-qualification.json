@@ -12382,35 +12382,35 @@
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 692,
+              "line": 693,
               "test": "forwards a host aria-label to the internal semantic button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 707,
+              "line": 708,
               "test": "keeps the icon-only button named when the host aria-label is empty or blank",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 707,
+              "line": 708,
               "test": "keeps the icon-only button named when the host aria-label is empty or blank",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 847,
+              "line": 848,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 1069,
+              "line": 1070,
               "test": "signals the error with more than colour, and stays accessible",
               "target": "el",
               "state": "populated"
@@ -12505,7 +12505,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 521,
+              "line": 534,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19245,7 +19245,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1103,
+              "line": 1202,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19967,21 +19967,21 @@
           "evidence": [
             {
               "file": "src/components/data/flow-node/flow-node.test.ts",
-              "line": 297,
+              "line": 287,
               "test": "is accessible with a status, progress, and handles",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/flow-node/flow-node.test.ts",
-              "line": 481,
+              "line": 471,
               "test": "is accessible with a selected, retinted card",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/flow-node/flow-node.test.ts",
-              "line": 648,
+              "line": 638,
               "test": "is accessible in the compact, selected, running state",
               "target": "el",
               "state": "populated"
@@ -20007,7 +20007,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-node/flow-node.test.ts",
-              "line": 383,
+              "line": 373,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -23509,42 +23509,42 @@
           "evidence": [
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 535,
+              "line": 574,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 545,
+              "line": 584,
               "test": "is accessible with slotted content instead of a named glyph",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 599,
+              "line": 638,
               "test": "renders safe href/target/download as a real anchor with a derived safe rel",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 622,
+              "line": 661,
               "test": "never forwards aria-pressed onto the anchor, while aria-current (global) still reaches it",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 638,
+              "line": 677,
               "test": "gives a disabled link icon-button an explicit role=\"link\" and keeps its name legal",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 708,
+              "line": 747,
               "test": "makes disabled link mode inert and restores its href when re-enabled",
               "target": "el",
               "state": "populated"
@@ -24863,14 +24863,14 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 992,
+              "line": 993,
               "test": "is accessible with a populated, expanded tree",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 997,
+              "line": 998,
               "test": "is accessible with copyable buttons and a collapsed root",
               "target": "el",
               "state": "populated"
@@ -24890,7 +24890,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 953,
+              "line": 954,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -24901,7 +24901,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 42,
+              "line": 43,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -24912,7 +24912,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1601,
+              "line": 1592,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27058,7 +27058,7 @@
             },
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 2007,
+              "line": 2057,
               "test": "is accessible once a fenced code block has been highlighted",
               "target": "el",
               "state": "populated"
@@ -27245,21 +27245,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 397,
+              "line": 450,
               "test": "is accessible with plain content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 653,
+              "line": 706,
               "test": "is accessible once highlighted via languages",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 2337,
+              "line": 2390,
               "test": "is accessible with a custom tab size on a tab-indented fenced block",
               "target": "el",
               "state": "populated"
@@ -28824,7 +28824,7 @@
             },
             {
               "file": "src/components/conversation/message-actions/message-actions.test.ts",
-              "line": 995,
+              "line": 996,
               "test": "is accessible with every built-in enabled",
               "target": "el",
               "state": "populated"
@@ -28924,7 +28924,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 815,
+              "line": 830,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42976,7 +42976,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 662,
+              "line": 718,
               "test": "is accessible while streaming, populated with Markdown content and a visible cursor",
               "target": "el",
               "state": "populated"
@@ -44810,42 +44810,42 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4919,
+              "line": 5032,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5367,
+              "line": 5480,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5868,
+              "line": 5981,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6049,
+              "line": 6162,
               "test": "is accessible with a select cell editor open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6469,
+              "line": 6582,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6582,
+              "line": 6695,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"
@@ -44887,7 +44887,7 @@
           "evidence": [
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7735,
+              "line": 7848,
               "kind": "320px allocation test signal"
             }
           ]
@@ -45908,14 +45908,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/thinking-panel/thinking-panel.test.ts",
-              "line": 340,
+              "line": 342,
               "test": "is accessible with populated compact plain chrome",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/thinking-panel/thinking-panel.test.ts",
-              "line": 690,
+              "line": 833,
               "test": "is accessible with content, expanded, and a duration set",
               "target": "el",
               "state": "populated"
@@ -45935,7 +45935,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/thinking-panel/thinking-panel.test.ts",
-              "line": 651,
+              "line": 794,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -51792,35 +51792,35 @@
           "evidence": [
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 1003,
+              "line": 1004,
               "test": "is accessible with an expanded tree and copyable on",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 1041,
+              "line": 1042,
               "test": "is accessible with the active-match prop themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 1110,
+              "line": 1111,
               "test": "is accessible with the non-active match outline color themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 1115,
+              "line": 1116,
               "test": "is accessible with the non-active match background themed to a contrast-safe color",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 1567,
+              "line": 1568,
               "test": "is accessible with highlights painted",
               "target": "el",
               "state": "populated"
@@ -51840,7 +51840,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 982,
+              "line": 983,
               "kind": "rendered RTL test signal"
             }
           ]

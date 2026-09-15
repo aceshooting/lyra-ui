@@ -894,7 +894,10 @@ export {
   LyraStreamingText,
   looksLikeMarkdown,
 } from './components/conversation/streaming-text/streaming-text.class.js';
-export type { StreamingTextContentMode } from './components/conversation/streaming-text/streaming-text.class.js';
+export type {
+  LyraStreamingTextEventMap,
+  StreamingTextContentMode,
+} from './components/conversation/streaming-text/streaming-text.class.js';
 export { LyraThinkingPanel } from './components/agent-tools/thinking-panel/thinking-panel.class.js';
 export type {
   ThinkingPanelMode,

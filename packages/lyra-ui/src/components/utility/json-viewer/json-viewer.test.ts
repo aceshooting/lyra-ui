@@ -7,6 +7,7 @@ import {
   aTimeout,
 } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { forceCoarsePointer } from "../../../../test/coarse-pointer-media.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import "./json-viewer.js";
 import type { LyraJsonViewer } from "./json-viewer.js";
@@ -1406,18 +1407,8 @@ it("keeps per-node copy actions visible in coarse/no-hover mode without overflow
       .data=${{ "a-very-long-property-name-that-must-wrap": "value" }}
     ></lr-json-viewer>
   `)) as LyraJsonViewer;
-  const mediaRule = el
-    .shadowRoot!.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules])
-    .find(
-      (rule): rule is CSSMediaRule =>
-        rule instanceof CSSMediaRule &&
-        rule.conditionText.includes("hover: none") &&
-        rule.conditionText.includes("pointer: coarse")
-    );
-  expect(mediaRule !== undefined).to.be.true;
-  const original = mediaRule!.media.mediaText;
+  const restore = forceCoarsePointer(el);
   try {
-    mediaRule!.media.mediaText = "all";
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => resolve())
     );
@@ -1432,7 +1423,7 @@ it("keeps per-node copy actions visible in coarse/no-hover mode without overflow
       row.getBoundingClientRect().right + 1
     );
   } finally {
-    mediaRule!.media.mediaText = original;
+    restore();
   }
 });
 

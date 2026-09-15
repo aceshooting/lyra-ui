@@ -53,6 +53,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/layout/app-rail/app-rail.class.js').then((module) => module.LyraAppRail),
   },
+  'lr-app-rail-group': {
+    optionalPeers: [],
+    load: () => import('../components/layout/app-rail-group/app-rail-group.class.js').then((module) => module.LyraAppRailGroup),
+  },
   'lr-app-rail-item': {
     optionalPeers: [],
     load: () => import('../components/layout/app-rail/app-rail-item.class.js').then((module) => module.LyraAppRailItem),

@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './flow-node.js';
 import type { LyraFlowNode } from './flow-node.js';
+import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
 const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
   ((query: string) =>
@@ -192,24 +193,13 @@ it('keeps slotted toolbar actions visible in coarse-pointer or no-hover environm
   `)) as LyraFlowNode;
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
-  const mediaRule = el.shadowRoot!.adoptedStyleSheets
-    .flatMap((sheet) => [...sheet.cssRules])
-    .find(
-      (rule): rule is CSSMediaRule =>
-        rule instanceof CSSMediaRule &&
-        rule.conditionText.includes('hover: none') &&
-        rule.conditionText.includes('pointer: coarse'),
-    );
-  expect(mediaRule).to.exist;
-  if (!mediaRule) return;
-  const original = mediaRule.media.mediaText;
+  const restore = forceCoarsePointer(el);
   try {
-    mediaRule.media.mediaText = 'all';
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
     expect(getComputedStyle(toolbar).opacity).to.equal('1');
   } finally {
-    mediaRule.media.mediaText = original;
+    restore();
   }
 });
 

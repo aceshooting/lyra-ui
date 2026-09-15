@@ -137,7 +137,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 269
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 270
   root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -1139,7 +1139,7 @@ pinned.
 The token layer also sets `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
 
-### Theme mode/accent runtime (`@aceshooting/lyra-ui/theme.js`)
+### Theme mode/accent/surface runtime (`@aceshooting/lyra-ui/theme.js`)
 
 Flipping the mode class/attribute above is something every app ends up hand-rolling — persist a
 choice, apply it on load, avoid the flash of wrong theme before the app boots. `theme.js` is that
@@ -1151,24 +1151,28 @@ graph into its first-paint bundle.
 import { setLyraTheme, getLyraTheme } from "@aceshooting/lyra-ui/theme.js";
 
 setLyraTheme({ mode: "dark" }); // unspecified fields keep their current value
-setLyraTheme({ accent: "#7c3aed" }); // mode stays 'dark'
-getLyraTheme(); // → { mode: 'dark', accent: '#7c3aed' }
+setLyraTheme({ accent: "#7c3aed" }); // mode stays 'dark'; brand-only shorthand
+getLyraTheme(); // → { mode: 'dark', accent: '#7c3aed', surface: null }
+setLyraTheme({ accent: { danger: "#dc2626", success: "#16a34a" } }); // per-role, brand untouched
+setLyraTheme({ accent: { brand: { light: "#2563eb", dark: "#f59e0b" } } }); // per-mode base color
+setLyraTheme({ surface: "#0b0f1a" }); // mixes every ramp against this instead of the mode default
 setLyraTheme({ mode: "auto" }); // follows the OS, including later changes
-setLyraTheme({ mode: "unset", accent: null }); // removes Lyra's override and accent
+setLyraTheme({ mode: "unset", accent: null, surface: null }); // removes Lyra's overrides
 ```
 
-- **`setLyraTheme({ mode?, accent? })`** persists to `localStorage['lyra-theme']`, applies to
-  `document.documentElement`, and dispatches `lr-theme-change` on `window` with
-  `detail: { mode, accent }`. Fields you omit keep their current value; pass `null` to clear the
-  accent. It **never throws** — when `localStorage` is unavailable (private browsing, quota, a
-  sandboxed iframe) it degrades to apply-without-persist, and the "fields you omit keep their
-  current value" rule still holds across calls in that state: the merge falls back to the last
-  theme applied in this session rather than to the default.
-- **`getLyraTheme()`** returns `{ mode, accent }`, defaulting to `{ mode: 'auto', accent: null }`
-  when nothing is stored or the stored value is malformed. Storage is re-read on every call — no
-  in-memory cache — so a value written by another tab or a previous session is picked up cold.
-  Where storage is unreadable or unwritable it reports the theme last applied, so the return value
-  always describes what the document is actually showing and a toggle UI bound to it stays in sync.
+- **`setLyraTheme({ mode?, accent?, surface? })`** persists to `localStorage['lyra-theme']`,
+  applies to `document.documentElement`, and dispatches `lr-theme-change` on `window` with
+  `detail: { mode, accent, surface }`. Fields you omit keep their current value; pass `null` to
+  clear a field. It **never throws** — when `localStorage` is unavailable (private browsing,
+  quota, a sandboxed iframe) it degrades to apply-without-persist, and the "fields you omit keep
+  their current value" rule still holds across calls in that state: the merge falls back to the
+  last theme applied in this session rather than to the default.
+- **`getLyraTheme()`** returns `{ mode, accent, surface }`, defaulting to
+  `{ mode: 'auto', accent: null, surface: null }` when nothing is stored or the stored value is
+  malformed. Storage is re-read on every call — no in-memory cache — so a value written by another
+  tab or a previous session is picked up cold. Where storage is unreadable or unwritable it
+  reports the theme last applied, so the return value always describes what the document is
+  actually showing and a toggle UI bound to it stays in sync.
 - **`mode`** is `'light' | 'dark' | 'auto' | 'unset'`. `'light'`/`'dark'` set **both
   `data-lr-theme`** (the
   attribute `theme.css` actually keys its palette blocks on) **and `data-theme`** (the generic
@@ -1176,14 +1180,36 @@ setLyraTheme({ mode: "unset", accent: null }); // removes Lyra's override and ac
   the switch rather than keeping stale colors — see `llms/components/lr-chart.md`). `'auto'`
   resolves `prefers-color-scheme` immediately and keeps following changes. `'unset'` removes both
   attributes; use it when the application owns mode selection through another cascade.
-- **`accent`** accepts an absolute CSS color. Lyra keeps `--lr-theme-accent` as a compatibility
-  value and derives the complete brand quiet/normal/loud fill, border, paired on-color, and focus
-  token ramp as inline `--lr-theme-*` inputs. Each paired foreground is selected for at least
-  4.5:1 contrast against its fill; normal/loud borders and focus are adjusted to at least 3:1
-  against the shipped mode surface. If an application also replaces that surface input, it must
-  recheck or override the paired ramp inputs. Malformed values, CSS-wide keywords, `currentColor`,
-  system colors, relative-color syntax, and unresolved `var()` expressions fail closed to
-  `accent: null`. Pass `null` to restore the palette supplied by `theme.css`.
+- **`accent`** is either an absolute CSS color — shorthand for `{ brand: <that color> }`, and the
+  only shape prior to 16.0.0 — or a per-role record
+  `{ brand?, success?, warning?, danger?, neutral? }`. Only the roles you supply are (re)derived;
+  an omitted role keeps whatever the static palette (`llms/tokens.md`) already provides. For each
+  supplied role, Lyra derives the complete quiet/normal/loud fill, border, and paired on-color
+  ramp as inline `--lr-theme-color-<role>-*` inputs; `brand` additionally keeps `--lr-theme-accent`
+  (a compatibility value holding the raw brand color, resolved for the active mode when the role
+  is per-mode) and `--lr-theme-color-focus`, which no other role drives. Each paired foreground is
+  selected for at least 4.5:1 contrast against its fill; normal/loud borders and the brand focus
+  color are adjusted to at least 3:1 against the resolved surface (see `surface` below). Malformed
+  values, CSS-wide keywords, `currentColor`, system colors, relative-color syntax, and unresolved
+  `var()` expressions fail closed to `null` — at the whole `accent` field for a bare-string call,
+  or at just that one role (or role/mode branch) for a per-role record, so one bad role does not
+  take the others down with it. Pass `accent: null` to restore the palette supplied by
+  `theme.css` entirely.
+- **Per-mode accent.** Each role's value can itself be a bare color/`null` (applied to both
+  resolved modes, as above) or a `{ light?, dark? }` map deriving that role's ramp from a
+  genuinely *different base color* per resolved mode — not merely a different tint weight of the
+  same hue — for example `{ brand: { light: "#2563eb", dark: "#f59e0b" } }`. An omitted branch
+  (or a role/branch that fails validation) keeps that mode's inherited/palette default; the branch
+  actually painted follows the *resolved* mode, so it updates automatically when `mode: 'auto'`
+  follows a `prefers-color-scheme` change. The stored/returned/event-detail shape always mirrors
+  what you supplied (bare color or `{ light, dark }`), never collapsed to a single resolved color.
+- **`surface`** is an absolute CSS color used as every role's ramp mix base, instead of the
+  shipped light/dark defaults (`#1a1a1a` dark / `#ffffff` light). It follows the same absolute
+  CSS color and fail-closed-to-`null` rules as `accent`; an alpha channel is composited against
+  the mode's own default surface before use. `null` (the default) keeps those shipped defaults.
+  Supplying `surface` changes the quiet/normal/loud mix ratios and every border/focus contrast
+  check for **every** currently-supplied role at once — it is one mix base per apply, not
+  per-role.
 
   These are `--lr-theme-*` inputs, so they reach every nested shadow root — see "Where an override
   actually reaches" above for why setting a `--lr-*` token instead would not.
@@ -1191,10 +1217,11 @@ setLyraTheme({ mode: "unset", accent: null }); // removes Lyra's override and ac
 **Theme presets.** `@aceshooting/lyra-ui/theme/presets.js` exports
 `LYRA_THEME_PRESETS`, `defineLyraThemePreset()` and `applyLyraThemePreset()`. Built-in keys are
 `system`, `light`, `dark`, `unset`, `emerald`, `ruby`, `amethyst`, and `sapphire`; the gemstone
-presets use system-following mode plus the named accent. Application presets use a stable lowercase
-kebab-case `id` and a `theme: { mode?, accent? }` record. `defineLyraThemePreset()` validates the
-id and field shapes, freezes both records, and leaves CSS color-syntax validation to the production
-runtime when the preset is applied:
+presets use system-following mode plus the named brand accent. Application presets use a stable
+lowercase kebab-case `id` and a `theme: { mode?, accent?, surface? }` record — the same shapes
+`setLyraTheme()` accepts, including a per-role `accent` record. `defineLyraThemePreset()`
+validates the id and field shapes, freezes both records, and leaves CSS color-syntax validation to
+the production runtime when the preset is applied:
 
 ```ts
 import {
@@ -1206,7 +1233,11 @@ applyLyraThemePreset("sapphire");
 applyLyraThemePreset(
   defineLyraThemePreset({
     id: "application-ocean",
-    theme: { mode: "dark", accent: "#22d3ee" },
+    theme: {
+      mode: "dark",
+      accent: { brand: "#22d3ee", danger: "#dc2626" },
+      surface: "#0b0f1a",
+    },
   })
 );
 ```
@@ -1239,10 +1270,19 @@ inline script the nonce or hash required by the application:
 </head>
 ```
 
-Both variants read a stored `{ mode, accent }` record, resolve `auto`, and apply the same two
-attributes and derived brand ramp as the runtime. A missing or malformed record receives the
-runtime's `{ mode: 'auto', accent: null }` default; blocked `localStorage` leaves the document
+Both variants read a stored `{ mode, accent, surface }` record, resolve `auto`, and derive the same
+per-role ramp(s) from the same math — the bootstrap re-implements it inline (self-contained, so it
+can run before any module loads) rather than importing the runtime, but the two are tested to never
+drift. A missing or malformed record receives the runtime's
+`{ mode: 'auto', accent: null, surface: null }` default; blocked `localStorage` leaves the document
 untouched rather than throwing before your app loads.
+
+**Migrating from 15.x.** `accent` used to be exactly an absolute CSS color or `null`; that shape
+still works unchanged (`setLyraTheme({ accent: '#7c3aed' })` keeps deriving only the brand ramp).
+What changed is `LyraTheme` gaining a `surface` field alongside it — a strict superset for every
+caller that only ever read/wrote `mode`/`accent`, since `getLyraTheme()` now also returns
+`surface: null` by default. Only code that structurally compares the whole returned record (for
+example `assert.deepEqual(getLyraTheme(), { mode, accent })`) needs the extra field added.
 
 ### Invalidating canvas theme values
 
@@ -1602,6 +1642,28 @@ ones cost nothing. A catalog registered this way is merged like any other, so a 
 in `getRegisteredLyraLocales()`, and therefore in `<lr-locale-picker>`, so the set you import is the
 set a user can switch between.
 
+### Smaller catalogs: `@aceshooting/lyra-ui/translations/<locale>/<family>.js`
+
+Each locale above is also published as twelve smaller, side-effect-only **family slices** — one per
+component family (`agent-tools`, `charts`, `conversation`, `data`, `forms`, `layout`, `media`,
+`overlays`, `retrieval`, `utility`, `viewers`), plus `shared` for the handful of messages more than
+one family reaches (roving-focus/overlay/a11y strings like `collapse`, `open`, `search`). Import only
+the families the application actually renders instead of the whole-locale aggregate above:
+
+```ts
+import "@aceshooting/lyra-ui/translations/fr/forms.js"; // lr-input, lr-select, lr-combobox, ...
+import "@aceshooting/lyra-ui/translations/fr/data.js"; // lr-table, lr-tree, lr-data-grid, ...
+import "@aceshooting/lyra-ui/translations/fr/shared.js"; // cross-cutting strings both families reach
+```
+
+`@aceshooting/lyra-ui/translations/fr.js` is unchanged: it is now a thin aggregate that imports every
+slice above, so the plain whole-locale import from the previous section keeps working exactly as
+before — this is a purely additive, opt-in way to shrink a non-English bundle, mirroring the
+per-component tree-shaking English defaults already get for free. A component's family is the
+directory it ships under (`src/components/<family>/<name>/`); when in doubt, import the aggregate and
+measure, or import `shared` alongside whichever family slices you do import so a cross-cutting string
+is never silently missing.
+
 ### Pluralized messages
 
 A message may be a plain string or a **`LyraPluralMessage`** — an object keyed by CLDR plural
@@ -1872,6 +1934,19 @@ directly and needing the complete `attributes`/`members`/`events`/`slots`/`cssPr
 those four kinds must walk the declaration's own `superclass.name`/`superclass.module` across
 `modules[].declarations[]` itself, or read `web-types.json`/`vscode-html-data.json` instead, which
 are already fully resolved.
+
+**Which tags a per-tag entry registers (`registrations.json`).** A stable per-tag entry
+(`@aceshooting/lyra-ui/components/lr-<name>.js`) can, at import time, define more than one custom
+element: importing `lr-table.js` also registers `<lr-empty>`, `<lr-pagination>`, `<lr-skeleton>` and
+`<lr-spinner>`, because `lr-table`'s registration entry imports those composed children's own
+registration entries before defining `<lr-table>` itself. `custom-elements.json` declares one
+custom element per family source module, with no field for a stable per-tag entry specifier and
+none for the extra tags importing it registers as a side effect. For that, read the generated
+`@aceshooting/lyra-ui/registrations.json` instead: `{ schemaVersion: 1, entries: [{ tag, entry,
+registrationModule, registers }] }`, where `registers` is every `lr-*` tag importing `entry`
+defines, derived from the same transitive-import analysis
+`scripts/check-component-dependencies.mjs` already performs against the real registration graph
+(not a second hand-maintained list) and regenerated by `pnpm run registration-graph`.
 
 ## Independence and migration
 
@@ -3750,6 +3825,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraTheme {
   mode: unknown;
   accent: unknown;
+  surface: unknown;
 }`
   `setLyraTheme(/* public names: theme */): unknown`
 

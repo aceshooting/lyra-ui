@@ -13,6 +13,7 @@ export const AUTOLOADER_TAGS = [
   'lr-animated-image',
   'lr-animation',
   'lr-app-rail',
+  'lr-app-rail-group',
   'lr-app-rail-item',
   'lr-approval-queue',
   'lr-archive-viewer',

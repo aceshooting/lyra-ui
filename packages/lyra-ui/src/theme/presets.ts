@@ -1,11 +1,11 @@
 import { GEMSTONES } from './gemstones-data.js';
-import { getLyraTheme, setLyraTheme, type LyraTheme } from './theme.js';
+import { accentsEqual, getLyraTheme, setLyraTheme, type LyraTheme } from './theme.js';
 
 /** A named, reusable application theme choice. */
 export interface LyraThemePreset {
   /** Stable lowercase identifier reflected to `data-lr-theme-preset`. */
   readonly id: string;
-  /** Mode/accent fields passed through the production theme runtime. */
+  /** Mode/accent/surface fields passed through the production theme runtime. */
   readonly theme: Readonly<Partial<LyraTheme>>;
 }
 
@@ -39,7 +39,7 @@ export function defineLyraThemePreset<const Preset extends LyraThemePreset>(
   if (!preset.theme || typeof preset.theme !== 'object' || Array.isArray(preset.theme)) {
     throw new TypeError('Lyra theme presets require a theme record.');
   }
-  const { mode, accent } = preset.theme;
+  const { mode, accent, surface } = preset.theme;
   if (mode !== undefined
       && mode !== 'light'
       && mode !== 'dark'
@@ -47,8 +47,14 @@ export function defineLyraThemePreset<const Preset extends LyraThemePreset>(
       && mode !== 'unset') {
     throw new TypeError('Lyra theme preset mode must be light, dark, auto, or unset.');
   }
-  if (accent !== undefined && accent !== null && typeof accent !== 'string') {
-    throw new TypeError('Lyra theme preset accent must be a CSS color string or null.');
+  const isPlainAccentRecord = typeof accent === 'object' && accent !== null && !Array.isArray(accent);
+  if (accent !== undefined && accent !== null && typeof accent !== 'string' && !isPlainAccentRecord) {
+    throw new TypeError(
+      'Lyra theme preset accent must be a CSS color string, a per-role color record, or null.',
+    );
+  }
+  if (surface !== undefined && surface !== null && typeof surface !== 'string') {
+    throw new TypeError('Lyra theme preset surface must be a CSS color string or null.');
   }
   const theme = Object.freeze({ ...preset.theme });
   return Object.freeze({ ...preset, theme }) as Readonly<Preset>;
@@ -99,8 +105,13 @@ export function applyLyraThemePreset(
   const normalized = defineLyraThemePreset(preset);
   setLyraTheme(normalized.theme);
   const applied = Object.freeze({ ...getLyraTheme() });
+  // Read via a widened alias: a built-in preset's theme infers an ultra-narrow literal type that
+  // never mentions `surface` at all (none of them set it), which `normalized.theme.surface` alone
+  // cannot type-check against.
+  const requestedSurface = (normalized.theme as Partial<LyraTheme>).surface;
   const matchesApplied = (normalized.theme.mode === undefined || normalized.theme.mode === applied.mode)
-    && (normalized.theme.accent === undefined || normalized.theme.accent === applied.accent);
+    && (normalized.theme.accent === undefined || accentsEqual(normalized.theme.accent, applied.accent))
+    && (requestedSurface === undefined || requestedSurface === applied.surface);
   if (!matchesApplied) return;
 
   document.documentElement.dataset['lrThemePreset'] = normalized.id;

@@ -41,7 +41,15 @@ the patterns need to be airtight — a false positive just routes ordinary prose
 `<lr-markdown>`; a false negative just shows literal `**`/backticks/etc. as plain text until more
 of the stream arrives.
 
-**Events:** none.
+**Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — fired once newly-coalesced
+`content` actually reaches the rendered DOM. In `markdown` mode (forced or auto-detected) this
+element does not emit the event itself; the composed `<lr-markdown>` it delegates rendering to
+already emits its own `lr-content-settled` at its own settle point, and — being composed — that
+event bubbles out through this element unmodified, so exactly one event per settle reaches a
+listener either way. A consumer composing this element inside a free-form container (e.g.
+`<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since this component
+renders into its own shadow root and a plain light-DOM `MutationObserver` on the container can
+never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 
 **Slots:** none — content renders from `content`, not a slot.
 

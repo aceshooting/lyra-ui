@@ -156,6 +156,13 @@ placed first and preserved inside both ceilings.
   rendered content, or `null` when the selection couldn't be anchored
 - `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` property assignment or
   a `scrollToAnchor()` call is applied (the shared anchor-target contract)
+- `lr-content-settled` (`detail: null`, composed, bubbling) — fired whenever newly-rendered content
+  actually reaches `[part="content"]`, including a transient plain-text fallback frame and a later
+  async syntax-highlight upgrade, not only a final parsed render. Being composed, it crosses this
+  element's own shadow boundary — a consumer composing `<lr-markdown>` inside a free-form container
+  (e.g. `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since a
+  light-DOM `MutationObserver` on that container can never see a property-driven update rendered
+  entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -327,7 +334,7 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
-`lr-anchor-result` — identical detail shapes to `<lr-markdown>`'s own.
+`lr-anchor-result`, `lr-content-settled` — identical detail shapes to `<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -1430,7 +1437,15 @@ the patterns need to be airtight — a false positive just routes ordinary prose
 `<lr-markdown>`; a false negative just shows literal `**`/backticks/etc. as plain text until more
 of the stream arrives.
 
-**Events:** none.
+**Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — fired once newly-coalesced
+`content` actually reaches the rendered DOM. In `markdown` mode (forced or auto-detected) this
+element does not emit the event itself; the composed `<lr-markdown>` it delegates rendering to
+already emits its own `lr-content-settled` at its own settle point, and — being composed — that
+event bubbles out through this element unmodified, so exactly one event per settle reaches a
+listener either way. A consumer composing this element inside a free-form container (e.g.
+`<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since this component
+renders into its own shadow root and a plain light-DOM `MutationObserver` on the container can
+never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -2188,6 +2203,15 @@ navigation.
 as of 16.0.0 both are composed `<lr-icon-button>`s, so `--lr-icon-button-*` retunes them and the
 toolbar's roving tab stop is leased on the native control rather than the host), and `feedback` (the
 embedded `lr-message-feedback`).
+
+The toolbar has no `size`/`compact` property: every built-in's hit area is `<lr-icon-button>`'s
+shared `--lr-icon-button-size` floor (2.5rem/40px), same as everywhere else in the library. For a
+dense action row, lower `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every
+`LyraElement` re-declares on its own `:host` and so never reaches a composed child) on this element
+or an ancestor, or reach a built-in's composed native control directly through
+`::part(regenerate-button__control)` / `::part(edit-button__control)`. A coarse-pointer/no-hover
+media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
+override lowered it, so the shrink is safe on a touch device.
 
 ## `lr-message-feedback`
 

@@ -1,4 +1,4 @@
-import { fixture, expect, html, aTimeout } from "@open-wc/testing";
+import { fixture, expect, html, aTimeout, oneEvent } from "@open-wc/testing";
 import "./streaming-text.js";
 import "../markdown/markdown.js";
 import { looksLikeMarkdown } from "./streaming-text.js";
@@ -637,7 +637,7 @@ describe("cursor", () => {
   });
 });
 
-it("does not dispatch any lr-* events -- purely presentational", async () => {
+it("does not dispatch an invented event name -- purely property-driven otherwise", async () => {
   const el = (await fixture(
     html`<lr-streaming-text></lr-streaming-text>`
   )) as LyraStreamingText;
@@ -650,6 +650,62 @@ it("does not dispatch any lr-* events -- purely presentational", async () => {
   el.streaming = false;
   await el.updateComplete;
   expect(sawEvent).to.be.false;
+});
+
+describe("lr-content-settled", () => {
+  it("fires a composed, bubbling, null-detail event once coalesced content reaches the DOM in plain mode", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text content-mode="plain"></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const pending = oneEvent(el, "lr-content-settled");
+    el.content = "hello";
+    const event = (await pending) as CustomEvent<null>;
+    expect(event.detail).to.equal(null);
+    expect(event.bubbles).to.be.true;
+    expect(event.composed).to.be.true;
+    expect(plainText(el)).to.equal("hello");
+  });
+
+  it("bubbles lr-markdown's own settle event through unmodified in markdown mode, never a duplicate emitted by this element itself", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text content-mode="markdown"></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const origins: EventTarget[] = [];
+    el.addEventListener("lr-content-settled", (event) => {
+      origins.push((event as CustomEvent).composedPath()[0] as EventTarget);
+    });
+    const pending = oneEvent(el, "lr-content-settled");
+    el.content = "# Heading";
+    await pending;
+    // The inner <lr-markdown> can settle more than once as its optional parser peers resolve --
+    // give any further settle a chance to arrive before checking every observed origin.
+    await aTimeout(80);
+    expect(origins.length, "at least one settle should have bubbled through").to.be.greaterThan(0);
+    for (const origin of origins) {
+      expect(
+        origin,
+        "every observed lr-content-settled must originate from the inner lr-markdown, never this element itself",
+      ).to.not.equal(el);
+    }
+    const inner = el.shadowRoot!.querySelector("lr-markdown");
+    expect(inner, "markdown mode should compose an inner <lr-markdown>").to.exist;
+  });
+
+  it("does not fire when only streaming toggles with no content assigned yet", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text content-mode="plain"></lr-streaming-text>`
+    )) as LyraStreamingText;
+    await el.updateComplete;
+    let count = 0;
+    el.addEventListener("lr-content-settled", () => {
+      count += 1;
+    });
+    el.streaming = true;
+    await el.updateComplete;
+    el.streaming = false;
+    await el.updateComplete;
+    expect(count).to.equal(0);
+  });
 });
 
 it("is accessible in the default (empty, not streaming) state", async () => {

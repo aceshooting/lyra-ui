@@ -71,7 +71,7 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
-`lr-anchor-result` — identical detail shapes to `<lr-markdown>`'s own.
+`lr-anchor-result`, `lr-content-settled` — identical detail shapes to `<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 

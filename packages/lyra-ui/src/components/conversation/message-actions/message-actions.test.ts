@@ -10,6 +10,7 @@ import "./message-actions.js";
 import "../branch-picker/branch-picker.js";
 import type { LyraMessageActions } from "./message-actions.js";
 import type { LyraToolbarAction } from "./toolbar-actions.js";
+import { forceCoarsePointer } from "../../../../test/coarse-pointer-media.js";
 
 class ClosedToolbarProvider extends HTMLElement {
   private readonly trigger: HTMLButtonElement;
@@ -1328,4 +1329,66 @@ it('recognizes a callable toolbar provider structurally', async () => {
   provider.getToolbarActions = () => [];
 
   expect(isLyraToolbarActionProvider(provider)).to.equal(true);
+});
+
+describe('dense-row hit-area override and its coarse-pointer safety net', () => {
+  const regenerateButton = (el: LyraMessageActions): Element =>
+    el.shadowRoot!.querySelector('[part~="regenerate-button"]')!;
+
+  it('renders the ordinary 40px floor on a built-in action with no override', async () => {
+    const el = (await fixture(
+      html`<lr-message-actions .controls=${['regenerate']}></lr-message-actions>`,
+    )) as LyraMessageActions;
+    const control = composedControl(regenerateButton(el));
+    expect(control.getBoundingClientRect().width).to.equal(40);
+    expect(control.getBoundingClientRect().height).to.equal(40);
+  });
+
+  it('shrinks below the ordinary floor when an ancestor lowers --lr-theme-icon-button-size, for a dense toolbar', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-theme-icon-button-size: 1.5rem">
+        <lr-message-actions .controls=${['regenerate']}></lr-message-actions>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-message-actions') as LyraMessageActions;
+    const control = composedControl(regenerateButton(el));
+    expect(control.getBoundingClientRect().width).to.equal(24);
+    expect(control.getBoundingClientRect().height).to.equal(24);
+  });
+
+  it('reaches the same composed control directly through the forwarded regenerate-button__control part', async () => {
+    const style = document.createElement('style');
+    style.textContent =
+      'lr-message-actions.dense::part(regenerate-button__control) { min-inline-size: 24px; min-block-size: 24px; }';
+    document.head.append(style);
+    try {
+      const el = (await fixture(
+        html`<lr-message-actions class="dense" .controls=${['regenerate']}></lr-message-actions>`,
+      )) as LyraMessageActions;
+      const control = composedControl(regenerateButton(el));
+      expect(control.getBoundingClientRect().width).to.equal(24);
+      expect(control.getBoundingClientRect().height).to.equal(24);
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('grows a dense toolbar back to the platform touch-target floor under a coarse pointer', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-theme-icon-button-size: 1.5rem">
+        <lr-message-actions .controls=${['regenerate']}></lr-message-actions>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-message-actions') as LyraMessageActions;
+    const control = composedControl(regenerateButton(el));
+    expect(control.getBoundingClientRect().width, 'shrunk on a fine pointer').to.equal(24);
+    const restore = forceCoarsePointer(regenerateButton(el));
+    try {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      expect(control.getBoundingClientRect().width, 'grown back under a coarse pointer').to.equal(44);
+      expect(control.getBoundingClientRect().height, 'grown back under a coarse pointer').to.equal(44);
+    } finally {
+      restore();
+    }
+  });
 });

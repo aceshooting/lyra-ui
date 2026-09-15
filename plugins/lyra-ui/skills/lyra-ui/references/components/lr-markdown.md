@@ -158,6 +158,13 @@ placed first and preserved inside both ceilings.
   rendered content, or `null` when the selection couldn't be anchored
 - `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` property assignment or
   a `scrollToAnchor()` call is applied (the shared anchor-target contract)
+- `lr-content-settled` (`detail: null`, composed, bubbling) — fired whenever newly-rendered content
+  actually reaches `[part="content"]`, including a transient plain-text fallback frame and a later
+  async syntax-highlight upgrade, not only a final parsed render. Being composed, it crosses this
+  element's own shadow boundary — a consumer composing `<lr-markdown>` inside a free-form container
+  (e.g. `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since a
+  light-DOM `MutationObserver` on that container can never see a property-driven update rendered
+  entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 

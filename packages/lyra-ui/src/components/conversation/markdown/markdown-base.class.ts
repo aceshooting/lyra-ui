@@ -108,6 +108,7 @@ function keyboardHighlightIdFrom(
 export interface MarkdownRuntimeEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-link-click': CustomEvent<{ href: string }>;
+  'lr-content-settled': CustomEvent<null>;
 }
 
 // The Lyra-prefixed owner is intentional: the default-string slice generator attributes helper
@@ -352,6 +353,20 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       (localeChanged && this.highlights.length > 0)
     ) {
       this.repaintHighlights();
+    }
+    // Signals a settle point -- new content (including the transient plain-text fallback shown
+    // while `streaming` or before the optional parser peer resolves, and a later async highlight
+    // upgrade) actually reached the rendered DOM. `content` covers every render this component's
+    // own shadow-DOM-scoped `[part="content"]` produces, including the streaming/plain-fallback
+    // path where `renderedHtml` itself never changes value (it stays `null` across an entire
+    // stream); `renderedHtml` additionally covers the async highlight-upgrade re-render, which
+    // changes rendered content without `content` itself changing. Composed and bubbling (see
+    // `emit()`), so it crosses this element's own shadow boundary -- a host composing this element
+    // inside a free-form container (e.g. `<lr-thinking-panel>`'s default slot) can listen for it to
+    // drive auto-scroll, since a light-DOM `MutationObserver` on that container can never see a
+    // property-driven update rendered entirely inside this element's own shadow root.
+    if ((changed.has('content') || changed.has('renderedHtml')) && this.isConnected) {
+      this.emit('lr-content-settled', null);
     }
   }
 

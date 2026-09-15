@@ -61,6 +61,7 @@ import type { LyraPushToTalkEventMap } from './components/conversation/push-to-t
 import type { LyraRealtimeSessionEventMap } from './components/conversation/realtime-session/realtime-session.class.js';
 import type { LyraSelectionToolbarEventMap } from './components/conversation/selection-toolbar/selection-toolbar.class.js';
 import type { LyraStreamStatusEventMap } from './components/conversation/stream-status/stream-status.class.js';
+import type { LyraStreamingTextEventMap } from './components/conversation/streaming-text/streaming-text.class.js';
 import type { LyraSuggestionChipsEventMap } from './components/conversation/suggestion-chips/suggestion-chips.class.js';
 import type { LyraThreadListEventMap } from './components/conversation/thread-list/thread-list.class.js';
 import type { LyraTranscriptFeedEventMap } from './components/conversation/transcript-feed/transcript-feed.class.js';
@@ -903,6 +904,19 @@ export type LyraConnectEvent =
  * Detail type: `LyraRandomContentEventMap['lr-content-change']`.
  */
 export type LyraContentChangeEvent = LyraRandomContentEventMap['lr-content-change'];
+
+/**
+ * `lr-content-settled` — dispatched by 3 components: `<lr-markdown-core>`, `<lr-markdown>`,
+ * `<lr-streaming-text>`.
+ *
+ * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraMarkdownCoreEventMap['lr-content-settled']`.
+ */
+export type LyraContentSettledEvent =
+  | LyraMarkdownCoreEventMap['lr-content-settled']
+  | LyraMarkdownEventMap['lr-content-settled']
+  | LyraStreamingTextEventMap['lr-content-settled'];
 
 /**
  * `lr-copy` — dispatched by 17 components: `<lr-artifact-panel>`, `<lr-code-block-core>`,
@@ -3658,6 +3672,7 @@ export interface LyraGlobalEventMap {
   'lr-complete': LyraCompleteEvent;
   'lr-connect': LyraConnectEvent;
   'lr-content-change': LyraContentChangeEvent;
+  'lr-content-settled': LyraContentSettledEvent;
   'lr-copy': LyraCopyEvent;
   'lr-copy-error': LyraCopyErrorEvent;
   'lr-create': LyraCreateEvent;

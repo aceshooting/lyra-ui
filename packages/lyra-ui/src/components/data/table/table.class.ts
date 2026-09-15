@@ -504,7 +504,9 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * mode writes `sortKey`/`sortDir` and reorders the rendered rows before emitting `lr-sort`; server
  * mode leaves those properties controlled and emits the same committed transaction so the caller
  * can fetch and supply the corresponding row order. Single/multiple selection is self-managed in
- * one `selectedRowKeys` store; expansion remains controlled through `expandedRowKeys`. The
+ * one `selectedRowKeys` store; row expansion follows the same opt-in shape through
+ * `expansionMode`/`expandedRowKeys` -- see that property's own doc block below for the
+ * request/commit detail. The
  * direction chosen the first time a column becomes the active `sortKey` comes from that column's
  * own `columns[].defaultSortDir` when set, falling back to the element-level `defaultSortDir`
  * (`'asc'` by default) otherwise -- letting one column in an otherwise-ascending table (e.g. a

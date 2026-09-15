@@ -253,6 +253,21 @@ function editIcon(): SVGTemplateResult {
  *
  * ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor remain native editing keys. Roving navigation still operates on the actual toolbar and thumb actions.
  *
+ * The toolbar has no `size`/`compact` property of its own: every built-in action composes
+ * `<lr-icon-button>` (the embedded `lr-copy-button` does the same one level deeper), so each one's
+ * hit area is that component's shared `--lr-icon-button-size` floor (2.5rem/40px), same as
+ * everywhere else in the library. For a dense action row where 40px per action is more than the
+ * layout can afford, lower `--lr-theme-icon-button-size` -- NOT `--lr-icon-button-size` itself,
+ * which every `LyraElement` re-declares on its own `:host` and so never reaches a composed child
+ * (`internal/tokens.test.ts` proves this) -- on this element or any ancestor of it;
+ * `::part(regenerate-button__control)`/`::part(edit-button__control)` also reach the built-ins'
+ * composed native controls directly for a one-off override. Either way the shrink is local to the
+ * elements it targets, not a library-wide floor change. A coarse-pointer/no-hover safety net
+ * (`internal/tokens.styles.ts`'s `baseTokens`) then floors the rendered hit area back at
+ * 2.75rem/44px regardless of how far the dense-row override lowered it, so an intentionally
+ * cramped desktop toolbar is still comfortably tappable the moment the pointer reaching it is a
+ * finger rather than a mouse.
+ *
  * @customElement lr-message-actions
  * @slot - Additional controls (e.g. `lr-copy-button`, `lr-icon-button`, `lr-branch-picker`)
  *   appended after the built-ins; they participate in the toolbar's arrow-key navigation.

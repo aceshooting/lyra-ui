@@ -77,4 +77,44 @@ export const sizes = css`
     --lr-form-control-padding-inline: var(--lr-space-l);
     --lr-form-control-padding-block: var(--lr-space-s);
   }
+
+  /* Coarse-pointer touch-target floor, paired with the identical --lr-icon-button-size rule in
+     tokens.styles.ts's baseTokens -- the two token systems the density-axis request named as "the
+     only lever". Every tier's tappable height floors at 2.75rem (44px, the iOS HIG / Android
+     Material touch-target convention) once the pointer that reaches it is a finger rather than a
+     mouse; 'l' and 'xl' are already at or above that and so are untouched by max(). Font size and
+     padding are deliberately left alone -- only the tappable box itself grows, so a coarse-pointer
+     '2xs' row still reads as dense, it just is not finger-hostile. Selector-for-selector against
+     every rule above (not one generic :host rule): :host([size='2xs']) outranks a bare :host on
+     specificity, so a single lower-specificity override here would silently lose the cascade for
+     every sized tier and only ever apply to the unsized default. Each rule reads its own
+     '--lr-form-control-height-<tier>' input rather than the shared '--lr-form-control-height'
+     output above -- referencing the very property a declaration assigns, on the same selector, is
+     a cycle per the Custom Properties spec and resolves to guaranteed-invalid (inherited) instead
+     of the intended floor, not to some sensible current value. */
+  @media (hover: none), (pointer: coarse) {
+    :host {
+      --lr-form-control-height: max(var(--lr-form-control-height-m), 2.75rem);
+    }
+    :host([size='2xs']) {
+      --lr-form-control-height: max(var(--lr-form-control-height-2xs), 2.75rem);
+    }
+    :host([size='xs']) {
+      --lr-form-control-height: max(var(--lr-form-control-height-xs), 2.75rem);
+    }
+    :host([size='s']),
+    :host([size='small']) {
+      --lr-form-control-height: max(var(--lr-form-control-height-s), 2.75rem);
+    }
+    :host([size='medium']) {
+      --lr-form-control-height: max(var(--lr-form-control-height-m), 2.75rem);
+    }
+    :host([size='l']),
+    :host([size='large']) {
+      --lr-form-control-height: max(var(--lr-form-control-height-l), 2.75rem);
+    }
+    :host([size='xl']) {
+      --lr-form-control-height: max(var(--lr-form-control-height-xl), 2.75rem);
+    }
+  }
 `;
