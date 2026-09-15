@@ -1,6 +1,6 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './branch-picker.js';
 import type { LyraBranchPicker } from './branch-picker.js';
 
@@ -290,20 +290,30 @@ it('renders hover feedback on enabled chevrons without repainting disabled contr
   const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
   try {
     const previousRest = getComputedStyle(previous).backgroundColor;
-    let rect = previous.getBoundingClientRect();
+    // `previous` is disabled at index 0, so :hover never matches it -- there is no rendered state
+    // to poll for, and a synchronous read right after the move would pass vacuously whether or not
+    // the pointer event had actually been processed yet. Give the browser two frames, then assert
+    // nothing repainted.
+    const previousRect = previous.getBoundingClientRect();
     await sendMouse({
       type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      position: [
+        Math.round(previousRect.left + previousRect.width / 2),
+        Math.round(previousRect.top + previousRect.height / 2),
+      ],
     });
+    await settlePointer();
     expect(getComputedStyle(previous).backgroundColor).to.equal(previousRest);
 
     const nextRest = getComputedStyle(next).backgroundColor;
-    rect = next.getBoundingClientRect();
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
-    expect(getComputedStyle(next).backgroundColor).to.not.equal(nextRest);
+    // `next` IS hoverable, so land the pointer with hoverUntilMatched() and poll for the repaint
+    // instead of reading getComputedStyle() synchronously right after the move -- sendMouse()
+    // resolving does not mean the browser has processed the native pointer event yet.
+    await hoverUntilMatched(next, 'next chevron never matched :hover');
+    await waitUntil(
+      () => getComputedStyle(next).backgroundColor !== nextRest,
+      'next chevron hover background never repainted',
+    );
   } finally {
     await resetMouse();
   }

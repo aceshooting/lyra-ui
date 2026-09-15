@@ -725,6 +725,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private axisTitleFits = new WeakMap<SVGTextElement, {
     source: string; extent: number; display: string; width: number;
   }>();
+  private categoryLabelFits = new WeakMap<SVGTextElement, {
+    source: string; extent: number; display: string; width: number;
+  }>();
   private forcedColorsQuery?: MediaQueryList;
   private forcedColorsWindow?: Window;
   private refocusMarkAfterUpdate = false;
@@ -798,7 +801,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
     super.attributeChangedCallback(name, oldValue, value);
-    if (oldValue !== value && (name === 'style' || name === 'class')) this.fitAxisTitles();
+    if (oldValue !== value && (name === 'style' || name === 'class')) {
+      this.fitAxisTitles();
+      this.fitCategoryLabels();
+    }
   }
 
   override connectedCallback(): void {
@@ -845,6 +851,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           this.plotHeight = rect.height;
         }
         this.fitAxisTitles();
+        this.fitCategoryLabels();
       }
       if (entries.some((entry) => this.axisTitleTargets.has(entry.target as SVGTextElement))) {
         this.queueAxisTitleFit();
@@ -1007,6 +1014,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       this.svgEl?.focus();
     }
     this.fitAxisTitles();
+    this.fitCategoryLabels();
     this.syncAxisTitleTargets();
   }
 
@@ -1046,6 +1054,125 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         }
       }
       this.axisTitleFits.set(title, { source, extent, display: text.data, width: title.getComputedTextLength() });
+    }
+  }
+
+  /** Truncate one category-axis tick to a real measured `extent`, the same binary-search shape
+   *  fitAxisTitles() uses for axis titles: getComputedTextLength() measures what the browser
+   *  actually painted, which a character-count estimate (APPROX_LABEL_CHARACTER_WIDTH, used only
+   *  for the pre-layout initial paint) cannot. Returns the far edge this tick actually occupies --
+   *  `x + width` for a 'start' anchor, `x - width` for 'end', `x` (its own position; a 'middle'
+   *  anchor's occupied edges are each derived from this by its own caller, since a centered label
+   *  splits `width` in half each direction) otherwise -- so a caller resolving a neighboring tick
+   *  can bound it against what this one really painted instead of its nominal budget. */
+  private fitOneCategoryLabel(tick: SVGTextElement, x: number, anchor: string, extent: number): number {
+    const bounded = finiteRange(extent, 0, 0, MAX_SCROLL_CONTENT_WIDTH);
+    tick.setAttribute('data-label-extent', String(bounded));
+    const text = Array.from(tick.childNodes).find((node) => node.nodeType === 3) as Text | undefined;
+    if (!text) return x;
+    const source = tick.getAttribute('data-full-label') ?? '';
+    const previous = this.categoryLabelFits.get(tick);
+    if (
+      previous?.source === source && previous.extent === bounded &&
+      previous.display === text.data && previous.width === tick.getComputedTextLength()
+    ) {
+      return anchor === 'start' ? x + previous.width : anchor === 'end' ? x - previous.width : x;
+    }
+    text.data = source;
+    if (tick.getComputedTextLength() > bounded) {
+      if (source.length <= 1) {
+        text.data = source.length === 0 ? source : '…';
+      } else {
+        // Binary search bounds layout reads logarithmically even for a very long label.
+        let lower = 0;
+        let upper = source.length;
+        while (lower < upper) {
+          const middle = Math.ceil((lower + upper) / 2);
+          text.data = middle === 0 ? '…' : `${source.slice(0, middle)}…`;
+          if (tick.getComputedTextLength() <= bounded) lower = middle;
+          else upper = middle - 1;
+        }
+        // Do not leave the first half of a surrogate pair immediately before the ellipsis.
+        const lastCode = source.charCodeAt(lower - 1);
+        if (lastCode >= 0xd800 && lastCode <= 0xdbff) lower -= 1;
+        text.data = lower === 0 ? '…' : `${source.slice(0, lower)}…`;
+      }
+    }
+    if (text.data === source) tick.removeAttribute('aria-label');
+    else tick.setAttribute('aria-label', source);
+    const width = tick.getComputedTextLength();
+    this.categoryLabelFits.set(tick, { source, extent: bounded, display: text.data, width });
+    return anchor === 'start' ? x + width : anchor === 'end' ? x - width : x;
+  }
+
+  /** Fit every category-axis tick to its real per-survivor slot width after layout.
+   *  displayCategoryLabel()'s character-count estimate only sizes the pre-layout initial paint
+   *  (renderChart()'s `categoryLabelWidth`, an AVERAGE decimation stride); real glyph widths vary
+   *  by platform and font enough that the estimate alone can under-truncate (the painted text
+   *  overflows its slot and collides with a neighbor) even where the average exactly matches the
+   *  tightest real gap. A per-tick, per-neighbor re-fit is the only way to make "no overlap" an
+   *  actual guarantee rather than a usually-true average:
+   *
+   *  A center-anchored (interior) survivor splits its own width in half each direction, so if its
+   *  extent never exceeds the smaller of its two real neighbor gaps, two such neighbors can never
+   *  together claim more than the gap between them. A boundary survivor ('start'/'end', pointed
+   *  toward the plot interior -- see renderChart()) grows in one direction only and is fit FIRST,
+   *  using the *entire* real gap to its one neighbor, so a long boundary label (this file's own
+   *  test coverage requires one to render in full, unellipsized, whenever the plot is wide enough)
+   *  is not pre-emptively starved by a neighbor that may not need the room. Its interior neighbor
+   *  is then bounded by what the boundary tick ACTUALLY painted (this method's return value), not
+   *  by the boundary's nominal budget -- the only order that can satisfy both "a long boundary
+   *  label can use the whole gap" and "no realized overlap" at once. The rare case of exactly two
+   *  boundary ticks and no interior arbiter between them splits their one shared gap evenly instead
+   *  of letting both independently claim it in full. */
+  private fitCategoryLabels(): void {
+    if (!this.ownerDocument?.defaultView || !this.isConnected || !this.svgEl?.getClientRects().length) return;
+    const ticks = [...this.svgEl.querySelectorAll<SVGTextElement>('[part="axis-label"][data-full-label]')]
+      .sort((a, b) => Number(a.getAttribute('x')) - Number(b.getAttribute('x')));
+    const count = ticks.length;
+    if (count === 0) return;
+    const MARGIN = BAR_CORNER_RADIUS;
+    const positionOf = (tick: SVGTextElement): number => Number(tick.getAttribute('x')) || 0;
+    const anchorOf = (tick: SVGTextElement): string => tick.getAttribute('text-anchor') ?? 'middle';
+
+    const first = ticks[0]!;
+    const last = ticks[count - 1]!;
+    const firstIsBoundary = count > 1 && anchorOf(first) !== 'middle';
+    const lastIsBoundary = count > 1 && anchorOf(last) !== 'middle';
+    let firstRightEdge = positionOf(first);
+    let lastLeftEdge = positionOf(last);
+
+    if (firstIsBoundary && lastIsBoundary && count === 2) {
+      const half = Math.max(0, (positionOf(last) - positionOf(first)) / 2 - MARGIN);
+      firstRightEdge = this.fitOneCategoryLabel(first, positionOf(first), anchorOf(first), half);
+      lastLeftEdge = this.fitOneCategoryLabel(last, positionOf(last), anchorOf(last), half);
+    } else {
+      if (firstIsBoundary) {
+        const gap = positionOf(ticks[1]!) - positionOf(first);
+        firstRightEdge = this.fitOneCategoryLabel(first, positionOf(first), anchorOf(first), gap - MARGIN);
+      }
+      if (lastIsBoundary) {
+        const gap = positionOf(last) - positionOf(ticks[count - 2]!);
+        lastLeftEdge = this.fitOneCategoryLabel(last, positionOf(last), anchorOf(last), gap - MARGIN);
+      }
+    }
+
+    for (let index = 0; index < count; index++) {
+      if ((index === 0 && firstIsBoundary) || (index === count - 1 && lastIsBoundary)) continue;
+      const tick = ticks[index]!;
+      const x = positionOf(tick);
+      const leftAvailable = index === 0
+        ? MAX_SCROLL_CONTENT_WIDTH
+        : index === 1 && firstIsBoundary
+          ? x - firstRightEdge
+          : (x - positionOf(ticks[index - 1]!)) / 2;
+      const rightAvailable = index === count - 1
+        ? MAX_SCROLL_CONTENT_WIDTH
+        : index === count - 2 && lastIsBoundary
+          ? lastLeftEdge - x
+          : (positionOf(ticks[index + 1]!) - x) / 2;
+      const extent = 2 * Math.min(leftAvailable, rightAvailable) - MARGIN;
+      this.fitOneCategoryLabel(tick, x, anchorOf(tick), extent);
     }
   }
 
@@ -2258,12 +2385,36 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       plotW,
       recordSample.rowIndexes,
     );
-    // A `max-labels` decimation keeps roughly n / visibleLabelIndexes.size slots of horizontal
+    const categoryLabelX = (i: number): number =>
+      this.effectiveType === 'bar' && n > 0
+        ? (barOrigins.get(i) ?? plotX + i * slot) + slot / 2
+        : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
+    // Which sampled categories actually paint a tick: `max-labels` decimation first, then the
+    // public `axisLabelText` callback. Resolved once per index here and reused below so a
+    // stateful/counting callback is never invoked twice for the same category.
+    const tickOverrides = new Map<number, string | null | undefined>();
+    const renderedTickIndexes: number[] = [];
+    for (const i of recordSample.rowIndexes) {
+      if (visibleLabelIndexes && !visibleLabelIndexes.has(i)) continue;
+      const label = this.labels[i] ?? '';
+      // A public callback's return value is data from outside: only a string is drawn, `null`
+      // deliberately draws no tick, and anything else falls back to the source label rather than
+      // reaching SVG text as `undefined`/`[object Object]`.
+      const override = this.axisLabelText?.(label, i);
+      if (override === null) continue;
+      tickOverrides.set(i, override);
+      renderedTickIndexes.push(i);
+    }
+    // A `max-labels` decimation keeps roughly n / renderedTickIndexes.length slots of horizontal
     // space per surviving label, not the one slot every one of the n samples would get if none
-    // were dropped -- size the clip to what a survivor actually owns. Non-boundary labels are
-    // text-anchor="middle", so a survivor has half that stride clear on each side; nothing can
-    // collide. Stays 1 (byte-identical to the pre-decimation clip) when max-labels is unset.
-    const decimationStride = visibleLabelIndexes ? n / visibleLabelIndexes.size : 1;
+    // were dropped -- size the clip to what a survivor actually owns. This average is only the
+    // INITIAL estimate: before layout exists (SSR, the pre-hydration render) there is nothing to
+    // measure, so it is what ships. Once the chart is actually in the DOM, fitCategoryLabels()
+    // (called from updated()) replaces it with a per-tick fit against each survivor's REAL
+    // measured neighbor, which is the only thing that can correctly arbitrate a long boundary
+    // label against a decimation stride that (thanks to `visibleLabelIndexes()` rounding) is not
+    // perfectly even.
+    const decimationStride = renderedTickIndexes.length ? n / renderedTickIndexes.length : 1;
     const categoryLabelWidth = Math.max(
       0,
       decimationStride *
@@ -2273,20 +2424,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             ? plotW / (n - 1)
             : plotW) - BAR_CORNER_RADIUS,
     );
-    const categoryLabels = awaitingFitMeasurement ? [] : recordSample.rowIndexes.map((i) => {
+    const categoryLabels = awaitingFitMeasurement ? [] : renderedTickIndexes.map((i) => {
       const label = this.labels[i] ?? '';
-      if (visibleLabelIndexes && !visibleLabelIndexes.has(i)) return nothing;
-      // A public callback's return value is data from outside: only a string is drawn, `null`
-      // deliberately draws no tick, and anything else falls back to the source label rather than
-      // reaching SVG text as `undefined`/`[object Object]`.
-      const override = this.axisLabelText?.(label, i);
-      if (override === null) return nothing;
+      const override = tickOverrides.get(i);
       const fullLabel = typeof override === 'string' ? override : label;
-      const x =
-        this.effectiveType === 'bar' && n > 0
-          ? (barOrigins.get(i) ?? plotX + i * slot) + slot / 2
-          : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
-      const displayLabel = this.displayCategoryLabel(fullLabel, categoryLabelWidth);
+      const x = categoryLabelX(i);
       // The first and last surviving ticks sit AT the plot's own boundary (`plotX` /
       // `plotX + plotW`), not one stride short of it like every other survivor -- they have no
       // neighbor on their outer side, so a centered label there overhangs past the svg's own
@@ -2310,11 +2452,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             : i === n - 1
               ? (rtl ? 'start' : 'end')
               : 'middle';
+      const displayLabel = this.displayCategoryLabel(fullLabel, categoryLabelWidth);
       return svg`<text
         part="axis-label"
         x=${x}
         y=${plotY + plotH + CATEGORY_LABEL_OFFSET}
         text-anchor=${textAnchor}
+        data-label-extent=${categoryLabelWidth}
+        data-full-label=${fullLabel}
         aria-label=${displayLabel === fullLabel ? nothing : fullLabel}
       >${displayLabel}</text>`;
     });

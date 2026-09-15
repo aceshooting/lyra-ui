@@ -603,16 +603,24 @@ it('tints the divider on hover and deepens it while the drag handle is pressed',
   const rect = handle.getBoundingClientRect();
   expect(rect.width, 'the handle covers the comparer, so it is what the pointer lands on').to.be.greaterThan(0);
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
-    const hovered = getComputedStyle(divider).backgroundColor;
-    expect(hovered, 'hovering the invisible handle tints the visible divider').to.not.equal(resting);
+    // The divider reaches both interaction states through a `:has([part="input"]:hover|:active)`
+    // indirection and repaints through its own `transition: background-color`, so a synchronous
+    // read right after `sendMouse` can either sample before the browser processed the native
+    // pointer event or mid-transition. Land the pointer with hoverUntilMatched() (proves the move
+    // was processed, not merely sent) and poll the settled color with waitUntil() -- never read a
+    // pointer-driven repaint synchronously (docs/agents/testing.md).
+    await hoverUntilMatched(handle, 'the input never took the pointer at the comparer center');
+    let hovered = '';
+    await waitUntil(() => {
+      hovered = getComputedStyle(divider).backgroundColor;
+      return hovered !== resting;
+    }, 'hovering the invisible handle never tinted the visible divider');
 
     await sendMouse({ type: 'down' });
-    const pressed = getComputedStyle(divider).backgroundColor;
-    expect(pressed, 'pressed is a further step, not a repeat of hover').to.not.equal(hovered);
+    await waitUntil(
+      () => getComputedStyle(divider).backgroundColor !== hovered,
+      'pressing the handle never deepened the divider past its hover tint',
+    );
     await sendMouse({ type: 'up' });
   } finally {
     await resetMouse();

@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./rating.js";
 import { LyraRating } from "./rating.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 
 it("exposes fresh callable static validators that project live rating validity", async () => {
   const first = LyraRating.validators;
@@ -196,7 +196,12 @@ it("applies --lr-rating-active-color only while the editable rating is pressed",
 
   expect(getComputedStyle(star).color, "resting").to.equal("rgb(1, 2, 3)");
   try {
-    await sendMouse({ type: "move", position });
+    await hoverUntilMatched(base, "the rating base never took the pointer", () => position);
+    // Hover and resting resolve to the SAME color here (both key off --lr-rating-empty-color), so
+    // there is no state to poll toward -- give the browser two frames (settlePointer()) rather than
+    // reading straight after the move, which would pass vacuously whether or not the hover had
+    // actually been processed yet.
+    await settlePointer();
     expect(
       getComputedStyle(star).color,
       "hover does not use the pressed hook"
@@ -207,6 +212,14 @@ it("applies --lr-rating-active-color only while the editable rating is pressed",
     await sendMouse({ type: "up" });
     await resetMouse();
   }
+  // The pressed-to-resting repaint runs through the star's own `transition: color` (see
+  // rating.styles.ts), so a synchronous read right after resetMouse() can sample a mid-transition
+  // interpolated value instead of the settled one -- poll for the resting color rather than
+  // reading it once.
+  await waitUntil(
+    () => getComputedStyle(star).color === "rgb(1, 2, 3)",
+    "released",
+  );
   expect(getComputedStyle(star).color, "released").to.equal("rgb(1, 2, 3)");
 });
 
