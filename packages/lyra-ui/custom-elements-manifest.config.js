@@ -581,6 +581,14 @@ export const DOCUMENT_ANCHOR_TARGET_CONTRACT = Object.freeze({
 /** Content attributes deliberately owned without a same-named public JavaScript property. */
 export const ATTRIBUTE_ONLY_CONTRACTS = new Map([
   ['lr-app-rail-item', { 'icon-only': { type: 'boolean' } }],
+  // The owning rail writes this onto a slotted group exactly as it does onto a slotted item, and
+  // the group mirrors it down its own subtree; there is no same-named JavaScript property on
+  // either, so both belong here rather than carrying a public reactive field nobody sets.
+  ['lr-app-rail-group', { 'icon-only': { type: 'boolean' } }],
+  // Every other projected `aria-*` on the icon button is backed by a `trigger*` property, so CEM
+  // types it from the field. `aria-labelledby` cannot be: an IDREF string does not cross a shadow
+  // boundary, so it is resolved imperatively onto `ariaLabelledByElements` with no field to read.
+  ['lr-icon-button', { 'aria-labelledby': { type: 'string | null' } }],
 ]);
 
 /** Reflected attributes that exist only as framework/hydration transport and must not be

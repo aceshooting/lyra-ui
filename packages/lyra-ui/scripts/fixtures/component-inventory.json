@@ -6203,7 +6203,7 @@
           {
             "name": "icon-only",
             "property": "icon-only",
-            "type": "unknown",
+            "type": "boolean",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -62110,7 +62110,7 @@
           {
             "name": "aria-labelledby",
             "property": "aria-labelledby",
-            "type": "unknown",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,

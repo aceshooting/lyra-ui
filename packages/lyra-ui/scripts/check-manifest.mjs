@@ -118,6 +118,41 @@ function addPartBindingHelperLiterals(source, expression, names) {
   }
 }
 
+/** The top-level, comma-separated argument sources of a call whose `(` sits at `openIndex`.
+ * Parenthesis/bracket/brace depth and quoting (including template literals) are tracked so a
+ * comma inside a nested object, array, call or string cannot split an argument. Returns an empty
+ * list when the call is unterminated. */
+function balancedArguments(source, openIndex) {
+  const args = [];
+  let depth = 0;
+  let start = openIndex + 1;
+  let quote = null;
+  for (let index = openIndex; index < source.length; index += 1) {
+    const character = source[index];
+    if (quote) {
+      if (character === '\\') index += 1;
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '(' || character === '[' || character === '{') depth += 1;
+    else if (character === ')' || character === ']' || character === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        args.push(source.slice(start, index));
+        return args;
+      }
+    } else if (character === ',' && depth === 1) {
+      args.push(source.slice(start, index));
+      start = index + 1;
+    }
+  }
+  return [];
+}
+
 function namesFromTemplates(source) {
   const names = new Set();
   for (const match of source.matchAll(/\bpart\s*=\s*["']([^"']+)["']/g)) {
@@ -283,6 +318,16 @@ function namesFromTemplates(source) {
       names.add(call[1]);
     }
   }
+  // The shared data-state renderer paints its host's part onto real markup -- `part=${prefix}` in
+  // internal/data-state-renderer.ts -- from the `partPrefix` argument its callers pass. A literal
+  // there is therefore rendered markup, not a bare string, so read it the same way a literal
+  // `part="..."` attribute is read. Only the third argument counts: the second (config) carries a
+  // `slotNames` map whose values are slot names, not parts, and the fourth is an event name.
+  for (const match of source.matchAll(/\brenderDataState\s*\(/g)) {
+    const argumentList = balancedArguments(source, match.index + match[0].length - 1);
+    if (argumentList.length >= 3) addLiteralPartNames(argumentList[2], names);
+  }
+
   // Fetched SVGs retain sanitizer-approved third-party part names while adding Lyra's public
   // token through a Set. Only accept `.add('token')` when that exact Set is spread into a
   // `setAttribute('part', ...)` sink, so unrelated Set values cannot mask a missing rendered part.
