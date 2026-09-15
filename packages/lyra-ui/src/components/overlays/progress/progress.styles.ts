@@ -138,11 +138,39 @@ export const ringStyles = css`
        explicit --lr-progress-ring-indicator-color or the upstream --indicator-color alias still
        wins outright. The standalone brand default is what this rendered before variants. */
     --_lr-progress-ring-indicator-variant-color: var(--lr-color-brand);
+    /* The diameter size ladder's private default. The unconditional value here IS the 'm' tier
+       (2.5rem, unchanged from before the size property existed); the tiered rules below only
+       override it for every other step. See the size property's own doc comment in
+       progress-ring.class.ts. */
+    --_lr-progress-ring-size: var(--lr-size-2-5rem);
   }
   /* [variant] is always present ('variant' reflects its 'brand' default on first render), but the
      bare :host default above still guards a not-yet-updated element. */
   :host([variant]) {
     --_lr-progress-ring-indicator-variant-color: var(--lr-color-fill-loud);
+  }
+  /* The diameter size ladder. Both spellings of every non-'m' tier are matched, matching
+     internal/sizes.styles.ts's own convention; 'm'/'medium' need no rule of their own since the
+     unconditional --_lr-progress-ring-size above already IS that tier. Only the diameter scales --
+     matching sibling <lr-progress-bar>'s own size, which likewise scales exactly one dimension --
+     so the track/indicator stroke width and the center label's font size are untouched by this
+     ladder. */
+  :host([size='2xs']) {
+    --_lr-progress-ring-size: var(--lr-size-1-25rem);
+  }
+  :host([size='xs']) {
+    --_lr-progress-ring-size: var(--lr-size-1-75rem);
+  }
+  :host([size='s']),
+  :host([size='small']) {
+    --_lr-progress-ring-size: var(--lr-size-2-25rem);
+  }
+  :host([size='l']),
+  :host([size='large']) {
+    --_lr-progress-ring-size: var(--lr-size-3rem);
+  }
+  :host([size='xl']) {
+    --_lr-progress-ring-size: var(--lr-size-3-5rem);
   }
   [part~="base"] {
     position: relative;
@@ -151,11 +179,11 @@ export const ringStyles = css`
     justify-content: center;
     inline-size: var(
       --lr-progress-ring-size,
-      var(--size, var(--lr-size-2-5rem))
+      var(--size, var(--_lr-progress-ring-size))
     );
     block-size: var(
       --lr-progress-ring-size,
-      var(--size, var(--lr-size-2-5rem))
+      var(--size, var(--_lr-progress-ring-size))
     );
   }
   svg {

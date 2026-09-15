@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
-- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -88,6 +88,8 @@ Page scroll mode deliberately ignores this cap.
 default because a `[data-active]` selector can't be chained onto the `::part(cell-highlight)` the
 cell reaches this component's stylesheet through. An inherited or direct public value remains
 authoritative across that boundary.
+`--lr-dataset-viewer-header-row-bg` (default `var(--lr-color-brand-quiet)`) — background of the
+sticky header row, independent of the highlight outline above.
 
 **Optional peer dependency:** `papaparse`.
 

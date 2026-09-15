@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 26 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -115,7 +115,14 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 `--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
 `--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
 the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
-inline gutter is reserved for the overlaid `search-clear` button and is not a knob. Plus shared
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob. The scrollable
+tool list's mouse-hover preview on `[part="body"]` has its own four-longhand outline shape:
+`--lr-tool-select-dialog-body-hover-outline-width` (default `var(--lr-border-width-thin)`),
+`--lr-tool-select-dialog-body-hover-outline-style` (default `solid`),
+`--lr-tool-select-dialog-body-hover-outline-color` (default `var(--lr-color-border)`, set to
+`transparent` to opt out entirely), and `--lr-tool-select-dialog-body-hover-outline-offset`
+(default `calc(-1 * var(--lr-border-width-thin))`, kept inward so the ring isn't clipped by the
+body's own scrolling). Unset, all four resolve to the rule's previous literal paint. Plus shared
 `--lr-space-*`, `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 

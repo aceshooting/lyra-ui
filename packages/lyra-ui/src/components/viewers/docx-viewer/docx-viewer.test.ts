@@ -703,6 +703,25 @@ describe('getHeadingTree', () => {
     }
   });
 
+  it('retints a rendered table header row from --lr-docx-viewer-table-header-background', async () => {
+    const el = await fixture<LyraDocxViewer>(
+      html`<lr-docx-viewer style="--lr-docx-viewer-table-header-background: rgb(1, 2, 3);"></lr-docx-viewer>`,
+    );
+    useLibrary(el, {
+      mammoth: { convertToHtml: () => Promise.resolve({ value: '<table><tr><th>Name</th></tr><tr><td>Ada</td></tr></table>', messages: [] }) },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const restore = stubFetch(BUFFER);
+    el.src = 'https://example.test/report.docx';
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="content"] th') !== null);
+    try {
+      const th = el.shadowRoot!.querySelector('[part="content"] th') as HTMLElement;
+      expect(getComputedStyle(th).backgroundColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      restore();
+    }
+  });
+
   it('stamps id attributes on the rendered headings', async () => {
     const { el, restore } = await loadWithMarkup('<h1>Title</h1>');
     try {

@@ -46,6 +46,15 @@ export interface LyraScrollerEventMap {
  * @cssprop [--shadow-size=var(--lr-size-2rem)] - Inline/block extent of each edge shadow.
  * @cssprop [--lr-scroller-shadow-color=var(--shadow-color)] - Lyra-prefixed shadow-color alias.
  * @cssprop [--lr-scroller-shadow-size=var(--shadow-size)] - Lyra-prefixed shadow-size alias.
+ * @cssprop [--lr-scroller-hover-outline-width=var(--lr-border-width-thin)] - Outline width of the
+ *   mouse-hover preview on `[part="viewport"]`.
+ * @cssprop [--lr-scroller-hover-outline-style=solid] - Outline style of the mouse-hover preview on
+ *   `[part="viewport"]`.
+ * @cssprop [--lr-scroller-hover-outline-color=var(--lr-color-border)] - Outline color of the
+ *   mouse-hover preview on `[part="viewport"]`. Set to `transparent` to opt out of the hover
+ *   treatment entirely.
+ * @cssprop [--lr-scroller-hover-outline-offset=var(--lr-focus-ring-offset)] - Offset of the
+ *   mouse-hover preview on `[part="viewport"]`.
  * @status stable
  * @since 4.0.0
  */

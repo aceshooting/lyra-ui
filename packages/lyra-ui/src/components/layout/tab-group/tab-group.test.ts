@@ -14,7 +14,11 @@ import type { LyraTabGroup } from "./tab-group.js";
 import type { LyraTab } from "./tab.js";
 import type { LyraTabPanel } from "./tab-panel.js";
 import { styles } from "./tab-group.styles.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const basic = () => html`
@@ -229,6 +233,39 @@ it('paints the keyboard-focusable panel hover affordance in computed style', asy
       'panel hover outline did not paint'
     );
     expect(getComputedStyle(panel).outlineWidth).to.not.equal('0px');
+  } finally {
+    await resetMouse();
+  }
+});
+
+it("lets each panel hover-outline longhand be retinted independently and keeps them unchanged while pressed", async () => {
+  const el = (await fixture(basic())) as LyraTabGroup;
+  el.style.setProperty("--lr-tab-group-panel-hover-outline-width", "3px");
+  el.style.setProperty("--lr-tab-group-panel-hover-outline-style", "dashed");
+  el.style.setProperty(
+    "--lr-tab-group-panel-hover-outline-color",
+    "rgb(12, 34, 56)"
+  );
+  el.style.setProperty("--lr-tab-group-panel-hover-outline-offset", "-2px");
+  const panel = panels(el)[0]!;
+  try {
+    await hoverUntilMatched(panel, "the tab panel never registered :hover");
+    await waitUntil(
+      () => getComputedStyle(panel).outlineColor === "rgb(12, 34, 56)",
+      "the scoped panel hover outline color never rendered"
+    );
+    const hovered = getComputedStyle(panel);
+    expect(hovered.outlineWidth).to.equal("3px");
+    expect(hovered.outlineStyle).to.equal("dashed");
+    expect(hovered.outlineColor).to.equal("rgb(12, 34, 56)");
+    expect(hovered.outlineOffset).to.equal("-2px");
+
+    await sendMouse({ type: "down" });
+    const pressed = getComputedStyle(panel);
+    expect(pressed.outlineWidth).to.equal("3px");
+    expect(pressed.outlineStyle).to.equal("dashed");
+    expect(pressed.outlineColor).to.equal("rgb(12, 34, 56)");
+    expect(pressed.outlineOffset).to.equal("-2px");
   } finally {
     await resetMouse();
   }

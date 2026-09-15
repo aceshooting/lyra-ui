@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -135,6 +135,8 @@ latter, so a neutral highlight tinted with it would render as unhighlighted.
 `--lr-xml-viewer-highlight-active-outline` (default `var(--lr-color-brand)`) outlines the entry named
 by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
 outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
+`--lr-xml-viewer-tag-color` (default `var(--lr-color-brand)`) retints every rendered `[part='tag']`
+element name, independent of that outline.
 
 `[part='toggle']`'s glyph box stays compact (`1.25rem`) while its _interactive_ box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,

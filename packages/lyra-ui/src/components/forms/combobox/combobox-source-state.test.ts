@@ -61,6 +61,39 @@ describe('lr-combobox async source failures', () => {
     });
   });
 
+  it('carries the query of the rejected call, not the live query after it changed', async () => {
+    const el = await fixture<LyraCombobox>(
+      html`<lr-combobox source-delay="0" open></lr-combobox>`
+    );
+    const failure = new Error('upstream down');
+    const calls: string[] = [];
+    let rejectPending!: (reason: unknown) => void;
+    const seen: { error: unknown; query: string }[] = [];
+    el.addEventListener('lr-source-error', (event) => {
+      seen.push((event as CustomEvent<{ error: unknown; query: string }>).detail);
+    });
+    await withSilencedWarning(async () => {
+      el.source = async (query) => {
+        calls.push(query);
+        return new Promise((_resolve, reject) => {
+          rejectPending = reject;
+        });
+      };
+      el.inputValue = 'stale-query';
+      await waitUntil(() => calls.includes('stale-query'), 'the source call is issued');
+      // Close before the rejection settles: the close path clears the live `query` synchronously
+      // without re-invoking `source()`, so the request in flight and the live field disagree.
+      await el.hide();
+      expect(el.inputValue).to.equal('', 'the live query has already been cleared by closing');
+      rejectPending(failure);
+      await waitUntil(() => seen.length === 1, 'the rejection is still observed after close');
+      expect(seen[0]!.query).to.equal(
+        'stale-query',
+        "the event names the rejected call's own query, not the live (now-cleared) one"
+      );
+    });
+  });
+
   it('recovers through the retry control, honouring a vetoed lr-retry', async () => {
     const el = await fixture<LyraCombobox>(
       html`<lr-combobox source-delay="0" open></lr-combobox>`

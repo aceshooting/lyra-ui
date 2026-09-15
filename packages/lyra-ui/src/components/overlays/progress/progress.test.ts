@@ -720,6 +720,67 @@ describe('track size ladder', () => {
   });
 });
 
+it('keeps the ring at the pre-existing 2.5rem diameter when size is left unset (regression: size tier addition)', async () => {
+  const el = (await fixture(html`<lr-progress-ring></lr-progress-ring>`)) as LyraProgressRing;
+  expect(el.size, 'size defaults to the pre-existing m tier without markup authoring it').to.equal('m');
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  expect(getComputedStyle(base).inlineSize).to.equal(`${2.5 * remPx}px`);
+});
+
+describe('ring diameter size ladder', () => {
+  const ringDiameter = async (size?: string): Promise<number> => {
+    const el = (await fixture(
+      size == null
+        ? html`<lr-progress-ring></lr-progress-ring>`
+        : html`<lr-progress-ring size=${size}></lr-progress-ring>`,
+    )) as LyraProgressRing;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    return Number.parseFloat(getComputedStyle(base).inlineSize);
+  };
+
+  it('defaults size to m and reflects every assignment onto the host attribute', async () => {
+    const el = (await fixture(html`<lr-progress-ring></lr-progress-ring>`)) as LyraProgressRing;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    el.size = 'xl';
+    await el.updateComplete;
+    expect(el.getAttribute('size')).to.equal('xl');
+  });
+
+  it('steps the diameter across the shared six-step ladder, in both spellings, with the unset default on m', async () => {
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const expectFor = async (size: string | undefined, rem: number): Promise<void> => {
+      expect(await ringDiameter(size), `size=${String(size)}`).to.be.closeTo(rem * remPx, 0.5);
+    };
+    await expectFor(undefined, 2.5);
+    await expectFor('2xs', 1.25);
+    await expectFor('xs', 1.75);
+    await expectFor('s', 2.25);
+    await expectFor('small', 2.25);
+    await expectFor('m', 2.5);
+    await expectFor('medium', 2.5);
+    await expectFor('l', 3);
+    await expectFor('large', 3);
+    await expectFor('xl', 3.5);
+  });
+
+  it('still lets an explicit --lr-progress-ring-size (or the upstream --size alias) win over every tier', async () => {
+    const el = (await fixture(
+      html`<lr-progress-ring size="xl" style="--lr-progress-ring-size: 20px"></lr-progress-ring>`,
+    )) as LyraProgressRing;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    expect(getComputedStyle(base).inlineSize).to.equal('20px');
+
+    const upstream = (await fixture(
+      html`<lr-progress-ring size="2xs" style="--size: 30px"></lr-progress-ring>`,
+    )) as LyraProgressRing;
+    const upstreamBase = upstream.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    expect(getComputedStyle(upstreamBase).inlineSize).to.equal('30px');
+  });
+});
+
 it('omits aria-valuenow for indeterminate progress', async () => {
   const el = (await fixture(html`<lr-progress-bar indeterminate></lr-progress-bar>`)) as LyraProgressBar;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;

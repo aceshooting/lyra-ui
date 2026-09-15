@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -146,6 +146,9 @@ and the arrowhead marker it references:
 `--lr-flow-canvas-edge-success-color` (default `var(--lr-color-success)`),
 `--lr-flow-canvas-edge-warning-color` (default `var(--lr-color-warning)`), and
 `--lr-flow-canvas-edge-danger-color` (default `var(--lr-color-danger)`).
+`--lr-flow-canvas-connection-line-color` (default `var(--lr-color-brand)`) colors
+`[part="connection-line"]`, the in-progress ghost path drawn while dragging a new connection from a
+node's output handle, independent of a finished edge's own `-edge-*-color` tone above.
 `--lr-flow-canvas-march-duration` (default
 `var(--lr-duration-ambient)`, running-edge march animation duration; this is a time-only value, not
 the `--lr-transition-ambient` duration/easing shorthand, because the animation supplies its own

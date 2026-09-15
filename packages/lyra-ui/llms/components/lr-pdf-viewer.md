@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
-- **Themeable via** 20 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -146,10 +146,14 @@ matched against the element the selected text originates in:
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized page list (`[part="pages"]`); also settable via the `maxHeight` property,
-which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-button-hover-bg`
+which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-bg` (default
+`var(--lr-color-brand-quiet)`) — background of the `toolbar` part, independent of the shared
+`--lr-color-brand-quiet` token. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface
 fill rather than the toolbar's own `--lr-color-brand-quiet` tint precisely so the hover state is
-visible against the toolbar behind it. `--lr-pdf-viewer-search-match-bg` (default
+visible against the toolbar behind it. `--lr-pdf-viewer-text-selection-bg` (default
+`var(--lr-color-brand-quiet)`) — background of a native text selection over a `text-span`,
+independent of the shared `--lr-color-brand-quiet` token. `--lr-pdf-viewer-search-match-bg` (default
 `var(--lr-color-warning-quiet)`) and `--lr-pdf-viewer-search-match-active-bg` (default
 `var(--lr-color-warning)`) retint the painted `search-match`/`search-match-active` marks without
 overriding the shared warning tokens directly. Everything else below the page list is retuned

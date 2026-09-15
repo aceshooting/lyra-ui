@@ -506,6 +506,8 @@ while the viewer and its composed ancestors are exposed to the accessibility tre
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
+`--lr-docx-viewer-table-header-background` (default `var(--lr-color-brand-quiet)`) retints a
+rendered document table's header row (`th`), independent of the highlight backgrounds below.
 Highlight backgrounds are independently themeable with
 `--lr-docx-viewer-highlight-accent-background`,
 `--lr-docx-viewer-highlight-success-background`,
@@ -1182,6 +1184,8 @@ Page scroll mode deliberately ignores this cap.
 default because a `[data-active]` selector can't be chained onto the `::part(cell-highlight)` the
 cell reaches this component's stylesheet through. An inherited or direct public value remains
 authoritative across that boundary.
+`--lr-dataset-viewer-header-row-bg` (default `var(--lr-color-brand-quiet)`) — background of the
+sticky header row, independent of the highlight outline above.
 
 **Optional peer dependency:** `papaparse`.
 
@@ -1378,10 +1382,14 @@ matched against the element the selected text originates in:
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized page list (`[part="pages"]`); also settable via the `maxHeight` property,
-which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-button-hover-bg`
+which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-bg` (default
+`var(--lr-color-brand-quiet)`) — background of the `toolbar` part, independent of the shared
+`--lr-color-brand-quiet` token. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface
 fill rather than the toolbar's own `--lr-color-brand-quiet` tint precisely so the hover state is
-visible against the toolbar behind it. `--lr-pdf-viewer-search-match-bg` (default
+visible against the toolbar behind it. `--lr-pdf-viewer-text-selection-bg` (default
+`var(--lr-color-brand-quiet)`) — background of a native text selection over a `text-span`,
+independent of the shared `--lr-color-brand-quiet` token. `--lr-pdf-viewer-search-match-bg` (default
 `var(--lr-color-warning-quiet)`) and `--lr-pdf-viewer-search-match-active-bg` (default
 `var(--lr-color-warning)`) retint the painted `search-match`/`search-match-active` marks without
 overriding the shared warning tokens directly. Everything else below the page list is retuned
@@ -2058,6 +2066,8 @@ latter, so a neutral highlight tinted with it would render as unhighlighted.
 `--lr-xml-viewer-highlight-active-outline` (default `var(--lr-color-brand)`) outlines the entry named
 by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
 outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
+`--lr-xml-viewer-tag-color` (default `var(--lr-color-brand)`) retints every rendered `[part='tag']`
+element name, independent of that outline.
 
 `[part='toggle']`'s glyph box stays compact (`1.25rem`) while its _interactive_ box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,

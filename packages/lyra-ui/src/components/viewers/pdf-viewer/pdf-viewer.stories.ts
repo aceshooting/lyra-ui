@@ -29,6 +29,18 @@ export const CustomWorkerSrc: Story = {
   render: () => html`<lr-pdf-viewer src=${SAMPLE_PDF_URL} name="sample.pdf" worker-src="/pdf.worker.min.mjs"></lr-pdf-viewer>`,
 };
 
+// `--lr-pdf-viewer-toolbar-bg` retints the toolbar independent of the shared brand-quiet token;
+// `--lr-pdf-viewer-text-selection-bg` retints a native text selection over an extracted-text span
+// (select some page text to see it) independent of that same shared token.
+export const ThemedToolbarAndSelection: Story = {
+  name: 'Themed toolbar and text selection (cssprops)',
+  render: () => html`<lr-pdf-viewer
+    src=${SAMPLE_PDF_URL}
+    name="sample.pdf"
+    style="--lr-pdf-viewer-toolbar-bg: var(--lr-color-success-quiet); --lr-pdf-viewer-text-selection-bg: var(--lr-color-success-quiet);"
+  ></lr-pdf-viewer>`,
+};
+
 // The toolbar (previous/next page, page-indicator text, zoom-out/zoom-in, zoom-indicator text --
 // six items in a `flex-wrap: wrap` row) has no coverage at a narrow allocation otherwise.
 export const Narrow320: Story = {

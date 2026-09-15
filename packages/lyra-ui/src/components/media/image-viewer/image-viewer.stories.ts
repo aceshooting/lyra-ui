@@ -153,13 +153,13 @@ export const ThemedActiveStates: Story = {
     docs: {
       description: {
         story:
-          '`--lr-image-viewer-annotate-active-bg`/`--lr-image-viewer-annotate-active-border` retint the pressed annotation toggle. `--lr-image-viewer-highlight-active-color`, `--lr-image-viewer-highlight-active-border-width`, `--lr-image-viewer-highlight-active-outline-width`, and `--lr-image-viewer-highlight-active-outline-offset` tune the active highlight independently of its tone. None is declared on `:host`, so a value set on any ancestor is never shadowed. The toggle carries its own glyph in `--lr-color-text`, so keep 4.5:1 against the background you choose.',
+          '`--lr-image-viewer-annotate-active-bg`/`--lr-image-viewer-annotate-active-border` retint the pressed annotation toggle. `--lr-image-viewer-highlight-active-color`, `--lr-image-viewer-highlight-active-border-width`, `--lr-image-viewer-highlight-active-outline-width`, and `--lr-image-viewer-highlight-active-outline-offset` tune the active highlight independently of its tone. `--lr-image-viewer-annotation-box-border`/`--lr-image-viewer-annotation-box-bg` retint the in-progress draft rectangle drawn while annotating (press Enter over the image with annotation mode on), independent of the saved highlights\' own tone colors. None is declared on `:host`, so a value set on any ancestor is never shadowed. The toggle carries its own glyph in `--lr-color-text`, so keep 4.5:1 against the background you choose.',
       },
     },
   },
   render: () => html`
     <lr-image-viewer
-      style="--lr-image-viewer-annotate-active-bg: ${storyColor('warningQuiet')}; --lr-image-viewer-annotate-active-border: ${storyColor('warning')}; --lr-image-viewer-highlight-active-color: ${storyColor('success')}; --lr-image-viewer-highlight-active-border-width: var(--lr-border-width-thin); --lr-image-viewer-highlight-active-outline-width: var(--lr-border-width-thick); --lr-image-viewer-highlight-active-outline-offset: var(--lr-border-width-thick);"
+      style="--lr-image-viewer-annotate-active-bg: ${storyColor('warningQuiet')}; --lr-image-viewer-annotate-active-border: ${storyColor('warning')}; --lr-image-viewer-highlight-active-color: ${storyColor('success')}; --lr-image-viewer-highlight-active-border-width: var(--lr-border-width-thin); --lr-image-viewer-highlight-active-outline-width: var(--lr-border-width-thick); --lr-image-viewer-highlight-active-outline-offset: var(--lr-border-width-thick); --lr-image-viewer-annotation-box-border: ${storyColor('danger')}; --lr-image-viewer-annotation-box-bg: ${storyColor('dangerQuiet')};"
       src=${SRC}
       name="Mountain river"
       annotatable

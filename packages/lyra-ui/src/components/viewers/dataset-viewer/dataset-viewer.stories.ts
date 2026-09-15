@@ -58,3 +58,13 @@ export const PageScrolling: Story = {
     ></lr-dataset-viewer>
   `,
 };
+
+/** `--lr-dataset-viewer-header-row-bg` retints the sticky header row independent of the
+ *  highlight outline (`--lr-dataset-viewer-highlight-color`). */
+export const RetintedHeaderRow: Story = {
+  render: () => html`<lr-dataset-viewer
+    src=${src}
+    name="People"
+    style="--lr-dataset-viewer-header-row-bg: var(--lr-color-success-quiet);"
+  ></lr-dataset-viewer>`,
+};

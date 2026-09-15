@@ -15,3 +15,15 @@ export const UpstreamThemeHooks: StoryObj = {
     >Uploading files</lr-progress-bar>
   `,
 };
+
+export const SizeTiers: StoryObj = {
+  name: 'Size tiers',
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1rem; inline-size: 16rem">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`<lr-progress-bar size=${size} value="65">${size}</lr-progress-bar>`,
+      )}
+      <lr-progress-bar size="large" value="65">large</lr-progress-bar>
+    </div>
+  `,
+};

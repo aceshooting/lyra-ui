@@ -160,6 +160,11 @@ export interface LyraCodeBlockCoreEventMap {
  *   of a line marked by `highlight-lines` or a `line-range` entry in `highlights`. Shared with
  *   `lr-code-block` (this component reuses its stylesheet), leaving every other
  *   `--lr-color-warning-quiet` surface alone.
+ * @cssprop [--lr-code-block-language-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   `language` badge in `[part="header"]`. Shared with `lr-code-block` (this component reuses its
+ *   stylesheet).
+ * @cssprop [--lr-code-block-language-color=var(--lr-color-brand)] - Text color of the `language`
+ *   badge.
  * @status stable
  * @since 4.0.0
  */

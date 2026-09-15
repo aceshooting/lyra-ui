@@ -523,6 +523,31 @@ export const ManualActivation: StoryObj = {
   `,
 };
 
+/** The hover preview's width, style, color, and inward offset can be themed separately without
+ *  changing the focus ring or adding a pressed state to the panel. */
+export const ThemedHoverOutline: Story = {
+  name: 'Themed hover outline (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover the active panel to see `--lr-tab-group-panel-hover-outline-width`, `--lr-tab-group-panel-hover-outline-style`, `--lr-tab-group-panel-hover-outline-color`, and `--lr-tab-group-panel-hover-outline-offset` inherited from its ancestor. Pressing the panel intentionally keeps the same hover preview: it is a container, not an action.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-tab-group-panel-hover-outline-width: var(--lr-border-width-thick); --lr-tab-group-panel-hover-outline-style: dashed; --lr-tab-group-panel-hover-outline-color: ${storyColor(
+        'warning',
+      )}; --lr-tab-group-panel-hover-outline-offset: calc(-1 * var(--lr-border-width-thick));"
+    >
+      <lr-tab-group aria-label="Themed hover outline">
+        ${standardTabs()}
+      </lr-tab-group>
+    </div>
+  `,
+};
+
 export const ManualFocusRemoval: StoryObj = {
   parameters: { docs: { description: { story: 'Use ArrowRight to focus the unselected second tab, then Delete to close it. Focus returns to a surviving tab while the first panel remains selected, without show/hide notifications.' } } },
   render: () => html`<lr-tab-group activation="manual" @lr-close=${(event: Event) => {

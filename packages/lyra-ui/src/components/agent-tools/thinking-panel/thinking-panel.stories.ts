@@ -5,6 +5,7 @@ import './thinking-panel.js';
 import '../../conversation/streaming-text/streaming-text.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
 import type { LyraStreamingText } from '../../conversation/streaming-text/streaming-text.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'ThinkingPanel',
@@ -28,6 +29,32 @@ export const Default: Story = {
       The user is asking about quarterly revenue trends. I should look at the last four quarters and
       identify any seasonal patterns before drawing a conclusion.
     </lr-thinking-panel>
+  `,
+};
+
+/** The hover preview's width, style, color, and inward offset can be themed separately without
+ *  changing the focus ring or adding a pressed state to the transcript body. */
+export const ThemedHoverOutline: Story = {
+  name: 'Themed hover outline (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover the transcript body to see `--lr-thinking-panel-body-hover-outline-width`, `--lr-thinking-panel-body-hover-outline-style`, `--lr-thinking-panel-body-hover-outline-color`, and `--lr-thinking-panel-body-hover-outline-offset` inherited from its ancestor. Pressing the body intentionally keeps the same hover preview: it is a scroll region, not an action.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="max-width: 32rem; --lr-thinking-panel-body-hover-outline-width: var(--lr-border-width-thick); --lr-thinking-panel-body-hover-outline-style: dashed; --lr-thinking-panel-body-hover-outline-color: ${storyColor(
+        'warning',
+      )}; --lr-thinking-panel-body-hover-outline-offset: calc(-1 * var(--lr-border-width-thick));"
+    >
+      <lr-thinking-panel expanded>
+        The user is asking about quarterly revenue trends. I should look at the last four quarters
+        and identify any seasonal patterns before drawing a conclusion.
+      </lr-thinking-panel>
+    </div>
   `,
 };
 

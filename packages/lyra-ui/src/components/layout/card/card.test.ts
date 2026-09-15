@@ -214,6 +214,22 @@ describe("lr-card", () => {
     expect(footer.hasAttribute("hidden")).to.be.true;
   });
 
+  it("keeps a padded/bordered slotted media child inside the media wrapper's allocation (regression)", async () => {
+    const el = (await fixture(html`
+      <lr-card style="inline-size: 300px">
+        <div slot="media" style="padding: 16px; border: 2px solid">Media</div>
+        body
+      </lr-card>
+    `)) as LyraCard;
+    const media = el.shadowRoot!.querySelector('[part~="media"]') as HTMLElement;
+    const child = el.querySelector('[slot="media"]') as HTMLElement;
+    // box-sizing does not inherit across the slot boundary, so a slotted node keeps the outer
+    // tree's value -- the UA's content-box unless the author set otherwise. [part~="media"]
+    // ::slotted(*) sets a definite `inline-size: 100%`, which before the fix allocated 100% to
+    // the child's CONTENT box and let its own padding/border escape the media wrapper.
+    expect(child.getBoundingClientRect().width).to.be.closeTo(media.clientWidth, 0.5);
+  });
+
   it("reflects appearance/actionable as attributes for CSS selectors", async () => {
     const el = (await fixture(
       html`<lr-card appearance="filled" actionable>body</lr-card>`

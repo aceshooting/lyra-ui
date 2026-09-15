@@ -65,3 +65,15 @@ export const FailedFetch: Story = {
 export const Narrow320: Story = {
   render: () => html`<div style="max-width:320px"><lr-docx-viewer src=${source} name="International quarterly analytical-engine research report.docx"></lr-docx-viewer></div>`,
 };
+
+/** `--lr-docx-viewer-table-header-background` retints a rendered document table's header row
+ *  (`th`), independent of the highlight backgrounds. The fixture document loaded elsewhere in this
+ *  file has no table, so this story sets the token descriptively; it applies whenever the loaded
+ *  document contains a table. */
+export const RetintedTableHeaderBackground: Story = {
+  render: () => html`<lr-docx-viewer
+    style="max-inline-size: 32rem; --lr-docx-viewer-table-header-background: var(--lr-color-success-quiet);"
+    src=${source}
+    name="fixture.docx"
+  ></lr-docx-viewer>`,
+};

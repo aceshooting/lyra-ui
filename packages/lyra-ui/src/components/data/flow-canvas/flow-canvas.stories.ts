@@ -283,3 +283,19 @@ export const RetintedEdgeTones: Story = {
     </div>
   `,
 };
+
+/** `--lr-flow-canvas-connection-line-color` retints `[part="connection-line"]`, the ghost path
+ *  drawn while dragging a new connection from a node's output handle (drag from a handle to see
+ *  it), independent of a finished edge's own `--lr-flow-canvas-edge-*-color` tone hooks. */
+export const RetintedConnectionLine: Story = {
+  render: () => html`
+    <div style="--lr-flow-canvas-connection-line-color: var(--lr-color-danger);">
+      <lr-flow-canvas
+        connectable
+        style="width:100%;height:24rem"
+        .nodes=${nodes}
+        .edges=${edges}
+      ></lr-flow-canvas>
+    </div>
+  `,
+};

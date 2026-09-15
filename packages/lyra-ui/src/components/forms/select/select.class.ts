@@ -371,6 +371,8 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  *   chip (a `multiple`-mode tag whose committed value matches no current option).
  * @cssprop [--lr-select-unknown-value-border-color=var(--lr-color-border)] - Border color of the
  *   same unknown-value chip.
+ * @cssprop [--lr-select-option-badge-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   `[part='option-badge']` "not in catalog" badge.
  * @cssprop [--tag-max-size=var(--lr-size-12rem)] - Maximum inline size of one selected-value tag.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Listbox enter-transition timing.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Listbox exit-transition timing.

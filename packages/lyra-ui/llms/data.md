@@ -1070,7 +1070,8 @@ or structural-pseudo-class selector and does not affect group, expanded, hover, 
 row's hover and pressed fills reach its `sticky` column cell the same way, through an internal
 custom property rather than a themeable token, since neither state has a public hook today.
 `--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
-`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`). The opaque surface default prevents body rows from
+`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`),
+including a `sticky` column's own header cell. The opaque surface default prevents body rows from
 showing through the sticky header while it scrolls.
 Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
 because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the
@@ -3030,6 +3031,9 @@ and the arrowhead marker it references:
 `--lr-flow-canvas-edge-success-color` (default `var(--lr-color-success)`),
 `--lr-flow-canvas-edge-warning-color` (default `var(--lr-color-warning)`), and
 `--lr-flow-canvas-edge-danger-color` (default `var(--lr-color-danger)`).
+`--lr-flow-canvas-connection-line-color` (default `var(--lr-color-brand)`) colors
+`[part="connection-line"]`, the in-progress ghost path drawn while dragging a new connection from a
+node's output handle, independent of a finished edge's own `-edge-*-color` tone above.
 `--lr-flow-canvas-march-duration` (default
 `var(--lr-duration-ambient)`, running-edge march animation duration; this is a time-only value, not
 the `--lr-transition-ambient` duration/easing shorthand, because the animation supplies its own
@@ -3237,6 +3241,8 @@ latest viewport-change text).
 `--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,
 `--lr-flow-status-success-color`, `--lr-flow-status-error-color`, and
 `--lr-flow-status-denied-color`.
+`--lr-flow-minimap-viewport-color` (default `var(--lr-color-brand)`) colors `[part="viewport"]`'s
+fill (mixed 15% into transparent) and stroke, independent of every per-status node fill above.
 `--lr-flow-minimap-viewport-min-size` (default `var(--lr-icon-button-size)`, normally 40px) floors
 only the transparent `viewport-hit-area` along each axis. The visible `viewport` remains the exact
 viewport-to-content ratio. The token inherits from ancestors; set it to `0` to opt out.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,7 +39,10 @@ mode), and `size` (the part keeps its name — it is the rendered size _text_, a
 would break shipped `::part()` rules for no gain).
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
-format badge's inline and block size).
+format badge's inline and block size). `--lr-file-icon-bg` (default `var(--lr-color-brand-quiet)`)
+and `--lr-file-icon-color` (default `var(--lr-color-brand)`) retint the `icon` badge — every file
+category renders the same fill today, so either can be set without hijacking the shared
+`--lr-color-brand-quiet`/`--lr-color-brand` tokens used elsewhere in the theme.
 
 **Exports:** `LyraFileTypeMetadata`, `LyraFileTypeMetadataEntry`, `LyraResolvedFileTypeMetadata`,
 `LyraFileTypeMetadataRegistry`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,

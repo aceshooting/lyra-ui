@@ -70,8 +70,8 @@ export const styles = css`
     fill: var(--lr-flow-status-denied-color, var(--lr-color-warning));
   }
   [part='viewport'] {
-    fill: color-mix(in srgb, var(--lr-color-brand) 15%, transparent);
-    stroke: var(--lr-color-brand);
+    fill: color-mix(in srgb, var(--lr-flow-minimap-viewport-color, var(--lr-color-brand)) 15%, transparent);
+    stroke: var(--lr-flow-minimap-viewport-color, var(--lr-color-brand));
     stroke-width: 2;
     pointer-events: none;
   }

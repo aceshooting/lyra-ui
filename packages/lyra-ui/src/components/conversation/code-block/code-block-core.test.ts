@@ -25,6 +25,22 @@ async function el2Ready(el: LyraCodeBlockCore): Promise<void> {
 }
 
 describe("lr-code-block-core", () => {
+  it("retints the language badge from --lr-code-block-language-bg/-color", async () => {
+    const el = (await fixture(
+      html`<lr-code-block-core
+        language="typescript"
+        style="--lr-code-block-language-bg: rgb(1, 2, 3); --lr-code-block-language-color: rgb(4, 5, 6);"
+      ></lr-code-block-core>`
+    )) as LyraCodeBlockCore;
+    await el2Ready(el);
+    const badge = el.shadowRoot!.querySelector(
+      '[part="language"]'
+    ) as HTMLElement;
+    const computed = getComputedStyle(badge);
+    expect(computed.backgroundColor).to.equal("rgb(1, 2, 3)");
+    expect(computed.color).to.equal("rgb(4, 5, 6)");
+  });
+
   it("uses the shared copyable presence-reflection matrix", async () => {
     const el = (await fixture(
       html`<lr-code-block-core></lr-code-block-core>`

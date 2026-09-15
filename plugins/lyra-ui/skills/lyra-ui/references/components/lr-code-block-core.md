@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -111,8 +111,10 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 (independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
 `--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`),
-`--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`), plus the same shared
-tokens. The last three are inline `var()` fallbacks at the point of use rather than `:host`
+`--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`), and
+`--lr-code-block-language-color` (default `var(--lr-color-brand)`), plus the same shared
+tokens. The last five are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a

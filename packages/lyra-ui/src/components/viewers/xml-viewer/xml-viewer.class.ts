@@ -295,6 +295,8 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
  * @cssprop [--lr-xml-viewer-active-attribute-color=var(--lr-color-brand)] - Outline color of the
  *   `[part="attribute"]` an attribute-addressing `node-path` anchor resolved to.
+ * @cssprop [--lr-xml-viewer-tag-color=var(--lr-color-brand)] - Text color of `[part="tag"]`, an
+ *   element's rendered tag name, independent of the active-attribute outline above.
  * @cssprop [--lr-xml-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] - Row
  *   background of an accent-tone (the default tone) `highlights` entry.
  * @cssprop [--lr-xml-viewer-highlight-success-background=var(--lr-color-success-quiet)] - Row

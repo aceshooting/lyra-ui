@@ -881,9 +881,10 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   stripe marker, so it can be set on the table or an ancestor without affecting group, expanded,
  *   hover, or selected rows.
  * @cssprop [--lr-table-header-sorted-bg=var(--lr-color-surface)] - Background of the currently-sorted column's
- *   header cell (`[aria-sort]` other than `none`). Same rationale as `--lr-table-row-selected-bg`:
- *   `::part(header-cell)[aria-sort]` is invalid CSS, so this token is the supported way to recolor
- *   the sorted header without hijacking a library-wide token.
+ *   header cell (`[aria-sort]` other than `none`), including a `sticky` column's own header cell.
+ *   Same rationale as `--lr-table-row-selected-bg`: `::part(header-cell)[aria-sort]` is invalid CSS,
+ *   so this token is the supported way to recolor the sorted header without hijacking a
+ *   library-wide token.
  * @cssprop [--lr-table-header-sorted-color=inherit] - Text color of the currently-sorted column's
  *   header cell.
  * @cssprop [--lr-table-sticky-offset=0] - Distance a `sticky` column pins from the inline edge.

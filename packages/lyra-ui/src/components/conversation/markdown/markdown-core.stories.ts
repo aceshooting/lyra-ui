@@ -157,3 +157,14 @@ export const ClearContent: Story = {
     </div>
   `,
 };
+
+const longSample = Array.from(
+  { length: 40 },
+  (_, index) => `## Section ${index}\n\nSome body text for section ${index}.`
+).join('\n\n');
+
+export const MaxHeightScrolling: Story = {
+  render: () => html`
+    <lr-markdown-core .content=${longSample} max-height="10rem" style="max-width: 32rem;"></lr-markdown-core>
+  `,
+};

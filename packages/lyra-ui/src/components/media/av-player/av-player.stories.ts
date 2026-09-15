@@ -116,13 +116,13 @@ export const ThemedActiveStates: Story = {
     docs: {
       description: {
         story:
-          '`--lr-av-player-marker-active-color` (the selected timeline marker), `--lr-av-player-cue-current-bg` (the cue the playhead is inside) and `--lr-av-player-cue-active-match-color` (the current search match) each retint one state on its own. None is declared on `:host`, so a value set on any ancestor is never shadowed — and unlike hijacking `--lr-color-brand`/`--lr-color-warning`, the other markers, cues and matches keep their own treatment.',
+          '`--lr-av-player-marker-active-color` (the selected timeline marker), `--lr-av-player-cue-hover-bg` (a hovered cue row, whose pressed step mixes from this same value), `--lr-av-player-cue-current-bg` (the cue the playhead is inside) and `--lr-av-player-cue-active-match-color` (the current search match) each retint one state on its own. None is declared on `:host`, so a value set on any ancestor is never shadowed — and unlike hijacking `--lr-color-brand`/`--lr-color-warning`, the other markers, cues and matches keep their own treatment.',
       },
     },
   },
   render: () => html`
     <lr-av-player
-      style="--lr-av-player-marker-active-color: ${storyColor('success')}; --lr-av-player-cue-current-bg: ${storyColor('warningQuiet')}; --lr-av-player-cue-active-match-color: ${storyColor('brand')};"
+      style="--lr-av-player-marker-active-color: ${storyColor('success')}; --lr-av-player-cue-hover-bg: ${storyColor('dangerQuiet')}; --lr-av-player-cue-current-bg: ${storyColor('warningQuiet')}; --lr-av-player-cue-active-match-color: ${storyColor('brand')};"
       src=${AUDIO_SRC}
       mime-type="audio/mp4"
       name="Episode 1"

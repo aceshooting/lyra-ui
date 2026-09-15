@@ -6554,6 +6554,28 @@ describe('lr-table sorted-header theming and specificity', () => {
     expect(getComputedStyle(scoreHeader).backgroundColor).to.equal('rgb(1, 2, 3)');
   });
 
+  it("gives a sorted, sticky header cell the sorted-header background instead of the sticky column's flat surface color (regression)", async () => {
+    const stickyColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', sticky: 'start', sortable: true, cell: (r) => r.name },
+      { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
+    ];
+    const el = (await fixture(html`
+      <lr-table style="--lr-table-header-sorted-bg: rgb(200, 0, 0);"></lr-table>
+    `)) as LyraTable<Row>;
+    el.columns = stickyColumns;
+    el.rows = rows;
+    el.sortKey = 'name';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+
+    const stickyHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-sticky]') as HTMLElement;
+    expect(stickyHeader.getAttribute('aria-sort'), 'the sticky column is the one under test').to.equal('ascending');
+    // Before the fix, [part='header-cell'][data-sticky]'s opaque background: var(--lr-color-surface)
+    // out-specifies the sorted rule ((0,2,0) vs (0,1,0)) regardless of source order, so this always
+    // painted the plain surface color instead of the token above.
+    expect(getComputedStyle(stickyHeader).backgroundColor).to.equal('rgb(200, 0, 0)');
+  });
+
   it('lets a consumer ::part(header-cell) cursor override win over the internal sort/cursor rule', async () => {
     const el = (await fixture(html` <lr-table></lr-table> `)) as LyraTable<Row>;
     // Consumer stylesheet targeting the part from the light DOM.

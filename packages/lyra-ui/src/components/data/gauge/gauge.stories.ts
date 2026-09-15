@@ -72,3 +72,49 @@ export const SizeTiers: Story = {
     </div>
   `,
 };
+
+export const Variant: Story = {
+  render: () => html`
+    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap">
+      ${(['neutral', 'brand', 'success', 'warning', 'danger'] as const).map(
+        (variant) => html`<lr-gauge variant=${variant} value="72" max="100" label=${variant}></lr-gauge>`,
+      )}
+    </div>
+  `,
+};
+
+export const ValueThresholds: Story = {
+  name: 'Value-derived thresholds',
+  render: () => html`
+    <div style="display: flex; gap: 2rem; align-items: flex-end; flex-wrap: wrap">
+      <div style="display: flex; gap: 1rem; align-items: flex-end">
+        ${[10, 75, 95].map(
+          (value) => html`<lr-gauge
+            value=${value}
+            max="100"
+            label="CPU"
+            .thresholds=${[
+              { at: 0, variant: 'success' },
+              { at: 70, variant: 'warning' },
+              { at: 90, variant: 'danger' },
+            ]}
+          ></lr-gauge>`,
+        )}
+      </div>
+      <div style="display: flex; gap: 1rem; align-items: flex-end">
+        ${[10, 30, 80].map(
+          (value) => html`<lr-gauge
+            value=${value}
+            max="100"
+            label="Battery"
+            .thresholds=${[
+              { at: 0, variant: 'danger' },
+              { at: 20, variant: 'warning' },
+              { at: 50, variant: 'success' },
+            ]}
+          ></lr-gauge>`,
+        )}
+      </div>
+    </div>
+  `,
+};

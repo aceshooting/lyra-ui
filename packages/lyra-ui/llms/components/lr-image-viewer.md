@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -119,7 +119,11 @@ can be set on the viewer or any ancestor. Highlight tone styling is exposed thro
 properties. `--lr-image-viewer-highlight-fill` is the resting fill a `[part='highlight']` actually
 renders, resolved per tone from the `-bg` knobs above; its hover and pressed states are color mixes
 taken from that value, so setting it directly retints all three states of one highlight at once —
-retint a whole tone through the matching `-bg` knob instead. These properties are declared as inline
+retint a whole tone through the matching `-bg` knob instead. `--lr-image-viewer-annotation-box-border`
+(default `var(--lr-color-brand)`) and `--lr-image-viewer-annotation-box-bg` (default
+`color-mix(in srgb, var(--lr-color-brand) 15%, transparent)`) retint `[part='annotation-box']`, the
+in-progress draft rectangle drawn while actively annotating, independent of the saved highlights'
+own tone colors. These properties are declared as inline
 `var()` fallbacks at the point of use rather than on `:host`, so each can be set on the element _or
 on any ancestor_:
 `::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after

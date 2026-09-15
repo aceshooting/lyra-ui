@@ -305,6 +305,9 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   renders, resolved per tone from the `--lr-av-player-marker-*-bg` knobs above. Its hover and
  *   pressed states are colour mixes taken from this value, so setting it directly retints all
  *   three at once for one marker; retint a whole tone through the `-bg` knob instead.
+ * @cssprop [--lr-av-player-cue-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered
+ *   `[part="cue"]`. The pressed state mixes further from this same value rather than a separate
+ *   knob, so retuning it keeps its pressed step too.
  * @cssprop [--lr-av-player-cue-current-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part="cue"]` the playhead is currently inside.
  * @cssprop [--lr-av-player-cue-active-match-color=var(--lr-color-warning)] - Outline color of the

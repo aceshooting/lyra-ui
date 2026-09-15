@@ -1045,6 +1045,7 @@ export type LyraAvPlayerReactProps = LyraReactElementProps<
   | 'volumechange',
   | '--lr-av-player-cue-active-match-color'
   | '--lr-av-player-cue-current-bg'
+  | '--lr-av-player-cue-hover-bg'
   | '--lr-av-player-marker-active-color'
   | '--lr-av-player-marker-bg'
   | '--lr-av-player-marker-danger-bg'
@@ -1770,6 +1771,10 @@ export type LyraCarouselReactProps = LyraReactElementProps<
   | '--lr-carousel-pagination-active-border-color'
   | '--lr-carousel-pagination-hover-bg'
   | '--lr-carousel-pagination-hover-border-color'
+  | '--lr-carousel-scroll-container-hover-outline-color'
+  | '--lr-carousel-scroll-container-hover-outline-offset'
+  | '--lr-carousel-scroll-container-hover-outline-style'
+  | '--lr-carousel-scroll-container-hover-outline-width'
   | '--lr-carousel-slide-basis'
   | '--scroll-hint'
   | '--slide-gap',
@@ -2298,6 +2303,8 @@ export type LyraCodeBlockReactProps = LyraReactElementProps<
   | '--lr-code-block-active-line-outline-color'
   | '--lr-code-block-font'
   | '--lr-code-block-highlighted-line-bg'
+  | '--lr-code-block-language-bg'
+  | '--lr-code-block-language-color'
   | '--lr-code-block-max-height'
   | '--lr-code-block-tab-size',
   {
@@ -2342,6 +2349,8 @@ export type LyraCodeBlockCoreReactProps = LyraReactElementProps<
   | '--lr-code-block-active-line-outline-color'
   | '--lr-code-block-font'
   | '--lr-code-block-highlighted-line-bg'
+  | '--lr-code-block-language-bg'
+  | '--lr-code-block-language-color'
   | '--lr-code-block-max-height'
   | '--lr-code-block-tab-size',
   {
@@ -3153,6 +3162,7 @@ export type LyraDatasetViewerReactProps = LyraReactElementProps<
   | 'lr-highlight-activate'
   | 'lr-render-error'
   | 'lr-search-change',
+  | '--lr-dataset-viewer-header-row-bg'
   | '--lr-dataset-viewer-highlight-color'
   | '--lr-dataset-viewer-max-height',
   {
@@ -3712,7 +3722,8 @@ export type LyraDocxViewerReactProps = LyraReactElementProps<
   | '--lr-docx-viewer-max-height'
   | '--lr-docx-viewer-search-match-active-background'
   | '--lr-docx-viewer-search-match-active-foreground'
-  | '--lr-docx-viewer-search-match-background',
+  | '--lr-docx-viewer-search-match-background'
+  | '--lr-docx-viewer-table-header-background',
   {
     'active-highlight-id'?: LyraDocxViewer['activeHighlightId'];
     'max-height'?: LyraDocxViewer['maxHeight'];
@@ -4449,6 +4460,8 @@ export type LyraFileIconReactProps = LyraReactElementProps<
   {},
   {},
 never,
+  | '--lr-file-icon-bg'
+  | '--lr-file-icon-color'
   | '--lr-file-icon-size',
   {
     'mime-type'?: LyraFileIcon['mimeType'];
@@ -4631,6 +4644,7 @@ export type LyraFlowCanvasReactProps = LyraReactElementProps<
   | 'lr-selection-delete'
   | 'lr-viewport-change',
   | '--lr-canvas-reserved-height'
+  | '--lr-flow-canvas-connection-line-color'
   | '--lr-flow-canvas-drop-active-outline-color'
   | '--lr-flow-canvas-edge-brand-color'
   | '--lr-flow-canvas-edge-danger-color'
@@ -4682,6 +4696,7 @@ export type LyraFlowMinimapReactProps = LyraReactElementProps<
 never,
   | '--lr-flow-minimap-block-size'
   | '--lr-flow-minimap-inline-size'
+  | '--lr-flow-minimap-viewport-color'
   | '--lr-flow-minimap-viewport-min-size'
   | '--lr-flow-status-color'
   | '--lr-flow-status-denied-color'
@@ -5537,6 +5552,8 @@ export type LyraImageViewerReactProps = LyraReactElementProps<
   | 'lr-zoom-change',
   | '--lr-image-viewer-annotate-active-bg'
   | '--lr-image-viewer-annotate-active-border'
+  | '--lr-image-viewer-annotation-box-bg'
+  | '--lr-image-viewer-annotation-box-border'
   | '--lr-image-viewer-highlight-active-border-width'
   | '--lr-image-viewer-highlight-active-color'
   | '--lr-image-viewer-highlight-active-outline-offset'
@@ -6312,6 +6329,7 @@ export type LyraMarkdownReactProps = LyraReactElementProps<
   | 'linkTarget'
   | 'locale'
   | 'math'
+  | 'maxHeight'
   | 'streaming'
   | 'strings'
   | 'tabSize',
@@ -6336,7 +6354,8 @@ export type LyraMarkdownReactProps = LyraReactElementProps<
   | '--lr-markdown-highlight-danger-bg'
   | '--lr-markdown-highlight-neutral-bg'
   | '--lr-markdown-highlight-success-bg'
-  | '--lr-markdown-highlight-warning-bg',
+  | '--lr-markdown-highlight-warning-bg'
+  | '--lr-markdown-max-height',
   {
     'active-highlight-id'?: LyraMarkdown['activeHighlightId'];
     'heading-anchors'?: LyraMarkdown['headingAnchors'];
@@ -6345,6 +6364,7 @@ export type LyraMarkdownReactProps = LyraReactElementProps<
     'html-mode'?: LyraMarkdown['htmlMode'];
     'internal-link-prefix'?: LyraMarkdown['internalLinkPrefix'];
     'link-target'?: LyraMarkdown['linkTarget'];
+    'max-height'?: LyraMarkdown['maxHeight'];
     'tab-size'?: LyraMarkdown['tabSize'];
   }
 >;
@@ -6365,6 +6385,7 @@ export type LyraMarkdownCoreReactProps = LyraReactElementProps<
   | 'linkTarget'
   | 'locale'
   | 'math'
+  | 'maxHeight'
   | 'streaming'
   | 'strings'
   | 'tabSize',
@@ -6389,7 +6410,8 @@ export type LyraMarkdownCoreReactProps = LyraReactElementProps<
   | '--lr-markdown-highlight-danger-bg'
   | '--lr-markdown-highlight-neutral-bg'
   | '--lr-markdown-highlight-success-bg'
-  | '--lr-markdown-highlight-warning-bg',
+  | '--lr-markdown-highlight-warning-bg'
+  | '--lr-markdown-max-height',
   {
     'active-highlight-id'?: LyraMarkdownCore['activeHighlightId'];
     'heading-anchors'?: LyraMarkdownCore['headingAnchors'];
@@ -6398,6 +6420,7 @@ export type LyraMarkdownCoreReactProps = LyraReactElementProps<
     'html-mode'?: LyraMarkdownCore['htmlMode'];
     'internal-link-prefix'?: LyraMarkdownCore['internalLinkPrefix'];
     'link-target'?: LyraMarkdownCore['linkTarget'];
+    'max-height'?: LyraMarkdownCore['maxHeight'];
     'tab-size'?: LyraMarkdownCore['tabSize'];
   }
 >;
@@ -7478,6 +7501,8 @@ export type LyraPdfViewerReactProps = LyraReactElementProps<
   | '--lr-pdf-viewer-height'
   | '--lr-pdf-viewer-search-match-active-bg'
   | '--lr-pdf-viewer-search-match-bg'
+  | '--lr-pdf-viewer-text-selection-bg'
+  | '--lr-pdf-viewer-toolbar-bg'
   | '--lr-pdf-viewer-toolbar-button-hover-bg',
   {
     'active-highlight-id'?: LyraPdfViewer['activeHighlightId'];
@@ -7994,6 +8019,7 @@ export type LyraProgressRingReactProps = LyraReactElementProps<
   | 'locale'
   | 'max'
   | 'showValue'
+  | 'size'
   | 'strings'
   | 'value'
   | 'variant',
@@ -8684,6 +8710,7 @@ export type LyraReorderItemReactProps = LyraReactElementProps<
 
 export type LyraReorderListReactProps = LyraReactElementProps<
   LyraReorderList,
+  | 'controlled'
   | 'disabled'
   | 'label'
   | 'locale'
@@ -9043,6 +9070,10 @@ export type LyraScrollerReactProps = LyraReactElementProps<
   LyraScrollerEventMap,
   | 'lr-scroll',
   | '--lr-scroller-control-size'
+  | '--lr-scroller-hover-outline-color'
+  | '--lr-scroller-hover-outline-offset'
+  | '--lr-scroller-hover-outline-style'
+  | '--lr-scroller-hover-outline-width'
   | '--lr-scroller-min-block-size'
   | '--lr-scroller-shadow-color'
   | '--lr-scroller-shadow-size'
@@ -9157,6 +9188,7 @@ export type LyraSelectReactProps = LyraReactElementProps<
   | '--lr-select-gap'
   | '--lr-select-open-border-color'
   | '--lr-select-option-active-bg'
+  | '--lr-select-option-badge-bg'
   | '--lr-select-option-selected-bg'
   | '--lr-select-option-selected-border'
   | '--lr-select-option-selected-color'
@@ -9970,6 +10002,10 @@ export type LyraTabGroupReactProps = LyraReactElementProps<
   | '--lr-tab-group-active-color'
   | '--lr-tab-group-hover-color'
   | '--lr-tab-group-indicator-color'
+  | '--lr-tab-group-panel-hover-outline-color'
+  | '--lr-tab-group-panel-hover-outline-offset'
+  | '--lr-tab-group-panel-hover-outline-style'
+  | '--lr-tab-group-panel-hover-outline-width'
   | '--lr-tab-group-scroll-button-active-bg'
   | '--lr-tab-group-scroll-button-active-color'
   | '--lr-tab-group-scroll-button-hover-color'
@@ -10392,6 +10428,10 @@ export type LyraThinkingPanelReactProps = LyraReactElementProps<
   | 'lr-toggle'
   | 'lr-toggle-request',
   | '--lr-thinking-panel-background'
+  | '--lr-thinking-panel-body-hover-outline-color'
+  | '--lr-thinking-panel-body-hover-outline-offset'
+  | '--lr-thinking-panel-body-hover-outline-style'
+  | '--lr-thinking-panel-body-hover-outline-width'
   | '--lr-thinking-panel-border-color'
   | '--lr-thinking-panel-compact-body-padding'
   | '--lr-thinking-panel-compact-header-font-size'
@@ -10978,6 +11018,10 @@ export type LyraToolSelectDialogReactProps = LyraReactElementProps<
   | 'focus'
   | 'lr-change'
   | 'lr-close',
+  | '--lr-tool-select-dialog-body-hover-outline-color'
+  | '--lr-tool-select-dialog-body-hover-outline-offset'
+  | '--lr-tool-select-dialog-body-hover-outline-style'
+  | '--lr-tool-select-dialog-body-hover-outline-width'
   | '--lr-tool-select-dialog-overlay-color'
   | '--lr-tool-select-dialog-search-font-size'
   | '--lr-tool-select-dialog-search-min-height'
@@ -11610,7 +11654,8 @@ export type LyraXmlViewerReactProps = LyraReactElementProps<
   | '--lr-xml-viewer-highlight-warning-background'
   | '--lr-xml-viewer-match-bg'
   | '--lr-xml-viewer-match-color'
-  | '--lr-xml-viewer-max-height',
+  | '--lr-xml-viewer-max-height'
+  | '--lr-xml-viewer-tag-color',
   {
     'active-highlight-id'?: LyraXmlViewer['activeHighlightId'];
     'collapsed-depth'?: LyraXmlViewer['collapsedDepth'];

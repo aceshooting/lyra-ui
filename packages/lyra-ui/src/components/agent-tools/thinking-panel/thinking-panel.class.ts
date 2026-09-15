@@ -150,6 +150,16 @@ const NEAR_BOTTOM_PX = 48;
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-thinking-panel-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.
+ * @cssprop [--lr-thinking-panel-body-hover-outline-width=var(--lr-focus-ring-width)] - Outline
+ *   width of the mouse-hover preview on `[part="body"]`.
+ * @cssprop [--lr-thinking-panel-body-hover-outline-style=solid] - Outline style of the
+ *   mouse-hover preview on `[part="body"]`.
+ * @cssprop [--lr-thinking-panel-body-hover-outline-color=var(--lr-color-border)] - Outline color
+ *   of the mouse-hover preview on `[part="body"]`. Set to `transparent` to opt out of the hover
+ *   treatment entirely.
+ * @cssprop [--lr-thinking-panel-body-hover-outline-offset=calc(-1 * var(--lr-focus-ring-offset))] -
+ *   Inward offset of the mouse-hover preview on `[part="body"]`, keeping the outline inside its
+ *   own scrollport so it is not clipped at the edge.
  * @status stable
  * @since 4.0.0
  */

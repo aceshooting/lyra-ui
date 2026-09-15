@@ -1,6 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
 import './scroller.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'Layout/Scroller', component: 'lr-scroller' };
 export default meta;
@@ -18,6 +19,37 @@ export const Horizontal: Story = {
   render: () => html`<lr-scroller controls label="Project cards" style="max-inline-size: 28rem;">
     ${['Solar', 'Wind', 'Battery', 'Forecast', 'Maintenance'].map((item) => html`<span style="display:inline-block; padding: var(--lr-space-l); background: var(--lr-color-brand-quiet);">${item}</span>`)}
   </lr-scroller>`,
+};
+
+/** The hover preview's width, style, color, and inward offset can be themed separately without
+ *  changing the focus ring or adding a pressed state to the viewport. */
+export const ThemedHoverOutline: Story = {
+  name: 'Themed hover outline (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover the viewport to see `--lr-scroller-hover-outline-width`, `--lr-scroller-hover-outline-style`, `--lr-scroller-hover-outline-color`, and `--lr-scroller-hover-outline-offset` inherited from its ancestor. Pressing the viewport intentionally keeps the same hover preview: it is a scroll region, not an action.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="max-inline-size: 28rem; --lr-scroller-hover-outline-width: var(--lr-border-width-thick); --lr-scroller-hover-outline-style: dashed; --lr-scroller-hover-outline-color: ${storyColor(
+        'warning',
+      )}; --lr-scroller-hover-outline-offset: calc(-1 * var(--lr-border-width-thick));"
+    >
+      <lr-scroller controls label="Themed hover outline">
+        ${['Solar', 'Wind', 'Battery', 'Forecast', 'Maintenance'].map(
+          (item) =>
+            html`<span
+              style="display:inline-block; padding: var(--lr-space-l); background: var(--lr-color-brand-quiet);"
+              >${item}</span
+            >`,
+        )}
+      </lr-scroller>
+    </div>
+  `,
 };
 
 export const Vertical: Story = {

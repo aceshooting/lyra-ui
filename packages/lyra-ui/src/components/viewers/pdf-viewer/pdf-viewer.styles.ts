@@ -20,7 +20,7 @@ export const styles = css`
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-pdf-viewer-toolbar-bg, var(--lr-color-brand-quiet));
     font-size: var(--lr-font-size-sm);
     flex-wrap: wrap;
   }
@@ -156,7 +156,7 @@ export const styles = css`
      element the selected text originates in, so targeting the run relies on no highlight
      inheritance from an ancestor. */
   lr-virtual-list::part(text-span)::selection {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-pdf-viewer-text-selection-bg, var(--lr-color-brand-quiet));
   }
   /* Text-transparent like every other text-layer run above, so only the highlighted background
      shows and the canvas's own painted glyphs stay the visible text. ::part() matches with part~=

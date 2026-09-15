@@ -173,8 +173,22 @@ export const styles = css`
   /* no-pressed-state: this is a scroll port, not an activation target -- pressing it activates
      nothing, and :active would match on any press landing inside the transcript text. */
   [part="body"]:hover:not(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-color-border);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    outline-width: var(
+      --lr-thinking-panel-body-hover-outline-width,
+      var(--lr-focus-ring-width)
+    );
+    outline-style: var(
+      --lr-thinking-panel-body-hover-outline-style,
+      solid
+    );
+    outline-color: var(
+      --lr-thinking-panel-body-hover-outline-color,
+      var(--lr-color-border)
+    );
+    outline-offset: var(
+      --lr-thinking-panel-body-hover-outline-offset,
+      calc(-1 * var(--lr-focus-ring-offset))
+    );
   }
   [part="body"][hidden] {
     display: none;

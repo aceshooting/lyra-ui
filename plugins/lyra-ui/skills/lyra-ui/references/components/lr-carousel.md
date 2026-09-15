@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -150,7 +150,14 @@ Navigation buttons use independent `--lr-carousel-navigation-hover-bg`,
 `--lr-carousel-pagination-hover-bg`, `--lr-carousel-pagination-hover-border-color`,
 `--lr-carousel-pagination-active-bg`, and `--lr-carousel-pagination-active-border-color` hooks.
 All are inline fallbacks at their state rules, inherit from ancestors, and retain the previous
-brand/active-mix rendering when unset.
+brand/active-mix rendering when unset. The scroll-snap viewport's mouse-hover preview has its own
+four-longhand outline shape, matching `lr-scroller`'s viewport:
+`--lr-carousel-scroll-container-hover-outline-width` (default `var(--lr-border-width-thin)`),
+`--lr-carousel-scroll-container-hover-outline-style` (default `solid`),
+`--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border-strong)`, set
+to `transparent` to opt out entirely), and `--lr-carousel-scroll-container-hover-outline-offset`
+(default `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal
+paint.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">

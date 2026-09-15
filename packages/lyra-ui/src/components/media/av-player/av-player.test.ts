@@ -2757,6 +2757,31 @@ describe('active-state cssprop escape hatches', () => {
     expect(getComputedStyle(currentCue(el)).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 
+  it('--lr-av-player-cue-hover-bg retints transcript cue row hover feedback, and the press mix reuses the same hook, independently of the shared --lr-color-brand-quiet token', async () => {
+    const el = await withCues(
+      '--lr-av-player-cue-hover-bg: rgb(7, 8, 9); --lr-color-brand-quiet: rgb(4, 5, 6); --lr-color-mix-partner: rgb(255, 255, 255); --lr-color-mix-active: 75%',
+    );
+    const cue = cueRows(el)[2]!; // plain cue: neither current nor a search match
+    try {
+      await hoverUntilMatched(cue, 'the transcript cue row never registered :hover');
+      await waitUntil(
+        () => getComputedStyle(cue).backgroundColor === 'rgb(7, 8, 9)',
+        'cue hover never read --lr-av-player-cue-hover-bg over the shared --lr-color-brand-quiet token',
+        { timeout: 2000 },
+      );
+
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(cue).backgroundColor !== 'rgb(7, 8, 9)',
+        'pressed mixes further from --lr-av-player-cue-hover-bg rather than repeating hover',
+        { timeout: 2000 },
+      );
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('--lr-av-player-cue-active-match-color recolors the active search-match cue outline', async () => {
     const el = await withCues('--lr-av-player-cue-active-match-color: rgb(0, 51, 102)');
     expect(getComputedStyle(activeMatchCue(el)).outlineColor).to.equal('rgb(0, 51, 102)');

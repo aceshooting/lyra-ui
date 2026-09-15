@@ -302,8 +302,12 @@ export const styles = css`
   }
   [part="annotation-box"] {
     position: absolute;
-    border: var(--lr-border-width-medium) dashed var(--lr-color-brand);
-    background: color-mix(in srgb, var(--lr-color-brand) 15%, transparent);
+    border: var(--lr-border-width-medium) dashed
+      var(--lr-image-viewer-annotation-box-border, var(--lr-color-brand));
+    background: var(
+      --lr-image-viewer-annotation-box-bg,
+      color-mix(in srgb, var(--lr-color-brand) 15%, transparent)
+    );
     pointer-events: none;
   }
   .reveal-target {

@@ -306,7 +306,7 @@ export const ActiveLineOutlineColor: Story = {
     docs: {
       description: {
         story:
-          "`--lr-code-block-active-line-outline-color` retints only the active highlight outline; every other brand-colored surface (the language pill, hover and focus states) keeps `--lr-color-brand`.",
+          "`--lr-code-block-active-line-outline-color` retints only the active highlight outline. `--lr-code-block-language-bg`/`--lr-code-block-language-color` retint the language pill independently of both that outline and the ordinary hover/focus states, which keep `--lr-color-brand`.",
       },
     },
   },
@@ -319,7 +319,7 @@ export const ActiveLineOutlineColor: Story = {
         { id: "h1", anchor: { kind: "line-range", start: 2, end: 2 } },
       ]}
       active-highlight-id="h1"
-      style="max-inline-size:32rem; --lr-code-block-active-line-outline-color: var(--lr-color-success);"
+      style="max-inline-size:32rem; --lr-code-block-active-line-outline-color: var(--lr-color-success); --lr-code-block-language-bg: var(--lr-color-warning-quiet); --lr-code-block-language-color: var(--lr-color-warning);"
     ></lr-code-block>
   `,
 };

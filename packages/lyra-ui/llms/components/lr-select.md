@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -350,6 +350,9 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `--lr-select-unknown-value-border-style` (default `dashed`) and
 `--lr-select-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
 `[part='unknown-value']` badge described above under "Unknown committed values".
+`--lr-select-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
+`[part='option-badge']` "not in catalog" badge `show-unknown-option` renders on the synthetic
+listbox row, independent of the unknown-value chip's border above.
 
 **Optional peer deps:** none.
 

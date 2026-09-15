@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -86,7 +86,13 @@ padding while `compact`. `--lr-thinking-panel-background` (default `var(--lr-col
 `--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
-`frame="plain"` keeps. Plus shared
+`frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
+four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (default
+`var(--lr-focus-ring-width)`), `--lr-thinking-panel-body-hover-outline-style` (default `solid`),
+`--lr-thinking-panel-body-hover-outline-color` (default `var(--lr-color-border)`, set to
+`transparent` to opt out entirely), and `--lr-thinking-panel-body-hover-outline-offset` (default
+`calc(-1 * var(--lr-focus-ring-offset))`). Unset, all four resolve to the rule's previous literal
+paint. Plus shared
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.

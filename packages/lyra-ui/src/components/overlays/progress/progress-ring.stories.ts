@@ -32,3 +32,15 @@ export const ShowValue: StoryObj = {
     </div>
   `,
 };
+
+export const SizeTiers: StoryObj = {
+  name: 'Size tiers',
+  render: () => html`
+    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`<lr-progress-ring size=${size} value="65" aria-label=${size}></lr-progress-ring>`,
+      )}
+      <lr-progress-ring size="large" value="65" aria-label="large"></lr-progress-ring>
+    </div>
+  `,
+};

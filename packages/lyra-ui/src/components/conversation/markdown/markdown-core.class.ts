@@ -164,7 +164,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  *   `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll; see that
  *   component's own docs.
  * @csspart content - The wrapper around the rendered (or plain-text
- *   fallback) output.
+ *   fallback) output; respects `max-height`.
  * @csspart heading - Every rendered `<h1>`–`<h6>` (shifted by
  *   `heading-offset`).
  * @csspart paragraph - Every rendered `<p>`.
@@ -176,6 +176,9 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
+ * @cssprop [--lr-markdown-max-height=none] - Cap on `[part="content"]`'s block size, past which
+ *   the document scrolls internally. The `maxHeight` property sets this token inline on
+ *   `[part="content"]`.
  * @cssprop [--lr-markdown-font-mono=var(--lr-font-mono)] - Monospace family for rendered `<code>`
  *   inside `content`.
  * @cssprop [--lr-markdown-code-bg=var(--lr-color-brand-quiet)] - Background shared by every
@@ -333,6 +336,10 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. `false` (the
    *  default) renders `$...$` literally, unparsed -- today's exact output. */
   @property({ type: Boolean }) override math = false;
+
+  /** A CSS length (e.g. `"20rem"`); once set, the rendered document scrolls internally past this
+   * height instead of growing the page. Invalid values are ignored. */
+  @property({ attribute: 'max-height' }) override maxHeight = '';
 
   // Deliberately not tagged internal -- these implement MarkdownRuntimeBase's own abstract
   // markdownVariant/tokenizePendingHighlight members; stripping either leaves this concrete class's

@@ -216,6 +216,29 @@ describe('lr-dataset-viewer', () => {
       restore();
     }
   });
+  it('retints the header row from --lr-dataset-viewer-header-row-bg', async () => {
+    const el = (await fixture(
+      html`<lr-dataset-viewer
+        name="Data"
+        style="--lr-dataset-viewer-header-row-bg: rgb(1, 2, 3);"
+      ></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
+    const restore = fetchText(TAB_DATA);
+    try {
+      el.src = 'https://example.test/a.tsv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="header-row"]') !== null
+      );
+      const header = el.shadowRoot!.querySelector(
+        '[part="header-row"]'
+      ) as HTMLElement;
+      expect(getComputedStyle(header).backgroundColor).to.equal(
+        'rgb(1, 2, 3)'
+      );
+    } finally {
+      restore();
+    }
+  });
   it('preserves pipe delimiters and quoted newlines through the bounded record parser', async () => {
     const el = (await fixture(
       html`<lr-dataset-viewer></lr-dataset-viewer>`

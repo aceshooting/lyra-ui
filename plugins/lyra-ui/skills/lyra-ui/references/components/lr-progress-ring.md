@@ -25,7 +25,15 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 `label: string = ''` (the mapped accessible-name property), and
 `accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
 accessible-name spelling retained by this progress component, while several sibling components use
-`aria-label` directly). Host
+`aria-label` directly). Also
+`size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
+'large'`. Outer diameter tier, on the shared six-step ladder: `1.25rem` (`2xs`), `1.75rem` (`xs`),
+`2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`, unchanged from before this property existed),
+`3rem` (`l`/`large`), `3.5rem` (`xl`) — each value feeds `--lr-progress-ring-size`'s private
+default. An explicit `--lr-progress-ring-size` (or the upstream `--size` alias) still wins over
+every tier. Matching sibling `lr-progress-bar`'s own `size`, this ladder scales exactly one
+dimension — `--lr-progress-ring-track-width`/`--lr-progress-ring-indicator-width` and the center
+label's font size are untouched by it. Host
 `aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
 visible default- or `label`-slot text when supplied, then the localized "Progress".
 Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
@@ -47,8 +55,10 @@ that circle, including the indeterminate value. The indicator node remains stabl
 value updates and reconnection while the offset updates live.
 **CSS parts:** `base` and `progress-ring` are aliases on the same progressbar; `track`, `indicator`,
 `label`.
-**Themeable custom properties:** `--lr-progress-ring-size` (default `var(--lr-size-2-5rem)` — the
-ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
+**Themeable custom properties:** `--lr-progress-ring-size` (default
+`var(--size, var(--_lr-progress-ring-size))`; `--size` is the upstream alias, and the private
+`--_lr-progress-ring-size` is the `size` property's own tier value, `2.5rem` at the `m` default,
+unchanged — the ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
 `--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
 `--lr-progress-ring-indicator-color` (default

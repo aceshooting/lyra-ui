@@ -49,6 +49,10 @@ const FILE_ICON_MODE = literalSetConverter<LyraFileIconMode>(['icon', 'label'], 
  * @csspart description - Consumer-authored metadata description in `mode="label"` mode.
  * @csspart size - The formatted `bytes` count, shown alongside `label` in `mode="label"` mode when `bytes` is non-zero.
  * @cssprop [--lr-file-icon-size=var(--lr-size-2rem)] - Inline/block size of the format badge.
+ * @cssprop [--lr-file-icon-bg=var(--lr-color-brand-quiet)] - Background of the `icon` part. Every
+ *   file category renders the same fill; retint it without hijacking `--lr-color-brand-quiet`
+ *   library-wide.
+ * @cssprop [--lr-file-icon-color=var(--lr-color-brand)] - Text/glyph color of the `icon` part.
  * @status stable
  * @since 4.0.0
  */

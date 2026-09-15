@@ -35,7 +35,10 @@ function isReorderOwnerState(value: unknown): value is ReorderOwnerState {
  * move-up/move-down buttons. This item alone doesn't know whether it's first or last in the list,
  * so its readonly boundary-disabled state (`atStart`/`atEnd`), list-level cascade
  * (`listDisabled`), and held-move state (`pending`) are resolved by the owning
- * `<lr-reorder-list>`.
+ * `<lr-reorder-list>`. `focusMoveButton()` moves focus onto one of the two controls
+ * programmatically -- the owning list uses it for its own post-move focus restore, and a host
+ * running `<lr-reorder-list>` in its `controlled` mode can use it the same way once its own
+ * re-render settles, including onto a freshly recreated element instance.
  *
  * @customElement lr-reorder-item
  * @slot - Arbitrary row content (a label, a mini-form, anything).
@@ -204,6 +207,25 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
       !hasValidIdentity ||
       this.atEnd
     );
+  }
+
+  /** Moves focus to this row's move-up or move-down control, mirroring the owning list's own
+   *  post-move focus restore. No-ops (returning `false`) when that control is disabled for any
+   *  reason -- this item's own `disabled`, the owning list's `listDisabled`, a move held or a
+   *  controlled reconciliation pending anywhere in the list (`busy`), an invalid identity, or the
+   *  requested direction already being this item's boundary. Returns whether focus moved. The
+   *  move controls are composed `<lr-icon-button>`s, which expose `disabled` and `focus()` but are
+   *  not `HTMLButtonElement`s; read both structurally. */
+  focusMoveButton(direction: 'up' | 'down'): boolean {
+    const disabled = direction === 'up' ? this.moveUpDisabled : this.moveDownDisabled;
+    if (disabled) return false;
+    const part = direction === 'up' ? 'move-up-button' : 'move-down-button';
+    const button = this.shadowRoot?.querySelector(`[part='${part}']`) as
+      | (HTMLElement & { disabled?: boolean })
+      | null;
+    if (!button || button.disabled) return false;
+    button.focus();
+    return true;
   }
 
   private get resolvedItemLabel(): string {

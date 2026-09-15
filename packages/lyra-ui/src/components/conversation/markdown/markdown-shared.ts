@@ -11,10 +11,12 @@
 
 import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   createTextQuoteIndex,
   rangeFromTextQuoteMatch,
@@ -1276,6 +1278,9 @@ export interface MarkdownContentOptions {
   onClick: (e: MouseEvent) => void;
   /** `DocumentAnchorTarget`'s `renderAnchorLiveRegion()` output. */
   liveRegion: unknown;
+  /** A CSS length (e.g. `"20rem"`); once set, `[part="content"]` scrolls internally past this
+   *  height instead of growing the page. Invalid values are ignored. */
+  maxHeight: string;
 }
 
 /** The rendered tree both variants produce: one `[part="content"]` wrapper plus the anchor-target
@@ -1283,6 +1288,7 @@ export interface MarkdownContentOptions {
  *  worth a tab stop. */
 export function renderMarkdownContent(options: MarkdownContentOptions): TemplateResult {
   const isFallback = options.renderedHtml === null;
+  const sanitizedMaxHeight = sanitizeCssLength(options.maxHeight);
   // Indented two levels deeper than this function body on purpose. `[part='content'][data-fallback]`
   // is `white-space: pre-wrap` (markdown.styles.ts), so the literal indentation around the binding
   // below is *rendered* whitespace in the plain-text fallback state -- keeping the exact text both
@@ -1297,6 +1303,16 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
         ?data-fallback=${isFallback}
         ?data-unsanitized=${!options.sanitized}
         data-dark-theme=${options.isDarkTheme ? 'true' : nothing}
+        style=${sanitizedMaxHeight
+          ? styleMap({
+              '--lr-markdown-max-height': sanitizedMaxHeight,
+              // Overrides the base stylesheet's overflow-block: hidden (see markdown.styles.ts'
+              // comment on [part='content']) only once a cap is actually in effect, so the
+              // sub-pixel-mismatch spurious-scrollbar risk that rule guards against never returns
+              // for the unset (default 'none') case.
+              'overflow-block': 'auto',
+            })
+          : nothing}
         @click=${options.onClick}
       >
         ${isFallback ? options.content : unsafeHTML(options.renderedHtml)}

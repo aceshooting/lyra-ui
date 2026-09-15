@@ -184,6 +184,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract languages?: Readonly<Record<string, ShikiLanguageSource>>;
   abstract headingAnchors: boolean;
   abstract math: boolean;
+  abstract maxHeight: string;
 
   /** Anchor kinds resolved by both concrete Markdown tags. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = [
@@ -628,6 +629,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       isDarkTheme: this.isDarkTheme,
       onClick: this.onContentClick,
       liveRegion: this.renderAnchorLiveRegion(),
+      maxHeight: this.maxHeight,
     });
   }
 }

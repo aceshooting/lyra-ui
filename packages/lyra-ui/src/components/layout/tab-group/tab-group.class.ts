@@ -220,6 +220,15 @@ export interface LyraTabGroupEventMap {
  * @cssprop [--lr-tab-group-vertical-nav-max-inline-size=var(--lr-size-12rem)] - Maximum logical
  *   inline size of a vertical `start`/`end` nav. Long labels ellipsize inside that bound so the
  *   panel remains usable at narrow allocations.
+ * @cssprop [--lr-tab-group-panel-hover-outline-width=var(--lr-border-width-thin)] - Outline width
+ *   of the mouse-hover preview on `[part="panel"]`.
+ * @cssprop [--lr-tab-group-panel-hover-outline-style=solid] - Outline style of the mouse-hover
+ *   preview on `[part="panel"]`.
+ * @cssprop [--lr-tab-group-panel-hover-outline-color=var(--lr-color-border)] - Outline color of
+ *   the mouse-hover preview on `[part="panel"]`. Set to `transparent` to opt out of the hover
+ *   treatment entirely.
+ * @cssprop [--lr-tab-group-panel-hover-outline-offset=var(--lr-focus-ring-offset)] - Offset of
+ *   the mouse-hover preview on `[part="panel"]`.
  * @status stable
  * @since 8.0.0
  */

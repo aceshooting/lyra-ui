@@ -36,6 +36,33 @@ export const EditableSlides: Story = {
   `,
 };
 
+/** The hover preview's width, style, color, and inward offset can be themed separately without
+ *  changing the focus ring or adding a pressed state to the scroll container. */
+export const ThemedHoverOutline: Story = {
+  name: 'Themed hover outline (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover the scroll-snap viewport to see `--lr-carousel-scroll-container-hover-outline-width`, `--lr-carousel-scroll-container-hover-outline-style`, `--lr-carousel-scroll-container-hover-outline-color`, and `--lr-carousel-scroll-container-hover-outline-offset` inherited from its ancestor. Pressing the viewport intentionally keeps the same hover preview: it is a scroll region, not an action.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-carousel-scroll-container-hover-outline-width: var(--lr-border-width-thick); --lr-carousel-scroll-container-hover-outline-style: dashed; --lr-carousel-scroll-container-hover-outline-color: ${storyColor(
+        'warning',
+      )}; --lr-carousel-scroll-container-hover-outline-offset: calc(-1 * var(--lr-border-width-thick));"
+    >
+      <lr-carousel navigation pagination aria-label="Themed hover outline">
+        <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">First panel</div>
+        <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
+        <div style="padding: var(--lr-space-2xl); background: var(--lr-color-warning-quiet);">Third panel</div>
+      </lr-carousel>
+    </div>
+  `,
+};
+
 /** Web Awesome's published mixed-case `currentSlide` attribute is accepted after HTML normalizes
  * it to `currentslide`; Lyra's `current-slide` spelling remains the reflected canonical form. */
 export const UpstreamCurrentSlideSpelling: Story = {

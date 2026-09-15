@@ -529,7 +529,8 @@ or structural-pseudo-class selector and does not affect group, expanded, hover, 
 row's hover and pressed fills reach its `sticky` column cell the same way, through an internal
 custom property rather than a themeable token, since neither state has a public hook today.
 `--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
-`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`). The opaque surface default prevents body rows from
+`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`),
+including a `sticky` column's own header cell. The opaque surface default prevents body rows from
 showing through the sticky header while it scrolls.
 Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
 because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the

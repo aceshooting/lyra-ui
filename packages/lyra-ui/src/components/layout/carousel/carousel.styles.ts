@@ -62,8 +62,22 @@ export const styles = css`
 
   /* no-pressed-state: no action. */
   [part~="scroll-container"]:hover {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
-    outline-offset: var(--lr-focus-ring-offset);
+    outline-width: var(
+      --lr-carousel-scroll-container-hover-outline-width,
+      var(--lr-border-width-thin)
+    );
+    outline-style: var(
+      --lr-carousel-scroll-container-hover-outline-style,
+      solid
+    );
+    outline-color: var(
+      --lr-carousel-scroll-container-hover-outline-color,
+      var(--lr-color-border-strong)
+    );
+    outline-offset: var(
+      --lr-carousel-scroll-container-hover-outline-offset,
+      var(--lr-focus-ring-offset)
+    );
   }
 
   [data-mouse-dragging] [part~="scroll-container"]:hover {

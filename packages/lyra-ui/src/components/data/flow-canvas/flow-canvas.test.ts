@@ -2679,6 +2679,31 @@ describe('connect gesture', () => {
     expect(fired).to.be.false;
   });
 
+  it('retints the in-progress connection line from --lr-flow-canvas-connection-line-color', async () => {
+    const el = (await fixture(
+      html`<lr-flow-canvas
+        connectable
+        style="--lr-flow-canvas-connection-line-color: rgb(9, 8, 7);"
+      ></lr-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const outputHandle = makeHandle('output', 'out');
+    wrapperA.appendChild(outputHandle);
+
+    outputHandle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true, composed: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150, clientY: 0 }));
+    await el.updateComplete;
+    const line = el.shadowRoot!.querySelector('[part="connection-line"]') as SVGPathElement;
+    expect(getComputedStyle(line).stroke).to.equal('rgb(9, 8, 7)');
+
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
+  });
+
   it('keyboard: Escape cancels connect mode without emitting', async () => {
     const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [

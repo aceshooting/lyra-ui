@@ -12,6 +12,19 @@ export const Formats: Story = {
 
 export const FilenameFallback: Story = { render: () => html`<lr-file-icon name="presentation.pptx" mime-type="application/octet-stream" mode="label"></lr-file-icon>` };
 
+export const ThemedBadge: Story = {
+  name: 'Themed badge (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-file-icon-bg` and `--lr-file-icon-color` retint the format badge on their own. Neither is declared on `:host`, so a value set on any ancestor reaches every `<lr-file-icon>` beneath it.',
+      },
+    },
+  },
+  render: () => html`<div style="display:flex; flex-wrap:wrap; gap:var(--lr-space-m); --lr-file-icon-bg: var(--lr-color-success-quiet); --lr-file-icon-color: var(--lr-color-success);"><lr-file-icon mime-type="application/pdf" mode="label"></lr-file-icon><lr-file-icon mime-type="image/png" mode="label"></lr-file-icon></div>`,
+};
+
 export const WithByteCount: Story = {
   name: 'bytes (formatted file size)',
   parameters: {

@@ -83,6 +83,9 @@ const DEFAULT_VIEWPORT_MIN_SIZE_PX = 40;
  * @cssprop [--lr-flow-status-success-color=var(--lr-color-success)] - Successful-node fill.
  * @cssprop [--lr-flow-status-error-color=var(--lr-color-danger)] - Failed-node fill.
  * @cssprop [--lr-flow-status-denied-color=var(--lr-color-warning)] - Denied-node fill.
+ * @cssprop [--lr-flow-minimap-viewport-color=var(--lr-color-brand)] - Fill (mixed 15% into
+ *   transparent) and stroke of `[part="viewport"]`, the rectangle showing the canvas's visible
+ *   area, independent of the per-status node fills above.
  * @cssprop [--lr-flow-minimap-viewport-min-size=var(--lr-icon-button-size)] - Smallest rendered size,
  *   in physical pixels, of the transparent `viewport-hit-area` along either axis. On a canvas whose
  *   node bounds dwarf the visible viewport the raw rectangle collapses to a few pixels, which

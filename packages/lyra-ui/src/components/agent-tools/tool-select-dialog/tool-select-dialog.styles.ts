@@ -187,8 +187,22 @@ export const styles = css`
   }
   /* no-pressed-state: the focusable body is a scroll viewport, not an activation target. */
   :where([part="body"]):hover {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-border);
-    outline-offset: calc(-1 * var(--lr-border-width-thin));
+    outline-width: var(
+      --lr-tool-select-dialog-body-hover-outline-width,
+      var(--lr-border-width-thin)
+    );
+    outline-style: var(
+      --lr-tool-select-dialog-body-hover-outline-style,
+      solid
+    );
+    outline-color: var(
+      --lr-tool-select-dialog-body-hover-outline-color,
+      var(--lr-color-border)
+    );
+    outline-offset: var(
+      --lr-tool-select-dialog-body-hover-outline-offset,
+      calc(-1 * var(--lr-border-width-thin))
+    );
   }
   [part="empty"] {
     margin: 0;

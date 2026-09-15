@@ -121,3 +121,15 @@ export const SearchCollapsedBranches: Story = {
     ></lr-xml-viewer>
   </section>`,
 };
+
+/** `--lr-xml-viewer-tag-color` retints every rendered element tag name, independent of the
+ *  active-attribute outline (`--lr-xml-viewer-active-attribute-color`). */
+export const RetintedTagColor: Story = {
+  render: () => html`
+    <lr-xml-viewer
+      name="feed.rss"
+      .xml=${FEED}
+      style="--lr-xml-viewer-tag-color: var(--lr-color-success);"
+    ></lr-xml-viewer>
+  `,
+};

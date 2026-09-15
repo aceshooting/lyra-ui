@@ -166,8 +166,19 @@ export const styles = css`
      nothing, and :active matches the ancestors of whatever was pressed, so clicking any slotted
      item would flash this outline around the whole strip. */
   [part="viewport"]:hover {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-border);
-    outline-offset: var(--lr-focus-ring-offset);
+    outline-width: var(
+      --lr-scroller-hover-outline-width,
+      var(--lr-border-width-thin)
+    );
+    outline-style: var(--lr-scroller-hover-outline-style, solid);
+    outline-color: var(
+      --lr-scroller-hover-outline-color,
+      var(--lr-color-border)
+    );
+    outline-offset: var(
+      --lr-scroller-hover-outline-offset,
+      var(--lr-focus-ring-offset)
+    );
   }
 
   /* previous and next are the same rendered button as [part='control'] above -- each carries both

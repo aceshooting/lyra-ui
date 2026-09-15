@@ -6,6 +6,7 @@ import type {
   ToolSelectDialogTool,
   ToolSelectionChangeDetail,
 } from './tool-select-dialog.js';
+import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
   title: 'ToolSelectDialog',
@@ -110,6 +111,33 @@ export const OpenInitially: Story = {
       .tools=${TOOLS}
       .selectedToolIds=${['web_search', 'fetch_url', 'run_python', 'read_file']}
     ></lr-tool-select-dialog>
+  `,
+};
+
+/** The hover preview's width, style, color, and inward offset can be themed separately without
+ *  changing the focus ring or adding a pressed state to the tool list body. */
+export const ThemedHoverOutline: Story = {
+  name: 'Themed hover outline (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover the scrollable tool list to see `--lr-tool-select-dialog-body-hover-outline-width`, `--lr-tool-select-dialog-body-hover-outline-style`, `--lr-tool-select-dialog-body-hover-outline-color`, and `--lr-tool-select-dialog-body-hover-outline-offset` inherited from its ancestor. Pressing the list intentionally keeps the same hover preview: it is a scroll region, not an action.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div
+      style="--lr-tool-select-dialog-body-hover-outline-width: var(--lr-border-width-thick); --lr-tool-select-dialog-body-hover-outline-style: dashed; --lr-tool-select-dialog-body-hover-outline-color: ${storyColor(
+        'warning',
+      )}; --lr-tool-select-dialog-body-hover-outline-offset: calc(-1 * var(--lr-border-width-thick));"
+    >
+      <lr-tool-select-dialog
+        .open=${context.viewMode !== 'docs'}
+        .tools=${TOOLS}
+        .selectedToolIds=${['web_search', 'fetch_url', 'run_python']}
+      ></lr-tool-select-dialog>
+    </div>
   `,
 };
 

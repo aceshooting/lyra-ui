@@ -122,7 +122,11 @@ export const styles = css`
   [part='header-cell'] {
     position: sticky;
     inset-block-start: 0;
-    background: var(--lr-color-surface);
+    /* --_lr-table-header-bg is set only by the sorted-header rule below (mirroring the
+       --_lr-table-row-bg/[part='row'] pattern for body rows) -- reading it here, instead of a plain
+       background: var(--lr-color-surface), lets the sorted fill still reach a header cell even when
+       the sticky-header rule further below is the one that wins the cascade for 'background'. */
+    background: var(--_lr-table-header-bg, var(--lr-color-surface));
     text-align: start;
     font-weight: var(--lr-font-weight-semibold);
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
@@ -184,18 +188,25 @@ export const styles = css`
   /* Inline var() fallbacks, not :host declarations -- as in the selected-row rule below: a :host
      declaration shadows any ancestor value, defeating the hook, and Shadow Parts forbids an
      attribute selector after ::part(), so ::part(header-cell)[aria-sort] is invalid CSS. Lets a
-     consumer recolor just the sorted header without hijacking a library-wide token. */
+     consumer recolor just the sorted header without hijacking a library-wide token.
+     Writes the private --_lr-table-header-bg property (read back by the base [part='header-cell']
+     rule above and by the sticky header-cell rule below) instead of only declaring 'background'
+     directly -- a sticky sortable column's <th> carries both [data-sticky] and [aria-sort] at once,
+     and the sticky rule's own opaque 'background' declaration is (0,2,0) versus this rule's
+     (0,1,0), so it would otherwise always out-specify and paint over the sorted fill regardless of
+     source order. */
   [part='header-cell']:where([aria-sort]:not([aria-sort='none'])) {
     /* Surface fill, not transparent: the cell is position: sticky, so a transparent default lets
        body rows scroll visibly through the sorted column's header in a height-capped table. The
        sticky-column rules below keep it for the same reason. */
-    background: var(--lr-table-header-sorted-bg, var(--lr-color-surface));
+    --_lr-table-header-bg: var(--lr-table-header-sorted-bg, var(--lr-color-surface));
+    background: var(--_lr-table-header-bg);
     color: var(--lr-table-header-sorted-color, inherit);
   }
   /* Both attribute selectors stay unwrapped at (0,3,0): they must out-rank the
      [part='header-cell'][data-sticky] rule below ((0,2,0)), which necessarily declares an opaque
-     background: var(--lr-color-surface). columns[].sticky and columns[].sortable compose, and while
-     these arms were :where()-zeroed to (0,1,0) a column using both had no hover and no press. */
+     background. columns[].sticky and columns[].sortable compose, and while these arms were
+     :where()-zeroed to (0,1,0) a column using both had no hover and no press. */
   [part='header-cell'][data-sortable]:hover {
     background: var(--lr-color-brand-quiet);
   }
@@ -458,11 +469,9 @@ export const styles = css`
   }
   /* columns[].sticky pins a column's header/cells to the inline-start edge during horizontal scroll
      -- the [part='header-cell'] inset-block-start pattern above, on the other axis. The box-shadow
-     is the seam over content scrolled underneath. The background reads --_lr-table-row-bg, written
-     by the [part='row'] stripe/selected/hover/active rules above, so a sticky body cell shows the
-     same fill as the rest of its row instead of painting a flat surface over the state; a sticky
-     header cell never sits inside [part='row'], so the property is never set there and it always
-     falls back to the plain surface color, unchanged from before. */
+     is the seam over content scrolled underneath. Structural rule shared by both element types;
+     'background' is declared per element type just below, since a body cell and a header cell read
+     different private properties for it. */
   [part='header-cell'][data-sticky],
   [part='cell'][data-sticky] {
     position: sticky;
@@ -471,8 +480,21 @@ export const styles = css`
        to 0 for the first sticky column, and before the first measurement pass. */
     inset-inline-start: var(--lr-table-sticky-offset, 0);
     z-index: var(--lr-layer-content);
-    background: var(--_lr-table-row-bg, var(--lr-color-surface));
     box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border);
+  }
+  /* Reads --_lr-table-row-bg, written by the [part='row'] stripe/selected/hover/active rules above,
+     so a sticky body cell shows the same fill as the rest of its row instead of painting a flat
+     surface over the state. */
+  [part='cell'][data-sticky] {
+    background: var(--_lr-table-row-bg, var(--lr-color-surface));
+  }
+  /* Reads --_lr-table-header-bg, written only by the sorted-header rule above -- a sticky AND
+     sorted column's <th> carries both [data-sticky] and [aria-sort] at once, so without this split
+     this rule's opaque background (0,2,0) always out-specified and painted over the sorted rule's
+     own 'background' declaration (0,1,0), regardless of source order. A sticky header cell that is
+     not sorted still falls back to the plain surface color, unchanged from before. */
+  [part='header-cell'][data-sticky] {
+    background: var(--_lr-table-header-bg, var(--lr-color-surface));
   }
   [part='header-cell'][data-sticky='end'],
   [part='cell'][data-sticky='end'] {

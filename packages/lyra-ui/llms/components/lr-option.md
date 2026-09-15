@@ -150,7 +150,9 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option or async row, everywhere it appears (trigger, `multiple`
   tag, synthetic row). `getTag` cannot serve this case: it is handed a matched option and there is
-  none. A blank return falls back to the raw value
+  none. A blank return falls back to the raw value. Not consulted while an async `source` fetch has
+  never yet resolved for this element — see "Unknown committed values" below; `loadingText` covers
+  that window instead, since the value is not yet known to be unmatched at all
 - `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected)
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
@@ -205,9 +207,10 @@ at all* (performance; the rest do not exist and are summarized by `option-overfl
 suggestion list.
 - `emptyText?: string` (attribute `empty-text`) — omission displays localized `noMatches` (`"No
 matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
-- `loadingText?: string` (attribute `loading-text`) — shown while a `source` fetch is in flight;
-  omission displays localized `loading` (`"Loading…"` in English), while any supplied string,
-  including `''`, renders verbatim
+- `loadingText?: string` (attribute `loading-text`) — shown while a `source` fetch is in flight,
+  and in place of the raw value on the trigger/tag for a committed value the fetch has never yet
+  resolved (see "Unknown committed values" below); omission displays localized `loading`
+  (`"Loading…"` in English), while any supplied string, including `''`, renders verbatim
 - `overflowText?: string` (attribute `overflow-text`) — shown when `maxRender` caps the rows;
   omission displays localized `comboboxOverflow` (`"+{n} more — refine your search"` in English).
   A supplied template wins verbatim over `.strings`, including when it equals that English
@@ -263,8 +266,13 @@ fully reachable through `value`/`selectedRows` — but renders a dashed/italic
 `[part='unknown-value']` badge next to the closed single-select input, or on the relevant
 `multiple`-mode tag, instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic
 "not in catalog" stale-value row — see `--lr-combobox-unknown-value-border-style`/`-color` below.
-The badge is suppressed while an async `source` fetch is still in flight, and never shown for an
-`allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one.
+The badge is suppressed while an async `source` fetch has never yet resolved for this element —
+from mount through the debounce delay and the in-flight call itself — and never shown for an
+`allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one. Over that same
+unresolved window the raw value itself is also withheld: the trigger (and any `multiple`-mode tag
+for the same value) shows the `loadingText` placeholder instead, so a value seeded before its async
+catalogue has ever answered never flashes an unexplained, unbadged machine key. Once the fetch
+settles — success or failure — the raw value returns, badged if it still matches nothing.
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
@@ -355,8 +363,11 @@ The internal input's `focus` and `blur` are relayed exactly once from the host a
 native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
-`lr-source-error` is non-cancelable, `detail: { error }` carrying the raw rejection from an async
-`source` call. The rendered copy stays localized and never shows it.
+`lr-source-error` is non-cancelable, `detail: { error, query }` carrying the raw rejection from an
+async `source` call plus the exact query string that call was made with (the rejected call's own
+query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
+closing the listbox — by the time the rejection settles). The rendered copy stays localized and
+never shows the raw error.
 `lr-retry` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and

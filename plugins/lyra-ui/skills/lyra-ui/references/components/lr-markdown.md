@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -112,6 +112,9 @@ uses for its own `[part="body"]`.
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
   lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
+- `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set,
+  `[part="content"]` scrolls internally past this height instead of growing the page. Invalid
+  values are ignored.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied `text-quote` highlights;
   reassign the array after mutation so painting is refreshed.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — identifies the
@@ -168,18 +171,20 @@ placed first and preserved inside both ceilings.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
-**CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; carries
-`data-fallback` while showing the plain-text fallback — still-loading peers or a failed render —
-so a consumer can target `lr-markdown [part='content'][data-fallback]` to style it distinctly),
-`anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest anchor-jump message),
-`heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`), `paragraph` (every rendered
-`<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every rendered fenced/indented `<pre>`),
-`inline-code` (every rendered inline `<code>` span — backtick spans, not fenced blocks), `link`
-(every rendered `<a>`), `table` (every rendered `<table>`), `blockquote` (every rendered
-`<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered inline or block math span,
-carrying `data-display="inline"|"block"`)
+**CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; respects
+`max-height`; carries `data-fallback` while showing the plain-text fallback — still-loading peers
+or a failed render — so a consumer can target `lr-markdown [part='content'][data-fallback]` to
+style it distinctly), `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
+anchor-jump message), `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`),
+`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every
+rendered fenced/indented `<pre>`), `inline-code` (every rendered inline `<code>` span — backtick
+spans, not fenced blocks), `link` (every rendered `<a>`), `table` (every rendered `<table>`),
+`blockquote` (every rendered `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered
+inline or block math span, carrying `data-display="inline"|"block"`)
 
-**Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
+**Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
+`[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
+property sets this token inline on `[part="content"]`), `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
 `--lr-theme-font-family-mono` override reaches it), `--lr-markdown-code-bg` (default
 `var(--lr-color-brand-quiet)` — background shared by every inline `code` span and the fenced

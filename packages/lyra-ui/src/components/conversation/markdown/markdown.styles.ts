@@ -6,17 +6,26 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     line-height: var(--lr-line-height-loose);
+    /* Consumer-tunable scroll cap; 'none' grows with the content like every other block-level
+       component here until a caller opts into an internal scrollbar via the max-height
+       attribute -- same rationale as lr-json-viewer's/lr-diff-view's identical
+       --_lr-json-viewer-max-height/--_lr-diff-view-max-height. */
+    --_lr-markdown-max-height: none;
   }
   [part='content'] {
     min-block-size: var(--lr-icon-button-size);
     box-sizing: border-box;
     min-inline-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
+    max-block-size: var(--lr-markdown-max-height, var(--_lr-markdown-max-height));
     overflow-inline: auto;
     /* Paired with overflow-inline above: the CSS overflow spec resolves the other axis to 'auto',
        never 'visible', once one is pinned non-'visible'. Left implicit, a sub-pixel content/box
        mismatch on the block axis trips a spurious, non-interactive vertical scrollbar. Mirrors
-       lr-tab-group's tablist fix (overflow-x: auto; overflow-y: hidden). */
+       lr-tab-group's tablist fix (overflow-x: auto; overflow-y: hidden). This stays 'hidden' for
+       the unset (default 'none' max-height) case; markdown-shared.ts's renderMarkdownContent()
+       overrides it inline to 'auto' only once a max-height cap is actually in effect, so the
+       spurious-scrollbar risk this rule guards against never returns for the capped case either. */
     overflow-block: hidden;
     overflow-wrap: anywhere;
   }

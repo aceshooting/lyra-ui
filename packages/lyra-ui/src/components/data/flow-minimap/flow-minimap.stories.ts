@@ -100,7 +100,7 @@ export const RetintedRunStates: Story = {
     docs: {
       description: {
         story:
-          'Each execution-state rectangle has its own component-scoped color hook; the shared semantic palette remains unchanged.',
+          'Each execution-state rectangle has its own component-scoped color hook; the shared semantic palette remains unchanged. --lr-flow-minimap-viewport-color retints the visible-area rectangle independently of every node status color.',
       },
     },
   },
@@ -121,6 +121,7 @@ export const RetintedRunStates: Story = {
           --lr-flow-status-running-color: var(--lr-color-danger);
           --lr-flow-status-success-color: var(--lr-color-brand);
           --lr-flow-status-denied-color: var(--lr-color-success);
+          --lr-flow-minimap-viewport-color: var(--lr-color-warning);
         "
       ></lr-flow-minimap>
     </lr-flow-canvas>

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -131,7 +131,10 @@ rendered code, applied to `[part='pre']`), `--lr-code-block-active-line-outline-
 `var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`),
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)` — the background of a
 line marked by `highlight-lines` or a `line-range` entry in `highlights`, in both the light and
-dark-theme rendering paths), plus shared tokens `--lr-color-border`, `--lr-radius`,
+dark-theme rendering paths), `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`)
+and `--lr-code-block-language-color` (default `var(--lr-color-brand)`) — the header `language` pill's
+background and text color, independent of the active-line outline above — plus shared tokens
+`--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`.
@@ -154,9 +157,11 @@ while a markdown code block inherits `pre-wrap`, and tab stops restart at each v
 wrapped line's tabs diverge.
 
 `--lr-code-block-active-line-outline-color` retints just the active line's outline and leaves every
-other `--lr-color-brand` surface in the component — the header language pill, hover states, the focus
+other `--lr-color-brand` surface in the component — hover states, the focus
 ring — alone. It too is an inline `var()` fallback rather than a `:host` declaration, deliberately,
 so it inherits: set it on the element, on an ancestor, or at the theme level.
+`--lr-code-block-language-bg`/`--lr-code-block-language-color` retint the header language pill on
+their own, independent of both the active-line outline and the hover/focus states.
 
 `--lr-code-block-highlighted-line-bg` follows the same pattern: an inline `var()` fallback (not a
 `:host` declaration) so it inherits, retinting just the highlighted-line background and leaving every

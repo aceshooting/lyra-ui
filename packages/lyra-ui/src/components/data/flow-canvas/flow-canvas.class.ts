@@ -221,6 +221,9 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  *   takes precedence.
  * @cssprop [--lr-flow-canvas-edge-neutral-color=var(--lr-color-border)] - Neutral edge and arrowhead color.
  * @cssprop [--lr-flow-canvas-edge-brand-color=var(--lr-color-brand)] - Brand edge and arrowhead color.
+ * @cssprop [--lr-flow-canvas-connection-line-color=var(--lr-color-brand)] - Stroke color of
+ *   `[part="connection-line"]`, the in-progress connect-gesture path drawn while dragging a new
+ *   connection, independent of a finished edge's own `--lr-flow-canvas-edge-*-color`.
  * @cssprop [--lr-flow-canvas-edge-success-color=var(--lr-color-success)] - Success edge and arrowhead color.
  * @cssprop [--lr-flow-canvas-edge-warning-color=var(--lr-color-warning)] - Warning edge and arrowhead color.
  * @cssprop [--lr-flow-canvas-edge-danger-color=var(--lr-color-danger)] - Danger edge and arrowhead color.

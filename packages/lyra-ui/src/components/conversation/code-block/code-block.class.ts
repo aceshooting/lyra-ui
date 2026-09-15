@@ -170,6 +170,10 @@ export interface LyraCodeBlockEventMap {
  * @cssprop [--lr-code-block-font=var(--lr-font-mono)] - Monospace family for the rendered `pre`
  *   and `code`.
  * @cssprop [--lr-code-block-tab-size=2] - Tab width for the rendered code, applied to `pre`.
+ * @cssprop [--lr-code-block-language-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   `language` badge in `[part="header"]`.
+ * @cssprop [--lr-code-block-language-color=var(--lr-color-brand)] - Text color of the `language`
+ *   badge.
  *   Same default as `--lr-code-editor-tab-size`, so the editable and read-only code surfaces
  *   agree; `lr-markdown`/`lr-markdown-core` declare the same token for their own
  *   `code-block` part (they are sibling elements, so they cannot inherit this one). Read as a

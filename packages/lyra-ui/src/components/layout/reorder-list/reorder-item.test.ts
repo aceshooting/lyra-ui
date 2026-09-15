@@ -322,4 +322,31 @@ describe('ElementInternals availability', () => {
       HTMLElement.prototype.attachInternals = original;
     }
   });
+
+});
+
+describe('focusMoveButton()', () => {
+  it('moves focus to the requested enabled control and reports success', async () => {
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="row">Row</lr-reorder-item>`);
+    expect(el.focusMoveButton('down')).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('move-down-button');
+
+    expect(el.focusMoveButton('up')).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('move-up-button');
+  });
+
+  it('no-ops and returns false for a disabled control, without moving focus', async () => {
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item disabled value="row">Row</lr-reorder-item>`);
+    expect(el.focusMoveButton('up')).to.equal(false);
+    expect(el.focusMoveButton('down')).to.equal(false);
+    expect(el.shadowRoot!.activeElement === null, 'focus stays where it was').to.equal(true);
+  });
+
+  it('respects a standalone item\'s own boundary disablement without an owning list', async () => {
+    // With no owning list, `atStart`/`atEnd` stay false, so a standalone item's only disabling
+    // condition is a missing/invalid identity -- exercised here via an empty value.
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item>Row</lr-reorder-item>`);
+    expect(el.focusMoveButton('up')).to.equal(false);
+    expect(el.focusMoveButton('down')).to.equal(false);
+  });
 });

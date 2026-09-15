@@ -7,7 +7,11 @@ import type {
 } from './tool-select-dialog.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
 import type { LyraSwitch } from '../../forms/switch/switch.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from '../../../../test/wtr-mouse.js';
 
 it('provides rendered hover feedback for the native search input', async () => {
   const el = await fixture<LyraToolSelectDialog>(html`
@@ -22,6 +26,42 @@ it('provides rendered hover feedback for the native search input', async () => {
     });
     await waitUntil(() => getComputedStyle(input).borderTopColor === 'rgb(1, 2, 3)');
     expect(getComputedStyle(input).borderTopColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('lets each body hover-outline longhand be retinted independently and keeps them unchanged while pressed', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      style="
+        --lr-tool-select-dialog-body-hover-outline-width: 3px;
+        --lr-tool-select-dialog-body-hover-outline-style: dashed;
+        --lr-tool-select-dialog-body-hover-outline-color: rgb(12, 34, 56);
+        --lr-tool-select-dialog-body-hover-outline-offset: -2px;
+      "
+    ></lr-tool-select-dialog>
+  `);
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  try {
+    await hoverUntilMatched(body, 'the tool-select-dialog body never registered :hover');
+    await waitUntil(
+      () => getComputedStyle(body).outlineColor === 'rgb(12, 34, 56)',
+      'the scoped body hover outline color never rendered',
+    );
+    const hovered = getComputedStyle(body);
+    expect(hovered.outlineWidth).to.equal('3px');
+    expect(hovered.outlineStyle).to.equal('dashed');
+    expect(hovered.outlineColor).to.equal('rgb(12, 34, 56)');
+    expect(hovered.outlineOffset).to.equal('-2px');
+
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(body);
+    expect(pressed.outlineWidth).to.equal('3px');
+    expect(pressed.outlineStyle).to.equal('dashed');
+    expect(pressed.outlineColor).to.equal('rgb(12, 34, 56)');
+    expect(pressed.outlineOffset).to.equal('-2px');
   } finally {
     await resetMouse();
   }

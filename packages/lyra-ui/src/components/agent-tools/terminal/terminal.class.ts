@@ -166,6 +166,13 @@ export interface LyraTerminalEventMap {
  * removes the outer card chrome when a surrounding container already supplies it — the same pair
  * `lr-result-card`, `lr-stack-trace`, `lr-task-list`, and `lr-thinking-panel` expose.
  *
+ * Deliberately no `maxHeight`/`--lr-terminal-max-height` pair (unlike `lr-json-viewer`,
+ * `lr-diff-view`, `lr-code-block`, `lr-stack-trace`, and `lr-markdown`): those default to `none`
+ * and grow with their content until a caller opts into a cap. This component's `[part="viewport"]`
+ * is *always* a fixed-height virtualized scrollback region — `--lr-terminal-height` (default
+ * `20rem`) already is that cap, retunable the same way. A second, differently-shaped "grows until
+ * capped" property would fight that always-scrolling model rather than complement it.
+ *
  * @customElement lr-terminal
  * @event lr-copy - `detail: { ok: true, text }` — the plain-text clipboard write completed.
  * @event lr-error - The clipboard write failed; generic no-detail notification.

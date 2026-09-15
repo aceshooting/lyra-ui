@@ -354,7 +354,7 @@ export interface LyraComboboxEventMap<Multiple extends boolean = boolean> {
     }>
   >;
   'lr-activate': CustomEvent<{ value: string }>;
-  'lr-source-error': CustomEvent<{ error: unknown }>;
+  'lr-source-error': CustomEvent<{ error: unknown; query: string }>;
   'lr-retry': CustomEvent<null>;
   input: InputEvent | CustomEvent<
     LyraEventDetailSnapshot<{
@@ -420,8 +420,12 @@ export type LyraComboboxSourceErrorEvent =
  * committed value matching no current option/row (a stale value, or a programmatic assignment with
  * a typo) still commits rather than being dropped, but renders with a dashed/italic
  * `[part='unknown-value']` badge instead of silently passing the raw string off as an ordinary
- * label -- see `isUnknownValue()`. Suppressed while a `source` fetch is still in flight, and never
- * shown for an `allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one.
+ * label -- see `isUnknownValue()`. Suppressed while an async `source` fetch has never yet resolved
+ * for this element, and never shown for an `allowCustomValue` commit, which is a sanctioned
+ * unmatched value, not a stale one. Over that same unresolved window the raw value itself is
+ * withheld too -- the trigger (and any `multiple`-mode tag for the same value) shows the
+ * `loadingText` placeholder instead of the raw string, since it is not yet knowable whether the
+ * value is even unmatched.
  *
  * @customElement lr-combobox
  * @slot - `<lr-option>` elements.
@@ -459,10 +463,12 @@ export type LyraComboboxSourceErrorEvent =
  *   move the selection, `input`/`change`/`lr-change` are emitted first. Not fired for typing, for a
  *   committed custom value that matches no row, for the clear button, or for a programmatic `value`
  *   assignment.
- * @event lr-source-error - An async `source` call rejected. `detail: { error }` carries the raw
- *   rejection, so a host can log or report it; the rendered copy stays localized and never shows
- *   it. Not cancelable — the failure has already happened and the error row is already what
- *   rendered, so there is nothing to veto.
+ * @event lr-source-error - An async `source` call rejected. `detail: { error, query }` carries the
+ *   raw rejection, so a host can log or report it (the rendered copy stays localized and never
+ *   shows it), plus the exact query string that call was made with -- the rejected call's own
+ *   query, not necessarily `this.query`/`inputValue`, which may have moved on (or been cleared by
+ *   closing the listbox) by the time the rejection settles. Not cancelable — the failure has
+ *   already happened and the error row is already what rendered, so there is nothing to veto.
  * @event lr-retry - The failed-load state's `[part='retry-button']` was activated. Cancelable —
  *   the built-in action calls `refresh()`, and `preventDefault()` leaves the failure on screen for
  *   a host that owns its own retry timing.
@@ -746,7 +752,9 @@ export class LyraCombobox<
    * render. This hook applies everywhere that value's label appears -- the trigger, a `multiple`
    * tag, and the synthetic listbox row -- and is used only while the value is genuinely unmatched,
    * so it can never override a real option's own label. A blank return falls back to the raw
-   * value, exactly as no hook at all would. Caller-supplied text: it is not localized here.
+   * value, exactly as no hook at all would. Caller-supplied text: it is not localized here. Not
+   * consulted while an async `source` fetch has never yet resolved for this element -- the value
+   * is not yet known to be unmatched at all, so `loadingText` renders instead (see `isUnknownValue()`).
    */
   @property({ attribute: false }) getUnknownLabel?: (value: string) => string;
 
@@ -800,7 +808,9 @@ export class LyraCombobox<
    * `"No matches"` or `""`, renders verbatim. */
   @property({ attribute: 'empty-text' }) emptyText?: string;
   /** Optional loading-copy override. Omission localizes `loading`; a supplied string, including
-   * `"Loading…"` or `""`, renders verbatim. */
+   * `"Loading…"` or `""`, renders verbatim. Shown both in the listbox's own loading row and, for a
+   * committed value a `source` fetch has never resolved (see `labelFor()`), in place of the raw
+   * value on the trigger/tags -- the same key covers both spots. */
   @property({ attribute: 'loading-text' }) loadingText?: string;
   /** Optional capped-list copy override. Omission localizes `comboboxOverflow`; a supplied string,
    * including the built-in English template or `""`, wins verbatim after `{n}` interpolation. */
@@ -891,6 +901,15 @@ export class LyraCombobox<
    * idref.
    */
   @state() private sourceFailed = false;
+  /**
+   * True once a `source` call has settled at least once (success or rejection) since the last
+   * time `source` itself was assigned. Distinguishes "not yet known" (this stays `false`, from
+   * mount through the debounce delay and the in-flight call) from "genuinely unknown" (a real
+   * settle happened and the value still matched nothing) -- see `isUnknownValue()` and
+   * `labelFor()`, which both key off it instead of the narrower `loading` flag so the raw value
+   * never leaks, badged or not, before the first real answer comes back.
+   */
+  @state() private sourceEverSettled = false;
   @state() private asyncRows: ComboboxSourceRow[] = [];
   private _sourceTotal = 0;
   private _sourceTruncated = false;
@@ -1264,6 +1283,7 @@ export class LyraCombobox<
       this.sourceToken++;
       this.loading = false;
       this.sourceFailed = false;
+      this.sourceEverSettled = false;
       this.asyncRows = [];
       this._sourceTotal = 0;
       this._sourceTruncated = false;
@@ -2037,11 +2057,20 @@ export class LyraCombobox<
     // has ever been opened) has no chance to have populated the first two,
     // so without this last fallback it would render as the raw value string
     // instead of its label.
+    //
+    // One fallback still sits ahead of the raw value itself: a `source` combobox whose async
+    // catalogue has never resolved even once (see `sourceEverSettled`) has no way yet to know
+    // whether `value` matches anything, so showing the raw value here -- machine key, numeric id,
+    // whatever it is -- would be exactly the untranslated flash the unknown-value badge exists to
+    // avoid, just without the badge (`isUnknownValue()` also suppresses over this same window, so
+    // the badge cannot compensate). A resolved-but-still-unmatched value falls all the way through
+    // to the raw value below, same as always.
     return (
       (!this.source && !this.multiple && this.singleSelectedOption?.value === value ? nonBlank(this.singleSelectedOption.label) : undefined) ??
       nonBlank(this._selectedLabelCache.get(value)) ??
       nonBlank(this.options.find((o) => o.value === value)?.label) ??
       nonBlank(this.asyncRows.find((r) => r.value === value)?.label) ??
+      (this.source && !this.sourceEverSettled ? this.statusText('loading', this.loadingText) : undefined) ??
       value
     );
   }
@@ -2053,8 +2082,12 @@ export class LyraCombobox<
    * unresolved value never leaks its raw string with no explanation, while `labelFor()` keeps the
    * raw value itself fully reachable.
    *
-   * Suppressed entirely while `loading`: an async `source` fetch still in flight simply hasn't had
-   * a chance to populate `asyncRows` yet, which is "not yet known", not "genuinely unknown".
+   * Suppressed entirely until a `source` combobox's async fetch has settled at least once (see
+   * `sourceEverSettled`): from mount through the debounce delay and the in-flight call itself,
+   * simply hasn't had a chance to populate `asyncRows` yet, which is "not yet known", not
+   * "genuinely unknown" -- `loading` alone would miss the debounce-delay span before the request
+   * even starts, which is exactly the window `labelFor()`'s own loading-placeholder fallback needs
+   * this to agree with.
    *
    * Checked against the same four sources as `labelFor()`, but as a plain existence test rather
    * than a label lookup, so a real match with a deliberately blank label is never misreported as
@@ -2063,7 +2096,7 @@ export class LyraCombobox<
    * one, so it must never show this badge.
    */
   private isUnknownValue(value: string): boolean {
-    if (this.loading) return false;
+    if (this.source && !this.sourceEverSettled) return false;
     return !(
       (!this.source && !this.multiple && this.singleSelectedOption?.value === value) ||
       this._selectedLabelCache.has(value) ||
@@ -2953,6 +2986,7 @@ export class LyraCombobox<
         this._sourceTruncated = normalized.truncated;
         this.asyncRows = normalized.rows;
         this.sourceFailed = false;
+        this.sourceEverSettled = true;
         this.normalizeActiveIndex();
         this.applyPendingSelectedRows(true);
         const selected = new Set(this._selected);
@@ -2984,6 +3018,10 @@ export class LyraCombobox<
         this._sourceTruncated = false;
         this.activeIndex = -1;
         this.sourceFailed = true;
+        // A rejection is still a real settle -- the alternative (staying "not yet known" forever)
+        // would strand the trigger showing a loading placeholder for a query that has already
+        // failed and will not resolve on its own, with the retry state as the only way out.
+        this.sourceEverSettled = true;
         this.sourceErrorAnnouncementSink?.announce(
           this.localize('comboboxLoadError')
         );
@@ -2991,7 +3029,7 @@ export class LyraCombobox<
         // rendered outcome, so there is nothing here for a listener to veto. It carries the raw
         // rejection so a host can log or report it -- the rendered copy stays localized and never
         // leaks the message.
-        this.emit('lr-source-error', { error: err });
+        this.emit('lr-source-error', { error: err, query });
         console.warn('<lr-combobox> source() rejected:', err);
       })
       .finally(() => {

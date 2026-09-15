@@ -251,6 +251,18 @@ describe('lr-file-icon', () => {
     expect(style.whiteSpace).to.equal('nowrap');
   });
 
+  it('--lr-file-icon-bg / --lr-file-icon-color retint the format badge independently of the shared brand tokens', async () => {
+    const el = await fixture(html`
+      <lr-file-icon
+        mime-type="application/pdf"
+        style="--lr-file-icon-bg: rgb(10, 20, 30); --lr-file-icon-color: rgb(40, 50, 60)"
+      ></lr-file-icon>
+    `);
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(getComputedStyle(icon).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(icon).color).to.equal('rgb(40, 50, 60)');
+  });
+
   it('hides the complete label badge subtree from accessibility APIs when decorative', async () => {
     const el = await fixture(html`
       <lr-file-icon mime-type="application/pdf" mode="label" bytes="2415919" decorative></lr-file-icon>

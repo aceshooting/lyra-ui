@@ -625,7 +625,7 @@ export const styles = css`
     margin-inline-start: auto;
     padding: 0 var(--lr-space-xs);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-select-option-badge-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
     font-style: normal;

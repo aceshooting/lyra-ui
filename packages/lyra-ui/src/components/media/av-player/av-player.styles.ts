@@ -204,14 +204,18 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   /* Before ::part(cue-current) below, so the current cue's own background wins the specificity tie
-     on source order even while hovered. */
+     on source order even while hovered. A dedicated hook, not the bare shared token, mirroring
+     --lr-av-player-cue-current-bg's own indirection immediately below: a consumer can retint just
+     this row's hover/press feedback without hijacking --lr-color-brand-quiet library-wide. */
   lr-virtual-list::part(cue):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-av-player-cue-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Ahead of ::part(cue-current) for the same source-order reason: the current cue's own fill still
-     wins over both transient states. */
+     wins over both transient states. Mixes from the SAME hover hook the rule above reads, so a
+     retuned hover fill keeps its pressed step instead of snapping back to the brand default under
+     the pointer when the hook is set. */
   lr-virtual-list::part(cue):active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, var(--lr-av-player-cue-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   lr-virtual-list::part(cue-current) {
     background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet));

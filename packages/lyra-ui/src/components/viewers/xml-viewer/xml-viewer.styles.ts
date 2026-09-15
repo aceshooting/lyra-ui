@@ -99,7 +99,7 @@ export const styles = css`
     border-radius: var(--lr-size-0-1875rem);
   }
   [part='tag'] {
-    color: var(--lr-color-brand);
+    color: var(--lr-xml-viewer-tag-color, var(--lr-color-brand));
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='attribute-name'] {

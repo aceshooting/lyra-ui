@@ -5893,6 +5893,20 @@ describe('unknown committed value presentation', () => {
     expect(badge, 'a distinguishing badge renders next to the raw value').to.exist;
   });
 
+  it('retints the open-listbox "not in catalog" badge from --lr-select-option-badge-bg', async () => {
+    const el = (await fixture(html`
+      <lr-select value="ghost" show-unknown-option style="--lr-select-option-badge-bg: rgb(1, 2, 3);">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    const badge = el.shadowRoot!.querySelector('[part="option-badge"]') as HTMLElement;
+    expect(badge, 'the synthetic unmatched-value row renders its badge while open').to.exist;
+    expect(getComputedStyle(badge).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
+
   it('does not flag a value that matches an option', async () => {
     const el = (await fixture(basic())) as LyraSelect;
     el.value = 'a';

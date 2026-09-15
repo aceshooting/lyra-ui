@@ -1771,7 +1771,10 @@ mode), and `size` (the part keeps its name — it is the rendered size _text_, a
 would break shipped `::part()` rules for no gain).
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
-format badge's inline and block size).
+format badge's inline and block size). `--lr-file-icon-bg` (default `var(--lr-color-brand-quiet)`)
+and `--lr-file-icon-color` (default `var(--lr-color-brand)`) retint the `icon` badge — every file
+category renders the same fill today, so either can be set without hijacking the shared
+`--lr-color-brand-quiet`/`--lr-color-brand` tokens used elsewhere in the theme.
 
 **Exports:** `LyraFileTypeMetadata`, `LyraFileTypeMetadataEntry`, `LyraResolvedFileTypeMetadata`,
 `LyraFileTypeMetadataRegistry`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
@@ -2676,7 +2679,11 @@ can be set on the viewer or any ancestor. Highlight tone styling is exposed thro
 properties. `--lr-image-viewer-highlight-fill` is the resting fill a `[part='highlight']` actually
 renders, resolved per tone from the `-bg` knobs above; its hover and pressed states are color mixes
 taken from that value, so setting it directly retints all three states of one highlight at once —
-retint a whole tone through the matching `-bg` knob instead. These properties are declared as inline
+retint a whole tone through the matching `-bg` knob instead. `--lr-image-viewer-annotation-box-border`
+(default `var(--lr-color-brand)`) and `--lr-image-viewer-annotation-box-bg` (default
+`color-mix(in srgb, var(--lr-color-brand) 15%, transparent)`) retint `[part='annotation-box']`, the
+in-progress draft rectangle drawn while actively annotating, independent of the saved highlights'
+own tone colors. These properties are declared as inline
 `var()` fallbacks at the point of use rather than on `:host`, so each can be set on the element _or
 on any ancestor_:
 `::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
@@ -2832,12 +2839,15 @@ resolved per tone from those `-bg` knobs; its hover and pressed states are color
 that value, so setting it directly retints all three states of one marker at once — retint a whole
 tone through the matching `-bg` knob instead.
 
-Two further cue-state properties tint the transcript: `--lr-av-player-cue-current-bg` (default
-`var(--lr-color-brand-quiet)`) is the background of the `cue-current` row the playhead is inside,
-and `--lr-av-player-cue-active-match-color` (default `var(--lr-color-warning)`) is the outline of
-the `cue-active-match` row, leaving the other matches' dashed outline on the shared warning token.
-Both are inline `var()` fallbacks at the point of use rather than `:host` declarations, so either
-can be set on the element or on any ancestor.
+Three further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
+`var(--lr-color-brand-quiet)`) is the background of a hovered `cue` row, and its pressed state is a
+color mix taken from that same value rather than a separate knob, so retuning it keeps its pressed
+step too. `--lr-av-player-cue-current-bg` (default `var(--lr-color-brand-quiet)`) is the background
+of the `cue-current` row the playhead is inside, and `--lr-av-player-cue-active-match-color`
+(default `var(--lr-color-warning)`) is the outline of the `cue-active-match` row, leaving the other
+matches' dashed outline on the shared warning token. All three are inline `var()` fallbacks at the
+point of use rather than `:host` declarations, so any of them can be set on the element or on any
+ancestor.
 
 **RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
 on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in

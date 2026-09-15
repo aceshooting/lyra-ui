@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
+import { html, render } from 'lit';
 import './reorder-list.js';
 import './reorder-item.js';
 import type { LyraReorderList } from './reorder-list.js';
@@ -86,6 +86,44 @@ export const CancelableMove: StoryObj = {
       <lr-reorder-item value="phone">Phone</lr-reorder-item>
     </lr-reorder-list>
   `,
+};
+
+export const Controlled: StoryObj = {
+  name: 'Controlled (host-owned order)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `controlled` stops the list from moving its own slotted rows itself: the host reorders its own backing array and re-renders, and the list reconciles the completed move by each row\'s `value` once that render lands -- the same request/reconcile-later contract `<lr-tree>`\'s `reorderable` establishes for its own `data`-driven children. This story\'s host re-render is deliberately a plain non-keyed `Array.map()`, which reuses each POSITION\'s existing `<lr-reorder-item>` and just rewrites its `value` property rather than moving any node -- reconciliation still finds the moved row by that value.',
+      },
+    },
+  },
+  render: () => {
+    let order = ['name', 'email', 'phone', 'address'];
+    const labels: Record<string, string> = {
+      name: 'Name',
+      email: 'Email',
+      phone: 'Phone',
+      address: 'Address',
+    };
+    const template = (): unknown => html`
+      <lr-reorder-list
+        controlled
+        label="Form fields (controlled)"
+        style="max-width: 20rem;"
+        @lr-reorder=${(e: Event) => {
+          order = (e as CustomEvent<{ order: readonly string[] }>).detail.order.slice();
+          const root = (e.currentTarget as HTMLElement).parentElement;
+          // Storybook's `render()` return value isn't reactive on its own -- force a re-render
+          // of this story's own root the same way the table stories do.
+          if (root) render(template(), root);
+        }}
+      >
+        ${order.map((value) => html`<lr-reorder-item .value=${value}>${labels[value]}</lr-reorder-item>`)}
+      </lr-reorder-list>
+    `;
+    return template();
+  },
 };
 
 export const NarrowLongContent: StoryObj = {

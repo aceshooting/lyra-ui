@@ -249,6 +249,31 @@ export const ActiveSort: Story = {
   render: () => html`<lr-table .columns=${columns} .rows=${rows} sort-key="score" sort-dir="desc"></lr-table>`,
 };
 
+const stickySortableColumns: TableColumn<DemoRow>[] = [
+  { key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r) => r.name },
+  { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
+];
+
+export const StickySortedHeaderColor: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-table-header-sorted-bg` reaches a `sticky` column\'s own header cell too. Sorting the pinned "Name" column shows the same tint the non-sticky "Score" header gets when sorted -- before this fix, a sticky sortable header always painted the plain surface color instead, because its opaque background rule out-specified the sorted rule regardless of source order.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-table
+      style="--lr-table-header-sorted-bg: var(--lr-color-success-quiet)"
+      .columns=${stickySortableColumns}
+      .rows=${rows}
+      sort-key="name"
+      sort-dir="asc"
+    ></lr-table>
+  `,
+};
+
 export const SortTransaction: Story = {
   parameters: {
     docs: {

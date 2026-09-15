@@ -7745,6 +7745,68 @@ describe('unknown committed value presentation', () => {
       'resolved with no match -- genuinely unknown',
     ).to.be.true;
   });
+
+  it('shows a loading placeholder in place of the raw value while a committed value has never resolved', async () => {
+    const el = (await fixture(
+      html`<lr-combobox source-delay="0"></lr-combobox>`,
+    )) as LyraCombobox;
+    let resolve!: (rows: { value: string; label: string }[]) => void;
+    el.source = () => new Promise((r) => (resolve = r));
+    el.value = 'ghost';
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    // Before the debounced call has even started (`loading` is still false here), the raw
+    // value must not leak either -- the gap is the whole unresolved window, not just the
+    // in-flight span.
+    expect(
+      input.value,
+      'a localized loading placeholder stands in even before the debounced fetch starts',
+    ).to.equal('Loading…');
+    await waitUntil(
+      () => (el as unknown as { loading: boolean }).loading,
+      'the proactive warm-up fetch never started',
+    );
+    expect(
+      input.value,
+      'the placeholder still stands in once the fetch is actually in flight',
+    ).to.equal('Loading…');
+
+    resolve([]);
+    await waitUntil(
+      () => !(el as unknown as { loading: boolean }).loading,
+      'the source call never settled',
+    );
+    await el.updateComplete;
+    expect(
+      input.value,
+      'settled with no match -- the raw value is the only thing left to show, now badged',
+    ).to.equal('ghost');
+    expect(input.hasAttribute('data-unknown-value')).to.be.true;
+  });
+
+  it('shows a loading placeholder on an unresolved tag in multiple mode too', async () => {
+    const el = (await fixture(
+      html`<lr-combobox multiple source-delay="0"></lr-combobox>`,
+    )) as LyraCombobox;
+    let resolve!: (rows: { value: string; label: string }[]) => void;
+    el.source = () => new Promise((r) => (resolve = r));
+    el.value = ['ghost'];
+    await el.updateComplete;
+    await waitUntil(
+      () => (el as unknown as { loading: boolean }).loading,
+      'the proactive warm-up fetch never started',
+    );
+    const tag = el.shadowRoot!.querySelector('[part="tag"]');
+    expect(tag, 'the unresolved value still renders a tag').to.exist;
+    expect(
+      tag!.hasAttribute('data-unknown-value'),
+      'not yet known to be unknown',
+    ).to.be.false;
+    expect(
+      tag!.querySelector('[part="tag__content"]')?.textContent?.trim(),
+      'a loading placeholder stands in for the raw value',
+    ).to.equal('Loading…');
+  });
 });
 
 describe("lr-combobox activation event", () => {

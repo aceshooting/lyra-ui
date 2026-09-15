@@ -239,6 +239,20 @@ it("shows filename and language as visible header text when set", async () => {
   ).to.equal("typescript");
 });
 
+it("retints the language badge from --lr-code-block-language-bg/-color", async () => {
+  const el = (await fixture(
+    html`<lr-code-block
+      language="typescript"
+      style="--lr-code-block-language-bg: rgb(1, 2, 3); --lr-code-block-language-color: rgb(4, 5, 6);"
+      .code=${jsSample}
+    ></lr-code-block>`
+  )) as LyraCodeBlock;
+  const badge = el.shadowRoot!.querySelector('[part="language"]') as HTMLElement;
+  const computed = getComputedStyle(badge);
+  expect(computed.backgroundColor).to.equal("rgb(1, 2, 3)");
+  expect(computed.color).to.equal("rgb(4, 5, 6)");
+});
+
 it("renders no header at all when there is nothing to put in it", async () => {
   const el = (await fixture(
     html`<lr-code-block .copyable=${false} .code=${jsSample}></lr-code-block>`

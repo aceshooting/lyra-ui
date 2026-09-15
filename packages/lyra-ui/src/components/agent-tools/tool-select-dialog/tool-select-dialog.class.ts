@@ -346,6 +346,16 @@ interface ToolProjection {
  *   search field.
  * @cssprop [--lr-tool-select-dialog-search-radius=var(--lr-radius)] - Corner radius of the search
  *   field.
+ * @cssprop [--lr-tool-select-dialog-body-hover-outline-width=var(--lr-border-width-thin)] -
+ *   Outline width of the mouse-hover preview on `[part="body"]`.
+ * @cssprop [--lr-tool-select-dialog-body-hover-outline-style=solid] - Outline style of the
+ *   mouse-hover preview on `[part="body"]`.
+ * @cssprop [--lr-tool-select-dialog-body-hover-outline-color=var(--lr-color-border)] - Outline
+ *   color of the mouse-hover preview on `[part="body"]`. Set to `transparent` to opt out of the
+ *   hover treatment entirely.
+ * @cssprop [--lr-tool-select-dialog-body-hover-outline-offset=calc(-1 * var(--lr-border-width-thin))] -
+ *   Inward offset of the mouse-hover preview on `[part="body"]`, keeping the outline inside its
+ *   own scrollport so it is not clipped at the edge.
  * @status stable
  * @since 4.0.0
  */

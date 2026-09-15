@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './thinking-panel.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
 import '../../conversation/streaming-text/streaming-text.js';
@@ -930,6 +930,47 @@ describe('the tabbable scroll region\'s own affordances', () => {
       expect(hovered.outlineColor).to.equal(expectedColor);
       // A preview, deliberately not the focus ring's own colour, so the two stay distinguishable.
       expect(hovered.outlineColor).to.not.equal(focusRingColor);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('lets each body hover-outline longhand be retinted independently and keeps them unchanged while pressed', async () => {
+    const el = (await fixture(html`
+      <lr-thinking-panel
+        expanded
+        style="
+          --lr-thinking-panel-body-hover-outline-width: 3px;
+          --lr-thinking-panel-body-hover-outline-style: dashed;
+          --lr-thinking-panel-body-hover-outline-color: rgb(12, 34, 56);
+          --lr-thinking-panel-body-hover-outline-offset: -2px;
+        "
+      >Long reasoning transcript</lr-thinking-panel>
+    `)) as LyraThinkingPanel;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    body.scrollIntoView({ block: 'center' });
+    const rect = body.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(body).outlineColor === 'rgb(12, 34, 56)',
+        'the scoped body hover outline color never rendered',
+      );
+      const hovered = getComputedStyle(body);
+      expect(hovered.outlineWidth).to.equal('3px');
+      expect(hovered.outlineStyle).to.equal('dashed');
+      expect(hovered.outlineColor).to.equal('rgb(12, 34, 56)');
+      expect(hovered.outlineOffset).to.equal('-2px');
+
+      await sendMouse({ type: 'down' });
+      const pressed = getComputedStyle(body);
+      expect(pressed.outlineWidth).to.equal('3px');
+      expect(pressed.outlineStyle).to.equal('dashed');
+      expect(pressed.outlineColor).to.equal('rgb(12, 34, 56)');
+      expect(pressed.outlineOffset).to.equal('-2px');
     } finally {
       await resetMouse();
     }

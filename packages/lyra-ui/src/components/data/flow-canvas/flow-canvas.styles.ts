@@ -278,7 +278,7 @@ export const styles = css`
   }
   [part='connection-line'] {
     fill: none;
-    stroke: var(--lr-color-brand);
+    stroke: var(--lr-flow-canvas-connection-line-color, var(--lr-color-brand));
     stroke-width: 1.5;
     stroke-dasharray: 4 4;
     pointer-events: none;

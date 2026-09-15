@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `mammoth` — see `llms/peers.md`
-- **Themeable via** 11 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -84,6 +84,8 @@ while the viewer and its composed ancestors are exposed to the accessibility tre
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
+`--lr-docx-viewer-table-header-background` (default `var(--lr-color-brand-quiet)`) retints a
+rendered document table's header row (`th`), independent of the highlight backgrounds below.
 Highlight backgrounds are independently themeable with
 `--lr-docx-viewer-highlight-accent-background`,
 `--lr-docx-viewer-highlight-success-background`,

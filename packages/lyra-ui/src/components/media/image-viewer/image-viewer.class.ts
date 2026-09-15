@@ -188,6 +188,11 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  *   width of the `[part="highlight"]` matching `activeHighlightId`.
  * @cssprop [--lr-image-viewer-highlight-active-outline-offset=var(--lr-focus-ring-offset)] - Outline
  *   offset of the `[part="highlight"]` matching `activeHighlightId`.
+ * @cssprop [--lr-image-viewer-annotation-box-border=var(--lr-color-brand)] - Border color of
+ *   `[part="annotation-box"]`, the in-progress draft rectangle drawn while annotating, independent
+ *   of the saved `[part="highlight"]` boxes' own tone colors.
+ * @cssprop [--lr-image-viewer-annotation-box-bg=color-mix(in srgb, var(--lr-color-brand) 15%, transparent)] -
+ *   Fill of `[part="annotation-box"]`.
  * @cssprop [--lr-image-viewer-highlight-border=var(--lr-color-brand)] - Default highlight border.
  * @cssprop [--lr-image-viewer-highlight-bg=color-mix(in srgb, var(--lr-color-brand) 20%, transparent)] - Default highlight fill.
  * @cssprop --lr-image-viewer-highlight-success-border - Success-tone highlight border.

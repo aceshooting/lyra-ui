@@ -825,7 +825,14 @@ Navigation buttons use independent `--lr-carousel-navigation-hover-bg`,
 `--lr-carousel-pagination-hover-bg`, `--lr-carousel-pagination-hover-border-color`,
 `--lr-carousel-pagination-active-bg`, and `--lr-carousel-pagination-active-border-color` hooks.
 All are inline fallbacks at their state rules, inherit from ancestors, and retain the previous
-brand/active-mix rendering when unset.
+brand/active-mix rendering when unset. The scroll-snap viewport's mouse-hover preview has its own
+four-longhand outline shape, matching `lr-scroller`'s viewport:
+`--lr-carousel-scroll-container-hover-outline-width` (default `var(--lr-border-width-thin)`),
+`--lr-carousel-scroll-container-hover-outline-style` (default `solid`),
+`--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border-strong)`, set
+to `transparent` to opt out entirely), and `--lr-carousel-scroll-container-hover-outline-offset`
+(default `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal
+paint.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">
@@ -955,7 +962,12 @@ orientation's minimum block size, ignored while horizontal. `--shadow-color` (de
 `var(--lr-color-surface)`) and `--shadow-size` (default `var(--lr-size-2rem)`) theme each edge cue's
 base color and logical extent; `--lr-scroller-shadow-color` and `--lr-scroller-shadow-size` are
 Lyra-prefixed aliases for the same two (mirroring `lr-split-panel`'s alias pattern for its own
-upstream-named props), and win when both spellings are set.
+upstream-named props), and win when both spellings are set. The viewport's mouse-hover preview has
+its own four-longhand outline shape, matching `lr-virtual-list`'s: `--lr-scroller-hover-outline-width`
+(default `var(--lr-border-width-thin)`), `--lr-scroller-hover-outline-style` (default `solid`),
+`--lr-scroller-hover-outline-color` (default `var(--lr-color-border)`, set to `transparent` to opt
+out entirely), and `--lr-scroller-hover-outline-offset` (default `var(--lr-focus-ring-offset)`).
+Unset, all four resolve to the rule's previous literal paint.
 
 ```html
 <lr-scroller controls label="Project cards">
@@ -1153,6 +1165,14 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
 `--lr-tab-group-scroll-button-active-color` (default `var(--lr-color-text)`). Each is an
 inline fallback, so a wrapper can retheme the interaction state without affecting ordinary tabs,
 selection, or the other control state.
+
+The active panel's mouse-hover preview — a subtler cue than `:focus-visible` for a panel that is
+also keyboard-focusable, matching `lr-scroller`'s viewport and `lr-carousel`'s scroll container —
+has its own four-longhand outline shape: `--lr-tab-group-panel-hover-outline-width` (default
+`var(--lr-border-width-thin)`), `--lr-tab-group-panel-hover-outline-style` (default `solid`),
+`--lr-tab-group-panel-hover-outline-color` (default `var(--lr-color-border)`, set to `transparent`
+to opt out entirely), and `--lr-tab-group-panel-hover-outline-offset` (default
+`var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal paint.
 
 Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 `--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
@@ -1518,13 +1538,19 @@ between grouped controls; shared spacing and layout tokens apply as well.
 
 A generic flat-list reorder primitive: per-row move-up/move-down buttons (always available), plus
 Ctrl/Cmd+ArrowUp/ArrowDown from focus anywhere inside a row — the same modifier convention
-`<lr-tree>`'s `reorderable` and `<lr-dashboard-grid>`'s `cells-draggable` already establish. Unlike
-`<lr-tree>`'s controlled `reorderable` mode, this list physically moves its own slotted
-`<lr-reorder-item>` light-DOM nodes itself (there is no `data` array prop to reconcile against),
-and emits `lr-reorder` with the full new order so the host can persist it without hand-rolling its
-own splice/resort logic. `lr-reorder` is cancelable — a listener calling `preventDefault()` holds
-the move open (mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) until the host calls
-`finalizePendingMove()`/`revertPendingMove()`.
+`<lr-tree>`'s `reorderable` and `<lr-dashboard-grid>`'s `cells-draggable` already establish. By
+default this list physically moves its own slotted `<lr-reorder-item>` light-DOM nodes itself
+(there is no `data` array prop to reconcile against), and emits `lr-reorder` with the full new
+order so the host can persist it without hand-rolling its own splice/resort logic. Setting
+`controlled` opts into `<lr-tree>`'s controlled `reorderable` contract instead: the list stops
+moving anything itself, and waits for the host to reorder its own backing data and re-render the
+slotted items to match — reconciled by each item's `value` rather than by element reference, so a
+non-keyed host re-render that recreates the moved row (or merely rewrites `value` on the elements
+already at each position) still completes the move once the resulting order matches. `lr-reorder`
+is cancelable — a listener calling `preventDefault()` holds the move open (mirroring
+`lr-confirm-bar`'s cancelable approve/deny pattern) until the host calls
+`finalizePendingMove()`/`revertPendingMove()`; `controlled` changes what "applying" the move
+means (host re-render instead of a physical DOM move) but not this cancelable contract.
 
 Direct item `value` property or attribute edits refresh the owning list's valid identities and
 movement boundaries. Correcting a missing or duplicate identity re-enables the corresponding
@@ -1540,20 +1566,32 @@ explicit empty string remains supplied and later valid values recover.
   `aria-label` always wins over `label`, including when the host value is explicitly empty.
 - `disabled: boolean = false` (reflected) — disables every item's move buttons and the Ctrl/Cmd+
   Arrow shortcut, without mutating any item's own `disabled` attribute.
+- `controlled: boolean = false` (reflected) — opts into the controlled mode described above:
+  an accepted move waits for a matching host re-render (reconciled by `value`) instead of moving
+  the DOM itself. Every move action stays disabled and `aria-busy="true"`/`:state(busy)` apply
+  list-wide for the whole wait, the same as a `preventDefault()`-held move. A host re-render that
+  never reaches the exact emitted `order` leaves the move pending indefinitely; one that drops the
+  moved `value` entirely (removes or renames that row) cancels it silently, with no announcement.
+  Toggling this off while a reconciliation is pending drops it rather than leaving the list stuck
+  busy.
 
 **Events:** `lr-reorder`
 (`detail: LyraReorderDetail { readonly order: readonly string[], readonly fromIndex: number,
 readonly toIndex: number }`, cancelable) — fired before a move is applied; `order` is an immutable
 snapshot of every valid item's stable `value` in the order the move WOULD produce. Uncanceled, the
 move applies synchronously only if the exact mover, target, membership, order, identities, and
-availability remain valid after dispatch. `preventDefault()` holds the move instead: the internal
-list exposes `aria-busy="true"`, every move action is disabled, the affected item exposes
+availability remain valid after dispatch — or, while `controlled`, starts waiting for the host's
+own re-render to reach that `order` instead. `preventDefault()` holds the move instead: the
+internal list exposes `aria-busy="true"`, every move action is disabled, the affected item exposes
 `:state(pending)`, and no other move can start until the host resolves it — see **Methods** below.
 Synchronous finalize/revert calls from the canceling listener are supported.
 
-**Methods:** `finalizePendingMove()` — applies a move held via `preventDefault()`.
-`revertPendingMove()` — discards a held move, restoring the prior order. Both no-op when nothing
-is pending.
+**Methods:** `finalizePendingMove()` — applies a move held via `preventDefault()` (or, while
+`controlled`, starts waiting for the host's own re-render instead of moving the DOM itself).
+`revertPendingMove(options?: { silent?: boolean })` — discards a held move, restoring the prior
+order; pass `{ silent: true }` to suppress the built-in `reorderMoveCancelled` announcement, e.g.
+when a host is deferring the decision to a flow of its own (a confirmation dialog, say) that will
+communicate the outcome itself. Both methods no-op when nothing is pending.
 
 **Slots:** default — `<lr-reorder-item>` elements.
 
@@ -1584,6 +1622,10 @@ between rows.
 - Ctrl/Cmd+Arrow is consumed only for a valid owned move. A boundary/no-op gesture or one from a
   nested input, select, link, button, editable region, or custom control retains its native action.
 - No pointer drag-and-drop; move-up/move-down buttons and the keyboard shortcut only.
+- `controlled` reconciliation is keyed by `value`, never by element reference: a host re-render
+  that recreates the moved row as a brand-new element, or one that leaves every node in place and
+  just rewrites `value` at each position (the common outcome of a non-keyed `Array.map()` into the
+  default slot), both complete the move once the resulting order matches.
 
 ---
 
@@ -1604,6 +1646,14 @@ between rows.
 
 **Events:** `lr-move-request` (`detail: { direction: 'up' | 'down' }` — a move button was activated
 while not disabled; handled by the parent `<lr-reorder-list>`, which performs the actual move)
+
+**Methods:** `focusMoveButton(direction: 'up' | 'down'): boolean` — moves focus to the requested
+move control and returns whether it did; a no-op returning `false` when that control is disabled
+for any reason (this item's own `disabled`, the owning list's `listDisabled`, a move held or a
+controlled reconciliation pending anywhere in the list, an invalid identity, or that direction
+already being this item's boundary). The owning `<lr-reorder-list>` uses it for its own post-move
+focus restore, including onto a freshly recreated element instance while `controlled`; a host can
+call it the same way.
 
 **Slots:** default — arbitrary row content.
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -162,12 +162,15 @@ resolved per tone from those `-bg` knobs; its hover and pressed states are color
 that value, so setting it directly retints all three states of one marker at once — retint a whole
 tone through the matching `-bg` knob instead.
 
-Two further cue-state properties tint the transcript: `--lr-av-player-cue-current-bg` (default
-`var(--lr-color-brand-quiet)`) is the background of the `cue-current` row the playhead is inside,
-and `--lr-av-player-cue-active-match-color` (default `var(--lr-color-warning)`) is the outline of
-the `cue-active-match` row, leaving the other matches' dashed outline on the shared warning token.
-Both are inline `var()` fallbacks at the point of use rather than `:host` declarations, so either
-can be set on the element or on any ancestor.
+Three further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
+`var(--lr-color-brand-quiet)`) is the background of a hovered `cue` row, and its pressed state is a
+color mix taken from that same value rather than a separate knob, so retuning it keeps its pressed
+step too. `--lr-av-player-cue-current-bg` (default `var(--lr-color-brand-quiet)`) is the background
+of the `cue-current` row the playhead is inside, and `--lr-av-player-cue-active-match-color`
+(default `var(--lr-color-warning)`) is the outline of the `cue-active-match` row, leaving the other
+matches' dashed outline on the shared warning token. All three are inline `var()` fallbacks at the
+point of use rather than `:host` declarations, so any of them can be set on the element or on any
+ancestor.
 
 **RTL behavior:** surrounding controls follow the inherited direction, but the elapsed-media axis
 on `[part='timeline']` stays physical left-to-right. ArrowLeft rewinds and ArrowRight advances in

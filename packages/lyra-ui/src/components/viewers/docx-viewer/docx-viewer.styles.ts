@@ -76,7 +76,7 @@ export const styles = css`
   }
 
   [part="content"] th {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-docx-viewer-table-header-background, var(--lr-color-brand-quiet));
     font-weight: var(--lr-font-weight-semibold);
   }
 

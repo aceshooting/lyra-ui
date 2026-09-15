@@ -926,6 +926,30 @@ describe("annotation", () => {
     expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to
       .be.true;
   });
+
+  it("retints the draft box border and fill from --lr-image-viewer-annotation-box-border/-bg", async () => {
+    const el = (await fixture(
+      html`<lr-image-viewer
+        src=${PNG_SRC}
+        annotatable
+        style="--lr-image-viewer-annotation-box-border: rgb(1, 2, 3); --lr-image-viewer-annotation-box-bg: rgb(4, 5, 6);"
+      ></lr-image-viewer>`
+    )) as LyraImageViewer;
+    await stubImageLoad(el);
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="image-wrapper"]'
+    ) as HTMLElement;
+    wrapper.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
+    await el.updateComplete;
+    const box = el.shadowRoot!.querySelector(
+      '[part="annotation-box"]'
+    ) as HTMLElement;
+    const computed = getComputedStyle(box);
+    expect(computed.borderColor).to.equal("rgb(1, 2, 3)");
+    expect(computed.backgroundColor).to.equal("rgb(4, 5, 6)");
+  });
 });
 
 // Positions the wrapper's bounding box deterministically -- a real image never actually loads in

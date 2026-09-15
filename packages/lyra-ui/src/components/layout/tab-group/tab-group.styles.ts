@@ -309,8 +309,19 @@ export const styles = css`
      matches the ancestors of whatever was pressed, so clicking any control inside would flash this
      outline around the whole panel. */
   [part="panel"]:hover {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-border);
-    outline-offset: var(--lr-focus-ring-offset);
+    outline-width: var(
+      --lr-tab-group-panel-hover-outline-width,
+      var(--lr-border-width-thin)
+    );
+    outline-style: var(--lr-tab-group-panel-hover-outline-style, solid);
+    outline-color: var(
+      --lr-tab-group-panel-hover-outline-color,
+      var(--lr-color-border)
+    );
+    outline-offset: var(
+      --lr-tab-group-panel-hover-outline-offset,
+      var(--lr-focus-ring-offset)
+    );
     border-radius: var(--lr-radius);
   }
   [part="panel"]:focus-visible {

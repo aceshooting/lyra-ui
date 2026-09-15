@@ -4497,6 +4497,22 @@ describe("styling", () => {
     }
   });
 
+  it('lets --lr-pdf-viewer-toolbar-bg override the default brand-quiet toolbar background', async () => {
+    const el = await fixture<LyraPdfViewer>(html`
+      <lr-pdf-viewer style="--lr-pdf-viewer-toolbar-bg: rgb(7, 8, 9)"></lr-pdf-viewer>
+    `);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+      expect(getComputedStyle(toolbar).backgroundColor).to.equal('rgb(7, 8, 9)');
+    } finally {
+      restore();
+    }
+  });
+
   it('honors the composite focus-ring shorthand on rendered toolbar buttons', async () => {
     const el = await fixture<LyraPdfViewer>(html`
       <lr-pdf-viewer style="--lr-focus-ring: 5px dashed rgb(1, 2, 3)"></lr-pdf-viewer>
@@ -4895,6 +4911,25 @@ describe("virtualized page part styling", () => {
       ) as HTMLElement;
       expect(getComputedStyle(span, "::selection").backgroundColor).to.equal(
         tokenColor(el, "--lr-color-brand-quiet")
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  it("lets --lr-pdf-viewer-text-selection-bg override the default brand-quiet selection tint", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer style="--lr-pdf-viewer-text-selection-bg: rgb(12, 34, 56)"></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      const root = await loadedPage(el);
+      const span = root.querySelector(
+        '[part="text-layer"] span'
+      ) as HTMLElement;
+      expect(getComputedStyle(span, "::selection").backgroundColor).to.equal(
+        "rgb(12, 34, 56)"
       );
     } finally {
       restore();

@@ -10,7 +10,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -201,6 +201,14 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
 `--lr-tab-group-scroll-button-active-color` (default `var(--lr-color-text)`). Each is an
 inline fallback, so a wrapper can retheme the interaction state without affecting ordinary tabs,
 selection, or the other control state.
+
+The active panel's mouse-hover preview — a subtler cue than `:focus-visible` for a panel that is
+also keyboard-focusable, matching `lr-scroller`'s viewport and `lr-carousel`'s scroll container —
+has its own four-longhand outline shape: `--lr-tab-group-panel-hover-outline-width` (default
+`var(--lr-border-width-thin)`), `--lr-tab-group-panel-hover-outline-style` (default `solid`),
+`--lr-tab-group-panel-hover-outline-color` (default `var(--lr-color-border)`, set to `transparent`
+to opt out entirely), and `--lr-tab-group-panel-hover-outline-offset` (default
+`var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal paint.
 
 Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 `--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,

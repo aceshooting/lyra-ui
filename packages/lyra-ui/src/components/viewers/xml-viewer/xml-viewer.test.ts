@@ -111,6 +111,15 @@ describe('parsing and tree rendering', () => {
     expect(tags.filter((t) => t === 'item').length).to.equal(2);
   });
 
+  it('retints the tag name from --lr-xml-viewer-tag-color', async () => {
+    const el = (await fixture(
+      html`<lr-xml-viewer .xml=${SIMPLE_XML} style="--lr-xml-viewer-tag-color: rgb(1, 2, 3);"></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    await el.updateComplete;
+    const tag = el.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
+    expect(getComputedStyle(tag).color).to.equal('rgb(1, 2, 3)');
+  });
+
   it('renders attribute name/value pairs on an element row', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;

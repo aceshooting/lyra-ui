@@ -4,6 +4,7 @@ import type { LyraScroller } from "./scroller.class.js";
 import {
   hoverUntilMatched,
   resetMouse,
+  sendMouse,
 } from "../../../../test/wtr-mouse.js";
 
 /** `lr-scroll` and the edge recompute are coalesced through one `requestAnimationFrame` tick, so a
@@ -633,6 +634,50 @@ describe("<lr-scroller>", () => {
         { timeout: 2000 }
       );
       expect(getComputedStyle(viewport).outlineColor).to.equal("rgb(4, 5, 6)");
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("lets each viewport hover-outline longhand be retinted independently and keeps them unchanged while pressed", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        label="Items"
+        style="inline-size: 200px;
+          --lr-scroller-hover-outline-width: 3px;
+          --lr-scroller-hover-outline-style: dashed;
+          --lr-scroller-hover-outline-color: rgb(12, 34, 56);
+          --lr-scroller-hover-outline-offset: -2px;"
+      >
+        <div style="inline-size: 800px">wide content</div>
+      </lr-scroller>
+    `);
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="viewport"]'
+    )!;
+    try {
+      await hoverUntilMatched(
+        viewport,
+        "the scroller viewport never registered :hover"
+      );
+      await waitUntil(
+        () => getComputedStyle(viewport).outlineColor === "rgb(12, 34, 56)",
+        "the scoped viewport hover outline color never rendered",
+        { timeout: 2000 }
+      );
+      const hovered = getComputedStyle(viewport);
+      expect(hovered.outlineWidth).to.equal("3px");
+      expect(hovered.outlineStyle).to.equal("dashed");
+      expect(hovered.outlineColor).to.equal("rgb(12, 34, 56)");
+      expect(hovered.outlineOffset).to.equal("-2px");
+
+      await sendMouse({ type: "down" });
+      const pressed = getComputedStyle(viewport);
+      expect(pressed.outlineWidth).to.equal("3px");
+      expect(pressed.outlineStyle).to.equal("dashed");
+      expect(pressed.outlineColor).to.equal("rgb(12, 34, 56)");
+      expect(pressed.outlineOffset).to.equal("-2px");
     } finally {
       await resetMouse();
     }

@@ -328,6 +328,8 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @csspart search-match - A painted in-document search match.
  * @csspart search-match-active - The currently active search match (also carries `search-match`).
  * @cssprop [--lr-docx-viewer-max-height=none] - Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop [--lr-docx-viewer-table-header-background=var(--lr-color-brand-quiet)] - Background of a
+ *   rendered document table's header row (`th`), independent of the highlight backgrounds below.
  * @cssprop --lr-docx-viewer-highlight-accent-background - Accent highlight background.
  * @cssprop --lr-docx-viewer-highlight-success-background - Success highlight background.
  * @cssprop --lr-docx-viewer-highlight-warning-background - Warning highlight background.

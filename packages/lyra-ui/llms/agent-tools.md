@@ -601,7 +601,14 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 `--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
 `--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
 the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
-inline gutter is reserved for the overlaid `search-clear` button and is not a knob. Plus shared
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob. The scrollable
+tool list's mouse-hover preview on `[part="body"]` has its own four-longhand outline shape:
+`--lr-tool-select-dialog-body-hover-outline-width` (default `var(--lr-border-width-thin)`),
+`--lr-tool-select-dialog-body-hover-outline-style` (default `solid`),
+`--lr-tool-select-dialog-body-hover-outline-color` (default `var(--lr-color-border)`, set to
+`transparent` to opt out entirely), and `--lr-tool-select-dialog-body-hover-outline-offset`
+(default `calc(-1 * var(--lr-border-width-thin))`, kept inward so the ring isn't clipped by the
+body's own scrolling). Unset, all four resolve to the rule's previous literal paint. Plus shared
 `--lr-space-*`, `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -734,7 +741,13 @@ padding while `compact`. `--lr-thinking-panel-background` (default `var(--lr-col
 `--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
-`frame="plain"` keeps. Plus shared
+`frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
+four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (default
+`var(--lr-focus-ring-width)`), `--lr-thinking-panel-body-hover-outline-style` (default `solid`),
+`--lr-thinking-panel-body-hover-outline-color` (default `var(--lr-color-border)`, set to
+`transparent` to opt out entirely), and `--lr-thinking-panel-body-hover-outline-offset` (default
+`calc(-1 * var(--lr-focus-ring-offset))`). Unset, all four resolve to the rule's previous literal
+paint. Plus shared
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.

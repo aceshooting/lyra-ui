@@ -552,10 +552,15 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart spinner - The decorative loading placeholder and its ordinary visually-hidden label;
  *   transitions announce through the shared document-level polite region.
  * @cssprop [--lr-pdf-viewer-height=var(--lr-size-24rem)] - Block size of the virtualized page list.
+ * @cssprop [--lr-pdf-viewer-toolbar-bg=var(--lr-color-brand-quiet)] - Background of the `toolbar`
+ *   part, independent of the shared `--lr-color-brand-quiet` token.
  * @cssprop [--lr-pdf-viewer-toolbar-button-hover-bg=var(--lr-color-surface)] - Hover fill of the
  *   toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover
  *   state is actually visible against it.
  *   Also settable via the `max-height` property.
+ * @cssprop [--lr-pdf-viewer-text-selection-bg=var(--lr-color-brand-quiet)] - Background of a
+ *   native text selection over a `text-span`, independent of the shared `--lr-color-brand-quiet`
+ *   token.
  * @cssprop [--lr-pdf-viewer-search-match-bg=var(--lr-color-warning-quiet)] - Background of a
  *   painted, non-active search match.
  * @cssprop [--lr-pdf-viewer-search-match-active-bg=var(--lr-color-warning)] - Background of the

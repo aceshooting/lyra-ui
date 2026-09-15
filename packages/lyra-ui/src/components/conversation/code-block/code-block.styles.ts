@@ -133,8 +133,8 @@ export const styles = css`
        from the [part="header"] background it sits on (also -surface, per the comment above), and
        brand-on-brand-quiet is a pairing already relied on elsewhere here that passes contrast,
        unlike -text-quiet on -brand-quiet. */
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-code-block-language-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-code-block-language-color, var(--lr-color-brand));
     font-size: var(--lr-size-0-6875rem);
     line-height: var(--lr-line-height-1-4);
     text-transform: uppercase;

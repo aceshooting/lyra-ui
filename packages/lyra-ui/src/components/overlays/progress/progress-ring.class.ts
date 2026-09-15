@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import type { LyraProgressVariant } from './progress-bar.class.js';
 import {
@@ -36,7 +37,10 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
  * @csspart track - The SVG track.
  * @csspart indicator - The SVG indicator.
  * @csspart label - The center label.
- * @cssprop [--lr-progress-ring-size=var(--lr-size-2-5rem)] - Outer diameter of the ring.
+ * @cssprop [--lr-progress-ring-size=var(--size,var(--_lr-progress-ring-size))] - Outer diameter of
+ * the ring. The private fallback steps with `size` across the shared six-step ladder (`1.25rem` at
+ * `2xs` up to `3.5rem` at `xl`, `2.5rem` unchanged at the `m` default); an inherited or direct
+ * value here (or the upstream `--size` alias) still wins outright over every tier.
  * @cssprop [--lr-progress-ring-track-width=var(--lr-theme-border-width-thick,var(--lr-size-4px))] - Track stroke
  *   width. Bridges the shared border-width theme input directly (not the `--lr-border-width-*`
  *   alias, whose own literal default is a different value) so retuning it moves this ring's
@@ -84,6 +88,14 @@ export class LyraProgressRing extends LyraElement {
    *  gated: a consumer who slots their own content always sees that content instead, with or
    *  without `show-value` (native `<slot>` projection semantics, unaffected by this property). */
   @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
+  /** Outer diameter of the ring, on the library's shared six-step size ladder. `'m'` (the default)
+   *  is this component's pre-existing behaviour, unchanged: an unset ring still renders at
+   *  `--lr-progress-ring-size`'s literal `2.5rem` default. Every other tier scales that same
+   *  diameter, from a compact `1.25rem` at `2xs` up to a roomy `3.5rem` at `xl`; an explicit
+   *  `--lr-progress-ring-size` (or the upstream `--size` alias) still wins over any tier. Matching
+   *  sibling `<lr-progress-bar>`'s own `size`, this scales exactly one dimension — the track/
+   *  indicator stroke width and the center label's font size are unaffected by the tier. */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Mapped accessible-label property. */
   @property() label = '';
   /** Explicit accessible name, on the library-wide `accessibleLabel`/`accessible-label` convention

@@ -687,6 +687,52 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
   }
 });
 
+it('lets each scroll-container hover-outline longhand be retinted independently and keeps them unchanged while pressed', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="
+      --lr-carousel-scroll-container-hover-outline-width: 3px;
+      --lr-carousel-scroll-container-hover-outline-style: dashed;
+      --lr-carousel-scroll-container-hover-outline-color: rgb(12, 34, 56);
+      --lr-carousel-scroll-container-hover-outline-offset: -2px;
+    ">
+      <lr-carousel><div>One</div><div>Two</div></lr-carousel>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-carousel') as LyraCarousel;
+  await el.updateComplete;
+  const scrollContainer = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part~="scroll-container"]'
+  )!;
+  const rect = scrollContainer.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => getComputedStyle(scrollContainer).outlineColor === 'rgb(12, 34, 56)',
+      'the scoped scroll-container hover outline color never rendered',
+    );
+    const hovered = getComputedStyle(scrollContainer);
+    expect(hovered.outlineWidth).to.equal('3px');
+    expect(hovered.outlineStyle).to.equal('dashed');
+    expect(hovered.outlineColor).to.equal('rgb(12, 34, 56)');
+    expect(hovered.outlineOffset).to.equal('-2px');
+
+    await sendMouse({ type: 'down' });
+    const pressed = getComputedStyle(scrollContainer);
+    expect(pressed.outlineWidth).to.equal('3px');
+    expect(pressed.outlineStyle).to.equal('dashed');
+    expect(pressed.outlineColor).to.equal('rgb(12, 34, 56)');
+    expect(pressed.outlineOffset).to.equal('-2px');
+  } finally {
+    await resetMouse();
+  }
+});
+
 it("exposes one active slide and localized navigation controls", async () => {
   const el = await carousel();
   const slides = [...el.children] as [HTMLElement, HTMLElement, HTMLElement];

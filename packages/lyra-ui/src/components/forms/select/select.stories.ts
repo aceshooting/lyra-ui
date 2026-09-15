@@ -516,9 +516,10 @@ export const MountedOptionSelection: Story = {
 };
 
 export const OutOfListValue: Story = {
-  parameters: { docs: { description: { story: 'A committed value no `<lr-option>` claims — a stale id saved before its catalog entry disappeared — already renders with a dashed "not in catalog" badge on the trigger. `show-unknown-option` additionally appends it to the end of the listbox as a synthetic, keyboard-reachable, re-selectable row, so a user who opens the listbox still has a way back to the value they arrived with. `getUnknownLabel` renders that value’s label wherever it appears; the existing `getTag` hook cannot serve this case, because it is handed a matched option and there is none.' } } },
+  parameters: { docs: { description: { story: 'A committed value no `<lr-option>` claims — a stale id saved before its catalog entry disappeared — already renders with a dashed "not in catalog" badge on the trigger. `show-unknown-option` additionally appends it to the end of the listbox as a synthetic, keyboard-reachable, re-selectable row, so a user who opens the listbox still has a way back to the value they arrived with. `getUnknownLabel` renders that value’s label wherever it appears; the existing `getTag` hook cannot serve this case, because it is handed a matched option and there is none. Open the listbox to see the row — `--lr-select-option-badge-bg` retints its "not in catalog" badge.' } } },
   render: () => html`
     <lr-select label="Model" value="gpt-legacy-2023" show-unknown-option
+      style="--lr-select-option-badge-bg: var(--lr-color-warning-quiet);"
       .getUnknownLabel=${(value: string) => `Saved model (${value})`}>
       <lr-option value="fast">Fast</lr-option>
       <lr-option value="balanced">Balanced</lr-option>

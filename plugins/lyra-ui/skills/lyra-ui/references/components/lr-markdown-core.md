@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,7 +56,8 @@ block stays unhighlighted permanently. Each value is either an already-resolved 
 loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
 `() => import('@shikijs/langs/bash')`) — called at most once per key, memoized, the first time a
 fenced block actually requests that language, `headingAnchors: boolean = false` (attribute `heading-anchors`),
-`math: boolean = false`; plus the same inherited anchor-target properties as `<lr-markdown>`:
+`math: boolean = false`, `maxHeight: string = ''` (attribute `max-height`) — same CSS-length scroll
+cap on `[part="content"]` as `<lr-markdown>`'s own; plus the same inherited anchor-target properties as `<lr-markdown>`:
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
 and `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']`.
@@ -79,10 +80,13 @@ as the full class; the core route exports its own `Marked` alias.
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
-anchor-jump message), `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`,
-`link`, `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
+anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`,
+`code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math` — identical to
+`<lr-markdown>`'s own parts.
 
-**Themeable custom properties:** identical to `<lr-markdown>`'s own code-surface tokens —
+**Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
+`--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
+`maxHeight` property sets this token inline) and its code-surface tokens —
 `--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the
 fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-radius` (inline
 `code` span padding/radius, defaulting to `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)`/

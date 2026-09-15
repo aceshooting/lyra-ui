@@ -955,6 +955,24 @@ describe('mouse-hover feedback on the viewport rectangle', () => {
   });
 });
 
+describe('--lr-flow-minimap-viewport-color', () => {
+  it('retints the viewport rectangle fill and stroke, independent of per-status node fills', async () => {
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas style="width:400px;height:300px">
+        <lr-flow-minimap slot="bottom-end" style="--lr-flow-minimap-viewport-color: rgb(9, 8, 7);"></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await minimap.updateComplete;
+    const viewport = minimap.shadowRoot!.querySelector<SVGRectElement>('[part="viewport"]')!;
+    const computed = getComputedStyle(viewport);
+    expect(computed.stroke).to.equal('rgb(9, 8, 7)');
+  });
+});
+
 describe('.strings overrides (every localize() key)', () => {
   // `<lr-flow-minimap>` calls this.localize() with 4 keys; each one is proven here to reach the
   // rendered DOM through a `.strings` override, so `registerLyraLocale()` can translate it.

@@ -153,6 +153,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @cssprop [--lr-dataset-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
  *   highlighted cell. The active highlight changes a private warning-color default; an inherited
  *   or direct public value remains authoritative.
+ * @cssprop [--lr-dataset-viewer-header-row-bg=var(--lr-color-brand-quiet)] - Background of
+ *   `[part="header-row"]`, independent of the highlight outline above.
  * @status stable
  * @since 4.0.0
  */

@@ -3683,7 +3683,6 @@
         "src/components/layout/stepper/stepper.styles.ts",
         "src/components/media/avatar/avatar.styles.ts",
         "src/components/media/avatar-group/avatar-group.styles.ts",
-        "src/components/overlays/progress/progress-ring.class.ts",
         "src/components/overlays/progress/progress.styles.ts",
         "src/internal/contextual-vocabulary.styles.ts"
       ]

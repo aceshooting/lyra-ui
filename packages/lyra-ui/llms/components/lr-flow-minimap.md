@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,6 +50,8 @@ latest viewport-change text).
 `--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,
 `--lr-flow-status-success-color`, `--lr-flow-status-error-color`, and
 `--lr-flow-status-denied-color`.
+`--lr-flow-minimap-viewport-color` (default `var(--lr-color-brand)`) colors `[part="viewport"]`'s
+fill (mixed 15% into transparent) and stroke, independent of every per-status node fill above.
 `--lr-flow-minimap-viewport-min-size` (default `var(--lr-icon-button-size)`, normally 40px) floors
 only the transparent `viewport-hit-area` along each axis. The visible `viewport` remains the exact
 viewport-to-content ratio. The token inherits from ancestors; set it to `0` to opt out.

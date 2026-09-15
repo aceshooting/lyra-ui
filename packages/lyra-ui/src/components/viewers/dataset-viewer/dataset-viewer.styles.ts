@@ -52,7 +52,7 @@ export const styles = css`
     grid-auto-flow: column;
     grid-auto-columns: minmax(var(--lr-size-8rem), 1fr);
     z-index: var(--lr-layer-content);
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-dataset-viewer-header-row-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-text);
     font-weight: var(--lr-font-weight-semibold);
     border-block-end: var(--lr-border-width-medium) solid var(--lr-color-border);

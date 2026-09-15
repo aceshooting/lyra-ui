@@ -157,6 +157,15 @@ export interface LyraCarouselEventMap {
  *   former brand-quiet active mix.
  * @cssprop [--lr-carousel-pagination-active-border-color=var(--lr-color-brand)] - Pagination-dot pressed border.
  * @cssprop --lr-carousel-slide-basis - Compatibility override for the computed per-page basis.
+ * @cssprop [--lr-carousel-scroll-container-hover-outline-width=var(--lr-border-width-thin)] -
+ *   Outline width of the mouse-hover preview on `[part="scroll-container"]`.
+ * @cssprop [--lr-carousel-scroll-container-hover-outline-style=solid] - Outline style of the
+ *   mouse-hover preview on `[part="scroll-container"]`.
+ * @cssprop [--lr-carousel-scroll-container-hover-outline-color=var(--lr-color-border-strong)] -
+ *   Outline color of the mouse-hover preview on `[part="scroll-container"]`. Set to `transparent`
+ *   to opt out of the hover treatment entirely.
+ * @cssprop [--lr-carousel-scroll-container-hover-outline-offset=var(--lr-focus-ring-offset)] -
+ *   Offset of the mouse-hover preview on `[part="scroll-container"]`.
  * @status stable
  * @since 4.0.0
  */

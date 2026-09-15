@@ -184,6 +184,30 @@ describe('lr-video-playlist public contract', () => {
     expect(el.repeat).to.equal('none');
   });
 
+  it('keeps an inactive playlist video display:none even against an author "display" rule targeting it directly (regression)', async () => {
+    const style = document.createElement('style');
+    style.textContent = '[data-hostile-display] { display: flex; }';
+    document.head.append(style);
+    try {
+      const el = await fixture<LyraVideoPlaylist>(html`
+        <lr-video-playlist>
+          <lr-video title="First"></lr-video>
+          <lr-video title="Second" data-hostile-display></lr-video>
+        </lr-video-playlist>
+      `);
+      await settle(el);
+      const [, second] = childVideos(el);
+      expect(second!.hidden).to.be.true;
+      // <lr-video> is a LyraElement, so it already carries the shared base stylesheet's own
+      // ':host([hidden]) { display: none !important; }' -- an outside author 'display' rule,
+      // however specific, cannot re-show it. No lr-video-playlist stylesheet change is needed
+      // (unlike a plain, non-lr-* slotted node, which has no such self-protection).
+      expect(getComputedStyle(second!).display).to.equal('none');
+    } finally {
+      style.remove();
+    }
+  });
+
   it('uses default and ancestor-themed current-item hooks for rendered playlist ink', async () => {
     const defaults = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist><lr-video title="First"></lr-video><lr-video title="Second"></lr-video></lr-video-playlist>

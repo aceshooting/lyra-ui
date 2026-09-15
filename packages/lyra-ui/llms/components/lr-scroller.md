@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,7 +53,12 @@ orientation's minimum block size, ignored while horizontal. `--shadow-color` (de
 `var(--lr-color-surface)`) and `--shadow-size` (default `var(--lr-size-2rem)`) theme each edge cue's
 base color and logical extent; `--lr-scroller-shadow-color` and `--lr-scroller-shadow-size` are
 Lyra-prefixed aliases for the same two (mirroring `lr-split-panel`'s alias pattern for its own
-upstream-named props), and win when both spellings are set.
+upstream-named props), and win when both spellings are set. The viewport's mouse-hover preview has
+its own four-longhand outline shape, matching `lr-virtual-list`'s: `--lr-scroller-hover-outline-width`
+(default `var(--lr-border-width-thin)`), `--lr-scroller-hover-outline-style` (default `solid`),
+`--lr-scroller-hover-outline-color` (default `var(--lr-color-border)`, set to `transparent` to opt
+out entirely), and `--lr-scroller-hover-outline-offset` (default `var(--lr-focus-ring-offset)`).
+Unset, all four resolve to the rule's previous literal paint.
 
 ```html
 <lr-scroller controls label="Project cards">

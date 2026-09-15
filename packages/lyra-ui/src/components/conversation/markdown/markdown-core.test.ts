@@ -2708,3 +2708,47 @@ describe('shiki engine seam public reachability', () => {
     expect(typeof entry.setShikiCoreEngine).to.equal('function');
   });
 });
+
+describe('maxHeight', () => {
+  it('applies no maximum block size by default, unchanged from before maxHeight existed', async () => {
+    const el = (await fixture(html`<lr-markdown-core content="hi"></lr-markdown-core>`)) as LyraMarkdownCore;
+    await waitUntil(() => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute('data-fallback'));
+    const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    expect(getComputedStyle(content).maxBlockSize).to.equal('none');
+  });
+
+  it('respects max-height by setting the scoped custom property on the content part', async () => {
+    const el = (await fixture(html`<lr-markdown-core content="hi"></lr-markdown-core>`)) as LyraMarkdownCore;
+    el.maxHeight = '10rem';
+    await el.updateComplete;
+    const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    expect(content.style.getPropertyValue('--lr-markdown-max-height')).to.equal('10rem');
+  });
+
+  it('rejects declaration-breaking maxHeight values but accepts a var() passthrough', async () => {
+    const el = (await fixture(html`<lr-markdown-core content="hi"></lr-markdown-core>`)) as LyraMarkdownCore;
+    el.maxHeight = '10rem;position:fixed';
+    await el.updateComplete;
+    const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    expect(content.style.position).to.equal('');
+    expect(content.style.getPropertyValue('--lr-markdown-max-height')).to.equal('');
+
+    el.maxHeight = 'var(--viewer-height)';
+    await el.updateComplete;
+    expect(content.style.getPropertyValue('--lr-markdown-max-height')).to.equal('var(--viewer-height)');
+  });
+
+  it('caps the rendered block size once maxHeight is set, scrolling internally instead of growing the page', async () => {
+    const manyParagraphs = Array.from({ length: 60 }, (_, index) => `Paragraph ${index}`).join('\n\n');
+    const el = (await fixture(html`<lr-markdown-core .content=${manyParagraphs}></lr-markdown-core>`)) as LyraMarkdownCore;
+    await waitUntil(() => !el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute('data-fallback'));
+    const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    const unclamped = content.getBoundingClientRect().height;
+
+    el.maxHeight = '120px';
+    await el.updateComplete;
+    expect(getComputedStyle(content).maxBlockSize).to.equal('120px');
+    expect(content.getBoundingClientRect().height).to.be.at.most(120);
+    expect(content.getBoundingClientRect().height).to.be.lessThan(unclamped);
+  });
+});

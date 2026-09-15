@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./reorder-list.js";
 import "./reorder-item.js";
 import type { LyraReorderList } from "./reorder-list.class.js";
@@ -789,4 +789,240 @@ it("contains long localized rows in exact 320px LTR and RTL reorder lists", asyn
     expect(content.every((part) => part.scrollWidth <= part.clientWidth + 1)).to.equal(true);
     expect(getComputedStyle(base).direction).to.equal(direction);
   }
+});
+
+describe('<lr-reorder-list controlled>', () => {
+  const itemsOf = (el: LyraReorderList) =>
+    [...el.querySelectorAll('lr-reorder-item')] as LyraReorderItem[];
+  const threeControlledItems = html`
+    <lr-reorder-list controlled>
+      <lr-reorder-item value="a">Row A</lr-reorder-item>
+      <lr-reorder-item value="b">Row B</lr-reorder-item>
+      <lr-reorder-item value="c">Row C</lr-reorder-item>
+    </lr-reorder-list>
+  `;
+
+  it('defaults to false and reflects as an attribute', async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list><lr-reorder-item value="a">A</lr-reorder-item></lr-reorder-list>
+    `);
+    expect(el.controlled).to.equal(false);
+    expect(el.hasAttribute('controlled')).to.equal(false);
+    el.controlled = true;
+    await el.updateComplete;
+    expect(el.hasAttribute('controlled')).to.equal(true);
+  });
+
+  it('does not move the DOM itself on an uncanceled lr-reorder, and completes once the host reorders its own children to match', async () => {
+    const el = await fixture<LyraReorderList>(threeControlledItems);
+    const middle = itemsOf(el)[1]!;
+    let detail: { order: readonly string[] } | undefined;
+    el.addEventListener('lr-reorder', (e) => {
+      detail = (e as CustomEvent<{ order: readonly string[] }>).detail;
+    });
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    upButton.click();
+    await el.updateComplete;
+
+    // Nothing moved yet -- the list is waiting for the host's own re-render.
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+    expect(middle.pending).to.equal(true);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-busy')).to.equal('true');
+    expect(detail?.order).to.deep.equal(['b', 'a', 'c']);
+
+    // The host applies its own reorder, reusing the same element instances -- matching what a
+    // keyed `repeat()` re-render would produce.
+    el.insertBefore(middle, itemsOf(el)[0]!);
+    await waitUntil(() => !middle.pending);
+
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
+    expect(base.getAttribute('aria-busy')).to.equal('false');
+  });
+
+  it('reconciles by value, restoring focus and announcing, even when the host recreates the moved item as a new element instance', async () => {
+    const el = await fixture<LyraReorderList>(threeControlledItems);
+    el.strings = { reorderItemMoved: 'Moved to {index} of {total}' };
+    await el.updateComplete;
+    const originalMiddle = itemsOf(el)[1]!;
+    const upButton = originalMiddle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    upButton.click();
+    await el.updateComplete;
+    expect(originalMiddle.pending).to.equal(true);
+
+    // The host applies the reorder by recreating the moved row from its own backing data
+    // (e.g. a non-keyed template), rather than moving the existing element instance.
+    const newB = document.createElement('lr-reorder-item') as LyraReorderItem;
+    newB.value = 'b';
+    newB.textContent = 'Row B';
+    originalMiddle.remove();
+    el.prepend(newB);
+    await waitUntil(() => itemsOf(el).map((i) => i.value).join(',') === 'b,a,c' && !newB.pending);
+
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+    expect(region.shadowRoot!.textContent).to.contain('Moved to');
+
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await newB.updateComplete;
+    expect(['move-up-button', 'move-down-button']).to.include(
+      newB.shadowRoot!.activeElement?.getAttribute('part'),
+    );
+  });
+
+  it('leaves the move pending when a host mutation does not reach the expected order, and completes once a later one does', async () => {
+    const el = await fixture<LyraReorderList>(threeControlledItems);
+    const middle = itemsOf(el)[1]!;
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    upButton.click();
+    await el.updateComplete;
+
+    // An unrelated host mutation (disables the last row) does not reach the expected b,a,c order.
+    itemsOf(el)[2]!.disabled = true;
+    await el.updateComplete;
+    expect(middle.pending).to.equal(true);
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+
+    el.insertBefore(middle, itemsOf(el)[0]!);
+    await waitUntil(() => !middle.pending);
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
+  });
+
+  it('cancels silently, with no announcement, when a host mutation drops the moved value entirely', async () => {
+    const el = await fixture<LyraReorderList>(threeControlledItems);
+    el.strings = { reorderMoveCancelled: 'Move discarded', reorderItemMoved: 'Moved' };
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const middle = itemsOf(el)[1]!;
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    upButton.click();
+    await el.updateComplete;
+    expect(base.getAttribute('aria-busy')).to.equal('true');
+
+    middle.remove();
+    await waitUntil(() => base.getAttribute('aria-busy') === 'false');
+
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+    expect(region.shadowRoot!.textContent ?? '').to.not.contain('Move discarded');
+    expect(region.shadowRoot!.textContent ?? '').to.not.contain('Moved');
+  });
+
+  it('refuses to start a second move anywhere in the list while a controlled reconciliation is pending', async () => {
+    const el = await fixture<LyraReorderList>(threeControlledItems);
+    const items = itemsOf(el);
+    const middleUp = items[1]!.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    middleUp.click();
+    await el.updateComplete;
+    expect(items[1]!.pending).to.equal(true);
+
+    let secondEventFired = false;
+    el.addEventListener('lr-reorder', () => {
+      secondEventFired = true;
+    });
+    const lastUp = itemsOf(el)[2]!.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    lastUp.click();
+    await el.updateComplete;
+
+    expect(secondEventFired, 'no second lr-reorder while a controlled reconciliation is pending').to.equal(false);
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+  });
+
+  it('reconciles via a plain value property rewrite on the SAME element instances (no DOM reordering, no attribute mutation)', async () => {
+    // The realistic non-keyed-template host gotcha: `Array.map()` into the default slot without
+    // `repeat()` reuses each POSITION's existing element and just rewrites its `value` PROPERTY
+    // (never the attribute), rather than moving any node. Reconciliation must still key by value.
+    const el = await fixture<LyraReorderList>(threeControlledItems);
+    const [itemAtPos0, itemAtPos1] = itemsOf(el);
+    const middle = itemAtPos1!;
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    upButton.click();
+    await el.updateComplete;
+    expect(middle.pending).to.equal(true);
+
+    itemAtPos0!.value = 'b';
+    itemAtPos1!.value = 'a';
+    await waitUntil(() => !itemAtPos0!.pending);
+
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
+    // Reconciliation is keyed by value, so it completed against whichever element instance now
+    // holds "b" -- the element that used to sit at position 0, never the originally clicked one.
+    expect(itemAtPos0!.pending).to.equal(false);
+    expect(middle.pending).to.equal(false);
+  });
+
+  it('finalizePendingMove() starts a controlled reconciliation instead of moving the DOM itself', async () => {
+    const el = await fixture<LyraReorderList>(threeControlledItems);
+    const middle = itemsOf(el)[1]!;
+    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    (middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    el.finalizePendingMove();
+    await el.updateComplete;
+
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+    expect(middle.pending).to.equal(true);
+
+    el.insertBefore(middle, itemsOf(el)[0]!);
+    await waitUntil(() => !middle.pending);
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
+  });
+
+  it('turning controlled off while a reconciliation is pending drops it instead of leaving the list stuck busy', async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list controlled>
+        <lr-reorder-item value="a">Row A</lr-reorder-item>
+        <lr-reorder-item value="b">Row B</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    const first = itemsOf(el)[0]!;
+    (first.shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(first.pending).to.equal(true);
+
+    el.controlled = false;
+    await el.updateComplete;
+
+    expect(first.pending).to.equal(false);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-busy')).to.equal('false');
+  });
+});
+
+describe('<lr-reorder-list> revertPendingMove({ silent })', () => {
+  const itemsOf = (el: LyraReorderList) =>
+    [...el.querySelectorAll('lr-reorder-item')] as LyraReorderItem[];
+
+  it('discards a held move without the built-in cancellation announcement when passed { silent: true }', async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list>
+        <lr-reorder-item value="a">Row A</lr-reorder-item>
+        <lr-reorder-item value="b">Row B</lr-reorder-item>
+        <lr-reorder-item value="c">Row C</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    el.strings = { reorderMoveCancelled: 'Move discarded' };
+    await el.updateComplete;
+    const middle = itemsOf(el)[1]!;
+    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    (middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(middle.pending).to.equal(true);
+
+    el.revertPendingMove({ silent: true });
+    await el.updateComplete;
+
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+    expect(middle.pending).to.equal(false);
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+    expect(region.shadowRoot!.textContent ?? '').to.not.contain('Move discarded');
+  });
 });

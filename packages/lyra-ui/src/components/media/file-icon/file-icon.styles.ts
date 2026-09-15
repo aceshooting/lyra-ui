@@ -25,8 +25,8 @@ export const styles = css`
     padding-inline: var(--lr-space-2xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-file-icon-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-file-icon-color, var(--lr-color-brand));
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-bold);
     line-height: var(--lr-line-height-none);

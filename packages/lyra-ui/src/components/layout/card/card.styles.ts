@@ -198,6 +198,11 @@ export const styles = css`
   [part~="media"] ::slotted(*) {
     display: block;
     inline-size: 100%;
+    /* box-sizing does not inherit across the slot boundary, so a slotted node keeps the outer
+       tree's value -- the UA's content-box unless the author set otherwise. The definite
+       inline-size: 100% above would then allocate 100% to the child's CONTENT box and let its
+       own padding/border escape the media wrapper. */
+    box-sizing: border-box;
   }
   /* The display above is author-origin, outranking the UA '[hidden] { display: none }', so a
      hidden slotted media child would still paint -- the wrapper guard above only fires when the

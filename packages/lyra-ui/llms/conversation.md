@@ -110,6 +110,9 @@ uses for its own `[part="body"]`.
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
   lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
+- `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set,
+  `[part="content"]` scrolls internally past this height instead of growing the page. Invalid
+  values are ignored.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied `text-quote` highlights;
   reassign the array after mutation so painting is refreshed.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — identifies the
@@ -166,18 +169,20 @@ placed first and preserved inside both ceilings.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
-**CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; carries
-`data-fallback` while showing the plain-text fallback — still-loading peers or a failed render —
-so a consumer can target `lr-markdown [part='content'][data-fallback]` to style it distinctly),
-`anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest anchor-jump message),
-`heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`), `paragraph` (every rendered
-`<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every rendered fenced/indented `<pre>`),
-`inline-code` (every rendered inline `<code>` span — backtick spans, not fenced blocks), `link`
-(every rendered `<a>`), `table` (every rendered `<table>`), `blockquote` (every rendered
-`<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered inline or block math span,
-carrying `data-display="inline"|"block"`)
+**CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; respects
+`max-height`; carries `data-fallback` while showing the plain-text fallback — still-loading peers
+or a failed render — so a consumer can target `lr-markdown [part='content'][data-fallback]` to
+style it distinctly), `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
+anchor-jump message), `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`),
+`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every
+rendered fenced/indented `<pre>`), `inline-code` (every rendered inline `<code>` span — backtick
+spans, not fenced blocks), `link` (every rendered `<a>`), `table` (every rendered `<table>`),
+`blockquote` (every rendered `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered
+inline or block math span, carrying `data-display="inline"|"block"`)
 
-**Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
+**Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
+`[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
+property sets this token inline on `[part="content"]`), `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
 `--lr-theme-font-family-mono` override reaches it), `--lr-markdown-code-bg` (default
 `var(--lr-color-brand-quiet)` — background shared by every inline `code` span and the fenced
@@ -319,7 +324,8 @@ block stays unhighlighted permanently. Each value is either an already-resolved 
 loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
 `() => import('@shikijs/langs/bash')`) — called at most once per key, memoized, the first time a
 fenced block actually requests that language, `headingAnchors: boolean = false` (attribute `heading-anchors`),
-`math: boolean = false`; plus the same inherited anchor-target properties as `<lr-markdown>`:
+`math: boolean = false`, `maxHeight: string = ''` (attribute `max-height`) — same CSS-length scroll
+cap on `[part="content"]` as `<lr-markdown>`'s own; plus the same inherited anchor-target properties as `<lr-markdown>`:
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
 and `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']`.
@@ -342,10 +348,13 @@ as the full class; the core route exports its own `Marked` alias.
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
-anchor-jump message), `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`,
-`link`, `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
+anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`,
+`code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math` — identical to
+`<lr-markdown>`'s own parts.
 
-**Themeable custom properties:** identical to `<lr-markdown>`'s own code-surface tokens —
+**Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
+`--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
+`maxHeight` property sets this token inline) and its code-surface tokens —
 `--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the
 fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-radius` (inline
 `code` span padding/radius, defaulting to `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)`/
@@ -1813,7 +1822,10 @@ rendered code, applied to `[part='pre']`), `--lr-code-block-active-line-outline-
 `var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`),
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)` — the background of a
 line marked by `highlight-lines` or a `line-range` entry in `highlights`, in both the light and
-dark-theme rendering paths), plus shared tokens `--lr-color-border`, `--lr-radius`,
+dark-theme rendering paths), `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`)
+and `--lr-code-block-language-color` (default `var(--lr-color-brand)`) — the header `language` pill's
+background and text color, independent of the active-line outline above — plus shared tokens
+`--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`.
@@ -1836,9 +1848,11 @@ while a markdown code block inherits `pre-wrap`, and tab stops restart at each v
 wrapped line's tabs diverge.
 
 `--lr-code-block-active-line-outline-color` retints just the active line's outline and leaves every
-other `--lr-color-brand` surface in the component — the header language pill, hover states, the focus
+other `--lr-color-brand` surface in the component — hover states, the focus
 ring — alone. It too is an inline `var()` fallback rather than a `:host` declaration, deliberately,
 so it inherits: set it on the element, on an ancestor, or at the theme level.
+`--lr-code-block-language-bg`/`--lr-code-block-language-color` retint the header language pill on
+their own, independent of both the active-line outline and the hover/focus states.
 
 `--lr-code-block-highlighted-line-bg` follows the same pattern: an inline `var()` fallback (not a
 `:host` declaration) so it inherits, retinting just the highlighted-line background and leaving every
@@ -1994,8 +2008,10 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 (independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
 `--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`),
-`--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`), plus the same shared
-tokens. The last three are inline `var()` fallbacks at the point of use rather than `:host`
+`--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`), and
+`--lr-code-block-language-color` (default `var(--lr-color-brand)`), plus the same shared
+tokens. The last five are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
