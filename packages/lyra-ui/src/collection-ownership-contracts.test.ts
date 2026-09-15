@@ -95,7 +95,6 @@ export interface BespokeCollectionPropertyCase extends CollectionPropertyCase {
  * have their normalization contracts covered by their colocated component tests instead.
  */
 export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] = Object.freeze([
-  { tag: 'lr-activity-feed', property: 'entries' },
   { tag: 'lr-agent-run', property: 'metrics' },
   { tag: 'lr-agent-trace', property: 'hiddenKinds' },
   { tag: 'lr-agent-workspace', property: 'selectedRetrievalChunkIds' },
@@ -183,6 +182,7 @@ export const APP_IDENTITY_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[
   { tag: 'lr-span-waterfall', property: 'spans' },
   { tag: 'lr-tool-timeline', property: 'entries' },
   { tag: 'lr-prompt-queue', property: 'items' },
+  { tag: 'lr-activity-feed', property: 'entries' },
   { tag: 'lr-thread-list', property: 'threads' },
   { tag: 'lr-command-palette', property: 'commands' },
   { tag: 'lr-test-results', property: 'suites' },
