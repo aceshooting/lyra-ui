@@ -787,7 +787,6 @@ export type LyraAppRailGroupSvelteProps = LyraSvelteElementProps<
 
 export type LyraAppRailItemSvelteProps = LyraSvelteElementProps<
   LyraAppRailItem,
-  | 'active'
   | 'current'
   | 'disabled'
   | 'href'
@@ -1914,6 +1913,7 @@ export type LyraChartSvelteProps = LyraSvelteElementProps<
 export type LyraChatComposerSvelteProps = LyraSvelteElementProps<
   LyraChatComposer,
   | 'accessibleLabel'
+  | 'actionsLayout'
   | 'autocapitalize'
   | 'autocomplete'
   | 'autocorrect'
@@ -1960,8 +1960,12 @@ export type LyraChatComposerSvelteProps = LyraSvelteElementProps<
   | '--lr-chat-composer-background'
   | '--lr-chat-composer-border-color'
   | '--lr-chat-composer-busy-bg'
+  | '--lr-chat-composer-focus-shadow'
+  | '--lr-chat-composer-gap'
+  | '--lr-chat-composer-padding'
   | '--lr-chat-composer-radius',
   {
+    'actions-layout'?: LyraChatComposer['actionsLayout'];
     'aria-label'?: LyraChatComposer['accessibleLabel'];
     'custom-error'?: LyraChatComposer['customError'];
     'enterkeyhint'?: LyraChatComposer['enterKeyHint'];
@@ -2308,7 +2312,9 @@ export type LyraCodeBlockSvelteProps = LyraSvelteElementProps<
   | '--lr-code-block-language-bg'
   | '--lr-code-block-language-color'
   | '--lr-code-block-max-height'
-  | '--lr-code-block-tab-size',
+  | '--lr-code-block-tab-size'
+  | '--lr-scrollbar-gutter'
+  | '--lr-scrollbar-width',
   {
     'activatable-lines'?: LyraCodeBlock['activatableLines'];
     'active-highlight-id'?: LyraCodeBlock['activeHighlightId'];
@@ -2354,7 +2360,9 @@ export type LyraCodeBlockCoreSvelteProps = LyraSvelteElementProps<
   | '--lr-code-block-language-bg'
   | '--lr-code-block-language-color'
   | '--lr-code-block-max-height'
-  | '--lr-code-block-tab-size',
+  | '--lr-code-block-tab-size'
+  | '--lr-scrollbar-gutter'
+  | '--lr-scrollbar-width',
   {
     'activatable-lines'?: LyraCodeBlockCore['activatableLines'];
     'active-highlight-id'?: LyraCodeBlockCore['activeHighlightId'];
@@ -2428,7 +2436,9 @@ export type LyraCodeEditorSvelteProps = LyraSvelteElementProps<
   | '--lr-code-editor-tab-size'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
-  | '--lr-form-control-required-offset',
+  | '--lr-form-control-required-offset'
+  | '--lr-scrollbar-gutter'
+  | '--lr-scrollbar-width',
   {
     'aria-label'?: LyraCodeEditor['accessibleLabel'];
     'custom-error'?: LyraCodeEditor['customError'];
@@ -2514,6 +2524,7 @@ export type LyraColorPickerSvelteProps = LyraSvelteElementProps<
   | '--lr-overlay-radius'
   | '--lr-overlay-shadow-anchored'
   | '--lr-overlay-surface'
+  | '--lr-positioning-strategy'
   | '--slider-handle-size'
   | '--slider-height'
   | '--swatch-size',
@@ -2611,6 +2622,7 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
   | '--lr-combobox-gap'
   | '--lr-combobox-open-border-color'
   | '--lr-combobox-option-active-bg'
+  | '--lr-combobox-option-badge-bg'
   | '--lr-combobox-option-selected-bg'
   | '--lr-combobox-option-selected-border'
   | '--lr-combobox-option-selected-color'
@@ -4006,6 +4018,7 @@ export type LyraDropdownSvelteProps = LyraSvelteElementProps<
   | '--lr-overlay-radius'
   | '--lr-overlay-shadow-anchored'
   | '--lr-overlay-surface'
+  | '--lr-positioning-strategy'
   | '--max-width'
   | '--show-duration',
   {
@@ -4027,6 +4040,7 @@ export type LyraDropdownItemSvelteProps = LyraSvelteElementProps<
   | 'checked'
   | 'disabled'
   | 'download'
+  | 'group'
   | 'href'
   | 'loading'
   | 'locale'
@@ -6357,7 +6371,8 @@ export type LyraMarkdownSvelteProps = LyraSvelteElementProps<
   | '--lr-markdown-highlight-neutral-bg'
   | '--lr-markdown-highlight-success-bg'
   | '--lr-markdown-highlight-warning-bg'
-  | '--lr-markdown-max-height',
+  | '--lr-markdown-max-height'
+  | '--lr-markdown-table-header-bg',
   {
     'active-highlight-id'?: LyraMarkdown['activeHighlightId'];
     'heading-anchors'?: LyraMarkdown['headingAnchors'];
@@ -6413,7 +6428,8 @@ export type LyraMarkdownCoreSvelteProps = LyraSvelteElementProps<
   | '--lr-markdown-highlight-neutral-bg'
   | '--lr-markdown-highlight-success-bg'
   | '--lr-markdown-highlight-warning-bg'
-  | '--lr-markdown-max-height',
+  | '--lr-markdown-max-height'
+  | '--lr-markdown-table-header-bg',
   {
     'active-highlight-id'?: LyraMarkdownCore['activeHighlightId'];
     'heading-anchors'?: LyraMarkdownCore['headingAnchors'];
@@ -6552,6 +6568,7 @@ export type LyraMenuItemSvelteProps = LyraSvelteElementProps<
   | 'checked'
   | 'disabled'
   | 'download'
+  | 'group'
   | 'href'
   | 'loading'
   | 'locale'
@@ -7882,6 +7899,7 @@ export type LyraPopoverSvelteProps = LyraSvelteElementProps<
   | '--lr-overlay-radius'
   | '--lr-overlay-shadow-anchored'
   | '--lr-overlay-surface'
+  | '--lr-positioning-strategy'
   | '--max-width'
   | '--show-duration',
   {
@@ -8753,7 +8771,8 @@ export type LyraResponsivePanelSvelteProps = LyraSvelteElementProps<
   | '--lr-responsive-panel-overlay-color'
   | '--lr-responsive-panel-overlay-panel-bg'
   | '--lr-responsive-panel-overlay-panel-shadow'
-  | '--lr-responsive-panel-sheet-max-block-size',
+  | '--lr-responsive-panel-sheet-max-block-size'
+  | '--lr-responsive-panel-side-inline-size',
   {
     'aria-label'?: LyraAttributeValue<string | null>;
     'overlay-breakpoint'?: LyraResponsivePanel['overlayBreakpoint'];
@@ -9185,6 +9204,7 @@ export type LyraSelectSvelteProps = LyraSvelteElementProps<
   | '--lr-overlay-radius'
   | '--lr-overlay-shadow-anchored'
   | '--lr-overlay-surface'
+  | '--lr-positioning-strategy'
   | '--lr-select-expand-size'
   | '--lr-select-font-size'
   | '--lr-select-gap'
@@ -10112,6 +10132,8 @@ export type LyraTableSvelteProps = LyraSvelteElementProps<
   | 'lr-selection-change'
   | 'lr-sort'
   | 'lr-sort-request',
+  | '--lr-scrollbar-gutter'
+  | '--lr-scrollbar-width'
   | '--lr-table-cell-color'
   | '--lr-table-cell-link-color'
   | '--lr-table-cell-link-hover-color'
@@ -11105,6 +11127,7 @@ export type LyraTooltipSvelteProps = LyraSvelteElementProps<
   | '--lr-overlay-border'
   | '--lr-overlay-radius'
   | '--lr-overlay-surface'
+  | '--lr-positioning-strategy'
   | '--lr-tooltip-arrow-size'
   | '--lr-tooltip-background'
   | '--lr-tooltip-color'
@@ -11426,6 +11449,8 @@ export type LyraVirtualListSvelteProps = LyraSvelteElementProps<
   | 'lr-load-more'
   | 'lr-virtual-scroll'
   | 'lr-visible-range-change',
+  | '--lr-scrollbar-gutter'
+  | '--lr-scrollbar-width'
   | '--lr-virtual-list-height'
   | '--lr-virtual-list-hover-outline-color'
   | '--lr-virtual-list-hover-outline-offset'
@@ -11535,7 +11560,6 @@ export type LyraVoicePickerSvelteProps = LyraSvelteElementProps<
 export type LyraWidgetSvelteProps = LyraSvelteElementProps<
   LyraWidget,
   | 'accessibleLabel'
-  | 'activeView'
   | 'activeViewId'
   | 'backdropInset'
   | 'collapsed'

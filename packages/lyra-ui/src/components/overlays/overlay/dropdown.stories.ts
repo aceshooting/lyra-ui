@@ -61,6 +61,34 @@ export const NarrowLongRtl: StoryObj = {
   `,
 };
 
+/** Every unset dropdown in a subtree escapes an `overflow: hidden` ancestor with one declaration
+ *  of the cascading `--lr-positioning-strategy` custom property, instead of authoring `hoist` on
+ *  each instance individually. It is 16.0.0's theme-level alternative to the per-instance
+ *  `positioning-strategy`/`hoist` attribute: an explicit value on an instance still always wins. */
+export const CardScopedPositioningStrategy: StoryObj = {
+  name: 'Card-scoped --lr-positioning-strategy',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The card sets `--lr-positioning-strategy: fixed` once; every dropdown inside it escapes the clipping `overflow: hidden` without an individual `hoist`/`positioning-strategy` attribute. `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` honor the same cascading property.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div
+      style="--lr-positioning-strategy: fixed; overflow: hidden; padding: 1rem; border: 1px solid currentColor; inline-size: 260px;"
+    >
+      <lr-dropdown aria-label="Row actions" .open=${context.viewMode !== 'docs'}>
+        <button slot="trigger" type="button">Row actions</button>
+        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+        <lr-dropdown-item value="duplicate">Duplicate</lr-dropdown-item>
+        <lr-dropdown-item value="delete" variant="danger">Delete</lr-dropdown-item>
+      </lr-dropdown>
+    </div>
+  `,
+};
+
 /** Disabled is an opening invariant: even declarative `open` markup normalizes closed before the
  * first rendered/positioned state, independent of attribute order. */
 export const DisabledOpenNormalizesClosed: StoryObj = {

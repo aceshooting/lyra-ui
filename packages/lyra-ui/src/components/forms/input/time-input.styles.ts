@@ -286,7 +286,11 @@ export const styles = css`
     overflow-block: auto;
     overflow-inline: hidden;
     overscroll-behavior: contain;
-    scrollbar-width: thin;
+    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- each reads
+       --lr-theme-scrollbar-* directly, with this column's own previous literal as the fallback, so
+       nothing changes for a consumer who never sets the theme input. */
+    scrollbar-width: var(--lr-theme-scrollbar-width, thin);
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
   }
   [part~='column-item'] {
     flex: 0 0 var(--column-item-height, calc(var(--lr-size-1em) * 2.25));

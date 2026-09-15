@@ -11,7 +11,7 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
 /**
  * `<lr-dropdown-item>` — the Web Awesome-compatible name for a menu item.
  * It is intentionally a subclass of `<lr-menu-item>`, so it participates in
- * the same roving focus, checkbox, selection, and menu event contracts — and
+ * the same roving focus, checkbox, radio, selection, and menu event contracts — and
  * in the same `size` ladder, including the `small`/`medium`/`large` spellings.
  * It also inherits `<lr-menu-item>`'s `href`/`target`/`rel`/`download` link-item support, mirroring
  * `wa-dropdown-item`'s identical navigation surface — see that class's doc.

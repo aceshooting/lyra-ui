@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -137,7 +137,11 @@ background and text color, independent of the active-line outline above — plus
 `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
-`--lr-focus-ring-width/-color/-offset`.
+`--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also reads the shared
+`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
+unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
+ancestor for one declaration to retheme every internal scroll container in the library, including
+`lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 
 `base` is a flex column and `body` grows to fill whatever block space a definite-height host
 gives it, still capped by `--lr-code-block-max-height` and still independently scrollable. An

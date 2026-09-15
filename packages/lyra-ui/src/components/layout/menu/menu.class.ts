@@ -323,6 +323,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private readonly listId = nextId('menu-list');
   private readonly owningMenu: MenuItemOwner = {
     activate: (item) => this.onOwnedItemSelect(item),
+    uncheckRadioGroup: (item, group) => this.uncheckRadioGroupSiblings(item, group),
   };
   // Standard menu type-ahead, mirroring lr-select's identical listbox
   // trio: printable keystrokes accumulate into this buffer and reset ~500ms
@@ -710,6 +711,21 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       null,
       this.owningMenu
     );
+  }
+
+  /** Enforces `type="radio"` exclusive choice among the items this menu owns directly (`this.items`
+   *  never includes a nested submenu's items, which belong to that submenu's own `<lr-menu>` — so
+   *  the scope this walks is already exactly "the owning menu", matching the group's default). */
+  private uncheckRadioGroupSiblings(
+    item: HTMLElement,
+    group: string | undefined
+  ): void {
+    for (const sibling of this.items) {
+      if (sibling === item) continue;
+      if (sibling.type !== 'radio') continue;
+      if (sibling.group !== group) continue;
+      if (sibling.checked) sibling.checked = false;
+    }
   }
 
   /** `inert` counts alongside disabled/hidden because an inert element *refuses* focus: stepping

@@ -107,3 +107,78 @@ describe('positioning-strategy on lr-color-picker', () => {
     );
   });
 });
+
+describe('the cascading --lr-positioning-strategy custom property', () => {
+  it('lr-select: clips absolutely by default inside a card, and escapes when the card opts in', async () => {
+    const clipped = await fixture(html`<div style="overflow: hidden">
+      <lr-select>
+        <lr-option value="a">A</lr-option>
+        <lr-option value="b">B</lr-option>
+      </lr-select>
+    </div>`);
+    const clippedEl = clipped.querySelector('lr-select') as LyraSelect;
+    clippedEl.open = true;
+    await clippedEl.updateComplete;
+    await waitUntil(
+      () => renderedPosition(clippedEl, 'listbox') === 'absolute',
+      'the select stays absolute (and thus clippable) by default',
+    );
+
+    const escaping = await fixture(html`<div style="overflow: hidden; --lr-positioning-strategy: fixed">
+      <lr-select>
+        <lr-option value="a">A</lr-option>
+        <lr-option value="b">B</lr-option>
+      </lr-select>
+    </div>`);
+    const escapingEl = escaping.querySelector('lr-select') as LyraSelect;
+    escapingEl.open = true;
+    await escapingEl.updateComplete;
+    await waitUntil(
+      () => renderedPosition(escapingEl, 'listbox') === 'fixed',
+      'the card-level override escapes the clipping ancestor',
+    );
+  });
+
+  it('lr-select: an explicit positioning-strategy on the instance still wins over the card', async () => {
+    const wrapper = await fixture(html`<div style="--lr-positioning-strategy: fixed">
+      <lr-select positioning-strategy="absolute">
+        <lr-option value="a">A</lr-option>
+      </lr-select>
+    </div>`);
+    const el = wrapper.querySelector('lr-select') as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    await waitUntil(
+      () => renderedPosition(el, 'listbox') === 'absolute',
+      'the explicit instance value wins over the card override',
+    );
+  });
+
+  it('lr-select: an unset ancestor never changes the default rendered strategy', async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-select>
+        <lr-option value="a">A</lr-option>
+      </lr-select>
+    </div>`);
+    const el = wrapper.querySelector('lr-select') as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    await waitUntil(
+      () => renderedPosition(el, 'listbox') === 'absolute',
+      'the unset default is unchanged',
+    );
+  });
+
+  it('lr-color-picker: honors the same cascading override as the anchored surfaces', async () => {
+    const wrapper = await fixture(html`<div style="--lr-positioning-strategy: fixed">
+      <lr-color-picker value="#ff0000"></lr-color-picker>
+    </div>`);
+    const el = wrapper.querySelector('lr-color-picker') as LyraColorPicker;
+    el.open = true;
+    await el.updateComplete;
+    await waitUntil(
+      () => renderedPosition(el, 'panel') === 'fixed',
+      'the color picker honors the cascading override too',
+    );
+  });
+});

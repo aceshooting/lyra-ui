@@ -70,4 +70,15 @@ export const styles = css`
   :host([placement="bottom"]) [part~="panel"] {
     --_lr-drawer-enter-y: var(--lr-size-1rem);
   }
+  /* Opts out of lr-dialog's inherited [part="body"] { flex: 1 1 auto } fill-height chain. On
+     lr-dialog that rule is a no-op until a consumer opts in with --lr-dialog-height, because the
+     panel is otherwise content-sized; on lr-drawer the panel above is unconditionally definite
+     height for every placement (100% for start/end, a --lr-drawer-height-driven min() for
+     top/bottom), so the inherited rule would always stretch the body and push the footer to the
+     panel's far edge instead of following the content, contradicting this component's own
+     natural-size layout. Restores the flex shorthand's initial value, the body's own sizing before
+     --lr-dialog-height existed. */
+  [part="body"] {
+    flex: 0 1 auto;
+  }
 `;

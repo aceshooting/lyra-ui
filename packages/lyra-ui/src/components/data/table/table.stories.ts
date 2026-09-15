@@ -45,6 +45,25 @@ export const Default: Story = {
   render: () => html`<lr-table .columns=${columns} .rows=${rows}></lr-table>`,
 };
 
+/** The opt-in theme-level scrollbar hooks retheme the base scrollport, plus every other internal
+ *  scroll container in the library, from one declaration on an ancestor. */
+export const ThemedScrollbar: Story = {
+  name: 'Themed scrollbar (theme-level cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `--lr-theme-scrollbar-width` and `--lr-theme-scrollbar-gutter` on an ancestor retunes the `base` scrollport -- and, set on `:root`, every other internal scroll container in the library (`lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-time-input`, `lr-emoji-picker`, `lr-code-block`, `lr-code-editor`) at once.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable;">
+      <lr-table style="--lr-table-max-height: 12rem" .columns=${columns} .rows=${rows}></lr-table>
+    </div>
+  `,
+};
+
 export const ResizableColumns: Story = {
   parameters: {
     docs: {

@@ -108,6 +108,25 @@ export const InitiallyOpen: Story = {
   `,
 };
 
+/** The opt-in theme-level scrollbar hooks retheme every open column, plus every other internal
+ *  scroll container in the library, from one declaration on an ancestor. */
+export const ThemedScrollbar: Story = {
+  name: 'Themed scrollbar (theme-level cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `--lr-theme-scrollbar-width` and `--lr-theme-scrollbar-gutter` on an ancestor retunes every open column -- and, set on `:root`, every other internal scroll container in the library (`lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-emoji-picker`, `lr-code-block`, `lr-code-editor`) at once.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="--lr-theme-scrollbar-width: none; --lr-theme-scrollbar-gutter: stable;">
+      <lr-time-input label="Themed scrollbar" value="13:15" open style="max-width: 20rem"></lr-time-input>
+    </div>
+  `,
+};
+
 export const DisabledFocusGuard: Story = {
   name: 'Disabled focus guard',
   render: () => {

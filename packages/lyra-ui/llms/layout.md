@@ -542,13 +542,9 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   Malformed/hostile entries are ignored without rejecting the component update.
 - `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
-  view externally; also updated internally when a view toggle is clicked.
-- `activeView: string = ''` (attribute: false) — **deprecated alias for `activeViewId`**, which it
-  seeds. `activeView` was this member's original public name and the rename was never announced, so
-  a shipped `.activeView=${…}` binding silently became inert and the widget fell back to its first
-  view. It seeds rather than being read alongside, because the component itself writes
-  `activeViewId` (a toggle click, and the fallback when `views` drops the active id) — so a stale
-  alias must not undo a later interactive change. Prefer `activeViewId` in new code.
+  view externally; also updated internally when a view toggle is clicked. `activeView`, a
+  deprecated alias that seeded this property, was removed in 16.0.0 (available since 11.2.0;
+  eligible for removal from 13.0.0) — use `activeViewId`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
@@ -832,7 +828,13 @@ four-longhand outline shape, matching `lr-scroller`'s viewport:
 `--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border-strong)`, set
 to `transparent` to opt out entirely), and `--lr-carousel-scroll-container-hover-outline-offset`
 (default `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal
-paint.
+paint. The `scroll-container` part also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `none`/`auto`, matching
+its previous unconditional `scrollbar-width: none`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library. Chromium and Safari ignore
+the standard `scrollbar-width` property for any element a page also styles through the legacy
+`::-webkit-scrollbar` pseudo-element, which this part's own stylesheet still does to hide its
+scrollbar there, so on those two engines the hook only visibly retunes this part in Firefox.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">
@@ -967,7 +969,11 @@ its own four-longhand outline shape, matching `lr-virtual-list`'s: `--lr-scrolle
 (default `var(--lr-border-width-thin)`), `--lr-scroller-hover-outline-style` (default `solid`),
 `--lr-scroller-hover-outline-color` (default `var(--lr-color-border)`, set to `transparent` to opt
 out entirely), and `--lr-scroller-hover-outline-offset` (default `var(--lr-focus-ring-offset)`).
-Unset, all four resolve to the rule's previous literal paint.
+Unset, all four resolve to the rule's previous literal paint. The `viewport` part also honors the
+opt-in theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults
+`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set either on `:root`
+or any ancestor for one declaration to retheme every internal scroll container in the library,
+including `lr-table`, `lr-virtual-list`, `lr-code-block`, and `lr-code-editor`.
 
 ```html
 <lr-scroller controls label="Project cards">
@@ -2057,7 +2063,11 @@ themeable with `--lr-virtual-list-hover-outline-width` (default
 `--lr-virtual-list-hover-outline-offset` (default
 `calc(-1 * var(--lr-border-width-thin))`). All four hover-outline hooks are inline fallbacks and
 there is intentionally no pressed state: the list viewport is a scroll surface rather than an
-activation target.
+activation target. `[part="base"]` also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
+tokens (default `auto`/`auto`, matching its previous unset behavior) — set
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library, including `lr-table`,
+`lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
 **Optional peer deps:** none.
 
@@ -2504,13 +2514,8 @@ removing the label from the accessibility tree.
 - `current: boolean = false` (reflected) — marks this as the destination for the current page/view;
   reflects `aria-current="page"` on `[part='base']` and drives the current visual treatment. The rail
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
-  current location).
-- `active: boolean = false` — **deprecated alias for `current`**, read alongside it: the item is
-  current when either is true. `active` was this member's original public name, in both property and
-  attribute form; it was renamed to `current` without an alias, so shipped consumers writing
-  `.active=${…}` or `<lr-app-rail-item active>` silently lost their current-item indicator and kept a
-  permanent `aria-current="false"`. A Lit property binding on a custom element is untyped, so nothing
-  in a consumer's type check or test suite could catch it. Prefer `current` in new code.
+  current location). `active`, a deprecated alias in both property and attribute form, was removed
+  in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
 - `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
@@ -2668,8 +2673,8 @@ instead of stretching across the header row (mirroring `<lr-app-rail-item>`'s ow
 ## `lr-responsive-panel`
 
 The same slotted content either docked inline in its containing layout or presented as a
-full-screen/bottom-sheet overlay, depending on the panel's allocated inline size. First-party
-invention (no `wa-*`/`sl-*` counterpart).
+full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.
+First-party invention (no `wa-*`/`sl-*` counterpart).
 
 **Properties:**
 
@@ -2681,8 +2686,11 @@ invention (no `wa-*`/`sl-*` counterpart).
   `'inline'|'overlay'` presentation.
 - `shape: LyraResponsivePanelShape = 'fullscreen'` (reflected) — only affects the overlay
   presentation's visual treatment: `'fullscreen'` covers the whole viewport; `'bottom-sheet'`
-  anchors to its block-end edge and does not cover the full height. Has no visual effect while the effective
-  presentation resolves to `'inline'`.
+  anchors to its block-end edge and does not cover the full height; `'start'`/`'end'` anchor to the
+  matching *logical* inline edge instead, like a docked sidebar's slide-in-from-the-edge overlay
+  counterpart — the anchored edge and the panel's rounded free edge both flip automatically under
+  `dir="rtl"` (logical `inset-inline-*`/border-radius properties, no `:dir()` selector involved).
+  Has no visual effect while the effective presentation resolves to `'inline'`.
 - `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`, used
   verbatim when set — but a plain `aria-label` attribute on the host wins outright over `label`
   when both are present, the standard ARIA convention for a consumer that wants full control over
@@ -2725,9 +2733,12 @@ in the overlay presentation).
 **Themeable custom properties:** `--lr-responsive-panel-overlay-color` (default
 `var(--lr-color-overlay)` — the overlay presentation's backdrop scrim color),
 `--lr-responsive-panel-sheet-max-block-size` (default `85dvh`, falling back to `85vh` where `dvh`
-isn't supported — the maximum height of a `variant="bottom-sheet"` overlay panel, so a long sheet
+isn't supported — the maximum height of a `shape="bottom-sheet"` overlay panel, so a long sheet
 stops short of the top of the viewport instead of covering it; it has no effect on
-`variant="fullscreen"` or on the inline presentation),
+`shape="fullscreen"` or on the inline presentation),
+`--lr-responsive-panel-side-inline-size` (default `var(--lr-size-20rem)` — the width of a
+`shape="start"`/`shape="end"` overlay panel along the inline axis; no effect on any other shape or
+on the inline presentation),
 `--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
@@ -2740,7 +2751,7 @@ they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr
 <lr-responsive-panel
   id="settings-panel"
   label="Settings"
-  variant="bottom-sheet"
+  shape="bottom-sheet"
   overlay-breakpoint="48rem"
 >
   <span slot="header"><h2>Settings</h2></span>
@@ -2781,8 +2792,13 @@ window.
   whether it came from an allowed `close()` call, a property write, or attribute removal.
 - crossing inline → overlay while already open preserves focus that is already inside and moves
   outside focus into the panel; do not expect focus to remain on page content behind the modal.
-- `variant="bottom-sheet"` has no visible effect at all while the effective presentation is
-  `'inline'` — it only changes the overlay presentation's anchoring/height.
+- `shape="bottom-sheet"`/`shape="start"`/`shape="end"` have no visible effect at all while the
+  effective presentation is `'inline'` — they only change the overlay presentation's
+  anchoring/height/width.
+- `shape="start"`/`shape="end"` are logical, not physical: `'start'` anchors to the inline-start
+  edge (left in `dir="ltr"`, right in `dir="rtl"`) and `'end'` to the inline-end edge, so neither
+  value alone tells you which physical side a given instance renders on without also knowing its
+  resolved direction.
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if overlay chrome was still active
   across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in
@@ -2919,7 +2935,7 @@ dropdown owns those root-level behaviors.
 ### `lr-menu-item`
 
 A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
-`menuitemcheckbox`) and roving `tabindex`; `[part="base"]` is only the visual row.
+`menuitemcheckbox`/`menuitemradio`) and roving `tabindex`; `[part="base"]` is only the visual row.
 
 **Properties:**
 
@@ -2927,8 +2943,13 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'`
 - `disabled: boolean = false`
 - `variant: 'default' | 'danger' = 'default'`
-- `type: 'normal' | 'checkbox' = 'normal'`
-- `checked: boolean = false` — meaningful only for `type="checkbox"`
+- `type: 'normal' | 'checkbox' | 'radio' = 'normal'`
+- `checked: boolean = false` — meaningful only for `type="checkbox"`/`type="radio"`
+- `group?: string` — narrows a `type="radio"` item's exclusive-choice scope to only the other
+  radio items sharing this same string. Unset, the scope is every `type="radio"` item the same
+  owning `<lr-menu>` owns directly — a nested submenu's radio items belong to that submenu's own
+  `<lr-menu>` instead, so they're never in scope regardless of `group`. Meaningless for
+  `type="normal"`/`"checkbox"`
 - `loading: boolean = false`
 - `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
   `safeLinkHref`, or `safeDownloadHref` when `download` is set, which drops `mailto:`),
@@ -2971,9 +2992,18 @@ A checkbox activation first emits cancelable `lr-menu-item-change` with the prop
 menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
 activation opens its submenu and emits neither checkbox-change nor selection.
 
+A `type="radio"` item works the same way, with exclusive-choice semantics layered on top:
+activating an already-checked radio is a no-op on `checked` — no `lr-menu-item-change`, no state
+change, matching native `<input type="radio">` — but still falls through to the owning menu's
+usual selection. Activating an unchecked radio fires `lr-menu-item-change` with
+`checked: true`; once not prevented, this item becomes `checked` and every other `type="radio"`
+item the same owning `<lr-menu>` owns directly whose `group` matches is unchecked directly
+(without an `lr-menu-item-change` of its own).
+
 **Events:**
 
-- `lr-menu-item-change` — cancelable checkbox-state proposal
+- `lr-menu-item-change` — cancelable checkbox/radio-state proposal; never fired when activating an
+  already-checked radio
 - `lr-menu-item-state-change` — internal navigation repair signal with
   `detail: { disabled, hidden, inert }`; the owning menu consumes and contains it, so it does not
   escape a menu or a composite wrapper as an apparent public event
@@ -2995,9 +3025,9 @@ expanding the popup.
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
 `--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
-apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked/selected-state
-hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
-a checked row paints identically to an unchecked one.
+apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the
+checked/selected-state hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>`
+already expose; unset, a checked row paints identically to an unchecked one.
 
 Four more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
 byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`) is the enabled
@@ -3052,7 +3082,7 @@ selection closes the full nested chain.
 ### `lr-dropdown-item`
 
 The Web Awesome-compatible name for the same item implementation. It shares all menu-item
-properties, slots, parts, methods, checkbox/state events, roving focus, and canonical parent
+properties, slots, parts, methods, checkbox/radio/state events, roving focus, and canonical parent
 `lr-select` behavior. Its host also exposes native, non-bubbling, composed `focus` and `blur`
 events.
 

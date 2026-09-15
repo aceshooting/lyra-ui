@@ -23,6 +23,7 @@ import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
 import {
   autocorrectConverter,
+  literalSetConverter,
   normalizeAutocorrect,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
@@ -55,6 +56,15 @@ export function normalizeChatComposerStatus(value: unknown): ChatComposerStatus 
 export type ChatComposerWrap = LyraTextWrap;
 /** Retained name for the shared native `selectionDirection` vocabulary. */
 export type ChatComposerSelectionDirection = LyraSelectionDirection;
+
+/** Arrangement of the `start`/`end` action slots relative to the textarea. `'inline'` is today's
+ *  single flex row; `'stacked'` arranges them as a compact rail beside a multi-row textarea. */
+export type ChatComposerActionsLayout = 'inline' | 'stacked';
+
+const CHAT_COMPOSER_ACTIONS_LAYOUT = literalSetConverter<ChatComposerActionsLayout>(
+  ['inline', 'stacked'],
+  'inline'
+);
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
@@ -155,6 +165,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * disabling the textarea or the busy-state Stop action.
  *
  * @customElement lr-chat-composer
+ * @slot toolbar - Auxiliary controls (e.g. a model or provider picker) rendered inside the frame,
+ * above the chips tray and input row, sharing `[part="base"]`'s `:focus-within` affordance.
  * @slot start - Content rendered before the textarea (e.g. an attach-file trigger button).
  * @slot chips - An attachment tray rendered above the input row (e.g. files queued for this message).
  * @slot end - Overrides the built-in send/stop button entirely when it has assigned content.
@@ -171,6 +183,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @csspart base - The bordered root container. Drops its card chrome (border, background, padding,
  * radius) under `frame="plain"`, where the focus affordance becomes an underline on this same
  * part instead of the border-color shift.
+ * @csspart toolbar - The wrapper around the `toolbar` slot. Hidden entirely when empty, matching
+ * `start`/`chips`.
  * @csspart chips - The wrapper around the `chips` slot. Hidden entirely when the slot is empty.
  * @csspart row - The row holding the start slot, textarea, and end slot/button.
  * @csspart start - The wrapper around the `start` slot. Hidden entirely when empty.
@@ -186,6 +200,17 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  *   border. The `:focus-within` border stays on the brand token -- it is state paint, not chrome.
  * @cssprop [--lr-chat-composer-radius=var(--lr-radius)] - Corner radius of the card.
  *   `frame="plain"` still squares the corners.
+ * @cssprop [--lr-chat-composer-padding=var(--lr-space-s)] - Padding of the card (`[part="base"]`).
+ *   `frame="plain"` still zeroes it, same as the background/border-color/radius hooks above.
+ * @cssprop [--lr-chat-composer-gap=var(--lr-space-xs)] - Row gap between the `toolbar`, `chips` and
+ *   `row` sections stacked inside `[part="base"]`.
+ * @cssprop [--lr-chat-composer-focus-shadow=inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color)] -
+ *   The `frame="plain"` focus affordance painted on `[part="base"]:focus-within`, replacing the
+ *   card's border-color shift with an underline since there is no border left to recolor under
+ *   `plain`. Override to reshape it (a different width/color) or set to `none` to cede focus chrome
+ *   entirely to a consumer-drawn wrapper -- chosen over a third `frame` value, since every other
+ *   piece of this card's paint (background/border-color/radius above) is already a cssprop hook
+ *   rather than a `frame` variant, and `none` already reads naturally as "I'll draw my own".
  * @status stable
  * @since 4.0.0
  */
@@ -243,6 +268,34 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  recolor. */
   @property({ reflect: true }) frame: ChatComposerFrame = 'card';
 
+  private actionsLayoutValue: ChatComposerActionsLayout = 'inline';
+  /** Arrangement of the `start`/`end` action slots relative to the textarea, on the shared
+   *  literal-set pattern (`literalSetConverter`, matching `<lr-model-settings-panel>`'s `layout`).
+   *  `'inline'` (the default) keeps today's single flex row. `'stacked'` arranges `start` above
+   *  `end` as a compact rail in one column, beside a `textarea` that spans both rows -- for a
+   *  multi-row composer where the action buttons would otherwise stretch to the row's full
+   *  cross-axis height. Layout only; slot content, empty-slot hiding and the built-in button are
+   *  unchanged. Invalid direct or attribute values normalize and reflect as `'inline'`. */
+  @property({
+    reflect: true,
+    attribute: 'actions-layout',
+    converter: CHAT_COMPOSER_ACTIONS_LAYOUT,
+  })
+  get actionsLayout(): ChatComposerActionsLayout {
+    return this.actionsLayoutValue;
+  }
+  set actionsLayout(next: ChatComposerActionsLayout) {
+    const normalized = CHAT_COMPOSER_ACTIONS_LAYOUT.normalizeReflected(
+      this,
+      'actions-layout',
+      next
+    );
+    const previous = this.actionsLayoutValue;
+    if (previous === normalized) return;
+    this.actionsLayoutValue = normalized;
+    this.requestUpdate('actionsLayout', previous);
+  }
+
   @property({
     type: Boolean,
     reflect: true,
@@ -298,6 +351,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
 
+  @state() private hasToolbarSlot = false;
   @state() private hasStartSlot = false;
   @state() private hasChipsSlot = false;
   @state() private hasEndSlot = false;
@@ -429,6 +483,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // A server render sees no light-DOM children, so a hydrating composer reproduces the server's
     // slot-less rendering first and adopts the real adornment slots on the next update.
     this.seedFirstRenderState(() => {
+      this.syncToolbarSlot();
       this.syncStartSlot();
       this.hasChipsSlot = this.hasSlotted('chips');
       this.syncEndSlot();
@@ -741,6 +796,10 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.emit('lr-submit', { value: this.value });
   }
 
+  private syncToolbarSlot = (): void => {
+    this.hasToolbarSlot = this.hasSlotted('toolbar');
+  };
+
   private syncStartSlot = (): void => {
     this.hasStartSlot = this.hasSlotted('start');
   };
@@ -800,6 +859,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   override render(): TemplateResult {
     return html`
       <div part="base">
+        <div part="toolbar" ?hidden=${!this.hasToolbarSlot}>
+          <slot name="toolbar" @slotchange=${this.syncToolbarSlot}></slot>
+        </div>
         <div part="chips" ?hidden=${!this.hasChipsSlot}>
           <slot name="chips" @slotchange=${this.onChipsSlotChange}></slot>
         </div>

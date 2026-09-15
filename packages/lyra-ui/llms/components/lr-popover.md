@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -70,7 +70,9 @@ If the import fails, leave the native disclosure visible and usable.
   positioning scheme the popup is laid out with, `'absolute' | 'fixed'`. The one property
   `<lr-popover>`, `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell
   the same way; each keeps its own default, so setting nothing changes nothing. An unsupported value
-  resolves back to that default.
+  resolves back to that default. This property always reports the instance's own authored value (or
+  its mirrored default) — see the cascading `--lr-positioning-strategy` custom property below for a
+  theme-level way to change the *rendered* strategy of every instance that sets neither.
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
@@ -239,6 +241,27 @@ application, and the same declaration on one component's own ancestor scopes the
 subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from the modal tier
 `--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
 dialogs.
+
+**`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
+`positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
+placement/anchor change while open — never per animation frame). Setting nothing anywhere leaves
+every default exactly as before. Precedence: an explicit `positioning-strategy`/`hoist` on the
+instance always wins; otherwise this inherited custom property; otherwise the component's own
+mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
+theme, or a single clipping ancestor (an `overflow: hidden` card or a scroller) changes every unset
+overlay beneath it — no need to author `positioning-strategy`/`hoist` on each instance individually,
+or to remember it on every new one:
+
+```html
+<lr-card style="--lr-positioning-strategy: fixed; overflow: hidden">
+  <lr-dropdown>
+    <button slot="trigger">Actions</button>
+    <lr-dropdown-item>Rename</lr-dropdown-item>
+  </lr-dropdown>
+</lr-card>
+```
+
+`<lr-popover>`, `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all honor it.
 
 ```html
 <lr-popover

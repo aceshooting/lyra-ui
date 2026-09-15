@@ -1,7 +1,7 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './task-list.js';
 import type { LyraTaskList, TaskItem } from './task-list.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 const reorderItems: TaskItem[] = [
   {
@@ -392,13 +392,15 @@ describe('reorderable', () => {
     const row = itemRow(el, 'prepare');
     row.scrollIntoView();
     const resting = getComputedStyle(row).backgroundColor;
-    const rect = row.getBoundingClientRect();
-    const position: [number, number] = [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
     try {
-      await sendMouse({ type: 'move', position });
+      // A single `move` can lose :hover under a busy multi-page run, and the paint that follows it
+      // lands a frame later: land the pointer until :hover really matches, then poll the rendered
+      // fill rather than reading it straight through.
+      await hoverUntilMatched(row, 'the reorderable row never reported :hover');
+      await waitUntil(
+        () => getComputedStyle(row).backgroundColor !== resting,
+        'the reorderable row never painted its hover affordance',
+      );
       expect(getComputedStyle(row).backgroundColor).to.not.equal(resting);
     } finally {
       await resetMouse();

@@ -9,7 +9,7 @@ async function settleClipboard(el: LyraTerminal): Promise<void> {
   await Promise.resolve();
   await el.updateComplete;
 }
-import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
@@ -1546,21 +1546,32 @@ describe('lr-terminal', () => {
       const button = (): HTMLButtonElement =>
         el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
       expect((button()) != null, `${part} must be rendered for this fixture`).to.equal(true);
-      // sendMouse positions are window coordinates, so a target below the fold is simply
-      // unreachable — the pointer lands on nothing and the test reports "hover did nothing". The
-      // jump-to-latest pill sits at the far bottom of a 20rem viewport and hits exactly that.
-      button().scrollIntoView({ block: 'center' });
-      const rect = button().getBoundingClientRect();
-      const centre: [number, number] = [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ];
       const rest = getComputedStyle(button()).backgroundColor;
       try {
-        await sendMouse({ type: 'move', position: centre });
-        const hovered = getComputedStyle(button()).backgroundColor;
+        // sendMouse positions are window coordinates, so a target below the fold is simply
+        // unreachable — the pointer lands on nothing and the test reports "hover did nothing". The
+        // jump-to-latest pill sits at the far bottom of a 20rem viewport and hits exactly that.
+        // hoverUntilMatched() scrolls the target into view, then re-reads its rect and
+        // re-dispatches until the browser has actually applied :hover -- sendMouse's own promise
+        // only means the synthesized command completed, never that the native pointer event was
+        // processed, and this component's late layout settle can move the target under it.
+        // Both rendered colours are then polled rather than read straight after the command; the
+        // empty-string guard keeps a getComputedStyle() against a swapped-out node (which returns
+        // '' for every property) from reading as "the colour changed".
+        await hoverUntilMatched(button(), `${part} never registered :hover`);
+        let hovered = rest;
+        await waitUntil(() => {
+          const current = getComputedStyle(button()).backgroundColor;
+          hovered = current;
+          return current !== '' && current !== rest;
+        }, 'hover must move the fill off its resting colour');
         await sendMouse({ type: 'down' });
-        const pressed = getComputedStyle(button()).backgroundColor;
+        let pressed = hovered;
+        await waitUntil(() => {
+          const current = getComputedStyle(button()).backgroundColor;
+          pressed = current;
+          return current !== '' && current !== hovered;
+        }, 'pressed must be visibly stronger than hover, not identical to it');
         await sendMouse({ type: 'up' });
         expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
         expect(pressed, 'pressed must be visibly stronger than hover, not identical to it').to.not.equal(
@@ -1585,16 +1596,19 @@ describe('lr-terminal', () => {
     await aTimeout(100);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const line = (): HTMLElement => list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
-    line().scrollIntoView({ block: 'center' });
-    const rect = line().getBoundingClientRect();
-    const centre: [number, number] = [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
     const rest = getComputedStyle(line()).backgroundColor;
     try {
-      await sendMouse({ type: 'move', position: centre });
-      const hovered = getComputedStyle(line()).backgroundColor;
+      // hoverUntilMatched() scrolls the row into view, then re-reads its rect and re-dispatches
+      // until :hover really matches -- a single move can land on nothing when the row shifts
+      // between the rect capture and the command's round trip. The tint is then polled; reading
+      // it straight after sendMouse samples before the native pointer event was processed.
+      await hoverUntilMatched(line(), 'the interactive line never registered :hover');
+      let hovered = rest;
+      await waitUntil(() => {
+        const current = getComputedStyle(line()).backgroundColor;
+        hovered = current;
+        return current !== '' && current !== rest;
+      }, 'hover must move the fill off its resting colour');
       expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(rest);
     } finally {
       await resetMouse();
@@ -1610,14 +1624,14 @@ describe('lr-terminal', () => {
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const line = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"]')!;
     expect(line.getAttribute('part')).to.contain('line-highlight-danger');
-    line.scrollIntoView({ block: 'center' });
-    const rect = line.getBoundingClientRect();
     const rest = getComputedStyle(line).backgroundColor;
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+      // "hover changed nothing" cannot be polled -- a pointer event the browser has not processed
+      // yet reads exactly like a correctly inert one. So prove the pointer arrived
+      // (hoverUntilMatched scrolls the row in, re-reads its rect and re-dispatches until :hover
+      // matches), then give the browser two frames to apply any tint before reading back.
+      await hoverUntilMatched(line, 'the danger-toned line never registered :hover');
+      await settlePointer();
       expect(getComputedStyle(line).backgroundColor).to.equal(rest);
     } finally {
       await resetMouse();

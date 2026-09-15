@@ -67,6 +67,50 @@ it('lets each body hover-outline longhand be retinted independently and keeps th
   }
 });
 
+it('keeps the pre-hook body hover outline when each scoped property is unset', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog open></lr-tool-select-dialog>
+  `);
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+  function resolvedInShadow(declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  const expectedWidth = resolvedInShadow(
+    'outline-width: var(--lr-border-width-thin)',
+    'outline-width',
+  );
+  const expectedColor = resolvedInShadow(
+    'outline-color: var(--lr-color-border)',
+    'outline-color',
+  );
+  const expectedOffset = resolvedInShadow(
+    'outline-offset: calc(-1 * var(--lr-border-width-thin))',
+    'outline-offset',
+  );
+
+  try {
+    await hoverUntilMatched(body, 'the tool-select-dialog body never registered :hover');
+    await waitUntil(
+      () => getComputedStyle(body).outlineStyle === 'solid',
+      'the body hover outline never rendered',
+    );
+    const hovered = getComputedStyle(body);
+    expect(hovered.outlineWidth).to.equal(expectedWidth);
+    expect(hovered.outlineStyle).to.equal('solid');
+    expect(hovered.outlineColor).to.equal(expectedColor);
+    expect(hovered.outlineOffset).to.equal(expectedOffset);
+  } finally {
+    await resetMouse();
+  }
+});
+
 // A stand-in for a slotted component whose real focusable target lives
 // inside its own shadow root rather than the host tag's light-DOM subtree.
 // Mirrors lr-dialog's/lr-tool-result-dialog's identical test fixture,

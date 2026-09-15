@@ -13,6 +13,7 @@ import {
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import {
   activateNonmodalOverlay,
   composedContains,
@@ -341,6 +342,11 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, read by
  * the picker panel only as the middle arm of `--lr-color-picker-radius`, which still wins when set.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
+ *   {@link positioningStrategy}/`hoist`, read from computed style when the panel is
+ *   (re)positioned. Set it once on `:root`, a theme, or one clipping ancestor to change every
+ *   unset color picker beneath it instead of authoring `positioning-strategy`/`hoist` on each
+ *   instance; an explicit value on the instance always wins over it.
  * @status stable
  * @since 4.0.0
  */
@@ -408,6 +414,9 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
    * mirrored default) keeps the panel in the component's local scrolling context; `fixed` escapes
    * most clipping ancestors. An unsupported value resolves back to the default. Changes apply live
    * while open.
+   * This property reports only the instance's own authored value (or the mirrored default); the
+   * panel is actually placed with the `--lr-positioning-strategy` cascading custom property
+   * honored ahead of that default when the instance itself sets nothing -- see that `@cssprop`.
    * @default 'absolute'
    */
   @property({
@@ -421,8 +430,12 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   set positioningStrategy(next: PlaceStrategy) {
     const normalized = POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
     const old = this.positioningStrategy;
-    if (normalized === old) return;
+    // Recorded even when it matches the already-resolved value: an author who explicitly writes
+    // the mirrored default still authored a value, and `resolveEffectivePositioningStrategy()`
+    // (positioning-strategy.ts) has to be able to tell that apart from "unset" -- only "unset"
+    // falls through to a cascading `--lr-positioning-strategy` ancestor override.
     this._positioningStrategy = normalized;
+    if (normalized === old) return;
     this.requestUpdate('positioningStrategy', old);
     // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
     // value without going through its own setter.
@@ -842,7 +855,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (!anchor || !panel) return;
     const handle = place(anchor, panel, {
       placement: rtlAwarePlacement(this.placement, this),
-      strategy: this.positioningStrategy,
+      strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
     });
     this.cleanupPositioner = handle;
     void handle.ready.then((positioned) => {
@@ -1204,9 +1217,14 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     handleEvent: (event: FocusEvent): void => this.onControlBlur(event),
   };
 
+  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
+  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
+  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
+  // fix), even though the assigned child's own `slot` attribute never changed. Mirrors the
+  // light-DOM check `connectedCallback()`'s `seedEnvironmentState` above already uses.
   private onSlotChange = (event: Event): void => {
     const slot = event.target as HTMLSlotElement;
-    const assigned = slot.assignedElements({ flatten: true }).length > 0;
+    const assigned = Array.from(this.children).some((el) => el.getAttribute('slot') === slot.name);
     if (slot.name === 'label') this.hasLabel = assigned;
     if (slot.name === 'hint') this.hasHint = assigned;
     if (slot.name === 'error') this.hasError = assigned;

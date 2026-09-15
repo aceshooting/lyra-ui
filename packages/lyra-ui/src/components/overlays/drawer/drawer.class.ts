@@ -33,7 +33,13 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @event lr-close - Inherited conditionally cancelable close event; detail is the dismissal
  *   reason. Ordinary dismissal can be vetoed; an `'unmount'` notification after external removal
  *   cannot be.
- * It inherits every `<lr-dialog>` CSS part unchanged.
+ * It inherits every `<lr-dialog>` CSS part unchanged, with one deliberate layout exception:
+ * `<lr-dialog>`'s `[part="body"]` grows to fill the panel once a consumer sets
+ * `--lr-dialog-height`, because that panel is otherwise content-sized. A drawer's panel is
+ * unconditionally a definite size for every `placement`, so this component opts back out of that
+ * growth — `body` keeps its natural content size and `footer` follows immediately after it,
+ * exactly as before `--lr-dialog-height` existed, instead of always being pushed to the panel's
+ * far edge.
  * @cssprop --size - Mapped drawer size for the active axis.
  * @cssprop --backdrop-filter - Mapped backdrop-filter alias.
  * @cssprop --spacing - Web Awesome shared region spacing.

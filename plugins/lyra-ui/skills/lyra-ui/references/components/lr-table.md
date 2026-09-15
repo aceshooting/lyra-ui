@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 45 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 45 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -539,6 +539,11 @@ indicator; these tokens style the header cell itself. Use `::part(sort-icon-inac
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
+`[part="base"]`, the table's own scroll container, also reads the shared
+`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
+unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
+ancestor for one declaration to retheme every internal scroll container in the library, including
+`lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
 **Optional peer deps:** none.
 

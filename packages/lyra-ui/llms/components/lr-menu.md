@@ -111,7 +111,7 @@ dropdown owns those root-level behaviors.
 ### `lr-menu-item`
 
 A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
-`menuitemcheckbox`) and roving `tabindex`; `[part="base"]` is only the visual row.
+`menuitemcheckbox`/`menuitemradio`) and roving `tabindex`; `[part="base"]` is only the visual row.
 
 **Properties:**
 
@@ -119,8 +119,13 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'`
 - `disabled: boolean = false`
 - `variant: 'default' | 'danger' = 'default'`
-- `type: 'normal' | 'checkbox' = 'normal'`
-- `checked: boolean = false` — meaningful only for `type="checkbox"`
+- `type: 'normal' | 'checkbox' | 'radio' = 'normal'`
+- `checked: boolean = false` — meaningful only for `type="checkbox"`/`type="radio"`
+- `group?: string` — narrows a `type="radio"` item's exclusive-choice scope to only the other
+  radio items sharing this same string. Unset, the scope is every `type="radio"` item the same
+  owning `<lr-menu>` owns directly — a nested submenu's radio items belong to that submenu's own
+  `<lr-menu>` instead, so they're never in scope regardless of `group`. Meaningless for
+  `type="normal"`/`"checkbox"`
 - `loading: boolean = false`
 - `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
   `safeLinkHref`, or `safeDownloadHref` when `download` is set, which drops `mailto:`),
@@ -163,9 +168,18 @@ A checkbox activation first emits cancelable `lr-menu-item-change` with the prop
 menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
 activation opens its submenu and emits neither checkbox-change nor selection.
 
+A `type="radio"` item works the same way, with exclusive-choice semantics layered on top:
+activating an already-checked radio is a no-op on `checked` — no `lr-menu-item-change`, no state
+change, matching native `<input type="radio">` — but still falls through to the owning menu's
+usual selection. Activating an unchecked radio fires `lr-menu-item-change` with
+`checked: true`; once not prevented, this item becomes `checked` and every other `type="radio"`
+item the same owning `<lr-menu>` owns directly whose `group` matches is unchecked directly
+(without an `lr-menu-item-change` of its own).
+
 **Events:**
 
-- `lr-menu-item-change` — cancelable checkbox-state proposal
+- `lr-menu-item-change` — cancelable checkbox/radio-state proposal; never fired when activating an
+  already-checked radio
 - `lr-menu-item-state-change` — internal navigation repair signal with
   `detail: { disabled, hidden, inert }`; the owning menu consumes and contains it, so it does not
   escape a menu or a composite wrapper as an apparent public event
@@ -187,9 +201,9 @@ expanding the popup.
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
 `--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
-apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked/selected-state
-hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
-a checked row paints identically to an unchecked one.
+apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the
+checked/selected-state hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>`
+already expose; unset, a checked row paints identically to an unchecked one.
 
 Four more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
 byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`) is the enabled
@@ -244,7 +258,7 @@ selection closes the full nested chain.
 ### `lr-dropdown-item`
 
 The Web Awesome-compatible name for the same item implementation. It shares all menu-item
-properties, slots, parts, methods, checkbox/state events, roving focus, and canonical parent
+properties, slots, parts, methods, checkbox/radio/state events, roving focus, and canonical parent
 `lr-select` behavior. Its host also exposes native, non-bubbling, composed `focus` and `blur`
 events.
 

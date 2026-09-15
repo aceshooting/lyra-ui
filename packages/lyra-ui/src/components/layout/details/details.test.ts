@@ -559,15 +559,16 @@ it("keeps disabled summary paint unchanged on hover and press", async () => {
   const summary =
     el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
   const rest = getComputedStyle(summary).backgroundColor;
-  const rect = summary.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
+    // "hover changed nothing" cannot be polled -- an unprocessed pointer event reads exactly
+    // like a correctly inert one -- so prove the pointer arrived with hoverUntilMatched() (it
+    // re-reads the rect and re-dispatches until :hover really matches), then give the browser
+    // two frames to apply any paint it would have applied before reading the colour back.
+    await hoverUntilMatched(
+      summary,
+      "the disabled details summary never reported :hover"
+    );
+    await settlePointer();
     expect(getComputedStyle(summary).backgroundColor).to.equal(rest);
     await sendMouse({ type: "down" });
     // A press that must change nothing cannot be polled for; settle first so the read is real.

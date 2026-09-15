@@ -15,6 +15,7 @@ import {
   type ShikiLanguageInput,
 } from "./shiki-types.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
+import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 
 const sharedJsonLanguages = { json: jsonGrammar };
 
@@ -39,6 +40,33 @@ describe("lr-code-block-core", () => {
     const computed = getComputedStyle(badge);
     expect(computed.backgroundColor).to.equal("rgb(1, 2, 3)");
     expect(computed.color).to.equal("rgb(4, 5, 6)");
+  });
+
+  it("reads the theme-level scrollbar hook on the body scrollport, defaulting to auto", async () => {
+    const el = (await fixture(
+      html`<lr-code-block-core></lr-code-block-core>`
+    )) as LyraCodeBlockCore;
+    await el2Ready(el);
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const computed = getComputedStyle(body);
+    expect(readScrollbarWidth(body, '[part="body"]')).to.equal("auto");
+    expect(computed.scrollbarGutter).to.equal("auto");
+  });
+
+  it("lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the body scrollport", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+        <lr-code-block-core></lr-code-block-core>
+      </div>
+    `);
+    const el = wrapper.querySelector(
+      "lr-code-block-core"
+    ) as LyraCodeBlockCore;
+    await el2Ready(el);
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const computed = getComputedStyle(body);
+    expect(readScrollbarWidth(body, '[part="body"]')).to.equal("thin");
+    expect(computed.scrollbarGutter).to.equal("stable");
   });
 
   it("uses the shared copyable presence-reflection matrix", async () => {

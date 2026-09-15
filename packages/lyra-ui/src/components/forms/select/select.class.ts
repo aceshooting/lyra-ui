@@ -14,6 +14,7 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import type {
   LyraPickerDetailValue,
   LyraPickerValue,
@@ -427,6 +428,11 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  * listbox.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored listbox.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
+ *   {@link positioningStrategy}/`hoist`, read from computed style when the listbox is
+ *   (re)positioned. Set it once on `:root`, a theme, or one clipping ancestor to change every
+ *   unset select beneath it instead of authoring `positioning-strategy`/`hoist` on each instance;
+ *   an explicit value on the instance always wins over it.
  * @status stable
  * @since 4.0.0
  */
@@ -544,6 +550,9 @@ export class LyraSelect<
    * default) positions against the nearest containing block and scrolls with it; `fixed` positions
    * against the viewport and escapes most clipping ancestors. An unsupported value resolves back
    * to the default. Changes apply live while open.
+   * This property reports only the instance's own authored value (or the mirrored default); the
+   * listbox is actually placed with the `--lr-positioning-strategy` cascading custom property
+   * honored ahead of that default when the instance itself sets nothing -- see that `@cssprop`.
    * @default 'absolute'
    */
   @property({
@@ -557,8 +566,12 @@ export class LyraSelect<
   set positioningStrategy(next: PlaceStrategy) {
     const normalized = POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
     const old = this.positioningStrategy;
-    if (normalized === old) return;
+    // Recorded even when it matches the already-resolved value: an author who explicitly writes
+    // the mirrored default still authored a value, and `resolveEffectivePositioningStrategy()`
+    // (positioning-strategy.ts) has to be able to tell that apart from "unset" -- only "unset"
+    // falls through to a cascading `--lr-positioning-strategy` ancestor override.
     this._positioningStrategy = normalized;
+    if (normalized === old) return;
     this.requestUpdate('positioningStrategy', old);
     // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
     // value without going through its own setter.
@@ -1896,7 +1909,7 @@ export class LyraSelect<
     if (!anchor || !listbox) return;
     this.cleanup = place(anchor, listbox, {
       placement: rtlAwarePlacement(this.placement, this),
-      strategy: this.positioningStrategy,
+      strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
     });
     this.positioningReady = this.cleanup.ready;
   }

@@ -119,6 +119,40 @@ export const ForcedOverlayBottomSheet: Story = {
   `,
 };
 
+export const ForcedOverlaySide: Story = {
+  name: 'mode="overlay" shape="start"/"end" (side/drawer)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `start`/`end` shapes anchor the overlay panel to the matching *logical* inline edge instead of covering or spanning the full viewport, like a docked sidebar\'s slide-in-from-the-edge counterpart. Both examples below use `dir="rtl"` on their wrapper, so the `start`-shaped panel anchors to the right instead of the left -- the anchored edge, and the panel\'s rounded free edge, flip together with no `:dir()` selector involved.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; gap: 1rem;">
+      <div dir="rtl">
+        <button @click=${openPanel}>Open start</button>
+        <lr-responsive-panel mode="overlay" shape="start" label="Navigation">
+          <span slot="header" style="font-weight: 600;">Navigation</span>
+          <nav style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="#">Dashboard</a>
+            <a href="#">Reports</a>
+            <a href="#">Settings</a>
+          </nav>
+        </lr-responsive-panel>
+      </div>
+      <div dir="rtl">
+        <button @click=${openPanel}>Open end</button>
+        <lr-responsive-panel mode="overlay" shape="end" label="Details">
+          <span slot="header" style="font-weight: 600;">Details</span>
+          <p style="margin: 0;">Side-anchored detail content.</p>
+        </lr-responsive-panel>
+      </div>
+    </div>
+  `,
+};
+
 export const CancelableClose: Story = {
   name: 'Cancelable close veto',
   parameters: {

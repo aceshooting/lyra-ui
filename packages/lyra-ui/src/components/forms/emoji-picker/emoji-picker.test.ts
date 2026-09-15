@@ -5,6 +5,7 @@ import { styles } from './emoji-picker.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 
 const groups: EmojiPickerGroup[] = [
   {
@@ -566,6 +567,35 @@ it('clips cross-axis overflow instead of creating a phantom horizontal grid scro
   const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
   expect(grid.scrollWidth).to.be.greaterThan(grid.clientWidth);
   expect(getComputedStyle(grid).overflowX).to.equal('hidden');
+});
+
+it('reads the theme-level scrollbar hook on the grid, defaulting to its own stable/auto pair', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
+  const computed = getComputedStyle(grid);
+  expect(computed.scrollbarGutter).to.equal('stable');
+  expect(readScrollbarWidth(grid, '[part="grid"]')).to.equal('auto');
+});
+
+it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the grid', async () => {
+  const wrapper = document.createElement('div');
+  wrapper.style.setProperty('--lr-theme-scrollbar-width', 'thin');
+  wrapper.style.setProperty('--lr-theme-scrollbar-gutter', 'auto');
+  created.push(wrapper);
+  document.body.append(wrapper);
+
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+  (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () =>
+    Promise.resolve(null);
+  el.groups = groups;
+  wrapper.append(el);
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="grid"]')!;
+  const computed = getComputedStyle(grid);
+  expect(readScrollbarWidth(grid, '[part="grid"]')).to.equal('thin');
+  expect(computed.scrollbarGutter).to.equal('auto');
 });
 
 describe('search filtering', () => {

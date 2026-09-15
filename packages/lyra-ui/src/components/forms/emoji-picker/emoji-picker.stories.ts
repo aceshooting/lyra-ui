@@ -46,6 +46,25 @@ export const WithSuppliedGroups: Story = {
   render: () => html`<lr-emoji-picker .groups=${groups}></lr-emoji-picker>`,
 };
 
+/** The opt-in theme-level scrollbar hooks retheme the emoji grid, plus every other internal
+ *  scroll container in the library, from one declaration on an ancestor. */
+export const ThemedScrollbar: Story = {
+  name: 'Themed scrollbar (theme-level cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `--lr-theme-scrollbar-width` and `--lr-theme-scrollbar-gutter` on an ancestor retunes the emoji grid -- and, set on `:root`, every other internal scroll container in the library (`lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-time-input`, `lr-code-block`, `lr-code-editor`) at once.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: auto;">
+      <lr-emoji-picker .groups=${groups}></lr-emoji-picker>
+    </div>
+  `,
+};
+
 export const DescribedRequiredPicker: Story = {
   parameters: {
     docs: { description: { story: 'External guidance describes the emoji listbox alongside the local hint. Blur the search, then reset: required validity remains, while interaction feedback becomes pristine. Composing search keys do not pick or navigate emoji.' } },

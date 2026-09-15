@@ -12,6 +12,10 @@ import type { LyraSlider } from "./slider.js";
 import { styles } from "./slider.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
+// Registers the real shipped `ar` catalog's `forms` slice so the `ar`/`ar-EG` locale tests
+// below can render without tripping the dev-mode locale-fallback warning that strict-console
+// platform lanes treat as fatal.
+import "../../../translations/ar/forms.js";
 
 function mockTrackWidth(el: LyraSlider, width: number): void {
   const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;

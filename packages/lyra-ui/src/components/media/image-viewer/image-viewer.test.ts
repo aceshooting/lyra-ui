@@ -3,7 +3,11 @@ import "./image-viewer.js";
 import type { LyraImageViewer, LyraImageRotation } from "./image-viewer.js";
 import type { LyraHighlight } from "../../viewers/document-viewer/anchors.js";
 import type { LyraPanZoom } from "../pan-zoom/pan-zoom.class.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from "../../../../test/wtr-mouse.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
@@ -468,14 +472,29 @@ describe("region highlights", () => {
       "the highlight has real geometry to point at"
     ).to.be.greaterThan(0);
     const resting = readDangerFill("resting");
+    // A non-throwing companion to readDangerFill() for polling: a `waitUntil` predicate that
+    // throws turns into an unhandled rejection instead of a named failure, so the guarded reader
+    // above stays the one that produces the value the assertions compare.
+    const peekDangerFill = (): string => {
+      const live =
+        el.shadowRoot!.querySelectorAll<HTMLElement>('[part="highlight"]');
+      return live.length === 2 ? getComputedStyle(live[1]!).backgroundColor : "";
+    };
     try {
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      // `sendMouse` resolves when the synthesized command completes, NOT when the browser has
+      // processed the resulting native pointer event and recomputed `:hover`/`:active` -- and a
+      // late layout settle can move the box out from under an already-dispatched position. Land
+      // the pointer with hoverUntilMatched() (it re-reads the rect and re-dispatches until
+      // `:hover` really matches), then poll the rendered fill; a synchronous read straight after
+      // `sendMouse` is the race documented in docs/agents/testing.md.
+      await hoverUntilMatched(
+        boxes[1]!,
+        "the danger highlight never took the pointer"
+      );
+      await waitUntil(
+        () => peekDangerFill() !== resting,
+        "hovering the danger highlight never moved its fill off resting"
+      );
       const hovered = readDangerFill("hover");
       expect(
         hovered,
@@ -483,6 +502,10 @@ describe("region highlights", () => {
       ).to.not.equal(resting);
 
       await sendMouse({ type: "down" });
+      await waitUntil(
+        () => peekDangerFill() !== hovered,
+        "pressing the danger highlight never moved its fill past hover"
+      );
       const pressed = readDangerFill("pressed");
       expect(
         pressed,
@@ -1398,9 +1421,11 @@ describe("accessibility", () => {
   });
 
   it("keeps toolbar hover and pressed-toggle states visible without color", async function () {
-    // The wait below can run up to 15000ms under a loaded CI runner; mocha's own suite-wide
-    // 6000ms default (see web-test-runner.config.js) would otherwise cut the test off first.
-    this.timeout(20000);
+    // The wait below can run up to 15000ms under a loaded CI runner, and landing the pointer with
+    // hoverUntilMatched() below can spend up to ~4.8s of retries before that wait even starts;
+    // mocha's own suite-wide 6000ms default (see web-test-runner.config.js) would otherwise cut
+    // the test off first.
+    this.timeout(30000);
     await setForcedColors("active");
     try {
       // LOADABLE_PNG, not PNG_SRC: root-caused via WebKit instrumentation (rotate.disabled logged
@@ -1436,19 +1461,18 @@ describe("accessibility", () => {
       await el.updateComplete;
 
       expect(getComputedStyle(annotate).borderStyle).to.equal("double");
-      const box = rotate.getBoundingClientRect();
-      // sendMouse requires integer coordinates; an unrounded midpoint throws under some engines
-      // and silently misses the hit area under others when the rect's width/height is odd (same
-      // fix already applied to av-player.test.ts's equivalent hover-position call).
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(box.left + box.width / 2),
-          Math.round(box.top + box.height / 2),
-        ],
-      });
+      // hoverUntilMatched() rather than a single `sendMouse` move: it rounds the coordinates (an
+      // unrounded midpoint throws under some engines and silently misses the hit area under
+      // others when the rect's width/height is odd -- the same fix av-player.test.ts's equivalent
+      // hover-position call needed), and it re-reads the rect and re-dispatches until the button
+      // actually matches `:hover`, so a pointer that never landed fails here by name instead of
+      // silently burning the whole wait below.
+      await hoverUntilMatched(
+        rotate,
+        "the rotate button never took the pointer"
+      );
       // This rule has no CSS transition to wait out (see image-viewer.styles.ts's forced-colors
-      // block) -- the whole wait is the browser processing the mousemove and recomputing :hover.
+      // block) -- the whole wait is the browser recomputing style for the :hover it now matches.
       // 15000ms keeps real headroom for that on a loaded CI runner now that the fixture itself
       // (LOADABLE_PNG above) can no longer flip the button `disabled` out from under this wait.
       await waitUntil(
@@ -1610,15 +1634,18 @@ describe("active-state cssprop escape hatches", () => {
 
   it("gives the pressed annotate-toggle its own press feedback", async () => {
     const { toggle } = await withAnnotateActive();
-    const rect = toggle.getBoundingClientRect();
-    const centre: [number, number] = [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
     await resetMouse();
     const resting = getComputedStyle(toggle).backgroundColor;
     try {
-      await sendMouse({ type: "move", position: centre });
+      // The press has to land ON the toggle for `:active` to apply at all, and `sendMouse` only
+      // guarantees the command was sent -- a single-shot move at a rect read before the toolbar
+      // settled puts the following `down` somewhere else, and the poll below then times out on a
+      // press that never happened. hoverUntilMatched() re-reads the rect and re-dispatches until
+      // the toggle really matches `:hover` (docs/agents/testing.md).
+      await hoverUntilMatched(
+        toggle,
+        "the annotate toggle never took the pointer"
+      );
       await sendMouse({ type: "down" });
       // Losing the hover tint on a toggle that is already on is a deliberate call (see the
       // stylesheet); losing the press is not -- hover says "this is a target", a press says "your
@@ -1760,13 +1787,12 @@ describe("native control theming", () => {
 
     for (const part of ["fit-control", "rotate-button", "annotate-toggle"]) {
       const control = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
-      control.scrollIntoView({ block: "center" });
-      const rect = control.getBoundingClientRect();
       try {
-        await sendMouse({
-          type: "move",
-          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-        });
+        // hoverUntilMatched() scrolls the control into view, re-reads its rect and re-dispatches
+        // until it actually matches `:hover`; a single `sendMouse` move resolves as soon as the
+        // command is sent, so a toolbar that settles after the rect was read leaves the pointer
+        // beside the control and the poll below fails on a hover that never happened.
+        await hoverUntilMatched(control, `${part} never took the pointer`);
         await waitUntil(
           () => getComputedStyle(control).backgroundColor === "rgb(1, 2, 3)",
           `${part} never painted its hover background`,

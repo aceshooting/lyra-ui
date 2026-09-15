@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -511,6 +511,10 @@ it touches the trigger row the popup drops from.
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
 `[part='unknown-value']` badge described above under "Unknown committed values".
+`--lr-combobox-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
+`[part='option-badge']` trailing metadata badge on an async row, and the "not in catalog" badge
+`show-unknown-option` renders on the synthetic unmatched-value listbox row — the same
+per-component indirection `lr-select`'s `--lr-select-option-badge-bg` uses.
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by

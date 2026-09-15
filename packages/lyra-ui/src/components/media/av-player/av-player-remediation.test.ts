@@ -1,7 +1,36 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './av-player.js';
 import type { LyraAvCue } from './av-player.js';
-import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+  settlePointer,
+} from '../../../../test/wtr-mouse.js';
+
+/**
+ * Resolve once `target`'s box has stopped moving.
+ *
+ * The transport-controls row re-lays out when metadata arrives (the duration label goes from a
+ * placeholder to a real timestamp, which resizes the flexible timeline next to it), so a pointer
+ * dispatched at a rect read before that settle can land outside the element it was aimed at.
+ * `hoverUntilMatched()` recovers from that, but only after burning a full retry window -- waiting
+ * for a stable box first keeps the landing on its fast path.
+ */
+async function stableRect(target: Element): Promise<void> {
+  const frame = (): Promise<void> =>
+    new Promise((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+  let previous = '';
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await frame();
+    const { left, top, width, height } = target.getBoundingClientRect();
+    const current = `${left},${top},${width},${height}`;
+    if (current === previous) return;
+    previous = current;
+  }
+}
 
 it('consumes removed mime-type as absent with null readback and later audio detection recovery', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-av-player']>(html`<lr-av-player mime-type="audio/mpeg"></lr-av-player>`);
@@ -23,16 +52,19 @@ it('keeps the unavailable timeline resting paint under hover and press while ret
   const el = await fixture<HTMLElementTagNameMap['lr-av-player']>(html`<lr-av-player style="inline-size: 400px; --lr-transition-fast: 0s;"></lr-av-player>`);
   const timeline = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline"]')!;
   const read = (): string[] => { const style = getComputedStyle(timeline); return [style.backgroundColor, style.borderColor]; };
-  const settle = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   await resetMouse();
   const resting = read();
   expect(timeline.getAttribute('aria-disabled')).to.equal('true');
   try {
+    await stableRect(timeline);
     await hoverUntilMatched(timeline, 'unavailable timeline should receive hover');
-    await settle();
+    // A hover/press that must change NOTHING cannot be polled for -- "the pointer event has not
+    // been processed yet" and "it was correctly inert" read identically. Two frames turns each
+    // read into a real assertion (docs/agents/testing.md).
+    await settlePointer();
     expect(read()).to.deep.equal(resting);
     await sendMouse({ type: 'down' });
-    await settle();
+    await settlePointer();
     expect(read()).to.deep.equal(resting);
     await resetMouse();
     const media = el.shadowRoot!.querySelector<HTMLMediaElement>('[part="media"]')!;
@@ -41,8 +73,15 @@ it('keeps the unavailable timeline resting paint under hover and press while ret
     await el.updateComplete;
     expect(timeline.getAttribute('aria-disabled')).to.equal('false');
     const enabledRest = read();
+    // Metadata re-rendered the control row, so let the timeline's box settle before aiming at it.
+    await stableRect(timeline);
     await hoverUntilMatched(timeline, 'enabled timeline should receive hover');
-    await settle();
+    // This paint MUST change, so poll it instead of reading after a fixed number of frames: a
+    // pointer-driven repaint is not guaranteed to land within two frames on every engine.
+    await waitUntil(
+      () => read().join('|') !== enabledRest.join('|'),
+      'hovering the enabled timeline never repainted it',
+    );
     expect(read()).to.not.deep.equal(enabledRest);
   } finally { await resetMouse(); }
 });

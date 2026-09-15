@@ -140,7 +140,7 @@ export const styles = css`
     text-align: start;
   }
   [part='table'] th {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-markdown-table-header-bg, var(--lr-color-brand-quiet));
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='math'][data-display='block'] {

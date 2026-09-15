@@ -4,9 +4,14 @@ import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
 import { styles } from './table.styles.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+// Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
+// test below (which only overrides `resizeValuePixels`) can render without tripping the
+// dev-mode locale-fallback warning that strict-console platform lanes treat as fatal.
+import '../../../translations/ar/data.js';
 
 class TableOpaqueControlElement extends HTMLElement {
   private readonly control: HTMLButtonElement;
@@ -130,6 +135,33 @@ it('renders header labels and a row per item, keyed by rowKey', async () => {
   const headers = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')].map((h) => h.textContent!.trim());
   expect(headers).to.deep.equal(['Name', 'Score']);
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
+});
+
+it('reads the theme-level scrollbar hook on the base scrollport, defaulting to auto', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const computed = getComputedStyle(base);
+  expect(readScrollbarWidth(base, '[part="base"]')).to.equal('auto');
+  expect(computed.scrollbarGutter).to.equal('auto');
+});
+
+it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the base scrollport', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+      <lr-table></lr-table>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const computed = getComputedStyle(base);
+  expect(readScrollbarWidth(base, '[part="base"]')).to.equal('thin');
+  expect(computed.scrollbarGutter).to.equal('stable');
 });
 
 it('uses the first unique nonempty column and row keys before counts, focus, actions, and events', async () => {
@@ -818,14 +850,14 @@ it('renders inherited resize-handle hover/pressed hooks while direct host values
   el.rows = rows;
   await el.updateComplete;
   const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
-  const rect = handle.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
 
   try {
-    await sendMouse({ type: 'move', position });
+    // `sendMouse` resolves once the synthesized command completes, which is not when the engine
+    // has processed the native pointer event it produced -- and a late layout settle can move the
+    // handle out from under an already-dispatched position. `hoverUntilMatched` re-reads the rect
+    // and re-dispatches until `:hover` actually matches, so the poll below waits on the paint
+    // rather than on the pointer ever having arrived.
+    await hoverUntilMatched(handle, 'the resize handle never took the pointer');
     await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(1, 2, 3)');
     expect(getComputedStyle(handle).opacity).to.equal('0.31');
 
@@ -1418,12 +1450,10 @@ it('shows a rendered hover affordance on the public filter control', async () =>
 
   const filter = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
   const before = getComputedStyle(filter).backgroundColor;
-  const rect = filter.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    // A single `sendMouse` move resolves before the engine has necessarily processed the pointer
+    // event it synthesized, so the poll below would be waiting on a hover that never arrived.
+    await hoverUntilMatched(filter, 'the filter control never took the pointer');
     await waitUntil(() => getComputedStyle(filter).backgroundColor !== before, 'filter control hover fill never landed');
   } finally {
     await resetMouse();
@@ -1442,12 +1472,10 @@ it('shows a rendered hover affordance on the public cell editor', async () => {
   await el.updateComplete;
   const editor = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
   const before = getComputedStyle(editor).backgroundColor;
-  const rect = editor.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    // Landed with `hoverUntilMatched` for the same reason as the filter control above: the move
+    // command resolving is not proof the engine processed the pointer event it produced.
+    await hoverUntilMatched(editor, 'the cell editor never took the pointer');
     await waitUntil(() => getComputedStyle(editor).backgroundColor !== before, 'cell editor hover fill never landed');
   } finally {
     await resetMouse();
@@ -2787,14 +2815,12 @@ it("gives a sticky cell in a hovered row the row's hover background instead of t
   const plainRow = el.shadowRoot!.querySelectorAll('[part="row"]')[1] as HTMLElement;
   const stickyCell = plainRow.querySelector('[part="cell"][data-sticky]') as HTMLElement;
   const before = getComputedStyle(stickyCell).backgroundColor;
-  const rect = stickyCell.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
 
   try {
-    await sendMouse({ type: 'move', position });
+    // `hoverUntilMatched` re-reads the rect and re-dispatches until `:hover` matches the cell: a
+    // single move resolves before the engine has necessarily processed the pointer event, and a
+    // late layout settle can slide the sticky cell out from under the dispatched position.
+    await hoverUntilMatched(stickyCell, 'the sticky cell never took the pointer');
     await waitUntil(
       () => getComputedStyle(stickyCell).backgroundColor !== before,
       'hovered sticky cell never picked up the row hover background',
@@ -5346,12 +5372,14 @@ describe('--lr-table-row-selected-bg', () => {
   it('shows a pressed fill on an already-selected row', async () => {
     const el = await selectionFixture();
     const selected = el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]') as HTMLElement;
-    selected.scrollIntoView();
     const resting = getComputedStyle(selected).backgroundColor;
-    const rect = selected.getBoundingClientRect();
-    const position: [number, number] = [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
     try {
-      await sendMouse({ type: 'move', position });
+      // The press only means anything once the pointer is provably on the row: `sendMouse`
+      // resolves when the synthesized command completes, not when the engine has processed the
+      // pointer event, so a `down` sent straight after a single move can land on nothing.
+      // `hoverUntilMatched` scrolls the row into view, re-reads its rect and re-dispatches until
+      // `:hover` actually matches.
+      await hoverUntilMatched(selected, 'the selected row never took the pointer');
       await sendMouse({ type: 'down' });
       await waitUntil(() => getComputedStyle(selected).backgroundColor !== resting, 'selected background color never moved off resting');
     } finally {
@@ -5367,12 +5395,11 @@ describe('--lr-table-row-selected-bg', () => {
   it('shows a hover fill on an already-selected row, distinct from the resting selected fill', async () => {
     const el = await selectionFixture();
     const selected = el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]') as HTMLElement;
-    selected.scrollIntoView();
     const resting = getComputedStyle(selected).backgroundColor;
-    const rect = selected.getBoundingClientRect();
-    const position: [number, number] = [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
     try {
-      await sendMouse({ type: 'move', position });
+      // Landed with `hoverUntilMatched` so the poll below waits on the fill, never on a hover the
+      // engine never processed from a single already-dispatched move.
+      await hoverUntilMatched(selected, 'the selected row never took the pointer');
       await waitUntil(() => getComputedStyle(selected).backgroundColor !== resting, 'already-selected row hover fill never landed');
     } finally {
       await resetMouse();
@@ -5389,12 +5416,10 @@ describe('--lr-table-row-selected-bg', () => {
       expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
       expect(getComputedStyle(ordinary).outlineStyle).to.equal('none');
 
-      const rect = ordinary.getBoundingClientRect();
       try {
-        await sendMouse({
-          type: 'move',
-          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-        });
+        // Forced colors changes nothing about the pointer race: a single move resolves before the
+        // engine has necessarily processed the pointer event, so land the hover first.
+        await hoverUntilMatched(ordinary, 'the ordinary row never took the pointer');
         await waitUntil(() => getComputedStyle(ordinary).outlineStyle === 'dashed');
         expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
         expect(getComputedStyle(selected).outlineWidth).to.not.equal(getComputedStyle(ordinary).outlineWidth);
@@ -5730,11 +5755,9 @@ it("lets a consumer's own ::part(header-cell):hover override win over the intern
     `)) as LyraTable<Row>;
     await el.updateComplete;
     const header = el.shadowRoot!.querySelector("[part='header-cell'][data-sortable]") as HTMLElement;
-    const rect = header.getBoundingClientRect();
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    // Landed with `hoverUntilMatched`: `sendMouse` resolving is not proof the engine processed the
+    // pointer event, so a single move can leave the poll below waiting on a hover that never was.
+    await hoverUntilMatched(header, 'the sortable header cell never took the pointer');
     await waitUntil(
       () => getComputedStyle(header).backgroundColor === 'rgb(1, 2, 3)',
       'the consumer ::part(header-cell):hover override never reached the header cell'
@@ -5755,13 +5778,11 @@ it('renders the row-expand-toggle hover treatment shared by the sibling icon con
   el.expandedContent = (row) => html`<p>${row.name} details</p>`;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="row-expand-toggle"]')!;
-  toggle.scrollIntoView({ block: 'center' });
-  const rect = toggle.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    // `hoverUntilMatched` does the scroll-into-view, re-reads the rect afterwards and re-dispatches
+    // until `:hover` matches -- a single move computed from a pre-scroll rect can miss the toggle
+    // entirely, and `sendMouse` resolving never meant the engine processed the pointer event.
+    await hoverUntilMatched(toggle, 'the row-expand toggle never took the pointer');
     await waitUntil(
       () => getComputedStyle(toggle).backgroundColor === 'rgb(1, 2, 3)',
       'the rendered row-expand-toggle hover background never appeared',
@@ -8163,13 +8184,13 @@ describe('sticky + sortable header pointer feedback', () => {
     ) as HTMLElement;
   }
 
-  async function moveMouseTo(target: HTMLElement): Promise<void> {
-    target.scrollIntoView({ block: 'center', inline: 'center' });
-    const rect = target.getBoundingClientRect();
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+  /** Land the pointer on `target` and wait until the engine has actually applied `:hover` to it.
+   *  A single `sendMouse` move resolves when the synthesized command completes, which is not when
+   *  the browser has processed the resulting native pointer event -- and a pinned header can settle
+   *  out from under an already-dispatched position. `hoverUntilMatched` scrolls, re-reads the rect
+   *  and re-dispatches until `:hover` really matches. */
+  async function landPointerOn(target: HTMLElement): Promise<void> {
+    await hoverUntilMatched(target, 'the pinned sortable header never took the pointer');
   }
 
   it('tints a pinned sortable header while it is hovered', async function () {
@@ -8182,7 +8203,7 @@ describe('sticky + sortable header pointer feedback', () => {
 
     try {
       await resetMouse();
-      await moveMouseTo(header);
+      await landPointerOn(header);
       await waitUntil(
         () => getComputedStyle(header).backgroundColor === hovered,
         'the hovered sticky sortable header kept its opaque surface fill'
@@ -8205,7 +8226,7 @@ describe('sticky + sortable header pointer feedback', () => {
 
     try {
       await resetMouse();
-      await moveMouseTo(header);
+      await landPointerOn(header);
       await sendMouse({ type: 'down' });
       await waitUntil(
         () => getComputedStyle(header).backgroundColor === held,
@@ -8226,7 +8247,7 @@ describe('sticky + sortable header pointer feedback', () => {
 
     try {
       await resetMouse();
-      await moveMouseTo(header);
+      await landPointerOn(header);
       await waitUntil(
         () => getComputedStyle(header).backgroundColor !== surface,
         'the hovered sticky sortable header kept its opaque surface fill'

@@ -2080,6 +2080,26 @@
       },
       "themeInput": "--lr-theme-scroll-fade-size"
     },
+    "--lr-scrollbar-gutter": {
+      "type": "string",
+      "group": "layout",
+      "scope": "shared",
+      "description": "Canonical shared component token for scrollbar gutter.",
+      "values": {
+        "light": "var(--lr-theme-scrollbar-gutter, auto)"
+      },
+      "themeInput": "--lr-theme-scrollbar-gutter"
+    },
+    "--lr-scrollbar-width": {
+      "type": "string",
+      "group": "layout",
+      "scope": "shared",
+      "description": "Canonical shared component token for scrollbar width.",
+      "values": {
+        "light": "var(--lr-theme-scrollbar-width, auto)"
+      },
+      "themeInput": "--lr-theme-scrollbar-width"
+    },
     "--lr-shadow": {
       "type": "shadow",
       "group": "elevation",

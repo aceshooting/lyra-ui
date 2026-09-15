@@ -516,7 +516,7 @@ export const styles = css`
     flex: 0 0 auto;
     padding: 0 var(--lr-space-xs);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-combobox-option-badge-bg, var(--lr-color-brand-quiet));
     /* Full-strength text, not the quiet tone: quiet-on-quiet measured 4.25:1, under WCAG 1.4.3's
        4.5:1. The badge already reads as secondary from its size and tinted pill, so the muted text
        colour on top was double de-emphasis. */

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -129,6 +129,11 @@ hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
+The `editor` scroll frame also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
+tokens (default `auto`/`auto`, matching its previous unset behavior) — set
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library, including `lr-table`,
+`lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
 
 **Known gotchas:**
 

@@ -1266,6 +1266,20 @@
       ]
     },
     {
+      "name": "--lr-scrollbar-gutter",
+      "description": "Canonical shared component token for scrollbar gutter.",
+      "references": [
+        "--lr-theme-scrollbar-gutter"
+      ]
+    },
+    {
+      "name": "--lr-scrollbar-width",
+      "description": "Canonical shared component token for scrollbar width.",
+      "references": [
+        "--lr-theme-scrollbar-width"
+      ]
+    },
+    {
       "name": "--lr-shadow",
       "description": "Canonical shared component token for shadow.",
       "references": []
@@ -2804,6 +2818,16 @@
     {
       "name": "--lr-theme-scroll-fade-size",
       "description": "Application theme input for --lr-scroll-fade-size.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-scrollbar-gutter",
+      "description": "Application input for --lr-scrollbar-gutter; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-scrollbar-width",
+      "description": "Application input for --lr-scrollbar-width; falls back to the shared token default.",
       "references": []
     },
     {

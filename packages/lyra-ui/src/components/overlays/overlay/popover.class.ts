@@ -18,6 +18,7 @@ import type {
   PlaceSync,
   VirtualAnchor,
 } from '../../../internal/positioner.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
@@ -224,6 +225,11 @@ export interface LyraPopoverEventMap {
  *   never raises dialogs.
  * @cssprop [--show-duration=var(--lr-duration-fast)] - Opening transition duration.
  * @cssprop [--hide-duration=var(--lr-duration-fast)] - Closing transition duration.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
+ *   {@link positioningStrategy}, read from computed style when the popup is (re)positioned. Set it
+ *   once on `:root`, a theme, or one clipping ancestor to change every unset overlay beneath it
+ *   without authoring `positioning-strategy`/`hoist` on each instance; an explicit value on the
+ *   instance always wins over it.
  * @cssstate open - Present while the popover is open.
  * @status stable
  * @since 4.0.0
@@ -271,8 +277,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    * `<lr-dropdown>` and `<lr-select>` all spell the same way. `fixed` normally positions against
    * the viewport, so it escapes most clipping ancestors; `absolute` positions against the popup's
    * containing block and scrolls with it. Each component keeps its own mirrored default, so
-   * setting nothing never changes what it already rendered; an unsupported value resolves to that
-   * same default. Changes apply live while open.
+   * setting nothing on the instance and on every ancestor never changes what it already rendered;
+   * an unsupported authored value resolves to that same default. Changes apply live while open.
+   * This property reports only the instance's own authored value (or the mirrored default); the
+   * popup is actually placed with the `--lr-positioning-strategy` cascading custom property
+   * honored ahead of that default when the instance itself sets nothing -- see that `@cssprop`.
    * @default 'fixed'
    */
   @property({
@@ -287,8 +296,12 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const normalized =
       POSITIONING_STRATEGY.normalize(next) ?? this.defaultPositioningStrategy;
     const old = this.positioningStrategy;
-    if (normalized === old) return;
+    // Recorded even when it matches the already-resolved value: an author who explicitly writes
+    // the mirrored default still authored a value, and `resolveEffectivePositioningStrategy()`
+    // (positioning-strategy.ts) has to be able to tell that apart from "unset" -- only "unset"
+    // falls through to a cascading `--lr-positioning-strategy` ancestor override.
     this._positioningStrategy = normalized;
+    if (normalized === old) return;
     this.requestUpdate('positioningStrategy', old);
     this.onPositioningStrategyChanged(old, normalized);
   }
@@ -962,7 +975,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       }
       const cleanup = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
-        strategy: this.positioningStrategy,
+        strategy: resolveEffectivePositioningStrategy(
+          this,
+          this._positioningStrategy,
+          this.defaultPositioningStrategy,
+        ),
         offset: finiteNumber(this.distance, this.defaultDistance),
         skidding: finiteNumber(this.skidding, 0),
         sync: this.positioningSync,

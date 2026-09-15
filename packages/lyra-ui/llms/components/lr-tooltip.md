@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,7 +61,9 @@ later text renders normally.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
   (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
-  attributes can never disagree. Prefer `positioning-strategy` in new code.
+  attributes can never disagree. Prefer `positioning-strategy` in new code. It also honors the
+  cascading `--lr-positioning-strategy` custom property `<lr-popover>` documents, ahead of this
+  mirrored `absolute` default, when neither spelling is authored on the instance.
 - `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
   reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
@@ -118,6 +120,10 @@ because its rules live in the stylesheet module `lr-popover` also composes, but 
 a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
 panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`, draws no border,
 and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
+
+`--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
+`absolute`/`fixed` override `<lr-popover>` documents above, ahead of its own mirrored `absolute`
+default, when neither `positioning-strategy` nor `hoist` is authored on the instance.
 
 ```html
 <lr-tooltip

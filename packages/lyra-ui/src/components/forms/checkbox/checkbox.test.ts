@@ -1201,6 +1201,34 @@ it("tracks visual label presence through a forwarding slot without exposing its 
   ).to.equal("Explicit checkbox name");
 });
 
+it("keeps the hint slot marked present when a forwarding slot's assigned text mutates", async () => {
+  // `<span slot="hint">` is the direct light-DOM child that carries the hint assignment; the
+  // inner unnamed `<slot>` forwards `wrapper`'s own default-slotted content through it, the same
+  // two-shadow-boundary forwarding chain `lr-switch`'s equivalent test exercises. Mutating the
+  // deeply forwarded Text node's `characterData` must never toggle `hasHintSlot`: the assigned
+  // `<span slot="hint">` itself never changes, so a slotchange handler that re-derives presence
+  // from the light-DOM `slot` attribute (rather than from a live `assignedElements()` snapshot of
+  // the outer named slot) never has anything to get wrong here.
+  const wrapper = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const assigned = wrapper.ownerDocument.createTextNode("Hint text");
+  wrapper.append(assigned);
+  const root = wrapper.attachShadow({ mode: "open" });
+  root.innerHTML = `<lr-checkbox><span slot="hint"><slot></slot></span></lr-checkbox>`;
+  const el = root.querySelector("lr-checkbox") as LyraCheckbox;
+  await el.updateComplete;
+  const hint = el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
+  expect(hint.hasAttribute("hidden"), "the hint chrome renders for the forwarded assignment").to
+    .be.false;
+
+  assigned.data = "Updated hint text";
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(
+    hint.hasAttribute("hidden"),
+    "a text mutation deep in the forwarding chain must not hide the hint chrome"
+  ).to.be.false;
+});
+
 it("constructs its label observer in the adopted owner realm", async () => {
   const frame = document.createElement("iframe");
   document.body.append(frame);

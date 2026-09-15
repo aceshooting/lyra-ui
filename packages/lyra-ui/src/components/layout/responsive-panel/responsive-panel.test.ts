@@ -809,6 +809,68 @@ it("reflects the shape attribute", async () => {
   expect(el.getAttribute("shape")).to.equal("bottom-sheet");
 });
 
+it("reflects the start and end side/drawer shape attributes", async () => {
+  for (const shape of ["start", "end"] as const) {
+    const el = (await fixture(
+      html`<lr-responsive-panel shape=${shape}>body</lr-responsive-panel>`
+    )) as LyraResponsivePanel;
+    expect(el.getAttribute("shape")).to.equal(shape);
+    expect(el.shape).to.equal(shape);
+  }
+});
+
+it("anchors the start/end overlay shapes to the inline-start/inline-end edge and flips under RTL without a :dir() escape hatch", async () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    for (const shape of ["start", "end"] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 600px;">
+          <lr-responsive-panel mode="overlay" shape=${shape} open label="Navigation"
+            ><button>Item</button></lr-responsive-panel
+          >
+        </div>
+      `);
+      const el = wrapper.querySelector(
+        "lr-responsive-panel"
+      ) as LyraResponsivePanel;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+      const baseRect = base.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+
+      // The panel's inline-start edge is the viewport's left edge in ltr and its right edge in
+      // rtl -- so a shape="start" panel hugs the left in ltr but the right in rtl, and shape="end"
+      // is the mirror image, with no :dir() selector involved in producing that flip.
+      const hugsLeftEdge =
+        shape === "start" ? direction === "ltr" : direction === "rtl";
+      if (hugsLeftEdge) {
+        expect(Math.round(panelRect.left)).to.equal(Math.round(baseRect.left));
+      } else {
+        expect(Math.round(panelRect.right)).to.equal(Math.round(baseRect.right));
+      }
+      expect(panelRect.width).to.be.lessThan(baseRect.width);
+      expect(Math.round(panelRect.height)).to.equal(Math.round(baseRect.height));
+
+      el.open = false;
+      await el.updateComplete;
+    }
+  }
+});
+
+it("is accessible while open in the start/end overlay shapes", async () => {
+  for (const shape of ["start", "end"] as const) {
+    const el = (await fixture(
+      html`<lr-responsive-panel mode="overlay" shape=${shape} open label="Navigation"
+        ><button>Item</button></lr-responsive-panel
+      >`
+    )) as LyraResponsivePanel;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+    el.open = false;
+    await el.updateComplete;
+  }
+});
+
 it("is accessible while closed (empty/default state)", async () => {
   const el = (await fixture(
     html`<lr-responsive-panel></lr-responsive-panel>`

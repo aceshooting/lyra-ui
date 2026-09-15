@@ -4,7 +4,12 @@ import "./time-range.js";
 import type { LyraTimeRange, TimeRangePreset } from "./time-range.js";
 import { styles } from "./time-range.styles.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+  settlePointer,
+} from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 
 function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {
@@ -1245,15 +1250,16 @@ it("moves a drag handle’s painted fill on hover, and further again while it is
   const handle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  const rect = handle.getBoundingClientRect();
-  const centre: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   const fill = (): string => getComputedStyle(handle).backgroundColor;
   const rest = fill();
   try {
-    await sendMouse({ type: "move", position: centre });
+    // Land the pointer rather than merely dispatching one move at a rect read earlier:
+    // `sendMouse` resolves when the synthesized command completes, not when the browser processed
+    // the resulting native pointer event, and a track that settles late moves the handle out from
+    // under an already-dispatched position -- the poll below would then time out on a hover that
+    // never happened. hoverUntilMatched() re-reads the rect and re-dispatches until the handle
+    // really matches `:hover` (docs/agents/testing.md).
+    await hoverUntilMatched(handle, "the start handle never took the pointer");
     await waitUntil(
       () => fill() !== rest,
       "hover must move the fill off its resting colour"
@@ -1302,22 +1308,20 @@ it("themes preset and handle hover/pressed paint through independent component h
   const handle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  const center = (target: HTMLElement): [number, number] => {
-    const rect = target.getBoundingClientRect();
-    return [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-  };
   try {
-    await sendMouse({ type: "move", position: center(preset) });
+    // Each read below is pointer-driven, so it is polled after the pointer is proven to have
+    // landed: `sendMouse` resolves when the command completes, not when the browser processed the
+    // native pointer event and recomputed `:hover`/`:active` (docs/agents/testing.md).
+    await hoverUntilMatched(preset, "the preset button never took the pointer");
+    await waitUntil(() => getComputedStyle(preset).borderTopColor === "rgb(1, 2, 3)", 'preset border top color never reached the hover hook "rgb(1, 2, 3)"');
     expect(getComputedStyle(preset).borderTopColor).to.equal("rgb(1, 2, 3)");
     await sendMouse({ type: "down" });
     await waitUntil(() => getComputedStyle(preset).borderTopColor === "rgb(4, 5, 6)", 'preset border top color never reached "rgb(4, 5, 6)"');
     expect(getComputedStyle(preset).backgroundColor).to.equal("rgb(7, 8, 9)");
     await sendMouse({ type: "up" });
 
-    await sendMouse({ type: "move", position: center(handle) });
+    await hoverUntilMatched(handle, "the start handle never took the pointer");
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === "rgb(10, 11, 12)", 'handle background color never reached the hover hook "rgb(10, 11, 12)"');
     expect(getComputedStyle(handle).backgroundColor).to.equal(
       "rgb(10, 11, 12)"
     );
@@ -1348,16 +1352,15 @@ describe("preset-button hover specificity", () => {
     const preset = el.shadowRoot!.querySelector<HTMLElement>(
       '[part="preset-button"]'
     )!;
-    const rect = preset.getBoundingClientRect();
     try {
-      await resetMouse();
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      // hoverUntilMatched() re-reads the rect and re-dispatches until the button really matches
+      // `:hover`; one `sendMouse` move only proves the command was sent, so a preset row that
+      // settled after its rect was read leaves the pointer beside the button and the poll below
+      // fails on a hover that never happened.
+      await hoverUntilMatched(
+        preset,
+        "the preset button never took the pointer"
+      );
       await waitUntil(
         () => getComputedStyle(preset).borderColor === "rgb(7, 8, 9)",
         "consumer preset-button hover border did not win"
@@ -4392,17 +4395,12 @@ describe("active-preset pointer feedback", () => {
     return el;
   }
 
-  async function moveMouseTo(target: HTMLElement): Promise<void> {
-    target.scrollIntoView({ block: "center", inline: "center" });
-    const rect = target.getBoundingClientRect();
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
-  }
+  // The three tests below press a preset and read the fill that press paints, so the pointer has
+  // to be PROVEN to be on the button first: `sendMouse` resolves when the synthesized command
+  // completes, not when the browser processed the native pointer event, and a preset row whose
+  // layout settles after its rect was read moves out from under an already-dispatched position.
+  // hoverUntilMatched() re-reads the rect and re-dispatches until `:hover` really matches, which
+  // is why it replaced the single-shot move helper this block used to carry.
 
   it("deepens the ACTIVE preset while it is held", async function () {
     if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
@@ -4422,9 +4420,15 @@ describe("active-preset pointer feedback", () => {
 
     try {
       await resetMouse();
-      await moveMouseTo(active);
+      await hoverUntilMatched(
+        active,
+        "the active preset never took the pointer"
+      );
       // The active preset deliberately keeps its own fill while merely hovered -- the selected
-      // treatment is the point, and hover already reads on every other preset.
+      // treatment is the point, and hover already reads on every other preset. A paint that must
+      // NOT change cannot be polled for, so settle two frames first: otherwise "hover left the
+      // fill alone" is indistinguishable from "the hover has not been processed yet".
+      await settlePointer();
       expect(getComputedStyle(active).backgroundColor).to.equal(
         "rgb(0, 51, 102)"
       );
@@ -4454,7 +4458,10 @@ describe("active-preset pointer feedback", () => {
 
     try {
       await resetMouse();
-      await moveMouseTo(inactive);
+      await hoverUntilMatched(
+        inactive,
+        "the inactive preset never took the pointer"
+      );
       await sendMouse({ type: "down" });
       await waitUntil(
         () => getComputedStyle(inactive).backgroundColor === held,
@@ -4475,7 +4482,10 @@ describe("active-preset pointer feedback", () => {
     ) as HTMLElement;
     try {
       await resetMouse();
-      await moveMouseTo(active);
+      await hoverUntilMatched(
+        active,
+        "the active preset never took the pointer"
+      );
       await sendMouse({ type: "down" });
       await waitUntil(
         () => getComputedStyle(active).backgroundColor !== "rgb(0, 51, 102)",

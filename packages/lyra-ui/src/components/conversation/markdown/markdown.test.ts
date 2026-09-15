@@ -1746,6 +1746,42 @@ describe("inline code / code-block theming hooks", () => {
   });
 });
 
+describe("table header theming hook", () => {
+  const tableContent = "| a | b |\n| --- | --- |\n| 1 | 2 |\n";
+
+  it("falls back to the ambient --lr-color-brand-quiet for the table header background when --lr-markdown-table-header-bg is unset", async () => {
+    const el = (await fixture(
+      html`<lr-markdown
+        style="--lr-theme-color-brand-fill-quiet: rgb(1, 2, 3);"
+        content=${tableContent}
+      ></lr-markdown>`
+    )) as LyraMarkdown;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="table"] th') !== null,
+      "never rendered",
+      { timeout: 4000 }
+    );
+    const th = el.shadowRoot!.querySelector('[part="table"] th') as HTMLElement;
+    expect(getComputedStyle(th).backgroundColor).to.equal("rgb(1, 2, 3)");
+  });
+
+  it("themes --lr-markdown-table-header-bg independently of the shared brand-quiet token", async () => {
+    const el = (await fixture(
+      html`<lr-markdown
+        style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-markdown-table-header-bg: rgb(4, 5, 6);"
+        content=${tableContent}
+      ></lr-markdown>`
+    )) as LyraMarkdown;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="table"] th') !== null,
+      "never rendered",
+      { timeout: 4000 }
+    );
+    const th = el.shadowRoot!.querySelector('[part="table"] th') as HTMLElement;
+    expect(getComputedStyle(th).backgroundColor).to.equal("rgb(4, 5, 6)");
+  });
+});
+
 describe("highlightCode cache plumbing (no async loading yet)", () => {
   type Internals = {
     highlightCache: Map<string, string>;

@@ -186,7 +186,13 @@ export class LyraUsageBadge extends LyraElement {
 
   private onDetailsSlotChange = (e: Event): void => {
     const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
-    this.hasDetailsSlot = assigned.length > 0;
+    // `hasDetailsSlot` reads the light-DOM `slot` attribute directly rather than `assigned.length`:
+    // WebKit has been observed reporting `assignedElements()` transiently empty for an unrelated
+    // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
+    // fix), even though the assigned child's own `slot` attribute never changed. `detailsText`
+    // below still derives from the live `assigned` snapshot -- it needs the actual rendered
+    // elements' text, which a light-DOM attribute check cannot provide.
+    this.hasDetailsSlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'details');
     // `innerText` mirrors the rendered detail rows (omitting display:none descendants) even though
     // their wrapper is deliberately inert. Bound both breadth and output so arbitrary light-DOM
     // content cannot turn a compact badge update into unbounded accessibility work.
@@ -203,8 +209,12 @@ export class LyraUsageBadge extends LyraElement {
     if (!this.hasInteractiveTooltip) this.closeTooltipLifecycle();
   };
 
-  private onSummarySlotChange = (e: Event): void => {
-    this.hasSummarySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
+  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
+  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent fix),
+  // even though the assigned child's own `slot` attribute never changed.
+  private onSummarySlotChange = (): void => {
+    this.hasSummarySlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'summary');
     if (!this.hasInteractiveTooltip) this.closeTooltipLifecycle();
   };
 

@@ -157,7 +157,13 @@ four-longhand outline shape, matching `lr-scroller`'s viewport:
 `--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border-strong)`, set
 to `transparent` to opt out entirely), and `--lr-carousel-scroll-container-hover-outline-offset`
 (default `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal
-paint.
+paint. The `scroll-container` part also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `none`/`auto`, matching
+its previous unconditional `scrollbar-width: none`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library. Chromium and Safari ignore
+the standard `scrollbar-width` property for any element a page also styles through the legacy
+`::-webkit-scrollbar` pseudo-element, which this part's own stylesheet still does to hide its
+scrollbar there, so on those two engines the hook only visibly retunes this part in Firefox.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">

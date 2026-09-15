@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -78,7 +78,9 @@ their controls without putting arbitrary content inside the menu role.
   see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
   (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
   attributes can never disagree. Prefer `positioning-strategy` in new code. `<lr-dropdown>` also
-  inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`.
+  inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`, and honors the
+  cascading `--lr-positioning-strategy` custom property ahead of this mirrored `absolute` default
+  when neither spelling is authored on the instance.
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
@@ -125,7 +127,8 @@ default; style it only to debug the travel region.
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
 `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
-`--lr-overlay-border`, `--lr-overlay-radius` and `--lr-overlay-shadow-anchored`.
+`--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
+`--lr-positioning-strategy` override documented on `<lr-popover>` above.
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">

@@ -26,7 +26,14 @@ export const styles = css`
     scroll-behavior: smooth;
     overscroll-behavior-inline: contain;
     outline: none;
-    scrollbar-width: none;
+    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- each reads
+       --lr-theme-scrollbar-* directly, with this scroll-container's own previous literal as the
+       fallback, so nothing changes for a consumer who never sets the theme input. Note the
+       ::-webkit-scrollbar rule below still force-hides in Chromium/Safari regardless of
+       --lr-theme-scrollbar-width, since those engines ignore the standard property for any element
+       a page also styles through the legacy -webkit- pseudo-element. */
+    scrollbar-width: var(--lr-theme-scrollbar-width, none);
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
     aspect-ratio: var(--aspect-ratio, 16 / 9);
   }
 

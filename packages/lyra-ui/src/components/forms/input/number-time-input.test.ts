@@ -2,7 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import type { LyraNumberInput } from './number-input.class.js';
 import './number-input.js';
 import './native-time-input.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 type DescribedNativeInput = HTMLInputElement & {
   ariaDescribedByElements?: readonly Element[] | null;
@@ -161,7 +161,14 @@ describe('lr-number-input steppers', () => {
     const up = upOf(el);
     const resting = getComputedStyle(up).color;
     try {
+      // A hover that must paint NOTHING cannot be polled for: there is no state to wait for, and
+      // `sendMouse` resolves when the synthesized command completes, not when the browser
+      // processed the resulting native pointer event -- so a synchronous read cannot tell "the
+      // disabled stepper correctly ignored the hover" from "the hover has not landed yet".
+      // settlePointer() gives it two frames, which makes the read a real assertion
+      // (test/wtr-mouse.ts, docs/agents/testing.md).
       await sendMouse({ type: 'move', position: centerOf(up) });
+      await settlePointer();
       const hovered = getComputedStyle(up).color;
       expect(hovered, 'disabled stepper-up hover vs resting color').to.equal(resting);
     } finally {
@@ -175,8 +182,11 @@ describe('lr-number-input steppers', () => {
     const restingColor = getComputedStyle(down).color;
     const restingBackground = getComputedStyle(down).backgroundColor;
     try {
+      // Same as the hover case above: an inert press has no state to poll for, so settle two
+      // frames after the press is dispatched or the assertion passes vacuously.
       await sendMouse({ type: 'move', position: centerOf(down) });
       await sendMouse({ type: 'down' });
+      await settlePointer();
       const pressedColor = getComputedStyle(down).color;
       const pressedBackground = getComputedStyle(down).backgroundColor;
       expect(pressedColor, 'disabled stepper-down active vs resting color').to.equal(restingColor);

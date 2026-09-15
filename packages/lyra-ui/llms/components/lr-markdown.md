@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -194,7 +194,9 @@ other surface that reads the shared brand-quiet token), `--lr-markdown-code-padd
 `--lr-markdown-code-radius` (default `calc(var(--lr-radius) * 0.5)` — inline `code` span border
 radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr-space-m)` — the
 fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (default `var(--lr-radius)`
-— the fenced `code-block` surface's border radius), `--lr-code-block-tab-size` (default `2` — tab
+— the fenced `code-block` surface's border radius), `--lr-markdown-table-header-bg` (default
+`var(--lr-color-brand-quiet)` — background of every rendered `[part="table"]` header cell),
+`--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`,
 `--lr-color-text-quiet`, `--lr-radius`.
@@ -274,6 +276,7 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
 
 **Additional API surface:**
 
+- `--lr-markdown-table-header-bg` — Background of every rendered `[part="table"]` header cell. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.

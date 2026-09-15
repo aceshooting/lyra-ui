@@ -34,6 +34,11 @@ import {
   __setAnchoredOverlayRuntimeLoaderForTesting,
   type AnchoredOverlayRuntime,
 } from '../../../internal/anchored-overlay-runtime.js';
+// Registers the real shipped `ar` catalog's `forms` and `shared` slices so the `ar-EG` locale
+// tests below can render without tripping the dev-mode locale-fallback warning that
+// strict-console platform lanes treat as fatal.
+import "../../../translations/ar/forms.js";
+import "../../../translations/ar/shared.js";
 
 const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
   const item = items[index];
@@ -3678,13 +3683,24 @@ it("folds the filter query and option labels through locale-aware toLocaleLowerC
   // plain 'i' -- so `'İstanbul'.toLowerCase()` never contains the substring
   // 'istanbul' a user actually types. `toLocaleLowerCase('tr')` folds it
   // correctly to plain 'istanbul'.
-  const el = (await fixture(html`
-    <lr-combobox locale="tr">
-      <lr-option value="ist">İstanbul</lr-option>
-    </lr-combobox>
-  `)) as LyraCombobox;
-  el.open = true;
-  await el.updateComplete;
+  //
+  // No `tr` catalog ships (this library's purpose here is only the locale-aware casefold, not
+  // Turkish strings), so this intentionally exercises the dev-mode locale-fallback warning path
+  // rather than registering one -- swallow it rather than letting it reach strict-console lanes.
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraCombobox;
+  try {
+    el = (await fixture(html`
+      <lr-combobox locale="tr">
+        <lr-option value="ist">İstanbul</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.open = true;
+    await el.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
 
   await typeQuery(el, "istanbul");
   const rows = el.shadowRoot!.querySelectorAll('[part="option"]');
@@ -4859,6 +4875,40 @@ describe("--lr-combobox-option-active-bg", () => {
     const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
     row.setAttribute("data-active", "");
     expect(getComputedStyle(row).backgroundColor).to.equal("rgb(40, 50, 60)");
+  });
+});
+
+describe("--lr-combobox-option-badge-bg", () => {
+  it('retints the "not in catalog" badge via the cssprop, not just the bare shared token', async () => {
+    const el = (await fixture(html`
+      <lr-combobox show-unknown-option style="--lr-combobox-option-badge-bg: rgb(1, 2, 3);">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.value = "ghost";
+    el.open = true;
+    await el.updateComplete;
+    const badge = el.shadowRoot!.querySelector(
+      '[part="option-badge"]'
+    ) as HTMLElement;
+    expect(badge, "the synthetic unmatched-value row renders its badge while open")
+      .to.exist;
+    expect(getComputedStyle(badge).backgroundColor).to.equal("rgb(1, 2, 3)");
+  });
+
+  it("still falls back to the shared --lr-color-brand-quiet token when unset", async () => {
+    const el = (await fixture(html`
+      <lr-combobox show-unknown-option style="--lr-color-brand-quiet: rgb(40, 50, 60);">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.value = "ghost";
+    el.open = true;
+    await el.updateComplete;
+    const badge = el.shadowRoot!.querySelector(
+      '[part="option-badge"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(badge).backgroundColor).to.equal("rgb(40, 50, 60)");
   });
 });
 

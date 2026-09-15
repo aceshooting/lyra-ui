@@ -63,6 +63,29 @@ export const ThemedHoverOutline: Story = {
   `,
 };
 
+/** The opt-in theme-level scrollbar hooks retheme this scroll-container, plus every other internal
+ *  scroll container in the library, from one declaration on an ancestor. */
+export const ThemedScrollbar: Story = {
+  name: 'Themed scrollbar (theme-level cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `--lr-theme-scrollbar-width` and `--lr-theme-scrollbar-gutter` on an ancestor retunes this scroll-container -- and, set on `:root`, every other internal scroll container in the library (`lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-time-input`, `lr-emoji-picker`, `lr-code-block`, `lr-code-editor`) at once. Chromium and Safari still force-hide this particular scrollbar through the legacy `::-webkit-scrollbar` pseudo-element, so the width/gutter change is only visible in Firefox.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable;">
+      <lr-carousel navigation pagination aria-label="Themed scrollbar">
+        <div style="padding: var(--lr-space-2xl); background: var(--lr-color-brand-quiet);">First panel</div>
+        <div style="padding: var(--lr-space-2xl); background: var(--lr-color-success-quiet);">Second panel</div>
+        <div style="padding: var(--lr-space-2xl); background: var(--lr-color-warning-quiet);">Third panel</div>
+      </lr-carousel>
+    </div>
+  `,
+};
+
 /** Web Awesome's published mixed-case `currentSlide` attribute is accepted after HTML normalizes
  * it to `currentslide`; Lyra's `current-slide` spelling remains the reflected canonical form. */
 export const UpstreamCurrentSlideSpelling: Story = {

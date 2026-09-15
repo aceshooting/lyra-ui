@@ -153,7 +153,10 @@ undeclared on the host so ancestor themes work. The upstream-compatible `--colum
 (default `calc(var(--lr-size-1em) * 2.25)`) and `--column-width`
 (default `calc(var(--lr-size-1em) * 3)`) retain their component-font-relative sizing through the
 Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
-duration-token fallbacks.
+duration-token fallbacks. Each `column` also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `thin`/`auto`, matching
+its previous unconditional `scrollbar-width: thin`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while
 this control is focused or open — one name for every field-shaped control in the library, so a halo

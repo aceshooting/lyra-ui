@@ -173,6 +173,31 @@ export const ThemedHoverOutline: Story = {
   `,
 };
 
+/** The opt-in theme-level scrollbar hooks retheme this viewport, plus every other internal scroll
+ *  container in the library, from one declaration on an ancestor. */
+export const ThemedScrollbar: Story = {
+  name: 'Themed scrollbar (theme-level cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `--lr-theme-scrollbar-width` and `--lr-theme-scrollbar-gutter` on an ancestor retunes this viewport -- and, set on `:root`, every other internal scroll container in the library (`lr-table`, `lr-scroller`, `lr-carousel`, `lr-time-input`, `lr-emoji-picker`, `lr-code-block`, `lr-code-editor`) at once.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="max-inline-size: 32rem; --lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable;">
+      <lr-virtual-list
+        aria-label="Themed scrollbar"
+        style="--lr-virtual-list-height: 12rem;"
+        .items=${messages.slice(0, 24)}
+        .renderItem=${renderMessage}
+        .keyFunction=${keyFunction}
+      ></lr-virtual-list>
+    </div>
+  `,
+};
+
 /**
  * At a 320px allocation, ordinary long row content wraps and the default auto-height measurement
  * follows the resulting height in both text directions. Consumer content that intentionally sets

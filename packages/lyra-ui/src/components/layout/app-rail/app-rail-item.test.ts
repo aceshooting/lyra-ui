@@ -81,17 +81,22 @@ it('keeps disabled rail-item paint unchanged on hover and press', async () => {
   const el = (await fixture(html`
     <lr-app-rail-item
       disabled
-      style="--lr-app-rail-item-hover-bg:rgb(1,2,3);--lr-app-rail-item-active-bg:rgb(4,5,6)"
+      style="--lr-app-rail-item-hover-bg:rgb(1,2,3);--lr-app-rail-item-active-bg:rgb(4,5,6);--lr-transition-fast:0s"
     >Settings</lr-app-rail-item>
   `)) as LyraAppRailItem;
   const target = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   const rest = getComputedStyle(target).backgroundColor;
-  const rect = target.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    // One move to a rect read beforehand proves nothing: sendMouse resolves when the synthesized
+    // command completes, not when the browser processed the pointer event, and a late layout settle
+    // can move the target out from under the dispatched position -- so "nothing changed" would pass
+    // with the pointer never on the item. Land :hover for real, then settle, so the read separates
+    // an inert disabled control from a missed one. --lr-transition-fast is zeroed on the fixture:
+    // the base transitions its background, so an erroneous tint would still read as the resting
+    // colour one frame in.
+    await hoverUntilMatched(target, 'the disabled rail item never reported :hover');
+    // A hover that must change nothing cannot be polled for; settle first so the read is real.
+    await settlePointer();
     expect(getComputedStyle(target).backgroundColor).to.equal(rest);
     await sendMouse({ type: 'down' });
     // A press that must change nothing cannot be polled for; settle first so the read is real.
@@ -679,47 +684,33 @@ describe("current-state cssprops", () => {
 
 // `active` was ADDED as public API and documented ("`lr-app-rail-item`: add an `active` property
 // that reflects `aria-current="page"` onto the item"), then renamed to `current` with no CHANGELOG
-// entry, no alias and no deprecation record. A shipped consumer's `.active=${...}` binding did not
-// error -- Lit property bindings on a custom element are untyped, so it silently became a dead
-// expando. The measured consequence downstream was an app rail with no active-nav indicator and a
-// permanent `aria-current="false"`, which is an accessibility regression that no test, no type
-// check and no build step could see. `active` is therefore restored as a deprecated alias read
-// alongside the canonical property, per the house rule that a rename adds a second name rather
-// than swapping one out from under shipped consumers.
-describe('active (deprecated alias for current)', () => {
-  it('marks the item current when only the deprecated alias is set', async () => {
+// entry, no alias and no deprecation record. It was restored in 11.2.0 as a deprecated alias read
+// alongside `current`, with `removalNotBefore: '13.0.0'`. That version is long past, so 16.0.0
+// removes it outright -- `active` is now a plain, unobserved expando: Lit no longer manages it as
+// a reactive property, and setting it (as an attribute or after mount) has no effect on the
+// rendered current state.
+describe('active (removed 16.0.0; no longer an alias for current)', () => {
+  it('is not registered as a Lit reactive property', async () => {
+    const el = (await fixture(html`<lr-app-rail-item>Reports</lr-app-rail-item>`)) as LyraAppRailItem;
+    const ctor = el.constructor as unknown as { elementProperties: Map<string, unknown> };
+    expect(ctor.elementProperties.has('active')).to.be.false;
+  });
+
+  it('does not mark the item current when set as the active attribute', async () => {
     const el = (await fixture(
       html`<lr-app-rail-item active>Reports</lr-app-rail-item>`
     )) as LyraAppRailItem;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part~="base"]')!;
-    expect(base.getAttribute('aria-current')).to.equal('page');
+    expect(base.getAttribute('aria-current')).to.equal('false');
   });
 
-  it('still marks the item current when only the canonical property is set', async () => {
-    const el = (await fixture(
-      html`<lr-app-rail-item current>Reports</lr-app-rail-item>`
-    )) as LyraAppRailItem;
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-current')).to.equal(
-      'page'
-    );
-  });
-
-  it('renders aria-current="false" when neither is set', async () => {
+  it('does not mark the item current when set as a property after mount', async () => {
     const el = (await fixture(html`<lr-app-rail-item>Reports</lr-app-rail-item>`)) as LyraAppRailItem;
+    (el as unknown as { active: boolean }).active = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-current')).to.equal(
       'false'
-    );
-  });
-
-  it('reacts to the deprecated alias being set as a property after mount', async () => {
-    const el = (await fixture(html`<lr-app-rail-item>Reports</lr-app-rail-item>`)) as LyraAppRailItem;
-    el.active = true;
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-current')).to.equal(
-      'page'
     );
   });
 });
@@ -766,11 +757,14 @@ describe('current-indicator part', () => {
     ).to.be.true;
   });
 
-  it('renders for the deprecated `active` alias too', async () => {
+  it('does not render for the removed `active` attribute', async () => {
     const el = (await fixture(
       html`<lr-app-rail-item href="/home" active>Home</lr-app-rail-item>`
     )) as LyraAppRailItem;
-    expect(el.shadowRoot!.querySelector('[part="current-indicator"]')).to.exist;
+    expect(
+      el.shadowRoot!.querySelector('[part="current-indicator"]') === null,
+      'current-indicator should not render for the removed active attribute'
+    ).to.be.true;
   });
 
   it('renders in both the link and button paths', async () => {

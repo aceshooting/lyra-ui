@@ -1,6 +1,6 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './file-input.js';
-import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 for (const property of ['label', 'hint'] as const) {
   it(`consumes removed ${property} without changing null readback and recovers text and association`, async () => {
@@ -38,7 +38,9 @@ it('retains native fieldset-disabled remove paint while preserving enabled point
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
   const read = (): string[] => { const style = getComputedStyle(button); return [style.backgroundColor, style.color]; };
-  const settle = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  // Two frames is what turns "the press was correctly inert" into a real assertion; the shared
+  // helper owns that wait so every must-not-paint read in the repo uses the same settle.
+  const settle = settlePointer;
   await resetMouse();
   const resting = read();
   expect(button.disabled).to.equal(true);
@@ -55,7 +57,12 @@ it('retains native fieldset-disabled remove paint while preserving enabled point
     expect(button.disabled).to.equal(false);
     const enabledRest = read();
     await hoverUntilMatched(button, 'enabled remove should receive hover');
-    await settle();
+    // :hover matching proves only that the pointer arrived; the paint it drives can land a frame
+    // or more later per engine, so poll the rendered result instead of reading it straight through.
+    await waitUntil(
+      () => read().join('|') !== enabledRest.join('|'),
+      'enabled remove never painted its hover feedback',
+    );
     expect(read()).to.not.deep.equal(enabledRest);
   } finally { await resetMouse(); }
 });

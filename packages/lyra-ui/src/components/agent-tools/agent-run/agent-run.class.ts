@@ -344,12 +344,17 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
   }
 
-  private onHeaderSlotChange = (e: Event): void => {
-    this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  // `hasSlotted()` reads the light-DOM `slot` attribute directly rather than the live
+  // `assignedElements()` snapshot: WebKit has been observed reporting the latter transiently
+  // empty for an unrelated forwarding-slot chain nested inside the assigned element (see
+  // `<lr-switch>`'s equivalent fix), even though the assigned child's own `slot` attribute never
+  // changed.
+  private onHeaderSlotChange = (): void => {
+    this.hasHeaderSlot = this.hasSlotted('header');
   };
 
-  private onSummarySlotChange = (e: Event): void => {
-    this.hasSummarySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onSummarySlotChange = (): void => {
+    this.hasSummarySlot = this.hasSlotted('summary');
   };
 
   protected override updated(changed: PropertyValues): void {

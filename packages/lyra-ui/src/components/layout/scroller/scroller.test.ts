@@ -6,6 +6,7 @@ import {
   resetMouse,
   sendMouse,
 } from "../../../../test/wtr-mouse.js";
+import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 
 /** `lr-scroll` and the edge recompute are coalesced through one `requestAnimationFrame` tick, so a
  *  synthetic `scroll` dispatch settles a frame later rather than synchronously. */
@@ -116,7 +117,29 @@ describe("<lr-scroller>", () => {
       html`<lr-scroller label="Items" without-scrollbar><span>Content</span></lr-scroller>`
     );
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
-    expect(getComputedStyle(viewport).scrollbarWidth).to.equal("none");
+    expect(
+      readScrollbarWidth(viewport, ':host([without-scrollbar]) [part="viewport"]')
+    ).to.equal("none");
+  });
+
+  it("reads the theme-level --lr-theme-scrollbar-width hook on the viewport, defaulting to auto", async () => {
+    const el = await fixture<LyraScroller>(
+      html`<lr-scroller label="Items"><span>Content</span></lr-scroller>`
+    );
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    expect(readScrollbarWidth(viewport, '[part="viewport"]')).to.equal("auto");
+  });
+
+  it("lets a --lr-theme-scrollbar-width ancestor override retune the viewport", async () => {
+    const wrapper = await fixture(html`
+      <div style="--lr-theme-scrollbar-width: thin">
+        <lr-scroller label="Items"><span>Content</span></lr-scroller>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-scroller") as LyraScroller;
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    expect(readScrollbarWidth(viewport, '[part="viewport"]')).to.equal("thin");
   });
 
   it("keeps controls and edge cues inert until the first trustworthy measurement", async () => {

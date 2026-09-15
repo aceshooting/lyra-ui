@@ -1247,11 +1247,15 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (this.overlayActive) this.setOpen(false);
   };
 
-  private onHeaderSlotChange = (e: Event): void => {
-    this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  // Each reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
+  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
+  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
+  // fix), even though the assigned child's own `slot` attribute never changed.
+  private onHeaderSlotChange = (): void => {
+    this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
   };
-  private onFooterSlotChange = (e: Event): void => {
-    this.hasFooterSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onFooterSlotChange = (): void => {
+    this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
   };
   private onNavSlotChange = (): void => {
     this.syncSlottedItems();

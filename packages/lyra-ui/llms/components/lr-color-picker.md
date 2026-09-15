@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -113,7 +113,10 @@ and:
   resolves back to the default, and a change applies live while the panel is open.
   `hoist: boolean = false` is its retained exact alias (`hoist` ⇔ `positioning-strategy="fixed"`);
   writing either spelling updates the other, so the two attributes can never disagree. Prefer
-  `positioning-strategy` in new code
+  `positioning-strategy` in new code. This property always reports the instance's own authored
+  value (or the mirrored default); when neither spelling is authored, the panel is actually placed
+  with the cascading `--lr-positioning-strategy` custom property honored ahead of that default —
+  see **Themeable custom properties** below
 - `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
   (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
   is present before client-side slot observation
@@ -255,6 +258,13 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
 `--lr-color-picker-radius`, which still wins when set.
+
+`--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
+`<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
+panel is (re)positioned. An explicit `positioning-strategy`/`hoist` on the instance always wins
+over it; otherwise it wins over this control's own mirrored `absolute` default. One declaration on
+`:root`, a theme, or a single clipping ancestor changes every unset color picker beneath it instead
+of authoring `positioning-strategy`/`hoist` on each instance.
 
 **Additional API surface:**
 

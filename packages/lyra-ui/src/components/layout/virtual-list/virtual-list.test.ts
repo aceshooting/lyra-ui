@@ -17,7 +17,9 @@ import {
   hoverUntilMatched,
   resetMouse,
   sendMouse,
+  settlePointer,
 } from "../../../../test/wtr-mouse.js";
+import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 
 /** Waits two animation frames -- enough for the component's rAF-coalesced
  *  scroll handler *and* a queued ResizeObserver callback to have run. */
@@ -117,6 +119,43 @@ it("is accessible with an empty items array", async () => {
   )) as LyraVirtualList;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it("reads the theme-level scrollbar hook on the base viewport, defaulting to auto", async () => {
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${[1, 2, 3]}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>`
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const computed = getComputedStyle(base);
+  expect(readScrollbarWidth(base, '[part="base"]')).to.equal("auto");
+  expect(computed.scrollbarGutter).to.equal("auto");
+});
+
+it("lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the base viewport", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+      <lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${[1, 2, 3]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-virtual-list") as LyraVirtualList;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const computed = getComputedStyle(base);
+  expect(readScrollbarWidth(base, '[part="base"]')).to.equal("thin");
+  expect(computed.scrollbarGutter).to.equal("stable");
 });
 
 it("is accessible with a populated, windowed item list", async () => {
@@ -1788,14 +1827,11 @@ describe("hover-outline cssprops", () => {
     };
   }
 
-  function pointerPosition(target: HTMLElement): [number, number] {
-    target.scrollIntoView();
-    const rect = target.getBoundingClientRect();
-    return [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-  }
+  // Both tests below land the pointer with hoverUntilMatched() instead of computing a position and
+  // dispatching one move: `sendMouse` resolves when the synthesized command completes, not when
+  // the browser processed the resulting native pointer event, and a windowed list whose rows settle
+  // late moves the viewport out from under an already-dispatched position. hoverUntilMatched()
+  // re-reads the rect and re-dispatches until `:hover` really matches (docs/agents/testing.md).
 
   it("keeps the pre-hook hover outline when each scoped property is unset", async () => {
     const { el, base } = await themed();
@@ -1816,7 +1852,14 @@ describe("hover-outline cssprops", () => {
     );
 
     try {
-      await sendMouse({ type: "move", position: pointerPosition(base) });
+      await hoverUntilMatched(
+        base,
+        "the list viewport never took the pointer"
+      );
+      await waitUntil(
+        () => getComputedStyle(base).outlineStyle === "solid",
+        "the hovered list viewport never painted its outline"
+      );
       const hovered = getComputedStyle(base);
       expect(hovered.outlineWidth).to.equal(expectedWidth);
       expect(hovered.outlineStyle).to.equal("solid");
@@ -1836,7 +1879,14 @@ describe("hover-outline cssprops", () => {
     );
 
     try {
-      await sendMouse({ type: "move", position: pointerPosition(base) });
+      await hoverUntilMatched(
+        base,
+        "the list viewport never took the pointer"
+      );
+      await waitUntil(
+        () => getComputedStyle(base).outlineWidth === "3px",
+        "the hovered list viewport never took the scoped outline width"
+      );
       const hovered = getComputedStyle(base);
       expect(hovered.outlineWidth).to.equal("3px");
       expect(hovered.outlineStyle).to.equal("dashed");
@@ -1844,6 +1894,10 @@ describe("hover-outline cssprops", () => {
       expect(hovered.outlineOffset).to.equal("-2px");
 
       await sendMouse({ type: "down" });
+      // The press must leave that preview UNCHANGED, and an unchanged paint has nothing to poll
+      // for -- settle two frames so the read cannot pass simply because the press has not been
+      // processed yet (test/wtr-mouse.ts).
+      await settlePointer();
       const pressed = getComputedStyle(base);
       expect(pressed.outlineWidth).to.equal("3px");
       expect(pressed.outlineStyle).to.equal("dashed");
@@ -3271,6 +3325,10 @@ describe("sticky group overlay", () => {
           Math.round(rect.top + rect.height / 2),
         ],
       });
+      // `sendMouse` resolves when the synthesized click command completes, not when the browser
+      // delivered the native events it produces -- so a click that DID activate the inert copy
+      // would read as zero here too. Settle two frames first (test/wtr-mouse.ts).
+      await settlePointer();
       expect(
         activations,
         "inert suppresses activation without mutating the button"

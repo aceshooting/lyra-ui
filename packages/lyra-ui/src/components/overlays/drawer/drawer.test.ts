@@ -284,6 +284,42 @@ it("keeps a long header-actions projection and the close target inside a 319px d
   }
 });
 
+it("does not stretch a short body to fill the panel, unlike lr-dialog's own opt-in --lr-dialog-height fill chain", async () => {
+  // The drawer's own [part~="panel"] rule always gives placement="bottom" a definite block-size
+  // (a min() driven by --lr-drawer-height), unlike lr-dialog's panel, which is only definite once a
+  // consumer opts in with --lr-dialog-height. lr-dialog's inherited [part="body"] { flex: 1 1 auto }
+  // is therefore never a no-op here: it would always stretch the body across the whole panel and
+  // push the footer down to the panel edge, contradicting the drawer's own natural-size layout.
+  const el = (await fixture(html`
+    <lr-drawer
+      open
+      placement="bottom"
+      heading="Filters"
+      style="--lr-drawer-height: 300px; --lr-duration-base: 0ms"
+    >
+      <p>Short body</p>
+      <div slot="footer"><button type="button">Close</button></div>
+    </lr-drawer>
+  `)) as LyraDrawer;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+  const panelRect = panel.getBoundingClientRect();
+  expect(
+    panelRect.height,
+    "the panel itself resolves --lr-drawer-height, unaffected by the body fix below"
+  ).to.be.closeTo(300, 1);
+  expect(
+    body.getBoundingClientRect().height,
+    "the body stays sized to its short content instead of growing to fill the 300px panel"
+  ).to.be.lessThan(100);
+  expect(
+    footer.getBoundingClientRect().bottom,
+    "the footer follows right after the short body instead of being pushed to the panel's bottom edge"
+  ).to.be.lessThan(panelRect.bottom - 50);
+});
+
 describe("inherited show/hide lifecycle", () => {
   it("runs the same four-event lifecycle as lr-dialog", async () => {
     const el = (await fixture(

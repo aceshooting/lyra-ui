@@ -890,6 +890,11 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @cssprop [--lr-table-sticky-offset=0] - Distance a `sticky` column pins from the inline edge.
  *   Measured and set inline per column by the component so multiple sticky columns stack instead
  *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.
+ * @cssprop [--lr-scrollbar-width=auto] - Theme-level scrollbar width read by the `base` scroll
+ *   container; unset, renders identically to before. Set `--lr-theme-scrollbar-width` on `:root` or
+ *   any ancestor to retune every internal scroll container in the library at once.
+ * @cssprop [--lr-scrollbar-gutter=auto] - Theme-level scrollbar gutter read by the `base` scroll
+ *   container; see `--lr-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

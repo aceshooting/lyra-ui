@@ -165,6 +165,12 @@ export interface LyraCodeBlockCoreEventMap {
  *   stylesheet).
  * @cssprop [--lr-code-block-language-color=var(--lr-color-brand)] - Text color of the `language`
  *   badge.
+ * @cssprop [--lr-scrollbar-width=auto] - Theme-level scrollbar width read by `body`; unset, renders
+ *   identically to before. Set `--lr-theme-scrollbar-width` on `:root` or any ancestor to retune
+ *   every internal scroll container in the library at once. Shared with `lr-code-block` (this
+ *   component reuses its stylesheet).
+ * @cssprop [--lr-scrollbar-gutter=auto] - Theme-level scrollbar gutter read by `body`; see
+ *   `--lr-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

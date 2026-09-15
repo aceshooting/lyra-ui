@@ -5,7 +5,12 @@ import type { LyraMenuItem } from './menu-item.js';
 import './menu.js';
 import type { MenuFocusTarget } from './menu.js';
 import type { LyraMenu } from './menu.js';
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+  settlePointer,
+} from '../../../../test/wtr-mouse.js';
 
 // role="menuitem" requires a role="menu"/"menubar"/"group" ancestor to
 // satisfy axe's aria-required-parent rule -- <lr-menu> normally supplies
@@ -178,8 +183,12 @@ describe('danger-state cssprops', () => {
       probe.remove();
       return value;
     };
-    const centerOf = (target: HTMLElement): [number, number] => {
-      const rect = target.getBoundingClientRect();
+    // `sendMouse` resolves when the synthesized command completes, not when the engine has
+    // processed the resulting native pointer event -- and a late layout settle can move a row out
+    // from under an already-dispatched position. Every hover below therefore lands through
+    // hoverUntilMatched(), which re-reads the rect and re-dispatches until `:hover` actually
+    // matches, before the painted result is polled (docs/agents/testing.md).
+    const centrePoint = (rect: DOMRect): [number, number] => {
       expect(
         rect.width,
         'each danger row needs rendered geometry for pointer-state coverage'
@@ -189,7 +198,6 @@ describe('danger-state cssprops', () => {
         Math.round(rect.top + rect.height / 2),
       ];
     };
-    const destructiveCentre = centerOf(destructiveBase);
 
     expect(getComputedStyle(destructiveBase).color).to.equal(
       resolveInShadow('color: var(--lr-color-danger)', 'color')
@@ -207,7 +215,11 @@ describe('danger-state cssprops', () => {
         'background: color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
         'background-color'
       );
-      await sendMouse({ type: 'move', position: destructiveCentre });
+      await hoverUntilMatched(
+        destructiveBase,
+        'the destructive row never reported :hover',
+        centrePoint
+      );
       await waitUntil(
         () =>
           getComputedStyle(destructiveBase).backgroundColor === defaultHover,
@@ -240,7 +252,11 @@ describe('danger-state cssprops', () => {
       expect(getComputedStyle(variantBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(dropdownBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(ordinaryBase).color).to.not.equal('rgb(1, 2, 3)');
-      await sendMouse({ type: 'move', position: destructiveCentre });
+      await hoverUntilMatched(
+        destructiveBase,
+        'the themed destructive row never reported :hover',
+        centrePoint
+      );
       await waitUntil(
         () =>
           getComputedStyle(destructiveBase).backgroundColor === 'rgb(4, 5, 6)',
@@ -261,7 +277,11 @@ describe('danger-state cssprops', () => {
       );
       await sendMouse({ type: 'up' });
 
-      await sendMouse({ type: 'move', position: centerOf(dropdownBase) });
+      await hoverUntilMatched(
+        dropdownBase,
+        'the dropdown danger row never reported :hover',
+        centrePoint
+      );
       await waitUntil(
         () => getComputedStyle(dropdownBase).backgroundColor === 'rgb(4, 5, 6)',
         'dropdown danger hover paint did not settle'
@@ -280,7 +300,11 @@ describe('danger-state cssprops', () => {
       await sendMouse({ type: 'up' });
 
       const ordinaryResting = getComputedStyle(ordinaryBase).backgroundColor;
-      await sendMouse({ type: 'move', position: centerOf(ordinaryBase) });
+      await hoverUntilMatched(
+        ordinaryBase,
+        'the ordinary row never reported :hover',
+        centrePoint
+      );
       await waitUntil(
         () =>
           getComputedStyle(ordinaryBase).backgroundColor !== ordinaryResting,
@@ -312,14 +336,16 @@ describe('danger-state cssprops', () => {
         ...wrapper.querySelectorAll('lr-menu-item'),
       ] as LyraMenuItem[]) {
         const row = base(item);
-        const rect = row.getBoundingClientRect();
-        await sendMouse({
-          type: 'move',
-          position: [
-            Math.round(rect.left + rect.width / 2),
-            Math.round(rect.top + rect.height / 2),
-          ],
-        });
+        // A hover that must change nothing cannot be polled for, and `sendMouse` resolving is not
+        // the engine having processed the pointer event -- so a straight read cannot tell "the row
+        // is correctly inert" from "the hover never arrived". hoverUntilMatched() proves `:hover`
+        // actually matched the row (the suppression rules keep it hit-testable), and
+        // settlePointer() then gives style recalc two frames before the read.
+        await hoverUntilMatched(
+          row,
+          `the ${item.disabled ? 'disabled' : 'loading'} danger row never reported :hover`
+        );
+        await settlePointer();
         expect(getComputedStyle(row).backgroundColor).to.equal(
           'rgba(0, 0, 0, 0)'
         );
@@ -340,8 +366,9 @@ describe('danger-state cssprops', () => {
 describe('active-state cssprop', () => {
   const base = (el: LyraMenuItem): HTMLElement =>
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const centerOf = (target: HTMLElement): [number, number] => {
-    const rect = target.getBoundingClientRect();
+  // Point callback for hoverUntilMatched(): it re-reads the rect on every attempt, so the geometry
+  // guard runs against the rect the pointer is actually aimed at rather than a stale one.
+  const centrePoint = (rect: DOMRect): [number, number] => {
     expect(
       rect.width,
       'row needs rendered geometry for pointer-state coverage'
@@ -371,7 +398,13 @@ describe('active-state cssprop', () => {
       'background-color'
     );
     try {
-      await sendMouse({ type: 'move', position: centerOf(row) });
+      // Land the hover before pressing: `sendMouse` resolving is not the engine having processed
+      // the move, so a press dispatched straight after one can miss a row that settled elsewhere.
+      await hoverUntilMatched(
+        row,
+        'the row never reported :hover before the press',
+        centrePoint
+      );
       await sendMouse({ type: 'down' });
       await waitUntil(
         () => getComputedStyle(row).backgroundColor === expectedPressed,
@@ -396,7 +429,11 @@ describe('active-state cssprop', () => {
     const el = wrapper.querySelector('lr-menu-item') as LyraMenuItem;
     const row = base(el);
     try {
-      await sendMouse({ type: 'move', position: centerOf(row) });
+      await hoverUntilMatched(
+        row,
+        'the row never reported :hover',
+        centrePoint
+      );
       await waitUntil(
         () => getComputedStyle(row).backgroundColor === 'rgb(1, 2, 3)',
         'hover paint did not settle'
@@ -529,13 +566,10 @@ describe('checked-state cssprops', () => {
     const rect = row.getBoundingClientRect();
     expect(rect.width, 'the checked row needs rendered geometry').to.be.greaterThan(0);
     try {
-      await sendMouse({
-        type: 'move',
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      // Re-reads the rect and re-dispatches until `:hover` matches: the position computed above is
+      // stale the moment anything settles, and `sendMouse` resolving is not the engine having
+      // processed the move (docs/agents/testing.md).
+      await hoverUntilMatched(row, 'the checked row never reported :hover');
       await waitUntil(
         () => getComputedStyle(row).backgroundColor === expectedHover,
         'checked row hover paint did not settle'
@@ -679,15 +713,33 @@ it('keeps every display slot decorative while the host retains the sole menuitem
   let selections = 0;
   label.addEventListener('click', () => (slottedClicks += 1));
   wrapper.addEventListener('lr-select', () => (selections += 1));
-  const rect = label.getBoundingClientRect();
+  const centreOfLabel = (): [number, number] => {
+    const rect = label.getBoundingClientRect();
+    expect(
+      rect.width,
+      'the slotted label needs rendered geometry for the pointer to land on'
+    ).to.be.greaterThan(0);
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  };
   try {
-    await sendMouse({
-      type: 'click',
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
+    // `sendMouse` resolves when the synthesized command completes, not when the engine has
+    // processed the resulting native pointer event, and the label's rect goes stale the moment the
+    // row settles. Land the pointer over the label first -- `:hover` matches the menuitem host,
+    // because the display slots sit in an inert wrapper that is not itself a hit-test target --
+    // then poll the selection instead of reading the counters straight after the click.
+    await hoverUntilMatched(
+      item,
+      'the menu item never took the pointer over its slotted label',
+      centreOfLabel
+    );
+    await sendMouse({ type: 'click', position: centreOfLabel() });
+    await waitUntil(
+      () => selections === 1,
+      'clicking the slotted label never selected the menu item'
+    );
   } finally {
     await resetMouse();
   }
@@ -1047,6 +1099,142 @@ it('is accessible with type="checkbox", both unchecked and checked', async () =>
     </div>
   `)) as HTMLElement;
   await expect(wrapper).to.be.accessible();
+});
+
+it('type="radio" renders role="menuitemradio" with aria-checked reflecting checked', async () => {
+  const el = await fixtureInMenu(
+    html`<lr-menu-item type="radio">USD</lr-menu-item>`
+  );
+  expect(el.getAttribute('role')).to.equal('menuitemradio');
+  expect(el.getAttribute('aria-checked')).to.equal('false');
+
+  el.checked = true;
+  await el.updateComplete;
+  expect(el.getAttribute('aria-checked')).to.equal('true');
+});
+
+it('activating an unchecked radio proposes checked:true and, unless vetoed, unchecks the other radio rows the same menu owns', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Currency">
+      <lr-menu-item type="radio" checked value="usd">USD</lr-menu-item>
+      <lr-menu-item type="radio" value="eur">EUR</lr-menu-item>
+    </lr-menu>
+  `);
+  const [usdItem, eurItem] = Array.from(
+    menu.querySelectorAll('lr-menu-item')
+  ) as LyraMenuItem[];
+  let selectCount = 0;
+  menu.addEventListener('lr-select', () => (selectCount += 1));
+  const changes: { value: string; checked: boolean }[] = [];
+  eurItem!.addEventListener('lr-menu-item-change', (event) => {
+    changes.push(
+      (event as CustomEvent<{ value: string; checked: boolean }>).detail
+    );
+  });
+
+  eurItem!.select();
+
+  expect(changes).to.deep.equal([{ value: 'eur', checked: true }]);
+  expect(eurItem!.checked).to.be.true;
+  expect(usdItem!.checked).to.be.false;
+  expect(selectCount).to.equal(1);
+});
+
+it('activating an already-checked radio is a no-op: no change proposal, no state change', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Currency">
+      <lr-menu-item type="radio" checked value="usd">USD</lr-menu-item>
+      <lr-menu-item type="radio" value="eur">EUR</lr-menu-item>
+    </lr-menu>
+  `);
+  const [usdItem] = Array.from(
+    menu.querySelectorAll('lr-menu-item')
+  ) as LyraMenuItem[];
+  let changeFired = false;
+  let selectCount = 0;
+  usdItem!.addEventListener('lr-menu-item-change', () => (changeFired = true));
+  menu.addEventListener('lr-select', () => (selectCount += 1));
+
+  usdItem!.select();
+
+  expect(changeFired).to.be.false;
+  expect(usdItem!.checked).to.be.true;
+  expect(selectCount).to.equal(1);
+});
+
+it('honors preventDefault on a radio change proposal, leaving checked state and siblings untouched', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Currency">
+      <lr-menu-item type="radio" checked value="usd">USD</lr-menu-item>
+      <lr-menu-item type="radio" value="eur">EUR</lr-menu-item>
+    </lr-menu>
+  `);
+  const [usdItem, eurItem] = Array.from(
+    menu.querySelectorAll('lr-menu-item')
+  ) as LyraMenuItem[];
+  let selectCount = 0;
+  eurItem!.addEventListener('lr-menu-item-change', (event) =>
+    event.preventDefault()
+  );
+  menu.addEventListener('lr-select', () => (selectCount += 1));
+
+  eurItem!.select();
+
+  expect(eurItem!.checked).to.be.false;
+  expect(usdItem!.checked).to.be.true;
+  expect(selectCount).to.equal(1);
+});
+
+it('narrows exclusive choice to the `group` attribute, leaving other groups untouched', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Preferences">
+      <lr-menu-item type="radio" group="currency" checked value="usd"
+        >USD</lr-menu-item
+      >
+      <lr-menu-item type="radio" group="currency" value="eur"
+        >EUR</lr-menu-item
+      >
+      <lr-menu-item type="radio" group="units" checked value="metric"
+        >Metric</lr-menu-item
+      >
+      <lr-menu-item type="radio" group="units" value="imperial"
+        >Imperial</lr-menu-item
+      >
+    </lr-menu>
+  `);
+  const [usdItem, eurItem, metricItem, imperialItem] = Array.from(
+    menu.querySelectorAll('lr-menu-item')
+  ) as LyraMenuItem[];
+
+  eurItem!.select();
+
+  expect(eurItem!.checked).to.be.true;
+  expect(usdItem!.checked).to.be.false;
+  expect(metricItem!.checked).to.be.true;
+  expect(imperialItem!.checked).to.be.false;
+});
+
+it('renders a checkmark glyph only when type="radio" and checked', async () => {
+  const unchecked = (await fixture(
+    html`<lr-menu-item type="radio" value="usd">USD</lr-menu-item>`
+  )) as LyraMenuItem;
+  expect(unchecked.shadowRoot!.querySelector('[part="checkmark"]') == null).to
+    .be.true;
+
+  const checked = (await fixture(
+    html`<lr-menu-item type="radio" checked value="usd">USD</lr-menu-item>`
+  )) as LyraMenuItem;
+  expect(checked.shadowRoot!.querySelector('[part="checkmark"]')).to.exist;
+});
+
+it('is accessible in an open menu with type="radio" items, both unchecked and checked', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Currency">
+      <lr-menu-item type="radio" checked value="usd">USD</lr-menu-item>
+      <lr-menu-item type="radio" value="eur">EUR</lr-menu-item>
+    </lr-menu>
+  `);
+  await expect(menu).to.be.accessible();
 });
 
 it('is accessible in the default state', async () => {

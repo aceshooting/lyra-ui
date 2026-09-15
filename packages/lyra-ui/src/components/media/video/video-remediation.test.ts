@@ -1,4 +1,4 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './video.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -26,7 +26,12 @@ it('keeps the unavailable progress owner and its rendered track at rest under a 
     expect(progress.disabled).to.equal(false);
     const enabledRest = read();
     await hoverUntilMatched(progress, 'enabled progress should receive hover');
-    await settle();
+    // :hover matching proves the pointer arrived, never that the sibling-combinator rule reached
+    // the rendered track -- so poll the painted result instead of reading it one settle later.
+    await waitUntil(
+      () => read().join() !== enabledRest.join(),
+      'the enabled progress owner repaints its rendered track under the pointer',
+    );
     expect(read()).to.not.deep.equal(enabledRest);
   } finally { await resetMouse(); }
 });

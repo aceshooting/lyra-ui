@@ -1,5 +1,9 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from "../../../../test/wtr-mouse.js";
 import { CHAT_COMPOSER_STATUSES } from "./chat-composer.js";
 import type { LyraChatComposer } from "./chat-composer.js";
 
@@ -593,6 +597,129 @@ it("renders declaratively-slotted start/chips content without waiting on the fir
   const chips = el.shadowRoot!.querySelector('[part="chips"]') as HTMLElement;
   expect(start.hidden).to.be.false;
   expect(chips.hidden).to.be.false;
+});
+
+describe('toolbar slot', () => {
+  it('hides the toolbar wrapper when the toolbar slot is empty, shows it once populated', async () => {
+    const el = (await fixture(
+      html`<lr-chat-composer></lr-chat-composer>`
+    )) as LyraChatComposer;
+    const toolbar = el.shadowRoot!.querySelector(
+      '[part="toolbar"]'
+    ) as HTMLElement;
+    const slot = el.shadowRoot!.querySelector(
+      'slot[name="toolbar"]'
+    ) as HTMLSlotElement;
+    expect(toolbar.hidden).to.be.true;
+
+    const picker = document.createElement('button');
+    picker.slot = 'toolbar';
+    const slotChanged = oneEvent(slot, 'slotchange');
+    el.appendChild(picker);
+    await slotChanged;
+    await el.updateComplete;
+    expect(toolbar.hidden).to.be.false;
+  });
+
+  it('re-hides the toolbar wrapper once its slot becomes empty again', async () => {
+    const el = (await fixture(
+      html`<lr-chat-composer></lr-chat-composer>`
+    )) as LyraChatComposer;
+    const toolbar = el.shadowRoot!.querySelector(
+      '[part="toolbar"]'
+    ) as HTMLElement;
+    const slot = el.shadowRoot!.querySelector(
+      'slot[name="toolbar"]'
+    ) as HTMLSlotElement;
+
+    const picker = document.createElement('button');
+    picker.slot = 'toolbar';
+    let slotChanged = oneEvent(slot, 'slotchange');
+    el.appendChild(picker);
+    await slotChanged;
+    await el.updateComplete;
+    expect(toolbar.hidden).to.be.false;
+
+    slotChanged = oneEvent(slot, 'slotchange');
+    el.removeChild(picker);
+    await slotChanged;
+    await el.updateComplete;
+    expect(toolbar.hidden).to.be.true;
+  });
+
+  it('renders declaratively-slotted toolbar content without waiting on the first slotchange', async () => {
+    const el = (await fixture(html`
+      <lr-chat-composer><button slot="toolbar">Model</button></lr-chat-composer>
+    `)) as LyraChatComposer;
+    const toolbar = el.shadowRoot!.querySelector(
+      '[part="toolbar"]'
+    ) as HTMLElement;
+    expect(toolbar.hidden).to.be.false;
+  });
+
+  it('renders the toolbar inside the frame, sharing its :focus-within affordance', async () => {
+    const el = (await fixture(html`
+      <lr-chat-composer style="--lr-theme-transition-fast: 0s">
+        <button slot="toolbar">Model</button>
+      </lr-chat-composer>
+    `)) as LyraChatComposer;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const toolbar = el.shadowRoot!.querySelector(
+      '[part="toolbar"]'
+    ) as HTMLElement;
+    expect(base.contains(toolbar)).to.be.true;
+    const restingBorder = getComputedStyle(base).borderTopColor;
+    textareaOf(el).focus();
+    await waitUntil(
+      () => getComputedStyle(base).borderTopColor !== restingBorder,
+      'the toolbar sits inside the part that gains the :focus-within border'
+    );
+  });
+});
+
+describe('actionsLayout', () => {
+  it("defaults to 'inline' and reflects the attribute, rendering the row as a flex layout", async () => {
+    const el = (await fixture(
+      html`<lr-chat-composer></lr-chat-composer>`
+    )) as LyraChatComposer;
+    expect(el.actionsLayout).to.equal('inline');
+    expect(el.getAttribute('actions-layout')).to.equal('inline');
+    const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    expect(getComputedStyle(row).display).to.equal('flex');
+  });
+
+  it("normalizes a hostile actions-layout attribute to 'inline' and reflects that canonical value", async () => {
+    const el = (await fixture(
+      html`<lr-chat-composer actions-layout="bogus"></lr-chat-composer>`
+    )) as LyraChatComposer;
+    expect(el.actionsLayout).to.equal('inline');
+    expect(el.getAttribute('actions-layout')).to.equal('inline');
+  });
+
+  it("switches the row to a CSS grid stacking start above end beside a spanning textarea under 'stacked'", async () => {
+    const el = (await fixture(html`
+      <lr-chat-composer actions-layout="stacked" min-rows="3">
+        <button slot="start">Attach</button>
+      </lr-chat-composer>
+    `)) as LyraChatComposer;
+    expect(el.actionsLayout).to.equal('stacked');
+    const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    expect(getComputedStyle(row).display).to.equal('grid');
+
+    const start = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
+    const end = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+    const startRect = start.getBoundingClientRect();
+    const endRect = end.getBoundingClientRect();
+    const textareaRect = textareaOf(el).getBoundingClientRect();
+
+    // start sits above end, both to the left of a spanning textarea.
+    expect(startRect.bottom).to.be.at.most(endRect.top + 1);
+    expect(textareaRect.left).to.be.at.least(startRect.right - 1);
+    expect(textareaRect.left).to.be.at.least(endRect.right - 1);
+    expect(textareaRect.height).to.be.at.least(
+      startRect.height + endRect.height - 1
+    );
+  });
 });
 
 it("hides the built-in button entirely once the end slot has assigned content", async () => {
@@ -1238,26 +1365,34 @@ it("gives the busy Stop action distinct hover and pressed feedback", async () =>
     ></lr-chat-composer>
   `)) as LyraChatComposer;
   const button = actionButtonOf(el)!;
-  const rect = button.getBoundingClientRect();
   expect(
-    rect.width,
+    button.getBoundingClientRect().width,
     "the busy Stop action has real geometry to point at"
   ).to.be.greaterThan(0);
 
   try {
     await resetMouse();
     const resting = getComputedStyle(button).backgroundColor;
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
+    // `sendMouse` resolves when the synthesized command completes, not when the engine has
+    // processed the native pointer event it produced -- so land the pointer with
+    // `hoverUntilMatched` (it re-reads the rect and re-dispatches until `:hover` really matches)
+    // and poll the rendered fill, rather than reading it straight after a single move.
+    await hoverUntilMatched(
+      button,
+      "the busy Stop action never took the pointer"
+    );
+    await waitUntil(
+      () => getComputedStyle(button).backgroundColor !== resting,
+      "the busy Stop action never picked up its hover tint"
+    );
     const hovered = getComputedStyle(button).backgroundColor;
     expect(hovered, "hover tints the busy Stop action").to.not.equal(resting);
 
     await sendMouse({ type: "down" });
+    await waitUntil(
+      () => getComputedStyle(button).backgroundColor !== hovered,
+      "the pressed busy Stop action never stepped past its hover fill"
+    );
     const pressed = getComputedStyle(button).backgroundColor;
     expect(
       pressed,
@@ -1746,6 +1881,28 @@ describe("frame", () => {
     expect(shadow).to.include("-5px");
   });
 
+  it('lets a consumer reshape or fully cede the plain focus underline via --lr-chat-composer-focus-shadow', async () => {
+    const reshaped = (await fixture(html`
+      <lr-chat-composer
+        frame="plain"
+        style="--lr-chat-composer-focus-shadow: inset 0 -3px 0 0 rgb(9, 9, 9)"
+      ></lr-chat-composer>
+    `)) as LyraChatComposer;
+    textareaOf(reshaped).focus();
+    expect(getComputedStyle(baseOf(reshaped)).boxShadow).to.include(
+      'rgb(9, 9, 9)'
+    );
+
+    const ceded = (await fixture(html`
+      <lr-chat-composer
+        frame="plain"
+        style="--lr-chat-composer-focus-shadow: none"
+      ></lr-chat-composer>
+    `)) as LyraChatComposer;
+    textareaOf(ceded).focus();
+    expect(getComputedStyle(baseOf(ceded)).boxShadow).to.equal('none');
+  });
+
   it("leaves the disabled treatment and the transition the reduced-motion block overrides untouched under plain", async () => {
     const el = (await fixture(
       html`<lr-chat-composer frame="plain" disabled></lr-chat-composer>`
@@ -1881,6 +2038,31 @@ describe('card chrome theming hooks', () => {
     expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
     expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
     expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('resizes the card through --lr-chat-composer-padding/-gap', async () => {
+    const el = (await fixture(html`
+      <lr-chat-composer
+        style="--lr-chat-composer-padding: 30px; --lr-chat-composer-gap: 20px"
+      ></lr-chat-composer>
+    `)) as LyraChatComposer;
+    const chrome = getComputedStyle(base(el));
+    expect(chrome.paddingTop).to.equal('30px');
+    expect(chrome.paddingLeft).to.equal('30px');
+    expect(chrome.rowGap).to.equal('20px');
+  });
+
+  it('leaves the card padding/gap byte-identical when the hooks are unset', async () => {
+    const control = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+    const tokened = (await fixture(html`
+      <lr-chat-composer
+        style="--lr-chat-composer-padding: var(--lr-space-s); --lr-chat-composer-gap: var(--lr-space-xs)"
+      ></lr-chat-composer>
+    `)) as LyraChatComposer;
+    const unset = getComputedStyle(base(control));
+    const explicit = getComputedStyle(base(tokened));
+    expect(unset.paddingTop).to.equal(explicit.paddingTop);
+    expect(unset.rowGap).to.equal(explicit.rowGap);
   });
 
   it('keeps the brand focus-within border, which is state paint rather than card chrome', async () => {

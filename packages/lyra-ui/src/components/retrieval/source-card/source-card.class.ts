@@ -200,24 +200,21 @@ export class LyraSourceCard extends StripHostTitleAttribute(
 
   override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    const fullSlot = this.shadowRoot!.querySelector(
-      'slot[name="full"]'
-    ) as HTMLSlotElement;
-    const fullCount = fullSlot.assignedElements({ flatten: true }).length;
+    // Reads the light-DOM `slot` attribute directly rather than the rendered slots' live
+    // `assignedElements()` snapshot: WebKit has been observed reporting the latter transiently
+    // empty for an unrelated forwarding-slot chain nested inside the assigned element (see
+    // `<lr-switch>`'s equivalent fix), even though the assigned child's own `slot` attribute
+    // never changed. Mirrors the light-DOM check `willUpdate()` above already uses for the same
+    // flags.
+    const fullCount = Array.from(this.children).filter((el) => el.getAttribute('slot') === 'full').length;
     this.hasFullSlot = fullCount > 0;
     if (fullCount === 0) this.fullExpanded = false;
 
-    const excerptSlot = this.shadowRoot!.querySelector(
-      'slot[name="excerpt"]'
-    ) as HTMLSlotElement;
-    this.hasExcerptSlot =
-      excerptSlot.assignedElements({ flatten: true }).length > 0;
+    this.hasExcerptSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'excerpt');
   }
 
-  private onFullSlotChange = (e: Event): void => {
-    const count = (e.target as HTMLSlotElement).assignedElements({
-      flatten: true,
-    }).length;
+  private onFullSlotChange = (): void => {
+    const count = Array.from(this.children).filter((el) => el.getAttribute('slot') === 'full').length;
     this.hasFullSlot = count > 0;
     // Losing the slotted content collapses the card, which changes aria-expanded and the toggle
     // label exactly as a click would. A host tracking expansion off the event stream would silently
@@ -228,10 +225,8 @@ export class LyraSourceCard extends StripHostTitleAttribute(
     }
   };
 
-  private onExcerptSlotChange = (e: Event): void => {
-    this.hasExcerptSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
+  private onExcerptSlotChange = (): void => {
+    this.hasExcerptSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'excerpt');
   };
 
   private get titleText(): string {

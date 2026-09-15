@@ -782,9 +782,10 @@ export const MountedOptionSelection: Story = {
 };
 
 export const OutOfListValue: Story = {
-  parameters: { docs: { description: { story: 'A committed value that matches no option and no async row already renders with a dashed "not in catalog" badge. `show-unknown-option` additionally appends it to the end of the listbox as a synthetic, re-selectable row, so it stays reachable once the listbox is open. `getUnknownLabel` renders that value’s label wherever it appears.' } } },
+  parameters: { docs: { description: { story: 'A committed value that matches no option and no async row already renders with a dashed "not in catalog" badge. `show-unknown-option` additionally appends it to the end of the listbox as a synthetic, re-selectable row, so it stays reachable once the listbox is open. `getUnknownLabel` renders that value’s label wherever it appears. Open the listbox to see the row — `--lr-combobox-option-badge-bg` retints its "not in catalog" badge.' } } },
   render: () => html`
     <lr-combobox label="Model" value="gpt-legacy-2023" show-unknown-option
+      style="--lr-combobox-option-badge-bg: var(--lr-color-warning-quiet);"
       .getUnknownLabel=${(value: string) => `Saved model (${value})`}>
       <lr-option value="fast">Fast</lr-option>
       <lr-option value="balanced">Balanced</lr-option>

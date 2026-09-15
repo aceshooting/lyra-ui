@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -48,6 +48,13 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   double it. Named `frame`, not `appearance`: `appearance` is the library's vocabulary for how a
   _control fills itself_, and one property name cannot mean both. The focus affordance is swapped,
   not dropped — see **Known gotchas**
+- `actionsLayout: ChatComposerActionsLayout = 'inline'` (reflected, attribute `actions-layout`) —
+  `'inline' | 'stacked'`. `'inline'` (the default) keeps today's single flex row. `'stacked'`
+  arranges the `start` and `end` action slots as a compact one-column rail (`start` above `end`)
+  beside a `textarea` that spans both rows — for a multi-row composer (a taller `min-rows`) where
+  stretching the action buttons across the row's full height would otherwise look wrong. Layout
+  only; slot content, empty-slot hiding and the built-in button are unchanged. Invalid direct or
+  attribute values normalize and reflect as `'inline'`.
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
@@ -93,12 +100,14 @@ validity and recomputes the current intrinsic constraints.
 - `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
   preventing it also prevents the native `invalid` event that produced it
 
-**Slots:** `start` (content before the textarea, e.g. an attach-file trigger button), `end`
-(overrides the built-in send/stop button entirely when it has assigned content), `chips` (an
-attachment tray rendered above the input row).
+**Slots:** `toolbar` (auxiliary controls, e.g. a model or provider picker, rendered inside the
+frame above the chips tray and input row, sharing `[part="base"]`'s `:focus-within` affordance),
+`start` (content before the textarea, e.g. an attach-file trigger button), `end` (overrides the
+built-in send/stop button entirely when it has assigned content), `chips` (an attachment tray
+rendered above the input row).
 
-**CSS parts:** `base`, `chips`, `row`, `start`, `textarea`, `end`, `send-glyph`, `stop-glyph`,
-`action-button`
+**CSS parts:** `base`, `toolbar`, `chips`, `row`, `start`, `textarea`, `end`, `send-glyph`,
+`stop-glyph`, `action-button`
 
 **Themeable custom properties:** `--lr-chat-composer-busy-bg` (default `var(--lr-color-text-quiet)`)
 — `[part="action-button"]`'s background while `status` is `"sending"` or `"streaming"` (the busy/stop
@@ -108,7 +117,13 @@ button, not the placeholder too (the same shared-token-collision fix `<lr-chat-m
 user-bubble background pair documents). `--lr-chat-composer-background` (default
 `var(--lr-color-surface)`), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
 `--lr-chat-composer-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome so a
-composer docked into a themed panel can match it, with no `::part(base)` override. The
+composer docked into a themed panel can match it, with no `::part(base)` override. `--lr-chat-composer-padding`
+(default `var(--lr-space-s)`) and `--lr-chat-composer-gap` (default `var(--lr-space-xs)`) retune
+`[part="base"]`'s padding and the row gap between its stacked `toolbar`/`chips`/`row` sections; like
+the chrome hooks above, `frame="plain"` still zeroes the padding. `--lr-chat-composer-focus-shadow`
+(default `inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color)`) is the
+`frame="plain"` focus underline painted on `[part="base"]:focus-within` — override it to reshape the
+underline, or set it to `none` to cede focus chrome entirely to a wrapper you draw yourself. The
 `:focus-within` border keeps its `--lr-color-brand` shift — that is state paint, not card chrome —
 and `frame="plain"` still removes the border, radius and fill outright. Plus shared tokens
 `--lr-space-xs`, `--lr-space-s`,
@@ -168,13 +183,19 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
   once it has assigned content, the library's send/stop icon, its `aria-label`, and its
   `status`-driven busy styling all disappear, so a custom end control needs its own send/stop
   handling.
-- `[part="chips"]`/`[part="start"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
-  CSS `:empty` selector, because each always contains a literal `<slot>` child regardless of
-  assigned content.
+- `[part="toolbar"]`/`[part="chips"]`/`[part="start"]` are hidden via a JS-tracked `[hidden]`
+  attribute rather than a CSS `:empty` selector, because each always contains a literal `<slot>`
+  child regardless of assigned content.
 - Under `frame="card"` the only focus affordance is a border-color shift on `[part="base"]`
   (the internal `<textarea>` sets `outline: none`). `frame="plain"` removes that border, so it
   swaps in a different affordance rather than losing focus visibility: an underline across the whole
-  input row, drawn as an inset `box-shadow` from `--lr-focus-ring-width`/`--lr-focus-ring-color` so
-  it costs no layout. If you restyle `[part="base"]` under `plain`, keep a focus indicator.
+  input row, drawn as an inset `box-shadow` from `--lr-focus-ring-width`/`--lr-focus-ring-color`,
+  reachable as one unit through `--lr-chat-composer-focus-shadow`, so it costs no layout. If you
+  restyle `[part="base"]` under `plain` and want to draw your own focus cue instead (e.g. on a
+  wrapper you place the composer inside), set `--lr-chat-composer-focus-shadow: none` rather than
+  fighting the default with a higher-specificity override.
+- `actions-layout="stacked"` only changes `[part="row"]`'s layout (a CSS grid instead of a flex
+  row); it does not change which slot content is hidden or when the built-in button replaces
+  `end`.
 
 ---

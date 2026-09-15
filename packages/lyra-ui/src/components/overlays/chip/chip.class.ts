@@ -396,11 +396,15 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     );
   }
 
-  private onStartSlotChange = (e: Event): void => {
-    const slot = e.target as HTMLSlotElement;
+  // Reads the light-DOM `slot` attribute directly (via `recomputeHasStartSlot`, already the
+  // trusted computation above) rather than the live `assignedElements()` snapshot: WebKit has
+  // been observed reporting the latter transiently empty for an unrelated forwarding-slot chain
+  // nested inside the assigned element (see `<lr-switch>`'s equivalent fix), even though the
+  // assigned child's own `slot` attribute never changed.
+  private onStartSlotChange = (): void => {
     const update = (): void => {
       if (!this.isConnected) return;
-      this.hasStartSlot = slot.assignedElements({ flatten: true }).length > 0;
+      this.recomputeHasStartSlot();
     };
     this.updateBrowserDerivedState(update);
   };
@@ -414,11 +418,11 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     );
   }
 
-  private onEndSlotChange = (e: Event): void => {
-    const slot = e.target as HTMLSlotElement;
+  // Same rationale as `onStartSlotChange` above.
+  private onEndSlotChange = (): void => {
     const update = (): void => {
       if (!this.isConnected) return;
-      this.hasEndSlot = slot.assignedElements({ flatten: true }).length > 0;
+      this.recomputeHasEndSlot();
     };
     this.updateBrowserDerivedState(update);
   };

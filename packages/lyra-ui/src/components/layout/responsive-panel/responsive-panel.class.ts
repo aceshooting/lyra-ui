@@ -30,7 +30,7 @@ const RESPONSIVE_PANEL_MODE = literalSetConverter<LyraResponsivePanelMode>(
  *  account -- `'auto'` never appears here. */
 export type LyraResponsivePanelEffectiveMode = 'inline' | 'overlay';
 
-export type LyraResponsivePanelShape = 'fullscreen' | 'bottom-sheet';
+export type LyraResponsivePanelShape = 'fullscreen' | 'bottom-sheet' | 'start' | 'end';
 
 /** Reason the panel was closed, forwarded as the `lr-close` event detail --
  *  mirrors lr-dialog's own `DialogCloseReason` shape. `'escape'` and
@@ -146,6 +146,8 @@ export function resolveResponsivePanelEffectiveMode(
  *   `[part="panel"]` in the overlay presentation.
  * @cssprop [--lr-responsive-panel-sheet-max-block-size=85dvh] - Maximum height of the
  *   `shape="bottom-sheet"` overlay panel (falls back to `85vh` where `dvh` is unsupported).
+ * @cssprop [--lr-responsive-panel-side-inline-size=var(--lr-size-20rem)] - Width of the
+ *   `shape="start"`/`shape="end"` overlay panel along the inline axis.
  * @status stable
  * @since 4.0.0
  */
@@ -186,9 +188,13 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   /** Only affects the overlay presentation's visual treatment -- `'fullscreen'` (default) covers
    *  the whole viewport; `'bottom-sheet'` anchors to the block-end edge and doesn't cover the full
-   *  height. No entrance motion is implied by the shape. This is a presentation-shape axis, not
-   *  the library's shared semantic-tone `variant` vocabulary (`lr-button`/`lr-badge`/etc.) -- it
-   *  deliberately uses a different property name to avoid colliding with that meaning. */
+   *  height; `'start'`/`'end'` anchor to the matching *logical* inline edge instead, like a docked
+   *  sidebar's slide-in-from-the-edge overlay counterpart -- the anchored edge, the panel's rounded
+   *  free edge, and the geometry all flip automatically under `dir="rtl"` (logical
+   *  `inset-inline-*`/border-radius properties, no `:dir()` selector involved). No entrance motion
+   *  is implied by any shape value. This is a presentation-shape axis, not the library's shared
+   *  semantic-tone `variant` vocabulary (`lr-button`/`lr-badge`/etc.) -- it deliberately uses a
+   *  different property name to avoid colliding with that meaning. */
   @property({ reflect: true }) shape: LyraResponsivePanelShape = 'fullscreen';
 
   /** Accessible name for the overlay presentation's `role="dialog"`. Unused in the inline

@@ -100,6 +100,30 @@ export const styles = css`
     }
   }
 
+  /* Overlay/start and overlay/end: a side-anchored sheet (a docked-sidebar-style drawer) instead of
+     one that covers or spans the full viewport. The panel is taken out of the [part="base"] flex
+     flow and anchored directly with logical inset-inline and border-radius properties, so both the
+     anchored edge and the panel's rounded free edge flip together under dir="rtl" with no :dir()
+     selector needed anywhere here. */
+  :host([shape='start']) [part='base'].overlay [part='panel'],
+  :host([shape='end']) [part='base'].overlay [part='panel'] {
+    position: absolute;
+    inset-block: 0;
+    block-size: 100%;
+    inline-size: var(--lr-responsive-panel-side-inline-size, var(--lr-size-20rem));
+    max-inline-size: 100%;
+  }
+  :host([shape='start']) [part='base'].overlay [part='panel'] {
+    inset-inline-start: 0;
+    border-start-end-radius: var(--lr-radius);
+    border-end-end-radius: var(--lr-radius);
+  }
+  :host([shape='end']) [part='base'].overlay [part='panel'] {
+    inset-inline-end: 0;
+    border-start-start-radius: var(--lr-radius);
+    border-end-start-radius: var(--lr-radius);
+  }
+
   [part='header'] {
     min-inline-size: 0;
     max-inline-size: 100%;

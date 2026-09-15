@@ -425,24 +425,29 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     }
   }
 
-  private onAvatarSlotChange = (e: Event): void => {
-    this.hasAvatarSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  // Each reads the light-DOM `slot` attribute directly (via `hasSlotted`, already the trusted
+  // computation above) rather than the live `assignedElements()` snapshot: WebKit has been
+  // observed reporting the latter transiently empty for an unrelated forwarding-slot chain nested
+  // inside the assigned element (see `<lr-switch>`'s equivalent fix), even though the assigned
+  // child's own `slot` attribute never changed.
+  private onAvatarSlotChange = (): void => {
+    this.hasAvatarSlot = this.hasSlotted('avatar');
   };
 
-  private onBadgesSlotChange = (e: Event): void => {
-    this.hasBadgesSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onBadgesSlotChange = (): void => {
+    this.hasBadgesSlot = this.hasSlotted('badges');
   };
 
-  private onAttachmentsSlotChange = (e: Event): void => {
-    this.hasAttachmentsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onAttachmentsSlotChange = (): void => {
+    this.hasAttachmentsSlot = this.hasSlotted('attachments');
   };
 
-  private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onActionsSlotChange = (): void => {
+    this.hasActionsSlot = this.hasSlotted('actions');
   };
 
-  private onFailureSlotChange = (e: Event): void => {
-    this.hasFailureSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onFailureSlotChange = (): void => {
+    this.hasFailureSlot = this.hasSlotted('failure');
   };
 
   private toggleCollapsed = (): void => {

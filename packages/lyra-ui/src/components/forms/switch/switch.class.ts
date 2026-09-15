@@ -745,19 +745,29 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this.hasLabelSlot = hasRealContent(nodes);
   }
 
+  /**
+   * Whether a direct light-DOM child carries `slot="name"` -- the same structural check
+   * {@link recomputeLightDomSlotState} always relied on for the connect/reconnect pass, and now
+   * also what the hint/help-text/error slotchange handlers use. `HTMLSlotElement.assignedElements()`
+   * is a live re-derivation of the browser's *current* slot-assignment computation, and WebKit has
+   * been observed reporting it transiently empty for an unrelated forwarding-slot chain nested
+   * inside the assigned element (a deeply forwarded node's own `characterData` mutating can fire a
+   * spurious `slotchange` on this outer named slot, with `assignedElements()` reporting zero for
+   * that one notification) -- even though the assigned child's own `slot` attribute never changed.
+   * Reading the light-DOM attribute directly is immune to that: it does not depend on the engine's
+   * live slot-assignment snapshot at all.
+   */
+  private hasLightDomChildWithSlot(name: string): boolean {
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    if (!children) return false;
+    return Array.from(children).some((element) => element.getAttribute('slot') === name);
+  }
+
   private recomputeLightDomSlotState(): void {
     this.recomputeHasLabelSlot();
-    const children = (this as unknown as { children?: HTMLCollection }).children;
-    if (!children) return;
-    this.hasHintSlot = Array.from(children).some(
-      (element) => element.getAttribute('slot') === 'hint',
-    );
-    this.hasHelpTextSlot = Array.from(children).some(
-      (element) => element.getAttribute('slot') === 'help-text',
-    );
-    this.hasErrorSlot = Array.from(children).some(
-      (element) => element.getAttribute('slot') === 'error',
-    );
+    this.hasHintSlot = this.hasLightDomChildWithSlot('hint');
+    this.hasHelpTextSlot = this.hasLightDomChildWithSlot('help-text');
+    this.hasErrorSlot = this.hasLightDomChildWithSlot('error');
   }
 
   private handleLabelSlotChange(event: Event): void {
@@ -774,16 +784,16 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   private onLabelSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
   private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
 
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onHintSlotChange = (): void => {
+    this.hasHintSlot = this.hasLightDomChildWithSlot('hint');
   };
 
-  private onHelpTextSlotChange = (e: Event): void => {
-    this.hasHelpTextSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onHelpTextSlotChange = (): void => {
+    this.hasHelpTextSlot = this.hasLightDomChildWithSlot('help-text');
   };
 
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onErrorSlotChange = (): void => {
+    this.hasErrorSlot = this.hasLightDomChildWithSlot('error');
   };
 
   override render(): TemplateResult {

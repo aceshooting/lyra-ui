@@ -16,16 +16,24 @@ for (const year of ['0001', '0099', '0100']) {
   });
 }
 it('keeps colored agenda foreground and fill paired through hover and press', async () => {
-  const el = await fixture<LyraCalendar>(html`<lr-calendar view="agenda" view-date="2026-07-01" .events=${[{ date: '2026-07-15', title: 'Meeting', color: 'rgb(0, 60, 120)' }]}></lr-calendar>`);
+  // Both invariants are read only AFTER the overlay that pointer feedback actually paints has
+  // rendered, and --lr-transition-fast is zeroed: [part='agenda-event'] eases background-color, so
+  // a regression that recoloured the fill would still report the RESTING colour for the first
+  // frames after the pointer lands and this "the pair never moved" assertion would pass vacuously.
+  const el = await fixture<LyraCalendar>(html`<lr-calendar style="--lr-transition-fast: 0s" view="agenda" view-date="2026-07-01" .events=${[{ date: '2026-07-15', title: 'Meeting', color: 'rgb(0, 60, 120)' }]}></lr-calendar>`);
   const item = el.shadowRoot!.querySelector<HTMLElement>('[part="agenda-event"]')!;
   const rest = getComputedStyle(item).backgroundColor;
   const foreground = getComputedStyle(item).color;
+  const restingImage = getComputedStyle(item).backgroundImage;
   try {
     await hoverUntilMatched(item, 'agenda action hover');
+    await waitUntil(() => getComputedStyle(item).backgroundImage !== restingImage, 'the hover overlay never painted');
+    const hoveredImage = getComputedStyle(item).backgroundImage;
     expect(getComputedStyle(item).backgroundColor).to.equal(rest);
     expect(getComputedStyle(item).color).to.equal(foreground);
     await sendMouse({ type: 'down' });
-    await waitUntil(() => item.matches(':active'));
+    await waitUntil(() => item.matches(':active'), 'the agenda event never took the press');
+    await waitUntil(() => getComputedStyle(item).backgroundImage !== hoveredImage, 'the press overlay never painted');
     expect(getComputedStyle(item).backgroundColor).to.equal(rest);
     expect(getComputedStyle(item).color).to.equal(foreground);
   } finally { await resetMouse(); }

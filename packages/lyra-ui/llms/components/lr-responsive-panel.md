@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,8 +17,8 @@
 ## `lr-responsive-panel`
 
 The same slotted content either docked inline in its containing layout or presented as a
-full-screen/bottom-sheet overlay, depending on the panel's allocated inline size. First-party
-invention (no `wa-*`/`sl-*` counterpart).
+full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.
+First-party invention (no `wa-*`/`sl-*` counterpart).
 
 **Properties:**
 
@@ -30,8 +30,11 @@ invention (no `wa-*`/`sl-*` counterpart).
   `'inline'|'overlay'` presentation.
 - `shape: LyraResponsivePanelShape = 'fullscreen'` (reflected) — only affects the overlay
   presentation's visual treatment: `'fullscreen'` covers the whole viewport; `'bottom-sheet'`
-  anchors to its block-end edge and does not cover the full height. Has no visual effect while the effective
-  presentation resolves to `'inline'`.
+  anchors to its block-end edge and does not cover the full height; `'start'`/`'end'` anchor to the
+  matching *logical* inline edge instead, like a docked sidebar's slide-in-from-the-edge overlay
+  counterpart — the anchored edge and the panel's rounded free edge both flip automatically under
+  `dir="rtl"` (logical `inset-inline-*`/border-radius properties, no `:dir()` selector involved).
+  Has no visual effect while the effective presentation resolves to `'inline'`.
 - `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`, used
   verbatim when set — but a plain `aria-label` attribute on the host wins outright over `label`
   when both are present, the standard ARIA convention for a consumer that wants full control over
@@ -74,9 +77,12 @@ in the overlay presentation).
 **Themeable custom properties:** `--lr-responsive-panel-overlay-color` (default
 `var(--lr-color-overlay)` — the overlay presentation's backdrop scrim color),
 `--lr-responsive-panel-sheet-max-block-size` (default `85dvh`, falling back to `85vh` where `dvh`
-isn't supported — the maximum height of a `variant="bottom-sheet"` overlay panel, so a long sheet
+isn't supported — the maximum height of a `shape="bottom-sheet"` overlay panel, so a long sheet
 stops short of the top of the viewport instead of covering it; it has no effect on
-`variant="fullscreen"` or on the inline presentation),
+`shape="fullscreen"` or on the inline presentation),
+`--lr-responsive-panel-side-inline-size` (default `var(--lr-size-20rem)` — the width of a
+`shape="start"`/`shape="end"` overlay panel along the inline axis; no effect on any other shape or
+on the inline presentation),
 `--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
@@ -89,7 +95,7 @@ they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr
 <lr-responsive-panel
   id="settings-panel"
   label="Settings"
-  variant="bottom-sheet"
+  shape="bottom-sheet"
   overlay-breakpoint="48rem"
 >
   <span slot="header"><h2>Settings</h2></span>
@@ -130,8 +136,13 @@ window.
   whether it came from an allowed `close()` call, a property write, or attribute removal.
 - crossing inline → overlay while already open preserves focus that is already inside and moves
   outside focus into the panel; do not expect focus to remain on page content behind the modal.
-- `variant="bottom-sheet"` has no visible effect at all while the effective presentation is
-  `'inline'` — it only changes the overlay presentation's anchoring/height.
+- `shape="bottom-sheet"`/`shape="start"`/`shape="end"` have no visible effect at all while the
+  effective presentation is `'inline'` — they only change the overlay presentation's
+  anchoring/height/width.
+- `shape="start"`/`shape="end"` are logical, not physical: `'start'` anchors to the inline-start
+  edge (left in `dir="ltr"`, right in `dir="rtl"`) and `'end'` to the inline-end edge, so neither
+  value alone tells you which physical side a given instance renders on without also knowing its
+  resolved direction.
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if overlay chrome was still active
   across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in

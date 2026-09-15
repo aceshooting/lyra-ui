@@ -145,6 +145,60 @@ export const WithStartAndChips: Story = {
   `,
 };
 
+export const WithToolbar: Story = {
+  name: 'toolbar slot (model picker)',
+  render: () => html`
+    <lr-chat-composer placeholder="Message the assistant…" style="max-width: 32rem; display: block;">
+      <select
+        slot="toolbar"
+        aria-label="Model"
+        style="font: inherit; font-size: 0.8125rem; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); padding: 0.25rem 0.5rem;"
+      >
+        <option>gpt-5</option>
+        <option>claude</option>
+      </select>
+    </lr-chat-composer>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `toolbar` slot renders inside `[part="base"]`, above the chips tray and input row, so auxiliary controls like a model or provider picker sit inside the composer frame and share its `:focus-within` affordance.',
+      },
+    },
+  },
+};
+
+export const StackedActionsLayout: Story = {
+  name: 'actions-layout="stacked"',
+  render: () => html`
+    <lr-chat-composer
+      actions-layout="stacked"
+      min-rows="3"
+      max-rows="8"
+      placeholder="Message the assistant… (multi-row textarea beside a stacked action rail)"
+      style="max-width: 32rem; display: block;"
+    >
+      <button
+        slot="start"
+        type="button"
+        aria-label="Attach file"
+        style="font:inherit;font-size:1.125rem;background:none;border:none;cursor:pointer;padding:0.375rem;line-height:1;"
+      >
+        📎
+      </button>
+    </lr-chat-composer>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`actions-layout="stacked"` arranges `start` above `end` as a compact one-column rail beside a `textarea` that spans both rows, instead of the default single flex row — useful once `min-rows` grows the textarea tall enough that stretching the action buttons across its full height looks wrong.',
+      },
+    },
+  },
+};
+
 export const Narrow320: Story = {
   name: 'Narrow (320px, populated long draft)',
   render: () => html`

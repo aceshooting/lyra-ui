@@ -204,6 +204,33 @@ export const HeaderSlots: Story = {
   `,
 };
 
+export const AssertiveHeight: Story = {
+  name: 'Assertive height (--lr-dialog-height)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Left unset the panel shrink-wraps to its content (see `Default`). `--lr-dialog-height` gives the panel a definite block size instead, mirroring `--lr-dialog-width` on the other axis; `header` and `footer` keep their natural size and `body` grows to fill and scroll whatever space is left.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-dialog
+      .open=${context.viewMode !== 'docs'}
+      heading="Release notes"
+      closable
+      style="--lr-dialog-height: 20rem;"
+    >
+      ${Array.from({ length: 20 }, (_, i) => html`<p>Line ${i + 1} of the changelog.</p>`)}
+      <div slot="footer">
+        <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('ok')}>
+          Close
+        </button>
+      </div>
+    </lr-dialog>
+  `,
+};
+
 export const WithoutHeader: Story = {
   parameters: {
     docs: {

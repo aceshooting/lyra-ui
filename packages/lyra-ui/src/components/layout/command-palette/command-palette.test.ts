@@ -1122,6 +1122,12 @@ it("resets supported native search decorations without adding a Firefox-only con
         Math.round(rect.top + rect.height / 2),
       ];
       await sendMouse({ type: 'click', position: candidate });
+      // `sendMouse` resolves when the synthesized command completes, not when the browser has
+      // processed the resulting native click. A probe cannot poll for the clear -- "this offset
+      // missed the control" is a legitimate outcome -- so settle two frames to make a miss a real
+      // miss. Otherwise a late arrival is credited to the NEXT offset, and the negative control
+      // below then clicks a position that never sat over the native control at all.
+      await settlePointer();
       if (input.value === '') {
         cancelPosition = candidate;
         break;
@@ -1142,6 +1148,10 @@ it("resets supported native search decorations without adding a Firefox-only con
       requestAnimationFrame(() => resolve())
     );
     await sendMouse({ type: 'click', position: cancelPosition! });
+    // Nothing may change here, so there is nothing to poll for: read synchronously and "the press
+    // has not been processed yet" is indistinguishable from "the press was correctly inert", and
+    // the assertion passes vacuously. Two frames make it a real read.
+    await settlePointer();
     expect(
       input.value,
       'component styling removes the native clear action'

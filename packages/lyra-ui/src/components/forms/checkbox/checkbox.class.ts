@@ -497,13 +497,28 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     }
   }
 
-  private refreshNamedSlotState(): void {
+  /**
+   * Whether a direct light-DOM child carries `slot="name"` -- the same structural check
+   * {@link refreshNamedSlotState} always relied on for the connect/reconnect pass, and now also
+   * what the hint/help-text/error slotchange handlers use. `HTMLSlotElement.assignedElements()` is
+   * a live re-derivation of the browser's *current* slot-assignment computation, and WebKit has
+   * been observed reporting it transiently empty for an unrelated forwarding-slot chain nested
+   * inside the assigned element (a deeply forwarded node's own `characterData` mutating can fire a
+   * spurious `slotchange` on this outer named slot, with `assignedElements()` reporting zero for
+   * that one notification) -- even though the assigned child's own `slot` attribute never changed.
+   * Reading the light-DOM attribute directly is immune to that: it does not depend on the engine's
+   * live slot-assignment snapshot at all.
+   */
+  private hasLightDomChildWithSlot(name: string): boolean {
     const children = (this as unknown as { children?: HTMLCollection }).children;
-    if (!children) return;
-    const elements = Array.from(children);
-    this.hasHintSlot = elements.some((element) => element.getAttribute('slot') === 'hint');
-    this.hasHelpTextSlot = elements.some((element) => element.getAttribute('slot') === 'help-text');
-    this.hasErrorSlot = elements.some((element) => element.getAttribute('slot') === 'error');
+    if (!children) return false;
+    return Array.from(children).some((element) => element.getAttribute('slot') === name);
+  }
+
+  private refreshNamedSlotState(): void {
+    this.hasHintSlot = this.hasLightDomChildWithSlot('hint');
+    this.hasHelpTextSlot = this.hasLightDomChildWithSlot('help-text');
+    this.hasErrorSlot = this.hasLightDomChildWithSlot('error');
   }
 
   override disconnectedCallback(): void {
@@ -752,16 +767,16 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
 
-  private onHintSlotChange = (event: Event): void => {
-    this.hasHintSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onHintSlotChange = (): void => {
+    this.hasHintSlot = this.hasLightDomChildWithSlot('hint');
   };
 
-  private onHelpTextSlotChange = (event: Event): void => {
-    this.hasHelpTextSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onHelpTextSlotChange = (): void => {
+    this.hasHelpTextSlot = this.hasLightDomChildWithSlot('help-text');
   };
 
-  private onErrorSlotChange = (event: Event): void => {
-    this.hasErrorSlot = (event.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onErrorSlotChange = (): void => {
+    this.hasErrorSlot = this.hasLightDomChildWithSlot('error');
   };
 
   private isDefaultLabelNode(node: Node): boolean {

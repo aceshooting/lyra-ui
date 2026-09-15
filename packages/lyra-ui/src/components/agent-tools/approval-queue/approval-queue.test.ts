@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './approval-queue.js';
 import type { LyraApprovalQueue, ToolApprovalRequest } from './approval-queue.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
@@ -376,8 +376,11 @@ describe('lr-approval-queue', () => {
       { id: 'call-1', toolName: 'pending_tool', args: {} },
       { id: 'call-2', toolName: 'approved_tool', args: {}, status: 'approved' },
     ];
+    // --lr-transition-fast is zeroed because [part='request'] eases background-color: the resolved
+    // row's "must not move" reads below would otherwise sample the resting colour mid-transition
+    // and report a row that DOES light up as inert.
     const el = await fixture<LyraApprovalQueue>(html`
-      <lr-approval-queue .requests=${mixed}></lr-approval-queue>
+      <lr-approval-queue style="--lr-transition-fast: 0s" .requests=${mixed}></lr-approval-queue>
     `);
     await el.updateComplete;
     const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="request"]')];
@@ -396,42 +399,48 @@ describe('lr-approval-queue', () => {
 
     const pendingResting = getComputedStyle(pending).backgroundColor;
     const resolvedResting = getComputedStyle(resolved).backgroundColor;
-    const center = (node: Element): [number, number] => {
-      const rect = node.getBoundingClientRect();
-      return [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ];
-    };
     try {
-      await resetMouse();
-      await sendMouse({ type: 'move', position: center(pending) });
+      // The RESOLVED row is probed first, and both rows are landed with hoverUntilMatched(). Two
+      // separate races made the original order prove nothing about the resolved row: a bare `move`
+      // to a rect measured earlier resolves when the synthesized command completes -- not when the
+      // browser has processed the resulting pointer event, and not necessarily over the row after a
+      // late layout settle -- and, worse, pressing the pending row first OPENS the approval dialog,
+      // whose overlay then covers the whole viewport at z-index 1000. Every "the resolved row did
+      // not react" read was therefore taken with the pointer parked on that overlay, which is
+      // vacuously true however the row behaves -- with the pending row pressed first, the resolved
+      // row never reports :hover at all.
+      await hoverUntilMatched(resolved, 'a resolved row never took the pointer hover state');
+      // A resolved row must not react, so these two reads cannot poll for a change -- an
+      // unprocessed pointer event and a correctly inert row look identical. settlePointer() gives
+      // the browser two frames to apply whatever it was going to apply first.
+      await settlePointer();
+      expect(
+        getComputedStyle(resolved).backgroundColor,
+        'a resolved row must not light up under the pointer',
+      ).to.equal(resolvedResting);
+      await sendMouse({ type: 'down' });
+      await settlePointer();
+      expect(
+        getComputedStyle(resolved).backgroundColor,
+        'a resolved row must not react to a press either',
+      ).to.equal(resolvedResting);
+      await sendMouse({ type: 'up' });
+
+      await hoverUntilMatched(pending, 'a pending row never took the pointer hover state');
       await waitUntil(
         () => getComputedStyle(pending).backgroundColor !== pendingResting,
         'a pending row must still light up under the pointer',
       );
+      expect(
+        getComputedStyle(resolved).backgroundColor,
+        'the resolved row must stay at rest while its pending sibling lights up',
+      ).to.equal(resolvedResting);
       const pendingHover = getComputedStyle(pending).backgroundColor;
       await sendMouse({ type: 'down' });
       await waitUntil(
         () => getComputedStyle(pending).backgroundColor !== pendingHover,
         'a pending row must still darken under a press',
       );
-      await sendMouse({ type: 'up' });
-
-      await sendMouse({ type: 'move', position: center(resolved) });
-      await waitUntil(
-        () => getComputedStyle(pending).backgroundColor === pendingResting,
-        'the pointer should have left the pending row',
-      );
-      expect(
-        getComputedStyle(resolved).backgroundColor,
-        'a resolved row must not light up under the pointer',
-      ).to.equal(resolvedResting);
-      await sendMouse({ type: 'down' });
-      expect(
-        getComputedStyle(resolved).backgroundColor,
-        'a resolved row must not react to a press either',
-      ).to.equal(resolvedResting);
       await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();

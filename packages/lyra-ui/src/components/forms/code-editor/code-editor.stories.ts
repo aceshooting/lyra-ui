@@ -17,6 +17,30 @@ export const Json: Story = {
       .value=${'{\n  "enabled": true\n}'}
     ></lr-code-editor>`,
 };
+
+/** The opt-in theme-level scrollbar hooks retheme the editor scrollport, plus every other internal
+ *  scroll container in the library, from one declaration on an ancestor. */
+export const ThemedScrollbar: Story = {
+  name: 'Themed scrollbar (theme-level cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `--lr-theme-scrollbar-width` and `--lr-theme-scrollbar-gutter` on an ancestor retunes the `editor` scrollport -- and, set on `:root`, every other internal scroll container in the library (`lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-time-input`, `lr-emoji-picker`, `lr-code-block`) at once.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable;">
+      <lr-code-editor
+        label="Themed scrollbar"
+        language="json"
+        style="--lr-code-editor-min-block-size: 6rem;"
+        .value=${longUnwrappedSource}
+      ></lr-code-editor>
+    </div>
+  `,
+};
 // Tab width precedence: an inherited `--lr-code-editor-tab-size` drives both editors' tab stops and
 // their Tab key, except where `tab-size` is set explicitly -- the property still wins.
 export const TabWidth: Story = {

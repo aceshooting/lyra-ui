@@ -129,7 +129,11 @@ export const styles = css`
     overflow-inline: hidden;
   }
   [part='grid'] {
-    scrollbar-gutter: stable;
+    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- each reads
+       --lr-theme-scrollbar-* directly, with this grid's own previous literal as the fallback, so
+       nothing changes for a consumer who never sets the theme input. */
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, stable);
+    scrollbar-width: var(--lr-theme-scrollbar-width, auto);
   }
   /* Off-flow geometry probes, not parts -- never exposed to consumers. A custom property computes
      to an unresolved token stream ('2.5rem', 'calc(2.5rem + 1rem)'), never a pixel length, so the

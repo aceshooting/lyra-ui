@@ -2,6 +2,10 @@ import { elementUpdated, expect, fixture, html, oneEvent, waitUntil } from '@ope
 import './split-panel.js';
 import { SNAP_NONE, type LyraSplitPanel, type LyraSplitPanelSnapFunction } from './split-panel.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+// Registers the real shipped `ar` catalog's `layout` slice so the `lang="ar-EG"` tests below
+// can render without tripping the dev-mode locale-fallback warning that strict-console platform
+// lanes treat as fatal (each overrides only one of the two keys the component resolves).
+import '../../../translations/ar/layout.js';
 
 function divider(element: LyraSplitPanel): HTMLElement {
   return element.shadowRoot!.querySelector('[part~="divider"]') as HTMLElement;
@@ -1412,19 +1416,29 @@ it('tolerates releasePointerCapture rejecting an already-released capture', asyn
     <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
   `)) as LyraSplitPanel;
   const handle = divider(element);
-  const rect = handle.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   const originalRelease = handle.releasePointerCapture.bind(handle);
   handle.releasePointerCapture = () => {
     throw new DOMException('Already released', 'InvalidStateError');
   };
   try {
-    await sendMouse({ type: 'move', position });
+    // `sendMouse` resolves when the synthesized command completes, not when the engine has
+    // processed the pointer event -- so a press dispatched straight after a single move can miss a
+    // divider that settled elsewhere, and reading `data-dragging` straight after the release can
+    // sample a drag the engine has not ended yet. Land the pointer with hoverUntilMatched(), then
+    // wait for the drag to actually begin: without that, "never dragged at all" and "released
+    // cleanly despite the throwing capture" are indistinguishable, and the release stub is only
+    // reached while a capture is in place.
+    await hoverUntilMatched(handle, 'divider never reported :hover');
     await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => handle.hasAttribute('data-dragging'),
+      'pressing the divider never started a drag',
+    );
     await sendMouse({ type: 'up' });
+    await waitUntil(
+      () => !handle.hasAttribute('data-dragging'),
+      'the divider never left its dragging state after releasePointerCapture threw',
+    );
     await elementUpdated(element);
     expect(handle.hasAttribute('data-dragging')).to.equal(false);
   } finally {

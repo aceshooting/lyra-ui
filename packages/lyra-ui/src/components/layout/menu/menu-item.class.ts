@@ -29,7 +29,7 @@ import {
 import { styles } from './menu-item.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 
-export type MenuItemType = 'normal' | 'checkbox';
+export type MenuItemType = 'normal' | 'checkbox' | 'radio';
 export type MenuItemVariant = 'default' | 'danger';
 
 const menuTag = unsafeStatic(tag('menu'));
@@ -112,7 +112,8 @@ export interface LyraMenuItemEventMap {
  * one-submenu-per-level rule — and drives it through `openSubmenu()` /
  * `closeSubmenu()`; this element owns the ARIA, the naming, and the panel
  * wiring. Because a submenu parent is a disclosure rather than an action, it
- * never activates the menu, and `type="checkbox"` has no effect on one. A submenu selection is
+ * never activates the menu, and neither `type="checkbox"` nor `type="radio"` has any effect on
+ * one. A submenu selection is
  * the same single `lr-select` event bubbling through the outer menu — there is no separate nested
  * selection event or public child-to-menu event.
  *
@@ -140,6 +141,22 @@ export interface LyraMenuItemEventMap {
  * behaves exactly as before this option existed — no role, rendering, or
  * event differences.
  *
+ * `type="radio"` renders `role="menuitemradio"` instead, reusing the same
+ * `aria-checked` reflection and checkmark glyph as `checkbox`, but with
+ * exclusive-choice group semantics layered on top: activating an already-
+ * `checked` radio is a no-op on `checked` itself — no `lr-menu-item-change`
+ * proposal, no state change, matching native `<input type="radio">`
+ * semantics — though it still falls through to the owning menu's usual
+ * selection, exactly like re-activating any other item. Activating an
+ * *unchecked* radio fires the same cancelable `lr-menu-item-change` with
+ * `checked: true`; once that is not prevented, this item becomes `checked`
+ * and every other `type="radio"` item the *same owning `<lr-menu>`* owns
+ * directly (never one owned by a nested submenu, which has its own owning
+ * menu) whose `group` matches this item's `group` is unchecked directly —
+ * without an `lr-menu-item-change` of its own. `group` defaults to `undefined`,
+ * so every ungrouped radio row beneath one menu shares a single exclusive
+ * scope unless narrowed by giving each subset its own `group` string.
+ *
  * @customElement lr-menu-item
  * @slot - The item's visual label content. Its flattened subtree is inert and hidden from assistive
  *   technology; its accessible text names the host menu item.
@@ -152,12 +169,14 @@ export interface LyraMenuItemEventMap {
  * @slot suffix - Shoelace-compatible decorative trailing content. Its flattened subtree is inert and
  *   hidden from assistive technology.
  * @slot submenu - A nested `<lr-menu>` or direct mapped menu items that open beside this row.
- * @event lr-menu-item-change - A `type="checkbox"` item was activated.
+ * @event lr-menu-item-change - A `type="checkbox"` item was activated, or a `type="radio"` item
+ * was activated while unchecked (an already-checked radio never fires this).
  * `detail: { value, checked }` contains the item's own `value` and the
  * proposed next `checked` value, before the property mutates. Cancelable:
  * prevent it to retain the current `checked` value. The usual
  * the parent menu's `lr-select` still follows, so selection and close
- * behavior are unchanged. Never fired for `type="normal"`.
+ * behavior are unchanged. Never fired for `type="normal"`. Unchecking a radio's group siblings
+ * once this event commits fires no event of its own.
  * @event lr-menu-item-state-change - Something that decides whether this item is navigable changed:
  *   `disabled`, `loading`, `hidden`, `inert`, or `aria-hidden`. `detail: { disabled, hidden, inert }`,
  *   where `disabled` is the effective `disabled || loading`. `<lr-menu>` consumes this to repair its
@@ -168,7 +187,8 @@ export interface LyraMenuItemEventMap {
  * @csspart icon - Wrapper around the `icon` slot. Not rendered at all when the slot is empty.
  * @csspart prefix - Wrapper around the `prefix` slot.
  * @csspart label - Wrapper around the default slot.
- * @csspart checkmark - The checkmark glyph shown when a `type="checkbox"` item is `checked`. Not rendered at all for `type="normal"`.
+ * @csspart checkmark - The checkmark glyph shown when a `type="checkbox"`/`type="radio"` item is
+ *   `checked`. Not rendered at all for `type="normal"`.
  * @csspart checked-icon - Shoelace-compatible wrapper around the checked glyph.
  * @csspart details - Wrapper around the `details` slot.
  * @csspart suffix - Wrapper around the `suffix` slot.
@@ -195,10 +215,10 @@ export interface LyraMenuItemEventMap {
  * @cssprop [--lr-menu-item-danger-active-bg=color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of an enabled danger row while pressed.
  * Checked-state hooks are also inline fallbacks, matching `<lr-option>`/`<lr-select>`/
  * `<lr-combobox>`/`<lr-tree-item>`'s equivalent row-chrome hooks; all three default to no visual
- * change, so a `type="checkbox"` item's checked row paints identically to before these existed
- * unless a consumer sets one.
+ * change, so a `type="checkbox"`/`type="radio"` item's checked row paints identically to before
+ * these existed unless a consumer sets one.
  * @cssprop [--lr-menu-item-checked-bg=transparent] - Background of a checked (`type="checkbox"
- * checked`) row.
+ * checked` or `type="radio" checked`) row.
  * @cssprop [--lr-menu-item-checked-color=inherit] - Foreground of a checked row.
  * @cssprop [--lr-menu-item-checked-font-weight=inherit] - Font weight of a checked row.
  * @cssprop [--lr-menu-item-hover-bg=var(--lr-color-brand-quiet)] - Background of an enabled row
@@ -252,11 +272,20 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   @property({ reflect: true }) variant: MenuItemVariant = 'default';
 
   /** `'checkbox'` renders `role="menuitemcheckbox"` with a toggleable `checked` state and a
-   *  checkmark glyph, mirroring `wa-dropdown-item`'s identical `type` option — see the class doc. */
+   *  checkmark glyph, mirroring `wa-dropdown-item`'s identical `type` option. `'radio'` renders
+   *  `role="menuitemradio"` with exclusive-choice group semantics — see the class doc for both. */
   @property({ reflect: true }) type: MenuItemType = 'normal';
 
-  /** Whether a `type="checkbox"` item is checked. Meaningless (ignored) for `type="normal"`. */
+  /** Whether a `type="checkbox"`/`type="radio"` item is checked. Meaningless (ignored) for
+   *  `type="normal"`. */
   @property({ type: Boolean, reflect: true }) checked = false;
+
+  /** Narrows a `type="radio"` item's exclusive-choice scope to only the other radio items sharing
+   *  this same string. Unset (the default), the scope is every `type="radio"` item the same
+   *  owning `<lr-menu>` owns directly — a nested submenu's radio items already belong to that
+   *  submenu's own `<lr-menu>` instead, so they're never in scope regardless of `group`. Meaningless
+   *  (ignored) for `type="normal"`/`"checkbox"`. */
+  @property() group?: string;
 
   /** Shows progress and makes the row interaction-disabled while an action is pending. */
   @property({ type: Boolean, reflect: true }) loading = false;
@@ -481,10 +510,14 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // render()'s shadow-DOM template -- mirrors lr-tree-item's identical
     // willUpdate.
     // A submenu parent is a disclosure, never simultaneously a checked action. Keep the author
-    // property intact so removing the submenu restores its requested checkbox mode.
+    // property intact so removing the submenu restores its requested checkbox/radio mode.
     const isCheckbox = this.type === 'checkbox' && !this.submenuAssigned;
-    this.setAttribute('role', isCheckbox ? 'menuitemcheckbox' : 'menuitem');
-    if (isCheckbox) {
+    const isRadio = this.type === 'radio' && !this.submenuAssigned;
+    this.setAttribute(
+      'role',
+      isCheckbox ? 'menuitemcheckbox' : isRadio ? 'menuitemradio' : 'menuitem'
+    );
+    if (isCheckbox || isRadio) {
       this.setAttribute('aria-checked', this.checked ? 'true' : 'false');
     } else {
       // Kept absent entirely for type="normal" -- see the class doc's "no
@@ -526,8 +559,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   }
 
   /** Activates the visual row, matching a consumer click on this focusable host. This preserves the
-   *  row's native click event path and its normal, checkbox, and submenu branches. Disabled and
-   *  loading items remain inert. */
+   *  row's native click event path and its normal, checkbox, radio, and submenu branches. Disabled
+   *  and loading items remain inert. */
   override click(): void {
     if (this.interactionDisabled) return;
     this.renderRoot.querySelector<HTMLElement>('[part~="base"]')?.click();
@@ -537,7 +570,10 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  this element's own click handler, and by `<lr-menu>`'s Enter/Space keydown handling.
    *  For `type="checkbox"`, first emits the cancelable proposed `lr-menu-item-change`; it commits
    *  that proposed `checked` state only when the event is not prevented, then fires selection --
-   *  see the class doc.
+   *  see the class doc. For `type="radio"`, an already-`checked` item skips the proposal entirely
+   *  (no event, no state change -- native radio semantics) and simply falls through to selection;
+   *  an unchecked item proposes the same cancelable event with `checked: true` and, once
+   *  committed, unchecks every other radio row in its `group` beneath the owning menu.
    *
    *  A submenu parent is a disclosure rather than an action: it opens its submenu (without
    *  moving focus, since this path is the pointer one -- `<lr-menu>`'s own Enter/Space handling
@@ -556,6 +592,19 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         { cancelable: true }
       );
       if (!changeEvent.defaultPrevented) this.checked = checked;
+    } else if (this.type === 'radio' && !this.checked) {
+      // An already-checked radio proposes nothing and changes nothing here -- matching native
+      // radio semantics (see the class doc) -- but still falls through to activate() below, same
+      // as re-selecting any other item.
+      const changeEvent = this.emit(
+        'lr-menu-item-change',
+        { value: this.value, checked: true },
+        { cancelable: true }
+      );
+      if (!changeEvent.defaultPrevented) {
+        this.checked = true;
+        this.owningMenu?.uncheckRadioGroup(this, this.group);
+      }
     }
     this.owningMenu?.activate(this);
   }
@@ -606,24 +655,29 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     await this.updateComplete;
   }
 
+  // Reads the light-DOM `slot` attribute directly rather than a rendered slot's live
+  // `assignedElements()` snapshot: WebKit has been observed reporting the latter transiently
+  // empty for an unrelated forwarding-slot chain nested inside the assigned element (see
+  // `<lr-switch>`'s equivalent fix), even though the assigned child's own `slot` attribute never
+  // changed.
   private onIconSlotChange = (): void => {
-    this.hasIconSlot = [
-      ...this.renderRoot.querySelectorAll<HTMLSlotElement>(
-        'slot[name="icon"], slot[name="prefix"]'
-      ),
-    ].some((slot) => slot.assignedElements({ flatten: true }).length > 0);
+    this.hasIconSlot = Array.from(this.children).some(
+      (el) => el.getAttribute('slot') === 'icon' || el.getAttribute('slot') === 'prefix',
+    );
   };
 
+  // `hasDetailsSlot` is a content check (does the assigned node have real text), not a plain
+  // presence flag, so it stays on the live assigned-nodes snapshot rather than the light-DOM
+  // attribute -- a light-DOM check cannot see text forwarded through a nested `<slot>` inside the
+  // assigned element.
   private onDetailsSlotChange = (e: Event): void => {
     this.hasDetailsSlot = (e.target as HTMLSlotElement)
       .assignedNodes({ flatten: true })
       .some((node) => (node.textContent ?? '').trim() !== '');
   };
 
-  private onSuffixSlotChange = (e: Event): void => {
-    this.hasSuffixSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
+  private onSuffixSlotChange = (): void => {
+    this.hasSuffixSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'suffix');
   };
 
   private defaultLabelSlot(): HTMLSlotElement | null {
@@ -958,7 +1012,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
             >${spinnerIcon()}</span
           >`
         : nothing}
-      ${this.type === 'checkbox' && this.checked
+      ${(this.type === 'checkbox' || this.type === 'radio') && this.checked
         ? html`<span part="checked-icon">${checkmarkGlyph()}</span>`
         : nothing}
       ${this.submenuAssigned

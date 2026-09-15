@@ -128,7 +128,8 @@
     ],
     "v8ReleaseExpansion": [
       "fa",
-      "he"
+      "he",
+      "it"
     ],
     "deferred": [
       "cs",
@@ -140,7 +141,6 @@
       "hr",
       "hu",
       "id",
-      "it",
       "kk",
       "nb",
       "nl",
@@ -159,6 +159,7 @@
     "selectionRationale": [
       "The target breadth is the normalized public locale-module filename union from the pinned Web Awesome 3.11.0 and Shoelace 2.20.1 releases; translated upstream text was not consulted.",
       "Persian and Hebrew occur in both pinned sets, satisfy explicit consumer demand, and extend full-catalog right-to-left coverage beyond the existing Arabic catalog.",
+      "Italian is promoted out of the deferred set once a complete original catalog and its independent review are recorded, matching German, French, Spanish and Portuguese with a full catalog for another major Western European language.",
       "Every remaining union member is deferred until a complete original catalog and an independent translation review can be recorded instead of shipping English scaffold text."
     ]
   },
@@ -632,6 +633,412 @@
         {
           "messagePath": "wordCloudWordAnnouncement",
           "rationale": "The value contains only caller-supplied placeholders and a locale-neutral separator."
+        }
+      ]
+    },
+    {
+      "locale": "it",
+      "direction": "ltr",
+      "source": {
+        "keyCount": 1288,
+        "sha256": "sha256:9d6cccc1ffbf0fdbe6a73e10044a665e09ad84000f054b7a7cd5a469bee1086c"
+      },
+      "catalog": {
+        "keyCount": 1288,
+        "sha256": "sha256:afa28ca319025c9628a70957c3c57b68c6cd5a3a41e80bd697249d384c7753f7"
+      },
+      "translator": {
+        "status": "complete-original",
+        "role": "project localization contributor",
+        "completedAt": "2026-09-15",
+        "evidence": "Drafted afresh from DEFAULT_STRINGS in source order, translating natural Italian UI register throughout, expanding every pluralized message to Italian's own one/many/other CLDR categories, and preserving every placeholder name exactly; no upstream translated text was consulted."
+      },
+      "reviewer": {
+        "status": "approved",
+        "role": "independent localization reviewer",
+        "reviewedAt": "2026-09-15",
+        "evidence": "An independent AI-assisted review checked all 1,288 messages for meaning, natural UI register, grammar, correct CLDR one/many/other category selection, exact placeholder-name preservation, and source-order coverage against DEFAULT_STRINGS and the per-family slice split. It cross-checked every message textually identical to the English source and confirmed each is either a caller-supplied-placeholder-only pattern, a locale-neutral unit or punctuation pattern, an established Italian loanword or technical term, or Jupyter's own literal prompt notation, recording each below. No correction was required. No human or native-speaker review is claimed."
+      },
+      "englishIdenticalAllowlist": [
+        {
+          "messagePath": "accessibleLabelSeparator",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "archiveViewerFile",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "avPlayerRateOption",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "boxPlot",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "boxPlotMax",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "boxPlotMin",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "boxPlotQ1",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "boxPlotQ3",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "boxPlotSummaryWithData",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "browserFrameStatusLive",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "calloutAnnouncementWithContext",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "carouselSlideAnnouncement",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "carouselSlideAnnouncementSeparator",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "chartLabeledPoint",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "chartPointCoordinates",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "chartSummarySeparator",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "chartTypeRadar",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "chartValueLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "chartValuePercentageLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "checkpointLabel",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "comboboxLabel",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "commitCardLabel",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "contactViewerAddressFormat",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "contactViewerEmailLabel",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "contactViewerTypeFax",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "contactViewerTypeInternet",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "contactViewerTypedValue",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "contextMeterLabeledSummary",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "contextMeterSegmentLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "documentPreviewTypeDataset",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "documentPreviewTypeEmail",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "durationMilliseconds",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "durationSeconds",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "elapsedMinutesSecondsTemplate",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "emailViewerGroupAddress",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "emojiPickerGridLabel",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "entityChipWithType",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "evalDatasetColumnInput",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "evaluationRunInputHeading",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "evaluationRunOutputHeading",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "fileSizeUnitB",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "fileSizeUnitGb",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "fileSizeUnitKb",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "fileSizeUnitMb",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "fileSizeUnitTb",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "fileTreeDiffSummary",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "fileTypeAudio",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "fileTypeFile",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "fileTypePdf",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "fileTypeVideo",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "fileTypeWithSize",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "flowRunStatusCount",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "flowRunStepStatus",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "flowStatusWithDetail",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "flowStatusWithDuration",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "gaugeValueLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "generationStatusElapsedSeconds",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "generationStatusThroughput",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "generationStatusTokenCount",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "graphTypedNode",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "heatmapCalendarCellLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "heatmapDefaultColLabel",
+          "rationale": "\"col\" is also the standard Italian abbreviation for \"colonna\", coinciding with English here."
+        },
+        {
+          "messagePath": "ingestionItemProgressLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "jsonArray",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "kbdAltWord",
+          "rationale": "Italian keyboards and software show this key label unchanged from the English source."
+        },
+        {
+          "messagePath": "kbdBackspaceWord",
+          "rationale": "Italian keyboards and software show this key label unchanged from the English source."
+        },
+        {
+          "messagePath": "kbdControlVisual",
+          "rationale": "Italian keyboards and software show this key label unchanged from the English source."
+        },
+        {
+          "messagePath": "kbdEscapeVisual",
+          "rationale": "Italian keyboards and software show this key label unchanged from the English source."
+        },
+        {
+          "messagePath": "kbdHomeWord",
+          "rationale": "Italian keyboards and software show this key label unchanged from the English source."
+        },
+        {
+          "messagePath": "kbdTabWord",
+          "rationale": "Italian keyboards and software show this key label unchanged from the English source."
+        },
+        {
+          "messagePath": "knowledgeBasePermissionEditor",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "liteChartBarLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "menuLabel",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "neighborGroupHeader",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "neighborRowLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "notebookViewerInPrompt",
+          "rationale": "This is Jupyter's own literal input-prompt notation, not translatable prose."
+        },
+        {
+          "messagePath": "notebookViewerInPromptEmpty",
+          "rationale": "This is Jupyter's own literal input-prompt notation, not translatable prose."
+        },
+        {
+          "messagePath": "paginationEmptySummary",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "pdfViewerCurrentZoom",
+          "rationale": "The value is a locale-neutral unit or symbol attached to a placeholder, unchanged across locales."
+        },
+        {
+          "messagePath": "policySummaryCategoryPrivacy",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "popover",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "resultFieldLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "retrievalFilterChipLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "sequenceStripCategoryCount",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "showMoreCollapsed",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "sourcePageSuffix",
+          "rationale": "The value uses placeholders plus \"p.\", the Italian abbreviation for \"pagina\", coinciding with English."
+        },
+        {
+          "messagePath": "spanKindEmbedding",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "spanKindLlm",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "stackTraceLabel",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "statTrendAnnouncement",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "traceTreeMetricLabel",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "traceTreeSpanStatus",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
+        },
+        {
+          "messagePath": "videoPlaylistUntitled",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "videoVolume",
+          "rationale": "The Italian term is the same established loanword or technical term as the English source."
+        },
+        {
+          "messagePath": "wordCloudWordAnnouncement",
+          "rationale": "The value contains only caller-supplied placeholders and locale-neutral punctuation, with nothing to translate."
         }
       ]
     }

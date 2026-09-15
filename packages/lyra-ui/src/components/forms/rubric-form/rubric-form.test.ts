@@ -6,6 +6,7 @@ import {
   hoverUntilMatched,
   resetMouse,
   sendMouse,
+  settlePointer,
 } from "../../../../test/wtr-mouse.js";
 import { VALIDITY_ANCHOR } from "../../../internal/anchored-validity.js";
 
@@ -1501,6 +1502,13 @@ describe("lr-rubric-form", () => {
       const rest = getComputedStyle(button).backgroundColor;
       const rect = button.getBoundingClientRect();
       try {
+        // A hover/press that must change NOTHING cannot be polled for: there is no state to wait
+        // for, and `sendMouse` resolves when the synthesized command completes, not when the
+        // browser has processed the resulting native pointer event -- so a synchronous read here
+        // cannot tell "the press was correctly inert" from "the press has not landed yet" and
+        // passes vacuously either way. settlePointer() gives the browser two frames to process the
+        // already-dispatched event and recompute style, which turns each read into a real
+        // assertion (docs/agents/testing.md; test/wtr-mouse.ts).
         await sendMouse({
           type: "move",
           position: [
@@ -1508,11 +1516,13 @@ describe("lr-rubric-form", () => {
             Math.round(rect.top + rect.height / 2),
           ],
         });
+        await settlePointer();
         expect(
           getComputedStyle(button).backgroundColor,
           `${part} hover`
         ).to.equal(rest);
         await sendMouse({ type: "down" });
+        await settlePointer();
         expect(
           getComputedStyle(button).backgroundColor,
           `${part} press`

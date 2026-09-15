@@ -62,6 +62,28 @@ export const NoResize: Story = {
   render: () => html`<lr-textarea placeholder="Fixed size" resize="none" rows="4"></lr-textarea>`,
 };
 
+/**
+ * The host, `form-control`, `textarea-wrapper` and `textarea` parts all carry an unconditional
+ * `block-size: 100%` chain, the same pattern `lr-file-input` and `lr-code-editor` already use. Set
+ * on an ordinary auto-height ancestor it is a no-op (see `Default`); sized inside a flex column
+ * with a definite block size, as here, the label and hint keep their natural size and the native
+ * textarea fills and scrolls the remaining space. `resize="none"` keeps this demonstration free of
+ * `resize="auto"`'s own JS-driven growth, which supersedes this CSS chain whenever it is active.
+ */
+export const FillHeightContainer: Story = {
+  name: 'Fills a definite-height container',
+  render: () => html`
+    <div style="display: flex; flex-direction: column; block-size: 10rem; max-inline-size: 20rem;">
+      <lr-textarea
+        label="Notes"
+        hint="Grows to fill the remaining space below this hint."
+        resize="none"
+        style="block-size: 100%;"
+      ></lr-textarea>
+    </div>
+  `,
+};
+
 export const Readonly: Story = {
   render: () => html`
     <lr-textarea

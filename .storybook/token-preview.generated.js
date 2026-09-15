@@ -2902,6 +2902,22 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-scrollbar-gutter",
+        "type": "string",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-scrollbar-gutter, auto)"
+        }
+      },
+      {
+        "name": "--lr-scrollbar-width",
+        "type": "string",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-scrollbar-width, auto)"
+        }
+      },
+      {
         "name": "--lr-theme-popover-viewport-clamp",
         "type": "dimension",
         "scope": "theme-input",

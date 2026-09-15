@@ -18,6 +18,7 @@ import '../translations/ar.js';
 import '../translations/de.js';
 import '../translations/fa.js';
 import '../translations/he.js';
+import '../translations/it.js';
 import '../translations/pt-BR.js';
 import '../translations/zh-CN.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
@@ -380,6 +381,22 @@ it('selects Persian one/other and Hebrew one/two/other catalog forms through reg
   expect(matches(hebrew, 1)).to.equal('1 התאמה');
   expect(matches(hebrew, 2)).to.equal('2 התאמות');
   expect(matches(hebrew, 3)).to.equal('3 התאמות');
+});
+
+it('registers the complete Italian catalog as a discoverable locale', () => {
+  const result = getRegisteredLyraLocales();
+  expect(result).to.include('it');
+});
+
+it('resolves Italian messages and selects one/many/other catalog forms', async () => {
+  const italian = await localeHost('it');
+  expect(resolveLyraString(italian, 'close')).to.equal('Chiudi');
+  const matches = (count: number) =>
+    resolveLyraString(italian, 'viewerSearchMatchCount', undefined, undefined, { count });
+
+  expect(matches(1)).to.equal('1 corrispondenza');
+  expect(matches(2)).to.equal('2 corrispondenze');
+  expect(matches(1_000_000)).to.equal('1000000 corrispondenze');
 });
 
 it('reaches a regional-only catalog from its bare base language and from a script-bearing tag', async () => {

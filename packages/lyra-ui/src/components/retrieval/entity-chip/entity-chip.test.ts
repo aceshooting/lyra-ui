@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './entity-chip.js';
 import type { LyraEntityChip } from './entity-chip.js';
 
@@ -445,14 +445,6 @@ describe('disabled affordance (an entity-less chip)', () => {
   const base = (el: LyraEntityChip): HTMLButtonElement =>
     el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
 
-  const center = (node: Element): [number, number] => {
-    const rect = node.getBoundingClientRect();
-    return [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-  };
-
   it('paints and feels disabled while an enabled sibling keeps its hover and press feedback', async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div>
@@ -481,8 +473,12 @@ describe('disabled affordance (an entity-less chip)', () => {
     const enabledResting = getComputedStyle(enabledBase).backgroundColor;
     const disabledResting = getComputedStyle(disabledBase).backgroundColor;
     try {
-      await resetMouse();
-      await sendMouse({ type: 'move', position: center(enabledBase) });
+      // A single `move` can miss: sendMouse resolves when the synthesized command completes, not
+      // when the browser processed the resulting native pointer event, and a late layout settle
+      // can move the chip out from under an already-dispatched position. hoverUntilMatched()
+      // re-reads the rect and re-dispatches until :hover really matches; only then is polling the
+      // painted result meaningful.
+      await hoverUntilMatched(enabledBase, 'the enabled chip never reported :hover');
       await waitUntil(
         () => getComputedStyle(enabledBase).backgroundColor !== enabledResting,
         'an enabled chip must still light up under the pointer',
@@ -495,16 +491,22 @@ describe('disabled affordance (an entity-less chip)', () => {
       );
       await sendMouse({ type: 'up' });
 
-      await sendMouse({ type: 'move', position: center(disabledBase) });
+      // The disabled half asserts that a pointer changed NOTHING, which cannot be polled: an
+      // unprocessed pointer event and a correctly inert one read identically. So prove the
+      // pointer actually arrived (hoverUntilMatched), then give the browser two frames to apply
+      // any style it would have applied (settlePointer) before reading the resting colour back.
+      await hoverUntilMatched(disabledBase, 'the disabled chip never reported :hover');
       await waitUntil(
         () => getComputedStyle(enabledBase).backgroundColor === enabledResting,
         'the pointer should have left the enabled chip',
       );
+      await settlePointer();
       expect(
         getComputedStyle(disabledBase).backgroundColor,
         'a disabled chip must not light up under the pointer',
       ).to.equal(disabledResting);
       await sendMouse({ type: 'down' });
+      await settlePointer();
       expect(
         getComputedStyle(disabledBase).backgroundColor,
         'a disabled chip must not react to a press either',

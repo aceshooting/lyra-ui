@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import type { PropertyValues } from "lit";
 import "./switch.js";
 import type { LyraSwitch } from "./switch.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 
 it("contains long label and hint content at 320px in LTR and RTL", async () => {
@@ -212,13 +212,17 @@ it("gives the switch track hover and press feedback matching the keyboard focus-
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   const restingTrack = getComputedStyle(track).backgroundColor;
   const restingLabel = getComputedStyle(label).color;
-  const rect = base.getBoundingClientRect();
-  const position: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   try {
-    await sendMouse({ type: "move", position });
+    // The pointer is landed with hoverUntilMatched() and every repaint is polled. sendMouse()
+    // resolves when the synthesized command completes, which is NOT when the browser has processed
+    // the resulting native pointer event -- and a single move aimed at a rect measured earlier can
+    // also miss the control outright after a late layout settle. Reading the track straight after
+    // the move can therefore sample the resting colour and report working feedback as broken.
+    await hoverUntilMatched(base, "the switch never took the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(track).backgroundColor !== restingTrack,
+      "the track never lit up under the pointer"
+    );
     const hovered = getComputedStyle(track).backgroundColor;
     expect(hovered, "hovered track vs resting").to.not.equal(restingTrack);
     expect(getComputedStyle(base).filter, "no subtree filter").to.equal("none");
@@ -227,6 +231,10 @@ it("gives the switch track hover and press feedback matching the keyboard focus-
       "the label must not move with the track"
     ).to.equal(restingLabel);
     await sendMouse({ type: "down" });
+    await waitUntil(
+      () => getComputedStyle(track).backgroundColor !== hovered,
+      "the track never darkened under the press"
+    );
     expect(
       getComputedStyle(track).backgroundColor,
       "pressed vs hovered"
@@ -245,15 +253,12 @@ it("moves the checked track under the pointer too, away from its own brand fill"
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const track = el.shadowRoot!.querySelector('[part~="track"]') as HTMLElement;
   const resting = getComputedStyle(track).backgroundColor;
-  const rect = base.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
+    await hoverUntilMatched(base, "the checked switch never took the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(track).backgroundColor !== resting,
+      "the checked track never moved under the pointer"
+    );
     expect(
       getComputedStyle(track).backgroundColor,
       "checked hover vs checked resting"
@@ -283,15 +288,12 @@ it("themes checked track, thumb, hover, and pressed paint through component hook
   const thumb = el.shadowRoot!.querySelector<HTMLElement>('[part="thumb"]')!;
   expect(getComputedStyle(track).backgroundColor).to.equal("rgb(1, 2, 3)");
   expect(getComputedStyle(thumb).backgroundColor).to.equal("rgb(4, 5, 6)");
-  const rect = base.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
+    await hoverUntilMatched(base, "the themed switch never took the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(track).backgroundColor === "rgb(7, 8, 9)",
+      'track background color never reached "rgb(7, 8, 9)"'
+    );
     expect(getComputedStyle(track).backgroundColor).to.equal("rgb(7, 8, 9)");
     await sendMouse({ type: "down" });
     await waitUntil(() => getComputedStyle(track).backgroundColor === "rgb(10, 11, 12)", 'track background color never reached "rgb(10, 11, 12)"');

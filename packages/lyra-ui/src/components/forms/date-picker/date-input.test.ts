@@ -6,6 +6,15 @@ import type { LyraDatePicker } from "./date-picker.js";
 import { styles } from "./date-input.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
+// Registers the real shipped `ar`, `fr` and `fa` catalogs' `forms` and `shared` slices so the
+// locale tests below can render without tripping the dev-mode locale-fallback warning that
+// strict-console platform lanes treat as fatal.
+import "../../../translations/ar/forms.js";
+import "../../../translations/ar/shared.js";
+import "../../../translations/fr/forms.js";
+import "../../../translations/fr/shared.js";
+import "../../../translations/fa/forms.js";
+import "../../../translations/fa/shared.js";
 
 interface WindowWithDate extends Window {
   Date: DateConstructor;
@@ -1307,19 +1316,26 @@ it("normalizes invalid calendar count and weekday format attributes before propa
 });
 
 it("falls back to the default locale when a malformed locale is supplied", async () => {
-  const el = (await fixture(
-    html`<lr-date-input
-      value="2026-07-15"
-      locale="not_a_locale"
-    ></lr-date-input>`
-  )) as LyraDateInput;
-  const input = el.shadowRoot!.querySelector(
-    '[part="input"]'
-  ) as HTMLInputElement;
-  const picker = el.shadowRoot!.querySelector(
-    "lr-date-picker"
-  ) as LyraDatePicker;
-  await picker.updateComplete;
+  // A malformed locale can never have a registered catalog, so this intentionally exercises
+  // the dev-mode locale-fallback warning path -- swallow it rather than letting it reach
+  // strict-console lanes.
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let input: HTMLInputElement;
+  let picker: LyraDatePicker;
+  try {
+    const el = (await fixture(
+      html`<lr-date-input
+        value="2026-07-15"
+        locale="not_a_locale"
+      ></lr-date-input>`
+    )) as LyraDateInput;
+    input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    picker = el.shadowRoot!.querySelector("lr-date-picker") as LyraDatePicker;
+    await picker.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
 
   expect(input.value).to.equal(new Date(2026, 6, 15).toLocaleDateString());
   expect(
@@ -2315,10 +2331,19 @@ describe("locale day/month/year order fallback", () => {
   it("falls back to month/day/year field order when Intl.DateTimeFormat rejects the locale outright", async () => {
     // "not_a_locale" is malformed enough that `new Intl.DateTimeFormat(...)` itself throws a
     // RangeError -- localeDateOrder()'s own try/catch must fall back to its hardcoded default
-    // rather than letting that propagate out of a keystroke handler.
-    const el = (await fixture(
-      html`<lr-date-input locale="not_a_locale"></lr-date-input>`
-    )) as LyraDateInput;
+    // rather than letting that propagate out of a keystroke handler. It can also never have a
+    // registered catalog, so this intentionally exercises the dev-mode locale-fallback warning
+    // path too -- swallow it rather than letting it reach strict-console lanes.
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let el: LyraDateInput;
+    try {
+      el = (await fixture(
+        html`<lr-date-input locale="not_a_locale"></lr-date-input>`
+      )) as LyraDateInput;
+    } finally {
+      console.warn = originalWarn;
+    }
     const input = el.shadowRoot!.querySelector(
       '[part="input"]'
     ) as HTMLInputElement;
@@ -4163,16 +4188,26 @@ describe('coverage-gap fixes', () => {
   });
 
   it('recovers from a malformed runtime locale instead of throwing while normalizing typed digits', async () => {
-    const el = (await fixture(
-      html`<lr-date-input locale="!!not-a-locale!!"></lr-date-input>`
-    )) as LyraDateInput;
-    const input = el.shadowRoot!.querySelector(
-      '[part="input"]'
-    ) as HTMLInputElement;
-    input.value = "2026-07-15";
-    setTimeout(() => input.dispatchEvent(new Event("change")));
-    await oneEvent(el, "change");
-    expect(el.value).to.equal("2026-07-15");
+    // A malformed locale can never have a registered catalog, and the nested lr-date-picker's
+    // own calendar strings resolve on a later update than this outer fixture() await -- so this
+    // intentionally exercises the dev-mode locale-fallback warning path for the whole test body,
+    // swallowing it rather than letting it reach strict-console lanes.
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      const el = (await fixture(
+        html`<lr-date-input locale="!!not-a-locale!!"></lr-date-input>`
+      )) as LyraDateInput;
+      const input = el.shadowRoot!.querySelector(
+        '[part="input"]'
+      ) as HTMLInputElement;
+      input.value = "2026-07-15";
+      setTimeout(() => input.dispatchEvent(new Event("change")));
+      await oneEvent(el, "change");
+      expect(el.value).to.equal("2026-07-15");
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 
   it('recovers when the locale-digit number formatter itself throws while normalizing typed text', async () => {

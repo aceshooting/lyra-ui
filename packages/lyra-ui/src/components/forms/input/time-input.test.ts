@@ -1,5 +1,11 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+  settlePointer,
+} from '../../../../test/wtr-mouse.js';
+import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 import './time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
@@ -833,6 +839,31 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const column = el.shadowRoot!.querySelector<HTMLElement>('[part="column"]')!;
     expect(column.scrollWidth).to.be.greaterThan(column.clientWidth);
     expect(getComputedStyle(column).overflowX).to.equal('hidden');
+  });
+
+  it('reads the theme-level scrollbar hook on each column, defaulting to its own thin/auto pair', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:00"></lr-time-input>`);
+    await el.show();
+    await el.updateComplete;
+    const column = el.shadowRoot!.querySelector<HTMLElement>('[part="column"]')!;
+    const computed = getComputedStyle(column);
+    expect(readScrollbarWidth(column, '[part="column"]')).to.equal('thin');
+    expect(computed.scrollbarGutter).to.equal('auto');
+  });
+
+  it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune each column', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-theme-scrollbar-width: none; --lr-theme-scrollbar-gutter: stable">
+        <lr-time-input value="10:00"></lr-time-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-time-input') as LyraTimeInput;
+    await el.show();
+    await el.updateComplete;
+    const column = el.shadowRoot!.querySelector<HTMLElement>('[part="column"]')!;
+    const computed = getComputedStyle(column);
+    expect(readScrollbarWidth(column, '[part="column"]')).to.equal('none');
+    expect(computed.scrollbarGutter).to.equal('stable');
   });
 
   it('keeps the mirrored picker dimensions relative to the component font size', async () => {
@@ -1820,11 +1851,6 @@ describe('lr-time-input validity, value coercion, and slots', () => {
 // unguarded one that happens not to be reached by keyboard-only coverage. Colour STRINGS are
 // compared, never elements -- a DOM node as chai's actual/expected hangs the whole file.
 describe('lr-time-input disabled segment hover/press feedback', () => {
-  const centerOf = (node: Element): [number, number] => {
-    const rect = node.getBoundingClientRect();
-    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
-  };
-
   it('does not tint a segment on hover or press while disabled', async () => {
     const el = await fixture<LyraTimeInput>(
       html`<lr-time-input disabled value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>`,
@@ -1832,7 +1858,12 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
     const target = segment(el, 'hour');
     const resting = getComputedStyle(target).backgroundColor;
     try {
-      await sendMouse({ type: 'move', position: centerOf(target) });
+      // A hover that must change nothing cannot be polled for: an unprocessed pointer event and a
+      // correctly inert one read identically. hoverUntilMatched() proves the pointer really
+      // landed (it re-reads the rect and re-dispatches until :hover matches), and settlePointer()
+      // then gives the browser two frames to apply any tint it would have applied.
+      await hoverUntilMatched(target, 'the disabled segment never reported :hover');
+      await settlePointer();
       expect(getComputedStyle(target).backgroundColor, 'hover must not tint a disabled segment').to.equal(
         resting,
       );
@@ -1861,12 +1892,19 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
     const target = segment(el, 'hour');
     const resting = getComputedStyle(target).backgroundColor;
     try {
-      await sendMouse({ type: 'move', position: centerOf(target) });
+      // Same reasoning as the `disabled` case above: land the pointer for real, then settle two
+      // frames, because neither read here can be polled for.
+      await hoverUntilMatched(
+        target,
+        'the fieldset-disabled segment never reported :hover',
+      );
+      await settlePointer();
       expect(
         getComputedStyle(target).backgroundColor,
         'hover must not tint a segment disabled via an ancestor fieldset',
       ).to.equal(resting);
       await sendMouse({ type: 'down' });
+      await settlePointer();
       expect(
         getComputedStyle(target).backgroundColor,
         'press must not tint a segment disabled via an ancestor fieldset',
@@ -1884,8 +1922,14 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
     const target = segment(el, 'hour');
     const resting = getComputedStyle(target).backgroundColor;
     try {
-      await sendMouse({ type: 'move', position: centerOf(target) });
-      const hovered = getComputedStyle(target).backgroundColor;
+      // The control direction CAN be polled: land the pointer, then wait for the tint to appear.
+      // Reading it straight after sendMouse samples before the browser processed the event.
+      await hoverUntilMatched(target, 'the enabled segment never reported :hover');
+      let hovered = resting;
+      await waitUntil(() => {
+        hovered = getComputedStyle(target).backgroundColor;
+        return hovered !== resting;
+      }, 'hover must move the fill off its resting colour');
       expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(resting);
       await sendMouse({ type: 'down' });
       await waitUntil(() => getComputedStyle(target).backgroundColor !== hovered, 'press vs hover');
@@ -1897,11 +1941,6 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
 });
 
 describe('lr-time-input disabled action hover/press feedback', () => {
-  const centerOf = (node: Element): [number, number] => {
-    const rect = node.getBoundingClientRect();
-    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
-  };
-
   for (const testCase of [
     {
       name: 'disabled picker toggle',
@@ -1919,8 +1958,12 @@ describe('lr-time-input disabled action hover/press feedback', () => {
       const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${testCase.part}"]`)!;
       const resting = getComputedStyle(target).backgroundColor;
       try {
-        await sendMouse({ type: 'move', position: centerOf(target) });
-        await waitUntil(() => target.matches(':hover'));
+        // A single `move` can land on nothing when a late layout settle shifts the target, and
+        // its `:hover` may never arrive; hoverUntilMatched() re-reads the rect and re-dispatches
+        // until the browser has actually applied :hover.
+        await hoverUntilMatched(target, `the ${testCase.name} never reported :hover`);
+        // A hover that must change nothing cannot be polled for; settle first so the read is real.
+        await settlePointer();
         expect(getComputedStyle(target).backgroundColor, 'hover').to.equal(resting);
         await sendMouse({ type: 'down' });
         await waitUntil(() => target.matches(':active'));

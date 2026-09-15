@@ -2655,13 +2655,17 @@ it('lets inherited CSS properties theme popup-close-button hover and active stat
   try {
     await hoverUntilMatched(close, 'the popup close button never reported :hover');
     const expectedHoverBackground = resolvedInShadow('background: var(--lr-color-brand-quiet)', 'background-color');
+    const expectedHoverColor = resolvedInShadow('color: var(--lr-color-brand)', 'color');
+    // The hover rule retints background-color AND color, and both ease independently over
+    // --lr-transition-fast. Polling only the background can therefore return on a frame whose
+    // rounded color is still a step short of the brand token, so wait for the pair.
     await waitUntil(
-      () => getComputedStyle(close).backgroundColor === expectedHoverBackground,
-      'close background color never reached its hover value',
+      () =>
+        getComputedStyle(close).backgroundColor === expectedHoverBackground &&
+        getComputedStyle(close).color === expectedHoverColor,
+      'close background color and text color never reached their hover values',
     );
-    expect(getComputedStyle(close).color).to.equal(
-      resolvedInShadow('color: var(--lr-color-brand)', 'color'),
-    );
+    expect(getComputedStyle(close).color).to.equal(expectedHoverColor);
     await sendMouse({ type: 'down' });
     await waitUntil(() => getComputedStyle(close).backgroundColor === resolvedInShadow( 'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))', 'background-color', ), 'close background color never reached its pressed value');
     expect(getComputedStyle(close).color).to.equal(
@@ -2677,13 +2681,20 @@ it('lets inherited CSS properties theme popup-close-button hover and active stat
     wrapper.style.setProperty('--lr-map-popup-close-button-active-bg', 'rgb(7, 8, 9)');
     wrapper.style.setProperty('--lr-map-popup-close-button-active-color', 'rgb(10, 11, 12)');
     await waitUntil(
-      () => getComputedStyle(close).backgroundColor === 'rgb(1, 2, 3)',
-      'close background color never retinted to rgb(1, 2, 3)',
+      () =>
+        getComputedStyle(close).backgroundColor === 'rgb(1, 2, 3)' &&
+        getComputedStyle(close).color === 'rgb(4, 5, 6)',
+      'close background color and text color never retinted to rgb(1, 2, 3) / rgb(4, 5, 6)',
     );
     expect(getComputedStyle(close).color).to.equal('rgb(4, 5, 6)');
 
     await sendMouse({ type: 'down' });
-    await waitUntil(() => getComputedStyle(close).backgroundColor === 'rgb(7, 8, 9)', 'close background color never reached rgb(7, 8, 9)');
+    await waitUntil(
+      () =>
+        getComputedStyle(close).backgroundColor === 'rgb(7, 8, 9)' &&
+        getComputedStyle(close).color === 'rgb(10, 11, 12)',
+      'close background color and text color never reached rgb(7, 8, 9) / rgb(10, 11, 12)',
+    );
     expect(getComputedStyle(close).color).to.equal('rgb(10, 11, 12)');
     await sendMouse({ type: 'up' });
   } finally {

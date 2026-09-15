@@ -174,10 +174,11 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-ui/translations/<locale>.js` (the ten shipped message catalogs),
+  `@aceshooting/lyra-ui/translations/<locale>.js` (the eleven shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
-  (happy-dom shims, plus `createLyraEvent()` for building a validated test event),
+  (happy-dom shims, `createLyraEvent()` for building a validated test event, plus a small set of
+  interaction drivers that go through a component's own real activation path),
   `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
 
 ### Registration-free component helpers
@@ -771,7 +772,8 @@ convenience: `--lr-ramp-*` (a step encodes a light-mode choice and has no theme 
 palettes (generated ramps that move with the palette tooling), `--lr-layer-*` (stacking order is
 your decision), `--lr-color-mix-*` and `--lr-hover-brightness` (inputs to the library's own
 interaction recipe), `--lr-line-height-*`, the per-control internals (`--lr-icon-button-size`,
-`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-popover-viewport-clamp`,
+`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-scrollbar-width`,
+`--lr-scrollbar-gutter`, `--lr-popover-viewport-clamp`,
 `--lr-safe-area-*`, `--lr-mask-opaque`, `--lr-color-no-data`), and the nine variant-following slots
 (`--lr-color-fill-loud` and friends), which mean "the variant _this_ element is set to" and are
 meaningless on `:root`. If you need one of these, ask for it to be added rather than reading it out
@@ -1651,21 +1653,24 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
 
-Ten full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `ja`, `pt-BR`,
-`ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are **side-effect-only
-modules**: import one bare, read nothing from it, and it calls `registerLyraLocale()` for you.
+Eleven full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`,
+`pt-BR`, `ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
+**side-effect-only modules**: import one bare, read nothing from it, and it calls
+`registerLyraLocale()` for you.
 
 ```ts
 import "@aceshooting/lyra-ui/translations/de.js";
 import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
 import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
+import "@aceshooting/lyra-ui/translations/it.js"; // Italian
 import "@aceshooting/lyra-ui/translations/pt-BR.js"; // also serves pt and pt-PT
 import "@aceshooting/lyra-ui/translations/zh-CN.js"; // also serves zh, zh-Hans and zh-Hans-CN
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
-`one`/`two`/`other`). `ar`, `fa` and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
+`one`/`two`/`other`); Italian uses a non-default set too (`it`: `one`/`many`/`other`). `ar`, `fa`
+and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
@@ -1865,6 +1870,11 @@ installing or shipping a wrapper; import the normal granular registration entry 
 - **Angular** additionally needs `CUSTOM_ELEMENTS_SCHEMA` in the module/component that uses the tags.
 - In-DOM templates lower-case attribute names; camelCase property names only survive in framework
   templates and JS, never in hand-written HTML attributes.
+- **Dev-mode unknown-attribute diagnostics ignore framework-owned scoping/debug attributes.**
+  Angular's default emulated view encapsulation writes `_ngcontent-*`/`_nghost-*` scoping markers
+  onto every element it manages, its dev builds add `ng-reflect-*` input reflections and
+  `ng-version`, and Vue's scoped styles add `data-v-*` — none of these trigger the unknown-attribute
+  warning. A genuinely misspelled or unsupported attribute still warns.
 
 ## SSR and declarative shadow DOM
 
@@ -1977,9 +1987,54 @@ builds the event only — dispatch it yourself with `target.dispatchEvent(event)
 
 Scope: covers every `lr-*`-named event a component documents. A component's native-named
 re-emits (`input`, `change`, `blur`, `focus`, ...) already have real DOM event types and dispatch
-semantics of their own that this factory does not model, and there is no equivalent for driving a
-component's own internal activation path (choosing an option, submitting a confirm decision) —
-render the real component and interact with it for that.
+semantics of their own that this factory does not model.
+
+## Driving a component's real activation path: interaction drivers
+
+For the exact gap `createLyraEvent()` leaves open — choosing an option, submitting a confirm
+decision, toggling a switch, activating a step — `@aceshooting/lyra-ui/testing` exports a small
+set of typed interaction drivers, one per interaction, that go through the real component's own
+activation path (its own shadow-part lookup and `.click()`, the same as its own tests) instead of
+a downstream suite reverse-engineering internal detail shapes or shadow-part selectors itself:
+
+```ts
+import {
+  chooseOption,
+  submitConfirmDecision,
+  toggleSwitch,
+  activateStep,
+} from '@aceshooting/lyra-ui/testing';
+
+await chooseOption(combobox, 'banana'); // opens the listbox, clicks the matching [part="option"] row
+await submitConfirmDecision(confirmBar, 'approved'); // clicks [part="approve-button"]
+await toggleSwitch(switchEl); // calls switchEl.click(), lr-switch's own activation path
+await activateStep(stepper, 'review'); // clicks the [part="step"] button for that stepId (or pass an index)
+```
+
+`chooseOption()` accepts any of `<lr-combobox>`, `<lr-select>`, `<lr-model-select>`,
+`<lr-locale-picker>` and `<lr-voice-picker>` — every component that independently implements the
+same `[part="option"]` row plus `data-value` delegated-click pattern for its own listbox/popup.
+`submitConfirmDecision()`
+accepts either `<lr-confirm-bar>` or `<lr-tool-approval-dialog>`, which render the identical
+`[part="approve-button"]`/`[part="deny-button"]` pair for the same `lr-approve`/`lr-deny`
+contract.
+
+Each driver is `async` and awaits `updateComplete` before returning, so assertions written
+immediately after it see fully-settled DOM/state. Each one also throws a plain `Error` — never a
+silent no-op — when the requested interaction cannot actually happen: the target is disabled, the
+option owner/stepper is read-only or has no matching row/step currently rendered, or the confirm
+bar is already decided. That is the exact failure mode a hand-rolled event misses (for example
+dispatching a confirm event without `cancelable`, which makes a `preventDefault()`-based
+pending-state handler a silent no-op that still looks tested) — these drivers exercise the
+component for real, so a precondition that blocks the interaction is surfaced as a thrown error
+instead of quietly doing nothing.
+
+Pure DOM operations only (`Element.click()`, shadow-part queries, public properties) — no
+`@web/test-runner`/CDP-only helper, so they also run under a downstream suite's own
+happy-dom/jsdom environment, not only a real browser.
+
+Scope: one driver per interaction named above. Not a general "drive any component" toolkit —
+render the real component and interact with it directly for anything else.
 
 ## Accessibility contract
 
@@ -3978,6 +4033,13 @@ These named interfaces and helper signatures are available to typed integrations
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
   `installHappyDomFormAssociatedShims(): unknown`
   `installStubInternalsForTest(/* public names: host */): unknown`
+
+- **`testing-interaction-drivers-contracts`** — Shared utility contracts.
+  `chooseOption(/* public names: owner, value */): unknown`
+  `submitConfirmDecision(/* public names: owner, decision */): unknown`
+  `toggleSwitch(/* public names: switchEl */): unknown`
+  `activateStep(/* public names: stepper, target */): unknown`
+  See "Driving a component's real activation path: interaction drivers" above for the full contract.
 
 - **`theme-gemstones-data-contracts`** — Shared utility contracts.
   `GemstoneAccent {

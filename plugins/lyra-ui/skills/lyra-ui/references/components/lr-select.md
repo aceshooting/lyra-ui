@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -119,7 +119,11 @@ exactly like the multi-option case, until the trigger is actually activated.
   direction change refreshes logical left/right placement by the same path
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
-  exact alias; writing either spelling updates the other
+  exact alias; writing either spelling updates the other. This property always reports the
+  instance's own authored value (or the mirrored `absolute` default); when neither spelling is
+  authored, the listbox is actually placed with the cascading `--lr-positioning-strategy` custom
+  property honored ahead of that default — see the listbox's own **Themeable custom properties**
+  below
 - `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
   keyboard-reachable, re-selectable row. Off by default
@@ -295,6 +299,13 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+
+`--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
+`<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
+listbox is (re)positioned. An explicit `positioning-strategy`/`hoist` on the instance always wins
+over it; otherwise it wins over this control's own mirrored `absolute` default. One declaration on
+`:root`, a theme, or a single clipping ancestor (an `overflow: hidden` card or scroller) changes
+every unset select beneath it instead of authoring `positioning-strategy`/`hoist` on each instance.
 
 The trigger's own resting surface has hooks as of 16.0.0: `--lr-select-trigger-fill` (default
 `var(--lr-color-surface)`) and `--lr-select-trigger-border-color` (default

@@ -11,6 +11,106 @@ import { sendKeys } from '@web/test-runner-commands';
 const MP3_SRC = 'https://example.test/podcast.mp3';
 const MP4_SRC = 'https://example.test/clip.mp4';
 
+/**
+ * Waits until `target`'s bounding rect stops changing for two consecutive samples. Most fixtures in
+ * this file point `src` at a host that never resolves (the rate-select test, the timeline/marker/cue
+ * hover-feedback test, and the withCues()-based cue-hover-bg fixture all do), so the native `error`
+ * event that follows lands asynchronously and swaps in a `part="error"` banner above the
+ * toolbar/timeline, shifting every control below it. That shift can land after a pointer has already
+ * been landed on a hover target, silently dropping `:hover` mid-poll -- worse under coverage
+ * instrumentation, which slows the event loop enough to widen the race window. Not every fixture
+ * carries a `src` (the marker/press test below renders `kind="audio"` with none), but the wait is
+ * cheap and a no-op once the rect is already quiet, so call it before the first hover/press in every
+ * test rather than tracking which fixtures are actually exposed to the race.
+ */
+async function waitForStableLayout(
+  target: Element,
+  { quietMs = 150, timeoutMs = 2000 }: { quietMs?: number; timeoutMs?: number } = {},
+): Promise<void> {
+  const settle = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+  let previous = target.getBoundingClientRect();
+  let stableSince = Date.now();
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await settle(30);
+    const rect = target.getBoundingClientRect();
+    if (
+      rect.top !== previous.top ||
+      rect.left !== previous.left ||
+      rect.width !== previous.width ||
+      rect.height !== previous.height
+    ) {
+      previous = rect;
+      stableSince = Date.now();
+      continue;
+    }
+    if (Date.now() - stableSince >= quietMs) return;
+  }
+}
+
+/**
+ * Lands the pointer on `target` and polls `predicate` for the transitioned hover/active paint it
+ * is expected to produce. Tolerant of the late layout shift `waitForStableLayout` documents: waits
+ * the layout out before the first hover, and re-lands the pointer if the poll ever observes
+ * `:hover` lost rather than letting the predicate race a target that moved out from under an
+ * already-landed pointer.
+ */
+async function hoverAndAwaitPaint(
+  target: Element,
+  hoverMessage: string,
+  predicate: () => boolean,
+  paintMessage: string,
+  options: { timeout?: number; point?: (rect: DOMRect) => [number, number] } = {},
+): Promise<void> {
+  const { timeout = 2000, point } = options;
+  await waitForStableLayout(target);
+  await hoverUntilMatched(target, hoverMessage, point);
+  await waitUntil(
+    async () => {
+      if (!target.matches(':hover')) {
+        await hoverUntilMatched(target, hoverMessage, point);
+      }
+      return predicate();
+    },
+    paintMessage,
+    { timeout },
+  );
+}
+
+/**
+ * Presses `target` and polls `predicate` for the transitioned pressed/active paint it is expected
+ * to produce. Same re-landing tolerance as `hoverAndAwaitPaint`, extended to the pressed state:
+ * waits for layout to settle, lands the hover, presses, and if the poll ever observes `:active`
+ * lost (the same late layout shift `waitForStableLayout` documents can strand an already-landed
+ * pointer, or a stray release) releases and re-lands both the hover and the press rather than
+ * letting the predicate race a target that moved out from under an already-pressed pointer.
+ */
+async function pressAndAwaitPaint(
+  target: Element,
+  hoverMessage: string,
+  predicate: () => boolean,
+  paintMessage: string,
+  options: { timeout?: number; point?: (rect: DOMRect) => [number, number] } = {},
+): Promise<void> {
+  const { timeout = 2000, point } = options;
+  const land = async (): Promise<void> => {
+    await waitForStableLayout(target);
+    await hoverUntilMatched(target, hoverMessage, point);
+    await sendMouse({ type: 'down' });
+  };
+  await land();
+  await waitUntil(
+    async () => {
+      if (!target.matches(':active')) {
+        await land();
+      }
+      return predicate();
+    },
+    paintMessage,
+    { timeout },
+  );
+}
+
 function assertiveAnnouncements(): string[] {
   const sink = document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
@@ -701,7 +801,7 @@ describe('playback controls', () => {
     const el = (await fixture(html`
       <lr-av-player
         src=${MP4_SRC}
-        style="--lr-color-surface: rgb(7, 8, 9); --lr-color-text: rgb(10, 11, 12); --lr-color-brand-quiet: rgb(1, 2, 3)"
+        style="--lr-transition-fast: 0ms linear; --lr-color-surface: rgb(7, 8, 9); --lr-color-text: rgb(10, 11, 12); --lr-color-brand-quiet: rgb(1, 2, 3)"
       ></lr-av-player>
     `)) as LyraAvPlayer;
     await el.updateComplete;
@@ -716,11 +816,11 @@ describe('playback controls', () => {
     expect(optionStyle.color).to.equal('rgb(10, 11, 12)');
 
     try {
-      await hoverUntilMatched(select, 'the rate-select never registered :hover');
-      await waitUntil(
+      await hoverAndAwaitPaint(
+        select,
+        'the rate-select never registered :hover',
         () => getComputedStyle(select).backgroundColor === 'rgb(1, 2, 3)',
         'the rate-select hover background never appeared',
-        { timeout: 2000 },
       );
     } finally {
       await resetMouse();
@@ -1411,7 +1511,7 @@ describe('hover feedback for click-to-seek/clickable parts', () => {
     const el = await fixture<LyraAvPlayer>(html`
       <lr-av-player
         src=${MP3_SRC}
-        style="--lr-color-brand: rgb(1, 2, 3); --lr-color-brand-quiet: rgb(4, 5, 6); --lr-color-mix-partner: rgb(255, 255, 255); --lr-color-mix-hover: 50%"
+        style="--lr-transition-fast: 0ms linear; --lr-color-brand: rgb(1, 2, 3); --lr-color-brand-quiet: rgb(4, 5, 6); --lr-color-mix-partner: rgb(255, 255, 255); --lr-color-mix-hover: 50%"
         .cues=${CUES}
         .highlights=${[{ id: 'chapter', anchor: { kind: 'time-range', start: 5 } }]}
       ></lr-av-player>
@@ -1428,15 +1528,12 @@ describe('hover feedback for click-to-seek/clickable parts', () => {
     const cue = cueRows(el)[1]!;
 
     try {
-      await hoverUntilMatched(
+      await hoverAndAwaitPaint(
         timeline,
         'the timeline never registered :hover',
-        (rect) => [rect.right - 5, rect.top + rect.height / 2],
-      );
-      await waitUntil(
         () => getComputedStyle(timeline).borderTopColor === 'rgb(1, 2, 3)',
         'the timeline hover border never appeared',
-        { timeout: 2000 },
+        { point: (rect) => [rect.right - 5, rect.top + rect.height / 2] },
       );
     } finally {
       await resetMouse();
@@ -1444,22 +1541,22 @@ describe('hover feedback for click-to-seek/clickable parts', () => {
 
     const restingMarker = getComputedStyle(marker).backgroundColor;
     try {
-      await hoverUntilMatched(marker, 'the timeline marker never registered :hover');
-      await waitUntil(
+      await hoverAndAwaitPaint(
+        marker,
+        'the timeline marker never registered :hover',
         () => getComputedStyle(marker).backgroundColor !== restingMarker,
         'the timeline marker hover fill never appeared',
-        { timeout: 2000 },
       );
     } finally {
       await resetMouse();
     }
 
     try {
-      await hoverUntilMatched(cue, 'the transcript cue row never registered :hover');
-      await waitUntil(
+      await hoverAndAwaitPaint(
+        cue,
+        'the transcript cue row never registered :hover',
         () => getComputedStyle(cue).backgroundColor === 'rgb(4, 5, 6)',
         'the transcript cue hover background never appeared',
-        { timeout: 2000 },
       );
     } finally {
       await resetMouse();
@@ -2705,7 +2802,7 @@ describe('active-state cssprop escape hatches', () => {
     // default it would flatten every toned marker to brand the moment the pointer arrived. Hence
     // the two halves below -- each marker mixes from ITS OWN resting fill, and pressed is a further
     // step rather than a repeat of hover.
-    const wrapper = (await fixture(html`<div>
+    const wrapper = (await fixture(html`<div style="--lr-transition-fast: 0ms linear">
       <lr-av-player
         kind="audio"
         .highlights=${[
@@ -2734,15 +2831,17 @@ describe('active-state cssprop escape hatches', () => {
     expect(rect.width, 'the marker has real geometry to point at').to.be.greaterThan(0);
     const resting = getComputedStyle(target).backgroundColor;
     try {
-      await hoverUntilMatched(target, 'the native pointer never reached the marker');
-      await waitUntil(
+      await hoverAndAwaitPaint(
+        target,
+        'the native pointer never reached the marker',
         () => getComputedStyle(target).backgroundColor !== resting,
         'hover moves the marker off its resting fill',
       );
       const hovered = getComputedStyle(target).backgroundColor;
 
-      await sendMouse({ type: 'down' });
-      await waitUntil(
+      await pressAndAwaitPaint(
+        target,
+        'the native pointer never reached the marker',
         () => getComputedStyle(target).backgroundColor !== hovered,
         'pressed is a further step, not a repeat of hover',
       );
@@ -2759,22 +2858,22 @@ describe('active-state cssprop escape hatches', () => {
 
   it('--lr-av-player-cue-hover-bg retints transcript cue row hover feedback, and the press mix reuses the same hook, independently of the shared --lr-color-brand-quiet token', async () => {
     const el = await withCues(
-      '--lr-av-player-cue-hover-bg: rgb(7, 8, 9); --lr-color-brand-quiet: rgb(4, 5, 6); --lr-color-mix-partner: rgb(255, 255, 255); --lr-color-mix-active: 75%',
+      '--lr-transition-fast: 0ms linear; --lr-av-player-cue-hover-bg: rgb(7, 8, 9); --lr-color-brand-quiet: rgb(4, 5, 6); --lr-color-mix-partner: rgb(255, 255, 255); --lr-color-mix-active: 75%',
     );
     const cue = cueRows(el)[2]!; // plain cue: neither current nor a search match
     try {
-      await hoverUntilMatched(cue, 'the transcript cue row never registered :hover');
-      await waitUntil(
+      await hoverAndAwaitPaint(
+        cue,
+        'the transcript cue row never registered :hover',
         () => getComputedStyle(cue).backgroundColor === 'rgb(7, 8, 9)',
         'cue hover never read --lr-av-player-cue-hover-bg over the shared --lr-color-brand-quiet token',
-        { timeout: 2000 },
       );
 
-      await sendMouse({ type: 'down' });
-      await waitUntil(
+      await pressAndAwaitPaint(
+        cue,
+        'the transcript cue row never registered :hover',
         () => getComputedStyle(cue).backgroundColor !== 'rgb(7, 8, 9)',
         'pressed mixes further from --lr-av-player-cue-hover-bg rather than repeating hover',
-        { timeout: 2000 },
       );
       await sendMouse({ type: 'up' });
     } finally {

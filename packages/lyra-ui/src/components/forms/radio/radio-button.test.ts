@@ -317,11 +317,6 @@ describe('size and pill', () => {
 });
 
 describe('lr-radio-button hover and press feedback', () => {
-  const centerOf = (node: Element): [number, number] => {
-    const rect = node.getBoundingClientRect();
-    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
-  };
-
   // Both pairs shipped with an :active rule byte-identical to their :hover one, which is a pressed
   // state only on paper. Rendered results, because identical rules read identically in the source.
   // --lr-transition-fast is zeroed on each fixture: the base transitions its background, so reading
@@ -372,7 +367,15 @@ describe('lr-radio-button hover and press feedback', () => {
       expect(getComputedStyle(base).cursor, `${radio.localName} cursor`).to.equal('not-allowed');
       expect(getComputedStyle(base).opacity, `${radio.localName} opacity`).to.equal('0.5');
       try {
-        await sendMouse({ type: 'move', position: centerOf(base) });
+        // Landing the hover rather than dispatching one move to a rect read beforehand:
+        // sendMouse resolves when the synthesized command completes, not when the browser has
+        // processed the resulting pointer event, and a late layout settle can move the target out
+        // from under the dispatched position -- either way the inertness assertion below would
+        // pass with the pointer never on this radio.
+        await hoverUntilMatched(
+          base,
+          `${radio.localName} (${radio.getAttribute('value')}) never received the pointer hover state`,
+        );
         // A hover that must change nothing cannot be polled for; settle first so the read is real.
         await settlePointer();
         expect(getComputedStyle(painted).backgroundColor, `${radio.localName} hover background`).to.equal(restingBackground);
@@ -402,7 +405,10 @@ describe('lr-radio-button hover and press feedback', () => {
       const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       const resting = getComputedStyle(base).backgroundColor;
       try {
-        await sendMouse({ type: 'move', position: centerOf(base) });
+        // Land the hover instead of dispatching a single move: a move whose native pointer event
+        // the browser has not processed yet is indistinguishable from a segment that correctly
+        // refused to tint, so the assertion below would pass vacuously.
+        await hoverUntilMatched(base, `disabled ${label} segment never received the pointer hover state`);
         // A hover that must change nothing cannot be polled for; settle first so the read is real.
         await settlePointer();
         expect(getComputedStyle(base).backgroundColor, `disabled ${label} hover vs resting`).to.equal(

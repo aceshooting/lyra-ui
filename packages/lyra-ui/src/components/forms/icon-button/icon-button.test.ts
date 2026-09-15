@@ -549,6 +549,11 @@ it('falls the press tokens through to the hover ones when only those are set', a
   try {
     await hoverUntilMatched(button, 'icon button never received the pointer hover state');
     await sendMouse({ type: 'down' });
+    // Wait for :active itself, not just for the colour. The press is asserted to FALL BACK to the
+    // hover overrides, so every value polled below is already rendered by the hover state -- a
+    // colour-only poll passes the instant the pointer lands and never proves the press was
+    // processed at all, let alone that it kept those values.
+    await waitUntil(() => button.matches(':active'), 'the physical pointer activates the icon button');
     await waitUntil(
       () => getComputedStyle(button).color === 'rgb(4, 5, 6)',
       'press colour fallback to the hover override never rendered',

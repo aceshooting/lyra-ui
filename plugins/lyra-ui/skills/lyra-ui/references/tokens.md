@@ -42,7 +42,7 @@ unchanged.
 > properties are the other safe lever, because no component re-declares another component's
 > namespace.
 
-## Direct theme-backed tokens (263)
+## Direct theme-backed tokens (265)
 
 | Internal token | `--lr-theme-*` input | Light/default fallback | Mode overrides |
 |---|---|---|---|
@@ -173,6 +173,8 @@ unchanged.
 | `--lr-radius-pill` | `--lr-theme-border-radius-pill` | `999px` | — |
 | `--lr-radius-xs` | `--lr-theme-border-radius-xs` | `2px` | — |
 | `--lr-scroll-fade-size` | `--lr-theme-scroll-fade-size` | `2rem` | — |
+| `--lr-scrollbar-gutter` | `--lr-theme-scrollbar-gutter` | `auto` | — |
+| `--lr-scrollbar-width` | `--lr-theme-scrollbar-width` | `auto` | — |
 | `--lr-shadow-color` | `--lr-theme-shadow-color` | `0 0 0` | — |
 | `--lr-shadow-l` | `--lr-theme-shadow-l` | `0 6px 16px rgb(var(--lr-shadow-color) / 0.18)` | dark: `var(--lr-theme-shadow-l, 0 8px 20px rgb(var(--lr-shadow-color) / 0.56))` |
 | `--lr-shadow-m` | `--lr-theme-shadow-m` | `0 2px 8px rgb(var(--lr-shadow-color) / 0.15)` | dark: `var(--lr-theme-shadow-m, 0 2px 8px rgb(var(--lr-shadow-color) / 0.46))` |

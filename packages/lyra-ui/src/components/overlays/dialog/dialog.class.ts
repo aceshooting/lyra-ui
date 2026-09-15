@@ -559,8 +559,12 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.detectLightDomChrome();
   };
 
-  private onFooterSlotChange = (e: Event): void => {
-    this.hasFooterSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
+  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
+  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
+  // fix), even though the assigned child's own `slot` attribute never changed.
+  private onFooterSlotChange = (): void => {
+    this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
   };
 
   // Only direct children are scanned -- a heading nested several layers deep

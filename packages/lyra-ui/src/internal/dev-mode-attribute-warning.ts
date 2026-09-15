@@ -26,6 +26,39 @@ const GLOBAL_ATTRIBUTE_EXEMPTIONS = new Set([
   'itemtype',
 ]);
 
+/**
+ * Framework-owned attributes: written by a host framework's renderer, never by the app author,
+ * and never something a Lyra component could react to. Decided per-framework, not with a blanket
+ * underscore or dash rule, so a genuine typo (`_foo`, `ng-reflectx`) keeps warning:
+ *
+ * - `_ngcontent-*` / `_nghost-*` -- Angular's emulated view encapsulation writes these as pure CSS
+ *   scoping markers on every element inside/hosting a component using the (default) `Emulated`
+ *   encapsulation mode, custom elements included. The id suffix shape changed across Angular
+ *   versions (`_ngcontent-c0` pre-Ivy-stable, `_ngcontent-ng-c1234567890` current), so the
+ *   exemption matches the stable prefix, not the suffix.
+ * - `ng-reflect-*` -- Angular's dev-mode-only reflection of a bound `@Input()`'s last value back
+ *   onto the DOM (for the dev tools/debugger), one attribute per input, present only when Angular
+ *   itself is not built for production (`ngDevMode` true). Prefix-exempt: the suffix is the
+ *   kebab-cased input name, which varies per binding.
+ * - `ng-version` -- set once, verbatim, on an Angular application's root element by
+ *   `bootstrapApplication`/`bootstrapModule`. Exact-match, not a prefix: unlike the two above it
+ *   is a single fixed attribute, not a per-input family.
+ * - Vue's scoped-style marker (`data-v-<hash>`) needs no entry here -- it already matches the
+ *   `data-*` prefix below.
+ * - Svelte's scoped-style mechanism writes a generated class (`svelte-<hash>`) onto `class`, never
+ *   a new attribute, so there is nothing to exempt for it. Same for React, which manages custom
+ *   element properties/attributes directly with no framework-owned attribute of its own.
+ */
+const FRAMEWORK_ATTRIBUTE_EXACT = new Set(['ng-version']);
+const FRAMEWORK_ATTRIBUTE_PREFIXES = ['_ngcontent-', '_nghost-', 'ng-reflect-'];
+
+function isFrameworkOwnedAttribute(name: string): boolean {
+  return (
+    FRAMEWORK_ATTRIBUTE_EXACT.has(name) ||
+    FRAMEWORK_ATTRIBUTE_PREFIXES.some((prefix) => name.startsWith(prefix))
+  );
+}
+
 /** `class`/`style`/`slot`/`lang`/`dir`/`aria-label`/`aria-describedby` are not exempted here --
  *  `LyraElement`'s own `REACTIVE_HOST_ATTRIBUTES`/`DIRECTION_HOST_ATTRIBUTES` already merge them
  *  into every component's `observedAttributes`, so they never reach this exemption check at all. */
@@ -33,7 +66,8 @@ function isExemptAttribute(name: string): boolean {
   return (
     name.startsWith('data-') ||
     name.startsWith('aria-') ||
-    GLOBAL_ATTRIBUTE_EXEMPTIONS.has(name)
+    GLOBAL_ATTRIBUTE_EXEMPTIONS.has(name) ||
+    isFrameworkOwnedAttribute(name)
   );
 }
 

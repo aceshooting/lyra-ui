@@ -6430,34 +6430,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-app-rail-item",
-            "kind": "attribute",
-            "name": "active",
-            "since": "11.2.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "current",
-              "usage": "current"
-            },
-            "removalNotBefore": "13.0.0",
-            "rationale": "The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction."
-          },
-          {
-            "tag": "lr-app-rail-item",
-            "kind": "property",
-            "name": "active",
-            "since": "11.2.0",
-            "replacement": {
-              "kind": "property",
-              "name": "current",
-              "usage": "current"
-            },
-            "removalNotBefore": "13.0.0",
-            "rationale": "`active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current=\"false\". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -6475,28 +6448,6 @@
       "counterparts": [],
       "surface": {
         "attributes": [
-          {
-            "name": "active",
-            "property": "active",
-            "type": "boolean",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": {
-              "tag": "lr-app-rail-item",
-              "kind": "attribute",
-              "name": "active",
-              "since": "11.2.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "current",
-                "usage": "current"
-              },
-              "removalNotBefore": "13.0.0",
-              "rationale": "The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction."
-            },
-            "hasDefault": true,
-            "default": false
-          },
           {
             "name": "current",
             "property": "current",
@@ -6568,28 +6519,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "active",
-            "attribute": "active",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-app-rail-item",
-              "kind": "property",
-              "name": "active",
-              "since": "11.2.0",
-              "replacement": {
-                "kind": "property",
-                "name": "current",
-                "usage": "current"
-              },
-              "removalNotBefore": "13.0.0",
-              "rationale": "`active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current=\"false\". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote."
-            },
-            "hasDefault": true,
-            "default": false
-          },
           {
             "name": "current",
             "attribute": "current",
@@ -19227,6 +19156,15 @@
       "surface": {
         "attributes": [
           {
+            "name": "actions-layout",
+            "property": "actionsLayout",
+            "type": "ChatComposerActionsLayout",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string | null",
@@ -19493,6 +19431,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "actionsLayout",
+            "attribute": "actions-layout",
+            "type": "ChatComposerActionsLayout",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "autocapitalize",
@@ -19834,6 +19781,10 @@
           {
             "name": "start",
             "deprecated": null
+          },
+          {
+            "name": "toolbar",
+            "deprecated": null
           }
         ],
         "events": [
@@ -19928,6 +19879,10 @@
           {
             "name": "textarea",
             "deprecated": null
+          },
+          {
+            "name": "toolbar",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -19948,6 +19903,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chat-composer-focus-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color)"
+          },
+          {
+            "name": "--lr-chat-composer-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-chat-composer-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chat-composer-radius",
@@ -24565,6 +24538,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 2
+          },
+          {
+            "name": "--lr-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           }
         ],
         "cssStates": [],
@@ -25114,6 +25099,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 2
+          },
+          {
+            "name": "--lr-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           }
         ],
         "cssStates": [],
@@ -26065,6 +26062,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           }
         ],
         "cssStates": [],
@@ -27337,6 +27346,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-overlay)"
+          },
+          {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--slider-handle-size",
@@ -28868,6 +28882,12 @@
           },
           {
             "name": "--lr-combobox-option-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-combobox-option-badge-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -45589,6 +45609,11 @@
             "default": "var(--lr-color-surface-overlay)"
           },
           {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--max-width",
             "deprecated": null,
             "hasDefault": true,
@@ -45758,6 +45783,15 @@
             "hasDefault": false
           },
           {
+            "name": "group",
+            "property": "group",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "href",
             "property": "href",
             "type": "string | undefined",
@@ -45888,6 +45922,15 @@
           {
             "name": "download",
             "attribute": "download",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "group",
+            "attribute": "group",
             "type": "string | undefined",
             "readonly": false,
             "reflects": false,
@@ -73674,6 +73717,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-markdown-table-header-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -74297,6 +74346,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-markdown-table-header-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -75875,6 +75930,15 @@
             "hasDefault": false
           },
           {
+            "name": "group",
+            "property": "group",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "href",
             "property": "href",
             "type": "string | undefined",
@@ -75986,6 +76050,15 @@
           {
             "name": "download",
             "attribute": "download",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "group",
+            "attribute": "group",
             "type": "string | undefined",
             "readonly": false,
             "reflects": false,
@@ -92828,6 +92901,11 @@
             "default": "var(--lr-color-surface-overlay)"
           },
           {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--max-width",
             "deprecated": null,
             "hasDefault": true,
@@ -104015,6 +104093,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "85dvh"
+          },
+          {
+            "name": "--lr-responsive-panel-side-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
           }
         ],
         "cssStates": [],
@@ -109262,6 +109346,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-overlay)"
+          },
+          {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-select-expand-size",
@@ -120497,6 +120586,18 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
           {
             "name": "--lr-table-cell-color",
             "deprecated": null,
@@ -132499,6 +132600,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-tooltip-arrow-size",
             "deprecated": null,
             "hasDefault": false
@@ -136606,6 +136712,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "--lr-virtual-list-height",
             "deprecated": null,
             "hasDefault": true,
@@ -138004,21 +138122,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-widget",
-            "kind": "property",
-            "name": "activeView",
-            "since": "11.2.0",
-            "replacement": {
-              "kind": "property",
-              "name": "activeViewId",
-              "usage": "activeViewId"
-            },
-            "removalNotBefore": "13.0.0",
-            "rationale": "`activeView` was this property's original public name; the string does not appear anywhere in CHANGELOG.md, so the rename to `activeViewId` was never announced at all. A shipped consumer's `.activeView=` binding became a dead expando and the widget fell back to its first view with no error. The alias seeds `activeViewId` rather than being read alongside it, because the component itself writes that property (a view-toggle click, and the fallback when `views` drops the active id), and a read-alongside alias would undo a later interactive change on the next update."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -138166,28 +138270,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
-          },
-          {
-            "name": "activeView",
-            "attribute": null,
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-widget",
-              "kind": "property",
-              "name": "activeView",
-              "since": "11.2.0",
-              "replacement": {
-                "kind": "property",
-                "name": "activeViewId",
-                "usage": "activeViewId"
-              },
-              "removalNotBefore": "13.0.0",
-              "rationale": "`activeView` was this property's original public name; the string does not appear anywhere in CHANGELOG.md, so the rename to `activeViewId` was never announced at all. A shipped consumer's `.activeView=` binding became a dead expando and the widget fell back to its first view with no error. The alias seeds `activeViewId` rather than being read alongside it, because the component itself writes that property (a view-toggle click, and the fallback when `views` drops the active id), and a read-alongside alias would undo a later interactive change on the next update."
-            },
-            "hasDefault": true,
-            "default": ""
           },
           {
             "name": "activeViewId",

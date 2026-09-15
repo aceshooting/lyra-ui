@@ -82,6 +82,9 @@ interface ConsumerMenuSnapshot {
  *   inherited from the popover surface.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of an anchored,
  *   positioner-placed overlay, inherited from the popover surface.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
+ *   {@link positioningStrategy}/`hoist`, inherited from the popover surface. An explicit
+ *   `positioning-strategy`/`hoist` on the instance always wins over it.
  * @status stable
  * @since 4.0.0
  */

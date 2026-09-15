@@ -326,7 +326,12 @@ describe('calendar labels and rendered styles', () => {
       }
     });
     it(`retains selected foreground/background pairing through hover and press for ${value}`, async () => {
-      const el = await fixture<LyraDatePicker>(html`<lr-date-picker .mode=${value.includes('/') ? 'range' : 'single'} .value=${value}></lr-date-picker>`);
+      // `--lr-transition-fast: 0s` because every assertion below reads a paint and asserts it did
+      // NOT move, and the day cell eases background-color: mid-transition the rendered colour is
+      // still the resting one for a frame (so a regression passes vacuously) and an in-between one
+      // after that (so a correct implementation can fail). Zeroing the ease makes the painted
+      // colour agree with the `:hover`/`:active` state the reads below are gated on.
+      const el = await fixture<LyraDatePicker>(html`<lr-date-picker style="--lr-transition-fast:0s" .mode=${value.includes('/') ? 'range' : 'single'} .value=${value}></lr-date-picker>`);
       for (const selected of el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="day-selected"]')) {
         const rest = getComputedStyle(selected).backgroundColor;
         const foreground = getComputedStyle(selected).color;
@@ -431,7 +436,12 @@ function paintedContrast(target: HTMLElement): number {
 }
 for (const theme of ['light', 'dark']) {
   it(`keeps selected and brand-colored actions readable through pointer states in ${theme}`, async () => {
-    const wrap = await fixture<HTMLDivElement>(html`<div>
+    // `--lr-transition-fast: 0s` (inherited by both hosts) because the contrast assertions below
+    // read a PAINT, and both the selected day and the agenda event ease background-color: a read
+    // taken while that ease is in flight measures an in-between colour, or the resting colour that
+    // already passed one line earlier. With the ease zeroed, the landed `:hover` and the polled
+    // `:active` each guarantee the colour being measured is the one that state actually paints.
+    const wrap = await fixture<HTMLDivElement>(html`<div style="--lr-transition-fast:0s">
       <lr-date-picker data-lr-theme=${theme} value="2026-07-15"></lr-date-picker>
       <lr-calendar data-lr-theme=${theme} view="agenda" view-date="2026-07-01" .events=${[{ date: '2026-07-15', title: 'Meeting', color: 'var(--lr-color-brand)' }]}></lr-calendar>
     </div>`);

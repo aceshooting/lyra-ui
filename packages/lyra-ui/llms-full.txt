@@ -226,10 +226,11 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-ui/translations/<locale>.js` (the ten shipped message catalogs),
+  `@aceshooting/lyra-ui/translations/<locale>.js` (the eleven shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
-  (happy-dom shims, plus `createLyraEvent()` for building a validated test event),
+  (happy-dom shims, `createLyraEvent()` for building a validated test event, plus a small set of
+  interaction drivers that go through a component's own real activation path),
   `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
 
 ### Registration-free component helpers
@@ -823,7 +824,8 @@ convenience: `--lr-ramp-*` (a step encodes a light-mode choice and has no theme 
 palettes (generated ramps that move with the palette tooling), `--lr-layer-*` (stacking order is
 your decision), `--lr-color-mix-*` and `--lr-hover-brightness` (inputs to the library's own
 interaction recipe), `--lr-line-height-*`, the per-control internals (`--lr-icon-button-size`,
-`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-popover-viewport-clamp`,
+`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-scrollbar-width`,
+`--lr-scrollbar-gutter`, `--lr-popover-viewport-clamp`,
 `--lr-safe-area-*`, `--lr-mask-opaque`, `--lr-color-no-data`), and the nine variant-following slots
 (`--lr-color-fill-loud` and friends), which mean "the variant _this_ element is set to" and are
 meaningless on `:root`. If you need one of these, ask for it to be added rather than reading it out
@@ -1703,21 +1705,24 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
 
-Ten full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `ja`, `pt-BR`,
-`ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are **side-effect-only
-modules**: import one bare, read nothing from it, and it calls `registerLyraLocale()` for you.
+Eleven full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`,
+`pt-BR`, `ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
+**side-effect-only modules**: import one bare, read nothing from it, and it calls
+`registerLyraLocale()` for you.
 
 ```ts
 import "@aceshooting/lyra-ui/translations/de.js";
 import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
 import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
+import "@aceshooting/lyra-ui/translations/it.js"; // Italian
 import "@aceshooting/lyra-ui/translations/pt-BR.js"; // also serves pt and pt-PT
 import "@aceshooting/lyra-ui/translations/zh-CN.js"; // also serves zh, zh-Hans and zh-Hans-CN
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
-`one`/`two`/`other`). `ar`, `fa` and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
+`one`/`two`/`other`); Italian uses a non-default set too (`it`: `one`/`many`/`other`). `ar`, `fa`
+and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
@@ -1917,6 +1922,11 @@ installing or shipping a wrapper; import the normal granular registration entry 
 - **Angular** additionally needs `CUSTOM_ELEMENTS_SCHEMA` in the module/component that uses the tags.
 - In-DOM templates lower-case attribute names; camelCase property names only survive in framework
   templates and JS, never in hand-written HTML attributes.
+- **Dev-mode unknown-attribute diagnostics ignore framework-owned scoping/debug attributes.**
+  Angular's default emulated view encapsulation writes `_ngcontent-*`/`_nghost-*` scoping markers
+  onto every element it manages, its dev builds add `ng-reflect-*` input reflections and
+  `ng-version`, and Vue's scoped styles add `data-v-*` — none of these trigger the unknown-attribute
+  warning. A genuinely misspelled or unsupported attribute still warns.
 
 ## SSR and declarative shadow DOM
 
@@ -2029,9 +2039,54 @@ builds the event only — dispatch it yourself with `target.dispatchEvent(event)
 
 Scope: covers every `lr-*`-named event a component documents. A component's native-named
 re-emits (`input`, `change`, `blur`, `focus`, ...) already have real DOM event types and dispatch
-semantics of their own that this factory does not model, and there is no equivalent for driving a
-component's own internal activation path (choosing an option, submitting a confirm decision) —
-render the real component and interact with it for that.
+semantics of their own that this factory does not model.
+
+## Driving a component's real activation path: interaction drivers
+
+For the exact gap `createLyraEvent()` leaves open — choosing an option, submitting a confirm
+decision, toggling a switch, activating a step — `@aceshooting/lyra-ui/testing` exports a small
+set of typed interaction drivers, one per interaction, that go through the real component's own
+activation path (its own shadow-part lookup and `.click()`, the same as its own tests) instead of
+a downstream suite reverse-engineering internal detail shapes or shadow-part selectors itself:
+
+```ts
+import {
+  chooseOption,
+  submitConfirmDecision,
+  toggleSwitch,
+  activateStep,
+} from '@aceshooting/lyra-ui/testing';
+
+await chooseOption(combobox, 'banana'); // opens the listbox, clicks the matching [part="option"] row
+await submitConfirmDecision(confirmBar, 'approved'); // clicks [part="approve-button"]
+await toggleSwitch(switchEl); // calls switchEl.click(), lr-switch's own activation path
+await activateStep(stepper, 'review'); // clicks the [part="step"] button for that stepId (or pass an index)
+```
+
+`chooseOption()` accepts any of `<lr-combobox>`, `<lr-select>`, `<lr-model-select>`,
+`<lr-locale-picker>` and `<lr-voice-picker>` — every component that independently implements the
+same `[part="option"]` row plus `data-value` delegated-click pattern for its own listbox/popup.
+`submitConfirmDecision()`
+accepts either `<lr-confirm-bar>` or `<lr-tool-approval-dialog>`, which render the identical
+`[part="approve-button"]`/`[part="deny-button"]` pair for the same `lr-approve`/`lr-deny`
+contract.
+
+Each driver is `async` and awaits `updateComplete` before returning, so assertions written
+immediately after it see fully-settled DOM/state. Each one also throws a plain `Error` — never a
+silent no-op — when the requested interaction cannot actually happen: the target is disabled, the
+option owner/stepper is read-only or has no matching row/step currently rendered, or the confirm
+bar is already decided. That is the exact failure mode a hand-rolled event misses (for example
+dispatching a confirm event without `cancelable`, which makes a `preventDefault()`-based
+pending-state handler a silent no-op that still looks tested) — these drivers exercise the
+component for real, so a precondition that blocks the interaction is surfaced as a thrown error
+instead of quietly doing nothing.
+
+Pure DOM operations only (`Element.click()`, shadow-part queries, public properties) — no
+`@web/test-runner`/CDP-only helper, so they also run under a downstream suite's own
+happy-dom/jsdom environment, not only a real browser.
+
+Scope: one driver per interaction named above. Not a general "drive any component" toolkit —
+render the real component and interact with it directly for anything else.
 
 ## Accessibility contract
 
@@ -4031,6 +4086,13 @@ These named interfaces and helper signatures are available to typed integrations
   `installHappyDomFormAssociatedShims(): unknown`
   `installStubInternalsForTest(/* public names: host */): unknown`
 
+- **`testing-interaction-drivers-contracts`** — Shared utility contracts.
+  `chooseOption(/* public names: owner, value */): unknown`
+  `submitConfirmDecision(/* public names: owner, decision */): unknown`
+  `toggleSwitch(/* public names: switchEl */): unknown`
+  `activateStep(/* public names: stepper, target */): unknown`
+  See "Driving a component's real activation path: interaction drivers" above for the full contract.
+
 - **`theme-gemstones-data-contracts`** — Shared utility contracts.
   `GemstoneAccent {
   key: unknown;
@@ -4983,6 +5045,10 @@ it touches the trigger row the popup drops from.
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
 `[part='unknown-value']` badge described above under "Unknown committed values".
+`--lr-combobox-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
+`[part='option-badge']` trailing metadata badge on an async row, and the "not in catalog" badge
+`show-unknown-option` renders on the synthetic unmatched-value listbox row — the same
+per-component indirection `lr-select`'s `--lr-select-option-badge-bg` uses.
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
@@ -5241,7 +5307,11 @@ exactly like the multi-option case, until the trigger is actually activated.
   direction change refreshes logical left/right placement by the same path
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
-  exact alias; writing either spelling updates the other
+  exact alias; writing either spelling updates the other. This property always reports the
+  instance's own authored value (or the mirrored `absolute` default); when neither spelling is
+  authored, the listbox is actually placed with the cascading `--lr-positioning-strategy` custom
+  property honored ahead of that default — see the listbox's own **Themeable custom properties**
+  below
 - `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
   keyboard-reachable, re-selectable row. Off by default
@@ -5417,6 +5487,13 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+
+`--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
+`<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
+listbox is (re)positioned. An explicit `positioning-strategy`/`hoist` on the instance always wins
+over it; otherwise it wins over this control's own mirrored `absolute` default. One declaration on
+`:root`, a theme, or a single clipping ancestor (an `overflow: hidden` card or scroller) changes
+every unset select beneath it instead of authoring `positioning-strategy`/`hoist` on each instance.
 
 The trigger's own resting surface has hooks as of 16.0.0: `--lr-select-trigger-fill` (default
 `var(--lr-color-surface)`) and `--lr-select-trigger-border-color` (default
@@ -7509,7 +7586,10 @@ undeclared on the host so ancestor themes work. The upstream-compatible `--colum
 (default `calc(var(--lr-size-1em) * 2.25)`) and `--column-width`
 (default `calc(var(--lr-size-1em) * 3)`) retain their component-font-relative sizing through the
 Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
-duration-token fallbacks.
+duration-token fallbacks. Each `column` also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `thin`/`auto`, matching
+its previous unconditional `scrollbar-width: thin`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while
 this control is focused or open — one name for every field-shaped control in the library, so a halo
@@ -9832,6 +9912,11 @@ hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
+The `editor` scroll frame also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
+tokens (default `auto`/`auto`, matching its previous unset behavior) — set
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library, including `lr-table`,
+`lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
 
 **Known gotchas:**
 
@@ -9946,7 +10031,10 @@ and:
   resolves back to the default, and a change applies live while the panel is open.
   `hoist: boolean = false` is its retained exact alias (`hoist` ⇔ `positioning-strategy="fixed"`);
   writing either spelling updates the other, so the two attributes can never disagree. Prefer
-  `positioning-strategy` in new code
+  `positioning-strategy` in new code. This property always reports the instance's own authored
+  value (or the mirrored default); when neither spelling is authored, the panel is actually placed
+  with the cascading `--lr-positioning-strategy` custom property honored ahead of that default —
+  see **Themeable custom properties** below
 - `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
   (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
   is present before client-side slot observation
@@ -10088,6 +10176,13 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
 `--lr-color-picker-radius`, which still wins when set.
+
+`--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
+`<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
+panel is (re)positioned. An explicit `positioning-strategy`/`hoist` on the instance always wins
+over it; otherwise it wins over this control's own mirrored `absolute` default. One declaration on
+`:root`, a theme, or a single clipping ancestor changes every unset color picker beneath it instead
+of authoring `positioning-strategy`/`hoist` on each instance.
 
 **Additional API surface:**
 
@@ -10285,6 +10380,10 @@ rows are absolutely positioned at the row-height
 pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plus the group-label
 band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
 windowed row are additionally capped at 20 regardless of available width.
+The `grid` scroll container also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`stable`, matching
+its previous unconditional `scrollbar-gutter: stable`) — set either on `:root` or any ancestor for
+one declaration to retheme every internal scroll container in the library.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
@@ -11948,6 +12047,11 @@ indicator; these tokens style the header cell itself. Use `::part(sort-icon-inac
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
+`[part="base"]`, the table's own scroll container, also reads the shared
+`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
+unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
+ancestor for one declaration to retheme every internal scroll container in the library, including
+`lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
 **Optional peer deps:** none.
 
@@ -16115,13 +16219,9 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   Malformed/hostile entries are ignored without rejecting the component update.
 - `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
-  view externally; also updated internally when a view toggle is clicked.
-- `activeView: string = ''` (attribute: false) — **deprecated alias for `activeViewId`**, which it
-  seeds. `activeView` was this member's original public name and the rename was never announced, so
-  a shipped `.activeView=${…}` binding silently became inert and the widget fell back to its first
-  view. It seeds rather than being read alongside, because the component itself writes
-  `activeViewId` (a toggle click, and the fallback when `views` drops the active id) — so a stale
-  alias must not undo a later interactive change. Prefer `activeViewId` in new code.
+  view externally; also updated internally when a view toggle is clicked. `activeView`, a
+  deprecated alias that seeded this property, was removed in 16.0.0 (available since 11.2.0;
+  eligible for removal from 13.0.0) — use `activeViewId`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
@@ -16405,7 +16505,13 @@ four-longhand outline shape, matching `lr-scroller`'s viewport:
 `--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border-strong)`, set
 to `transparent` to opt out entirely), and `--lr-carousel-scroll-container-hover-outline-offset`
 (default `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal
-paint.
+paint. The `scroll-container` part also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `none`/`auto`, matching
+its previous unconditional `scrollbar-width: none`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library. Chromium and Safari ignore
+the standard `scrollbar-width` property for any element a page also styles through the legacy
+`::-webkit-scrollbar` pseudo-element, which this part's own stylesheet still does to hide its
+scrollbar there, so on those two engines the hook only visibly retunes this part in Firefox.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">
@@ -16540,7 +16646,11 @@ its own four-longhand outline shape, matching `lr-virtual-list`'s: `--lr-scrolle
 (default `var(--lr-border-width-thin)`), `--lr-scroller-hover-outline-style` (default `solid`),
 `--lr-scroller-hover-outline-color` (default `var(--lr-color-border)`, set to `transparent` to opt
 out entirely), and `--lr-scroller-hover-outline-offset` (default `var(--lr-focus-ring-offset)`).
-Unset, all four resolve to the rule's previous literal paint.
+Unset, all four resolve to the rule's previous literal paint. The `viewport` part also honors the
+opt-in theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults
+`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set either on `:root`
+or any ancestor for one declaration to retheme every internal scroll container in the library,
+including `lr-table`, `lr-virtual-list`, `lr-code-block`, and `lr-code-editor`.
 
 ```html
 <lr-scroller controls label="Project cards">
@@ -17630,7 +17740,11 @@ themeable with `--lr-virtual-list-hover-outline-width` (default
 `--lr-virtual-list-hover-outline-offset` (default
 `calc(-1 * var(--lr-border-width-thin))`). All four hover-outline hooks are inline fallbacks and
 there is intentionally no pressed state: the list viewport is a scroll surface rather than an
-activation target.
+activation target. `[part="base"]` also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
+tokens (default `auto`/`auto`, matching its previous unset behavior) — set
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library, including `lr-table`,
+`lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
 **Optional peer deps:** none.
 
@@ -18077,13 +18191,8 @@ removing the label from the accessibility tree.
 - `current: boolean = false` (reflected) — marks this as the destination for the current page/view;
   reflects `aria-current="page"` on `[part='base']` and drives the current visual treatment. The rail
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
-  current location).
-- `active: boolean = false` — **deprecated alias for `current`**, read alongside it: the item is
-  current when either is true. `active` was this member's original public name, in both property and
-  attribute form; it was renamed to `current` without an alias, so shipped consumers writing
-  `.active=${…}` or `<lr-app-rail-item active>` silently lost their current-item indicator and kept a
-  permanent `aria-current="false"`. A Lit property binding on a custom element is untyped, so nothing
-  in a consumer's type check or test suite could catch it. Prefer `current` in new code.
+  current location). `active`, a deprecated alias in both property and attribute form, was removed
+  in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
 - `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
@@ -18241,8 +18350,8 @@ instead of stretching across the header row (mirroring `<lr-app-rail-item>`'s ow
 ## `lr-responsive-panel`
 
 The same slotted content either docked inline in its containing layout or presented as a
-full-screen/bottom-sheet overlay, depending on the panel's allocated inline size. First-party
-invention (no `wa-*`/`sl-*` counterpart).
+full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.
+First-party invention (no `wa-*`/`sl-*` counterpart).
 
 **Properties:**
 
@@ -18254,8 +18363,11 @@ invention (no `wa-*`/`sl-*` counterpart).
   `'inline'|'overlay'` presentation.
 - `shape: LyraResponsivePanelShape = 'fullscreen'` (reflected) — only affects the overlay
   presentation's visual treatment: `'fullscreen'` covers the whole viewport; `'bottom-sheet'`
-  anchors to its block-end edge and does not cover the full height. Has no visual effect while the effective
-  presentation resolves to `'inline'`.
+  anchors to its block-end edge and does not cover the full height; `'start'`/`'end'` anchor to the
+  matching *logical* inline edge instead, like a docked sidebar's slide-in-from-the-edge overlay
+  counterpart — the anchored edge and the panel's rounded free edge both flip automatically under
+  `dir="rtl"` (logical `inset-inline-*`/border-radius properties, no `:dir()` selector involved).
+  Has no visual effect while the effective presentation resolves to `'inline'`.
 - `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`, used
   verbatim when set — but a plain `aria-label` attribute on the host wins outright over `label`
   when both are present, the standard ARIA convention for a consumer that wants full control over
@@ -18298,9 +18410,12 @@ in the overlay presentation).
 **Themeable custom properties:** `--lr-responsive-panel-overlay-color` (default
 `var(--lr-color-overlay)` — the overlay presentation's backdrop scrim color),
 `--lr-responsive-panel-sheet-max-block-size` (default `85dvh`, falling back to `85vh` where `dvh`
-isn't supported — the maximum height of a `variant="bottom-sheet"` overlay panel, so a long sheet
+isn't supported — the maximum height of a `shape="bottom-sheet"` overlay panel, so a long sheet
 stops short of the top of the viewport instead of covering it; it has no effect on
-`variant="fullscreen"` or on the inline presentation),
+`shape="fullscreen"` or on the inline presentation),
+`--lr-responsive-panel-side-inline-size` (default `var(--lr-size-20rem)` — the width of a
+`shape="start"`/`shape="end"` overlay panel along the inline axis; no effect on any other shape or
+on the inline presentation),
 `--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
@@ -18313,7 +18428,7 @@ they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr
 <lr-responsive-panel
   id="settings-panel"
   label="Settings"
-  variant="bottom-sheet"
+  shape="bottom-sheet"
   overlay-breakpoint="48rem"
 >
   <span slot="header"><h2>Settings</h2></span>
@@ -18354,8 +18469,13 @@ window.
   whether it came from an allowed `close()` call, a property write, or attribute removal.
 - crossing inline → overlay while already open preserves focus that is already inside and moves
   outside focus into the panel; do not expect focus to remain on page content behind the modal.
-- `variant="bottom-sheet"` has no visible effect at all while the effective presentation is
-  `'inline'` — it only changes the overlay presentation's anchoring/height.
+- `shape="bottom-sheet"`/`shape="start"`/`shape="end"` have no visible effect at all while the
+  effective presentation is `'inline'` — they only change the overlay presentation's
+  anchoring/height/width.
+- `shape="start"`/`shape="end"` are logical, not physical: `'start'` anchors to the inline-start
+  edge (left in `dir="ltr"`, right in `dir="rtl"`) and `'end'` to the inline-end edge, so neither
+  value alone tells you which physical side a given instance renders on without also knowing its
+  resolved direction.
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if overlay chrome was still active
   across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in
@@ -18492,7 +18612,7 @@ dropdown owns those root-level behaviors.
 ### `lr-menu-item`
 
 A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
-`menuitemcheckbox`) and roving `tabindex`; `[part="base"]` is only the visual row.
+`menuitemcheckbox`/`menuitemradio`) and roving `tabindex`; `[part="base"]` is only the visual row.
 
 **Properties:**
 
@@ -18500,8 +18620,13 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'`
 - `disabled: boolean = false`
 - `variant: 'default' | 'danger' = 'default'`
-- `type: 'normal' | 'checkbox' = 'normal'`
-- `checked: boolean = false` — meaningful only for `type="checkbox"`
+- `type: 'normal' | 'checkbox' | 'radio' = 'normal'`
+- `checked: boolean = false` — meaningful only for `type="checkbox"`/`type="radio"`
+- `group?: string` — narrows a `type="radio"` item's exclusive-choice scope to only the other
+  radio items sharing this same string. Unset, the scope is every `type="radio"` item the same
+  owning `<lr-menu>` owns directly — a nested submenu's radio items belong to that submenu's own
+  `<lr-menu>` instead, so they're never in scope regardless of `group`. Meaningless for
+  `type="normal"`/`"checkbox"`
 - `loading: boolean = false`
 - `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
   `safeLinkHref`, or `safeDownloadHref` when `download` is set, which drops `mailto:`),
@@ -18544,9 +18669,18 @@ A checkbox activation first emits cancelable `lr-menu-item-change` with the prop
 menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
 activation opens its submenu and emits neither checkbox-change nor selection.
 
+A `type="radio"` item works the same way, with exclusive-choice semantics layered on top:
+activating an already-checked radio is a no-op on `checked` — no `lr-menu-item-change`, no state
+change, matching native `<input type="radio">` — but still falls through to the owning menu's
+usual selection. Activating an unchecked radio fires `lr-menu-item-change` with
+`checked: true`; once not prevented, this item becomes `checked` and every other `type="radio"`
+item the same owning `<lr-menu>` owns directly whose `group` matches is unchecked directly
+(without an `lr-menu-item-change` of its own).
+
 **Events:**
 
-- `lr-menu-item-change` — cancelable checkbox-state proposal
+- `lr-menu-item-change` — cancelable checkbox/radio-state proposal; never fired when activating an
+  already-checked radio
 - `lr-menu-item-state-change` — internal navigation repair signal with
   `detail: { disabled, hidden, inert }`; the owning menu consumes and contains it, so it does not
   escape a menu or a composite wrapper as an apparent public event
@@ -18568,9 +18702,9 @@ expanding the popup.
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
 `--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
-apply to a `type="checkbox" checked` row's `[part="base"]`, matching the checked/selected-state
-hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>` already expose; unset,
-a checked row paints identically to an unchecked one.
+apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the
+checked/selected-state hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>`
+already expose; unset, a checked row paints identically to an unchecked one.
 
 Four more row-chrome hooks land in 16.0.0, each an inline fallback so unset rendering is
 byte-identical: `--lr-menu-item-hover-bg` (default `var(--lr-color-brand-quiet)`) is the enabled
@@ -18625,7 +18759,7 @@ selection closes the full nested chain.
 ### `lr-dropdown-item`
 
 The Web Awesome-compatible name for the same item implementation. It shares all menu-item
-properties, slots, parts, methods, checkbox/state events, roving focus, and canonical parent
+properties, slots, parts, methods, checkbox/radio/state events, roving focus, and canonical parent
 `lr-select` behavior. Its host also exposes native, non-bubbling, composed `focus` and `blur`
 events.
 
@@ -21295,7 +21429,13 @@ edge colour take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
 for `top`/`bottom`), which always wins the cascade over `<lr-dialog>`'s `--lr-dialog-height`-driven
-rule regardless of value, so the property has no effect on `<lr-drawer>`. The drawer's own
+rule regardless of value, so the property has no effect on `<lr-drawer>`. `<lr-drawer>` also opts
+out of `<lr-dialog>`'s inherited `[part="body"]` growth: on `<lr-dialog>` that rule only fills the
+panel once `--lr-dialog-height` is set (otherwise the panel is content-sized, so the rule is a
+no-op); a drawer's panel is unconditionally a definite size for every placement, so without this
+override `body` would always stretch and push `footer` to the panel's far edge. `<lr-drawer>`'s own
+`[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
+after a short body exactly as it did before `--lr-dialog-height` existed. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
@@ -22199,7 +22339,9 @@ If the import fails, leave the native disclosure visible and usable.
   positioning scheme the popup is laid out with, `'absolute' | 'fixed'`. The one property
   `<lr-popover>`, `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell
   the same way; each keeps its own default, so setting nothing changes nothing. An unsupported value
-  resolves back to that default.
+  resolves back to that default. This property always reports the instance's own authored value (or
+  its mirrored default) — see the cascading `--lr-positioning-strategy` custom property below for a
+  theme-level way to change the *rendered* strategy of every instance that sets neither.
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
@@ -22369,6 +22511,27 @@ subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from th
 `--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
 dialogs.
 
+**`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
+`positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
+placement/anchor change while open — never per animation frame). Setting nothing anywhere leaves
+every default exactly as before. Precedence: an explicit `positioning-strategy`/`hoist` on the
+instance always wins; otherwise this inherited custom property; otherwise the component's own
+mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
+theme, or a single clipping ancestor (an `overflow: hidden` card or a scroller) changes every unset
+overlay beneath it — no need to author `positioning-strategy`/`hoist` on each instance individually,
+or to remember it on every new one:
+
+```html
+<lr-card style="--lr-positioning-strategy: fixed; overflow: hidden">
+  <lr-dropdown>
+    <button slot="trigger">Actions</button>
+    <lr-dropdown-item>Rename</lr-dropdown-item>
+  </lr-dropdown>
+</lr-card>
+```
+
+`<lr-popover>`, `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all honor it.
+
 ```html
 <lr-popover
   arrow
@@ -22440,7 +22603,9 @@ later text renders normally.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
   (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
-  attributes can never disagree. Prefer `positioning-strategy` in new code.
+  attributes can never disagree. Prefer `positioning-strategy` in new code. It also honors the
+  cascading `--lr-positioning-strategy` custom property `<lr-popover>` documents, ahead of this
+  mirrored `absolute` default, when neither spelling is authored on the instance.
 - `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
   reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
@@ -22497,6 +22662,10 @@ because its rules live in the stylesheet module `lr-popover` also composes, but 
 a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
 panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`, draws no border,
 and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
+
+`--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
+`absolute`/`fixed` override `<lr-popover>` documents above, ahead of its own mirrored `absolute`
+default, when neither `positioning-strategy` nor `hoist` is authored on the instance.
 
 ```html
 <lr-tooltip
@@ -22648,7 +22817,9 @@ their controls without putting arbitrary content inside the menu role.
   see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
   (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
   attributes can never disagree. Prefer `positioning-strategy` in new code. `<lr-dropdown>` also
-  inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`.
+  inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`, and honors the
+  cascading `--lr-positioning-strategy` custom property ahead of this mirrored `absolute` default
+  when neither spelling is authored on the instance.
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
@@ -22695,7 +22866,8 @@ default; style it only to debug the travel region.
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
 `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
-`--lr-overlay-border`, `--lr-overlay-radius` and `--lr-overlay-shadow-anchored`.
+`--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
+`--lr-positioning-strategy` override documented on `<lr-popover>` above.
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">
@@ -33718,7 +33890,9 @@ other surface that reads the shared brand-quiet token), `--lr-markdown-code-padd
 `--lr-markdown-code-radius` (default `calc(var(--lr-radius) * 0.5)` — inline `code` span border
 radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr-space-m)` — the
 fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (default `var(--lr-radius)`
-— the fenced `code-block` surface's border radius), `--lr-code-block-tab-size` (default `2` — tab
+— the fenced `code-block` surface's border radius), `--lr-markdown-table-header-bg` (default
+`var(--lr-color-brand-quiet)` — background of every rendered `[part="table"]` header cell),
+`--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`,
 `--lr-color-text-quiet`, `--lr-radius`.
@@ -33798,6 +33972,7 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
 
 **Additional API surface:**
 
+- `--lr-markdown-table-header-bg` — Background of every rendered `[part="table"]` header cell. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
@@ -33916,6 +34091,7 @@ const view = html`<lr-markdown-core
 
 **Additional API surface:**
 
+- `--lr-markdown-table-header-bg` — Background of every rendered `[part="table"]` header cell. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
@@ -34247,6 +34423,13 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   double it. Named `frame`, not `appearance`: `appearance` is the library's vocabulary for how a
   _control fills itself_, and one property name cannot mean both. The focus affordance is swapped,
   not dropped — see **Known gotchas**
+- `actionsLayout: ChatComposerActionsLayout = 'inline'` (reflected, attribute `actions-layout`) —
+  `'inline' | 'stacked'`. `'inline'` (the default) keeps today's single flex row. `'stacked'`
+  arranges the `start` and `end` action slots as a compact one-column rail (`start` above `end`)
+  beside a `textarea` that spans both rows — for a multi-row composer (a taller `min-rows`) where
+  stretching the action buttons across the row's full height would otherwise look wrong. Layout
+  only; slot content, empty-slot hiding and the built-in button are unchanged. Invalid direct or
+  attribute values normalize and reflect as `'inline'`.
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
@@ -34292,12 +34475,14 @@ validity and recomputes the current intrinsic constraints.
 - `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
   preventing it also prevents the native `invalid` event that produced it
 
-**Slots:** `start` (content before the textarea, e.g. an attach-file trigger button), `end`
-(overrides the built-in send/stop button entirely when it has assigned content), `chips` (an
-attachment tray rendered above the input row).
+**Slots:** `toolbar` (auxiliary controls, e.g. a model or provider picker, rendered inside the
+frame above the chips tray and input row, sharing `[part="base"]`'s `:focus-within` affordance),
+`start` (content before the textarea, e.g. an attach-file trigger button), `end` (overrides the
+built-in send/stop button entirely when it has assigned content), `chips` (an attachment tray
+rendered above the input row).
 
-**CSS parts:** `base`, `chips`, `row`, `start`, `textarea`, `end`, `send-glyph`, `stop-glyph`,
-`action-button`
+**CSS parts:** `base`, `toolbar`, `chips`, `row`, `start`, `textarea`, `end`, `send-glyph`,
+`stop-glyph`, `action-button`
 
 **Themeable custom properties:** `--lr-chat-composer-busy-bg` (default `var(--lr-color-text-quiet)`)
 — `[part="action-button"]`'s background while `status` is `"sending"` or `"streaming"` (the busy/stop
@@ -34307,7 +34492,13 @@ button, not the placeholder too (the same shared-token-collision fix `<lr-chat-m
 user-bubble background pair documents). `--lr-chat-composer-background` (default
 `var(--lr-color-surface)`), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
 `--lr-chat-composer-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome so a
-composer docked into a themed panel can match it, with no `::part(base)` override. The
+composer docked into a themed panel can match it, with no `::part(base)` override. `--lr-chat-composer-padding`
+(default `var(--lr-space-s)`) and `--lr-chat-composer-gap` (default `var(--lr-space-xs)`) retune
+`[part="base"]`'s padding and the row gap between its stacked `toolbar`/`chips`/`row` sections; like
+the chrome hooks above, `frame="plain"` still zeroes the padding. `--lr-chat-composer-focus-shadow`
+(default `inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color)`) is the
+`frame="plain"` focus underline painted on `[part="base"]:focus-within` — override it to reshape the
+underline, or set it to `none` to cede focus chrome entirely to a wrapper you draw yourself. The
 `:focus-within` border keeps its `--lr-color-brand` shift — that is state paint, not card chrome —
 and `frame="plain"` still removes the border, radius and fill outright. Plus shared tokens
 `--lr-space-xs`, `--lr-space-s`,
@@ -34367,14 +34558,20 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
   once it has assigned content, the library's send/stop icon, its `aria-label`, and its
   `status`-driven busy styling all disappear, so a custom end control needs its own send/stop
   handling.
-- `[part="chips"]`/`[part="start"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
-  CSS `:empty` selector, because each always contains a literal `<slot>` child regardless of
-  assigned content.
+- `[part="toolbar"]`/`[part="chips"]`/`[part="start"]` are hidden via a JS-tracked `[hidden]`
+  attribute rather than a CSS `:empty` selector, because each always contains a literal `<slot>`
+  child regardless of assigned content.
 - Under `frame="card"` the only focus affordance is a border-color shift on `[part="base"]`
   (the internal `<textarea>` sets `outline: none`). `frame="plain"` removes that border, so it
   swaps in a different affordance rather than losing focus visibility: an underline across the whole
-  input row, drawn as an inset `box-shadow` from `--lr-focus-ring-width`/`--lr-focus-ring-color` so
-  it costs no layout. If you restyle `[part="base"]` under `plain`, keep a focus indicator.
+  input row, drawn as an inset `box-shadow` from `--lr-focus-ring-width`/`--lr-focus-ring-color`,
+  reachable as one unit through `--lr-chat-composer-focus-shadow`, so it costs no layout. If you
+  restyle `[part="base"]` under `plain` and want to draw your own focus cue instead (e.g. on a
+  wrapper you place the composer inside), set `--lr-chat-composer-focus-shadow: none` rather than
+  fighting the default with a higher-specificity override.
+- `actions-layout="stacked"` only changes `[part="row"]`'s layout (a CSS grid instead of a flex
+  row); it does not change which slot content is hidden or when the built-in button replaces
+  `end`.
 
 ---
 
@@ -35354,7 +35551,11 @@ background and text color, independent of the active-line outline above — plus
 `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
-`--lr-focus-ring-width/-color/-offset`.
+`--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also reads the shared
+`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
+unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
+ancestor for one declaration to retheme every internal scroll container in the library, including
+`lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 
 `base` is a flex column and `body` grows to fill whatever block space a definite-height host
 gives it, still capped by `--lr-code-block-max-height` and still independently scrollable. An
@@ -35537,7 +35738,9 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`), and
 `--lr-code-block-language-color` (default `var(--lr-color-brand)`), plus the same shared
-tokens. The last five are inline `var()` fallbacks at the point of use rather than `:host`
+tokens, including the `--lr-scrollbar-width`/`--lr-scrollbar-gutter` theme hooks `body` reads —
+this component reuses `<lr-code-block>`'s stylesheet, so both share exactly the same scroll
+container. The last five are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a

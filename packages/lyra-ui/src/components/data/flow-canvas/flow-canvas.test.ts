@@ -7,7 +7,12 @@ import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from '
 import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { sendKeys } from '@web/test-runner-commands';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+  settlePointer,
+} from '../../../../test/wtr-mouse.js';
 
 const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
   ((query: string) =>
@@ -1379,12 +1384,29 @@ describe('pan & zoom', () => {
       'a node-free viewport point must hit the pannable background',
     ).to.equal('background');
 
+    // Recomputed per landing attempt: a single dispatched move can be lost, and anything that
+    // settles the layout afterwards moves this point out from under an already-sent position.
+    const emptyPoint = (): [number, number] => {
+      const rect = viewport.getBoundingClientRect();
+      return [Math.round(rect.right - 12), Math.round(rect.bottom - 12)];
+    };
     const beforeX = el.viewport.x;
     try {
-      await sendMouse({ type: 'move', position: [clientX, clientY] });
+      await hoverUntilMatched(
+        background,
+        'the node-free background never reported :hover, so the press below would start elsewhere',
+        emptyPoint,
+      );
+      const [landedX, landedY] = emptyPoint();
       await sendMouse({ type: 'down' });
-      await sendMouse({ type: 'move', position: [clientX + 40, clientY] });
+      await sendMouse({ type: 'move', position: [landedX + 40, landedY] });
       await sendMouse({ type: 'up' });
+      // sendMouse resolves when the synthesized command completes, not when the browser has
+      // processed the resulting native pointer events, so poll the panned viewport.
+      await waitUntil(
+        () => el.viewport.x !== beforeX,
+        'dragging empty background space never panned the viewport',
+      );
       expect(el.viewport.x).to.not.equal(beforeX);
     } finally {
       await sendMouse({ type: 'up' });
@@ -3394,15 +3416,11 @@ describe('--lr-flow-canvas-node-hover-outline-color', () => {
       requestAnimationFrame(() => requestAnimationFrame(resolve)),
     );
     const node = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
-    const rect = node.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: 'move',
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      // A node card lays itself out after the canvas's own updateComplete, so a rect measured once
+      // and dispatched once can miss it entirely; hoverUntilMatched re-reads the rect and
+      // re-dispatches until :hover really matches.
+      await hoverUntilMatched(node, 'the node never reported :hover under the real pointer');
       await waitUntil(
         () => getComputedStyle(node).outlineStyle !== 'none',
         'the hovered node drew no outline, so there is nothing to read the fallback off',
@@ -3523,7 +3541,7 @@ describe('pointer feedback on nodes and edges', () => {
       'sanity: a resting unselected node draws no outline at all',
     ).to.equal('none');
     try {
-      await sendMouse({ type: 'move', position: centreOf(node) });
+      await hoverUntilMatched(node, 'the unselected node never reported :hover');
       await waitUntil(
         () => getComputedStyle(node).outlineStyle !== 'none',
         'a hovered node drew no outline',
@@ -3560,7 +3578,7 @@ describe('pointer feedback on nodes and edges', () => {
     ).to.equal('rgb(9, 9, 9)');
     const restingWidth = getComputedStyle(node).outlineWidth;
     try {
-      await sendMouse({ type: 'move', position: centreOf(node) });
+      await hoverUntilMatched(node, 'the selected node never reported :hover');
       await waitUntil(
         () => getComputedStyle(node).outlineColor === 'rgb(1, 2, 3)',
         'a hovered selected node kept its static selected ring',
@@ -3582,6 +3600,7 @@ describe('pointer feedback on nodes and edges', () => {
   it('thickens an edge on hover, both on its own stroke and through its wide hit area', async () => {
     const el = await spacedFixture(false);
     const edge = el.shadowRoot!.querySelector('[part="edge"]') as SVGPathElement;
+    const hitArea = el.shadowRoot!.querySelector('[part="edge-hit-area"]') as SVGPathElement;
     const resting = getComputedStyle(edge).strokeWidth;
     // A straight horizontal path has a zero-height geometry box, so its vertical centre IS the
     // drawn line -- no rounding slack to miss the stroke by.
@@ -3590,8 +3609,13 @@ describe('pointer feedback on nodes and edges', () => {
       (el.shadowRoot!.elementFromPoint(cx, cy) as Element | null)?.getAttribute('part'),
       'sanity: the stroke centre must be the edge itself',
     ).to.equal('edge');
+    // 8px off the stroke, recomputed from the edge's live rect so a settle cannot stale it.
+    const hitAreaPoint = (): [number, number] => {
+      const [x, y] = centreOf(edge);
+      return [x, y - 8];
+    };
     try {
-      await sendMouse({ type: 'move', position: [cx, cy] });
+      await hoverUntilMatched(edge, 'the edge never reported :hover on its own stroke');
       await waitUntil(
         () => getComputedStyle(edge).strokeWidth !== resting,
         'a hovered edge kept its resting stroke weight',
@@ -3604,7 +3628,11 @@ describe('pointer feedback on nodes and edges', () => {
         (el.shadowRoot!.elementFromPoint(cx, cy - 8) as Element | null)?.getAttribute('part'),
         'sanity: 8px off the stroke must be the hit area',
       ).to.equal('edge-hit-area');
-      await sendMouse({ type: 'move', position: [cx, cy - 8] });
+      await hoverUntilMatched(
+        hitArea,
+        'the wide hit area never reported :hover',
+        hitAreaPoint,
+      );
       await waitUntil(
         () => getComputedStyle(edge).strokeWidth === hovered,
         'hovering the wide hit area gave its edge no feedback',
@@ -3632,10 +3660,14 @@ describe('pointer feedback on nodes and edges', () => {
       'sanity: the press must land on the edge itself, not a node card or the hit area',
     ).to.equal('edge');
     try {
-      await sendMouse({ type: 'move', position: [cx, cy] });
-      await waitUntil(() => edge.matches(':hover'), 'the edge never reported itself hovered');
+      // A single move can be lost under a busy multi-page run; re-dispatch until :hover matches
+      // instead of polling a landing that may never be retried.
+      await hoverUntilMatched(edge, 'the edge never reported itself hovered');
       // Hover on a selected edge is deliberately inert: :hover and [aria-pressed='true'] declare
-      // the same 2.5, so nothing is visible and nothing is being masked.
+      // the same 2.5, so nothing is visible and nothing is being masked. A must-not-change read
+      // cannot poll, so give the browser two frames -- otherwise "the hover has not repainted yet"
+      // and "the hover is correctly inert" are indistinguishable.
+      await settlePointer();
       expect(getComputedStyle(edge).strokeWidth).to.equal(resting);
 
       await sendMouse({ type: 'down' });
@@ -3656,6 +3688,7 @@ describe('pointer feedback on nodes and edges', () => {
   it('thickens an already-selected edge held through its wide transparent hit area', async () => {
     const el = await spacedFixture(true);
     const edge = el.shadowRoot!.querySelector('[part="edge"]') as SVGPathElement;
+    const hitArea = el.shadowRoot!.querySelector('[part="edge-hit-area"]') as SVGPathElement;
     const resting = getComputedStyle(edge).strokeWidth;
     const [cx, cy] = centreOf(edge);
     expect(
@@ -3663,7 +3696,16 @@ describe('pointer feedback on nodes and edges', () => {
       'sanity: 8px off the stroke must be the hit area, not the edge',
     ).to.equal('edge-hit-area');
     try {
-      await sendMouse({ type: 'move', position: [cx, cy - 8] });
+      // The press must be confirmed to land ON the hit area: a lost move would put the `down`
+      // somewhere else entirely and the poll below would then time out for the wrong reason.
+      await hoverUntilMatched(
+        hitArea,
+        'the wide hit area never reported :hover before the press',
+        () => {
+          const [x, y] = centreOf(edge);
+          return [x, y - 8];
+        },
+      );
       await sendMouse({ type: 'down' });
       await waitUntil(
         () => getComputedStyle(edge).strokeWidth !== resting,

@@ -58,7 +58,11 @@ its own four-longhand outline shape, matching `lr-virtual-list`'s: `--lr-scrolle
 (default `var(--lr-border-width-thin)`), `--lr-scroller-hover-outline-style` (default `solid`),
 `--lr-scroller-hover-outline-color` (default `var(--lr-color-border)`, set to `transparent` to opt
 out entirely), and `--lr-scroller-hover-outline-offset` (default `var(--lr-focus-ring-offset)`).
-Unset, all four resolve to the rule's previous literal paint.
+Unset, all four resolve to the rule's previous literal paint. The `viewport` part also honors the
+opt-in theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults
+`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set either on `:root`
+or any ancestor for one declaration to retheme every internal scroll container in the library,
+including `lr-table`, `lr-virtual-list`, `lr-code-block`, and `lr-code-editor`.
 
 ```html
 <lr-scroller controls label="Project cards">

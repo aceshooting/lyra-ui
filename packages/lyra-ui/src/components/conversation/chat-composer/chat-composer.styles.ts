@@ -7,7 +7,7 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-chat-composer-gap, var(--lr-space-xs));
     box-sizing: border-box;
     /* Card chrome behind inline var() fallbacks: each fallback is the pre-existing token, so an
        unset composer paints exactly as before while a docking surface can retune the card without
@@ -17,7 +17,7 @@ export const styles = css`
       var(--lr-chat-composer-border-color, var(--lr-color-border));
     border-radius: var(--lr-chat-composer-radius, var(--lr-radius));
     background: var(--lr-chat-composer-background, var(--lr-color-surface));
-    padding: var(--lr-space-s);
+    padding: var(--lr-chat-composer-padding, var(--lr-space-s));
     transition: border-color var(--lr-transition-fast);
   }
   [part='base']:focus-within {
@@ -39,7 +39,10 @@ export const styles = css`
      swap-the-affordance approach lr-stat's plain frame takes. Inset box-shadow rather than a border
      so it costs no layout: a real border added on focus shifts the row by its width. */
   :host([frame='plain']) [part='base']:focus-within {
-    box-shadow: inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color);
+    box-shadow: var(
+      --lr-chat-composer-focus-shadow,
+      inset 0 calc(-1 * var(--lr-focus-ring-width)) 0 0 var(--lr-focus-ring-color)
+    );
   }
   /* :host(:disabled), not :host([disabled]) -- a form-associated custom element (FormAssociated
      mixin -> static formAssociated = true) has its :disabled/:enabled matching computed by the UA
@@ -50,6 +53,18 @@ export const styles = css`
   :host(:disabled) [part='base'] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
+  }
+
+  /* Same [hidden]-tracked-in-JS shape as [part='chips'] below, for the same reason -- a literal
+     <slot> child means [part='toolbar'] is never :empty regardless of assigned content. */
+  [part='toolbar'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-xs);
+  }
+  [part='toolbar'][hidden] {
+    display: none;
   }
 
   /* :empty never matches [part='chips'] -- it always contains a literal <slot> child regardless of
@@ -117,6 +132,32 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     gap: var(--lr-space-xs);
+  }
+
+  /* actions-layout="stacked": start and end become a compact one-column rail (start above end)
+     beside a textarea that spans both of that rail's rows, instead of the default single flex row
+     -- for a multi-row composer where the action buttons would otherwise stretch across the row's
+     full cross-axis height. A CSS grid on [part='row'] itself, with each child explicitly placed,
+     needs no markup change: [part='start']/[part='textarea']/[part='end'] stay direct siblings. A
+     hidden (empty) [part='start'] simply occupies no cell, same as it occupies no flex space today. */
+  :host([actions-layout='stacked']) [part='row'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: stretch;
+  }
+  :host([actions-layout='stacked']) [part='start'] {
+    grid-column: 1;
+    grid-row: 1;
+    padding-block-end: 0;
+  }
+  :host([actions-layout='stacked']) [part='textarea'] {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  :host([actions-layout='stacked']) [part='end'] {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   [part='action-button'] {

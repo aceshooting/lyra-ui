@@ -581,6 +581,9 @@ export type LyraComboboxSourceErrorEvent =
  *   selected option row.
  * @cssprop [--lr-combobox-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font
  *   weight of the selected option row.
+ * @cssprop [--lr-combobox-option-badge-bg=var(--lr-color-brand-quiet)] - Background of the
+ *   `[part='option-badge']` trailing metadata badge, and the "not in catalog" badge on a
+ *   synthetic unmatched-value row (`show-unknown-option`).
  * @cssprop [--tag-max-size=var(--lr-size-5rem)] - Maximum inline size of a built-in selected tag.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Listbox enter-transition duration.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Listbox exit-transition duration.

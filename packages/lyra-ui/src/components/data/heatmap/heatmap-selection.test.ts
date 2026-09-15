@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './heatmap.js';
 import type { HeatmapSelectedCell, LyraHeatmap } from './heatmap.js';
 
@@ -152,6 +152,11 @@ describe('lr-heatmap controlled multiple selection', () => {
     await sendMouse({ type: 'down' });
     const end = cell(el, 0, 2).getBoundingClientRect();
     await sendMouse({ type: 'move', position: [Math.round(end.x + end.width / 2), Math.round(end.y + end.height / 2)] });
+    // "no proposal yet, mid-gesture" has nothing to poll for, and `sendMouse` resolves when the
+    // synthesized command completes rather than when the browser delivered the native pointer
+    // event -- so without settling, a drag that DOES emit early reads identically to one that
+    // correctly waits for the release. Two frames make the read real (test/wtr-mouse.ts).
+    await settlePointer();
     expect(details.length).to.equal(0);
     await sendMouse({ type: 'up' });
     await waitUntil(() => details.length === 1);
@@ -174,6 +179,10 @@ describe('lr-heatmap controlled multiple selection', () => {
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[aria-selected="true"]').length === 1);
     el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointercancel', { pointerId, bubbles: true }));
     await sendMouse({ type: 'up' });
+    // The release is a native pointer event: `el.updateComplete` flushes Lit, not the browser's
+    // event delivery, so settle two frames before asserting the cancelled drag stayed discarded --
+    // otherwise a release that DID commit a proposal would still read as zero here.
+    await settlePointer();
     await el.updateComplete;
     expect(details.length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[aria-selected="true"]').length).to.equal(0);

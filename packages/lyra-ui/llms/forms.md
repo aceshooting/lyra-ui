@@ -615,6 +615,10 @@ it touches the trigger row the popup drops from.
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
 `[part='unknown-value']` badge described above under "Unknown committed values".
+`--lr-combobox-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
+`[part='option-badge']` trailing metadata badge on an async row, and the "not in catalog" badge
+`show-unknown-option` renders on the synthetic unmatched-value listbox row — the same
+per-component indirection `lr-select`'s `--lr-select-option-badge-bg` uses.
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
@@ -873,7 +877,11 @@ exactly like the multi-option case, until the trigger is actually activated.
   direction change refreshes logical left/right placement by the same path
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
-  exact alias; writing either spelling updates the other
+  exact alias; writing either spelling updates the other. This property always reports the
+  instance's own authored value (or the mirrored `absolute` default); when neither spelling is
+  authored, the listbox is actually placed with the cascading `--lr-positioning-strategy` custom
+  property honored ahead of that default — see the listbox's own **Themeable custom properties**
+  below
 - `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
   keyboard-reachable, re-selectable row. Off by default
@@ -1049,6 +1057,13 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+
+`--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
+`<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
+listbox is (re)positioned. An explicit `positioning-strategy`/`hoist` on the instance always wins
+over it; otherwise it wins over this control's own mirrored `absolute` default. One declaration on
+`:root`, a theme, or a single clipping ancestor (an `overflow: hidden` card or scroller) changes
+every unset select beneath it instead of authoring `positioning-strategy`/`hoist` on each instance.
 
 The trigger's own resting surface has hooks as of 16.0.0: `--lr-select-trigger-fill` (default
 `var(--lr-color-surface)`) and `--lr-select-trigger-border-color` (default
@@ -3141,7 +3156,10 @@ undeclared on the host so ancestor themes work. The upstream-compatible `--colum
 (default `calc(var(--lr-size-1em) * 2.25)`) and `--column-width`
 (default `calc(var(--lr-size-1em) * 3)`) retain their component-font-relative sizing through the
 Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
-duration-token fallbacks.
+duration-token fallbacks. Each `column` also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `thin`/`auto`, matching
+its previous unconditional `scrollbar-width: thin`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while
 this control is focused or open — one name for every field-shaped control in the library, so a halo
@@ -5464,6 +5482,11 @@ hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
+The `editor` scroll frame also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
+tokens (default `auto`/`auto`, matching its previous unset behavior) — set
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library, including `lr-table`,
+`lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
 
 **Known gotchas:**
 
@@ -5578,7 +5601,10 @@ and:
   resolves back to the default, and a change applies live while the panel is open.
   `hoist: boolean = false` is its retained exact alias (`hoist` ⇔ `positioning-strategy="fixed"`);
   writing either spelling updates the other, so the two attributes can never disagree. Prefer
-  `positioning-strategy` in new code
+  `positioning-strategy` in new code. This property always reports the instance's own authored
+  value (or the mirrored default); when neither spelling is authored, the panel is actually placed
+  with the cascading `--lr-positioning-strategy` custom property honored ahead of that default —
+  see **Themeable custom properties** below
 - `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
   (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
   is present before client-side slot observation
@@ -5720,6 +5746,13 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
 `--lr-color-picker-radius`, which still wins when set.
+
+`--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
+`<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
+panel is (re)positioned. An explicit `positioning-strategy`/`hoist` on the instance always wins
+over it; otherwise it wins over this control's own mirrored `absolute` default. One declaration on
+`:root`, a theme, or a single clipping ancestor changes every unset color picker beneath it instead
+of authoring `positioning-strategy`/`hoist` on each instance.
 
 **Additional API surface:**
 
@@ -5917,6 +5950,10 @@ rows are absolutely positioned at the row-height
 pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plus the group-label
 band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
 windowed row are additionally capped at 20 regardless of available width.
+The `grid` scroll container also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`stable`, matching
+its previous unconditional `scrollbar-gutter: stable`) — set either on `:root` or any ancestor for
+one declaration to retheme every internal scroll container in the library.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and

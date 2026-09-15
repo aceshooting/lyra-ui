@@ -68,11 +68,11 @@ byte-identical when unset.
   background are the identical shape (an unhooked content surface inconsistent with an
   already-hooked sibling in the same file — `--lr-markdown-code-bg`/`-highlight-*-bg` and
   `--lr-combobox-option-selected-*` respectively) and were found by this same sweep, but both
-  files carry another in-flight task's uncommitted changes this round
+  files carried another in-flight task's uncommitted changes this round
   (`markdown.styles.ts`/`markdown.class.ts` and `combobox.class.ts`); adding a hook here risked
-  colliding with that work mid-flight rather than after it lands. Tracked as follow-up, not as an
-  informal "someday" note: `--lr-markdown-table-header-bg` and `--lr-combobox-option-badge-bg`,
-  same shape as the fixes above.
+  colliding with that work mid-flight rather than after it lands. Landed as the tracked follow-up,
+  not left as an informal "someday" note: `--lr-markdown-table-header-bg` and
+  `--lr-combobox-option-badge-bg`, same shape as the fixes above — see the sibling changeset.
 - `<lr-mind-map>`'s resting node-circle fill, `<lr-agent-run>`'s current-step spinner icon color,
   `<lr-tool-approval-dialog>`'s tool-name label color, and the standalone loading-ring
   `border-block-start-color` in `<lr-tree>`'s tree-item spinner, `<lr-document-preview>`, and

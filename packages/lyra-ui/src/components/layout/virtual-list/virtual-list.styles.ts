@@ -18,6 +18,10 @@ export const styles = css`
     overflow-y: auto;
     /* A fast fling must not scroll the page behind this list at either end. */
     overscroll-behavior: contain;
+    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- unset, both resolve to
+       the same 'auto' this viewport always rendered with. */
+    scrollbar-width: var(--lr-scrollbar-width);
+    scrollbar-gutter: var(--lr-scrollbar-gutter);
   }
   /* An external scrollElement hands the scrollport to a consumer-owned ancestor: this element
      stops scrolling and grows to the list's whole virtual extent, so the ancestor's own scrollbar

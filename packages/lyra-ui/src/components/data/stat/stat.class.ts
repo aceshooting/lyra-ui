@@ -287,25 +287,28 @@ export class LyraStat extends LyraElement {
     }
   }
 
+  // Each reads the light-DOM `slot` attribute directly rather than a rendered slot's live
+  // `assignedElements()` snapshot: WebKit has been observed reporting the latter transiently
+  // empty for an unrelated forwarding-slot chain nested inside the assigned element (see
+  // `<lr-switch>`'s equivalent fix), even though the assigned child's own `slot` attribute never
+  // changed. Mirrors the light-DOM check `willUpdate()` above already uses for the same flags.
   private onIconSlotChange = (): void => {
-    const startSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="start"]');
-    const defaultSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
-    this.hasIcon = Boolean(
-      startSlot?.assignedElements({ flatten: true }).length ||
-        defaultSlot?.assignedElements({ flatten: true }).length,
-    );
+    this.hasIcon = Array.from(this.children ?? []).some((el) => {
+      const slotName = el.getAttribute('slot');
+      return slotName === null || slotName === 'start';
+    });
   };
 
-  private onCaptionSlotChange = (e: Event): void => {
-    this.hasCaptionSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onCaptionSlotChange = (): void => {
+    this.hasCaptionSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'caption');
   };
 
-  private onSparkSlotChange = (e: Event): void => {
-    this.hasSparkSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onSparkSlotChange = (): void => {
+    this.hasSparkSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'spark');
   };
 
-  private onSubSlotChange = (e: Event): void => {
-    this.hasSubSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onSubSlotChange = (): void => {
+    this.hasSubSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'sub');
   };
 
   private onLinkedContentClick = (event: Event): void => {

@@ -191,6 +191,8 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  *   fenced `code-block` surface.
  * @cssprop [--lr-markdown-code-block-radius=var(--lr-radius)] - Border radius of the fenced
  *   `code-block` surface.
+ * @cssprop [--lr-markdown-table-header-bg=var(--lr-color-brand-quiet)] - Background of every
+ *   rendered `[part="table"]` header cell (`<th>`).
  * @cssprop [--lr-markdown-highlight-accent-bg=var(--lr-color-brand-quiet)] - Accent highlight fill.
  * @cssprop [--lr-markdown-highlight-success-bg=var(--lr-color-success-quiet)] - Success highlight fill.
  * @cssprop [--lr-markdown-highlight-warning-bg=var(--lr-color-warning-quiet)] - Warning highlight fill.

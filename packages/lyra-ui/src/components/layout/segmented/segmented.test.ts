@@ -969,16 +969,11 @@ describe("segment hover specificity", () => {
     `);
     const el = wrapper.querySelector("lr-segmented") as LyraSegmented;
     const target = segmentButtons(el)[0]!;
-    const rect = target.getBoundingClientRect();
     try {
-      await resetMouse();
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      // hoverUntilMatched() re-reads the rect and re-dispatches until :hover really matches. A
+      // single move aimed at a rect measured earlier only proves the command was synthesized, not
+      // that the browser processed the pointer event or that the segment is still under that point.
+      await hoverUntilMatched(target, "segment never received the pointer hover state");
       await waitUntil(
         () => getComputedStyle(target).color === "rgb(7, 8, 9)",
         "consumer segment hover color did not win"
@@ -1050,16 +1045,8 @@ describe("selected-state cssprops", () => {
     const el = await themed(overrides);
     const unchecked = segmentButtons(el)[0]!;
     const expected = resolvedInShadow(el, "color: var(--lr-color-text)", "color");
-    const rect = unchecked.getBoundingClientRect();
     try {
-      await resetMouse();
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      await hoverUntilMatched(unchecked, "segment never received the pointer hover state");
       await waitUntil(
         () => getComputedStyle(unchecked).color === expected,
         "selected-state tokens leaked into the unchecked hover treatment"
@@ -1074,16 +1061,8 @@ describe("selected-state cssprops", () => {
     const el = await themed("--lr-segmented-hover-color: rgb(7, 8, 9);");
     const unchecked = segmentButtons(el)[0]!;
     const checked = segmentButtons(el)[1]!;
-    const rect = unchecked.getBoundingClientRect();
     try {
-      await resetMouse();
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      await hoverUntilMatched(unchecked, "segment never received the pointer hover state");
       await waitUntil(
         () => getComputedStyle(unchecked).color === "rgb(7, 8, 9)",
         "segmented hover token did not reach the rendered unchecked segment"
@@ -1142,8 +1121,13 @@ describe("selected-state cssprops", () => {
 
 describe("active-state cssprops", () => {
   async function themed(style = ""): Promise<LyraSegmented> {
+    // --lr-transition-fast is zeroed: a segment eases background-color and color, and every test
+    // below reads "the background stayed transparent" straight after the pointer lands. Mid
+    // transition that read still returns the RESTING value, so a hook that HAD leaked into the
+    // hover fill would pass unnoticed.
+    const scoped = `--lr-transition-fast: 0ms;${style}`;
     const wrapper = (await fixture(
-      html`<div style=${style}>
+      html`<div style=${scoped}>
         <lr-segmented .items=${items()} value="week"></lr-segmented>
       </div>`
     )) as HTMLElement;
@@ -1168,12 +1152,15 @@ describe("active-state cssprops", () => {
 
     try {
       await hoverUntilMatched(target, "segment never received the pointer hover state");
-      expect(getComputedStyle(target).backgroundColor).to.equal(
-        "rgba(0, 0, 0, 0)"
-      );
+      // The colour poll comes FIRST: it is the proof that the hover treatment has actually
+      // rendered, which is what makes the transparent-background assertion below a real one rather
+      // than a read taken before the browser applied anything.
       await waitUntil(
         () => getComputedStyle(target).color === expectedColor,
         "hover text colour never rendered"
+      );
+      expect(getComputedStyle(target).backgroundColor).to.equal(
+        "rgba(0, 0, 0, 0)"
       );
       expect(getComputedStyle(target).color).to.equal(expectedColor);
 
@@ -1209,12 +1196,14 @@ describe("active-state cssprops", () => {
 
     try {
       await hoverUntilMatched(target!, "segment never received the pointer hover state");
-      expect(getComputedStyle(target!).backgroundColor).to.equal(
-        "rgba(0, 0, 0, 0)"
-      );
+      // Poll the hover colour before reading the fill, for the same reason as above: the rendered
+      // hover treatment is what proves the pointer's effect landed.
       await waitUntil(
         () => getComputedStyle(target!).color === expectedHoverColor,
         "hover text colour never rendered"
+      );
+      expect(getComputedStyle(target!).backgroundColor).to.equal(
+        "rgba(0, 0, 0, 0)"
       );
       expect(getComputedStyle(target!).color).to.equal(expectedHoverColor);
 
@@ -1236,15 +1225,6 @@ describe("active-state cssprops", () => {
 });
 
 describe("--lr-segmented-hover-bg / --lr-segmented-hover-shadow", () => {
-  function centerOf(target: HTMLElement): [number, number] {
-    target.scrollIntoView();
-    const rect = target.getBoundingClientRect();
-    return [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-  }
-
   it("keeps the resting transparent background and absent shadow on hover when unset (regression)", async () => {
     const el = (await fixture(
       html`<lr-segmented style="--lr-transition-fast: 0ms" .items=${items()}></lr-segmented>`
@@ -1252,8 +1232,7 @@ describe("--lr-segmented-hover-bg / --lr-segmented-hover-shadow", () => {
     const unchecked = segmentButtons(el)[0]!;
     const expectedHoverColor = resolvedInShadow(el, "color: var(--lr-color-text)", "color");
     try {
-      await resetMouse();
-      await sendMouse({ type: "move", position: centerOf(unchecked) });
+      await hoverUntilMatched(unchecked, "segment never received the pointer hover state");
       // color IS already known to change on hover (--lr-segmented-hover-color's existing default);
       // waiting for it confirms the pointer hover actually registered before asserting that
       // background/box-shadow, which this change adds hooks for, stayed exactly as they rested.
@@ -1286,8 +1265,7 @@ describe("--lr-segmented-hover-bg / --lr-segmented-hover-shadow", () => {
     const expectedShadow = getComputedStyle(probe).boxShadow;
     document.body.removeChild(probe);
     try {
-      await resetMouse();
-      await sendMouse({ type: "move", position: centerOf(unchecked) });
+      await hoverUntilMatched(unchecked, "segment never received the pointer hover state");
       await waitUntil(
         () => getComputedStyle(unchecked).backgroundColor === "rgb(1, 2, 3)",
         "segmented hover-bg override never rendered"

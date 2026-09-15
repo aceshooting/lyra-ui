@@ -7,8 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated attribute** `active` since `11.2.0`; use attribute `current`; removal not before `13.0.0` — The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction.
-- **Deprecated property** `active` since `11.2.0`; use property `current`; removal not before `13.0.0` — `active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current="false". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail`, `lr-app-rail-group` (same section below)
@@ -353,13 +352,8 @@ removing the label from the accessibility tree.
 - `current: boolean = false` (reflected) — marks this as the destination for the current page/view;
   reflects `aria-current="page"` on `[part='base']` and drives the current visual treatment. The rail
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
-  current location).
-- `active: boolean = false` — **deprecated alias for `current`**, read alongside it: the item is
-  current when either is true. `active` was this member's original public name, in both property and
-  attribute form; it was renamed to `current` without an alias, so shipped consumers writing
-  `.active=${…}` or `<lr-app-rail-item active>` silently lost their current-item indicator and kept a
-  permanent `aria-current="false"`. A Lit property binding on a custom element is untyped, so nothing
-  in a consumer's type check or test suite could catch it. Prefer `current` in new code.
+  current location). `active`, a deprecated alias in both property and attribute form, was removed
+  in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
 - `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,

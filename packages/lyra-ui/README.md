@@ -476,11 +476,11 @@ registerLyraLocale("en", {
 });
 ```
 
-Ten translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
+Eleven translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
 hand-written catalog at all:
 
 ```js
-import "@aceshooting/lyra-ui/translations/fr.js"; // also ar, de, es, fa, he, ja, pt-BR, ru, zh-CN
+import "@aceshooting/lyra-ui/translations/fr.js"; // also ar, de, es, fa, he, it, ja, pt-BR, ru, zh-CN
 ```
 
 Each locale also ships as twelve smaller per-family slices, so an app using only a handful of

@@ -324,8 +324,13 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     });
   }
 
-  private onSlotChange = (e: Event): void => {
-    this.hasDefaultSlotContent = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
+  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
+  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent fix),
+  // even though the assigned child's own `slot` attribute never changed. An element with no
+  // `slot` attribute (or an empty one) is assigned to this unnamed default slot.
+  private onSlotChange = (): void => {
+    this.hasDefaultSlotContent = Array.from(this.children).some((el) => !el.getAttribute('slot'));
     this.contentRect = null;
     this.requestUpdate();
   };

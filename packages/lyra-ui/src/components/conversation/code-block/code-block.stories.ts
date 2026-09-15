@@ -49,6 +49,29 @@ export const WithFilename: Story = {
   `,
 };
 
+/** The opt-in theme-level scrollbar hooks retheme the body scrollport, plus every other internal
+ *  scroll container in the library, from one declaration on an ancestor. */
+export const ThemedScrollbar: Story = {
+  name: "Themed scrollbar (theme-level cssprops)",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Setting `--lr-theme-scrollbar-width` and `--lr-theme-scrollbar-gutter` on an ancestor retunes the `body` scrollport -- and, set on `:root`, every other internal scroll container in the library (`lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-time-input`, `lr-emoji-picker`, `lr-code-editor`) at once.",
+      },
+    },
+  },
+  render: () => html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable;">
+      <lr-code-block
+        language="typescript"
+        .code=${tsSample}
+        style="max-width: 32rem; --lr-code-block-max-height: 6rem;"
+      ></lr-code-block>
+    </div>
+  `,
+};
+
 const pySample = `def fibonacci(n):
     a, b = 0, 1
     for _ in range(n):
@@ -187,6 +210,31 @@ export const MaxHeightScrolling: Story = {
       ).join("\n")}
       style="max-width: 32rem;"
     ></lr-code-block>
+  `,
+};
+
+export const FillHeightContainer: Story = {
+  name: "Fills a definite-height container",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The host, base and body all carry an unconditional `block-size: 100%` chain, the same pattern `lr-file-input` and `lr-code-editor` already use. Set on an ordinary auto-height ancestor it is a no-op (see `Default`); sized inside a flex column with a definite block size, as here, the header keeps its natural size and the body grows to fill and scroll the remaining space instead of collapsing to its own content height.",
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; flex-direction: column; block-size: 12rem; max-width: 32rem;">
+      <lr-code-block
+        language="typescript"
+        filename="greet.ts"
+        style="block-size: 100%;"
+        .code=${Array.from(
+          { length: 30 },
+          (_, i) => `const line${i} = ${i};`
+        ).join("\n")}
+      ></lr-code-block>
+    </div>
   `,
 };
 

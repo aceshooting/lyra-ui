@@ -14233,7 +14233,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "ed3fb6c6c38f2d017ec9",
+      "fingerprint": "b339bf63af6f4e948072",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16028,7 +16028,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "04e17ac7c591fca8d1cd",
+      "fingerprint": "b8fb78762ec0a4d7bb6d",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16086,6 +16086,70 @@
         "kind": "utility",
         "name": "testing-event-factory-contracts",
         "declaration": "createLyraEvent"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "activateStep",
+      "kind": "function",
+      "fingerprint": "1be3f4441ee244b8c003",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "activateStep"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "chooseOption",
+      "kind": "function",
+      "fingerprint": "646de1fde58967b177e3",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "chooseOption"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "submitConfirmDecision",
+      "kind": "function",
+      "fingerprint": "f9d7f3f314dc13d1bac3",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "submitConfirmDecision"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "toggleSwitch",
+      "kind": "function",
+      "fingerprint": "75dfabdbc636ada1c7d1",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "toggleSwitch"
       }
     },
     {
@@ -16496,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "84a763b47484947105e1",
+      "fingerprint": "dea646594fc92ee0a58f",
       "routes": [
         "src/vue.ts"
       ],

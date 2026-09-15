@@ -2913,17 +2913,23 @@ describe("view-toggle pressed feedback", () => {
 
 // `activeView` was this property's original public name, renamed to `activeViewId` with no
 // changelog entry (the string "activeView" appears nowhere in CHANGELOG.md), no alias and no
-// deprecation record. Because Lit property bindings on a custom element are untyped, a shipped
-// consumer's `.activeView=${id}` did not error -- it silently became a dead expando and the widget
-// fell back to its first view. Restored as a deprecated alias that SEEDS the canonical property,
-// so the component keeps writing only `activeViewId` internally.
-describe("activeView (deprecated alias for activeViewId)", () => {
+// deprecation record. It was restored in 11.2.0 as a deprecated alias that SEEDS the canonical
+// property, with `removalNotBefore: '13.0.0'`. That version is long past, so 16.0.0 removes it
+// outright -- `activeView` is now a plain, unobserved expando: Lit no longer manages it as a
+// reactive property, and setting it via a property binding no longer seeds `activeViewId`.
+describe("activeView (removed 16.0.0; no longer an alias for activeViewId)", () => {
   const VIEWS = [
     { viewId: "chart", label: "Chart" },
     { viewId: "table", label: "Table" },
   ];
 
-  it("selects the named view when only the deprecated alias is set", async () => {
+  it("is not registered as a Lit reactive property", async () => {
+    const el = (await fixture(html`<lr-widget label="Usage"></lr-widget>`)) as LyraWidget;
+    const ctor = el.constructor as unknown as { elementProperties: Map<string, unknown> };
+    expect(ctor.elementProperties.has("activeView")).to.be.false;
+  });
+
+  it("does not seed activeViewId when set via property binding", async () => {
     const el = (await fixture(html`
       <lr-widget label="Usage" .views=${VIEWS} .activeView=${"table"}>
         <div slot="view-chart">chart content</div>
@@ -2931,12 +2937,7 @@ describe("activeView (deprecated alias for activeViewId)", () => {
       </lr-widget>
     `)) as LyraWidget;
     await el.updateComplete;
-    expect(el.activeViewId).to.equal("table");
-    const pressed = [...el.shadowRoot!.querySelectorAll('[part="view-toggle"]')].filter(
-      (toggle) => toggle.getAttribute("aria-pressed") === "true"
-    );
-    expect(pressed).to.have.length(1);
-    expect((pressed[0] as HTMLElement).dataset["viewId"]).to.equal("table");
+    expect(el.activeViewId).to.equal("chart");
   });
 
   it("still honours the canonical property alone", async () => {
@@ -2948,33 +2949,6 @@ describe("activeView (deprecated alias for activeViewId)", () => {
     `)) as LyraWidget;
     await el.updateComplete;
     expect(el.activeViewId).to.equal("table");
-  });
-
-  it("defaults to the first view when neither is set", async () => {
-    const el = (await fixture(html`
-      <lr-widget label="Usage" .views=${VIEWS}>
-        <div slot="view-chart">chart content</div>
-        <div slot="view-table">table content</div>
-      </lr-widget>
-    `)) as LyraWidget;
-    await el.updateComplete;
-    expect(el.activeViewId).to.equal("chart");
-  });
-
-  it("does not undo a later interactive view change", async () => {
-    const el = (await fixture(html`
-      <lr-widget label="Usage" .views=${VIEWS} .activeView=${"table"}>
-        <div slot="view-chart">chart content</div>
-        <div slot="view-table">table content</div>
-      </lr-widget>
-    `)) as LyraWidget;
-    await el.updateComplete;
-    const chartToggle = [...el.shadowRoot!.querySelectorAll('[part="view-toggle"]')].find(
-      (toggle) => (toggle as HTMLElement).dataset["viewId"] === "chart"
-    ) as HTMLElement;
-    chartToggle.click();
-    await el.updateComplete;
-    expect(el.activeViewId, "the stale alias must not re-seed on every update").to.equal("chart");
   });
 });
 

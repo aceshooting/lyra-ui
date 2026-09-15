@@ -631,6 +631,42 @@ describe("inline code / code-block theming hooks (shared stylesheet, lr-markdown
   });
 });
 
+describe("table header theming hook (shared stylesheet, lr-markdown-core)", () => {
+  const tableContent = "| a | b |\n| --- | --- |\n| 1 | 2 |\n";
+
+  it("falls back to the ambient --lr-color-brand-quiet for the table header background when --lr-markdown-table-header-bg is unset", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core
+        style="--lr-theme-color-brand-fill-quiet: rgb(1, 2, 3);"
+        content=${tableContent}
+      ></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="table"] th') !== null,
+      "never rendered",
+      { timeout: 4000 }
+    );
+    const th = el.shadowRoot!.querySelector('[part="table"] th') as HTMLElement;
+    expect(getComputedStyle(th).backgroundColor).to.equal("rgb(1, 2, 3)");
+  });
+
+  it("themes --lr-markdown-table-header-bg independently of the shared brand-quiet token", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core
+        style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-markdown-table-header-bg: rgb(4, 5, 6);"
+        content=${tableContent}
+      ></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="table"] th') !== null,
+      "never rendered",
+      { timeout: 4000 }
+    );
+    const th = el.shadowRoot!.querySelector('[part="table"] th') as HTMLElement;
+    expect(getComputedStyle(th).backgroundColor).to.equal("rgb(4, 5, 6)");
+  });
+});
+
 describe("languages (build-lean shiki, no full-bundle fallback)", () => {
   it("defaults languages to an empty object, highlightCode to true", async () => {
     const el = (await fixture(

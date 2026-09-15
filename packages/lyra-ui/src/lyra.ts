@@ -803,6 +803,7 @@ export type {
 } from './components/agent-tools/tool-result-dialog/tool-result-dialog.class.js';
 export { LyraChatComposer } from './components/conversation/chat-composer/chat-composer.class.js';
 export type {
+  ChatComposerActionsLayout,
   ChatComposerFrame,
   ChatComposerStatus,
   ChatComposerWrap,

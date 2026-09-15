@@ -4,6 +4,14 @@ import { CopyFailure } from './copy-button.stories.js';
 import type { LyraCopyButton } from './copy-button.js';
 import { hoverUntilMatched, sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 
+/** Resolves once a native pointer command has actually been processed by the browser, so a
+ *  "nothing happened yet" read cannot pass merely because the event is still in flight. */
+function nativeEventLanded(type: 'pointerdown' | 'mouseup'): () => boolean {
+  let landed = false;
+  document.addEventListener(type, () => { landed = true; }, { once: true, capture: true });
+  return () => landed;
+}
+
 for (const ownership of ['inherited', 'own'] as const) {
   it(`restores ${ownership} clipboard ownership after the actual CopyFailure story action`, async () => {
     const initial = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
@@ -56,7 +64,12 @@ it('keeps the actual refused-write demo effective after a held native pointer pr
     host.addEventListener('lr-copy', () => outcomes.push('success'));
     host.addEventListener('lr-copy-error', (event) => outcomes.push(event.detail.reason));
     await hoverUntilMatched(button, 'copy button is hovered');
+    const pressLanded = nativeEventLanded('pointerdown');
     await sendMouse({ type: 'down' });
+    // Anchor the quiet window to a press the browser has actually processed: sendMouse resolves
+    // when the synthesized command completes, so the original window could elapse with the
+    // pointerdown still in flight and an empty `outcomes` proved nothing.
+    await waitUntil(pressLanded, 'the native press never reached the document');
     await aTimeout(150);
     expect(outcomes).to.deep.equal([]);
     await sendMouse({ type: 'up' });
@@ -86,7 +99,11 @@ for (const cancellation of ['release outside', 'disconnect'] as const) {
       host.addEventListener('lr-copy', () => outcomes.push('success'));
       host.addEventListener('lr-copy-error', () => outcomes.push('error'));
       await hoverUntilMatched(button, 'copy button is hovered before cancellation');
+      const pressLanded = nativeEventLanded('pointerdown');
       await sendMouse({ type: 'down' });
+      // The press has to be processed before the cancellation, or `disconnect` removes the host
+      // while the pointerdown is still in flight and the test proves nothing about a held press.
+      await waitUntil(pressLanded, 'the native press never reached the document');
       if (cancellation === 'disconnect') host.remove();
       const outside = root.querySelector<HTMLElement>('[data-outside]')!;
       const rect = outside.getBoundingClientRect();
@@ -96,7 +113,9 @@ for (const cancellation of ['release outside', 'disconnect'] as const) {
       const move = await moved as unknown as MouseEvent;
       expect([move.clientX, move.clientY]).to.deep.equal(position);
       expect(move.buttons).to.equal(1);
+      const releaseLanded = nativeEventLanded('mouseup');
       await sendMouse({ type: 'up' });
+      await waitUntil(releaseLanded, 'the native release never reached the document');
       await aTimeout(50);
       expect(outcomes).to.deep.equal([]);
       const restored = Object.getOwnPropertyDescriptor(navigator, 'clipboard');

@@ -1,7 +1,7 @@
-import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './known-date.js';
 import type { LyraKnownDate } from './known-date.js';
-import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 function descriptionIds(owner: HTMLElement): string[] {
   return Reflect.has(owner, 'ariaDescribedByElements')
@@ -116,10 +116,16 @@ for (const mode of ['own', 'fieldset'] as const) {
       await waitUntil(() => input.disabled);
       const rest = getComputedStyle(input).borderColor;
       try {
+        // A disabled field must not repaint, so neither read can poll for a change -- an
+        // already-dispatched pointer event the browser has not processed yet looks exactly like a
+        // correctly inert one. settlePointer() gives the browser two frames to apply whatever the
+        // pointer was going to apply, which is what turns both reads into real assertions; a fixed
+        // sleep only made the window longer without proving the event was ever processed.
         await hoverUntilMatched(input, 'disabled date field did not receive hover');
+        await settlePointer();
         expect(getComputedStyle(input).borderColor).to.equal(rest);
         await sendMouse({ type: 'down' });
-        await aTimeout(20);
+        await settlePointer();
         expect(getComputedStyle(input).borderColor).to.equal(rest);
         await resetMouse();
         root.disabled = false;

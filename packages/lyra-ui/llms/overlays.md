@@ -617,7 +617,13 @@ edge colour take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
 for `top`/`bottom`), which always wins the cascade over `<lr-dialog>`'s `--lr-dialog-height`-driven
-rule regardless of value, so the property has no effect on `<lr-drawer>`. The drawer's own
+rule regardless of value, so the property has no effect on `<lr-drawer>`. `<lr-drawer>` also opts
+out of `<lr-dialog>`'s inherited `[part="body"]` growth: on `<lr-dialog>` that rule only fills the
+panel once `--lr-dialog-height` is set (otherwise the panel is content-sized, so the rule is a
+no-op); a drawer's panel is unconditionally a definite size for every placement, so without this
+override `body` would always stretch and push `footer` to the panel's far edge. `<lr-drawer>`'s own
+`[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
+after a short body exactly as it did before `--lr-dialog-height` existed. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
@@ -1521,7 +1527,9 @@ If the import fails, leave the native disclosure visible and usable.
   positioning scheme the popup is laid out with, `'absolute' | 'fixed'`. The one property
   `<lr-popover>`, `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell
   the same way; each keeps its own default, so setting nothing changes nothing. An unsupported value
-  resolves back to that default.
+  resolves back to that default. This property always reports the instance's own authored value (or
+  its mirrored default) — see the cascading `--lr-positioning-strategy` custom property below for a
+  theme-level way to change the *rendered* strategy of every instance that sets neither.
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
@@ -1691,6 +1699,27 @@ subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from th
 `--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
 dialogs.
 
+**`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
+`positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
+placement/anchor change while open — never per animation frame). Setting nothing anywhere leaves
+every default exactly as before. Precedence: an explicit `positioning-strategy`/`hoist` on the
+instance always wins; otherwise this inherited custom property; otherwise the component's own
+mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
+theme, or a single clipping ancestor (an `overflow: hidden` card or a scroller) changes every unset
+overlay beneath it — no need to author `positioning-strategy`/`hoist` on each instance individually,
+or to remember it on every new one:
+
+```html
+<lr-card style="--lr-positioning-strategy: fixed; overflow: hidden">
+  <lr-dropdown>
+    <button slot="trigger">Actions</button>
+    <lr-dropdown-item>Rename</lr-dropdown-item>
+  </lr-dropdown>
+</lr-card>
+```
+
+`<lr-popover>`, `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all honor it.
+
 ```html
 <lr-popover
   arrow
@@ -1762,7 +1791,9 @@ later text renders normally.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
   (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
-  attributes can never disagree. Prefer `positioning-strategy` in new code.
+  attributes can never disagree. Prefer `positioning-strategy` in new code. It also honors the
+  cascading `--lr-positioning-strategy` custom property `<lr-popover>` documents, ahead of this
+  mirrored `absolute` default, when neither spelling is authored on the instance.
 - `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
   reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
@@ -1819,6 +1850,10 @@ because its rules live in the stylesheet module `lr-popover` also composes, but 
 a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
 panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`, draws no border,
 and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
+
+`--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
+`absolute`/`fixed` override `<lr-popover>` documents above, ahead of its own mirrored `absolute`
+default, when neither `positioning-strategy` nor `hoist` is authored on the instance.
 
 ```html
 <lr-tooltip
@@ -1970,7 +2005,9 @@ their controls without putting arbitrary content inside the menu role.
   see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
   (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
   attributes can never disagree. Prefer `positioning-strategy` in new code. `<lr-dropdown>` also
-  inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`.
+  inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`, and honors the
+  cascading `--lr-positioning-strategy` custom property ahead of this mirrored `absolute` default
+  when neither spelling is authored on the instance.
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
@@ -2017,7 +2054,8 @@ default; style it only to debug the travel region.
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
 `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
-`--lr-overlay-border`, `--lr-overlay-radius` and `--lr-overlay-shadow-anchored`.
+`--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
+`--lr-positioning-strategy` override documented on `<lr-popover>` above.
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">

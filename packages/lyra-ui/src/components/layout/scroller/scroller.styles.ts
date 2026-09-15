@@ -32,7 +32,11 @@ export const styles = css`
     overflow: auto;
     overscroll-behavior-inline: contain;
     scroll-behavior: smooth;
-    scrollbar-width: auto;
+    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- each reads
+       --lr-theme-scrollbar-* directly, with this viewport's own previous literal as the fallback,
+       so nothing changes for a consumer who never sets the theme input. */
+    scrollbar-width: var(--lr-theme-scrollbar-width, auto);
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
   }
 
   :host([without-scrollbar]) [part="viewport"] {

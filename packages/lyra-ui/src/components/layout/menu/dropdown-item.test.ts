@@ -131,6 +131,27 @@ describe('<lr-dropdown-item>', () => {
     expect(selections).to.equal(1);
   });
 
+  it('inherits type="radio" exclusive-choice semantics from lr-menu-item', async () => {
+    const menu = await fixture<HTMLElement>(html`
+      <lr-menu label="Currency">
+        <lr-dropdown-item type="radio" checked value="usd"
+          >USD</lr-dropdown-item
+        >
+        <lr-dropdown-item type="radio" value="eur">EUR</lr-dropdown-item>
+      </lr-menu>
+    `);
+    const [usdItem, eurItem] = Array.from(
+      menu.querySelectorAll<LyraDropdownItem>('lr-dropdown-item')
+    );
+    await nextFrame();
+
+    eurItem!.select();
+
+    expect(eurItem!.checked).to.be.true;
+    expect(usdItem!.checked).to.be.false;
+    expect(eurItem!.getAttribute('role')).to.equal('menuitemradio');
+  });
+
   it('inherits menu-item row chrome defaults and fallback hooks from an ancestor', async () => {
     const defaultItem = await fixture<LyraDropdownItem>(
       html`<lr-dropdown-item>Archive</lr-dropdown-item>`

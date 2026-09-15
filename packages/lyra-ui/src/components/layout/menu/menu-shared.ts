@@ -23,6 +23,11 @@ export const menuItemOwner = Symbol('lyra-menu-item-owner');
 /** @internal */
 export interface MenuItemOwner {
   activate(item: HTMLElement): void;
+  /** Enforces `type="radio"` exclusive choice: unchecks every other radio item this owner owns
+   *  directly whose `group` matches `group` (including the shared `undefined` scope), so a newly
+   *  checked radio row unchecks its siblings. A nested submenu's radio items belong to that
+   *  submenu's own owning menu instead, so they are never reached from an outer call. */
+  uncheckRadioGroup(item: HTMLElement, group: string | undefined): void;
 }
 
 /** @internal */

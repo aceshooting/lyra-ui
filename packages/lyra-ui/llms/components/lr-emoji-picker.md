@@ -156,6 +156,10 @@ rows are absolutely positioned at the row-height
 pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plus the group-label
 band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
 windowed row are additionally capped at 20 regardless of available width.
+The `grid` scroll container also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`stable`, matching
+its previous unconditional `scrollbar-gutter: stable`) — set either on `:root` or any ancestor for
+one declaration to retheme every internal scroll container in the library.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and

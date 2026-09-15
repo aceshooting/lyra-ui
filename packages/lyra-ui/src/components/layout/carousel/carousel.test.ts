@@ -5,7 +5,18 @@ import type { LyraCarousel } from "./carousel.js";
 import type { LyraCarouselItem } from "./carousel-item.js";
 import { styles } from "./carousel.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+  settlePointer,
+} from '../../../../test/wtr-mouse.js';
+import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
+// Registers the real shipped `ar` catalog's `layout` slice (a side effect, like every
+// translation module) so the "formats generated slide indices with the effective locale" test
+// below can render `locale="ar-EG"` without tripping the dev-mode locale-fallback warning that
+// strict-console platform lanes treat as fatal -- see that test for detail.
+import "../../../translations/ar/layout.js";
 
 async function carousel(
   template = html`
@@ -644,9 +655,14 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
   const el = wrapper.querySelector('lr-carousel') as LyraCarousel;
   await el.updateComplete;
   const navigation = el.shadowRoot!.querySelector<HTMLElement>('[part~="navigation-button-next"]')!;
-  let rect = navigation.getBoundingClientRect();
   try {
-    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    // A single `sendMouse` move resolves when the synthesized command completes, not when the
+    // browser has processed the resulting native pointer event -- and a late layout settle can move
+    // the button out from under the already-dispatched position, so the poll below would then time
+    // out on a pointer that never landed. hoverUntilMatched() re-reads the rect and re-dispatches
+    // until `:hover` really matches; waitUntil() still measures the rendered paint, which the
+    // button's own background/border transition can reach a frame later.
+    await hoverUntilMatched(navigation, 'the next navigation button never registered :hover');
     await waitUntil(
       () => getComputedStyle(navigation).backgroundColor === 'rgb(1, 2, 3)',
       'navigation hover paint must settle',
@@ -666,9 +682,8 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
 
   const pagination = el.shadowRoot!.querySelector<HTMLElement>('[part~="pagination-item"]')!;
   const dot = pagination.querySelector<HTMLElement>('[part="indicator-dot"]')!;
-  rect = pagination.getBoundingClientRect();
   try {
-    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    await hoverUntilMatched(pagination, 'the pagination indicator never registered :hover');
     await waitUntil(
       () => getComputedStyle(dot).backgroundColor === 'rgb(13, 14, 15)',
       'pagination hover paint must settle',
@@ -703,15 +718,13 @@ it('lets each scroll-container hover-outline longhand be retinted independently 
   const scrollContainer = el.shadowRoot!.querySelector<HTMLElement>(
     '[part~="scroll-container"]'
   )!;
-  const rect = scrollContainer.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
+    // hoverUntilMatched() proves the pointer was PROCESSED, not merely sent -- a single move can
+    // be dispatched at a stale rect and lose the hover entirely under a busy multi-page run.
+    await hoverUntilMatched(
+      scrollContainer,
+      'the scroll-container never registered :hover for the scoped outline',
+    );
     await waitUntil(
       () => getComputedStyle(scrollContainer).outlineColor === 'rgb(12, 34, 56)',
       'the scoped scroll-container hover outline color never rendered',
@@ -723,6 +736,9 @@ it('lets each scroll-container hover-outline longhand be retinted independently 
     expect(hovered.outlineOffset).to.equal('-2px');
 
     await sendMouse({ type: 'down' });
+    // A press that must change nothing cannot be polled for: "not processed yet" and "correctly
+    // unchanged" read identically. Settle two frames first so the read is a real assertion.
+    await settlePointer();
     const pressed = getComputedStyle(scrollContainer);
     expect(pressed.outlineWidth).to.equal('3px');
     expect(pressed.outlineStyle).to.equal('dashed');
@@ -731,6 +747,85 @@ it('lets each scroll-container hover-outline longhand be retinted independently 
   } finally {
     await resetMouse();
   }
+});
+
+it('keeps the pre-hook scroll-container hover outline when each scoped property is unset', async () => {
+  const el = (await fixture(
+    html`<lr-carousel><div>One</div><div>Two</div></lr-carousel>`,
+  )) as LyraCarousel;
+  await el.updateComplete;
+  const scrollContainer = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part~="scroll-container"]'
+  )!;
+
+  function resolvedInShadow(declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  const expectedWidth = resolvedInShadow(
+    'outline-width: var(--lr-border-width-thin)',
+    'outline-width',
+  );
+  const expectedColor = resolvedInShadow(
+    'outline-color: var(--lr-color-border-strong)',
+    'outline-color',
+  );
+  const expectedOffset = resolvedInShadow(
+    'outline-offset: var(--lr-focus-ring-offset)',
+    'outline-offset',
+  );
+
+  try {
+    await hoverUntilMatched(
+      scrollContainer,
+      'the scroll-container never registered :hover for its default outline',
+    );
+    await waitUntil(
+      () => getComputedStyle(scrollContainer).outlineStyle === 'solid',
+      'the scroll-container hover outline never rendered',
+    );
+    const hovered = getComputedStyle(scrollContainer);
+    expect(hovered.outlineWidth).to.equal(expectedWidth);
+    expect(hovered.outlineStyle).to.equal('solid');
+    expect(hovered.outlineColor).to.equal(expectedColor);
+    expect(hovered.outlineOffset).to.equal(expectedOffset);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('reads the theme-level scrollbar hook on the scroll-container, defaulting to its own none/auto pair', async () => {
+  const el = (await fixture(
+    html`<lr-carousel><div>One</div><div>Two</div></lr-carousel>`,
+  )) as LyraCarousel;
+  await el.updateComplete;
+  const scrollContainer = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part~="scroll-container"]'
+  )!;
+  const computed = getComputedStyle(scrollContainer);
+  expect(readScrollbarWidth(scrollContainer, '[part~="scroll-container"]')).to.equal('none');
+  expect(computed.scrollbarGutter).to.equal('auto');
+});
+
+it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the scroll-container', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+      <lr-carousel><div>One</div><div>Two</div></lr-carousel>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-carousel') as LyraCarousel;
+  await el.updateComplete;
+  const scrollContainer = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part~="scroll-container"]'
+  )!;
+  const computed = getComputedStyle(scrollContainer);
+  expect(readScrollbarWidth(scrollContainer, '[part~="scroll-container"]')).to.equal('thin');
+  expect(computed.scrollbarGutter).to.equal('stable');
 });
 
 it("exposes one active slide and localized navigation controls", async () => {
@@ -1741,12 +1836,50 @@ it("adopts author slide state changed immediately before disconnect", async () =
 });
 
 it("formats generated slide indices with the effective locale", async () => {
-  const el = await carousel(html`
-    <lr-carousel locale="ar-EG" pagination>
-      <lr-carousel-item>One</lr-carousel-item>
-      <lr-carousel-item>Two</lr-carousel-item>
-    </lr-carousel>
-  `);
+  // The real shipped `ar` catalog is registered (see the top-of-file import) so this render
+  // never falls through to the dev-mode locale-fallback warning strict-console lanes treat as
+  // fatal -- capture console.warn around the render to prove that directly, independent of
+  // whichever strict-console/exit-code behavior the current wtr version happens to have.
+  //
+  // The fallback warning is deduped by `devWarnOnce()` (dev-mode-attribute-warning.ts) adding
+  // each `(locale, key)` pair to the page-global `litIssuedWarnings` Set BEFORE logging. This
+  // test's own `it` body is what web-test-runner.config.js's `testFramework.config.retries: 1`
+  // re-runs verbatim after a first failing attempt, in the same page -- so leaving that Set
+  // alone would let a real regression warn (and fail) on attempt 1, then silently dedupe into
+  // an ordinary-looking pass on attempt 2, with the first failure invisible in the summary.
+  // Forcing a BRAND-NEW Set immediately before every render this test performs (this code runs
+  // again on retry, same as the rest of the body) makes each attempt observe the real warning
+  // state independently, exactly like `request-commit.test.ts`'s and
+  // `localization-runtime.test.ts`'s own `warningsWhile()` helpers use the same fresh-Set
+  // pattern for this exact dedupe-across-runs hazard. It also makes the assertion deterministic
+  // regardless of whether Lit's dev-mode signal happens to be ambiently on already.
+  type LitWarningGlobal = { litIssuedWarnings?: Set<string> };
+  const warningsGlobal = globalThis as LitWarningGlobal;
+  const hadWarningsSignal = "litIssuedWarnings" in warningsGlobal;
+  const previousWarningsSignal = warningsGlobal.litIssuedWarnings;
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  warningsGlobal.litIssuedWarnings = new Set<string>();
+  console.warn = (...args: unknown[]) => calls.push(args);
+  let el: LyraCarousel;
+  try {
+    el = await carousel(html`
+      <lr-carousel locale="ar-EG" pagination>
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+  } finally {
+    console.warn = originalWarn;
+    if (hadWarningsSignal) warningsGlobal.litIssuedWarnings = previousWarningsSignal;
+    else delete warningsGlobal.litIssuedWarnings;
+  }
+  expect(
+    calls
+      .flat()
+      .map(String)
+      .some((message) => message.includes("message registered for locale"))
+  ).to.be.false;
   const formattedOne = new Intl.NumberFormat("ar-EG").format(1);
   expect((el.children[0] as HTMLElement).getAttribute("aria-label")).to.include(
     formattedOne
@@ -3308,12 +3441,11 @@ it('keeps a disabled navigation action visually flat on hover and press', async 
   )!;
   const restBackground = getComputedStyle(previous).backgroundColor;
   const restBorder = getComputedStyle(previous).borderColor;
-  const rect = previous.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
+    // The whole assertion is that nothing changed, so a pointer that never arrived would pass it
+    // vacuously. `:disabled` only drops opacity here (no `pointer-events: none`), so the button
+    // still takes `:hover` -- wait for that before pressing, so the press lands on the target.
+    await hoverUntilMatched(previous, 'the disabled previous button never registered :hover');
     await sendMouse({ type: 'down' });
     expect(previous.disabled).to.equal(true);
     // A press that must change nothing cannot be polled for; settle first so the read is real.

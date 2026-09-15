@@ -168,15 +168,21 @@ export class LyraFlowNode extends LyraElement {
   private browserStateSeeded = false;
 
   private sampleSlotPresence(): void {
+    // `hasHeaderSlot`/`hasIconSlot`/`hasToolbarSlot` always read the light-DOM `slot` attribute
+    // directly, in both the pre-render and rendered case, rather than a rendered slot's live
+    // `assignedElements()` snapshot: WebKit has been observed reporting the latter transiently
+    // empty for an unrelated forwarding-slot chain nested inside the assigned element (see
+    // `<lr-switch>`'s equivalent fix), even though the assigned child's own `slot` attribute never
+    // changed.
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    const lightChildren = Array.from(children ?? []);
+    this.hasHeaderSlot = lightChildren.some((element) => element.getAttribute('slot') === 'header');
+    this.hasIconSlot = lightChildren.some((element) => element.getAttribute('slot') === 'icon');
+    this.hasToolbarSlot = lightChildren.some((element) => element.getAttribute('slot') === 'toolbar');
+
     const renderRoot = this.renderRoot as ParentNode | undefined;
     const renderedSlots = renderRoot?.querySelectorAll<HTMLSlotElement>('slot');
     if (renderedSlots?.length) {
-      const assigned = (name: string): boolean =>
-        [...renderedSlots].some(
-          (slot) => slot.name === name && slot.assignedElements({ flatten: true }).length > 0,
-        );
-      this.hasHeaderSlot = assigned('header');
-      this.hasIconSlot = assigned('icon');
       this.hasBodySlot = [...renderedSlots].some(
         (slot) =>
           slot.name === '' &&
@@ -184,20 +190,14 @@ export class LyraFlowNode extends LyraElement {
             (node) => node.nodeType === 1 || Boolean(node.textContent?.trim()),
           ),
       );
-      this.hasToolbarSlot = assigned('toolbar');
       return;
     }
-    const children = (this as unknown as { children?: HTMLCollection }).children;
-    const lightChildren = Array.from(children ?? []);
     const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
-    this.hasHeaderSlot = lightChildren.some((element) => element.getAttribute('slot') === 'header');
-    this.hasIconSlot = lightChildren.some((element) => element.getAttribute('slot') === 'icon');
     this.hasBodySlot = Array.from(childNodes ?? []).some(
       (node) =>
         (node.nodeType === 1 && !(node as Element).hasAttribute('slot')) ||
         (node.nodeType === 3 && Boolean(node.textContent?.trim())),
     );
-    this.hasToolbarSlot = lightChildren.some((element) => element.getAttribute('slot') === 'toolbar');
   }
 
   private shouldPulseRing(): boolean {

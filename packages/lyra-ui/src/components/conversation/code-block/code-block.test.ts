@@ -13,6 +13,7 @@ import type { ShikiHighlighter, ShikiHighlighterCore } from "./code-loader.js";
 import { __setShikiHighlighterCoreLoaderForTesting } from "./shiki-types.js";
 import { styles } from "./code-block.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 
 type Internals = {
   highlighter?: ShikiHighlighter | null;
@@ -102,6 +103,20 @@ it("defaults to no language/filename, collapsible=false, collapsed=false, copyab
   expect(el.copyable).to.be.true;
   expect(el.maxHeight).to.equal("");
   expect(el.lineNumbers).to.be.false;
+});
+
+it("reads the theme-level scrollbar hook on the body scrollport, defaulting to auto", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+      <lr-code-block></lr-code-block>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-code-block") as LyraCodeBlock;
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  const computed = getComputedStyle(body);
+  expect(readScrollbarWidth(body, '[part="body"]')).to.equal("thin");
+  expect(computed.scrollbarGutter).to.equal("stable");
 });
 
 it("uses the shared copyable presence-reflection matrix", async () => {

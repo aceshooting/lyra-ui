@@ -9,6 +9,10 @@ import '../button/button.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { styles } from './phone-input.styles.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
+// Registers the real shipped `fr` catalog's `shared` slice so the `locale="fr"` test below can
+// render without tripping the dev-mode locale-fallback warning that strict-console platform
+// lanes treat as fatal.
+import '../../../translations/fr/shared.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
 setFlagUrlResolver(async () => TEST_FLAG_SRC);

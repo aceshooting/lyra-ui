@@ -953,21 +953,27 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     relayNativeEvent(this, event);
   };
 
-  private onLabelSlotChange = (event: Event): void => {
-    this.hasLabelSlot = (event.currentTarget as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  // Each reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
+  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
+  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
+  // fix), even though the assigned child's own `slot` attribute never changed. Mirrors the
+  // light-DOM check `willUpdate()` above already uses for the same flags.
+  private onLabelSlotChange = (): void => {
+    this.hasLabelSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'label');
   };
 
-  private onHintSlotChange = (event: Event): void => {
-    this.hasHintSlot = (event.currentTarget as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onHintSlotChange = (): void => {
+    this.hasHintSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'hint');
   };
 
-  private onErrorSlotChange = (event: Event): void => {
-    this.hasErrorSlot = (event.currentTarget as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onErrorSlotChange = (): void => {
+    this.hasErrorSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'error');
   };
 
-  private onCountryPrefixSlotChange = (event: Event): void => {
-    this.hasCountryPrefixSlot =
-      (event.currentTarget as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onCountryPrefixSlotChange = (): void => {
+    this.hasCountryPrefixSlot = Array.from(this.children ?? []).some(
+      (child) => child.getAttribute('slot') === 'country-prefix',
+    );
   };
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */

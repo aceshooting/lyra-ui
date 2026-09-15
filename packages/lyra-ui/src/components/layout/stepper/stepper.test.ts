@@ -1563,16 +1563,11 @@ describe("step hover specificity", () => {
     `);
     const el = wrapper.querySelector("lr-stepper") as LyraStepper;
     const target = stepButtons(el)[2]!;
-    const rect = target.getBoundingClientRect();
     try {
-      await resetMouse();
-      await sendMouse({
-        type: "move",
-        position: [
-          Math.round(rect.left + rect.width / 2),
-          Math.round(rect.top + rect.height / 2),
-        ],
-      });
+      // A rect measured once and dispatched once can miss: a late layout settle moves the step out
+      // from under the already-sent position, and a single move can lose :hover under a busy
+      // multi-page run. Land the pointer until :hover really matches, then poll the paint.
+      await hoverUntilMatched(target, "the consumer-overridden step never reported :hover");
       await waitUntil(
         () => getComputedStyle(target).backgroundColor === "rgb(7, 8, 9)",
         "consumer step hover background did not win"

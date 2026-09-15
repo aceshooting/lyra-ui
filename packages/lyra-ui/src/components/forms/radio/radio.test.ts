@@ -1,10 +1,14 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./radio.js";
 import "./radio-button.js";
 import "./radio-group.js";
 import type { LyraRadio } from "./radio.js";
 import type { LyraRadioGroup } from "./radio-group.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from "../../../../test/wtr-mouse.js";
 
 function requiredItem<T>(
   items: ArrayLike<T>,
@@ -1836,17 +1840,22 @@ it("themes radio hover and pressed border/ring paint through component hooks", a
   `)) as LyraRadio;
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   const circle = el.shadowRoot!.querySelector<HTMLElement>('[part~="circle"]')!;
-  const rect = base.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
+    // The circle repaints through `[part~="base"]:hover|:active` -- a pointer-driven state, so
+    // land the pointer with hoverUntilMatched() (it re-reads the rect and re-dispatches until
+    // :hover really matches) and poll the rendered colour. Reading either paint straight after
+    // sendMouse samples before the browser processed the native pointer event.
+    await hoverUntilMatched(base, "the radio base never reported :hover");
+    await waitUntil(
+      () => getComputedStyle(circle).borderTopColor === "rgb(1, 2, 3)",
+      "hovering the radio never repainted the circle border to its hover hook"
+    );
     expect(getComputedStyle(circle).borderTopColor).to.equal("rgb(1, 2, 3)");
     await sendMouse({ type: "down" });
+    await waitUntil(
+      () => getComputedStyle(circle).borderTopColor === "rgb(4, 5, 6)",
+      "pressing the radio never repainted the circle border to its active hook"
+    );
     const pressed = getComputedStyle(circle);
     expect(pressed.borderTopColor).to.equal("rgb(4, 5, 6)");
     expect(pressed.boxShadow).to.contain("rgb(7, 8, 9)");

@@ -18,6 +18,7 @@ import {
   hoverUntilMatched,
   resetMouse,
   sendMouse,
+  settlePointer,
 } from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 
@@ -63,18 +64,24 @@ function press(target: HTMLElement, key: string): void {
   );
 }
 
+/**
+ * Land the pointer on `target` and wait until the browser has really applied `:hover` to it.
+ *
+ * A single `sendMouse` move resolves when the synthesized command completes, which is NOT a
+ * guarantee that the browser went on to process the resulting native pointer event -- and the
+ * overflow controller measures in a `ResizeObserver` callback, so a late settle can move the
+ * target out from under an already-dispatched position. Both failures look identical to the
+ * caller: the hover-dependent `waitUntil` that follows just times out. `hoverUntilMatched()`
+ * re-reads the rect and re-dispatches until `:hover` matches, so the assertion afterwards measures
+ * a pointer that demonstrably arrived (docs/agents/testing.md).
+ */
 async function moveMouseTo(target: HTMLElement): Promise<void> {
-  target.scrollIntoView({ block: "center", inline: "center" });
+  // Give the tablist's ResizeObserver pass a frame pair to settle the box first, then land.
   await nextFrames();
-  const rect = target.getBoundingClientRect();
-  await sendMouse({
-    type: "move",
-    position: [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ],
-  });
-  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await hoverUntilMatched(
+    target,
+    `[part="${target.getAttribute("part") ?? target.localName}"] never registered :hover`
+  );
 }
 
 it("never scrolls vertically -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar", async () => {
@@ -261,6 +268,10 @@ it("lets each panel hover-outline longhand be retinted independently and keeps t
     expect(hovered.outlineOffset).to.equal("-2px");
 
     await sendMouse({ type: "down" });
+    // A press that must change nothing cannot be polled for: "the press has not been processed
+    // yet" and "the press was correctly inert" read identically. Settle two frames so the read
+    // below is a real assertion rather than a vacuous one.
+    await settlePointer();
     const pressed = getComputedStyle(panel);
     expect(pressed.outlineWidth).to.equal("3px");
     expect(pressed.outlineStyle).to.equal("dashed");

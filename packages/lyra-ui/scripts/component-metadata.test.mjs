@@ -73,14 +73,16 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   // names, then removed them outright instead, since the library has no released consumers to
   // protect and a dual-emit alias is a permanent cost. A removed event needs no deprecation record.
   //
-  // 11 as of the lr-app-rail-item `active` and lr-widget `activeView` restorations (a property
-  // record each, plus the attribute half of `active`). Those correct renames that shipped with no
-  // alias, no changelog entry and no record here -- and they are the direct counter-example to the
-  // "no released consumers to protect" reasoning above. There were released consumers, the renames
+  // It was briefly 11: the lr-app-rail-item `active` and lr-widget `activeView` restorations (a
+  // property record each, plus the attribute half of `active`) corrected renames that shipped with
+  // no alias, no changelog entry and no record here -- the direct counter-example to the "no
+  // released consumers to protect" reasoning above. There were released consumers, the renames
   // broke them, and the breakage was invisible: a Lit `.prop=` binding on a custom element is
-  // untyped, so a dead expando fails no type check, no test and no build. Weigh that against "a
-  // dual-emit alias is a permanent cost" before removing a public name again.
-  assert.equal(state.metadata.deprecations.length, 11);
+  // untyped, so a dead expando fails no type check, no test and no build. 16.0.0 removed all three
+  // records outright: both properties' `removalNotBefore: '13.0.0'` had long passed, and unlike the
+  // upstream-mirrored aliases below, nothing ties their removal to an upstream Web Awesome/Shoelace
+  // release. Back to 8.
+  assert.equal(state.metadata.deprecations.length, 8);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {

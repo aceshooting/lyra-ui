@@ -17,6 +17,10 @@ export const styles = css`
     /* Page flow below drops both; auto restores them only while inline content really overflows. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
+    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- unset, both resolve to
+       the same 'auto' this scrollport always rendered with. */
+    scrollbar-width: var(--lr-scrollbar-width);
+    scrollbar-gutter: var(--lr-scrollbar-gutter);
   }
 
   /* A scroll container clips both axes, so overflow: auto makes [part='base'] the header's sticky

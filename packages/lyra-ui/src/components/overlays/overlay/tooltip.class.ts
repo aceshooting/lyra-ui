@@ -36,6 +36,7 @@ import {
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import {
   activateNonmodalOverlay,
   composedContains,
@@ -201,6 +202,11 @@ export interface LyraTooltipEventMap {
  *   `--lr-overlay-surface` above: the bubble draws no border.
  * @cssprop --lr-overlay-radius - Shared floating-surface corner radius. Same deliberate exclusion:
  *   the bubble keeps the tighter `--lr-radius-xs` a label-sized box reads best with.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
+ *   {@link positioningStrategy}/`hoist`, read from computed style when the bubble is
+ *   (re)positioned. Set it once on `:root`, a theme, or one clipping ancestor to change every
+ *   unset tooltip beneath it instead of authoring `positioning-strategy`/`hoist` on each instance;
+ *   an explicit value on the instance always wins over it.
  * @status stable
  * @since 4.0.0
  */
@@ -281,6 +287,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    * default) positions against the nearest containing block and scrolls with it; `fixed` positions
    * against the viewport and escapes most clipping ancestors. An unsupported value resolves back
    * to the default. Changes apply live while open.
+   * This property reports only the instance's own authored value (or the mirrored default); the
+   * popup is actually placed with the `--lr-positioning-strategy` cascading custom property
+   * honored ahead of that default when the instance itself sets nothing -- see that `@cssprop`.
    * @default 'absolute'
    */
   @property({
@@ -294,8 +303,12 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   set positioningStrategy(next: PlaceStrategy) {
     const normalized = TOOLTIP_POSITIONING_STRATEGY.normalize(next) ?? 'absolute';
     const old = this.positioningStrategy;
-    if (normalized === old) return;
+    // Recorded even when it matches the already-resolved value: an author who explicitly writes
+    // the mirrored default still authored a value, and `resolveEffectivePositioningStrategy()`
+    // (positioning-strategy.ts) has to be able to tell that apart from "unset" -- only "unset"
+    // falls through to a cascading `--lr-positioning-strategy` ancestor override.
     this._positioningStrategy = normalized;
+    if (normalized === old) return;
     this.requestUpdate('positioningStrategy', old);
     // Lit only writes an attribute for a property it saw change, and this write changed `hoist`'s
     // value without going through its own setter.
@@ -884,7 +897,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       this.placementPending = true;
       this.cleanup = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
-        strategy: this.positioningStrategy,
+        strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
         offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
         skidding: finiteNumber(this.skidding, 0),
         arrow: this.rendersArrow && arrowElement ? arrowElement : undefined,

@@ -347,6 +347,11 @@ export interface LyraVirtualListEventMap {
  * @cssprop [--lr-virtual-list-hover-outline-offset=calc(-1 * var(--lr-border-width-thin))] -
  *   Inward offset of the mouse-hover preview on `[part="base"]`, keeping the outline inside its
  *   own scrollport so it is not clipped at the edge.
+ * @cssprop [--lr-scrollbar-width=auto] - Theme-level scrollbar width read by the `base` scroll
+ *   viewport; unset, renders identically to before. Set `--lr-theme-scrollbar-width` on `:root` or
+ *   any ancestor to retune every internal scroll container in the library at once.
+ * @cssprop [--lr-scrollbar-gutter=auto] - Theme-level scrollbar gutter read by the `base` scroll
+ *   viewport; see `--lr-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

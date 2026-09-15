@@ -121,6 +121,48 @@ export const CancelableCheckboxChange: StoryObj = {
   `,
 };
 
+/** `type="radio"` rows in the same `<lr-menu>` model exclusive choice: activating an unchecked row
+ * unchecks every other checked radio row the menu owns directly. */
+export const ExclusiveRadioChoice: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`type="radio"` renders `role="menuitemradio"`. Activating an unchecked row unchecks the other rows in its group; activating the already-checked row is a no-op.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-menu label="Currency" style="inline-size: 12rem;">
+      <lr-menu-item type="radio" checked value="usd">USD</lr-menu-item>
+      <lr-menu-item type="radio" value="eur">EUR</lr-menu-item>
+      <lr-menu-item type="radio" value="gbp">GBP</lr-menu-item>
+    </lr-menu>
+  `,
+};
+
+/** The `group` attribute narrows exclusive choice to only the radio rows sharing it, so one
+ * `<lr-menu>` can host several independent single-choice sections. */
+export const NarrowedRadioGroups: StoryObj = {
+  render: () => html`
+    <lr-menu label="Preferences" style="inline-size: 14rem;">
+      <lr-menu-item type="radio" group="currency" checked value="usd"
+        >USD</lr-menu-item
+      >
+      <lr-menu-item type="radio" group="currency" value="eur"
+        >EUR</lr-menu-item
+      >
+      <hr />
+      <lr-menu-item type="radio" group="units" checked value="metric"
+        >Metric</lr-menu-item
+      >
+      <lr-menu-item type="radio" group="units" value="imperial"
+        >Imperial</lr-menu-item
+      >
+    </lr-menu>
+  `,
+};
+
 export const VisualSlots: StoryObj = {
   render: () => html`
     <lr-menu label="Document actions" style="inline-size: 18rem;">

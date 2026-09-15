@@ -4,7 +4,7 @@ import './toast-item.js';
 import './toast.js';
 import type { LyraToastItem, LyraToastSize, LyraToastVariant } from './toast-item.js';
 import { styles } from './toast-item.styles.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { sendKeys } from '@web/test-runner-commands';
 
@@ -1667,10 +1667,6 @@ it('inherits close-button hover and active state hooks without changing their de
     return value;
   };
   const rect = close.getBoundingClientRect();
-  const centre: [number, number] = [
-    Math.round(rect.left + rect.width / 2),
-    Math.round(rect.top + rect.height / 2),
-  ];
   expect(rect.width, 'the close button needs rendered geometry for pointer-state coverage').to.be.greaterThan(0);
 
   // A real mouse release normally invokes the button's dismissal handler. Stop just that test
@@ -1680,7 +1676,19 @@ it('inherits close-button hover and active state hooks without changing their de
   close.addEventListener('click', preventDismissal, { capture: true });
 
   try {
-    await sendMouse({ type: 'move', position: centre });
+    // sendMouse resolves when the synthesized command completes, not when the browser processed
+    // the resulting native pointer event, so neither half of the hover contract can be read
+    // straight after a bare `move`. Land the pointer with hoverUntilMatched() (it re-reads the
+    // rect and re-dispatches until :hover really matches), then poll the half that MUST change --
+    // the default hover colour steps off the resting quiet colour. The background half ("hover
+    // still withholds a fill") cannot be polled for, so it reads once the polled colour proves
+    // the hover style has been applied.
+    await hoverUntilMatched(close, 'the toast close button never reported :hover');
+    const hoverColor = resolveInShadow('color: var(--lr-color-text)', 'color');
+    await waitUntil(
+      () => getComputedStyle(close).color === hoverColor,
+      'close colour never reached its default hover value',
+    );
     expect(getComputedStyle(close).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
     expect(getComputedStyle(close).color).to.equal(
       resolveInShadow('color: var(--lr-color-text)', 'color'),
@@ -1697,6 +1705,13 @@ it('inherits close-button hover and active state hooks without changing their de
     wrapper.style.setProperty('--lr-toast-close-button-hover-color', 'rgb(4, 5, 6)');
     wrapper.style.setProperty('--lr-toast-close-button-active-bg', 'rgb(7, 8, 9)');
     wrapper.style.setProperty('--lr-toast-close-button-active-color', 'rgb(10, 11, 12)');
+    // The pointer is still over the button but the release above may not have been processed yet,
+    // in which case the ACTIVE hooks (rgb(7, 8, 9) / rgb(10, 11, 12)) are what paints. Poll back
+    // to the hover pair rather than reading whichever state the browser happens to be in.
+    await waitUntil(
+      () => getComputedStyle(close).backgroundColor === 'rgb(1, 2, 3)',
+      'close background never returned to its hover hook after the release',
+    );
     expect(getComputedStyle(close).backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(getComputedStyle(close).color).to.equal('rgb(4, 5, 6)');
 

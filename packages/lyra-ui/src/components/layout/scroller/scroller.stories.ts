@@ -52,6 +52,33 @@ export const ThemedHoverOutline: Story = {
   `,
 };
 
+/** The opt-in theme-level scrollbar hooks retheme this viewport, plus every other internal
+ *  scroll container in the library, from one declaration on an ancestor. */
+export const ThemedScrollbar: Story = {
+  name: 'Themed scrollbar (theme-level cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `--lr-theme-scrollbar-width` and `--lr-theme-scrollbar-gutter` on an ancestor retunes this viewport -- and, set on `:root`, every other internal scroll container in the library (`lr-table`, `lr-virtual-list`, `lr-carousel`, `lr-time-input`, `lr-emoji-picker`, `lr-code-block`, `lr-code-editor`) at once.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="max-inline-size: 28rem; --lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable;">
+      <lr-scroller controls label="Themed scrollbar">
+        ${['Solar', 'Wind', 'Battery', 'Forecast', 'Maintenance'].map(
+          (item) =>
+            html`<span
+              style="display:inline-block; padding: var(--lr-space-l); background: var(--lr-color-brand-quiet);"
+              >${item}</span
+            >`,
+        )}
+      </lr-scroller>
+    </div>
+  `,
+};
+
 export const Vertical: Story = {
   render: () => html`<lr-scroller orientation="vertical" controls label="Recent events" style="max-block-size: 12rem;">
     ${Array.from({ length: 24 }, (_, index) => html`<span>Event ${index + 1}</span>`)}

@@ -302,24 +302,36 @@ describe('zoom controls and interaction', () => {
     `);
     const themedButton = wrapper.querySelector<LyraZoomableFrame>('lr-zoomable-frame')!.shadowRoot!
       .querySelector<HTMLElement>('[part="zoom-in-button"]')!;
-    const moveTo = async (target: HTMLElement): Promise<void> => {
-      target.scrollIntoView({ block: 'center', inline: 'center' });
-      await aTimeout(0);
-      const rect = target.getBoundingClientRect();
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+    // Resolve the default hover token to a concrete color so the poll below waits for the exact
+    // painted value: "differs from resting" is satisfied by the FIRST interpolated frame of the
+    // --lr-transition-fast ease, which proves nothing about where the hover rule lands.
+    const resolvedInShadow = (host: LyraZoomableFrame, declaration: string, property: string): string => {
+      const probe = document.createElement('span');
+      probe.setAttribute('style', declaration);
+      host.shadowRoot!.append(probe);
+      const value = getComputedStyle(probe).getPropertyValue(property);
+      probe.remove();
+      return value;
     };
+    const defaultHoverBackground = resolvedInShadow(
+      defaults,
+      'background: var(--lr-color-brand-quiet)',
+      'background-color',
+    );
+    expect(defaultHoverBackground, 'the default hover token must differ from the resting fill')
+      .to.not.equal(defaultBackground);
 
     try {
-      await resetMouse();
-      await moveTo(defaultButton);
+      // A single-shot move can lose the hover under a busy multi-page run even where the same
+      // test passes in isolation; hoverUntilMatched re-reads the rect and re-dispatches until
+      // `:hover` actually matches.
+      await hoverUntilMatched(defaultButton, 'the default zoom-in button never reported :hover');
       await waitUntil(
-        () => getComputedStyle(defaultButton).backgroundColor !== defaultBackground,
+        () => getComputedStyle(defaultButton).backgroundColor === defaultHoverBackground,
         'default zoom control hover background did not paint',
       );
-      await moveTo(themedButton);
+      expect(getComputedStyle(defaultButton).backgroundColor).to.not.equal(defaultBackground);
+      await hoverUntilMatched(themedButton, 'the themed zoom-in button never reported :hover');
       await waitUntil(
         () => getComputedStyle(themedButton).backgroundColor === 'rgb(29, 30, 31)',
         'themed zoom control hover background did not paint',
@@ -446,11 +458,22 @@ describe('zoom controls and interaction', () => {
     try {
       await resetMouse();
       await clickCenter(zoomInGlyph);
+      // `updateComplete` settles Lit's render, never the native click's delivery. The zoom change
+      // is the barrier proving the press was processed; without it `el.zoom` races the pointer
+      // event and the glyph-click count below reads vacuously.
+      await waitUntil(
+        () => el.zoom === 1.5,
+        'the native zoom-in button never took the pointer click',
+      );
       await el.updateComplete;
       expect(zoomInGlyphClicks, 'the decorative zoom-in glyph receives no pointer click').to.equal(0);
       expect(el.zoom).to.equal(1.5);
 
       await clickCenter(zoomOutGlyph);
+      await waitUntil(
+        () => el.zoom === 1,
+        'the native zoom-out button never took the pointer click',
+      );
       await el.updateComplete;
       expect(zoomOutGlyphClicks, 'the decorative zoom-out glyph receives no pointer click').to.equal(0);
       expect(el.zoom).to.equal(1);

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -122,6 +122,7 @@ const view = html`<lr-markdown-core
 
 **Additional API surface:**
 
+- `--lr-markdown-table-header-bg` — Background of every rendered `[part="table"]` header cell. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.

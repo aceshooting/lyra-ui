@@ -138,4 +138,44 @@ describe('warnUnknownAttributes', () => {
     warnUnknownAttributes(second, []);
     expect(warnStub.calls).to.have.length(1);
   });
+
+  it('exempts Angular emulated-encapsulation scoping attributes (_ngcontent-*/_nghost-*)', () => {
+    withDevMode();
+    const host = document.createElement('lr-fake-tag');
+    // Pre-Ivy-stable and current Angular id shapes, on both content and host markers.
+    host.setAttribute('_ngcontent-c0', '');
+    host.setAttribute('_ngcontent-ng-c1234567890', '');
+    host.setAttribute('_nghost-ng-c1234567890', '');
+    warnUnknownAttributes(host, []);
+    expect(warnStub.calls).to.have.length(0);
+  });
+
+  it('exempts Angular dev-mode input reflection (ng-reflect-*) and ng-version', () => {
+    withDevMode();
+    const host = document.createElement('lr-fake-tag');
+    host.setAttribute('ng-reflect-rows', '3');
+    host.setAttribute('ng-version', '18.0.0');
+    warnUnknownAttributes(host, []);
+    expect(warnStub.calls).to.have.length(0);
+  });
+
+  it('exempts Vue scoped-style markers (data-v-*) via the existing data-* prefix', () => {
+    withDevMode();
+    const host = document.createElement('lr-fake-tag');
+    host.setAttribute('data-v-7ba5bd90', '');
+    warnUnknownAttributes(host, []);
+    expect(warnStub.calls).to.have.length(0);
+  });
+
+  it('still warns for a misspelled real attribute and an unrelated underscore attribute', () => {
+    withDevMode();
+    const host = document.createElement('lr-fake-tag');
+    host.setAttribute('kown-attr', '');
+    host.setAttribute('_foo', '');
+    warnUnknownAttributes(host, ['known-attr']);
+    expect(warnStub.calls).to.have.length(2);
+    const messages = warnStub.calls.map((call) => call[0]);
+    expect(messages.some((message) => message?.includes('kown-attr'))).to.equal(true);
+    expect(messages.some((message) => message?.includes('_foo'))).to.equal(true);
+  });
 });

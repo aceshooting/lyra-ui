@@ -8,6 +8,7 @@ import {
   sendMouse,
   sendWheel,
 } from '../../../../test/wtr-mouse.js';
+import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 
 it('lets a consumer retint hover and invalid editor borders independently', async () => {
   const el = (await fixture(html`
@@ -60,6 +61,28 @@ it('lets a consumer retint the resting editor border and fill through component 
   const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
   expect(getComputedStyle(editor).borderTopColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(editor).backgroundColor).to.equal('rgb(4, 5, 6)');
+});
+
+it('reads the theme-level scrollbar hook on the editor scrollport, defaulting to auto', async () => {
+  const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  const computed = getComputedStyle(editor);
+  expect(readScrollbarWidth(editor, '[part="editor"]')).to.equal('auto');
+  expect(computed.scrollbarGutter).to.equal('auto');
+});
+
+it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the editor scrollport', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+      <lr-code-editor></lr-code-editor>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-code-editor') as LyraCodeEditor;
+  await el.updateComplete;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  const computed = getComputedStyle(editor);
+  expect(readScrollbarWidth(editor, '[part="editor"]')).to.equal('thin');
+  expect(computed.scrollbarGutter).to.equal('stable');
 });
 
 it('falls back from an invalid runtime resize value without injecting declarations', async () => {

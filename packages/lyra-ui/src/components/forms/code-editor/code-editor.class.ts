@@ -122,6 +122,11 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * retunable without touching any other danger-coloured surface.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * marker.
+ * @cssprop [--lr-scrollbar-width=auto] - Theme-level scrollbar width read by the `editor` scroll
+ * frame; unset, renders identically to before. Set `--lr-theme-scrollbar-width` on `:root` or any
+ * ancestor to retune every internal scroll container in the library at once.
+ * @cssprop [--lr-scrollbar-gutter=auto] - Theme-level scrollbar gutter read by the `editor` scroll
+ * frame; see `--lr-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

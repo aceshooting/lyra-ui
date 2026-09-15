@@ -8,7 +8,11 @@ import {
 } from '@open-wc/testing';
 import './page.js';
 import type { LyraPage } from './page.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  hoverUntilMatched,
+  resetMouse,
+  sendMouse,
+} from '../../../../test/wtr-mouse.js';
 
 interface PageTestAccess {
   applyMeasuredInlineSize(width: number): void;
@@ -414,6 +418,13 @@ it('keeps slotted skip content and toggle glyph controls decorative while preser
         Math.round(skipRect.top + skipRect.height / 2),
       ],
     });
+    // sendMouse resolves when the synthesized command completes, not when the browser has
+    // processed the resulting native click, so poll the effect the click must have. Doing it
+    // first also stops the inert-control count below from passing on an unprocessed click.
+    await waitUntil(
+      () => page.shadowRoot!.activeElement?.id === main.id,
+      'the skip activation never moved focus to the main region'
+    );
     await page.updateComplete;
     expect(skipControlActivations).to.equal(0);
     expect(page.shadowRoot!.activeElement?.id).to.equal(main.id);
@@ -436,8 +447,14 @@ it('keeps slotted skip content and toggle glyph controls decorative while preser
         Math.round(toggleIconRect.top + toggleIconRect.height / 2),
       ],
     });
+    // Same race: wait for the state the click must produce instead of sleeping. The slotted
+    // control sits inside the toggle, so its own listener would have run earlier in the very
+    // same dispatch -- once navOpen has flipped, a zero count is a real exclusion.
+    await waitUntil(
+      () => page.navOpen,
+      'the toggle activation never opened the navigation'
+    );
     await page.updateComplete;
-    await aTimeout(20);
     expect(toggleIconActivations).to.equal(0);
     expect(page.navOpen).to.equal(true);
     await expect(page).to.be.accessible();
@@ -1534,14 +1551,6 @@ it('operates foreign-realm navigation-toggle and delegated data-toggle controls'
 });
 
 describe('Page state cssprops', () => {
-  function centreOf(target: HTMLElement): [number, number] {
-    const rect = target.getBoundingClientRect();
-    return [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-  }
-
   function resolvedInShadow(
     page: LyraPage,
     declaration: string,
@@ -1576,62 +1585,88 @@ describe('Page state cssprops', () => {
         skip.getBoundingClientRect().width,
         'the revealed skip link has pointer geometry'
       ).to.be.greaterThan(0);
-      await sendMouse({ type: 'move', position: centreOf(skip) });
-      expect(getComputedStyle(skip).backgroundColor).to.equal(
-        resolvedInShadow(
-          page,
-          'background: var(--lr-color-brand-quiet)',
-          'background-color'
-        )
+      // Every read below is a pointer-driven paint: land the pointer until :hover really matches
+      // (a single move can be lost, and a late layout settle moves the target out from under an
+      // already-dispatched position), then poll the rendered value rather than reading it straight
+      // after the command resolves. The expected colours are resolved once, up front, because
+      // resolvedInShadow() mounts and removes a probe span each call.
+      const hoverBackground = resolvedInShadow(
+        page,
+        'background: var(--lr-color-brand-quiet)',
+        'background-color'
       );
-      expect(getComputedStyle(skip).color).to.equal(
-        resolvedInShadow(page, 'color: var(--lr-color-brand)', 'color')
+      const activeBackground = resolvedInShadow(
+        page,
+        'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+        'background-color'
       );
+      const brandColor = resolvedInShadow(
+        page,
+        'color: var(--lr-color-brand)',
+        'color'
+      );
+
+      await hoverUntilMatched(skip, 'the skip link never reported :hover');
+      await waitUntil(
+        () => getComputedStyle(skip).backgroundColor === hoverBackground,
+        'the skip link never painted its hover background'
+      );
+      expect(getComputedStyle(skip).backgroundColor).to.equal(hoverBackground);
+      expect(getComputedStyle(skip).color).to.equal(brandColor);
       await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => skip.matches(':active'),
+        'the physical pointer activates the skip link'
+      );
       expect(
         skip.matches(':active'),
         'the physical pointer activates the skip link'
       ).to.be.true;
-      expect(getComputedStyle(skip).backgroundColor).to.equal(
-        resolvedInShadow(
-          page,
-          'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-          'background-color'
-        )
+      await waitUntil(
+        () => getComputedStyle(skip).backgroundColor === activeBackground,
+        'the skip link never painted its pressed background'
       );
-      expect(getComputedStyle(skip).color).to.equal(
-        resolvedInShadow(page, 'color: var(--lr-color-brand)', 'color')
-      );
+      expect(getComputedStyle(skip).backgroundColor).to.equal(activeBackground);
+      expect(getComputedStyle(skip).color).to.equal(brandColor);
       await sendMouse({ type: 'up' });
       skip.style.pointerEvents = 'none';
 
-      await sendMouse({ type: 'move', position: centreOf(toggle) });
+      await hoverUntilMatched(
+        toggle,
+        'the navigation toggle never reported :hover'
+      );
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === hoverBackground,
+        'the navigation toggle never painted its hover background'
+      );
       expect(getComputedStyle(toggle).backgroundColor).to.equal(
-        resolvedInShadow(
-          page,
-          'background: var(--lr-color-brand-quiet)',
-          'background-color'
-        )
+        hoverBackground
       );
-      expect(getComputedStyle(toggle).color).to.equal(
-        resolvedInShadow(page, 'color: var(--lr-color-brand)', 'color')
-      );
+      expect(getComputedStyle(toggle).color).to.equal(brandColor);
       await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => toggle.matches(':active'),
+        'the physical pointer activates the navigation toggle'
+      );
       expect(
         toggle.matches(':active'),
         'the physical pointer activates the navigation toggle'
       ).to.be.true;
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === activeBackground,
+        'the navigation toggle never painted its pressed background'
+      );
       expect(getComputedStyle(toggle).backgroundColor).to.equal(
-        resolvedInShadow(
-          page,
-          'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-          'background-color'
-        )
+        activeBackground
       );
-      expect(getComputedStyle(toggle).color).to.equal(
-        resolvedInShadow(page, 'color: var(--lr-color-brand)', 'color')
-      );
+      expect(getComputedStyle(toggle).color).to.equal(brandColor);
       await sendMouse({ type: 'up' });
+      // The backdrop only tints while [nav-open] is set, so the release has to have produced its
+      // click before any of the paint below is readable at all.
+      await waitUntil(
+        () => page.navOpen,
+        'the released press never opened the navigation'
+      );
       await page.updateComplete;
 
       expect(page.navOpen).to.equal(true);
@@ -1708,7 +1743,11 @@ describe('Page state cssprops', () => {
       // the way in, so the test cannot inherit another file's pointer state.
       await resetMouse();
 
-      await sendMouse({ type: 'move', position: centreOf(skip) });
+      await hoverUntilMatched(skip, 'the skip link never reported :hover');
+      await waitUntil(
+        () => getComputedStyle(skip).backgroundColor === 'rgb(0, 51, 102)',
+        'the skip link never painted its themed hover background'
+      );
       expect(getComputedStyle(skip).backgroundColor).to.equal(
         'rgb(0, 51, 102)'
       );
@@ -1722,7 +1761,14 @@ describe('Page state cssprops', () => {
       await sendMouse({ type: 'up' });
       skip.style.pointerEvents = 'none';
 
-      await sendMouse({ type: 'move', position: centreOf(toggle) });
+      await hoverUntilMatched(
+        toggle,
+        'the navigation toggle never reported :hover'
+      );
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === 'rgb(0, 80, 120)',
+        'the navigation toggle never painted its themed hover background'
+      );
       expect(getComputedStyle(toggle).backgroundColor).to.equal(
         'rgb(0, 80, 120)'
       );
@@ -1736,6 +1782,12 @@ describe('Page state cssprops', () => {
       );
       expect(getComputedStyle(toggle).color).to.equal('rgb(255, 255, 0)');
       await sendMouse({ type: 'up' });
+      // The themed backdrop tint only exists while [nav-open] is set, so the release's click has
+      // to have been processed before the paint below means anything.
+      await waitUntil(
+        () => page.navOpen,
+        'the released press never opened the navigation'
+      );
       await page.updateComplete;
 
       expect(
@@ -1791,11 +1843,19 @@ describe('Page state cssprops', () => {
     ).to.be.greaterThan(0);
 
     try {
-      await sendMouse({ type: 'move', position: centreOf(customToggle) });
+      await hoverUntilMatched(
+        customToggle,
+        'the physical pointer hovers the slotted toggle'
+      );
       expect(
         customToggle.matches(':hover'),
         'the physical pointer hovers the slotted toggle'
       ).to.be.true;
+      await waitUntil(
+        () =>
+          getComputedStyle(customToggle).backgroundColor === 'rgb(0, 80, 120)',
+        'the slotted toggle never painted its hover background'
+      );
       expect(getComputedStyle(customToggle).backgroundColor).to.equal(
         'rgb(0, 80, 120)'
       );
@@ -1803,10 +1863,19 @@ describe('Page state cssprops', () => {
         'rgb(255, 255, 255)'
       );
       await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => customToggle.matches(':active'),
+        'the physical pointer activates the slotted toggle'
+      );
       expect(
         customToggle.matches(':active'),
         'the physical pointer activates the slotted toggle'
       ).to.be.true;
+      await waitUntil(
+        () =>
+          getComputedStyle(customToggle).backgroundColor === 'rgb(0, 40, 70)',
+        'the slotted toggle never painted its pressed background'
+      );
       expect(getComputedStyle(customToggle).backgroundColor).to.equal(
         'rgb(0, 40, 70)'
       );
