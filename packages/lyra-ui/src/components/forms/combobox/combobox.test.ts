@@ -7806,6 +7806,7 @@ describe('unknown committed value presentation', () => {
       tag!.querySelector('[part="tag__content"]')?.textContent?.trim(),
       'a loading placeholder stands in for the raw value',
     ).to.equal('Loading…');
+    resolve([]);
   });
 });
 
