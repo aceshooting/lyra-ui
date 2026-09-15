@@ -199,15 +199,36 @@ export function buildRegistrySource() {
   return `${lines.join('\n').replace(/\n+$/, '')}\n`;
 }
 
-function main() {
+function main(argv = process.argv.slice(2)) {
+  const check = argv.includes('--check');
+  // Read BEFORE building: `buildRegistrySource()` deletes the output file so that its own previous
+  // output is not rescanned as a component event map (see its body). A check that read afterwards
+  // would therefore always see a missing file, and would leave the tree with the file deleted.
+  const previous = existsSync(outputFile) ? readFileSync(outputFile, 'utf8') : null;
   const text = buildRegistrySource();
-  writeFileSync(outputFile, text);
+  const relative = path.relative(packageDir, outputFile);
   const tagCount = text.match(/^  '[^']+': Lyra/gm)?.length ?? 0;
+  if (check) {
+    // Restore exactly what was there, so a check never mutates the working tree. Fail closed: a
+    // missing file is as stale as a divergent one, since the registry `createLyraEvent()`
+    // validates against would then not exist at all.
+    if (previous !== null) writeFileSync(outputFile, previous);
+    if (previous !== text) {
+      console.error(
+        `${relative} is stale; run \`pnpm run testing-event-registry\` and commit the result.`,
+      );
+      return 1;
+    }
+    console.log(`${relative} is fresh (${tagCount} tags).`);
+    return 0;
+  }
+  writeFileSync(outputFile, text);
   console.log(
-    `Wrote ${path.relative(packageDir, outputFile)} (${tagCount} tags, ${text.split('\n').length} lines).`,
+    `Wrote ${relative} (${tagCount} tags, ${text.split('\n').length} lines).`,
   );
+  return 0;
 }
 
 if (isMainModule(import.meta.url)) {
-  main();
+  process.exitCode = main();
 }

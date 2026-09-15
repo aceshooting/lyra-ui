@@ -168,7 +168,7 @@ export function byteFormat(
 
 /** Number of rungs in either byte/bit unit ladder (`byte`..`petabyte` / `bit`..`petabit`). Both
  * ladders are the same length, so one constant covers either family. */
-export const BYTE_SCALE_UNIT_COUNT = BYTE_UNITS.length;
+const BYTE_SCALE_UNIT_COUNT = BYTE_UNITS.length;
 
 /** Normalizes a byte/bit unit-ladder step: non-finite or `<= 1` input falls back to the historical
  * 1000-based (decimal) ladder. Shared by {@link byteFormat} and `utilities/format.ts`'s
