@@ -78,9 +78,6 @@ export const optionalSizeConverter = optionalLiteralSetConverter<LyraSize>([
   'large',
 ]);
 
-/** Parses either spelling of a size; anything else reads as no size at all. */
-export const parseOptionalSize = optionalSizeConverter.normalize;
-
 /**
  * Normalizes a write to an opt-in `size` and keeps an already-present attribute in step with it,
  * so an unsupported value leaves neither a stale attribute for the tier selectors to match nor a

@@ -33,7 +33,7 @@ export type LyraDataStatePartPrefix =
   | Partial<Record<LyraDataStatePrecedence, string>>;
 
 /** The per-tier content a host substitutes for the built-in copy. */
-export interface DataStateSlots {
+interface DataStateSlots {
   loading?: unknown;
   error?: unknown;
   empty?: unknown;

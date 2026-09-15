@@ -145,7 +145,7 @@ export interface ComposedFocusRepairSnapshot {
  * so leave focus alone -- which is what lets a caller pass `rows[index]` or an optional query
  * result straight through without pre-checking it.
  */
-export type ComposedFocusRepairTargets =
+type ComposedFocusRepairTargets =
   | HTMLElement
   | null
   | undefined
