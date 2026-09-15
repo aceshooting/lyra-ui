@@ -32,7 +32,9 @@ Removing `label` restores the localized thinking name while preserving an explic
 visibly next to the animated shape, in a new `part="label"` element, mirroring `<lr-spinner>`'s own
 `labelPlacement` vocabulary. The default, `"none"`, is unchanged from this component's
 screen-reader-only rendering before this property existed: a single `.sr-only` text node, no
-visible twin.
+visible twin. That visible `part="label"` node is itself `aria-hidden="true"`: the host's own
+`aria-label` already carries the identical string as the accessible name, so the visible copy is
+never exposed as a second, redundant accessibility-tree node for the same text.
 
 **Properties:**
 
@@ -58,8 +60,8 @@ visible twin.
 
 **CSS parts:** `base` (the decorative, `aria-hidden`, wrapper around the animated shape), `dot`
 (each of the three dots in the `dots` variant), `pulse` (the single pulsing dot in the `pulse`
-variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible label, rendered
-only while `label-placement="after"`)
+variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible, `aria-hidden`,
+label, rendered only while `label-placement="after"`)
 
 **Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
 `0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default

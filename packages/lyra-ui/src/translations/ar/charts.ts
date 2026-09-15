@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   histogramFrequency: 'التكرار',
   liteChartMarkSummary: '{series}، {label}: {value} ({index} من {total})',
   liteChartBarLabel: '{series}، {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
   liteChartCustomMarkSummary: '{content} ({index} من {total})',
   chartMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت الحزمة الاختيارية "chart.js" لعرض المخططات.',
   boxPlotMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت حزمة المخطط الصندوقي الاختيارية لعرض المخططات الصندوقية.',

@@ -318,6 +318,13 @@ polite and assertive sinks, respectively;
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
 size of `[part="body"]` before the dialog body scrolls internally.
+`--lr-document-viewer-min-height` (default `var(--lr-size-12rem)`) — minimum block size of
+`[part="body"]` before it grows to fit content.
+`--lr-document-viewer-width` (default `auto`) — assertive inline size for the nested dialog panel,
+forwarded straight to `<lr-dialog>`'s own `--lr-dialog-width`; set this on `<lr-document-viewer>`
+itself rather than reaching through to `--lr-dialog-width` directly, which stays an internal detail
+of the nested dialog. Left at `auto` the panel keeps shrink-wrapping to content, capped by the
+dialog's own `--lr-dialog-max-width` tier.
 `--lr-document-viewer-download-link-hover-bg` defaults to `color-mix(in oklab,
 var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`, and
 `--lr-document-viewer-download-link-active-bg` uses `var(--lr-color-mix-active)` in that same mix

@@ -77,6 +77,9 @@ export const FALLBACK_TICK_COLOR = '#6b7280';
 export const FALLBACK_LEGEND_COLOR = '#1a1a1a';
 export const FALLBACK_TOOLTIP_BG = '#fff';
 export const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
+/** Mirrors `--lr-font-size-2xs`'s `0.625rem` default at the standard 16px root -- reached only if
+ *  `getComputedStyle` can't resolve `--lr-chart-tick-font-size`/`--_lr-chart-tick-font-size` at all. */
+export const FALLBACK_TICK_FONT_SIZE = 10;
 
 /** Shared canvas theme-color contract every `chart.class.ts`/`box-plot.class.ts` scale, legend, and
  *  tooltip resolver reads from. */
@@ -86,4 +89,6 @@ export interface ChartThemeColors {
   legend: string;
   tooltipBg: string;
   tooltipText: string;
+  /** Axis tick-label font size in pixels, resolved from `--lr-chart-tick-font-size`. */
+  tickFontSize: number;
 }

@@ -177,7 +177,8 @@ The entry points, then:
   `@aceshooting/lyra-ui/translations/<locale>.js` (the ten shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
-  (happy-dom shims), `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
+  (happy-dom shims, plus `createLyraEvent()` for building a validated test event),
+  `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
 
 ### Registration-free component helpers
 
@@ -1925,6 +1926,38 @@ that need form-value or validity behavior: it supplies
 `setFormValue()`, `setValidity()`, `checkValidity()`, `reportValidity()`, and readonly
 `form`/`labels`/`validity`/`validationMessage`/`willValidate`. The shim is a no-op where the
 platform already provides internals, so it is safe in a shared setup file.
+
+## Constructing a validated test event: `createLyraEvent()`
+
+`@aceshooting/lyra-ui/testing` also exports
+`createLyraEvent(tag, name, detail?): CustomEvent`, for a downstream suite that wants to dispatch
+one specific `lr-*` component's documented event — at a listener under test, without rendering the
+real component — instead of hand-rolling a `CustomEvent` and guessing its shape and flags:
+
+```ts
+import { createLyraEvent } from '@aceshooting/lyra-ui/testing';
+
+const event = createLyraEvent('lr-confirm-bar', 'lr-approve', { args: null, waitUntil: () => {} });
+event.cancelable; // true — lr-confirm-bar's own lr-approve call site is cancelable
+target.dispatchEvent(event);
+```
+
+`tag` and `name` are checked against that component's own generated event map: an event name the
+tag does not document, an unregistered tag, or a `detail` of the wrong shape are all compile
+errors. `bubbles` and `composed` are always `true` (every `lr-*` event is), and `cancelable` is
+looked up per tag and event from the component's own documented contract, so a listener that calls
+`preventDefault()` on a genuinely cancelable event is actually exercised — the exact case a
+hand-built event with a guessed `cancelable` value silently skips. `detail` is always optional,
+even where the real component's own type makes it required, so a test that only cares about the
+dispatched event's flags does not have to fabricate a realistic one; an omitted or `undefined`
+detail becomes `null`, matching `LyraElement.emit()`'s own normalization. `createLyraEvent()`
+builds the event only — dispatch it yourself with `target.dispatchEvent(event)`.
+
+Scope: covers every `lr-*`-named event a component documents. A component's native-named
+re-emits (`input`, `change`, `blur`, `focus`, ...) already have real DOM event types and dispatch
+semantics of their own that this factory does not model, and there is no equivalent for driving a
+component's own internal activation path (choosing an option, submitting a confirm decision) —
+render the real component and interact with it for that.
 
 ## Accessibility contract
 
@@ -3915,6 +3948,10 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-xml-viewer": unknown;
   "lr-zoomable-frame": unknown;
 }`
+
+- **`testing-event-factory-contracts`** — Shared utility contracts.
+  `createLyraEvent(/* public names: tag, name, detail */): unknown`
+  See "Constructing a validated test event: `createLyraEvent()`" above for the full contract.
 
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
   `installHappyDomFormAssociatedShims(): unknown`

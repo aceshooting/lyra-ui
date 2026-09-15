@@ -1128,6 +1128,57 @@ describe("lr-button", () => {
     });
   });
 
+  describe("lr-button: label layout centers a stretched icon+label pair (decision 26)", () => {
+    it("gives a stretched outlined button with a start icon and one-word label equal leading/trailing slack and an icon-to-text gap equal to --lr-button-gap", async () => {
+      const el = (await fixture(html`
+        <lr-button appearance="outlined" style="inline-size: 160px;">
+          <svg slot="start" width="16" height="16" viewBox="0 0 16 16"><circle r="8" cx="8" cy="8"/></svg>
+          <span>Save</span>
+        </lr-button>
+      `)) as LyraButton;
+      await el.updateComplete;
+
+      const base = el.shadowRoot!.querySelector('[part~="base"]')!.getBoundingClientRect();
+      const icon = el.shadowRoot!.querySelector('[part~="start"]')!.getBoundingClientRect();
+      // The actual rendered text run, not the (possibly grown, invisibly wider) `[part="label"]`
+      // wrapper box -- measuring the wrapper alone cannot see text floating away from its start.
+      const label = el.querySelector("span")!.getBoundingClientRect();
+      const gap = parseFloat(
+        getComputedStyle(el.shadowRoot!.querySelector('[part~="base"]')!).columnGap
+      );
+
+      const leadingSlack = icon.left - base.left;
+      const trailingSlack = base.right - label.right;
+      const iconToLabelGap = label.left - icon.right;
+
+      expect(
+        Math.abs(leadingSlack - trailingSlack),
+        `leading slack ${leadingSlack} and trailing slack ${trailingSlack} must match -- a grown label used to leave all the slack on the trailing side`
+      ).to.be.lessThan(1.5);
+      expect(
+        Math.abs(iconToLabelGap - gap),
+        `icon-to-label gap ${iconToLabelGap} must equal the declared --lr-button-gap (${gap}), not a wider gap opened by a grown label`
+      ).to.be.lessThan(1.5);
+    });
+
+    it("does not regress a plain non-stretched button's rendered size versus the pre-16.0.0 always-grow label (unset-regression)", async () => {
+      const defaultEl = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+      await defaultEl.updateComplete;
+      const restoredEl = (await fixture(
+        html`<lr-button style="--lr-button-label-grow: 1;">Save</lr-button>`
+      )) as LyraButton;
+      await restoredEl.updateComplete;
+
+      const defaultBase = defaultEl.shadowRoot!.querySelector('[part~="base"]')!.getBoundingClientRect();
+      const restoredBase = restoredEl.shadowRoot!.querySelector('[part~="base"]')!.getBoundingClientRect();
+
+      // A non-stretched (content-sized) host has no free space for flex-grow to claim either way,
+      // so the new flex-grow: 0 default must render identically to the old flex-grow: 1 behavior.
+      expect(Math.round(defaultBase.width)).to.equal(Math.round(restoredBase.width));
+      expect(Math.round(defaultBase.height)).to.equal(Math.round(restoredBase.height));
+    });
+  });
+
   describe('appearance="outlined" fill', () => {
     it("stays transparent when --lr-button-outlined-fill is unset", async () => {
       const el = (await fixture(
@@ -1858,16 +1909,18 @@ describe("lr-button: with-caret", () => {
     expect(el.hasAttribute("with-caret")).to.be.false;
   });
 
-  it("keeps the caret at the inline end under RTL, with the glyph un-mirrored", async () => {
+  it("keeps the caret at the inline end under RTL, with the glyph un-mirrored, pinned with symmetric slack when stretched", async () => {
     const el = (await fixture(
-      html`<lr-button dir="rtl" with-caret>القائمة</lr-button>`
+      html`<lr-button dir="rtl" with-caret style="inline-size: 220px;">القائمة</lr-button>`
     )) as LyraButton;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const caret = el.shadowRoot!.querySelector('[part="caret"]') as HTMLElement;
     const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const baseRect = base.getBoundingClientRect();
+    const caretRect = caret.getBoundingClientRect();
+    const labelRect = label.getBoundingClientRect();
     // Inline-end under RTL is physically to the left of the label.
-    expect(caret.getBoundingClientRect().left).to.be.lessThan(
-      label.getBoundingClientRect().left
-    );
+    expect(caretRect.left).to.be.lessThan(labelRect.left);
     // A downward caret is direction-neutral: it must not flip with the writing direction.
     const glyph = el.shadowRoot!.querySelector(
       '[part="caret"] svg'
@@ -1875,6 +1928,25 @@ describe("lr-button: with-caret", () => {
     expect(getComputedStyle(glyph).transform).to.equal(
       "matrix(0, 1, -1, 0, 0, 0)"
     );
+    // The with-caret grow keeps the label growing so the caret stays pinned to the trailing
+    // (physical-left, under RTL) content edge with no leftover dead gap: the slack outside the
+    // label on its own physical edge and the slack outside the caret on its own physical edge
+    // must both equal the same declared inline padding -- symmetric, not just correctly ordered.
+    const paddingInline = parseFloat(getComputedStyle(base).paddingInlineStart);
+    const labelOuterSlack = baseRect.right - labelRect.right;
+    const caretOuterSlack = caretRect.left - baseRect.left;
+    expect(
+      Math.abs(labelOuterSlack - paddingInline),
+      `label's outer slack ${labelOuterSlack} should equal the declared inline padding ${paddingInline}`
+    ).to.be.lessThan(1.5);
+    expect(
+      Math.abs(caretOuterSlack - paddingInline),
+      `caret's outer slack ${caretOuterSlack} should equal the declared inline padding ${paddingInline}`
+    ).to.be.lessThan(1.5);
+    expect(
+      Math.abs(labelOuterSlack - caretOuterSlack),
+      'the two pinned edges must carry the same slack, not an asymmetric leftover gap'
+    ).to.be.lessThan(1.5);
   });
 
   it("is accessible as a caret-bearing dropdown trigger", async () => {

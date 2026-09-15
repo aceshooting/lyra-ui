@@ -404,6 +404,28 @@ export const CollapsibleDesktopRail: Story = {
     `),
 };
 
+export const ReservedHeaderHeight: Story = {
+  name: "Reserved header height (cssprop)",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`--lr-app-rail-header-min-block-size` reserves room for header content that mounts or resizes asynchronously (e.g. an avatar image), so the nav below it doesn't jump once that content lands.",
+      },
+    },
+  },
+  render: () =>
+    page(html`
+      <lr-app-rail
+        label="Primary"
+        style="block-size:100%; --lr-app-rail-header-min-block-size: 96px;"
+      >
+        <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
+        ${navItems}
+      </lr-app-rail>
+    `),
+};
+
 export const GroupedSections: Story = {
   name: "Grouped sections",
   parameters: {

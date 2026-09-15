@@ -212,6 +212,27 @@ export const InheritedBodyHeight: Story = {
   `,
 };
 
+export const AssertiveWidthAndMinHeight: Story = {
+  name: "Assertive dialog width and body min-height hooks",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`--lr-document-viewer-width` forwards to the nested `<lr-dialog>`'s own `--lr-dialog-width`, and `--lr-document-viewer-min-height` sets the body's minimum block size -- both set directly on the viewer itself, without reaching into the nested dialog's own custom properties.",
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-document-viewer
+      style="--lr-document-viewer-width: 28rem; --lr-document-viewer-min-height: 16rem;"
+      .open=${context.viewMode !== "docs"}
+      name="response.json"
+      mime-type="application/json"
+      src=${textDataUrl}
+    ></lr-document-viewer>
+  `,
+};
+
 /** Baseline narrow-allocation coverage for the open shell with long document metadata. */
 export const Narrow320: Story = {
   render: (_args, context) => html`

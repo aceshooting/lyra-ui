@@ -258,6 +258,31 @@ describe('chart datum legends', () => {
     expect(dataLabels.formatter(1, { datasetIndex: 0, dataIndex: 0 })).to.equal(new Intl.NumberFormat('fr').format(Number.MAX_VALUE));
   });
 
+  it('combines a formatted value and its share on legendDisplay: value-percentage, exposing both to a formatter', async () => {
+    const el = await chart();
+    el.legendDisplay = 'value-percentage';
+    await el.updateComplete;
+    expect(labels(el)).to.deep.equal(['A: 5 (50%)', 'B: 3 (30%)', 'C: 2 (20%)']);
+    expect(el.getAttribute('legend-display')).to.equal(null);
+    el.setAttribute('legend-display', 'value-percentage');
+    await el.updateComplete;
+    expect(el.legendDisplay).to.equal('value-percentage');
+    expect(labels(el)).to.deep.equal(['A: 5 (50%)', 'B: 3 (30%)', 'C: 2 (20%)']);
+
+    // Chart.js's own (visually forced-off) canvas legend plugin shares surface: 'legend' too, via
+    // legendLabels()'s generateLabels hook -- it carries no share, so those calls report
+    // `percentage: undefined` and are filtered out below; only the DOM legend path (legendTextFor())
+    // knows each entry's share.
+    const seen: number[] = [];
+    el.formatter = (context) => {
+      if (context.surface === 'legend' && context.percentage !== undefined) seen.push(context.percentage);
+      return `$${context.value}`;
+    };
+    await el.updateComplete;
+    expect(labels(el)).to.deep.equal(['A: $5 (50%)', 'B: $3 (30%)', 'C: $2 (20%)']);
+    expect(seen).to.deep.equal([0.5, 0.3, 0.2]);
+  });
+
   it('uses dataset totals for dataset percentages and resets invalid display attributes', async () => {
     const el = await chart('bar');
     el.datasets = [...el.datasets, { label: 'Other', data: [10, 10, 10] }];

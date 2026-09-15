@@ -262,6 +262,9 @@ export interface LyraAppRailEventMap {
  *   is deliberately themed as a modal surface, not the docked rail chrome.
  * @cssprop [--lr-app-rail-header-padding=var(--lr-space-m)] - `[part="header"]`'s padding.
  * @cssprop [--lr-app-rail-footer-padding=var(--lr-space-m)] - `[part="footer"]`'s padding.
+ * @cssprop [--lr-app-rail-header-min-block-size=auto] - `[part="header"]`'s minimum block size.
+ *   `auto` (the default) is the property's own initial value, so unset reproduces today's exact
+ *   height; set it to reserve room for header content that mounts or resizes asynchronously.
  * @cssprop [--lr-app-rail-collapse-toggle-hover-bg=var(--lr-color-brand-quiet)] - Collapse-control
  *   hover background.
  * @cssprop [--lr-app-rail-collapse-toggle-hover-color=var(--lr-color-brand)] - Collapse-control

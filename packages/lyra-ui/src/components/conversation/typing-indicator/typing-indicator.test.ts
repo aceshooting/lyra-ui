@@ -182,6 +182,20 @@ describe('labelPlacement', () => {
     expect(el.getAttribute('aria-label')).to.equal('Working on it…');
   });
 
+  it('marks the visible label aria-hidden, since the host aria-label already carries the same text as the accessible name', async () => {
+    // Mirrors <lr-gauge>'s own [part="label"]: the host aria-label is the one accessible-name
+    // source, so the adjacent visible copy of the same string must not also be exposed as its own
+    // accessibility-tree node, or the name would be reachable twice for the same content.
+    const el = (await fixture(
+      html`<lr-typing-indicator
+        label-placement="after"
+        label="Working on it…"
+      ></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    const visibleLabel = el.shadowRoot!.querySelector('[part="label"]');
+    expect(visibleLabel!.getAttribute('aria-hidden')).to.equal('true');
+  });
+
   it('falls back to the localized "Thinking…" text when visible and label is empty', async () => {
     const el = (await fixture(
       html`<lr-typing-indicator label-placement="after"></lr-typing-indicator>`,

@@ -3399,6 +3399,137 @@ describe("keyboard navigation past the rendered window", () => {
   });
 });
 
+describe("itemElement", () => {
+  it("resolves the rendered row for a visible thread id after updateComplete, and null for an unknown id", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px"
+        grouping="none"
+        .threads=${threads}
+      ></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+
+    const row = el.itemElement("t1");
+    expect(row !== null, "a rendered row resolves").to.equal(true);
+    expect(row?.conversationId).to.equal("t1");
+    expect(
+      el.itemElement("does-not-exist") === null,
+      "an unknown conversation id resolves to null"
+    ).to.equal(true);
+  });
+
+  it("returns null for a thread filtered out by showArchived, and resolves it once shown", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px"
+        grouping="none"
+        .threads=${threads}
+      ></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(
+      el.itemElement("a1") === null,
+      "archived and showArchived defaults to false"
+    ).to.equal(true);
+
+    el.showArchived = true;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.itemElement("a1") !== null, "now shown").to.equal(true);
+  });
+
+  it("returns null once a thread is removed from `threads`", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px"
+        grouping="none"
+        .threads=${threads}
+      ></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.itemElement("t1") !== null).to.equal(true);
+
+    el.threads = threads.filter((thread) => thread.id !== "t1");
+    await el.updateComplete;
+    await nextFrame();
+    expect(
+      el.itemElement("t1") === null,
+      "the removed thread no longer resolves"
+    ).to.equal(true);
+  });
+
+  it("returns null for a thread windowed out of the virtualized viewport, resolving once scrolled into view", async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-thread-list::part(row) {
+            block-size: 48px;
+            overflow: hidden;
+          }
+        </style>
+        <lr-thread-list
+          style="block-size:200px"
+          grouping="none"
+          .threads=${manyThreads.slice(0, 20)}
+        ></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-thread-list") as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+
+    expect(
+      el.itemElement("m0") !== null,
+      "the first thread is within the initial small viewport"
+    ).to.equal(true);
+    expect(
+      el.itemElement("m19") === null,
+      "the last thread starts outside the small viewport"
+    ).to.equal(true);
+
+    const list = el.shadowRoot!.querySelector(
+      "lr-virtual-list"
+    ) as LyraVirtualList;
+    list.scrollToIndex(19, { align: "start", behavior: "auto" });
+    await nextFrame();
+    await list.updateComplete;
+
+    await waitUntil(
+      () => el.itemElement("m19") !== null,
+      "the scrolled-to thread did not resolve once rendered",
+      { timeout: 3000 }
+    );
+  });
+
+  it("resolves a light-DOM row by conversation-id in slotted mode, and null for content not slotted or already removed", async () => {
+    const el = (await fixture(html`
+      <lr-thread-list>
+        <lr-conversation-item conversation-id="s1" label="One"></lr-conversation-item>
+        <lr-conversation-item conversation-id="s2" label="Two"></lr-conversation-item>
+      </lr-thread-list>
+    `)) as LyraThreadList;
+    await el.updateComplete;
+
+    expect(el.itemElement("s1")?.label).to.equal("One");
+    expect(el.itemElement("missing") === null, "a missing slotted id resolves to null").to.equal(
+      true
+    );
+
+    el.querySelector('[conversation-id="s2"]')!.remove();
+    await el.updateComplete;
+    expect(
+      el.itemElement("s2") === null,
+      "a removed slotted row no longer resolves"
+    ).to.equal(true);
+  });
+});
+
 describe("sticky group headers", () => {
   // Two well-populated date groups, so there is something to scroll through *inside* a group and a
   // real boundary to cross -- a single group can never show the swap.

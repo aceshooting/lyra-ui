@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   histogramFrequency: 'Frecuencia',
   liteChartMarkSummary: '{series}, {label}: {value} ({index} de {total})',
   liteChartBarLabel: '{series}, {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
   liteChartCustomMarkSummary: '{content} ({index} de {total})',
   chartMissingLibrary: 'Este componente necesita el paquete opcional "chart.js" instalado para representar gráficos.',
   boxPlotMissingLibrary: 'Este componente necesita el paquete opcional de diagramas de caja instalado para representarlos.',

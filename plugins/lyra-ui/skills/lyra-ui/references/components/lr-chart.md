@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 16 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -146,8 +146,12 @@ structured points retain their y-value formatting.
   `formatter`/`valueFormatter` supplies values for tooltips or axes. `value` appends the formatted
   numeric value. `percentage` appends a locale-formatted share independently of these callbacks:
   the denominator is the sum of absolute represented legend values, including hidden entries.
-  Dataset entries use sampled sums; category entries use the first dataset's represented values.
-  Zero totals give 0%. These options affect the DOM legend; tooltip/axis/table formatting is unchanged.
+  `value-percentage` appends both, as `label: value (percentage)`. Dataset entries use sampled
+  sums; category entries use the first dataset's represented values. Zero totals give 0%. The
+  `formatter`/`valueFormatter` callback backing `value` and `value-percentage` also receives that
+  same share as `percentage` in its `surface: 'legend'` context (`LyraChartFormatterContext`), so a
+  custom formatter can render its own combined text without recomputing it from raw data. These
+  options affect the DOM legend; tooltip/axis/table formatting is unchanged.
   Simplified pie/doughnut datasets with magnitudes above `Number.MAX_SAFE_INTEGER` are uniformly
   rescaled for finite canvas geometry. Lyra tooltips, data labels, legends, events and CSV retain
   original values; direct Chart.js callbacks see the rescaled peer data. Explicit `config.data`
@@ -409,7 +413,10 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
-legend text, and tooltip background/text respectively; plus
+legend text, and tooltip background/text respectively; `--lr-chart-tick-font-size` (default
+`var(--lr-font-size-2xs)`, any CSS length unit) — the axis tick-label font size, same
+`getComputedStyle` resolution and same token name as `lr-lite-chart`'s SVG equivalent, so theming
+either retunes both; plus
 `--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
 `--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
 `--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the

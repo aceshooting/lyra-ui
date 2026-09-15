@@ -1002,6 +1002,23 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     this.emit('blur', null);
   };
 
+  /** The rendered `<lr-conversation-item>` for one thread's `conversationId` -- a data-mode
+   *  thread's own `id`, or a slotted item's own `conversation-id` -- or `null` when it is not
+   *  currently rendered: filtered out by `showArchived`/search, windowed out of the virtualized
+   *  viewport, removed from `threads`, or never present. `conversationId` is not a second identity
+   *  scheme -- it is the same stable id `<lr-conversation-item>` already exposes on its own public
+   *  `conversation-id` attribute/property, which every row event (`lr-select`, `lr-thread-rename`,
+   *  `lr-thread-pin`, ...) already keys off; this method documents an accessor for it instead of
+   *  requiring a consumer to pierce the shadow root and walk rendered rows themselves the way this
+   *  component's own internals do. Reads the DOM as it stands -- `await threadList.updateComplete`
+   *  before calling it after changing `threads`, `searchText`, `showArchived`, or scroll
+   *  position. */
+  itemElement(conversationId: string): LyraConversationItem | null {
+    return (
+      this.rowElements().find((row) => row.conversationId === conversationId) ?? null
+    );
+  }
+
   // Data mode's rows are rendered into `lr-virtual-list`'s own shadow root (this component only
   // supplies the `renderItem` callback), so they are reached through that component's public
   // `renderedRows` accessor -- the currently-windowed row wrappers -- rather than by querying its

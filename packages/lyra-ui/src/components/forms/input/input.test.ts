@@ -2098,3 +2098,119 @@ it('inherits public row geometry and paint hooks across size, appearance, and pi
   expect(computed.borderTopColor).to.equal('rgb(4, 5, 6)');
   expect(getComputedStyle(input).fontSize).to.equal('18px');
 });
+
+const matchShadowHostTag = 'lr-input-match-shadow-host-fixture';
+if (!customElements.get(matchShadowHostTag)) {
+  customElements.define(
+    matchShadowHostTag,
+    class extends HTMLElement {
+      connectedCallback(): void {
+        this.attachShadow({ mode: 'open' }).innerHTML =
+          '<lr-input id="nested-password" value="secret-nested"></lr-input>';
+      }
+    },
+  );
+}
+
+describe('lr-input match constraint', () => {
+  it('reports a localized mismatch when match (an id) points at a sibling with a different value', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <lr-input id="password" aria-label="Password" value="hunter2"></lr-input>
+        <lr-input id="confirm" aria-label="Confirm" match="password" value="hunter3"></lr-input>
+      </form>
+    `);
+    const confirm = form.querySelector('#confirm') as LyraInput;
+    expect(confirm.checkValidity()).to.be.false;
+    expect(confirm.validationMessage).to.equal('The values do not match.');
+
+    confirm.value = 'hunter2';
+    await confirm.updateComplete;
+    expect(confirm.checkValidity()).to.be.true;
+  });
+
+  it('accepts a direct element reference in addition to an id', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <lr-input id="password" aria-label="Password" value="hunter2"></lr-input>
+        <lr-input id="confirm" aria-label="Confirm" value="hunter3"></lr-input>
+      </form>
+    `);
+    const password = form.querySelector('#password') as LyraInput;
+    const confirm = form.querySelector('#confirm') as LyraInput;
+    confirm.match = password;
+    await confirm.updateComplete;
+    expect(confirm.checkValidity()).to.be.false;
+
+    confirm.value = 'hunter2';
+    await confirm.updateComplete;
+    expect(confirm.checkValidity()).to.be.true;
+  });
+
+  it('re-validates the moment the referenced field changes, without touching the constrained field', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <lr-input id="password" aria-label="Password" value="hunter2"></lr-input>
+        <lr-input id="confirm" aria-label="Confirm" match="password" value="hunter2"></lr-input>
+      </form>
+    `);
+    const password = form.querySelector('#password') as LyraInput;
+    const confirm = form.querySelector('#confirm') as LyraInput;
+    expect(confirm.checkValidity(), 'starts matching').to.be.true;
+
+    password.value = 'hunter2-changed';
+    password.input!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(confirm.checkValidity(), 'the sibling edit alone must invalidate confirm').to.be.false;
+
+    password.value = 'hunter2';
+    password.input!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(confirm.checkValidity()).to.be.true;
+  });
+
+  it('stays valid against a dangling reference instead of permanently blocking submission', async () => {
+    const el = (await fixture(html`
+      <lr-input aria-label="Confirm" match="does-not-exist" value="anything"></lr-input>
+    `)) as LyraInput;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('resolves an element-reference match across a shadow boundary', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <lr-input-match-shadow-host-fixture></lr-input-match-shadow-host-fixture>
+        <lr-input id="confirm" aria-label="Confirm" value="secret-outer"></lr-input>
+      </div>
+    `);
+    const shadowHost = root.querySelector(matchShadowHostTag)!;
+    const nestedPassword = shadowHost.shadowRoot!.querySelector('#nested-password') as LyraInput;
+    const confirm = root.querySelector('#confirm') as LyraInput;
+    confirm.match = nestedPassword;
+    await confirm.updateComplete;
+    expect(confirm.checkValidity()).to.be.false;
+
+    confirm.value = 'secret-nested';
+    await confirm.updateComplete;
+    expect(confirm.checkValidity()).to.be.true;
+  });
+
+  it('survives formResetCallback: the constraint re-evaluates against the restored default value', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <lr-input id="password" aria-label="Password" value="hunter2"></lr-input>
+        <lr-input id="confirm" aria-label="Confirm" match="password" value="hunter2"></lr-input>
+      </form>
+    `);
+    const confirm = form.querySelector('#confirm') as LyraInput;
+    expect(confirm.checkValidity(), 'matches before reset').to.be.true;
+
+    // Edit it away from the default, mismatching the sibling.
+    confirm.value = 'typo';
+    await confirm.updateComplete;
+    expect(confirm.checkValidity(), 'edited away from the default mismatches').to.be.false;
+
+    form.reset();
+    await confirm.updateComplete;
+    expect(confirm.value).to.equal('hunter2');
+    expect(confirm.checkValidity(), 'the restored default matches the sibling again').to.be.true;
+  });
+});

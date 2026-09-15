@@ -19,7 +19,9 @@ import { styles } from './app-rail-item.styles.js';
  * `<lr-app-rail-item>` — an explicit icon/label navigation item for
  * `<lr-app-rail>`. The rail sets its `icon-only` attribute as the viewport
  * changes, keeping the label available to assistive technology while removing
- * it from the visual layout.
+ * it from the visual layout. `[part="base"]` resolves to a square hit target
+ * (matching the icon-button footprint used elsewhere in this library) while
+ * `icon-only`, instead of stretching across the rail's icon column.
  * A host `aria-label` is forwarded by attribute presence to the internal
  * focusable link or button, including an explicitly empty value.
  * When a focused link/button is replaced, focus follows an available replacement. If the new
@@ -58,6 +60,11 @@ import { styles } from './app-rail-item.styles.js';
  *   only the current item without hijacking the library-wide `--lr-color-brand-quiet` token.
  * @cssprop [--lr-app-rail-item-current-color=var(--lr-color-brand)] - Text/icon color of the
  *   `current`/`aria-current="page"` item.
+ * @cssprop [--lr-app-rail-item-current-font-weight=var(--lr-font-weight-semibold)] - Font weight
+ *   of the `current`/`aria-current="page"` item, decoupled from the shared
+ *   `--lr-font-weight-semibold` token so retheming it does not repaint every other semibold
+ *   element on the page. Mirrors `<lr-stepper>`'s `--lr-stepper-current-font-weight` and
+ *   `<lr-segmented>`'s `--lr-segmented-selected-font-weight`.
  * @cssprop [--lr-app-rail-item-current-indicator-color=var(--lr-color-brand)] - Color of the
  *   decorative `[part="current-indicator"]` while current.
  * @cssprop [--lr-app-rail-item-current-indicator-width=var(--lr-size-2px)] - Inline size of
@@ -82,6 +89,8 @@ import { styles } from './app-rail-item.styles.js';
  *   font size.
  * @cssprop [--lr-app-rail-item-icon-size=var(--lr-icon-button-size)] - `[part="icon"]`'s inline
  *   size. Not floor-clamped -- the icon is decorative, not itself a pointer target.
+ * @cssprop [--lr-app-rail-item-font-size=inherit] - `[part="base"]`'s font size, set after the
+ *   `font` shorthand so it alone can be retuned while family/weight/line-height stay inherited.
  * @status stable
  * @since 4.0.0
  */

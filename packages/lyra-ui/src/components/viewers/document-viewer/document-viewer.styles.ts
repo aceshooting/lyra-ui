@@ -19,7 +19,7 @@ export const styles = css`
   [part="body"] {
     display: flex;
     flex-direction: column;
-    min-block-size: var(--lr-size-12rem);
+    min-block-size: var(--lr-document-viewer-min-height, var(--lr-size-12rem));
     max-block-size: var(
       --lr-document-viewer-max-height,
       var(--_lr-document-viewer-max-height)
@@ -28,6 +28,14 @@ export const styles = css`
     padding-inline: var(--lr-space-l);
     padding-block: var(--lr-space-l);
     min-inline-size: 0;
+  }
+
+  /* <lr-dialog> is rendered directly into this shadow root (not slotted), so a plain type
+     selector reaches it: the resulting --lr-dialog-width custom property is computed on that
+     element itself and inherits into its own shadow root exactly as if a consumer had set it
+     there directly. Left unset, the dialog panel keeps its own default shrink-to-fit behavior. */
+  lr-dialog {
+    --lr-dialog-width: var(--lr-document-viewer-width, auto);
   }
 
   [part="body"] img {

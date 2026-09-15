@@ -15,6 +15,7 @@ import {
   FALLBACK_GRID_COLOR,
   FALLBACK_LEGEND_COLOR,
   FALLBACK_TICK_COLOR,
+  FALLBACK_TICK_FONT_SIZE,
   FALLBACK_TOOLTIP_BG,
   FALLBACK_TOOLTIP_TEXT,
   resolveCanvasColor,
@@ -317,6 +318,8 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  *   property supplies only a private fallback, so this public token always wins when set.
  * @cssprop [--lr-chart-grid-color=var(--lr-color-border)] - Canvas grid-line color.
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Canvas tick and axis-title color.
+ * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-2xs)] - Canvas axis tick-label font size.
+ *   Same token name as `lr-chart`'s equivalent, so theming either retunes both.
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - DOM legend label color.
  * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Canvas tooltip background.
  * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Canvas tooltip text color.
@@ -742,6 +745,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           cs.getPropertyValue('--_lr-chart-tick-color').trim(),
         FALLBACK_TICK_COLOR,
       ),
+      tickFontSize: this.styleNumber(
+        '--lr-chart-tick-font-size',
+        FALLBACK_TICK_FONT_SIZE,
+        '--_lr-chart-tick-font-size',
+      ),
       legend: resolveCanvasColor(
         this,
         cs.getPropertyValue('--lr-chart-legend-color').trim() ||
@@ -939,7 +947,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         },
         scales: {
           x: {
-            ticks: { color: theme.tick },
+            ticks: { color: theme.tick, font: { size: theme.tickFontSize } },
             grid: { color: theme.grid },
           },
           y: {
@@ -948,6 +956,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
             title: { display: !!this.yLabel, text: this.yLabel, color: theme.tick },
             ticks: {
               color: theme.tick,
+              font: { size: theme.tickFontSize },
               ...((this.formatter || this.valueFormatter)
                 ? {
                     callback: (value: unknown) =>

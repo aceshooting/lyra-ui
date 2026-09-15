@@ -2541,6 +2541,50 @@ it('resolves grid/tick/legend/tooltip colors from custom --lr-chart-* values set
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
 });
 
+it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaulting to --lr-font-size-2xs', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const defaulted = (el as any).buildConfig();
+  expect(defaulted.options.scales.x.ticks.font.size).to.equal(10);
+  expect(defaulted.options.scales.y.ticks.font.size).to.equal(10);
+
+  el.style.setProperty('--lr-chart-tick-font-size', '20px');
+  await el.updateComplete;
+  const overridden = (el as any).buildConfig();
+  expect(overridden.options.scales.x.ticks.font.size).to.equal(20);
+  expect(overridden.options.scales.y.ticks.font.size).to.equal(20);
+});
+
+it('resolves the r-scale pointLabels (radar/polarArea spoke labels) font size from --lr-chart-tick-font-size too, matching the adjacent ticks font size', async () => {
+  for (const type of ['radar', 'polarArea'] as const) {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.type = type;
+    el.labels = ['A', 'B', 'C'];
+    el.datasets = [{ label: 'x', data: [1, 2, 3] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const defaulted = (el as any).buildConfig();
+    expect(defaulted.options.scales.r.pointLabels.font.size).to.equal(10);
+    expect(defaulted.options.scales.r.pointLabels.font.size).to.equal(
+      defaulted.options.scales.r.ticks.font.size
+    );
+
+    el.style.setProperty('--lr-chart-tick-font-size', '20px');
+    await el.updateComplete;
+    const overridden = (el as any).buildConfig();
+    expect(overridden.options.scales.r.pointLabels.font.size).to.equal(20);
+    expect(overridden.options.scales.r.pointLabels.font.size).to.equal(
+      overridden.options.scales.r.ticks.font.size
+    );
+  }
+});
+
 it('defaults a color-less series to the themed categorical palette, keyed by index', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';

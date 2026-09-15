@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 12 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -113,7 +113,7 @@ announced through the shared document-level light-DOM assertive sink), `data-tru
 bounded-alternative sampling notice)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
-`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text` — same public host-level precedence, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a

@@ -435,6 +435,8 @@ export interface LyraLiteChartEventMap {
  *   property supplies only a private fallback, so this public token always wins when set.
  * @cssprop [--lr-chart-grid-color=var(--lr-color-border)] - Grid-line color.
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Axis and legend-detail color.
+ * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-2xs)] - Axis tick-label font size. Same
+ *   token name as `lr-chart`'s canvas equivalent, so theming either retunes both.
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - Legend label color.
  * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum side-legend track size.
  * @cssprop [--lr-chart-color-1=var(--lr-color-chart-1)] - First series color.

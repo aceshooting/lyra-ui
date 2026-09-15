@@ -10,7 +10,7 @@
 - **Deprecated attribute** `active` since `11.2.0`; use attribute `current`; removal not before `13.0.0` — The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction.
 - **Deprecated property** `active` since `11.2.0`; use property `current`; removal not before `13.0.0` — `active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current="false". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote.
 - **Optional peers** none
-- **Themeable via** 7 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -224,7 +224,10 @@ content can then scroll/bleed both ways. `--lr-app-rail-background` (default
 background, the mobile overlay presentation; kept separate from `--lr-app-rail-background`/
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
 docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
-`var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently. Plus shared
+`var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
+`--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
+reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
+mounts or resizes asynchronously. Plus shared
 tokens (`--lr-color-border`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
@@ -402,15 +405,18 @@ the `meta` slot, hidden while empty) and `end` (the wrapper around the `end` slo
 empty).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
-`var(--lr-color-brand-quiet)`) and `--lr-app-rail-item-current-color` (default
-`var(--lr-color-brand)`) — background and text/icon color of the `current` (`aria-current="page"`)
-item. Both are scoped to `[aria-current='page']` only and declared as inline `var()` fallbacks at
-the point of use, never on `:host`, so either can be set on the item itself _or on any ancestor_ —
-including on `<lr-app-rail>` or a wrapper above it, to tint every item's current state at once.
-`::part(base)[aria-current='page']` is invalid CSS (Shadow Parts forbids an attribute selector after
-`::part()`), so before these hooks the only lever was overriding the library-wide
-`--lr-color-brand-quiet`/`--lr-color-brand` tokens, which repainted every other element reading
-them. Unset, each falls back to the token its rule used before.
+`var(--lr-color-brand-quiet)`), `--lr-app-rail-item-current-color` (default
+`var(--lr-color-brand)`), and `--lr-app-rail-item-current-font-weight` (default
+`var(--lr-font-weight-semibold)`) — background, text/icon color, and font weight of the `current`
+(`aria-current="page"`) item. All three are scoped to `[aria-current='page']` only and declared as
+inline `var()` fallbacks at the point of use, never on `:host`, so any can be set on the item itself
+_or on any ancestor_ — including on `<lr-app-rail>` or a wrapper above it, to retheme every item's
+current state at once. `::part(base)[aria-current='page']` is invalid CSS (Shadow Parts forbids an
+attribute selector after `::part()`), so before these hooks the only lever was overriding the
+library-wide `--lr-color-brand-quiet`/`--lr-color-brand`/`--lr-font-weight-semibold` tokens, which
+repainted every other element reading them. Unset, each falls back to the token its rule used
+before. `--lr-app-rail-item-current-font-weight` mirrors `<lr-stepper>`'s
+`--lr-stepper-current-font-weight` and `<lr-segmented>`'s `--lr-segmented-selected-font-weight`.
 `--lr-app-rail-item-current-indicator-color` (default `var(--lr-color-brand)`),
 `--lr-app-rail-item-current-indicator-width` (default `var(--lr-size-2px)`), and
 `--lr-app-rail-item-current-indicator-inset-inline` (default `0 auto`; set `auto 0` to place the
@@ -425,10 +431,14 @@ same token regardless of the override so the row's own hit target can never shri
 `--lr-app-rail-item-gap` (default `var(--lr-space-s)`, the gap between `[part="icon"]` and
 `[part="label"]`, and now also between the item's control and the `meta`/`end` adornments),
 `--lr-app-rail-item-meta-color` (default `var(--lr-color-text-quiet)`),
-`--lr-app-rail-item-meta-font-size` (default `var(--lr-font-size-sm)`), and
+`--lr-app-rail-item-meta-font-size` (default `var(--lr-font-size-sm)`),
 `--lr-app-rail-item-icon-size` (default `var(--lr-icon-button-size)`, not
-floor-clamped since the icon is decorative, not itself a pointer target) retune the row's
-geometry.
+floor-clamped since the icon is decorative, not itself a pointer target), and
+`--lr-app-rail-item-font-size` (default `inherit`, set after the `font` shorthand so only the size
+is retuned while family/weight/line-height stay inherited) retune the row's geometry.
+While `icon-only`, `[part="base"]` resolves to a square hit target matching the icon-button
+footprint used elsewhere in this library (`aspect-ratio: 1` against its already floor-clamped
+block size) instead of stretching across the rail's icon column.
 
 **Optional peer deps:** none.
 
@@ -496,7 +506,9 @@ forwards that to the items and nested groups it *directly* owns — including on
 so grouping survives the rail's icon-only presentation. A nested group re-forwards in turn, so
 exactly one element ever writes `icon-only` onto any given node and a nested group clips its own
 heading too. In that mode the heading text is clipped out of layout — whether or not the group is
-collapsible — but stays in the accessibility tree.
+collapsible — but stays in the accessibility tree. While `collapsible` too, `[part="toggle"]`
+resolves to a square hit target matching the icon-button footprint used elsewhere in this library,
+instead of stretching across the header row (mirroring `<lr-app-rail-item>`'s own `[part="base"]`).
 
 **Optional peer deps:** none.
 

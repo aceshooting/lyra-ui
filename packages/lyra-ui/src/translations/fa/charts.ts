@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   histogramFrequency: 'فراوانی',
   liteChartMarkSummary: '{series}، {label}: {value} ({index} از {total})',
   liteChartBarLabel: '{series}، {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
   liteChartCustomMarkSummary: '{content} ({index} از {total})',
   chartMissingLibrary: 'برای نمایش نمودارها، باید بستهٔ اختیاری «chart.js» را نصب کنید.',
   boxPlotMissingLibrary: 'برای نمایش نمودارهای جعبه‌ای، باید بستهٔ اختیاری نمودار جعبه‌ای را نصب کنید.',

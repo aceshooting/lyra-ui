@@ -726,6 +726,7 @@ export type LyraAppRailReactProps = LyraReactElementProps<
   | '--lr-app-rail-collapse-toggle-hover-bg'
   | '--lr-app-rail-collapse-toggle-hover-color'
   | '--lr-app-rail-footer-padding'
+  | '--lr-app-rail-header-min-block-size'
   | '--lr-app-rail-header-padding'
   | '--lr-app-rail-icon-width'
   | '--lr-app-rail-mobile-width'
@@ -799,9 +800,11 @@ never,
   | '--lr-app-rail-item-active-color'
   | '--lr-app-rail-item-current-bg'
   | '--lr-app-rail-item-current-color'
+  | '--lr-app-rail-item-current-font-weight'
   | '--lr-app-rail-item-current-indicator-color'
   | '--lr-app-rail-item-current-indicator-inset-inline'
   | '--lr-app-rail-item-current-indicator-width'
+  | '--lr-app-rail-item-font-size'
   | '--lr-app-rail-item-gap'
   | '--lr-app-rail-item-hover-bg'
   | '--lr-app-rail-item-hover-color'
@@ -1224,6 +1227,7 @@ export type LyraBarChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -1301,6 +1305,7 @@ export type LyraBoxPlotReactProps = LyraReactElementProps<
   | '--lr-chart-legend-side-max'
   | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text',
   {
@@ -1471,6 +1476,7 @@ export type LyraBubbleChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -1874,6 +1880,7 @@ export type LyraChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -3666,7 +3673,9 @@ export type LyraDocumentViewerReactProps = LyraReactElementProps<
   | 'lr-render-error',
   | '--lr-document-viewer-download-link-active-bg'
   | '--lr-document-viewer-download-link-hover-bg'
-  | '--lr-document-viewer-max-height',
+  | '--lr-document-viewer-max-height'
+  | '--lr-document-viewer-min-height'
+  | '--lr-document-viewer-width',
   {
     'mime-type'?: LyraDocumentViewer['mimeType'];
   }
@@ -3792,6 +3801,7 @@ export type LyraDoughnutChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -5295,6 +5305,7 @@ export type LyraHistogramReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -5610,6 +5621,7 @@ export type LyraInputReactProps = LyraReactElementProps<
   | 'inputMode'
   | 'label'
   | 'locale'
+  | 'match'
   | 'max'
   | 'maxlength'
   | 'min'
@@ -6063,6 +6075,7 @@ export type LyraLineChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -6142,6 +6155,7 @@ export type LyraLiteChartReactProps = LyraReactElementProps<
   | '--lr-chart-legend-side-max'
   | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-lite-chart-data-table-toggle-active-bg'
   | '--lr-lite-chart-data-table-toggle-hover-bg'
   | '--lr-lite-chart-selected-outline-color'
@@ -6874,6 +6888,7 @@ export type LyraNativeTimeInputReactProps = LyraReactElementProps<
   | 'inputMode'
   | 'label'
   | 'locale'
+  | 'match'
   | 'max'
   | 'maxlength'
   | 'min'
@@ -7059,6 +7074,7 @@ export type LyraNumberInputReactProps = LyraReactElementProps<
   | 'inputMode'
   | 'label'
   | 'locale'
+  | 'match'
   | 'max'
   | 'maxlength'
   | 'min'
@@ -7627,6 +7643,7 @@ export type LyraPieChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -7735,6 +7752,7 @@ export type LyraPolarAreaChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -8291,6 +8309,7 @@ export type LyraRadarChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',
@@ -8978,6 +8997,7 @@ export type LyraScatterChartReactProps = LyraReactElementProps<
   | '--lr-chart-reset-zoom-button-active-bg'
   | '--lr-chart-reset-zoom-button-hover-bg'
   | '--lr-chart-tick-color'
+  | '--lr-chart-tick-font-size'
   | '--lr-chart-tooltip-bg'
   | '--lr-chart-tooltip-text'
   | '--point-radius',

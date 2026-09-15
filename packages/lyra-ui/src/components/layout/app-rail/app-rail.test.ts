@@ -3150,6 +3150,30 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     expect(getComputedStyle(header).padding).to.equal("4px");
     expect(getComputedStyle(footer).padding).to.equal("20px");
   });
+
+  it("renders --lr-app-rail-header-min-block-size byte-identical (auto) when not set", async () => {
+    const el = (await fixture(html`
+      <lr-app-rail>
+        <span slot="header">Brand</span>
+        <button>a</button>
+      </lr-app-rail>
+    `)) as LyraAppRail;
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    expect(getComputedStyle(header).minBlockSize).to.equal("auto");
+  });
+
+  it("reserves a minimum header block size via --lr-app-rail-header-min-block-size", async () => {
+    const el = (await fixture(html`
+      <lr-app-rail style="--lr-app-rail-header-min-block-size: 96px;">
+        <span slot="header">Brand</span>
+        <button>a</button>
+      </lr-app-rail>
+    `)) as LyraAppRail;
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    expect(getComputedStyle(header).minBlockSize).to.equal("96px");
+  });
 });
 
 // -- external trigger ARIA (aria-expanded / aria-controls) ------------------

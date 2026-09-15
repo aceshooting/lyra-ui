@@ -137,6 +137,23 @@ the conversation item's `actions` slot. Use `row-wrapper` for whole-row layout, 
 the callback-output region, and the `row-item-*` parts for the conversation item's own internals.
 With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 
+**Methods:**
+
+- `itemElement(conversationId)` — the rendered `lr-conversation-item` for one thread's
+  `conversationId` (data mode) or one slotted item's own `conversation-id` (slotted mode), or
+  `null` when it is not currently rendered: filtered out by `showArchived`/search, windowed out of
+  the virtualized viewport, removed from `threads`, or never present
+
+`conversationId` is not a second identity scheme layered on top of the list — it is the same stable
+id every row already carries on its own public `conversation-id` attribute/property, which every
+row event (`lr-select`, `lr-thread-pin`, `lr-thread-archive`, `lr-thread-delete`,
+`lr-thread-rename`) already keys off. `itemElement()` documents an accessor for it instead of a
+consumer piercing this component's shadow root (and, in data mode, the nested internal
+`lr-virtual-list`'s own shadow root) to walk rendered rows the way this component's own internals
+do. It reads the DOM as it stands, so `await threadList.updateComplete` first and treat `null` as
+"not rendered right now" — in particular, a data-mode row can exist in `threads` yet still return
+`null` while it is scrolled outside the virtualized window.
+
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.
 

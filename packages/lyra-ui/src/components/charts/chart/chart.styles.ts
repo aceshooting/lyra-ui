@@ -17,6 +17,7 @@ export const styles = css`
        can retheme the chart's grid/ticks/legend/tooltip alone. */
     --_lr-chart-grid-color: var(--lr-color-border);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
+    --_lr-chart-tick-font-size: var(--lr-font-size-2xs);
     --_lr-chart-legend-color: var(--lr-color-text);
     --_lr-chart-tooltip-bg: var(--lr-color-surface);
     --_lr-chart-tooltip-text: var(--lr-color-text);

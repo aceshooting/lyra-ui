@@ -1925,14 +1925,14 @@
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 815,
+              "line": 827,
               "test": "is accessible while current with the indicator rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 1054,
+              "line": 1117,
               "test": "stays accessible with both slots populated",
               "target": "el",
               "state": "populated"
@@ -1946,7 +1946,7 @@
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3377,
+              "line": 3401,
               "test": "keeps the collapse toggle reachable and accessible in a populated rail",
               "target": "el",
               "state": "populated"
@@ -1971,7 +1971,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 1029,
+              "line": 1092,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -2123,14 +2123,14 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail-group/app-rail-group.test.ts",
-              "line": 417,
+              "line": 428,
               "test": "is accessible populated, and collapsed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail-group/app-rail-group.test.ts",
-              "line": 417,
+              "line": 428,
               "test": "is accessible populated, and collapsed",
               "target": "el",
               "state": "populated"
@@ -2303,28 +2303,28 @@
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 662,
+              "line": 674,
               "test": "is accessible with the current-state props themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 815,
+              "line": 827,
               "test": "is accessible while current with the indicator rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 1054,
+              "line": 1117,
               "test": "stays accessible with both slots populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3377,
+              "line": 3401,
               "test": "keeps the collapse toggle reachable and accessible in a populated rail",
               "target": "el",
               "state": "populated"
@@ -2349,7 +2349,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 1029,
+              "line": 1092,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4275,7 +4275,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -4383,7 +4383,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4484,14 +4484,14 @@
             },
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 2152,
+              "line": 2169,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 2152,
+              "line": 2169,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
@@ -4505,7 +4505,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -4613,7 +4613,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5441,7 +5441,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -5549,7 +5549,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5659,56 +5659,56 @@
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1158,
+              "line": 1209,
               "test": "is accessible with a tinted outlined fill and a pinned height",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1380,
+              "line": 1431,
               "test": "is accessible as a link button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1470,
+              "line": 1521,
               "test": "never forwards aria-pressed onto the anchor, while aria-current (global) still reaches it",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1769,
+              "line": 1820,
               "test": "is accessible as a pill button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1880,
+              "line": 1952,
               "test": "is accessible as a caret-bearing dropdown trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1923,
+              "line": 1995,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2391,
+              "line": 2463,
               "test": "is accessible in its new default appearance, and as a pill textarea-adjacent control",
               "target": "inline fixture",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2391,
+              "line": 2463,
               "test": "is accessible in its new default appearance, and as a pill textarea-adjacent control",
               "target": "inline fixture",
               "state": "populated"
@@ -7172,7 +7172,7 @@
             },
             {
               "file": "src/components/charts/chart/chart-datum-legend.test.ts",
-              "line": 288,
+              "line": 313,
               "test": "wraps long RTL categories and refreshes per-slice theme swatches",
               "target": "el",
               "state": "populated"
@@ -7193,21 +7193,21 @@
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6143,
+              "line": 6187,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6143,
+              "line": 6187,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6624,
+              "line": 6668,
               "test": "fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides",
               "target": "el",
               "state": "populated"
@@ -7221,7 +7221,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -7331,7 +7331,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15172,7 +15172,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.test.ts",
-              "line": 660,
+              "line": 692,
               "test": "is accessible when open with fallback content",
               "target": "el",
               "state": "open"
@@ -15262,7 +15262,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.class.ts",
-              "line": 332,
+              "line": 339,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15528,7 +15528,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -15636,7 +15636,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23141,7 +23141,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -23249,7 +23249,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26250,7 +26250,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26358,7 +26358,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26452,21 +26452,21 @@
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 676,
+              "line": 693,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 4178,
+              "line": 4195,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 4178,
+              "line": 4195,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
@@ -26480,7 +26480,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26583,7 +26583,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32991,7 +32991,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -33100,7 +33100,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33201,7 +33201,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -33309,7 +33309,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35620,7 +35620,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -35728,7 +35728,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39331,7 +39331,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1681,
+              "line": 1698,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -39439,7 +39439,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 541,
+              "line": 544,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45110,7 +45110,7 @@
             },
             {
               "file": "src/components/data/table/table-remediation.test.ts",
-              "line": 772,
+              "line": 794,
               "test": "is accessible in the error state",
               "target": "element",
               "state": "populated"
@@ -45152,42 +45152,42 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5118,
+              "line": 5228,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5566,
+              "line": 5676,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6067,
+              "line": 6177,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6248,
+              "line": 6358,
               "test": "is accessible with a select cell editor open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6668,
+              "line": 6778,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6781,
+              "line": 6891,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"
@@ -45228,8 +45228,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/table/table.test.ts",
-              "line": 7944,
+              "file": "src/components/data/table/table-remediation.test.ts",
+              "line": 77,
               "kind": "320px allocation test signal"
             }
           ]
@@ -46469,7 +46469,7 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3589,
+              "line": 3720,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"
@@ -50306,21 +50306,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/typing-indicator/typing-indicator.test.ts",
-              "line": 212,
+              "line": 226,
               "test": "is accessible with a visible label",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/typing-indicator/typing-indicator.test.ts",
-              "line": 331,
+              "line": 345,
               "test": "is accessible in the pulse and cursor states",
               "target": "pulse",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/typing-indicator/typing-indicator.test.ts",
-              "line": 331,
+              "line": 345,
               "test": "is accessible in the pulse and cursor states",
               "target": "cursor",
               "state": "populated"
@@ -50346,7 +50346,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/typing-indicator/typing-indicator.test.ts",
-              "line": 303,
+              "line": 317,
               "kind": "reduced-motion test signal"
             }
           ]

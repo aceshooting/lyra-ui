@@ -175,6 +175,23 @@ const BAR_DATASETS = [
   { label: 'B', data: [4, 5, 6] },
 ];
 
+it('resolves the axis tick-label font size from --lr-chart-tick-font-size, defaulting to --lr-font-size-2xs', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    .labels=${BAR_LABELS}
+    .datasets=${[{ label: 'A', data: [1, 2, 3] }]}
+  ></lr-lite-chart>`);
+  const [tick] = categoryAxisLabels(el);
+  expect(tick, 'a category tick renders').to.not.equal(undefined);
+  // Default root font-size is 16px, so --lr-font-size-2xs's 0.625rem resolves to 10px.
+  expect(getComputedStyle(tick!).fontSize).to.equal('10px');
+
+  el.style.setProperty('--lr-chart-tick-font-size', '20px');
+  await el.updateComplete;
+  const [overridden] = categoryAxisLabels(el);
+  expect(getComputedStyle(overridden!).fontSize).to.equal('20px');
+});
+
 it('rejects unsafe public height and series paint values while preserving valid ones', async () => {
   const el = await mount(html`<lr-lite-chart
     .height=${'12rem;position:fixed'}

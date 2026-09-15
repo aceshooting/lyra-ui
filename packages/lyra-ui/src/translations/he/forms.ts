@@ -57,6 +57,7 @@ const strings: LyraLocaleStrings = {
   selectValueMissing: 'אנא בחר אפשרות.',
   rangeStart: 'תחילת טווח',
   rangeEnd: 'סוף טווח',
+  matchMismatch: 'הערכים אינם תואמים.',
   phoneInputLabel: 'טלפון',
   phoneInputIncomplete: 'מספר טלפון זה אינו שלם.',
   otpInputIncomplete: 'הזן את כל {total} התווים.',

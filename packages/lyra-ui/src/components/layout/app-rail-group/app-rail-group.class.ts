@@ -71,7 +71,9 @@ export interface LyraAppRailGroupEventMap {
  * @csspart heading-text - The wrapper around the heading text/slot; visually clipped while
  *   `icon-only`, keeping the group's accessible name intact.
  * @csspart toggle - The collapse control, only rendered while `collapsible` is set. Renders
- *   `aria-expanded` in both states and takes its accessible name from the heading text.
+ *   `aria-expanded` in both states and takes its accessible name from the heading text. Resolves
+ *   to a square hit target (matching the icon-button footprint used elsewhere in this library)
+ *   while `icon-only`, instead of stretching across the header row.
  * @csspart toggle-icon - The wrapper around the collapse chevron. Direction-aware through this
  *   wrapper's own `transform`, never a second mirrored glyph.
  * @csspart header-actions - The wrapper around the `header-actions` slot. Hidden while empty.

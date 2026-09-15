@@ -2874,7 +2874,7 @@
       "module": "src/components/charts/chart/chart-colors.ts",
       "exportName": "ChartThemeColors",
       "kind": "interface",
-      "fingerprint": "b7fb4771792c084c2601",
+      "fingerprint": "a007c717e7d35e57f086",
       "routes": [
         "src/components/charts/chart/chart-colors.ts"
       ],
@@ -3426,7 +3426,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartFormatterContext",
       "kind": "interface",
-      "fingerprint": "4d638ab50280b94cb42e",
+      "fingerprint": "83b4acd7b67038a0f33e",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -14233,7 +14233,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "c8d02403d752e839b614",
+      "fingerprint": "61dcc398ada62d48d80f",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15266,7 +15266,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "522209f52f984e7ec7c8",
+      "fingerprint": "8628985501b466934edf",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15407,7 +15407,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "399ad2bd1ca7dabbe585",
+      "fingerprint": "fb4d49e8eda074591064",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16028,7 +16028,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "f78621428850a7f94567",
+      "fingerprint": "248b2712cb1531988a49",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16046,7 +16046,7 @@
       "kind": "function",
       "fingerprint": "45c97f877eefaf3d0f61",
       "routes": [
-        "src/testing/happy-dom-shims.ts"
+        "src/testing/index.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
@@ -16062,7 +16062,7 @@
       "kind": "function",
       "fingerprint": "7fed44021224faea9878",
       "routes": [
-        "src/testing/happy-dom-shims.ts"
+        "src/testing/index.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
@@ -16070,6 +16070,22 @@
         "kind": "utility",
         "name": "testing-happy-dom-shims-contracts",
         "declaration": "installStubInternalsForTest"
+      }
+    },
+    {
+      "module": "src/testing/event-factory.ts",
+      "exportName": "createLyraEvent",
+      "kind": "function",
+      "fingerprint": "441c245e8bddf3f28dfa",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-event-factory-contracts",
+        "declaration": "createLyraEvent"
       }
     },
     {
@@ -16442,7 +16458,7 @@
       "module": "src/utilities/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "3e4c849b2e55218e7bda",
+      "fingerprint": "c3aeb9e7024d5977d9f2",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/localization.ts"
@@ -16480,7 +16496,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "2211e0e351604844ae3b",
+      "fingerprint": "9cc3abf99cfae3d7bc99",
       "routes": [
         "src/vue.ts"
       ],

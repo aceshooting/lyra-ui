@@ -229,7 +229,8 @@ The entry points, then:
   `@aceshooting/lyra-ui/translations/<locale>.js` (the ten shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
-  (happy-dom shims), `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
+  (happy-dom shims, plus `createLyraEvent()` for building a validated test event),
+  `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
 
 ### Registration-free component helpers
 
@@ -1977,6 +1978,38 @@ that need form-value or validity behavior: it supplies
 `setFormValue()`, `setValidity()`, `checkValidity()`, `reportValidity()`, and readonly
 `form`/`labels`/`validity`/`validationMessage`/`willValidate`. The shim is a no-op where the
 platform already provides internals, so it is safe in a shared setup file.
+
+## Constructing a validated test event: `createLyraEvent()`
+
+`@aceshooting/lyra-ui/testing` also exports
+`createLyraEvent(tag, name, detail?): CustomEvent`, for a downstream suite that wants to dispatch
+one specific `lr-*` component's documented event — at a listener under test, without rendering the
+real component — instead of hand-rolling a `CustomEvent` and guessing its shape and flags:
+
+```ts
+import { createLyraEvent } from '@aceshooting/lyra-ui/testing';
+
+const event = createLyraEvent('lr-confirm-bar', 'lr-approve', { args: null, waitUntil: () => {} });
+event.cancelable; // true — lr-confirm-bar's own lr-approve call site is cancelable
+target.dispatchEvent(event);
+```
+
+`tag` and `name` are checked against that component's own generated event map: an event name the
+tag does not document, an unregistered tag, or a `detail` of the wrong shape are all compile
+errors. `bubbles` and `composed` are always `true` (every `lr-*` event is), and `cancelable` is
+looked up per tag and event from the component's own documented contract, so a listener that calls
+`preventDefault()` on a genuinely cancelable event is actually exercised — the exact case a
+hand-built event with a guessed `cancelable` value silently skips. `detail` is always optional,
+even where the real component's own type makes it required, so a test that only cares about the
+dispatched event's flags does not have to fabricate a realistic one; an omitted or `undefined`
+detail becomes `null`, matching `LyraElement.emit()`'s own normalization. `createLyraEvent()`
+builds the event only — dispatch it yourself with `target.dispatchEvent(event)`.
+
+Scope: covers every `lr-*`-named event a component documents. A component's native-named
+re-emits (`input`, `change`, `blur`, `focus`, ...) already have real DOM event types and dispatch
+semantics of their own that this factory does not model, and there is no equivalent for driving a
+component's own internal activation path (choosing an option, submitting a confirm decision) —
+render the real component and interact with it for that.
 
 ## Accessibility contract
 
@@ -3967,6 +4000,10 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-xml-viewer": unknown;
   "lr-zoomable-frame": unknown;
 }`
+
+- **`testing-event-factory-contracts`** — Shared utility contracts.
+  `createLyraEvent(/* public names: tag, name, detail */): unknown`
+  See "Constructing a validated test event: `createLyraEvent()`" above for the full contract.
 
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
   `installHappyDomFormAssociatedShims(): unknown`
@@ -6783,6 +6820,22 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only) —
   whether the field currently reveals its raw text. Toggled by the built-in button, and also
   settable up front with or without that button being rendered
+- `match: string | HTMLElement | null = null` (attribute `match`) — declarative cross-field
+  confirmation constraint: a sibling field to compare this one's `value` against, referenced either
+  by id (resolved in this element's own root — an idref never crosses a shadow boundary, matching
+  every other idref this library resolves) or by a direct element reference (works across shadow
+  trees, since no lookup is needed). While set and resolvable, this field additionally fails
+  validity — `customError`, with a localized mismatch message — whenever its value differs from the
+  referenced element's own `.value`, but only once every other constraint above (`required`,
+  `pattern`, length, type-specific format) already reports valid, so an empty required confirm
+  field reports `valueMissing`, not a mismatch. Re-validates automatically on either field's own
+  edits: this one's through the usual `value` write, and the referenced one's through a listener on
+  its `input`/`change` events, so retyping the password half of a confirm pair revalidates the
+  confirm field immediately, not only on its own next edit. A `match` that does not resolve to a
+  live element (most commonly a dangling id) is inert rather than a permanent block on submission,
+  exactly like the platform's own tolerance of an unresolvable `aria-describedby` idref. The
+  referenced element only needs a string `.value`, so a native `<input>`/`<textarea>` works the
+  same as another `lr-input`; see "A new-password field" below for the password-confirmation shape
 - `withoutSpinButtons: boolean = false` (attribute `without-spin-buttons`, reflected —
   `type="number"` only) — suppresses the browser's own increment/decrement spin buttons.
   **Breaking in 8.0.0:** `type="number"` used to hide them unconditionally; left unset, the
@@ -7044,6 +7097,37 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 attribute form is enough to turn each on. `autofocus` is likewise `false`-defaulting — none of
 these four needs the property form to be reset.
 
+**A new-password field.** There is no dedicated password-purpose preset; compose the existing
+primitives directly, the same way a plain native `<input type="password">` does:
+
+```html
+<lr-input
+  type="password"
+  id="new-password"
+  label="New password"
+  password-toggle
+  autocomplete="new-password"
+  minlength="12"
+  required
+></lr-input>
+<lr-input
+  type="password"
+  label="Confirm password"
+  password-toggle
+  autocomplete="new-password"
+  match="new-password"
+  required
+></lr-input>
+```
+
+`autocomplete="new-password"` (rather than the bare `password` token, and never `current-password`
+on a set/change/reset flow) is the platform contract that keeps a browser's or password manager's
+own generator and save prompt from cross-contaminating a change/reset flow with the account's
+existing credential; set it explicitly on every field in the pair, since `autocomplete` has no
+purpose-derived default here. `match` (above) is what makes the second field fail validity —
+`customError`, with a localized mismatch message — for as long as its value disagrees with the
+first field's, referenced here by id.
+
 **Known gotchas:**
 
 - `type="email"`/`type="number"` delegate constraint validation to the internal native `<input>`'s
@@ -7072,6 +7156,13 @@ these four needs the property form to be reset.
   picker didn't open. Don't build a flow that assumes a picker is now on screen.
 - `stepUp()`/`stepDown()` are silent — they emit no `input`/`change`. Emit your own, or drive the
   value through a real user affordance, if downstream state depends on those events.
+- **A `match` id reference resolves in this element's own root, not the whole document.** Two
+  fields inside two different shadow roots (a confirm field composed by one component, the field it
+  should match composed by an unrelated one) must pair through a direct element reference
+  (`confirm.match = passwordEl`) instead of an id string — exactly like every other idref this
+  library resolves, `aria-describedby` included. An id that does not resolve at all (a typo, or an
+  element removed later) is inert rather than a permanent block on submission: `match` stops
+  applying, it does not fail closed.
 
 **Additional API surface:**
 
@@ -16061,6 +16152,12 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   between, so `willUpdate()` alone wouldn't otherwise notice.
 - `collapsed` hides the body via `hidden` rather than an animated height transition — collapsing is
   instant, not a slide.
+- an explicit `collapsed` assignment before the first update — an attribute, a property, or a
+  framework binding, including one that pins the property to its own default `false` — always wins
+  over a `storageKey`-restored value for that mount, and skips the restore entirely. For
+  uncontrolled persistence, don't bind `collapsed`: read the restored value back after
+  `updateComplete` and track further changes from `lr-collapse-change`, pushing the property down
+  imperatively only for later external changes.
 - prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
   own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
   registered against those keys specifically to target `lr-widget`'s collapse button should move
@@ -17710,7 +17807,10 @@ content can then scroll/bleed both ways. `--lr-app-rail-background` (default
 background, the mobile overlay presentation; kept separate from `--lr-app-rail-background`/
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
 docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
-`var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently. Plus shared
+`var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
+`--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
+reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
+mounts or resizes asynchronously. Plus shared
 tokens (`--lr-color-border`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
@@ -17888,15 +17988,18 @@ the `meta` slot, hidden while empty) and `end` (the wrapper around the `end` slo
 empty).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
-`var(--lr-color-brand-quiet)`) and `--lr-app-rail-item-current-color` (default
-`var(--lr-color-brand)`) — background and text/icon color of the `current` (`aria-current="page"`)
-item. Both are scoped to `[aria-current='page']` only and declared as inline `var()` fallbacks at
-the point of use, never on `:host`, so either can be set on the item itself _or on any ancestor_ —
-including on `<lr-app-rail>` or a wrapper above it, to tint every item's current state at once.
-`::part(base)[aria-current='page']` is invalid CSS (Shadow Parts forbids an attribute selector after
-`::part()`), so before these hooks the only lever was overriding the library-wide
-`--lr-color-brand-quiet`/`--lr-color-brand` tokens, which repainted every other element reading
-them. Unset, each falls back to the token its rule used before.
+`var(--lr-color-brand-quiet)`), `--lr-app-rail-item-current-color` (default
+`var(--lr-color-brand)`), and `--lr-app-rail-item-current-font-weight` (default
+`var(--lr-font-weight-semibold)`) — background, text/icon color, and font weight of the `current`
+(`aria-current="page"`) item. All three are scoped to `[aria-current='page']` only and declared as
+inline `var()` fallbacks at the point of use, never on `:host`, so any can be set on the item itself
+_or on any ancestor_ — including on `<lr-app-rail>` or a wrapper above it, to retheme every item's
+current state at once. `::part(base)[aria-current='page']` is invalid CSS (Shadow Parts forbids an
+attribute selector after `::part()`), so before these hooks the only lever was overriding the
+library-wide `--lr-color-brand-quiet`/`--lr-color-brand`/`--lr-font-weight-semibold` tokens, which
+repainted every other element reading them. Unset, each falls back to the token its rule used
+before. `--lr-app-rail-item-current-font-weight` mirrors `<lr-stepper>`'s
+`--lr-stepper-current-font-weight` and `<lr-segmented>`'s `--lr-segmented-selected-font-weight`.
 `--lr-app-rail-item-current-indicator-color` (default `var(--lr-color-brand)`),
 `--lr-app-rail-item-current-indicator-width` (default `var(--lr-size-2px)`), and
 `--lr-app-rail-item-current-indicator-inset-inline` (default `0 auto`; set `auto 0` to place the
@@ -17911,10 +18014,14 @@ same token regardless of the override so the row's own hit target can never shri
 `--lr-app-rail-item-gap` (default `var(--lr-space-s)`, the gap between `[part="icon"]` and
 `[part="label"]`, and now also between the item's control and the `meta`/`end` adornments),
 `--lr-app-rail-item-meta-color` (default `var(--lr-color-text-quiet)`),
-`--lr-app-rail-item-meta-font-size` (default `var(--lr-font-size-sm)`), and
+`--lr-app-rail-item-meta-font-size` (default `var(--lr-font-size-sm)`),
 `--lr-app-rail-item-icon-size` (default `var(--lr-icon-button-size)`, not
-floor-clamped since the icon is decorative, not itself a pointer target) retune the row's
-geometry.
+floor-clamped since the icon is decorative, not itself a pointer target), and
+`--lr-app-rail-item-font-size` (default `inherit`, set after the `font` shorthand so only the size
+is retuned while family/weight/line-height stay inherited) retune the row's geometry.
+While `icon-only`, `[part="base"]` resolves to a square hit target matching the icon-button
+footprint used elsewhere in this library (`aspect-ratio: 1` against its already floor-clamped
+block size) instead of stretching across the rail's icon column.
 
 **Optional peer deps:** none.
 
@@ -17982,7 +18089,9 @@ forwards that to the items and nested groups it *directly* owns — including on
 so grouping survives the rail's icon-only presentation. A nested group re-forwards in turn, so
 exactly one element ever writes `icon-only` onto any given node and a nested group clips its own
 heading too. In that mode the heading text is clipped out of layout — whether or not the group is
-collapsible — but stays in the accessibility tree.
+collapsible — but stays in the accessibility tree. While `collapsible` too, `[part="toggle"]`
+resolves to a square hit target matching the icon-button footprint used elsewhere in this library,
+instead of stretching across the header row (mirroring `<lr-app-rail-item>`'s own `[part="base"]`).
 
 **Optional peer deps:** none.
 
@@ -29112,8 +29221,12 @@ structured points retain their y-value formatting.
   `formatter`/`valueFormatter` supplies values for tooltips or axes. `value` appends the formatted
   numeric value. `percentage` appends a locale-formatted share independently of these callbacks:
   the denominator is the sum of absolute represented legend values, including hidden entries.
-  Dataset entries use sampled sums; category entries use the first dataset's represented values.
-  Zero totals give 0%. These options affect the DOM legend; tooltip/axis/table formatting is unchanged.
+  `value-percentage` appends both, as `label: value (percentage)`. Dataset entries use sampled
+  sums; category entries use the first dataset's represented values. Zero totals give 0%. The
+  `formatter`/`valueFormatter` callback backing `value` and `value-percentage` also receives that
+  same share as `percentage` in its `surface: 'legend'` context (`LyraChartFormatterContext`), so a
+  custom formatter can render its own combined text without recomputing it from raw data. These
+  options affect the DOM legend; tooltip/axis/table formatting is unchanged.
   Simplified pie/doughnut datasets with magnitudes above `Number.MAX_SAFE_INTEGER` are uniformly
   rescaled for finite canvas geometry. Lyra tooltips, data labels, legends, events and CSV retain
   original values; direct Chart.js callbacks see the rescaled peer data. Explicit `config.data`
@@ -29375,7 +29488,10 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
-legend text, and tooltip background/text respectively; plus
+legend text, and tooltip background/text respectively; `--lr-chart-tick-font-size` (default
+`var(--lr-font-size-2xs)`, any CSS length unit) — the axis tick-label font size, same
+`getComputedStyle` resolution and same token name as `lr-lite-chart`'s SVG equivalent, so theming
+either retunes both; plus
 `--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
 `--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
 `--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the
@@ -29760,7 +29876,8 @@ suppresses the generated sample and notice.
 
 **Themeable custom properties:** `--lr-chart-height` (same public host-level property and precedence
 as `lr-chart`; it always wins over the `height` property's private fallback);
-`--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
+`--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-tick-font-size` (default
+`var(--lr-font-size-2xs)`), `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
 `--lr-chart-color-1`, `--lr-chart-color-2`, `--lr-chart-color-3`, `--lr-chart-color-4`,
 `--lr-chart-color-5`, `--lr-chart-color-6`, `--lr-chart-color-7`, and `--lr-chart-color-8` (each
@@ -29863,7 +29980,7 @@ failure transition is announced through the shared document-level light-DOM asse
 `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
-`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
@@ -29951,7 +30068,7 @@ failure transition is announced through the shared document-level light-DOM asse
 inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
-`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
@@ -30093,7 +30210,7 @@ announced through the shared document-level light-DOM assertive sink), `data-tru
 bounded-alternative sampling notice)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
-`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text` — same public host-level precedence, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
@@ -30218,7 +30335,10 @@ These named interfaces and helper signatures are available to typed integrations
     legend: string;
     tooltipBg: string;
     tooltipText: string;
+    tickFontSize: number;
   }`
+  Axis tick-label font size in pixels, resolved from `--lr-chart-tick-font-size` (see that
+  `@cssprop` on `<lr-chart>`/`<lr-box-plot>`/`<lr-lite-chart>`).
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.
   `seriesPalette(element?: Element | null): string[]`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.
@@ -30291,7 +30411,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly hiddenDatums: readonly number[];
   }`
   `LyraChartLegendMode = 'dataset' | 'datum'`
-  `LyraChartLegendDisplay = 'auto' | 'label' | 'value' | 'percentage'`
+  `LyraChartLegendDisplay = 'auto' | 'label' | 'value' | 'percentage' | 'value-percentage'`
 
 - **`components-charts-chart-chart-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
@@ -30406,6 +30526,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly seriesLabel?: string;
     readonly statistic?: LyraChartStatistic;
     readonly axis?: LyraChartFormatterAxis;
+    readonly percentage?: number;
   }`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartFormatterAxis = 'x' | 'y' | 'y2' | 'r'`
@@ -30783,6 +30904,13 @@ polite and assertive sinks, respectively;
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
 size of `[part="body"]` before the dialog body scrolls internally.
+`--lr-document-viewer-min-height` (default `var(--lr-size-12rem)`) — minimum block size of
+`[part="body"]` before it grows to fit content.
+`--lr-document-viewer-width` (default `auto`) — assertive inline size for the nested dialog panel,
+forwarded straight to `<lr-dialog>`'s own `--lr-dialog-width`; set this on `<lr-document-viewer>`
+itself rather than reaching through to `--lr-dialog-width` directly, which stays an internal detail
+of the nested dialog. Left at `auto` the panel keeps shrink-wrapping to content, capped by the
+dialog's own `--lr-dialog-max-width` tier.
 `--lr-document-viewer-download-link-hover-bg` defaults to `color-mix(in oklab,
 var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`, and
 `--lr-document-viewer-download-link-active-bg` uses `var(--lr-color-mix-active)` in that same mix
@@ -33808,7 +33936,9 @@ Removing `label` restores the localized thinking name while preserving an explic
 visibly next to the animated shape, in a new `part="label"` element, mirroring `<lr-spinner>`'s own
 `labelPlacement` vocabulary. The default, `"none"`, is unchanged from this component's
 screen-reader-only rendering before this property existed: a single `.sr-only` text node, no
-visible twin.
+visible twin. That visible `part="label"` node is itself `aria-hidden="true"`: the host's own
+`aria-label` already carries the identical string as the accessible name, so the visible copy is
+never exposed as a second, redundant accessibility-tree node for the same text.
 
 **Properties:**
 
@@ -33834,8 +33964,8 @@ visible twin.
 
 **CSS parts:** `base` (the decorative, `aria-hidden`, wrapper around the animated shape), `dot`
 (each of the three dots in the `dots` variant), `pulse` (the single pulsing dot in the `pulse`
-variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible label, rendered
-only while `label-placement="after"`)
+variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible, `aria-hidden`,
+label, rendered only while `label-placement="after"`)
 
 **Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
 `0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
@@ -36006,6 +36136,23 @@ complete built-in row, including built-in `rowActions` and appended `renderActio
 the conversation item's `actions` slot. Use `row-wrapper` for whole-row layout, `row-actions` for
 the callback-output region, and the `row-item-*` parts for the conversation item's own internals.
 With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
+
+**Methods:**
+
+- `itemElement(conversationId)` — the rendered `lr-conversation-item` for one thread's
+  `conversationId` (data mode) or one slotted item's own `conversation-id` (slotted mode), or
+  `null` when it is not currently rendered: filtered out by `showArchived`/search, windowed out of
+  the virtualized viewport, removed from `threads`, or never present
+
+`conversationId` is not a second identity scheme layered on top of the list — it is the same stable
+id every row already carries on its own public `conversation-id` attribute/property, which every
+row event (`lr-select`, `lr-thread-pin`, `lr-thread-archive`, `lr-thread-delete`,
+`lr-thread-rename`) already keys off. `itemElement()` documents an accessor for it instead of a
+consumer piercing this component's shadow root (and, in data mode, the nested internal
+`lr-virtual-list`'s own shadow root) to walk rendered rows the way this component's own internals
+do. It reads the DOM as it stands, so `await threadList.updateComplete` first and treat `null` as
+"not rendered right now" — in particular, a data-mode row can exist in `threads` yet still return
+`null` while it is scrolled outside the virtualized window.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.

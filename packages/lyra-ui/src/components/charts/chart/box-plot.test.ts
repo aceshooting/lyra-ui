@@ -1047,6 +1047,23 @@ it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the 
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
 });
 
+it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaulting to --lr-font-size-2xs', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  const defaulted = (el as any).buildConfig();
+  expect(defaulted.options.scales.x.ticks.font.size).to.equal(10);
+  expect(defaulted.options.scales.y.ticks.font.size).to.equal(10);
+
+  el.style.setProperty('--lr-chart-tick-font-size', '20px');
+  await el.updateComplete;
+  const overridden = (el as any).buildConfig();
+  expect(overridden.options.scales.x.ticks.font.size).to.equal(20);
+  expect(overridden.options.scales.y.ticks.font.size).to.equal(20);
+});
+
 it('replaces invalid canvas theme expressions with concrete fallbacks for every paint route', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   for (const name of [

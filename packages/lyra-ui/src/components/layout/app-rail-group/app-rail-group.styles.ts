@@ -124,6 +124,13 @@ export const styles = css`
   :host([icon-only]) [part="toggle"] {
     justify-content: center;
     padding-inline: 0;
+    /* Matches <lr-app-rail-item>'s own icon-only square hit target instead of stretching across
+       the header row: flex-basis auto plus flex-grow 0 stops it filling [part="header"] (whose own
+       icon-only rule below re-centers it there), and inline-size: auto lets aspect-ratio resolve
+       the now-auto inline axis from the WCAG 2.5.8 min-block-size floor above. */
+    flex: 0 0 auto;
+    inline-size: auto;
+    aspect-ratio: 1;
   }
   :host([icon-only]) [part="header"] {
     justify-content: center;

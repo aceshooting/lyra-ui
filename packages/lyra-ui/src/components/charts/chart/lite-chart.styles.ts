@@ -18,6 +18,7 @@ export const styles = css`
        or JS-side resolution needed. */
     --_lr-chart-grid-color: var(--lr-color-border);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
+    --_lr-chart-tick-font-size: var(--lr-font-size-2xs);
     --_lr-chart-legend-color: var(--lr-color-text);
     --_lr-chart-tooltip-bg: var(--lr-color-surface);
     --_lr-chart-tooltip-text: var(--lr-color-text);
@@ -58,7 +59,7 @@ export const styles = css`
   }
   [part='axis-label'] {
     fill: var(--lr-chart-tick-color, var(--_lr-chart-tick-color));
-    font-size: var(--lr-font-size-2xs);
+    font-size: var(--lr-chart-tick-font-size, var(--_lr-chart-tick-font-size));
     font-family: var(--lr-font);
   }
   [part='axis-title'] {

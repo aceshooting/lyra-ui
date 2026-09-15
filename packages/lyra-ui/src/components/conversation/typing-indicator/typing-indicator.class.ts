@@ -72,14 +72,18 @@ export type TypingIndicatorLabelPlacement = 'none' | 'after';
  * `labelPlacement="after"` additionally renders `label` (or its localized "Thinking…" fallback)
  * visibly next to the shape, in a `part="label"` element, mirroring `<lr-spinner>`'s own
  * `labelPlacement` vocabulary; the default `"none"` keeps today's screen-reader-only rendering,
- * a single sr-only text node with no visible twin.
+ * a single sr-only text node with no visible twin. The visible `part="label"` node is itself
+ * `aria-hidden="true"`: the host's own `aria-label` (see `accessibleLabel`) already carries the
+ * identical string as this element's accessible name, so the visible copy would otherwise be
+ * reachable as a second, redundant accessibility-tree node for the same text -- the same
+ * duplicate-source-of-truth problem `<lr-gauge>` already avoids by hiding its own `part="label"`.
  *
  * @customElement lr-typing-indicator
  * @csspart base - The decorative (`aria-hidden`) wrapper around the animated shape.
  * @csspart dot - Each of the three dots in the `dots` shape.
  * @csspart pulse - The single pulsing dot in the `pulse` shape.
  * @csspart cursor - The blinking bar in the `cursor` shape.
- * @csspart label - The visible label, rendered only while `label-placement="after"`.
+ * @csspart label - The visible label (`aria-hidden`), rendered only while `label-placement="after"`.
  * @cssprop [--lr-typing-dot-size=var(--lr-space-s)] - Diameter of each dot in the `dots` and
  * `pulse` variants. The `size` property supplies compact and roomy tier overrides.
  * @cssprop [--lr-typing-gap=var(--lr-space-xs)] - Gap between dots in the `dots` variant. The
@@ -164,7 +168,7 @@ export class LyraTypingIndicator extends LyraElement {
     return html`
       <span part="base" aria-hidden="true">${this.renderShape()}</span>
       ${this.labelPlacement === 'after'
-        ? html`<span part="label">${this.accessibleLabel}</span>`
+        ? html`<span part="label" aria-hidden="true">${this.accessibleLabel}</span>`
         : html`<span class="sr-only">${this.accessibleLabel}</span>`}
     `;
   }

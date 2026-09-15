@@ -159,8 +159,12 @@ structured points retain their y-value formatting.
   `formatter`/`valueFormatter` supplies values for tooltips or axes. `value` appends the formatted
   numeric value. `percentage` appends a locale-formatted share independently of these callbacks:
   the denominator is the sum of absolute represented legend values, including hidden entries.
-  Dataset entries use sampled sums; category entries use the first dataset's represented values.
-  Zero totals give 0%. These options affect the DOM legend; tooltip/axis/table formatting is unchanged.
+  `value-percentage` appends both, as `label: value (percentage)`. Dataset entries use sampled
+  sums; category entries use the first dataset's represented values. Zero totals give 0%. The
+  `formatter`/`valueFormatter` callback backing `value` and `value-percentage` also receives that
+  same share as `percentage` in its `surface: 'legend'` context (`LyraChartFormatterContext`), so a
+  custom formatter can render its own combined text without recomputing it from raw data. These
+  options affect the DOM legend; tooltip/axis/table formatting is unchanged.
   Simplified pie/doughnut datasets with magnitudes above `Number.MAX_SAFE_INTEGER` are uniformly
   rescaled for finite canvas geometry. Lyra tooltips, data labels, legends, events and CSV retain
   original values; direct Chart.js callbacks see the rescaled peer data. Explicit `config.data`
@@ -422,7 +426,10 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
-legend text, and tooltip background/text respectively; plus
+legend text, and tooltip background/text respectively; `--lr-chart-tick-font-size` (default
+`var(--lr-font-size-2xs)`, any CSS length unit) — the axis tick-label font size, same
+`getComputedStyle` resolution and same token name as `lr-lite-chart`'s SVG equivalent, so theming
+either retunes both; plus
 `--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
 `--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
 `--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the
@@ -807,7 +814,8 @@ suppresses the generated sample and notice.
 
 **Themeable custom properties:** `--lr-chart-height` (same public host-level property and precedence
 as `lr-chart`; it always wins over the `height` property's private fallback);
-`--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
+`--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-tick-font-size` (default
+`var(--lr-font-size-2xs)`), `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
 `--lr-chart-color-1`, `--lr-chart-color-2`, `--lr-chart-color-3`, `--lr-chart-color-4`,
 `--lr-chart-color-5`, `--lr-chart-color-6`, `--lr-chart-color-7`, and `--lr-chart-color-8` (each
@@ -910,7 +918,7 @@ failure transition is announced through the shared document-level light-DOM asse
 `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
-`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
@@ -998,7 +1006,7 @@ failure transition is announced through the shared document-level light-DOM asse
 inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
-`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
@@ -1140,7 +1148,7 @@ announced through the shared document-level light-DOM assertive sink), `data-tru
 bounded-alternative sampling notice)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
-`--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
+`--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text` — same public host-level precedence, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
@@ -1264,7 +1272,10 @@ These named interfaces and helper signatures are available to typed integrations
     legend: string;
     tooltipBg: string;
     tooltipText: string;
+    tickFontSize: number;
   }`
+  Axis tick-label font size in pixels, resolved from `--lr-chart-tick-font-size` (see that
+  `@cssprop` on `<lr-chart>`/`<lr-box-plot>`/`<lr-lite-chart>`).
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.
   `seriesPalette(element?: Element | null): string[]`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart-colors.js`.
@@ -1337,7 +1348,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly hiddenDatums: readonly number[];
   }`
   `LyraChartLegendMode = 'dataset' | 'datum'`
-  `LyraChartLegendDisplay = 'auto' | 'label' | 'value' | 'percentage'`
+  `LyraChartLegendDisplay = 'auto' | 'label' | 'value' | 'percentage' | 'value-percentage'`
 
 - **`components-charts-chart-chart-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js`.
@@ -1452,6 +1463,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly seriesLabel?: string;
     readonly statistic?: LyraChartStatistic;
     readonly axis?: LyraChartFormatterAxis;
+    readonly percentage?: number;
   }`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartFormatterAxis = 'x' | 'y' | 'y2' | 'r'`

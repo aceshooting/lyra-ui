@@ -62,12 +62,34 @@ describe('table live derived rows and responsive bands', () => {
     });
   }
 
+  // recomputeHiddenPriorityColumns() (table.class.ts) hides a `priority` column only once
+  // [part='base']'s measured content actually overflows it -- never at a fixed container width --
+  // so, unlike the fixed-breakpoint predecessor this replaced, a fixture needs cells that genuinely
+  // overflow at the widths under test, not just a narrow container over trivially short content (a
+  // single character per cell never overflows any of these widths, which is why this fixture used
+  // to hide columns by width alone and no longer does). `forcedWidthHeaderCell` mirrors
+  // table.test.ts's own helper (a `headerCell` always renders, unlike `cell()`, so it gives a
+  // deterministic, cross-engine measured width) to force 'medium'/'low' to a real width, so hiding
+  // is driven by actual overflow. The forced widths and the three container widths below
+  // deliberately match table.test.ts's own already cross-engine-verified priority-column fixtures
+  // (300/350px forced, 320/700/1000px containers), re-derived from that overflow rather than the
+  // old 900px/640px fixed breakpoints, and independently re-verified identical in Chromium, Firefox
+  // and WebKit, in both directions: full-hide at 320px, 'low' only at 700px, neither at 1000px.
+  // table.styles.ts's `[data-priority='...']` hide rule matches every th/td/footer-td sharing that
+  // value under `[part='base']` uniformly, so header, body and footer must always agree on
+  // whichever tiers are actually hidden -- that alignment, not the specific widths, is the
+  // contract this test protects.
+  function forcedWidthHeaderCell(px: number, label: string) {
+    return () => html`<span style="display:inline-block;inline-size:${px}px">${label}</span>`;
+  }
   for (const direction of ['ltr', 'rtl']) {
     for (const width of [320, 700, 1000]) {
       it(`aligns footer priorities with header and body at ${width}px in ${direction}`, async () => {
-        const priorityColumns: TableColumn<Row>[] = ['high', 'medium', 'low'].map((priority) => ({
-          key: priority, label: priority, priority: priority === 'high' ? undefined : priority as 'medium' | 'low', cell: (row: Row) => row.name, footer: () => 'Total',
-        }));
+        const priorityColumns: TableColumn<Row>[] = [
+          { key: 'high', label: 'high', cell: () => 'high', footer: () => 'Total' },
+          { key: 'medium', label: 'medium', priority: 'medium', headerCell: forcedWidthHeaderCell(300, 'medium'), cell: (row) => row.name, footer: () => 'Total' },
+          { key: 'low', label: 'low', priority: 'low', headerCell: forcedWidthHeaderCell(350, 'low'), cell: (row) => row.name, footer: () => 'Total' },
+        ];
         const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Names"
           style=${`inline-size: ${width}px`} dir=${direction} .rows=${rows} .columns=${priorityColumns}
           .rowKey=${rowKey} .expandedContent=${() => html`Details`}
@@ -75,7 +97,7 @@ describe('table live derived rows and responsive bands', () => {
         await waitUntil(() => element.getBoundingClientRect().width === width);
         for (const priority of ['high', 'medium', 'low']) {
           const cells = [...element.shadowRoot!.querySelectorAll<HTMLElement>(`[data-col-key="${priority}"]`)].filter((cell) => cell.matches('th,td'));
-          const expected = priority === 'low' && width < 900 || priority === 'medium' && width < 640 ? 'none' : 'table-cell';
+          const expected = (priority === 'low' && width < 1000) || (priority === 'medium' && width < 700) ? 'none' : 'table-cell';
           expect(cells.map((cell) => getComputedStyle(cell).display)).to.deep.equal(Array(cells.length).fill(expected));
           expect(cells.some((cell) => cell.getAttribute('part') === 'footer-cell')).to.equal(true);
         }
@@ -884,7 +906,23 @@ describe('inert priority-column configuration dev warning and public toggle avai
     await element.updateComplete;
     expect(element.priorityColumnsToggleAvailable).to.equal(false);
 
-    element.columns = priorityInertLabelColumns;
+    // priorityInertLabelColumns' single-character content never overflows 300px, so
+    // priorityColumnsToggleAvailable (like every priority-column hide) is now measured-overflow
+    // driven, not width-driven -- a local column set with a forced measured width (mirroring
+    // table.test.ts's own `forcedWidthHeaderCell` helper: a `headerCell` always renders, unlike
+    // `cell()`, giving a deterministic, cross-engine measured width) is needed to actually
+    // exercise the toggle becoming available.
+    const overflowingPriorityColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (row) => row.name },
+      {
+        key: 'id',
+        label: 'Id',
+        priority: 'low',
+        headerCell: () => html`<span style="display:inline-block;inline-size:350px">Id</span>`,
+        cell: (row) => row.id,
+      },
+    ];
+    element.columns = overflowingPriorityColumns;
     await waitUntil(() => element.priorityColumnsToggleAvailable === true, 'toggle never became available');
     expect(
       element.shadowRoot!.querySelector('[part="reveal-columns-button"]') !== null,

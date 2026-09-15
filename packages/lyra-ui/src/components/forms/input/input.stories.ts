@@ -32,6 +32,36 @@ export const Email: Story = {
   render: () => html`<lr-input type="email" label="Email" required></lr-input>`,
 };
 
+/**
+ * `match` (by id) pairs a confirm field with the field it must agree with; `autocomplete=
+ * "new-password"` on both is the platform contract for a set/change/reset flow (never a bare
+ * `password`, and never `current-password`, which is for signing in with an existing one).
+ */
+export const NewPasswordConfirmation: Story = {
+  name: 'match: new-password confirmation',
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-s); max-inline-size:24rem">
+      <lr-input
+        type="password"
+        id="new-password"
+        label="New password"
+        password-toggle
+        autocomplete="new-password"
+        minlength="12"
+        required
+      ></lr-input>
+      <lr-input
+        type="password"
+        label="Confirm password"
+        password-toggle
+        autocomplete="new-password"
+        match="new-password"
+        required
+      ></lr-input>
+    </div>
+  `,
+};
+
 /** Remaining mapped native input types keep the browser's editing and validation semantics. */
 export const NativeTypes: Story = {
   render: () => html`

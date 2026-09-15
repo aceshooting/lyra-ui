@@ -57,6 +57,7 @@ const strings: LyraLocaleStrings = {
   selectValueMissing: '请选择一个选项。',
   rangeStart: '范围起点',
   rangeEnd: '范围终点',
+  matchMismatch: '两个值不匹配。',
   phoneInputLabel: '电话',
   phoneInputIncomplete: '此电话号码不完整。',
   otpInputIncomplete: '请输入全部{total}位字符。',

@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   histogramFrequency: 'Частота',
   liteChartMarkSummary: '{series}, {label}: {value} ({index} из {total})',
   liteChartBarLabel: '{series}, {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
   liteChartCustomMarkSummary: '{content} ({index} из {total})',
   chartMissingLibrary: 'Для отображения диаграмм нужно установить дополнительный пакет «chart.js».',
   boxPlotMissingLibrary: 'Для отображения диаграмм размаха нужно установить соответствующий дополнительный пакет.',

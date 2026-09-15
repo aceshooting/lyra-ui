@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -264,7 +264,8 @@ suppresses the generated sample and notice.
 
 **Themeable custom properties:** `--lr-chart-height` (same public host-level property and precedence
 as `lr-chart`; it always wins over the `height` property's private fallback);
-`--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
+`--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-tick-font-size` (default
+`var(--lr-font-size-2xs)`), `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
 `--lr-chart-color-1`, `--lr-chart-color-2`, `--lr-chart-color-3`, `--lr-chart-color-4`,
 `--lr-chart-color-5`, `--lr-chart-color-6`, `--lr-chart-color-7`, and `--lr-chart-color-8` (each

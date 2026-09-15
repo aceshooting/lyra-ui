@@ -72,6 +72,38 @@ describe("defaults", () => {
     expect(getComputedStyle(inheritedBody).maxBlockSize).to.equal("123px");
     expect(getComputedStyle(directBody).maxBlockSize).to.equal("111px");
   });
+
+  it('forwards --lr-document-viewer-width to the nested dialog panel, leaving it unset by default', async () => {
+    const plain = (await fixture(
+      html`<lr-document-viewer open></lr-document-viewer>`
+    )) as LyraDocumentViewer;
+    const sized = (await fixture(
+      html`<lr-document-viewer open style="--lr-document-viewer-width: 300px"></lr-document-viewer>`
+    )) as LyraDocumentViewer;
+    await Promise.all([plain.updateComplete, sized.updateComplete]);
+    const plainPanel = plain.shadowRoot!.querySelector(
+      'lr-dialog'
+    )!.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    const sizedPanel = sized.shadowRoot!.querySelector(
+      'lr-dialog'
+    )!.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    expect(getComputedStyle(sizedPanel).inlineSize).to.equal('300px');
+    expect(getComputedStyle(plainPanel).inlineSize).to.not.equal('300px');
+  });
+
+  it('lets --lr-document-viewer-min-height override the body floor, defaulting to 12rem', async () => {
+    const plain = (await fixture(
+      html`<lr-document-viewer open></lr-document-viewer>`
+    )) as LyraDocumentViewer;
+    const sized = (await fixture(
+      html`<lr-document-viewer open style="--lr-document-viewer-min-height: 300px"></lr-document-viewer>`
+    )) as LyraDocumentViewer;
+    await Promise.all([plain.updateComplete, sized.updateComplete]);
+    const plainBody = plain.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const sizedBody = sized.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(getComputedStyle(sizedBody).minBlockSize).to.equal('300px');
+    expect(getComputedStyle(plainBody).minBlockSize).to.not.equal('300px');
+  });
 });
 
 describe('download state CSS properties', () => {

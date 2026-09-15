@@ -39,6 +39,7 @@ import {
   FALLBACK_GRID_COLOR,
   FALLBACK_LEGEND_COLOR,
   FALLBACK_TICK_COLOR,
+  FALLBACK_TICK_FONT_SIZE,
   FALLBACK_TOOLTIP_BG,
   FALLBACK_TOOLTIP_TEXT,
   resolveCanvasColor,
@@ -64,7 +65,7 @@ export type { LyraChartLegendVisibilityChangeDetail, LyraChartDatumVisibilityCha
 import { sampleChartTableIndexes } from './chart-table-sampling.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -155,7 +156,7 @@ export type LyraChartLegendPosition = LyraChartLayoutPosition | 'start' | 'end' 
 /** Dataset toggles, or shared category toggles for pie/doughnut/polar-area charts. */
 export type LyraChartLegendMode = 'auto' | 'dataset' | 'datum';
 /** Text shown in the DOM legend, independently of tooltip and axis formatting. */
-export type LyraChartLegendDisplay = 'auto' | 'label' | 'value' | 'percentage';
+export type LyraChartLegendDisplay = 'auto' | 'label' | 'value' | 'percentage' | 'value-percentage';
 export type LyraChartValueFormatterContext = 'tick' | 'tooltip' | 'legend' | 'table';
 export type LyraChartValueFormatter = (
   value: number,
@@ -205,6 +206,15 @@ export interface LyraChartFormatterContext {
    * the spoken announcement.
    */
   readonly axis?: LyraChartFormatterAxis;
+  /**
+   * This entry's share of the represented `surface: 'legend'` total, as a fraction in `[0, 1]`
+   * (`0.5` is 50%) -- present only on that surface, so a `legendDisplay: 'value'` or
+   * `'value-percentage'` formatter can render a share without recomputing it from raw data. There
+   * is no accompanying `total`: internally the sum is computed in a per-entry rescaled coordinate
+   * system for numeric stability with datasets whose finite values sum beyond
+   * `Number.MAX_VALUE`, so it has no fixed public unit -- `percentage` alone is stable regardless.
+   */
+  readonly percentage?: number;
 }
 
 export type LyraChartFormatter = (context: LyraChartFormatterContext) => string;
@@ -1669,6 +1679,9 @@ function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Axis tick-label color; also used
  *   for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token).
  *   Resolved via `getComputedStyle` on every draw.
+ * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-2xs)] - Axis tick-label font size, in any
+ *   CSS length unit. Resolved via `getComputedStyle` on every draw, same constraint as every other
+ *   `--lr-chart-*` token here (Chart.js paints to canvas and cannot consume `var()`).
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - Legend label color. Resolved via
  *   `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum inline size reserved for a
@@ -1769,6 +1782,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chartTypeRadar: LYRA_DEFAULT_chartTypeRadar,
     chartTypeScatter: LYRA_DEFAULT_chartTypeScatter,
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
+    chartValuePercentageLabel: LYRA_DEFAULT_chartValuePercentageLabel,
     chartZoomUnavailable: LYRA_DEFAULT_chartZoomUnavailable,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
@@ -1911,11 +1925,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /**
    * `auto` retains optional legend formatting; `label` omits values even with a formatter; `value`
    * appends a formatted value. `percentage` uses locale percentages of the absolute represented
-   * legend values, including hidden items (zero totals yield 0%). Dataset values are sampled sums;
-   * category values come from the first dataset. Tooltip and axis formatting are unchanged.
+   * legend values, including hidden items (zero totals yield 0%). `value-percentage` appends both,
+   * as `label: value (percentage)`. Dataset values are sampled sums; category values come from the
+   * first dataset. The `formatter`/`valueFormatter` callback backing `value` and `value-percentage`
+   * additionally receives that same `percentage` in its `surface: 'legend'` context, so a custom
+   * formatter can build its own combined text without recomputing the share. Tooltip and axis
+   * formatting are unchanged.
    */
   @property({ attribute: 'legend-display', converter: {
-    fromAttribute: (value) => ['label', 'value', 'percentage'].includes(value ?? '') ? value : 'auto',
+    fromAttribute: (value) =>
+      ['label', 'value', 'percentage', 'value-percentage'].includes(value ?? '') ? value : 'auto',
   } }) legendDisplay: LyraChartLegendDisplay = 'auto';
   /**
    * Accessible chart description, which REPLACES the generated summary rather than adding to it.
@@ -3354,6 +3373,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return {
       grid: resolveCanvasColor(this, grid, FALLBACK_GRID_COLOR),
       tick: resolveCanvasColor(this, tick, FALLBACK_TICK_COLOR),
+      tickFontSize: this.styleNumber('--lr-chart-tick-font-size', '--_lr-chart-tick-font-size', FALLBACK_TICK_FONT_SIZE),
       legend: resolveCanvasColor(this, legend, FALLBACK_LEGEND_COLOR),
       tooltipBg: resolveCanvasColor(this, tooltipBg, FALLBACK_TOOLTIP_BG),
       tooltipText: resolveCanvasColor(this, tooltipText, FALLBACK_TOOLTIP_TEXT),
@@ -3655,6 +3675,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   ): Record<string, unknown> {
     return {
       color: theme.tick,
+      font: { size: theme.tickFontSize },
       ...((this.formatter || this.valueFormatter) && kind === 'value'
         ? { callback: (value: unknown) => this.formatValue(value, 'tick', { axis }) }
         : {}),
@@ -3736,7 +3757,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             display: this.gridAxisVisible('x'),
             lineWidth: chartStyle.gridBorderWidth,
           },
-          pointLabels: { color: theme.tick },
+          pointLabels: { color: theme.tick, font: { size: theme.tickFontSize } },
         },
       };
     }
@@ -4995,10 +5016,26 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     metadata: LyraChartFormatterMetadata = {},
   ): string {
     if (this.legendDisplay === 'label' || value === undefined) return label;
+    // percentage rides along on every formatted branch (value, percentage, value-percentage) so a
+    // formatter/valueFormatter watching surface: 'legend' can read the share this method already
+    // computed instead of recomputing it from raw data.
+    const enriched: LyraChartFormatterMetadata = { ...metadata, percentage };
+    if (this.legendDisplay === 'value-percentage') {
+      const formatted = this.formatValue(value, 'legend', enriched);
+      const percentageText =
+        getNumberFormat(this.effectiveLocale, { style: 'percent', maximumFractionDigits: 1 }).format(percentage);
+      return formatted === undefined
+        ? label
+        : this.localize('chartValuePercentageLabel', undefined, {
+            label,
+            value: typeof formatted === 'number' ? this.formatSummaryValue(formatted) : String(formatted),
+            percentage: percentageText,
+          });
+    }
     const explicit = this.legendDisplay === 'value' || this.legendDisplay === 'percentage';
     const formatted = this.legendDisplay === 'percentage'
       ? getNumberFormat(this.effectiveLocale, { style: 'percent', maximumFractionDigits: 1 }).format(percentage)
-      : this.formatValue(value, 'legend', metadata);
+      : this.formatValue(value, 'legend', enriched);
     return (!explicit && formatted === value) || formatted === undefined
       ? label
       : this.localize('chartValueLabel', undefined, {
@@ -5096,7 +5133,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const forcedColors = forcedColorsActive(this.ownerWindow);
     const hiddenDatums = new Set(normalizeHiddenDatasets(this.hiddenDatums, sample.rowCount));
     const needValues = this.legendDisplay !== 'label' &&
-      (this.legendDisplay === 'value' || this.legendDisplay === 'percentage' || this.formatter || this.valueFormatter);
+      (this.legendDisplay === 'value' || this.legendDisplay === 'percentage' ||
+        this.legendDisplay === 'value-percentage' || this.formatter || this.valueFormatter);
     // Each render owns its projections and color probes, so repeated category entries share work
     // while subsequent data or theme updates always start with fresh values.
     const sources = new Map<number, readonly unknown[]>();

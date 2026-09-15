@@ -23,6 +23,7 @@ export const styles = css`
        touching unrelated text, border and surface colors. */
     --_lr-chart-grid-color: var(--lr-color-border);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
+    --_lr-chart-tick-font-size: var(--lr-font-size-2xs);
     --_lr-chart-legend-color: var(--lr-color-text);
     --_lr-chart-tooltip-bg: var(--lr-color-surface);
     --_lr-chart-tooltip-text: var(--lr-color-text);

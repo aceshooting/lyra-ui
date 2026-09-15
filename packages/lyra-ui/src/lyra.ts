@@ -729,6 +729,7 @@ export type {
 } from './internal/announcer.js';
 export type { LyraEmitOptions } from './internal/lyra-element.js';
 export type { LyraEventMap } from './internal/lyra-element.js';
+export type { LyraMatchTarget } from './internal/match-constraint.js';
 export type { LyraEventDetailSnapshot } from './internal/lyra-element.js';
 export {
   getLyraLocale,

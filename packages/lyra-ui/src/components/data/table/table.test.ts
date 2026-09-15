@@ -4182,6 +4182,116 @@ describe('expandable rows', () => {
   });
 });
 
+describe('rowElement / cellElement / expandedContentElement', () => {
+  it('resolves the rendered row and cell for a present (rowKey, columnKey) pair after updateComplete', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const row = el.rowElement('a');
+    expect(row !== null, 'a rendered row resolves').to.equal(true);
+    expect(row?.getAttribute('part')).to.equal('row');
+    const cell = el.cellElement('a', 'name');
+    expect(cell !== null, 'a rendered cell resolves').to.equal(true);
+    expect(cell?.textContent?.trim()).to.equal('Alpha');
+  });
+
+  it('returns null for a rowKey never present, and for a columnKey not in columns', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    expect(el.rowElement('never-existed') === null, 'an unknown rowKey resolves to null').to.equal(
+      true
+    );
+    expect(
+      el.cellElement('a', 'never-a-column') === null,
+      'an unknown columnKey resolves to null'
+    ).to.equal(true);
+  });
+
+  it('returns null for a rowKey paginated away, resolving once its page is shown', async () => {
+    const el = (await fixture(html`<lr-table page-size="1" page="1"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    expect(el.rowElement('a') !== null, 'row a is on page 1').to.equal(true);
+    expect(el.rowElement('b') === null, 'row b is paginated away on page 1').to.equal(true);
+
+    el.page = 2;
+    await el.updateComplete;
+    expect(el.rowElement('b') !== null, 'row b is shown once its page is current').to.equal(true);
+    expect(el.rowElement('a') === null, 'row a is now paginated away').to.equal(true);
+  });
+
+  it('returns null for a rowKey filtered out by filterText, resolving once the filter clears', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.filterText = 'Alpha';
+    await el.updateComplete;
+    expect(el.rowElement('a') !== null, 'row a matches the filter').to.equal(true);
+    expect(el.rowElement('b') === null, 'row b is filtered out').to.equal(true);
+
+    el.filterText = '';
+    await el.updateComplete;
+    expect(el.rowElement('b') !== null, 'row b is shown again once the filter clears').to.equal(
+      true
+    );
+  });
+
+  it('resolves the correct row/cell by walking rather than interpolating a consumer-supplied key unsafe for a CSS selector', async () => {
+    const unsafeRows: Row[] = [
+      { id: 'safe', name: 'Safe', score: 1 },
+      { id: '"][data-row-key="safe', name: 'Unsafe', score: 2 },
+    ];
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = unsafeRows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const unsafeCell = el.cellElement('"][data-row-key="safe', 'name');
+    expect(unsafeCell !== null, 'the unsafe key still resolves its own row').to.equal(true);
+    expect(unsafeCell?.textContent?.trim()).to.equal('Unsafe');
+    expect(el.cellElement('safe', 'name')?.textContent?.trim()).to.equal('Safe');
+  });
+
+  it('resolves the expanded panel only while the row is actually expanded, and null otherwise', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+    expect(el.expandedContentElement('a') === null, 'not expanded yet').to.equal(true);
+
+    el.expandedRowKeys = new Set(['a']);
+    await el.updateComplete;
+    const panel = el.expandedContentElement('a');
+    expect(panel !== null, 'the expanded panel resolves').to.equal(true);
+    expect(panel?.getAttribute('part')).to.equal('expanded-cell');
+    expect(panel?.textContent?.trim()).to.equal('Alpha details');
+
+    // rowElement deliberately does not reach the expanded panel -- it is a sibling <tr>, not a
+    // descendant of the data row.
+    expect(
+      el.rowElement('a')?.querySelector('[part="expanded-cell"]') === null,
+      'the expanded panel is not nested inside the data row'
+    ).to.equal(true);
+
+    el.expandedRowKeys = new Set();
+    await el.updateComplete;
+    expect(el.expandedContentElement('a') === null, 'null again once collapsed').to.equal(true);
+  });
+});
+
 // Proves each localize()-routed key actually reaches its rendered DOM node under a
 // `.strings` override -- a key existing in DEFAULT_STRINGS doesn't by itself prove the
 // call site is wired up correctly (see AGENTS.md's i18n testing convention).

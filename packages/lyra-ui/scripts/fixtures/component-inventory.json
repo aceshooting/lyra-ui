@@ -5986,6 +5986,12 @@
             "default": "var(--lr-space-m)"
           },
           {
+            "name": "--lr-app-rail-header-min-block-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "--lr-app-rail-header-padding",
             "deprecated": null,
             "hasDefault": true,
@@ -6719,6 +6725,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-app-rail-item-current-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-app-rail-item-current-indicator-color",
             "deprecated": null,
             "hasDefault": true,
@@ -6735,6 +6747,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-2px)"
+          },
+          {
+            "name": "--lr-app-rail-item-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-app-rail-item-gap",
@@ -11662,6 +11680,12 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
+          },
+          {
             "name": "--lr-chart-tooltip-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -12256,6 +12280,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -14219,6 +14249,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -18981,6 +19017,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -42038,6 +42080,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "70vh"
+          },
+          {
+            "name": "--lr-document-viewer-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-12rem)"
+          },
+          {
+            "name": "--lr-document-viewer-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           }
         ],
         "cssStates": [],
@@ -43454,6 +43508,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -61303,6 +61363,12 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
+          },
+          {
             "name": "--lr-chart-tooltip-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -64703,6 +64769,16 @@
             "default": ""
           },
           {
+            "name": "match",
+            "property": "match",
+            "type": "LyraMatchTarget",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "max",
             "property": "max",
             "type": "number | string | undefined",
@@ -65162,6 +65238,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "match",
+            "attribute": "match",
+            "type": "LyraMatchTarget",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "max",
@@ -70545,6 +70631,12 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
+          },
+          {
             "name": "--lr-chart-tooltip-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -71388,6 +71480,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           },
           {
             "name": "--lr-lite-chart-data-table-toggle-active-bg",
@@ -79999,6 +80097,16 @@
             "default": ""
           },
           {
+            "name": "match",
+            "property": "match",
+            "type": "LyraMatchTarget",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "max",
             "property": "max",
             "type": "number | string | undefined",
@@ -80448,6 +80556,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "match",
+            "attribute": "match",
+            "type": "LyraMatchTarget",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "max",
@@ -82497,6 +82615,16 @@
             "default": ""
           },
           {
+            "name": "match",
+            "property": "match",
+            "type": "LyraMatchTarget",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "max",
             "property": "max",
             "type": "number | string | undefined",
@@ -82967,6 +83095,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "match",
+            "attribute": "match",
+            "type": "LyraMatchTarget",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "max",
@@ -90469,6 +90607,12 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
+          },
+          {
             "name": "--lr-chart-tooltip-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -91513,6 +91657,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -98081,6 +98231,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -107065,6 +107221,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-chart-tick-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           },
           {
             "name": "--lr-chart-tooltip-bg",
@@ -124378,7 +124540,24 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "itemElement",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "conversationId",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "LyraConversationItem | null"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],

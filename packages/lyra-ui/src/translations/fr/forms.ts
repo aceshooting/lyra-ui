@@ -57,6 +57,7 @@ const strings: LyraLocaleStrings = {
   selectValueMissing: 'Veuillez sélectionner une option.',
   rangeStart: 'Début de la plage',
   rangeEnd: 'Fin de la plage',
+  matchMismatch: 'Les valeurs ne correspondent pas.',
   phoneInputLabel: 'Téléphone',
   phoneInputIncomplete: 'Ce numéro de téléphone est incomplet.',
   otpInputIncomplete: 'Saisissez les {total} caractères.',

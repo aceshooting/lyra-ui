@@ -49,10 +49,11 @@ export const IconOnlyTooltip: StoryObj = {
   `,
 };
 
-/** The `current`/`aria-current="page"` treatment is themeable through `--lr-app-rail-item-current-bg`
- *  and `--lr-app-rail-item-current-color`. Neither is declared on `:host`, so setting them on an
- *  ancestor is never shadowed, and they recolor only the current item — not everything else that
- *  reads `--lr-color-brand-quiet`/`--lr-color-brand`. */
+/** The `current`/`aria-current="page"` treatment is themeable through `--lr-app-rail-item-current-bg`,
+ *  `--lr-app-rail-item-current-color`, and `--lr-app-rail-item-current-font-weight`. None are
+ *  declared on `:host`, so setting them on an ancestor is never shadowed, and they recolor/reweight
+ *  only the current item — not everything else that reads
+ *  `--lr-color-brand-quiet`/`--lr-color-brand`/`--lr-font-weight-semibold`. */
 export const ThemedCurrent: StoryObj = {
   name: 'Themed current item (cssprops)',
   parameters: {
@@ -74,6 +75,7 @@ export const ThemedCurrent: StoryObj = {
         --lr-app-rail-item-current-color: ${storyColor(
         'success',
       )};
+        --lr-app-rail-item-current-font-weight: var(--lr-font-weight-bold);
         --lr-app-rail-item-hover-bg: ${storyColor(
         'warningQuiet',
       )};
@@ -89,6 +91,32 @@ export const ThemedCurrent: StoryObj = {
       <lr-app-rail-item href="/home" current>Home</lr-app-rail-item>
       <lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>
       <lr-app-rail-item href="/settings">Settings</lr-app-rail-item>
+    </div>
+  `,
+};
+
+export const GeometryHooks: StoryObj = {
+  name: 'Geometry hooks (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '--lr-app-rail-item-font-size retunes the label/icon column font size without disturbing family, weight, or line-height (declared after the `font` shorthand). In icon-only presentation, [part="base"] resolves to a square hit target matching the icon-button footprint instead of stretching across the rail\'s icon column.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: var(--lr-space-m);">
+      <div style="inline-size: var(--lr-size-12rem); --lr-app-rail-item-font-size: 1.125rem;">
+        <lr-app-rail-item href="/home"
+          ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
+        >
+      </div>
+      <div style="inline-size: var(--lr-icon-button-size);">
+        <lr-app-rail-item href="/home" icon-only
+          ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
+        >
+      </div>
     </div>
   `,
 };

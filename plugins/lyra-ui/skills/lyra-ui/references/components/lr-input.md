@@ -125,6 +125,22 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only) —
   whether the field currently reveals its raw text. Toggled by the built-in button, and also
   settable up front with or without that button being rendered
+- `match: string | HTMLElement | null = null` (attribute `match`) — declarative cross-field
+  confirmation constraint: a sibling field to compare this one's `value` against, referenced either
+  by id (resolved in this element's own root — an idref never crosses a shadow boundary, matching
+  every other idref this library resolves) or by a direct element reference (works across shadow
+  trees, since no lookup is needed). While set and resolvable, this field additionally fails
+  validity — `customError`, with a localized mismatch message — whenever its value differs from the
+  referenced element's own `.value`, but only once every other constraint above (`required`,
+  `pattern`, length, type-specific format) already reports valid, so an empty required confirm
+  field reports `valueMissing`, not a mismatch. Re-validates automatically on either field's own
+  edits: this one's through the usual `value` write, and the referenced one's through a listener on
+  its `input`/`change` events, so retyping the password half of a confirm pair revalidates the
+  confirm field immediately, not only on its own next edit. A `match` that does not resolve to a
+  live element (most commonly a dangling id) is inert rather than a permanent block on submission,
+  exactly like the platform's own tolerance of an unresolvable `aria-describedby` idref. The
+  referenced element only needs a string `.value`, so a native `<input>`/`<textarea>` works the
+  same as another `lr-input`; see "A new-password field" below for the password-confirmation shape
 - `withoutSpinButtons: boolean = false` (attribute `without-spin-buttons`, reflected —
   `type="number"` only) — suppresses the browser's own increment/decrement spin buttons.
   **Breaking in 8.0.0:** `type="number"` used to hide them unconditionally; left unset, the
@@ -386,6 +402,37 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 attribute form is enough to turn each on. `autofocus` is likewise `false`-defaulting — none of
 these four needs the property form to be reset.
 
+**A new-password field.** There is no dedicated password-purpose preset; compose the existing
+primitives directly, the same way a plain native `<input type="password">` does:
+
+```html
+<lr-input
+  type="password"
+  id="new-password"
+  label="New password"
+  password-toggle
+  autocomplete="new-password"
+  minlength="12"
+  required
+></lr-input>
+<lr-input
+  type="password"
+  label="Confirm password"
+  password-toggle
+  autocomplete="new-password"
+  match="new-password"
+  required
+></lr-input>
+```
+
+`autocomplete="new-password"` (rather than the bare `password` token, and never `current-password`
+on a set/change/reset flow) is the platform contract that keeps a browser's or password manager's
+own generator and save prompt from cross-contaminating a change/reset flow with the account's
+existing credential; set it explicitly on every field in the pair, since `autocomplete` has no
+purpose-derived default here. `match` (above) is what makes the second field fail validity —
+`customError`, with a localized mismatch message — for as long as its value disagrees with the
+first field's, referenced here by id.
+
 **Known gotchas:**
 
 - `type="email"`/`type="number"` delegate constraint validation to the internal native `<input>`'s
@@ -414,6 +461,13 @@ these four needs the property form to be reset.
   picker didn't open. Don't build a flow that assumes a picker is now on screen.
 - `stepUp()`/`stepDown()` are silent — they emit no `input`/`change`. Emit your own, or drive the
   value through a real user affordance, if downstream state depends on those events.
+- **A `match` id reference resolves in this element's own root, not the whole document.** Two
+  fields inside two different shadow roots (a confirm field composed by one component, the field it
+  should match composed by an unrelated one) must pair through a direct element reference
+  (`confirm.match = passwordEl`) instead of an id string — exactly like every other idref this
+  library resolves, `aria-describedby` included. An id that does not resolve at all (a typo, or an
+  element removed later) is inert rather than a permanent block on submission: `match` stops
+  applying, it does not fail closed.
 
 **Additional API surface:**
 

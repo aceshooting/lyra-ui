@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   histogramFrequency: '度数',
   liteChartMarkSummary: '{series}、{label}：{value}（{total} 件中 {index} 件目）',
   liteChartBarLabel: '{series}、{label}：{value}',
+  chartValuePercentageLabel: '{label}：{value}（{percentage}）',
   liteChartCustomMarkSummary: '{content}（{total} 件中 {index} 件目）',
   chartMissingLibrary: 'このコンポーネントでチャートを表示するには、オプションの "chart.js" パッケージをインストールしてください。',
   boxPlotMissingLibrary: 'このコンポーネントで箱ひげ図を表示するには、オプションの箱ひげ図チャートパッケージをインストールしてください。',

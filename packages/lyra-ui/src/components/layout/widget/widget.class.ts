@@ -312,12 +312,17 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   /** Secondary header copy. Removed or empty attributes render no fallback text. */
   @property() sublabel = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
-  /** Whether the body is collapsed. Reflects to the `collapsed` attribute.
+  /** Whether the body is collapsed. Reflects to the `collapsed` attribute. Also settable from
+   *  outside (attribute or property) to restore a previously-persisted `storageKey` preference --
+   *  see `storageKey`'s own doc for the explicit-assignment-beats-persisted-value precedence.
    *  @default false */
   declare collapsed: boolean;
   /** Persists `collapsed` to `localStorage` across reloads when set. Namespaced as
-   *  `lr-widget:${storageKey}` -- mirrors `lr-app-rail`'s/`lr-table`'s identical `storage-key`
-   *  pattern. Unset (the default) touches storage not at all. */
+   *  `lr-widget:${storageKey}`. Restoration never overwrites a `collapsed` the consumer already
+   *  assigned on the same mount (`collapsed` attribute present, or a `.collapsed=${...}` binding)
+   *  -- including a binding that pins it to `false`, its own default. The same "explicit beats
+   *  persisted" guarantee as `lr-app-rail`'s and `lr-table`'s `storage-key` restores, which share
+   *  this one's write-tracking mechanism. Unset (the default) touches storage not at all. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
   @property({ type: Boolean, reflect: true }) expandable = false;
   @property({ type: Boolean, reflect: true }) fullscreen = false;

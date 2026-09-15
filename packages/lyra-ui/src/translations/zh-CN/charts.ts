@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   histogramFrequency: '频数',
   liteChartMarkSummary: '{series}，{label}：{value}（第{index}项，共{total}项）',
   liteChartBarLabel: '{series}，{label}：{value}',
+  chartValuePercentageLabel: '{label}：{value}（{percentage}）',
   liteChartCustomMarkSummary: '{content}（第{index}项，共{total}项）',
   chartMissingLibrary: '此组件需要安装可选的 "chart.js" 包才能渲染图表。',
   boxPlotMissingLibrary: '此组件需要安装可选的箱线图扩展包才能渲染箱线图。',

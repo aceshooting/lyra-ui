@@ -396,6 +396,17 @@ describe('<lr-app-rail-group>', () => {
     }
   });
 
+  it('resolves the collapsible toggle to a square instead of stretching the row while icon-only', async () => {
+    const el = (await fixture<LyraAppRailGroup>(html`
+      <lr-app-rail-group collapsible icon-only heading="Workspaces"></lr-app-rail-group>
+    `)) as LyraAppRailGroup;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    const rect = toggle.getBoundingClientRect();
+    expect(rect.width).to.be.above(0);
+    expect(Math.abs(rect.width - rect.height)).to.be.below(1);
+  });
+
   it('stops forwarding once it disconnects', async () => {
     const el = (await fixture<LyraAppRailGroup>(populated())) as LyraAppRailGroup;
     await el.updateComplete;

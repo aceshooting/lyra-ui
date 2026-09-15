@@ -219,6 +219,12 @@ export const styles = css`
 
   [part="header"] {
     padding: var(--lr-app-rail-header-padding, var(--lr-space-m));
+    /* auto (the default) is min-block-size's own initial value, so unset reproduces today's exact
+       height -- including this flex item's own content-based automatic minimum size, which a
+       literal 0 would silently discard. Set it to reserve room for header content that mounts or
+       resizes asynchronously (e.g. an avatar image). Mirrors --lr-command-palette-search-min-
+       height's identical auto-default shape. */
+    min-block-size: var(--lr-app-rail-header-min-block-size, auto);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part="header"][hidden] {

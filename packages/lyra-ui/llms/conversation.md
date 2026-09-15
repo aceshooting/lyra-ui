@@ -588,7 +588,9 @@ Removing `label` restores the localized thinking name while preserving an explic
 visibly next to the animated shape, in a new `part="label"` element, mirroring `<lr-spinner>`'s own
 `labelPlacement` vocabulary. The default, `"none"`, is unchanged from this component's
 screen-reader-only rendering before this property existed: a single `.sr-only` text node, no
-visible twin.
+visible twin. That visible `part="label"` node is itself `aria-hidden="true"`: the host's own
+`aria-label` already carries the identical string as the accessible name, so the visible copy is
+never exposed as a second, redundant accessibility-tree node for the same text.
 
 **Properties:**
 
@@ -614,8 +616,8 @@ visible twin.
 
 **CSS parts:** `base` (the decorative, `aria-hidden`, wrapper around the animated shape), `dot`
 (each of the three dots in the `dots` variant), `pulse` (the single pulsing dot in the `pulse`
-variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible label, rendered
-only while `label-placement="after"`)
+variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible, `aria-hidden`,
+label, rendered only while `label-placement="after"`)
 
 **Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
 `0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
@@ -2786,6 +2788,23 @@ complete built-in row, including built-in `rowActions` and appended `renderActio
 the conversation item's `actions` slot. Use `row-wrapper` for whole-row layout, `row-actions` for
 the callback-output region, and the `row-item-*` parts for the conversation item's own internals.
 With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
+
+**Methods:**
+
+- `itemElement(conversationId)` — the rendered `lr-conversation-item` for one thread's
+  `conversationId` (data mode) or one slotted item's own `conversation-id` (slotted mode), or
+  `null` when it is not currently rendered: filtered out by `showArchived`/search, windowed out of
+  the virtualized viewport, removed from `threads`, or never present
+
+`conversationId` is not a second identity scheme layered on top of the list — it is the same stable
+id every row already carries on its own public `conversation-id` attribute/property, which every
+row event (`lr-select`, `lr-thread-pin`, `lr-thread-archive`, `lr-thread-delete`,
+`lr-thread-rename`) already keys off. `itemElement()` documents an accessor for it instead of a
+consumer piercing this component's shadow root (and, in data mode, the nested internal
+`lr-virtual-list`'s own shadow root) to walk rendered rows the way this component's own internals
+do. It reads the DOM as it stands, so `await threadList.updateComplete` first and treat `null` as
+"not rendered right now" — in particular, a data-mode row can exist in `threads` yet still return
+`null` while it is scrolled outside the virtualized window.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.

@@ -630,7 +630,7 @@ describe("current-state cssprops", () => {
   }
 
   const overrides =
-    "--lr-app-rail-item-current-bg: rgb(0, 51, 102); --lr-app-rail-item-current-color: rgb(255, 255, 255);";
+    "--lr-app-rail-item-current-bg: rgb(0, 51, 102); --lr-app-rail-item-current-color: rgb(255, 255, 255); --lr-app-rail-item-current-font-weight: 900;";
 
   it("recolors the aria-current item from an ancestor, not a :host-declared prop", async () => {
     const el = await themed(overrides);
@@ -639,6 +639,11 @@ describe("current-state cssprops", () => {
     const rendered = getComputedStyle(base);
     expect(rendered.backgroundColor).to.equal("rgb(0, 51, 102)");
     expect(rendered.color).to.equal("rgb(255, 255, 255)");
+    // The current item's font-weight has its own dedicated cssprop, decoupled from the shared
+    // --lr-font-weight-semibold token every other semibold-weighted element in the page also
+    // reads -- retheming it must not repaint any of those. Mirrors lr-stepper's
+    // --lr-stepper-current-font-weight/lr-segmented's --lr-segmented-selected-font-weight.
+    expect(rendered.fontWeight).to.equal("900");
     // The prop is never declared on :host, so an ancestor value is not shadowed.
     expect(el.shadowRoot!.querySelector('[part="base"]')!).to.exist;
   });
@@ -656,6 +661,13 @@ describe("current-state cssprops", () => {
     );
     expect(rendered.color).to.equal(
       resolvedInShadow(el, "color: var(--lr-color-brand)", "color")
+    );
+    expect(rendered.fontWeight).to.equal(
+      resolvedInShadow(
+        el,
+        "font-weight: var(--lr-font-weight-semibold)",
+        "font-weight"
+      )
     );
   });
 
@@ -896,6 +908,57 @@ describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
     const actual = parseFloat(getComputedStyle(base).minBlockSize);
     expect(actual).to.be.at.least(floor);
     expect(actual).to.not.equal(4);
+  });
+
+  it('renders font-size byte-identical to the inherited value when unset', async () => {
+    const wrapper = (await fixture(html`
+      <div style="font-size: 22px;">
+        <lr-app-rail-item href="/home">Home</lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).fontSize).to.equal('22px');
+  });
+
+  it('resizes the label text from an ancestor override', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-app-rail-item-font-size: 24px;">
+        <lr-app-rail-item href="/home">Home</lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).fontSize).to.equal('24px');
+  });
+});
+
+describe('icon-only square hit area', () => {
+  it('resolves the icon-only item to a square instead of stretching the row', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item icon-only href="/inbox">
+        <span slot="icon" aria-hidden="true">*</span>Inbox
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const rect = base.getBoundingClientRect();
+    expect(rect.width).to.be.above(0);
+    expect(Math.abs(rect.width - rect.height)).to.be.below(1);
+  });
+
+  it('does not constrain the row to a square outside icon-only mode', async () => {
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 240px;">
+        <lr-app-rail-item href="/inbox">
+          <span slot="icon" aria-hidden="true">*</span>Inbox
+        </lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const rect = base.getBoundingClientRect();
+    expect(rect.width).to.be.above(rect.height);
   });
 });
 

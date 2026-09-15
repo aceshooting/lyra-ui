@@ -7,6 +7,10 @@ import {
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
+import {
+  MatchConstraintController,
+  type LyraMatchTarget,
+} from '../../../internal/match-constraint.js';
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -37,7 +41,7 @@ import {
 } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_hidePassword, LYRA_DEFAULT_inputLabel, LYRA_DEFAULT_showPassword, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_hidePassword, LYRA_DEFAULT_inputLabel, LYRA_DEFAULT_matchMismatch, LYRA_DEFAULT_showPassword, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraInputType =
@@ -114,6 +118,13 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * Forwards the full native selection/editing surface (`selectionStart`/`selectionEnd`,
  * `setSelectionRange()`, `setRangeText()`), the same as `<lr-textarea>`, in addition to
  * `focus()`/`blur()`/`select()`, `showPicker()`, and `stepUp()`/`stepDown()`.
+ *
+ * The declarative `match` property pairs this field with a sibling one (by id, resolved in this
+ * element's own root, or by direct element reference) and fails validity — a localized
+ * `customError` — whenever the two values disagree, once every other constraint already reports
+ * valid; see its own doc comment for the full contract. There is no dedicated password-purpose
+ * preset: compose `type="password"`, `password-toggle`, `autocomplete="new-password"`, and `match`
+ * directly for a set/change/reset confirmation pair.
  *
  * Pressing Enter submits the ancestor `<form>`, the implicit submission a native `<input>`
  * performs — the internal input is inside a shadow root and has no form owner of its own, so the
@@ -249,6 +260,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     hidePassword: LYRA_DEFAULT_hidePassword,
     inputLabel: LYRA_DEFAULT_inputLabel,
+    matchMismatch: LYRA_DEFAULT_matchMismatch,
     showPassword: LYRA_DEFAULT_showPassword,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
@@ -439,6 +451,20 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   /** Shoelace alias for {@link withoutSpinButtons}. */
   @property({ type: Boolean, attribute: 'no-spin-buttons' }) noSpinButtons =
     false;
+  /** Declarative cross-field confirmation constraint: a sibling field to compare this one's
+   *  `value` against, referenced either by id (resolved in this element's own root — an idref
+   *  never crosses a shadow boundary, matching every other idref this library resolves) or by a
+   *  direct element reference (works across shadow trees, since no lookup is needed). While set
+   *  and resolvable, this field additionally fails validity — `customError`, with a localized
+   *  mismatch message — whenever its value differs from the referenced element's own `.value`.
+   *  Re-validates automatically whenever either field changes: this field's own edits through the
+   *  usual `value` write, and the referenced field's edits through a listener on its `input`/
+   *  `change` events. A `match` that does not resolve to a live element (a dangling id, most
+   *  commonly) is inert rather than a permanent block on submission — exactly like the platform's
+   *  own tolerance of an unresolvable `aria-describedby` idref. Pairs with a plain confirmation
+   *  field (`type="password"` or otherwise); the referenced element only needs a string `.value`,
+   *  so a native `<input>`/`<textarea>` works the same as another `lr-input`. */
+  @property({ attribute: 'match' }) match: LyraMatchTarget = null;
   /** Internal reactive adapter for Shoelace's public `default-value` attribute alias. The
    * supported JS property remains `defaultValue`; this accessor is not public API.
    * @internal
@@ -460,6 +486,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   private readonly settledDebounce = new DebounceController<string>(0, (value) => {
     this.emit('lr-input-settled', { value });
   });
+  /** Keeps {@link match}'s referenced field resolved and re-runs `updateValidity()` whenever that
+   *  field's own value changes. */
+  private readonly matchController = new MatchConstraintController(
+    this,
+    () => this.match,
+    () => this.updateValidity(),
+  );
 
   @query('input') private inputEl?: HTMLInputElement;
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
@@ -759,6 +792,11 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    * base mixin uses — this override used to check `readonly` alone, so a `<lr-input required
    * disabled>` (or one inside a `<fieldset disabled>`) still reported `valueMissing` and published
    * `:state(invalid)`/`:state(user-invalid)`, which no native `<input required disabled>` does.
+   *
+   * The declarative `match` constraint (see its own doc comment) is checked last, and only once
+   * every other constraint above already reports valid — a confirm field that is merely empty (and
+   * `required`) reports `valueMissing`, not a mismatch, exactly like a hand-written comparison
+   * would prioritize "did you fill this in" over "does it agree with the other field".
    */
   protected updateValidity(): void {
     const native = this.inputEl;
@@ -771,6 +809,11 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
         this[SET_ANCHORED_VALIDITY](
           { valueMissing: true },
           this.localize('fieldRequired')
+        );
+      } else if (this.matchMismatches()) {
+        this[SET_ANCHORED_VALIDITY](
+          { customError: true },
+          this.localize('matchMismatch')
         );
       } else {
         this[SET_ANCHORED_VALIDITY]({});
@@ -790,6 +833,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
         this[SET_ANCHORED_VALIDITY](
           { badInput: true },
           this.localize('valueInvalid')
+        );
+        return;
+      }
+      if (this.matchMismatches()) {
+        this[SET_ANCHORED_VALIDITY](
+          { customError: true },
+          this.localize('matchMismatch')
         );
         return;
       }
@@ -815,6 +865,16 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     );
   }
 
+  /** Whether `match` is set, currently resolves to a live element, and that element's own value
+   *  differs from this one's -- see `match`'s doc comment for the full contract. A dangling or
+   *  unresolvable reference (including one pointed at an element with no comparable string
+   *  `.value`) never mismatches: an inert constraint, not a permanent block on submission. */
+  private matchMismatches(): boolean {
+    if (!this.match) return false;
+    const targetValue = this.matchController.targetValue;
+    return targetValue !== null && targetValue !== this.value;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('value')) {
@@ -823,7 +883,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     }
     // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
     // reaches the native input only on this render, so validity has to be recomputed after it --
-    // the same reason `min`/`max`/`step` are listed here.
+    // the same reason `min`/`max`/`step` are listed here. `match` joins them so retargeting the
+    // reference re-checks the new target immediately, even before it fires its own input/change.
     if (
       changed.has('type') ||
       changed.has('min') ||
@@ -832,6 +893,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
       changed.has('minlength') ||
       changed.has('maxlength') ||
       changed.has('pattern') ||
+      changed.has('match') ||
       changed.has('readonly')
     ) {
       this.updateValidity();

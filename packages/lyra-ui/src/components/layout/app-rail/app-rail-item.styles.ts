@@ -36,6 +36,9 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text);
     font: inherit;
+    /* After the "font" shorthand, which would otherwise reset font-size back to the inherited
+       one -- mirrors lr-button's own --lr-button-font-size ordering. */
+    font-size: var(--lr-app-rail-item-font-size, inherit);
     text-align: start;
     text-decoration: none;
     cursor: pointer;
@@ -75,7 +78,10 @@ export const styles = css`
   [part="base"][aria-current="page"] {
     background: var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet));
     color: var(--lr-app-rail-item-current-color, var(--lr-color-brand));
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(
+      --lr-app-rail-item-current-font-weight,
+      var(--lr-font-weight-semibold)
+    );
   }
   /* Mirrors lr-conversation-item's shipped [part="active-indicator"] (same inset-inline/width/
      color token shape); rendered only while aria-current="page" (see the class doc), so it is
@@ -138,6 +144,18 @@ export const styles = css`
   :host([icon-only]) [part="base"] {
     justify-content: center;
     padding-inline: 0;
+    /* Matches the icon-button hit-target footprint used elsewhere in this library instead of
+       stretching across the rail's full icon column: flex-basis auto plus flex-grow 0 stops the
+       row filling :host's own width (:host([icon-only]) below re-centers it there), and
+       inline-size: auto lets aspect-ratio resolve the now-auto inline axis from the block axis
+       above -- already floor-clamped to --lr-icon-button-size -- producing a square regardless of
+       the floor's own value. */
+    flex: 0 0 auto;
+    inline-size: auto;
+    aspect-ratio: 1;
+  }
+  :host([icon-only]) {
+    justify-content: center;
   }
   /* Secondary text follows the label: clipped out of the narrow rail's layout while staying in the
      accessibility tree. clip-path (rather than [part="label"]'s position:absolute + clip) keeps the

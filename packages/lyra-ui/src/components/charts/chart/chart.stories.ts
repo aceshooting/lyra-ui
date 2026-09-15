@@ -27,6 +27,20 @@ export const CategoryLegends: Story = {
   `,
 };
 
+export const CombinedValueAndShareLegend: Story = {
+  parameters: {
+    docs: { description: { story: '`legend-display="value-percentage"` appends both a formatted value and its share of the represented total to each legend entry, as `label: value (percentage)`. The `valueFormatter` here only formats the value half; the percentage is always a locale percentage of the absolute represented legend total.' } },
+  },
+  render: () => html`
+    <lr-chart type="doughnut" legend-mode="datum" legend-display="value-percentage" legend-position="bottom"
+      height="18rem" style="inline-size:24rem;max-inline-size:100%"
+      .labels=${['Subscriptions', 'Services', 'Other revenue']}
+      .datasets=${[{ label: 'Current', data: [50, 30, 20] }]}
+      .valueFormatter=${(value: number) => `$${value}`}
+    ></lr-chart>
+  `,
+};
+
 /** Click a legend item to hide its dataset; hidden items retain a line-through state and part hook. */
 export const Default: Story = {
   render: () => {
@@ -283,7 +297,7 @@ export const Stacked: Story = {
 };
 
 /**
- * The `--lr-chart-grid-color`/`-tick-color`/`-tooltip-bg`/`-tooltip-text`
+ * The `--lr-chart-grid-color`/`-tick-color`/`-tick-font-size`/`-tooltip-bg`/`-tooltip-text`
  * custom properties retheme Chart.js's canvas-drawn chrome. Chart.js can't
  * consume `var()` directly, so those values are resolved via
  * `getComputedStyle` once per draw. `--lr-chart-legend-color` styles the
@@ -301,6 +315,7 @@ export const ThemedTokens: Story = {
           width: 22rem;
           --lr-chart-grid-color: var(--lr-color-danger);
           --lr-chart-tick-color: var(--lr-color-danger);
+          --lr-chart-tick-font-size: var(--lr-font-size-sm);
           --lr-chart-legend-color: var(--lr-color-danger);
           --lr-chart-tooltip-bg: var(--lr-color-text);
           --lr-chart-tooltip-text: var(--lr-color-surface);

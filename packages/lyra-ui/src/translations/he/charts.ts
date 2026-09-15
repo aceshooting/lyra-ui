@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   histogramFrequency: 'שכיחות',
   liteChartMarkSummary: '{series}, {label}: {value} ({index} מתוך {total})',
   liteChartBarLabel: '{series}, {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
   liteChartCustomMarkSummary: '{content} ({index} מתוך {total})',
   chartMissingLibrary: 'כדי להציג תרשימים, יש להתקין את החבילה האופציונלית "chart.js".',
   boxPlotMissingLibrary: 'כדי להציג תרשימי קופסה, יש להתקין את חבילת התרשימים האופציונלית המתאימה.',

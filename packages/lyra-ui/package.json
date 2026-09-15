@@ -1063,7 +1063,10 @@
     "./native.css": "./dist/styles/native.css",
     "./reservations.css": "./dist/styles/reservations.css",
     "./utilities.css": "./dist/styles/utilities.css",
-    "./testing": "./dist/testing/happy-dom-shims.js",
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    },
     "./package.json": "./package.json"
   },
   "sideEffects": [

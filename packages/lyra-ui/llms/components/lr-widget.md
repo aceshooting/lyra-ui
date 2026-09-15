@@ -179,6 +179,12 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   between, so `willUpdate()` alone wouldn't otherwise notice.
 - `collapsed` hides the body via `hidden` rather than an animated height transition — collapsing is
   instant, not a slide.
+- an explicit `collapsed` assignment before the first update — an attribute, a property, or a
+  framework binding, including one that pins the property to its own default `false` — always wins
+  over a `storageKey`-restored value for that mount, and skips the restore entirely. For
+  uncontrolled persistence, don't bind `collapsed`: read the restored value back after
+  `updateComplete` and track further changes from `lr-collapse-change`, pushing the property down
+  imperatively only for later external changes.
 - prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
   own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
   registered against those keys specifically to target `lr-widget`'s collapse button should move
