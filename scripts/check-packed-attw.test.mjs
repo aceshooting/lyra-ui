@@ -16,7 +16,7 @@ const manifest = JSON.parse(
 
 test('derives every non-CSS package export and partitions it exhaustively once', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 944, 'the reviewed package has 944 typed exports');
+  assert.equal(entrypoints.length, 945, 'the reviewed package has 945 typed exports');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
@@ -25,7 +25,7 @@ test('derives every non-CSS package export and partitions it exhaustively once',
   const shards = Array.from({ length: ATTW_CI_SHARD_TOTAL }, (_, index) =>
     partitionAttwEntrypoints(entrypoints, index + 1, ATTW_CI_SHARD_TOTAL),
   );
-  assert.deepEqual(shards.map((shard) => shard.length), [236, 236, 236, 236]);
+  assert.deepEqual(shards.map((shard) => shard.length), [237, 236, 236, 236]);
   assert.equal(new Set(shards.flat()).size, entrypoints.length, 'shards are disjoint');
   assert.deepEqual(shards.flat().sort(), entrypoints, 'shards cover every typed export');
 });

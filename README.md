@@ -178,7 +178,7 @@ the alias stays valid if the component's internal family changes. Import
 
 ## Theming, internationalization & RTL
 
-Every one of the 285 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 286 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.
