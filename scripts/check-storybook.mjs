@@ -192,7 +192,11 @@ async function waitForDocs(page, baseUrl, id, theme = 'dark') {
   const frame = await iframe.contentFrame();
   if (!frame) throw new Error(`${id} docs iframe was not available`);
 
-  await frame.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
+  try {
+    await frame.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
+  } catch (error) {
+    throw new Error(`${id} docs iframe did not mount: ${error instanceof Error ? error.message : String(error)}`);
+  }
   try {
     await frame.waitForFunction(
       (expectedTheme) => document.documentElement.dataset.lrTheme === expectedTheme,
@@ -309,7 +313,11 @@ async function auditComponentDocs(context, baseUrl, entries) {
           `${baseUrl}/iframe.html?id=${encodeURIComponent(entry.id)}&viewMode=docs&globals=theme:dark;direction:ltr`,
           { waitUntil: 'domcontentloaded', timeout: 20_000 },
         );
-        await auditPage.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
+        try {
+          await auditPage.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
+        } catch (error) {
+          throw new Error(`${entry.id} docs iframe did not mount: ${error instanceof Error ? error.message : String(error)}`);
+        }
         await auditPage.waitForTimeout(120);
 
         for (const matrix of matrices) {
@@ -556,9 +564,14 @@ async function main() {
       browserErrors.push(`${currentStoryId}: HTTP ${response.status()}: ${response.url()}`);
     }
   });
+  const docsIdForTag = (tag) => {
+    const match = componentDocs.find(({ expectedTag }) => expectedTag === tag);
+    if (!match) throw new Error(`Storybook has no docs entry for ${tag}`);
+    return match.entry.id;
+  };
 
   try {
-    const docsFrame = await waitForDocs(page, baseUrl, 'checkbox--docs', 'dark');
+    const docsFrame = await waitForDocs(page, baseUrl, docsIdForTag('lr-checkbox'), 'dark');
     await docsFrame.waitForSelector('lr-checkbox', { timeout: 15_000 });
     const darkDocsTheme = await docsFrame.evaluate(() => {
       const wrapper = document.querySelector('.sbdocs-wrapper');
@@ -644,7 +657,7 @@ async function main() {
       throw new Error(`Introduction did not render its light theme: ${JSON.stringify(lightLanding)}`);
     }
 
-    const dropdownDocsFrame = await waitForDocs(page, baseUrl, 'overlay-dropdown--docs', 'dark');
+    const dropdownDocsFrame = await waitForDocs(page, baseUrl, docsIdForTag('lr-dropdown'), 'dark');
     const dropdownDocs = dropdownDocsFrame.locator('lr-dropdown').first();
     await dropdownDocs.evaluate((element) => {
       // A realistically tall action list proves both failure modes that a one-row popup can hide:
@@ -708,7 +721,7 @@ async function main() {
     try {
       await narrowDocsPage.setViewportSize({ width: 390, height: 800 });
       await narrowDocsPage.goto(
-        `${baseUrl}/iframe.html?id=overlay-dropdown--docs&viewMode=docs&globals=theme:dark`,
+        `${baseUrl}/iframe.html?id=${encodeURIComponent(docsIdForTag('lr-dropdown'))}&viewMode=docs&globals=theme:dark`,
         { waitUntil: 'domcontentloaded', timeout: 20_000 },
       );
       await narrowDocsPage.waitForSelector('.docblock-argstable', { timeout: 15_000 });

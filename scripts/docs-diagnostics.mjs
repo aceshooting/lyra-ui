@@ -45,8 +45,8 @@ const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
   },
   ...[
     ['components-avatar--docs', 'https://example.invalid/nonexistent.png'],
-    ['docxviewer--docs', 'https://example.invalid/missing.docx'],
-    ['documentviewer-spreadsheetviewer--docs', 'https://example.invalid/missing.xlsx'],
+    ['viewers-docxviewer--docs', 'https://example.invalid/missing.docx'],
+    ['viewers-documentviewer-spreadsheetviewer--docs', 'https://example.invalid/missing.xlsx'],
   ].flatMap(([pageId, url]) => [
     {
       pageId,

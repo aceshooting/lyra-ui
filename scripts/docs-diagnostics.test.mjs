@@ -31,8 +31,12 @@ test('allows only the documented page-scoped intentional diagnostics', () => {
       url: 'https://example.invalid/nonexistent.png',
       error: 'net::ERR_NAME_NOT_RESOLVED',
     }),
-    resultWith('docxviewer--docs', 'response', {
+    resultWith('viewers-docxviewer--docs', 'response', {
       url: 'https://example.invalid/missing.docx',
+      status: 404,
+    }),
+    resultWith('viewers-documentviewer-spreadsheetviewer--docs', 'response', {
+      url: 'https://example.invalid/missing.xlsx',
       status: 404,
     }),
     resultWith('animatedimage--docs', 'response', {
