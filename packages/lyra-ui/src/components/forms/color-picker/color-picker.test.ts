@@ -82,6 +82,84 @@ it('rejects accessor-backed swatches without invoking them while retaining later
     .to.deep.equal(['Safe']);
 });
 
+describe('per-swatch disabled', () => {
+  const withDisabled = [
+    { color: '#ff0000', label: 'Red' },
+    { color: '#00ff00', label: 'Green', disabled: true },
+    { color: '#0000ff', label: 'Blue' },
+  ];
+
+  it('renders a genuinely disabled swatch and leaves an ordinary one unset (unset-regression)', async () => {
+    const el = (await fixture(html`<lr-color-picker .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
+    await el.updateComplete;
+    const swatches = parts(el, 'swatch') as HTMLButtonElement[];
+    expect(swatches[0]!.disabled, 'an ordinary swatch is not disabled').to.equal(false);
+    expect(swatches[1]!.disabled).to.equal(true);
+    expect(swatches[2]!.disabled).to.equal(false);
+  });
+
+  it('a click on a disabled swatch commits nothing', async () => {
+    const el = (await fixture(html`<lr-color-picker .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-change', () => (fired = true));
+    (parts(el, 'swatch')[1] as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(fired).to.equal(false);
+    expect(el.value).to.not.equal('#00ff00');
+  });
+
+  it('leaves the other swatches pickable while one entry is disabled', async () => {
+    const el = (await fixture(html`<lr-color-picker .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
+    await el.updateComplete;
+    const changed = oneEvent(el, 'lr-change');
+    (parts(el, 'swatch')[0] as HTMLButtonElement).click();
+    await changed;
+    await el.updateComplete;
+    expect(el.value.toLowerCase()).to.equal('#ff0000');
+  });
+
+  it('keeps a swatch whose disabled is not a boolean, omitting the field (fails open, like an absent disabled)', async () => {
+    const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+    el.swatches = [
+      { color: '#ff0000', label: 'Red', disabled: 'yes' },
+      { color: '#00ff00', label: 'Green' },
+    ] as unknown as typeof el.swatches;
+    await el.updateComplete;
+    const swatches = parts(el, 'swatch') as HTMLButtonElement[];
+    expect(swatches.map((swatch) => swatch.getAttribute('aria-label'))).to.deep.equal(['Red', 'Green']);
+    expect(swatches.map((swatch) => swatch.disabled)).to.deep.equal([false, false]);
+  });
+
+  it('never invokes an accessor-backed swatch disabled, and never treats it as disabled', async () => {
+    let reads = 0;
+    const hostile: Record<string, unknown> = { color: '#ff0000', label: 'Red' };
+    Object.defineProperty(hostile, 'disabled', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return true;
+      },
+    });
+    const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+    el.swatches = [hostile, { color: '#00ff00', label: 'Green' }] as unknown as typeof el.swatches;
+    await el.updateComplete;
+
+    expect(reads, 'the getter is never invoked').to.equal(0);
+    const swatches = parts(el, 'swatch') as HTMLButtonElement[];
+    expect(
+      swatches.map((swatch) => swatch.disabled),
+      'the entry survives as an ordinary, non-disabled swatch',
+    ).to.deep.equal([false, false]);
+  });
+
+  it('is accessible with a mix of enabled and disabled swatches', async () => {
+    const el = (await fixture(html`<lr-color-picker .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
 it('contains a throwing shadow-root activeElement getter while blurring', async () => {
   const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
   const root = el.shadowRoot!;

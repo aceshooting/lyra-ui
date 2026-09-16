@@ -613,14 +613,14 @@ export const styles = css`
        swatch's edge snaps while lr-button/lr-icon-button ease. */
     transition: border-color var(--lr-transition-fast);
   }
-  [part~="swatch"]:where(:hover) {
+  [part~="swatch"]:where(:not(:disabled)):where(:hover) {
     border-color: var(
       --lr-color-picker-hover-border-color,
       var(--lr-color-brand)
     );
   }
   /* Edge only, again: ::after paints the palette entry's own colour over this box. */
-  [part~="swatch"]:where(:active) {
+  [part~="swatch"]:where(:not(:disabled)):where(:active) {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
@@ -630,6 +630,15 @@ export const styles = css`
   [part~="swatch"]:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* A swatch entry declaring its own disabled is non-actionable: it keeps its own painted colour
+     (still the datum it always was) but loses every affordance that promises activation -- gated
+     above rather than overridden here, because CSS :hover still matches a natively disabled
+     button. Distinct from :host(:disabled) below, which dims the WHOLE control via host opacity;
+     this dims only the one swatch. */
+  [part~="swatch"]:disabled {
+    cursor: not-allowed;
+    opacity: var(--lr-color-picker-swatch-disabled-opacity, 0.5);
   }
   /* Ring AND check mark, so selection never rides on colour alone. Encoded in the part name -- an
      attribute selector after ::part() never matches -- so consumers can restyle it. */

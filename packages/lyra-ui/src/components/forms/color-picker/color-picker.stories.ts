@@ -140,6 +140,26 @@ export const Swatches: StoryObj = {
   `,
 };
 
+/** A swatch entry can be marked `disabled`, rendering it as a genuinely non-actionable palette
+ *  entry -- no tab stop, no hover/press affordance -- independent of the whole control's own
+ *  `disabled`. */
+export const DisabledSwatch: StoryObj = {
+  render: () => html`
+    <div style="block-size: 24rem">
+      <lr-color-picker
+        label="Brand palette"
+        value=${ACCENT}
+        .swatches=${[
+          { color: ACCENT, label: 'Accent' },
+          { color: SUCCESS, label: 'Success' },
+          { color: DANGER, label: 'Danger (retired)', disabled: true },
+        ]}
+        open
+      ></lr-color-picker>
+    </div>
+  `,
+};
+
 export const ScopedSelectedSwatchTheme: StoryObj = {
   name: 'Scoped selected-swatch theme',
   render: () => html`

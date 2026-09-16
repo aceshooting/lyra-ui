@@ -71,6 +71,13 @@ const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>([
 export interface LyraColorPickerSwatch {
   color: string;
   label?: string;
+  /**
+   * Marks this swatch non-actionable: it renders a genuinely disabled `<button>` (no tab stop, no
+   * hover/press affordance) and clicking it commits nothing. Independent of the whole control's own
+   * `disabled`/`effectiveDisabled` -- this swatch alone stays inert even while every other swatch
+   * remains pickable. Omitted or `false` renders the swatch exactly as before this field existed.
+   */
+  disabled?: boolean;
 }
 
 /** Arrow-key step, in percent/degrees. Shift multiplies it by {@link LARGE_STEP_MULTIPLIER}. */
@@ -117,6 +124,7 @@ function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwa
       if (entry.value === null || typeof entry.value !== 'object' || Array.isArray(entry.value)) continue;
       const color = getOwnDataDescriptor(entry.value, 'color');
       const label = getOwnDataDescriptor(entry.value, 'label');
+      const disabled = getOwnDataDescriptor(entry.value, 'disabled');
       if (
         color === MISSING_OWN_DATA_DESCRIPTOR ||
         color === UNSAFE_OWN_DATA_DESCRIPTOR ||
@@ -129,9 +137,20 @@ function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwa
         : typeof label.value === 'string' && label.value.trim()
           ? label.value
           : undefined;
+      // Optional and lenient, like `label` above: an accessor-backed or wrong-typed `disabled`
+      // never invokes the accessor and never marks the swatch disabled -- it is simply omitted,
+      // the same fail-open outcome an absent `disabled` already has, rather than dropping the
+      // whole swatch the way a malformed REQUIRED `color` does.
+      const disabledValue =
+        disabled === MISSING_OWN_DATA_DESCRIPTOR ||
+        disabled === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        typeof disabled.value !== 'boolean'
+          ? undefined
+          : disabled.value;
       swatches.push(Object.freeze({
         color: color.value.trim(),
         ...(labelValue === undefined ? {} : { label: labelValue }),
+        ...(disabledValue === undefined ? {} : { disabled: disabledValue as boolean }),
       }));
     }
     return Object.freeze(swatches);
@@ -213,6 +232,11 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * dismiss it only while it is topmost; closing a newer overlay hands focus back through the
  * manager instead of collapsing every open popup under the same event.
  *
+ * A `swatches` entry may also set `disabled`, marking that one palette swatch non-actionable
+ * independent of the whole control's own `disabled`: it renders a genuinely disabled `<button>`
+ * (no tab stop, no hover/press affordance) and clicking it commits nothing. Omitted or `false`
+ * renders the swatch exactly as before this field existed.
+ *
  * @customElement lr-color-picker
  * @slot label - Custom label content.
  * @slot hint - Supporting text.
@@ -288,7 +312,8 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart eyedropper-button__caret - Reserved caret container.
  * @csspart eye-dropper-button__caret - Shoelace alias for `eyedropper-button__caret`.
  * @csspart swatches - The predefined-palette container, rendered only when `swatches` is non-empty.
- * @csspart swatch - A single palette swatch. The active one is `[part~='swatch-selected']`.
+ * @csspart swatch - A single palette swatch. The active one is `[part~='swatch-selected']`. Renders
+ *   a genuine `disabled` `<button>` while that swatch's own entry sets `disabled`.
  * @csspart swatch-selected - Token added to the swatch matching the current value.
  * @csspart hint - Supporting text.
  * @csspart error - The validation message.
@@ -311,6 +336,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   hue/opacity ramp. The slider's own pointer target stays floored at 24px regardless.
  * @cssprop [--lr-color-picker-slider-handle-size=var(--lr-size-1-25rem)] - Diameter of a slider handle.
  * @cssprop [--lr-color-picker-palette-swatch-size=var(--lr-size-1-5rem)] - Size of a palette swatch.
+ * @cssprop [--lr-color-picker-swatch-disabled-opacity=0.5] - Opacity of a palette swatch whose own entry sets `disabled`.
  * @cssprop --grid-width - Upstream alias for `--lr-color-picker-grid-inline-size`.
  * @cssprop --grid-height - Upstream alias for `--lr-color-picker-grid-block-size`.
  * @cssprop --grid-handle-size - Upstream alias for `--lr-color-picker-grid-handle-size`.
@@ -1143,7 +1169,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   };
 
   private onSwatchClick(swatch: LyraColorPickerSwatch): void {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || swatch.disabled) return;
     const parsed = parseColor(swatch.color);
     if (!parsed) return;
     this.commitColor(this.opacity ? parsed : hsva(parsed.h, parsed.s, parsed.v, 1));
@@ -1350,7 +1376,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
             part=${part}
             aria-pressed=${selected ? 'true' : 'false'}
             aria-label=${name}
-            ?disabled=${this.effectiveDisabled}
+            ?disabled=${this.effectiveDisabled || entry.disabled === true}
             style=${styleMap(parsed ? { '--lr-color-picker-swatch-color': cssColor(parsed) } : {})}
             @click=${() => this.onSwatchClick(entry)}
           ></button>
