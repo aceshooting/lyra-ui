@@ -93,6 +93,14 @@ export interface LyraChartSeries {
   readonly dash?: boolean;
   readonly noTooltip?: boolean;
   readonly axis?: 'y' | 'y2';
+  /**
+   * Chart.js dataset `stack` group id. Series sharing the same `stack` value on the same axis
+   * accumulate into one stack; a different id starts an independent stack that Chart.js draws
+   * side by side with the first on that same (stacked) axis. Omitted series default to Chart.js's
+   * own ungrouped stack, matching every series's behavior before this existed. Only meaningful on
+   * an axis that is actually stacked -- see `LyraChart.stacked`/`LyraChart.stackedAxes`.
+   */
+  readonly stack?: string;
   readonly pointColors?: readonly string[];
   /**
    * Per-point radius. A single number applies to every point; an array (matching `data`'s
@@ -223,6 +231,19 @@ type LyraChartFormatterMetadata = Omit<
   'surface' | 'value'
 >;
 
+/**
+ * Tooltip title/footer formatter. Chart.js calls its own `title`/`footer` tooltip callbacks once
+ * per tooltip render against every hovered item, not once per item like the label path -- so
+ * unlike `LyraChartFormatter`, this receives every hovered item's context at once, each in the
+ * same `LyraChartFormatterContext` shape `formatter`'s `'tooltip'` surface already produces (one
+ * entry per dataset the tooltip covers, e.g. every stacked series sharing the hovered category).
+ * The property itself being unset -- not the formatter's return value -- is what leaves Chart.js's
+ * own default title (the shared category label) or default footer (none) in place.
+ */
+export type LyraChartTooltipGroupFormatter = (
+  items: readonly LyraChartFormatterContext[],
+) => string;
+
 export type LyraChartExportFormat = 'csv' | 'png';
 
 export interface LyraChartArea {
@@ -247,6 +268,7 @@ export interface LyraChartDatasetConfiguration {
   hidden?: boolean;
   axis?: string;
   yAxisID?: string;
+  stack?: string;
   noTooltip?: boolean;
   fill?: unknown;
   backgroundColor?: unknown;
@@ -836,6 +858,7 @@ const CHART_SERIES_PROPERTIES = [
   'dash',
   'noTooltip',
   'axis',
+  'stack',
   'pointColors',
   'pointRadius',
   'segmentColors',
@@ -878,6 +901,7 @@ function projectChartSeries(value: unknown): LyraChartSeries | undefined {
       dash?: boolean;
       noTooltip?: boolean;
       axis?: 'y' | 'y2';
+      stack?: string;
       pointColors?: readonly string[];
       pointRadius?: number | readonly number[];
       segmentColors?: readonly string[];
@@ -895,6 +919,7 @@ function projectChartSeries(value: unknown): LyraChartSeries | undefined {
     const dash = valueAt('dash');
     const noTooltip = valueAt('noTooltip');
     const axis = valueAt('axis');
+    const stack = valueAt('stack');
     const pointColors = projectChartStrings(valueAt('pointColors'));
     const pointRadius = valueAt('pointRadius');
     const segmentColors = projectChartStrings(valueAt('segmentColors'));
@@ -919,6 +944,7 @@ function projectChartSeries(value: unknown): LyraChartSeries | undefined {
     if (typeof dash === 'boolean') output.dash = dash;
     if (typeof noTooltip === 'boolean') output.noTooltip = noTooltip;
     if (axis === 'y' || axis === 'y2') output.axis = axis;
+    if (typeof stack === 'string') output.stack = stack;
     if (pointColors) output.pointColors = pointColors;
     if (typeof pointRadius === 'number' && Number.isFinite(pointRadius)) {
       output.pointRadius = pointRadius;
@@ -1181,7 +1207,7 @@ function projectChartDatasetConfiguration(
       if (typeof candidate === 'boolean') output[key] = candidate;
       continue;
     }
-    if (key === 'axis' || key === 'yAxisID' || key === 'type') {
+    if (key === 'axis' || key === 'yAxisID' || key === 'type' || key === 'stack') {
       if (typeof candidate === 'string') output[key] = candidate;
       continue;
     }
@@ -1600,6 +1626,14 @@ function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
       chartDatasetValue(dataset, 'axis') === 'y2'
     ? 'y2'
     : 'y';
+}
+
+/** The Chart.js dataset `stack` group id, or `undefined` for a series that never set
+ *  `LyraChartSeries.stack` -- every such series shares that one implicit group, keeping every
+ *  chart written before `stack` existed summing exactly as it always did. */
+function chartDatasetStack(dataset: unknown): string | undefined {
+  const value = chartDatasetValue(dataset, 'stack');
+  return typeof value === 'string' ? value : undefined;
 }
 /**
  * `<lr-chart>` — the core Chart.js wrapper used directly and by the typed
@@ -2038,6 +2072,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: false }) valueFormatter?: LyraChartValueFormatter;
   /** Unified context-object formatter for visual, tooltip, table/export, and spoken values. */
   @property({ attribute: false }) formatter?: LyraChartFormatter;
+  /**
+   * Tooltip title formatter -- e.g. a scatter point's own name. Receives every item the hovered
+   * tooltip covers, each in `formatter`'s `'tooltip'`-surface context shape. Unset (the default)
+   * leaves Chart.js's own default title (the shared category label) in place.
+   */
+  @property({ attribute: false }) tooltipTitleFormatter?: LyraChartTooltipGroupFormatter;
+  /**
+   * Tooltip footer formatter -- e.g. a category's stack total under the items. Receives every
+   * item the hovered tooltip covers, in the same shape as `tooltipTitleFormatter`. Unset (the
+   * default) leaves Chart.js's own default (no footer).
+   */
+  @property({ attribute: false }) tooltipFooterFormatter?: LyraChartTooltipGroupFormatter;
   /** Chart-wide default fill-under-line setting for line-type series; a series's own `LyraChartSeries.fill` overrides it. */
   @property({ type: Boolean }) area = false;
   @property({ type: Boolean }) zoom = false;
@@ -2086,6 +2132,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
   /** Stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only meaningful for `bar` and `line` types. */
   @property({ type: Boolean }) stacked = false;
+  /**
+   * Per-value-axis override of `stacked`, keyed by `'y'`/`'y2'`. An axis absent from this record
+   * -- including every axis when the whole property is unset -- falls back to the chart-wide
+   * `stacked` value, which is what keeps a chart that never sets this byte-identical to before.
+   * Lets a `stacked` bar series on the primary axis sit next to an unstacked overlay series on
+   * `y2` (via `LyraChartSeries.axis: 'y2'`): set `stackedAxes` to `{ y2: false }` alongside
+   * `stacked`, or spell out both axes explicitly. The shared categorical axis (`x` for a vertical
+   * bar/line, or `y` when `indexAxis` is `'y'`) has no independent entry of its own -- it always
+   * mirrors the resolved `'y'` value, matching Chart.js's own paired index/value-scale stacking
+   * contract. Only meaningful for `bar`/`line` types, matching `stacked` itself.
+   */
+  @property({ attribute: false }) stackedAxes?: Partial<Record<'y' | 'y2', boolean>>;
   /** Disables Chart.js animation. */
   @property({ type: Boolean, attribute: 'without-animation', reflect: true })
   withoutAnimation = false;
@@ -3134,6 +3192,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'autoLegendPosition',
       'valueFormatter',
       'formatter',
+      'tooltipTitleFormatter',
+      'tooltipFooterFormatter',
       'area',
       'height',
       'xLabel',
@@ -3141,6 +3201,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'y2Label',
       'beginAtZero',
       'stacked',
+      'stackedAxes',
       'withoutAnimation',
       'withoutLegend',
       'withoutTooltip',
@@ -3320,6 +3381,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           }
         : {}),
       yAxisID: series.axis === 'y2' ? 'y2' : 'y',
+      // Only spread in when the series sets a `stack` id, so a series without one produces the
+      // exact dataset object it always did (Chart.js's own ungrouped default).
+      ...(series.stack !== undefined ? { stack: series.stack } : {}),
     };
   }
 
@@ -3548,11 +3612,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * color is resolved via `getComputedStyle` (the same `themeColors()` tick
    * color) because Chart.js paints to canvas and cannot read `var()`.
    *
-   * `stackTotals` draws once per category: the plugin fires per (dataset, point),
-   * so a total is shown only on the topmost stacked dataset of each axis and its
-   * formatter returns the null-aware `computeStackTotals()` value (blank when the
-   * whole category is null). When only `dataLabels` is set, each point shows its
-   * own value; a null/non-finite point renders blank.
+   * `stackTotals` draws once per category per (axis, `LyraChartSeries.stack` group): the plugin
+   * fires per (dataset, point), so a total is shown only on the topmost dataset of each group
+   * whose OWN axis is actually stacked (`axisStacked()`) and its formatter returns the null-aware
+   * `computeStackTotals()` value for that group (blank when the whole category is null). Two
+   * stack groups sharing one axis each get their own total, drawn above their own topmost
+   * dataset. When only `dataLabels` is set, or a dataset's axis isn't stacked, each point shows
+   * its own value; a null/non-finite point renders blank.
    */
   private datalabelsOptions(
     theme: ThemeColors,
@@ -3561,15 +3627,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (!this.needsDataLabels) return { display: false };
     const effective = this.effectiveData();
     const datasets = effective.datasets;
-    const stackTotalsActive =
-      this.stackTotals && this.stacked && (effectiveType === 'bar' || effectiveType === 'line');
+    const stackTotalsPossible =
+      this.stackTotals && (effectiveType === 'bar' || effectiveType === 'line');
     const sourceDatasetIndex = (visualIndex: number): number =>
       this.visualDatasetSourceIndexes?.[visualIndex] ?? visualIndex;
     const sourceRowIndex = (visualIndex: number): number =>
       this.visualRowSourceIndexes?.[visualIndex] ?? visualIndex;
-    // The topmost dataset per axis carries the stack total (drawn above the stack).
-    const topDatasetIndexByAxis = new Map<'y' | 'y2', number>();
-    if (stackTotalsActive) {
+    // The topmost dataset per (axis, stack group) carries that group's total (drawn above it).
+    // A dataset whose own axis isn't stacked (`axisStacked()` false -- e.g. an unstacked overlay
+    // series on a second axis) never enters this map, so it never gets a spurious total. Keyed by
+    // axis then by group (rather than a joined string) so a `LyraChartSeries.stack` id can never
+    // collide with the axis id it's paired with.
+    const topDatasetIndexByGroup = new Map<'y' | 'y2', Map<string | undefined, number>>();
+    if (stackTotalsPossible) {
       const visualDatasetCount = this.visualDatasetSourceIndexes?.length ?? datasets.length;
       for (
         let visualIndex = 0;
@@ -3578,14 +3648,32 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       ) {
         const dataset = datasets[sourceDatasetIndex(visualIndex)];
         const axis = chartDatasetAxis(dataset);
+        if (!this.axisStacked(axis)) continue;
+        let byGroup = topDatasetIndexByGroup.get(axis);
+        if (!byGroup) {
+          byGroup = new Map();
+          topDatasetIndexByGroup.set(axis, byGroup);
+        }
         // `visualIndex` is deliberate: Chart.js invokes this callback against the sampled visual
-        // stack, while the mapped source dataset above supplies the axis and source values.
-        topDatasetIndexByAxis.set(axis, visualIndex);
+        // stack, while the mapped source dataset above supplies the axis, group and source values.
+        byGroup.set(chartDatasetStack(dataset), visualIndex);
       }
     }
-    const totalsByAxis = stackTotalsActive
-      ? { y: this.computeStackTotals('y'), y2: this.computeStackTotals('y2') }
-      : undefined;
+    const totalsByGroup = new Map<'y' | 'y2', Map<string | undefined, (number | null)[]>>();
+    const totalsFor = (axis: 'y' | 'y2', stack: string | undefined): (number | null)[] => {
+      let byGroup = totalsByGroup.get(axis);
+      if (!byGroup) {
+        byGroup = new Map();
+        totalsByGroup.set(axis, byGroup);
+      }
+      let totals = byGroup.get(stack);
+      if (!totals) {
+        totals = this.computeStackTotals(axis, stack);
+        byGroup.set(stack, totals);
+      }
+      return totals;
+    };
+    const stackTotalsActive = [...topDatasetIndexByGroup.values()].some((byGroup) => byGroup.size > 0);
     return {
       color: theme.tick,
       // Totals sit above the stack; plain point labels center on the point.
@@ -3597,11 +3685,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         const { datasetIndex, index } = indexes;
         const dataset = datasets[sourceDatasetIndex(datasetIndex)];
         const axis = chartDatasetAxis(dataset);
-        if (stackTotalsActive) {
-          // Only the topmost dataset of each axis draws, and only where the
+        const stack = chartDatasetStack(dataset);
+        if (stackTotalsPossible && this.axisStacked(axis)) {
+          // Only the topmost dataset of each (axis, group) draws, and only where the
           // category total is non-null.
-          if (topDatasetIndexByAxis.get(axis) !== datasetIndex) return this.dataLabels;
-          const total = totalsByAxis?.[axis][sourceRowIndex(index)];
+          if (topDatasetIndexByGroup.get(axis)?.get(stack) !== datasetIndex) return this.dataLabels;
+          const total = totalsFor(axis, stack)[sourceRowIndex(index)];
           if (total == null) return this.dataLabels;
           return true;
         }
@@ -3613,9 +3702,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         const { datasetIndex, index } = indexes;
         const dataset = datasets[sourceDatasetIndex(datasetIndex)];
         const axis = chartDatasetAxis(dataset);
+        const stack = chartDatasetStack(dataset);
         const metadata = this.datumFormatterMetadata(datasetIndex, index, effective);
-        if (stackTotalsActive && topDatasetIndexByAxis.get(axis) === datasetIndex) {
-          const total = totalsByAxis?.[axis][sourceRowIndex(index)];
+        if (
+          stackTotalsPossible &&
+          this.axisStacked(axis) &&
+          topDatasetIndexByGroup.get(axis)?.get(stack) === datasetIndex
+        ) {
+          const total = totalsFor(axis, stack)[sourceRowIndex(index)];
           if (total != null) return this.formatDataLabel(total, this.stackTotalMetadata(metadata));
         }
         const numeric = chartDatumNumericValue(this.scaledSliceDatasets.has(datasetIndex)
@@ -3643,16 +3737,23 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /**
-   * Per-category stack totals for the datasets on axis `axisId` (`'y'`/`'y2'`),
-   * or `null` for a category whose every value is null/undefined (so no total
-   * is drawn there rather than a misleading `0`). Reads the same per-point
-   * values as the sr-only data table, null-aware — canvas draws these via the
-   * datalabels plugin, but the numbers themselves stay screen-reader available
-   * through `renderDataTable()`.
+   * Per-category stack totals for the datasets on axis `axisId` (`'y'`/`'y2'`) belonging to
+   * `stackGroup` (a `LyraChartSeries.stack` id), or `null` for a category whose every value is
+   * null/undefined (so no total is drawn there rather than a misleading `0`). `stackGroup`
+   * defaults to `undefined` -- the implicit group every series without its own `stack` id
+   * shares -- so an existing call site untouched by the per-series `stack` feature keeps summing
+   * exactly the datasets it always did. Reads the same per-point values as the sr-only data
+   * table, null-aware — canvas draws these via the datalabels plugin, but the numbers themselves
+   * stay screen-reader available through `renderDataTable()`.
    */
-  private computeStackTotals(axisId: 'y' | 'y2' = 'y'): (number | null)[] {
+  private computeStackTotals(
+    axisId: 'y' | 'y2' = 'y',
+    stackGroup: string | undefined = undefined,
+  ): (number | null)[] {
     const effective = this.effectiveData();
-    const members = effective.datasets.filter((dataset) => chartDatasetAxis(dataset) === axisId);
+    const members = effective.datasets.filter(
+      (dataset) => chartDatasetAxis(dataset) === axisId && chartDatasetStack(dataset) === stackGroup,
+    );
     const categoryCount = members.reduce(
       (max, dataset) => Math.max(max, this.datasetValues(dataset).length),
       effective.labels.length
@@ -3739,6 +3840,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /**
+   * Resolves whether `axisId`'s scale should stack, folding `stackedAxes`'s per-axis override
+   * over the chart-wide `stacked` default. `'x'` has no override of its own -- it mirrors the
+   * resolved `'y'` value, since Chart.js's stacking contract needs the paired index and value
+   * scales to agree (an unstacked value scale ignores an index scale marked `stacked`, and vice
+   * versa). Every axis falls back to `stacked` when `stackedAxes` (or its own entry) is unset,
+   * which is what keeps a chart that never sets `stackedAxes` byte-identical to before.
+   */
+  private axisStacked(axisId: 'x' | 'y' | 'y2'): boolean {
+    if (axisId === 'y2') return this.stackedAxes?.y2 ?? this.stacked;
+    return this.stackedAxes?.y ?? this.stacked;
+  }
+
+  /**
    * Builds `options.scales` for the effective chart type: no scale at all for
    * pie/doughnut (a proportional-area chart has no axis), the single radial
    * `r` scale Chart.js v4 uses for radar/polarArea, and the cartesian
@@ -3800,10 +3914,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       (dataset) => chartDatasetAxis(dataset) === 'y2'
     );
     const rtl = this.effectiveDirection === 'rtl';
-    // `stacked` only applies to bar/line-family charts sharing a categorical
-    // axis, per the design spec — scatter/bubble's linear x scale and the
-    // radial r scale above are out of scope.
-    const stacked = this.stacked && (effectiveType === 'bar' || effectiveType === 'line');
+    // `stacked`/`stackedAxes` only apply to bar/line-family charts sharing a categorical axis,
+    // per the design spec — scatter/bubble's linear x scale and the radial r scale above are out
+    // of scope. Resolved per axis via `axisStacked()` so a chart-wide `stacked` alone (no
+    // `stackedAxes`) still yields the same single boolean on every axis as before.
+    const stackableType = effectiveType === 'bar' || effectiveType === 'line';
+    const stackedX = stackableType && this.axisStacked('x');
+    const stackedY = stackableType && this.axisStacked('y');
+    const stackedY2 = stackableType && this.axisStacked('y2');
     const horizontalCategorical =
       (effectiveType === 'bar' || effectiveType === 'line') && this.effectiveIndexAxis() === 'y';
     const pointChart = effectiveType === 'scatter' || effectiveType === 'bubble';
@@ -3826,7 +3944,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           lineWidth: chartStyle.gridBorderWidth,
         },
         border: { width: chartStyle.gridBorderWidth },
-        stacked,
+        stacked: stackedX,
       },
       y: {
         display: this.axisVisible('y'),
@@ -3842,7 +3960,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           lineWidth: chartStyle.gridBorderWidth,
         },
         border: { width: chartStyle.gridBorderWidth },
-        stacked,
+        stacked: stackedY,
       },
       ...(hasY2
         ? {
@@ -3860,7 +3978,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               border: { width: chartStyle.gridBorderWidth },
               title: { display: !!this.y2Label, text: this.y2Label, color: theme.tick, },
               ticks: this.tickOptions(theme, 'value', 'y2'),
-              stacked,
+              stacked: stackedY2,
             },
           }
         : {}),
@@ -4310,6 +4428,58 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       : String(formatted);
   }
 
+  /**
+   * Resolves one hovered tooltip item into the unified formatter context, for
+   * `tooltipTitleFormatter`/`tooltipFooterFormatter`. Mirrors `tooltipLabel()`'s raw-value and
+   * rescaled-slice resolution so a hovered item's `value` means the same number on every tooltip
+   * surface, but returns the context object itself rather than one rendered string -- title/footer
+   * need every hovered item's context at once, not one item's formatted text. `undefined` for an
+   * item with no numeric value, so it's dropped from the group rather than passed through as
+   * `NaN`.
+   */
+  private tooltipItemContext(
+    context: ChartTooltipContext,
+    horizontal: boolean,
+    effective: EffectiveChartData,
+  ): LyraChartFormatterContext | undefined {
+    const parsed = projectChartDatum(chartDatasetValue(context, 'parsed'));
+    const raw = projectChartDatum(chartDatasetValue(context, 'raw'));
+    const parsedPoint = normalizedChartPoint(parsed);
+    let rawValue = (horizontal && !normalizedChartPoint(raw) ? parsedPoint?.x : parsedPoint?.y) ??
+      parsed ?? raw;
+    const hit = this.callbackIndexes(context, effective);
+    if (hit !== undefined && this.scaledSliceDatasets.has(hit.datasetIndex)) {
+      const dataset =
+        effective.datasets[this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex];
+      rawValue = this.datasetValues(dataset!)[this.visualRowSourceIndexes?.[hit.index] ?? hit.index];
+    }
+    const numeric = chartDatumNumericValue(rawValue);
+    if (numeric === undefined) return undefined;
+    const metadata =
+      hit === undefined ? {} : this.datumFormatterMetadata(hit.datasetIndex, hit.index, effective);
+    return { value: numeric, surface: 'tooltip', ...metadata };
+  }
+
+  /**
+   * Runs `formatter` (`tooltipTitleFormatter`/`tooltipFooterFormatter`) against every hovered
+   * item's context at once. `undefined` when the formatter itself is unset -- the caller uses that
+   * to omit the Chart.js `title`/`footer` callback entirely, which leaves Chart.js's own default
+   * in place -- or when no hovered item resolved a numeric value.
+   */
+  private tooltipGroupText(
+    items: readonly ChartTooltipContext[],
+    horizontal: boolean,
+    formatter: LyraChartTooltipGroupFormatter | undefined,
+  ): string | undefined {
+    if (!formatter) return undefined;
+    const effective = this.effectiveData();
+    const contexts = items
+      .map((item) => this.tooltipItemContext(item, horizontal, effective))
+      .filter((context): context is LyraChartFormatterContext => context !== undefined);
+    if (!contexts.length) return undefined;
+    return formatter(contexts);
+  }
+
   private updateAutoLegendPosition(): boolean {
     const width = this.getBoundingClientRect().width || this.clientWidth;
     const next: 'right' | 'bottom' = width > 0 && width < 480 ? 'bottom' : 'right';
@@ -4419,6 +4589,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const palette = this.seriesPalette();
     const chartStyle = this.chartStyleOptions(palette);
     const rawDataEscapeHatch = this.hasExplicitConfigData();
+    // Matches the condition the tooltip `label` callback has always been gated on -- the
+    // pie/doughnut default only kicks in without an explicit raw `config.data` escape hatch.
+    const wantsTooltipLabelCallback =
+      !!(this.formatter || this.valueFormatter) ||
+      ((effectiveType === 'pie' || effectiveType === 'doughnut') && !rawDataEscapeHatch);
     const labels = this.canonicalLabels();
     let visualRows: readonly number[] | undefined;
     let visualSeries: readonly number[] | undefined;
@@ -4518,12 +4693,27 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             backgroundColor: theme.tooltipBg,
             titleColor: theme.tooltipText,
             bodyColor: theme.tooltipText,
-            ...(this.formatter || this.valueFormatter ||
-              ((effectiveType === 'pie' || effectiveType === 'doughnut') && !this.hasExplicitConfigData())
+            ...(wantsTooltipLabelCallback || this.tooltipTitleFormatter || this.tooltipFooterFormatter
               ? {
                   callbacks: {
-                    label: (context: ChartTooltipContext) =>
-                      this.tooltipLabel(context, tooltipIndexAxis === 'y'),
+                    ...(wantsTooltipLabelCallback
+                      ? {
+                          label: (context: ChartTooltipContext) =>
+                            this.tooltipLabel(context, tooltipIndexAxis === 'y'),
+                        }
+                      : {}),
+                    ...(this.tooltipTitleFormatter
+                      ? {
+                          title: (items: ChartTooltipContext[]) =>
+                            this.tooltipGroupText(items, tooltipIndexAxis === 'y', this.tooltipTitleFormatter),
+                        }
+                      : {}),
+                    ...(this.tooltipFooterFormatter
+                      ? {
+                          footer: (items: ChartTooltipContext[]) =>
+                            this.tooltipGroupText(items, tooltipIndexAxis === 'y', this.tooltipFooterFormatter),
+                        }
+                      : {}),
                   },
                 }
               : {}),
@@ -4812,10 +5002,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private tableStackAxes(): ('y' | 'y2')[] {
     const type = this.effectiveType();
-    if (!this.stackTotals || !this.stacked || (type !== 'bar' && type !== 'line')) return [];
+    if (!this.stackTotals || (type !== 'bar' && type !== 'line')) return [];
     const present = new Set<'y' | 'y2'>();
     for (const dataset of this.effectiveData().datasets) {
-      present.add(chartDatasetAxis(dataset));
+      const axis = chartDatasetAxis(dataset);
+      if (this.axisStacked(axis)) present.add(axis);
     }
     return (['y', 'y2'] as const).filter((axis) => present.has(axis));
   }

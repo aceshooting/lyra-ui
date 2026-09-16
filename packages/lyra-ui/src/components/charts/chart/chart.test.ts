@@ -4322,6 +4322,208 @@ describe('data labels and stack totals', () => {
   });
 });
 
+describe('per-series stack groups and per-axis stacking', () => {
+  it('leaves stacking unchanged across x/y/y2 when stackedAxes is left unset (legacy `stacked` alone)', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'line';
+    el.stacked = true;
+    el.labels = ['A'];
+    el.datasets = [
+      { label: 'primary', data: [1] },
+      { label: 'secondary', data: [2], axis: 'y2' },
+    ];
+    const config = (el as any).buildConfig();
+    expect(config.options.scales.x.stacked).to.equal(true);
+    expect(config.options.scales.y.stacked).to.equal(true);
+    expect(config.options.scales.y2.stacked).to.equal(true);
+  });
+
+  it('lets stackedAxes keep a secondary-axis overlay unstacked while the primary axis stays stacked', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'line';
+    el.stacked = true;
+    el.stackedAxes = { y2: false };
+    el.labels = ['A', 'B'];
+    el.datasets = [
+      { label: 'primary bars', data: [1, 2] },
+      { label: 'overlay line', data: [3, 4], axis: 'y2' },
+    ];
+    const config = (el as any).buildConfig();
+    expect(config.options.scales.x.stacked, 'x mirrors the primary y resolution').to.equal(true);
+    expect(config.options.scales.y.stacked).to.equal(true);
+    expect(config.options.scales.y2.stacked).to.equal(false);
+  });
+
+  it('lets stackedAxes turn stacking on for one axis while chart-wide `stacked` stays false', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.stackedAxes = { y: true };
+    el.labels = ['A', 'B'];
+    el.datasets = [{ label: 'x', data: [1, 2] }];
+    const config = (el as any).buildConfig();
+    expect(config.options.scales.x.stacked).to.equal(true);
+    expect(config.options.scales.y.stacked).to.equal(true);
+  });
+
+  it('carries a series\' `stack` group id onto its Chart.js dataset, omitting the key when unset', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.stacked = true;
+    el.labels = ['A'];
+    el.datasets = [
+      { label: 'a', data: [1], stack: 'group-a' },
+      { label: 'b', data: [2] },
+    ];
+    const config = (el as any).buildConfig();
+    expect(config.data.datasets[0].stack).to.equal('group-a');
+    expect('stack' in config.data.datasets[1]).to.equal(false);
+  });
+
+  it('computes independent per-category totals for two stack groups sharing one axis', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.stacked = true;
+    el.labels = ['Q1', 'Q2'];
+    el.datasets = [
+      { label: 'a1', data: [1, 2], stack: 'a' },
+      { label: 'a2', data: [10, 20], stack: 'a' },
+      { label: 'b1', data: [100, 200], stack: 'b' },
+    ];
+    expect((el as any).computeStackTotals('y', 'a')).to.deep.equal([11, 22]);
+    expect((el as any).computeStackTotals('y', 'b')).to.deep.equal([100, 200]);
+  });
+
+  it('keeps an omitted computeStackTotals group argument scoped to ungrouped series, unchanged from before `stack` existed', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.stacked = true;
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'ungrouped-1', data: [5] },
+      { label: 'ungrouped-2', data: [7] },
+      { label: 'grouped', data: [1000], stack: 'other' },
+    ];
+    expect((el as any).computeStackTotals('y')).to.deep.equal([12]);
+  });
+
+  it('draws a canvas stack total above only the topmost dataset of each stack group', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.stacked = true;
+    el.stackTotals = true;
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'a1', data: [1], stack: 'a' },
+      { label: 'a2', data: [2], stack: 'a' },
+      { label: 'b1', data: [10], stack: 'b' },
+    ];
+    const datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    expect(datalabels.display({ datasetIndex: 0, dataIndex: 0 })).to.equal(false);
+    expect(datalabels.display({ datasetIndex: 1, dataIndex: 0 })).to.equal(true);
+    expect(datalabels.display({ datasetIndex: 2, dataIndex: 0 })).to.equal(true);
+    expect(datalabels.formatter(3, { datasetIndex: 1, dataIndex: 0 })).to.equal('3');
+    expect(datalabels.formatter(10, { datasetIndex: 2, dataIndex: 0 })).to.equal('10');
+  });
+
+  it('never draws a stack total for a series on an axis stackedAxes leaves unstacked', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'line';
+    el.stacked = true;
+    el.stackTotals = true;
+    el.stackedAxes = { y2: false };
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'primary', data: [1] },
+      { label: 'overlay', data: [99], axis: 'y2' },
+    ];
+    const datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    expect(datalabels.display({ datasetIndex: 1, dataIndex: 0 })).to.equal(false);
+  });
+});
+
+describe('tooltip title/footer formatters', () => {
+  it('adds no tooltip callbacks object at all when nothing opts in (matches pre-feature behavior)', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    const tooltipOptions = (el as any).buildConfig().options.plugins.tooltip;
+    expect('callbacks' in tooltipOptions).to.equal(false);
+  });
+
+  it('leaves the label callback out when only tooltipTitleFormatter is set (no formatter/valueFormatter)', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    el.tooltipTitleFormatter = () => 'Title';
+    const callbacks = (el as any).buildConfig().options.plugins.tooltip.callbacks;
+    expect(callbacks.label).to.equal(undefined);
+    expect(callbacks.title).to.be.a('function');
+    expect(callbacks.footer).to.equal(undefined);
+  });
+
+  it('runs tooltipTitleFormatter once per tooltip against every hovered item', () => {
+    const seenLengths: number[] = [];
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'Revenue', data: [10] },
+      { label: 'Cost', data: [4] },
+    ];
+    el.tooltipTitleFormatter = (items) => {
+      seenLengths.push(items.length);
+      return items.map((item) => item.seriesLabel).join(' & ');
+    };
+    const config = (el as any).buildConfig();
+    const items = [
+      { datasetIndex: 0, dataIndex: 0, parsed: { y: 10 }, raw: { y: 10 }, dataset: { label: 'Revenue' } },
+      { datasetIndex: 1, dataIndex: 0, parsed: { y: 4 }, raw: { y: 4 }, dataset: { label: 'Cost' } },
+    ];
+    const title = config.options.plugins.tooltip.callbacks.title(items);
+    expect(title).to.equal('Revenue & Cost');
+    expect(seenLengths).to.deep.equal([2]);
+  });
+
+  it('runs tooltipFooterFormatter against every hovered item, e.g. a category total', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'Revenue', data: [10] },
+      { label: 'Cost', data: [4] },
+    ];
+    el.tooltipFooterFormatter = (items) =>
+      `Total: ${items.reduce((sum, item) => sum + item.value, 0)}`;
+    const config = (el as any).buildConfig();
+    const items = [
+      { datasetIndex: 0, dataIndex: 0, parsed: { y: 10 }, raw: { y: 10 }, dataset: { label: 'Revenue' } },
+      { datasetIndex: 1, dataIndex: 0, parsed: { y: 4 }, raw: { y: 4 }, dataset: { label: 'Cost' } },
+    ];
+    const footer = config.options.plugins.tooltip.callbacks.footer(items);
+    expect(footer).to.equal('Total: 14');
+  });
+
+  it('never calls tooltipFooterFormatter when no hovered item resolves a numeric value', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [{ label: 'Revenue', data: [10] }];
+    let calls = 0;
+    el.tooltipFooterFormatter = () => {
+      calls += 1;
+      return 'unreachable';
+    };
+    const config = (el as any).buildConfig();
+    const footer = config.options.plugins.tooltip.callbacks.footer([
+      { datasetIndex: 0, dataIndex: 0, parsed: {}, raw: {}, dataset: { label: 'Revenue' } },
+    ]);
+    expect(calls).to.equal(0);
+    expect(footer).to.equal(undefined);
+  });
+});
+
 describe('effective chart contract', () => {
   it('uses explicit config.data for mutation, export, naming, summary, and the fallback table', async () => {
     const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;

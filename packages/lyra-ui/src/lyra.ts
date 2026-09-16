@@ -584,6 +584,7 @@ export type {
   LyraChartScaleType,
   LyraChartSeries,
   LyraChartStatistic,
+  LyraChartTooltipGroupFormatter,
   LyraChartType,
   LyraChartValueFormatter,
   LyraChartValueFormatterContext,

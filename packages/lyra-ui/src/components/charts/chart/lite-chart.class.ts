@@ -389,6 +389,15 @@ export interface LyraLiteChartEventMap {
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
+ * Two `lr-chart` surfaces have no counterpart here, deliberately: a per-series `stack` group id
+ * and a per-axis `stackedAxes` override. This chart has exactly one value scale (no `y2`), so "an
+ * unstacked overlay on a second axis" has no equivalent shape, and `stacked` already sums the
+ * whole category into one segmented bar; a per-series stack-group id would need the bar-geometry
+ * pass below to track independent running offsets per group instead of one per category. Tooltip
+ * title/footer formatters are likewise absent: the hover tooltip here is a native SVG `<title>`
+ * per mark (`pointText`), not a multi-item tooltip with separate regions for several datasets
+ * sharing a hovered category.
+ *
  * @customElement lr-lite-chart
  * @event lr-datum-activate - Fired when a bar/point is activated. The
  *   normalized detail includes `kind`, `datasetIndex`, `index`, `label`, and
