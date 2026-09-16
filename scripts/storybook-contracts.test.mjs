@@ -8,6 +8,8 @@ import {
   resolveStoryOwnerDocs,
   storyOwnerFromSource,
 } from './storybook-contracts.mjs';
+import { transformStoryTitle } from '../.storybook/story-title-plugin.js';
+import { createGroupedStoryIndexer } from '../.storybook/story-indexer.js';
 
 test('extracts the component owner only from the default Meta object', () => {
   const source = `
@@ -93,4 +95,26 @@ test('plans one docs navigation per owner while retaining every layout matrix', 
     plan.reduce((total, audit) => total + audit.matrices.length, 0),
     6
   );
+});
+
+test('groups inline and multiline story metadata while preserving the legacy meta id', async () => {
+  const fileName = '/repo/src/components/viewers/notebook-viewer/notebook-viewer.stories.ts';
+  const source = `export default { title: 'DocumentViewer/NotebookViewer', component: 'lr-notebook-viewer' };`;
+  const multiline = `export default {\n  title: 'DocumentViewer/NotebookViewer',\n  component: 'lr-notebook-viewer',\n};`;
+  const expectedTitle = 'Viewers/DocumentViewer/NotebookViewer';
+  const expectedId = 'documentviewer-notebookviewer';
+  for (const fixture of [source, multiline]) {
+    const transformed = transformStoryTitle(fixture, fileName);
+    const { default: metadata } = await import(`data:text/javascript,${encodeURIComponent(transformed)}`);
+    assert.equal(metadata.title, expectedTitle);
+    assert.equal(metadata.id, expectedId);
+  }
+  const [indexed] = await createGroupedStoryIndexer({
+    test: /\.stories\.ts$/,
+    async createIndex() {
+      return [{ type: 'story', exportName: 'Default', title: 'DocumentViewer/NotebookViewer' }];
+    },
+  }).createIndex(fileName, { makeTitle: (title) => title });
+  assert.equal(indexed.title, expectedTitle);
+  assert.equal(indexed.metaId, expectedId);
 });

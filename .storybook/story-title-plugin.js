@@ -3,7 +3,8 @@ import { toId } from 'storybook/internal/csf';
 import { groupedStoryTitle } from './story-indexer.js';
 
 const STORY_FILE = /\.stories\.[cm]?[jt]sx?(?:\?.*)?$/;
-const TITLE_PROPERTY = /^(\s*title\s*:\s*)(['"`])([^'"`\r\n]+)\2(\s*,)/m;
+// Keep inline and multiline runtime metadata aligned with the grouped story index.
+const TITLE_PROPERTY = /(^|[{,])(\s*title\s*:\s*)(['"`])([^'"`\r\n]+)\3(\s*,)/m;
 
 export function transformStoryTitle(source, fileName) {
   if (!STORY_FILE.test(fileName)) return source;
@@ -11,12 +12,12 @@ export function transformStoryTitle(source, fileName) {
   const match = source.match(TITLE_PROPERTY);
   if (!match) return source;
 
-  const [, property, quote, originalTitle, comma] = match;
+  const [, prefix, property, quote, originalTitle, comma] = match;
   const groupedTitle = groupedStoryTitle(fileName, originalTitle);
   if (groupedTitle === originalTitle) return source;
 
   const indentation = property.match(/^\s*/)?.[0] ?? '';
-  const replacement = `${property}${quote}${groupedTitle}${quote}${comma}\n${indentation}id: '${toId(originalTitle)}',`;
+  const replacement = `${prefix}${property}${quote}${groupedTitle}${quote}${comma}\n${indentation}id: '${toId(originalTitle)}',`;
   return source.replace(match[0], replacement);
 }
 

@@ -899,7 +899,7 @@ describe('playback controls', () => {
   });
 
   it('ignores a late internal play rejection after its source generation is replaced', async () => {
-    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const el = (await fixture(html`<lr-av-player preload="none" src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
     let rejectPlay!: (error: unknown) => void;
     const pendingPlay = new Promise<void>((_resolve, reject) => {
