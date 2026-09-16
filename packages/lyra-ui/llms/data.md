@@ -2547,13 +2547,18 @@ numeric disclosure.
 **Properties:**
 
 - `items: readonly SequenceStripItem[] = []` (attribute: false) — `{ readonly id, readonly
-categoryId, readonly marker?, readonly label? }`;
+categoryId, readonly marker?, readonly label?, readonly disabled? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
   subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
   `role="listitem"` accessible name, falling back to the matching category's own nonblank `label`,
   then localized `sequenceStripUnnamedCategory` (`"Unnamed category"` in the built-in English
   catalog) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
-  summarizes by category/count only
+  summarizes by category/count only. `disabled` marks the item non-actionable:
+  `aria-disabled="true"` replaces the selected/active affordances of the cell that represents it,
+  activating it (click or Enter/Space) emits nothing, and roving Left/Right/Home/End navigation —
+  including the default resting tab stop — steps past it. Above the 200-cell cap, a range cell's
+  disabled state follows its own activated item, the range's first. Omitted or `false` renders the
+  item exactly as before this field existed
 - `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
 readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
@@ -3055,14 +3060,19 @@ import type {
 **Properties:**
 
 - `nodes: readonly FlowNode[] = []` (attribute: false) — each record has readonly `id`, optional
-  `type`, `position`, `data`, `accessibleLabel`, `inputs`, and `outputs`. A missing `position` opts
-  into layered layout. String `data.label` and `data.description` feed the declarative fallback
-  card. Assignment takes a detached, deeply frozen snapshot of plain arrays/records, omitting blank
-  ids and later duplicates first-wins before layout, focus, selection, gestures, companion
-  snapshots, and events. At most the first 10,000 source nodes are retained, with finite nested
-  depth/entry budgets; reassign `nodes` after changes. Replacing the model cancels node-drag and
-  connect gestures whose ids belonged to the old model and silently prunes selected ids that no
-  longer exist.
+  `type`, `position`, `data`, `accessibleLabel`, `inputs`, `outputs`, and `disabled`. A missing
+  `position` opts into layered layout. String `data.label` and `data.description` feed the
+  declarative fallback card. Assignment takes a detached, deeply frozen snapshot of plain
+  arrays/records, omitting blank ids and later duplicates first-wins before layout, focus,
+  selection, gestures, companion snapshots, and events. At most the first 10,000 source nodes are
+  retained, with finite nested depth/entry budgets; reassign `nodes` after changes. Replacing the
+  model cancels node-drag and connect gestures whose ids belonged to the old model and silently
+  prunes selected ids that no longer exist. `disabled` marks a node non-actionable: it keeps its
+  position and card content but cannot be selected/activated by click or keyboard, roving-tabindex
+  navigation (arrow keys, Home/End) steps past it, it cannot be dragged even while
+  `nodes-draggable`, and it is excluded from starting or receiving a new connection while
+  `connectable` (an edge already touching it is left alone). Omitted or `false` renders the node
+  exactly as before this field existed.
 - `edges: readonly FlowEdge[] = []` (attribute: false) — readonly `id`, `source`, `target`, optional
   handle ids, optional drawn `label`, and optional `tone: LyraVariant`. The canonical brand value is
   `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract. Blank
@@ -4563,6 +4573,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly accessibleLabel?: string;
     readonly inputs?: readonly FlowHandle[];
     readonly outputs?: readonly FlowHandle[];
+    readonly disabled?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowRunDecoration {
@@ -4758,6 +4769,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly categoryId: string;
     readonly marker?: boolean;
     readonly label?: string;
+    readonly disabled?: boolean;
   }`
 
 - **`components-data-stat-stat-contracts`** — Supporting data types and helpers for this component family.

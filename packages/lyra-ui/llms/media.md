@@ -2048,6 +2048,16 @@ painted surface sits one boundary deeper),
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).
 
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
+`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
+paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
+`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
+than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
+those public tokens ahead of any default this component supplies. For SIZE use
+`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
+latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
+
 **Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-color-text`/
 `-text-quiet`, `--lr-icon-button-size`, `--lr-focus-ring-*`, `--lr-opacity-disabled`,
 `--lr-radius`, `--lr-transition-fast`.

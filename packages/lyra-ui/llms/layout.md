@@ -1626,6 +1626,16 @@ communicate the outcome itself. Both methods no-op when nothing is pending.
 
 **CSS parts:** `base` — the internal `role="list"` wrapper.
 
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
+`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
+paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
+`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
+than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
+those public tokens ahead of any default this component supplies. For SIZE use
+`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
+latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
+
 **Themeable custom properties:** `--lr-reorder-list-gap` (default `var(--lr-space-2xs)`) — gap
 between rows.
 
@@ -2556,10 +2566,22 @@ removing the label from the accessibility tree.
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
   since the label is already visible there. `false` (the default) reproduces the exact existing
   output.
+- `expanded: boolean = false` (reflected) — whether this item's own `children` are shown. `false`
+  reproduces exactly what an item without this property rendered before this feature existed.
+  Driven through the same request/commit pair as `<lr-app-rail-group>`'s `open`, see Events below.
 
 A host `aria-label` is copied to the rendered native link or button by attribute presence,
 including an explicitly empty value; without it, the default slot supplies the native name. The
-same precedence supplies the tooltip text when that opt-in flyout is visible.
+same precedence supplies the tooltip text when that opt-in flyout is visible, and the disclosure's
+interpolated `{label}` (see Events below).
+
+**Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
+disclosure (`detail: { open }` — the field is named `open`, matching `<lr-app-rail-group>`'s
+identical event name and detail shape exactly). Call `preventDefault()` to keep the current state,
+or assign `expanded` from the listener to resolve it yourself; a write during the dispatch
+suppresses the default commit even when it assigns the value the property already held. Not
+emitted for a direct `expanded` write. `lr-toggle` — non-cancelable, emitted after `expanded` is
+written, never for a vetoed or listener-resolved request (`detail: { open }`).
 
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
@@ -2582,6 +2604,28 @@ names the native control, which remains the sole action).
   control keeps its own click, keyboard activation and focus order instead of being swallowed.
   Unlike `meta` it stays visible in `icon-only` mode, where it shares the narrow rail's width with
   the icon.
+- `children` slot — nested `<lr-app-rail-item>`s disclosed beneath this item (the
+  treeitem-with-link pattern: the row itself navigates, a separate disclosure expands its own
+  child rows). Slotting anything into it grows a built-in `[part="toggle"]` disclosure button as a
+  SIBLING of the item's own link/button, never nested inside it, so the link keeps navigating on
+  its own and the disclosure keeps toggling on its own — clicking one never triggers the other.
+  Leaving `children` empty renders neither the disclosure nor `[part="children"]` at all: an item
+  authored without any `children` content renders byte-identically to one authored before this
+  slot existed. The disclosure carries `aria-expanded` (both states) and `aria-controls` pointing
+  at `[part="children"]`'s id, and a localized accessible name interpolating this item's own label
+  (`Expand {label}`/`Collapse {label}` in the default locale — no literal fallback, so a
+  `registerLyraLocale()` translation or a `.strings` override always reaches it). `<lr-app-rail-group>`
+  cannot express this pattern: its collapsible heading *is* the toggle, so a navigable link cannot
+  live inside it without nesting an interactive element inside a button.
+
+  `icon-only` forwards from this item onto every `<lr-app-rail-item>` it directly owns through
+  `children` — including ones appended later — exactly how `<lr-app-rail-group>` forwards onto the
+  items and nested groups it owns. The disclosure itself never changes shape between
+  presentations: it is always a fixed icon-button-sized square beside `[part="base"]`, reusing the
+  same hover/active/focus tokens as the link/button (`--lr-app-rail-item-hover-bg` etc.) rather than
+  a second disclosure-only set. There is no ancestor-current treatment — `<lr-app-rail-group>` has
+  no equivalent concept for a group containing the current item, so none is invented here either; a
+  current descendant stays perceivable only through its own `current` property.
 
 Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an item using neither
 renders exactly as before. Note that while the mobile overlay is open, a click anywhere in the
@@ -2593,7 +2637,13 @@ only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversat
 shipped `active-indicator` part — suppressed by default while `icon-only`, see the current-ring
 tokens below), `tooltip` (the hover/focus label flyout, only rendered while `tooltip` is set, the
 item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around the `meta` slot,
-hidden while empty) and `end` (the wrapper around the `end` slot, hidden while empty).
+hidden while empty), `end` (the wrapper around the `end` slot, hidden while empty), `toggle` (the
+`children` disclosure, rendered only while something is slotted into `children`; a sibling of
+`base`, never nested inside it), `toggle-icon` (the wrapper around the disclosure chevron,
+direction-aware through this wrapper's own `transform` — mirrors `<lr-app-rail-group>`'s own
+`[part="toggle-icon"]`) and `children` (the wrapper around the `children` slot, rendered only
+alongside `toggle`; hidden — but present, so `aria-controls` keeps resolving — while `expanded` is
+`false`).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-app-rail-item-current-color` (default
@@ -2644,6 +2694,17 @@ block size) instead of stretching across the rail's icon column. `--lr-app-rail-
 `min-block-size` floor — independent of `--lr-app-rail-item-min-block-size`, so a taller expanded
 row and an icon-only square pinned to `--lr-icon-button-size` can coexist. Unset, the square is
 still derived via `aspect-ratio: 1` against the row's block size exactly as before.
+
+**`--lr-positioning-strategy`** (16.0.0) — the icon-only flyout tooltip reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-app-rail-item>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset rail item's flyout beneath it.
+
+`--lr-app-rail-item-indent` (default `var(--lr-space-l)`) sets `[part="children"]`'s
+`padding-inline-start`. Applied once per nesting level — a doubly-nested `children` list compounds
+two insets automatically, since each level's own `[part="children"]` applies the token again.
+Logical, so it mirrors under `dir="rtl"` with no separate rule.
 
 **Optional peer deps:** none.
 
@@ -2969,6 +3030,13 @@ than its container or the viewport. (That guarantee is enforced by a registered 
 an out-of-syntax value falls back cleanly instead of invalidating the whole declaration; an engine
 without `CSS.registerProperty` degrades to "use `100%`, not `none`".) A menu contained by
 `<lr-dropdown>` sizes from its dropdown and is unaffected by both names.
+
+**`--lr-positioning-strategy`** (16.0.0) — the private submenu surface reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-menu>`; set the custom property on `:root`, a theme, or one clipping ancestor to
+change every unset submenu beneath it. A menu contained by `<lr-dropdown>` is positioned by the
+dropdown instead and is unaffected.
 
 **Methods:** no menu-specific public overlay methods. Use `<lr-dropdown>`'s `show()`/`hide()` and
 `open` state for an overlay. Menu-item submenu methods remain public because they drive a row's
@@ -4153,6 +4221,38 @@ omitted independently, while supplied empty strings remain valid. A custom defin
 adapter and a callable `render`; a rejected definition does not reserve its filter ID. Valid
 siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate.
 
+**Lean registration entry.** `components/layout/filter-bar/filter-bar.js` (the default entry)
+eagerly imports every composed control this bar could possibly render — `<lr-select>`,
+`<lr-combobox>`, `<lr-dropdown>` + `<lr-dropdown-item>` (the `'checkbox-menu'` branch),
+`<lr-date-input>`, `<lr-input>`, `<lr-chip>`/`<lr-chip-group>` (the active-filter row), and
+`<lr-button>`/`<lr-spinner>` (the reset action and the loading status) — because `filters` is a
+runtime value it cannot inspect ahead of time. A bar that only ever declares `'select'`/`'text'`
+filters still pays for `<lr-combobox>` and `<lr-date-input>` through that entry: a measured ~69.5 kB
+gzip more than importing only what it uses. A consumer who knows their own filter `type`s ahead of
+time can import `components/layout/filter-bar/filter-bar-register.js` instead, which registers
+`<lr-filter-bar>` and nothing else, then import each composed control's own registration entry for
+the filter `type`s actually declared:
+
+| Filter `type` | Registration entry |
+| --- | --- |
+| `'select'` | `components/forms/select/select.js` |
+| `'combobox'` | `components/forms/combobox/combobox.js` |
+| `'checkbox-menu'` | `components/overlays/overlay/dropdown.js` **and** `components/layout/menu/dropdown-item.js` |
+| `'date'` / `'date-range'` | `components/forms/date-picker/date-input.js` |
+| `'text'` | `components/forms/input/input.js` |
+
+Two more are unconditional regardless of which filter `type`s are declared: `<lr-button>` renders
+the reset action on every bar, and `<lr-chip>`/`<lr-chip-group>` render the active-filter row
+whenever any filter has a value (further gated by `activeFiltersDisplay`, but never provably absent
+for a generic bar) — `components/forms/button/button.js` and `components/overlays/chip/chip.js` +
+`components/overlays/chip/chip-group.js`. `<lr-spinner>`
+(`components/overlays/spinner/spinner.js`) is the one built-in dependency the lean entry omits even
+though every bar could use it: `loading` is a plain boolean any consumer can leave unset entirely,
+unlike a filter `type`, which `filters` always names outright — import it too if the bar ever sets
+`loading`. A filter definition whose `type` has no matching import above renders no usable control
+until something else registers it, the same trade `icon-button-register.js` documents for
+`<lr-icon-button>`'s own `icon`/`src` attribute.
+
 **Properties:**
 
 - `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
@@ -4177,8 +4277,20 @@ siblings remain available. Exceptions thrown by an admitted trusted renderer sti
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
 - `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
+  Drives the reset button's own disabled state; unaffected by `activeFiltersDisplay`.
 - `invalidFilterIds: readonly string[]` (read-only) — immutable ids of required filters whose
   values are unset.
+- `activeFiltersDisplay: 'all' | 'changed' | 'hidden' = 'all'` (reflected, attribute
+  `active-filters-display`) — which currently-active filters render as removable chips in the row
+  below the fields. `'all'` (the default, and this component's only behavior before this property
+  existed) shows one chip per non-empty filter, including one sitting at its own `defaultValue`.
+  `'changed'` shows a chip only for a filter whose value differs from its own `defaultValue` — so a
+  bar whose defaults narrow the view on load does not claim the user narrowed it — and a filter with
+  no declared `defaultValue` counts as changed as soon as it has any value at all. `'hidden'` never
+  renders the row. Array values compare against `defaultValue` positionally (same length, same entry
+  at each index), matching this component's only other array-equality precedent (a custom adapter's
+  own `clearValue` comparison); a `'date-range'` value is a single composed string, so it compares
+  like any other string. Removing a chip always clears that filter, unaffected by this property.
 
 The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
 height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
@@ -4207,12 +4319,13 @@ action) rendered inside `controls`, next to the reset button. Hidden and claimin
 space while nothing is slotted.
 
 **CSS parts:** `base`, `controls`, `field`, `field-<filterId>`, `end`, `filter-control`,
-`filter-control-label`, `filter-control-field`, `filter-control-input`, `filter-control-start`,
-`filter-control-end`, `filter-control-listbox`, `filter-control-option`, `filter-control-tags`,
-`filter-control-tag`, `filter-control-tag-label`, `filter-control-clear-button`,
-`filter-control-expand-button`, `filter-control-expand-icon`, `filter-control-popup`,
-`filter-control-error`, `filter-control-hint`, `active-filters`, `chips`, `chip`, `reset-button`,
-`status`.
+`filter-control-label`, `filter-control-label-group`, `filter-control-field`,
+`filter-control-input`, `filter-control-start`, `filter-control-end`, `filter-control-listbox`,
+`filter-control-option`, `filter-control-tags`, `filter-control-tag`, `filter-control-tag-label`,
+`filter-control-tag-remove-button`, `filter-control-tag-remove-button-base`,
+`filter-control-clear-button`, `filter-control-expand-button`, `filter-control-expand-icon`,
+`filter-control-popup`, `filter-control-error`, `filter-control-hint`, `active-filters`, `chips`,
+`chip`, `reset-button`, `status`.
 
 The `filter-control-*` parts are semantic aliases forwarded from each built-in control's shadow
 surface. `filter-control-field` consistently reaches the select trigger, combobox container, or
@@ -4220,9 +4333,23 @@ text/date input wrapper; `filter-control-input` reaches the corresponding displa
 Listbox/option aliases apply to select and combobox filters, `filter-control-tags`/
 `filter-control-tag`/`filter-control-tag-label` apply to a `multiple` combobox filter's selected-tag
 chips (`filter-control-tag-label` is capped by that control's own `--tag-max-size`), and
-expand-button/popup apply to date filters. This lets a consumer theme the composed tier from
+expand-button/popup apply to date filters. `filter-control-tag-remove-button`/
+`filter-control-tag-remove-button-base` reach a selected tag's own remove button and its inner icon
+wrapper — the same reach a standalone `lr-combobox`/`lr-select` consumer already has, now available
+from `lr-filter-bar` too, for a consumer re-skinning filter tags as pills who needs the remove
+target inside one to be stylable. This lets a consumer theme the composed tier from
 `lr-filter-bar::part(...)` without depending on the built-in control type selected by a filter
 definition. Custom renderers retain ownership of their own part forwarding.
+
+A `multiple` `'combobox'` filter collapses past its own `max-options-visible` (3 by default, an
+`<lr-combobox>` property this component does not forward) into a localized "+N" overflow indicator,
+the same substance as `lr-select`'s own `multiple`-mode overflow chip. The one remaining difference:
+`lr-select`'s overflow chip carries a second, distinguishing `tag-overflow` part
+(`part="tag tag-overflow tag__base"`) so a consumer can style just that chip; `lr-combobox`'s
+overflow chip carries only the plain `tag` part, with no equivalent token to forward as
+`filter-control-tag-overflow`. Adding one is `<lr-combobox>`'s own surface to grow, not something
+`lr-filter-bar`'s `exportparts` can manufacture for a part its composed child never renders — noted
+here as a known, deliberate gap rather than silently undocumented.
 On a `'checkbox-menu'` filter, `filter-control-field` is the trigger button's own frame — the
 element inside `<lr-button>` that draws the border, background and radius, not the chrome-less
 button host, so a `::part(filter-control-field) { border-color: … }` rule works there exactly as it
@@ -4231,7 +4358,19 @@ a definition `icon` lands), `filter-control-input` is its selection summary, `fi
 is the trigger's own label text (not a stacked label above the control), `filter-control-listbox` is
 the dropdown's popup surface, `filter-control-option` is one `role="menuitemcheckbox"` row, and
 `filter-control-error` is the revealed required message — rendered by the bar itself, because the
-composed dropdown has no error chrome of its own.
+composed dropdown has no error chrome of its own. The trigger also renders a `with-caret` disclosure
+chevron, matching `lr-select`'s own — forwarded as `filter-control-expand-icon`, the same name a
+select/combobox/date-input filter's own chevron already uses, so one consumer rule styles every
+filter type's expand icon. `filter-control-label-group` reaches the trigger's own label wrapper —
+the flex row this component lays `filter-control-label` and `filter-control-input` out in, which
+also grows to fill the stretched trigger (via `with-caret`) so its content starts at the leading
+edge instead of centring; no other filter type renders this part, since every other type's label and
+input are two independent elements with no shared wrapper of their own. This component does not
+render a stacked label above a `'checkbox-menu'` field the way every other built-in type does:
+every other type's stacked label is rendered by the composed control itself, and there is no
+equivalent shared "stacked label" template inside `<lr-filter-bar>` for this branch to reuse without
+inventing a new one, so `labelVisibility` keeps its narrower meaning here (whether the trigger's own
+baked-in label text is visible or screen-reader-only).
 
 `field` wraps one filter's composed control and its validation spacer inside `controls`; its
 flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-size-12rem)`).
@@ -4249,12 +4388,17 @@ alone, exactly as before this part existed, rather than risking a `part` attribu
 space-separated token list fabricates an unrelated second token.
 
 A `'select'`, `'combobox'` or `'checkbox-menu'` filter's required `options` entries are
-`LyraFilterBarOption { value, label, icon?, searchText? }`. `searchText` is extra text the option
-also matches on, forwarded verbatim to `<lr-option>`'s own `search-text`, so a row can keep a short
-visible `label` ("Urgent") while still matching a long canonical key ("SEV-1 production outage").
-It affects a `'combobox'` filter only: the attribute is written on every choice type's `<lr-option>`,
-but `<lr-select>`'s listbox type-ahead matches the option's `label` alone and never reads it, and a
-`'checkbox-menu'` has no text entry to match against.
+`LyraFilterBarOption { value, label, icon?, searchText?, disabled? }`. `searchText` is extra text
+the option also matches on, forwarded verbatim to `<lr-option>`'s own `search-text`, so a row can
+keep a short visible `label` ("Urgent") while still matching a long canonical key ("SEV-1
+production outage"). It affects a `'combobox'` filter only: the attribute is written on every
+choice type's `<lr-option>`, but `<lr-select>`'s listbox type-ahead matches the option's `label`
+alone and never reads it, and a `'checkbox-menu'` has no text entry to match against. `disabled`
+marks the option non-actionable: forwarded to `<lr-option disabled>` for `'select'`/`'combobox'`
+and to the composed `<lr-dropdown-item disabled>` for `'checkbox-menu'`, so the row renders
+genuinely disabled (no tab/roving stop, no hover/press affordance) and arrow-key navigation already
+steps past it, since that is the composed control's own existing `disabled` behavior. Omitted or
+`false` renders the option exactly as before this field existed.
 `icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
 `<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
 accessible name:
@@ -4998,6 +5142,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly icon?: unknown;
     readonly searchText?: string;
+    readonly disabled?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
   `LyraFilterBarResetDetail {

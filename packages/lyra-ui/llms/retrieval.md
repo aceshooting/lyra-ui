@@ -670,6 +670,12 @@ The anchored detail popover is a floating surface and paints from the **shared o
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
+`--lr-positioning-strategy` (16.0.0) — the preview popover reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-entity-chip>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset entity chip beneath it.
+
 **Optional peer deps:** none.
 
 ```html
@@ -1295,6 +1301,12 @@ The anchored source-preview popover is a floating surface and paints from the **
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+
+`--lr-positioning-strategy` (16.0.0) — the source-preview popover reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-citation-badge>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset citation badge beneath it.
 
 **Optional peer deps:** none.
 

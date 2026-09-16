@@ -1536,6 +1536,12 @@ state hooks are `--lr-date-input-action-hover-color`, `--lr-date-input-action-ho
 `--lr-date-input-action-active-radius` for the pressed state. They inherit from theme ancestors;
 direct values on `lr-date-input` win without retuning library-wide tokens.
 
+`--lr-positioning-strategy` (16.0.0) — the calendar popup reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-date-input>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset date input beneath it.
+
 **Optional peer deps:** none.
 
 ```html
@@ -3204,6 +3210,12 @@ resolves to the plain page surface in light mode and would erase that separation
 mode the raised tone is already distinct from the page, so this panel never had the
 reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
 along with every other popup.
+
+`--lr-positioning-strategy` (16.0.0) — the `popup` panel reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-time-input>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset time input beneath it.
 
 ```html
 <lr-time-input
@@ -5610,12 +5622,15 @@ and:
   applies to the whole string, function names included (`RGB(255, 0, 0)`)
 - `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
   `;`-separated string, an array of colour strings, or an array of
-  `{ color: string; label?: string }` objects. Any colour the picker can parse is accepted; blank
-  entries are dropped. An entry that is _not_ parseable is kept in the list and still renders a
-  swatch — it just paints no colour (the bare checkerboard) and clicking it does nothing, so filter
-  the palette yourself if that matters. `label` becomes the swatch's accessible name; a missing,
-  empty, or whitespace-only label falls back to announcing the raw colour string. The palette
-  container renders only while the normalized list is non-empty
+  `{ color: string; label?: string; disabled?: boolean }` objects. Any colour the picker can parse
+  is accepted; blank entries are dropped. An entry that is _not_ parseable is kept in the list and
+  still renders a swatch — it just paints no colour (the bare checkerboard) and clicking it does
+  nothing, so filter the palette yourself if that matters. `label` becomes the swatch's accessible
+  name; a missing, empty, or whitespace-only label falls back to announcing the raw colour string.
+  `disabled` marks that one swatch non-actionable, independent of the whole control's own
+  `disabled`: it renders a genuinely disabled `<button>` (no tab stop, no hover/press affordance)
+  and clicking it commits nothing; omitted or `false` renders the swatch exactly as before this
+  field existed. The palette container renders only while the normalized list is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
   that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
   reaches the same behavior; either one wins
@@ -6269,6 +6284,12 @@ this listbox together with every other floating surface. `--lr-overlay-radius` r
 only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
 set: a component-scoped override outranks the shared family, never the other way round.
 
+`--lr-positioning-strategy` (16.0.0) — the listbox reads this same cascading `absolute`/`fixed`
+override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
+default when nothing is set. There is no per-instance `positioning-strategy` property on
+`<lr-locale-picker>`; set the custom property on `:root`, a theme, or one clipping ancestor to
+change every unset locale picker beneath it.
+
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional
 `@aceshooting/lyra-flags` package isn't installed and `showFlags` is left on.
@@ -6353,6 +6374,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraColorPickerSwatch {
     color: string;
     label?: string;
+    disabled?: boolean;
   }`
 
 - **`components-forms-combobox-combobox-contracts`** — Supporting data types and helpers for this component family.

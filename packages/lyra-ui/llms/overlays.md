@@ -609,6 +609,16 @@ controls, rendered before the built-in close button), `footer` — all inherited
 Names grouped together are aliases on the same functional node; `close-button__control` is the
 composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` as of 16.0.0.
 
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
+`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
+paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
+`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
+than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
+those public tokens ahead of any default this component supplies. For SIZE use
+`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
+latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
+
 **Themeable custom properties:** mapped `--size` controls the active axis. For start/end drawers,
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
 `--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap,
@@ -832,6 +842,16 @@ It never steals initial focus from real content: an `[autofocus]` element wins, 
 focusable control _inside_ the body, and the body itself is used only when there is nothing else to
 focus. So a dialog full of form controls behaves exactly as before, and a dialog full of text is now
 scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
+
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
+`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
+paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
+`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
+than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
+those public tokens ahead of any default this component supplies. For SIZE use
+`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
+latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
 
 **Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
@@ -2603,6 +2623,16 @@ The surface chrome lives on the custom-element host, not inside `base`. Ordinary
 `background`, `border`, `border-radius`, `color`, `padding`, and `margin` declarations therefore
 work directly and take normal author precedence. `inline` removes the host's border, background,
 and padding.
+
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
+`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
+paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
+`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
+than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
+those public tokens ahead of any default this component supplies. For SIZE use
+`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
+latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
 
 **Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`, and
 `--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud

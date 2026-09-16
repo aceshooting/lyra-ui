@@ -1207,7 +1207,11 @@ focus move.
 
 **Exported types:**
 
-- `LyraCatalogEntry { id: string; label: string }` — the shared minimum row vocabulary.
+- `LyraCatalogEntry { id: string; label: string; disabled?: boolean }` — the shared minimum row
+  vocabulary. `disabled` marks a row non-actionable: `aria-disabled="true"` replaces its
+  selected/active affordances, activating it (click or keyboard) commits nothing and changes no
+  state, and arrow-key/Home/End active-descendant navigation steps past it instead of landing on
+  it. Omitted or `false` renders the row exactly as before this field existed.
 - `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
   — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
   shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids
@@ -1476,6 +1480,32 @@ not a delta — this component does no accumulation or ordering of its own.
   `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
   untouched.
 
+The rest of `<lr-markdown>`'s configuration surface forwards verbatim too, each defaulting to
+exactly `<lr-markdown>`'s own default so leaving it unset renders identically to before these
+properties existed:
+
+- `tabSize: number = 4` (attribute `tab-size`) — forwarded to the composed `<lr-markdown>`'s own
+  `tabSize`.
+- `htmlMode: 'sanitize' | 'escape' | 'trusted' = 'sanitize'` (attribute `html-mode`) — forwarded to
+  the composed `<lr-markdown>`'s own `htmlMode`.
+- `gfm: boolean = true` — forwarded to the composed `<lr-markdown>`'s own `gfm`.
+- `linkTarget: string | null = '_blank'` (attribute `link-target`) — forwarded to the composed
+  `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
+  `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
+  non-default value, and never a bare `opener`.
+- `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — forwarded to the composed
+  `<lr-markdown>`'s own `internalLinkPrefix`.
+- `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
+  `<lr-markdown>`'s own `headingOffset`.
+- `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
+  `<lr-markdown>`'s own `highlightCode`.
+- `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
+  `<lr-markdown>`'s own `headingAnchors`.
+- `math: boolean = false` — forwarded to the composed `<lr-markdown>`'s own `math`; the transitive
+  `katex` peer is requested only once this is set.
+- `maxHeight: string = ''` (attribute `max-height`) — forwarded to the composed `<lr-markdown>`'s
+  own `maxHeight`.
+
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — runs a fixed, ordered list of
 lightweight regexes (ATX heading, fenced code block, `**bold**`, `_italic_`, inline code, bullet
 list item, numbered list item, `[text](url)` link, blockquote) against the whole string and returns
@@ -1512,8 +1542,9 @@ does not register it separately), so its optional-peer module graph includes `ma
 stay on the peer-free plain-text path; Markdown rendering lazy-loads `marked` plus the default
 `dompurify` sanitizer and falls back to readable plain text if either is unavailable. Fenced code
 can additionally use `shiki`, whose absence only leaves code unhighlighted. The composed Markdown
-implementation contains the opt-in `katex` loader, but this wrapper does not enable its `math`
-property and therefore never requests `katex` itself.
+implementation contains the opt-in `katex` loader; this wrapper forwards its own `math` property
+(default `false`) to the composed element verbatim, so `katex` is requested only once a consumer
+sets `math` here.
 
 ```html
 <lr-streaming-text id="out" coalesce-ms="80" streaming></lr-streaming-text>
@@ -1538,8 +1569,11 @@ never be left stranded mid-window, and a stream restarting on a reused element c
 showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
-forwarding this component's own `streaming` through as that component's `streaming` hint prop and
-`languages` verbatim; plain-text mode renders into a `white-space: pre-wrap` span instead. The
+forwarding this component's own `streaming` through as that component's `streaming` hint prop,
+`languages` verbatim, and the rest of `<lr-markdown>`'s configuration surface verbatim too
+(`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+`highlightCode`, `headingAnchors`, `math`, `maxHeight` — see **Properties** above); plain-text mode
+renders into a `white-space: pre-wrap` span instead. The
 blinking cursor degrades
 to a static, always-visible bar under `prefers-reduced-motion: reduce`. In plain-text mode it sits
 inline at the tail of the final character; in Markdown mode it renders as its own trailing block
@@ -1567,13 +1601,15 @@ happens to end with.
 A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `languages` map already
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
-`lr-content-settled` event, the `languages` property — is identical to `<lr-streaming-text>`; only
-which Markdown element Markdown mode composes differs: this variant renders `<lr-markdown-core>`
-(`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this entry point instead
-of `streaming-text.js` never references `<lr-markdown>`'s ~200-language dynamic-import table at
-all. A fenced code block whose language isn't a key in `languages` always renders the plain-text
-fallback — there is no default/full-table highlighter here to fall back to, mirroring
-`<lr-markdown-core>`'s own contract.
+`lr-content-settled` event, the `languages` property, and the full forwarded Markdown configuration
+surface (`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+`highlightCode`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
+only which Markdown element Markdown mode composes differs: this variant renders
+`<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
+entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
+dynamic-import table at all. A fenced code block whose language isn't a key in `languages` always
+renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
+mirroring `<lr-markdown-core>`'s own contract.
 
 **Properties:** `content: string = ''` — the full current text so far, identical contract to
 `<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
@@ -1582,7 +1618,18 @@ fallback — there is no default/full-table highlighter here to fall back to, mi
 `content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
 Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
-`<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s.
+`<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s (defaulting the composed
+element's own `languages` to `{}` when unset, unlike the full variant's `undefined`). The rest of
+`<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
+attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
+`tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
+'sanitize'` (attribute `html-mode`); `gfm: boolean = true`; `linkTarget: string | null = '_blank'`
+(attribute `link-target`, still guarded by the composed element's own
+`rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
+(attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
+`highlightCode: boolean = true` (attribute `highlight-code`); `headingAnchors: boolean = false`
+(attribute `heading-anchors`); `math: boolean = false`; `maxHeight: string = ''` (attribute
+`max-height`).
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
 `<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
@@ -1841,6 +1888,16 @@ header gap — a rule that sets `display` on it must qualify itself with `:not([
 `code`, `line-highlight` (a line marked by `highlightLines` or a `line-range` entry in `highlights`),
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)
+
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
+`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
+paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
+`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
+than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
+those public tokens ahead of any default this component supplies. For SIZE use
+`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
+latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
 
 **Themeable custom properties:** `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
@@ -2337,6 +2394,16 @@ or an ancestor, or reach a built-in's composed native control directly through
 media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
 override lowered it, so the shrink is safe on a touch device.
 
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only actions are composed
+`<lr-icon-button>`s, so a part naming one of them now names the composed child's HOST, which paints
+nothing. A `border`, `background` or `border-radius` set on it is silently dead — only `color` still
+appears to work, because it inherits, which makes such a rule look half-alive rather than broken.
+Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their `-hover`/`-active`
+variants) on this element or an ancestor instead: the composed control reads those public tokens
+ahead of any default this component supplies. For SIZE use `--lr-theme-icon-button-size`, not
+`--lr-icon-button-size` — every `LyraElement` re-declares the latter on its own `:host`, so it never
+reaches a composed child (see `llms/tokens.md`).
+
 ## `lr-message-feedback`
 
 Thumbs up/down for one assistant message, with an optional inline detail step (categorical reason
@@ -2674,12 +2741,15 @@ identifier disappears, focus repairs to the nearest surviving occurrence without
 external focus move.
 
 **Properties:** `suggestions: readonly LyraChatSuggestion[] = []` (attribute: false) —
-`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string }`
+`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string; disabled?: boolean }`
 (exported here). Identifiers must be nonempty and unique; invalid/later duplicates are omitted with
 the first valid occurrence winning. The input is clone-owned, bounded, and frozen; reassign a new
 array after changing the sequence or a row. `icon` is an optional
 peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
-`detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
+`detail` is an optional secondary line. `disabled` marks a suggestion non-actionable: its chip
+renders a genuinely disabled `<button>` (no roving tab stop, no hover/press affordance), activating
+it emits nothing, and arrow-key/Home/End roving navigation steps past it. Empty renders nothing at
+all. `wrap: boolean = false`
 (reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label?:
 string` — accessible name for the group. Omitting it uses the localized `suggestionsLabel`; an
 explicit empty string intentionally leaves the group unnamed.
@@ -3096,6 +3166,12 @@ family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overl
 ancestor, to scope it — retints this surface together with every other floating surface in the
 library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
+`--lr-positioning-strategy` (16.0.0) — the breakdown tooltip reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-usage-badge>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset usage badge beneath it.
+
 ```html
 <lr-chat-message message-role="assistant" status="sent">
   <lr-usage-badge
@@ -3339,8 +3415,11 @@ popup. Ordinary keyboard behavior resumes after composition.
 **Exported types:** `LyraVoiceCatalogEntry extends LyraCatalogEntry { language?: string;
 description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
 `[part="option-meta"]` second line. Voice catalogs use the shared
-`LyraCatalog<LyraVoiceCatalogEntry>` homogeneous readonly union documented under `lr-model-select`.
-The public `size` property uses `LyraSize`, including the long-form aliases.
+`LyraCatalog<LyraVoiceCatalogEntry>` homogeneous readonly union documented under `lr-model-select`,
+including the shared `disabled` field: a disabled voice row cannot be selected by click or keyboard
+and is stepped over by arrow-key/Home/End navigation, but its own `[part="option-preview"]` stays
+independently clickable, since previewing a voice is a separate affordance from selecting it. The
+public `size` property uses `LyraSize`, including the long-form aliases.
 `LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
 selection direction exposed in free-text mode.
 
@@ -4280,6 +4359,7 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from LyraCatalogEntry.
     id: string;
     label: string;
+    disabled?: boolean;
   }`
 
 - **`components-conversation-model-settings-panel-model-settings-panel-contracts`** — Supporting data types and helpers for this component family.
@@ -4352,6 +4432,7 @@ These named interfaces and helper signatures are available to typed integrations
     label: string;
     icon?: string;
     detail?: string;
+    disabled?: boolean;
   }`
 
 - **`components-conversation-transcript-feed-transcript-feed-contracts`** — Supporting data types and helpers for this component family.
@@ -4373,6 +4454,7 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from LyraCatalogEntry.
     id: string;
     label: string;
+    disabled?: boolean;
   }`
 
 - **`internal-catalog-picker-contracts`** — Shared utility contracts.
@@ -4380,4 +4462,5 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraCatalogEntry {
     id: string;
     label: string;
+    disabled?: boolean;
   }`

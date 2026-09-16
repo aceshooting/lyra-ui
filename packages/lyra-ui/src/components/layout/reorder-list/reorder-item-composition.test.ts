@@ -5,7 +5,7 @@ import './reorder-list.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px;';
+  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
 
 function movePart(el: LyraReorderItem, part: string): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!;
@@ -38,6 +38,11 @@ describe('lr-reorder-item: composed move lr-icon-buttons', () => {
     const style = getComputedStyle(nativeControl(el, 'move-up-button'));
     expect(style.backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(style.borderTopLeftRadius).to.equal('11px');
+    // Border is reachable through the same public token as the other paint properties. This
+    // component sets no border default of its own, so the ancestor value is what paints -- the
+    // composed control reads the public token ahead of any contextual default.
+    expect(style.borderTopWidth, 'the ancestor border token reaches the control').to.equal('2px');
+    expect(style.borderTopColor).to.equal('rgb(9, 8, 7)');
   });
 
   it('keeps the composed accessible name that names the verb and the row', async () => {
