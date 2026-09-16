@@ -826,6 +826,116 @@ describe('current-indicator part', () => {
   });
 });
 
+describe('current-indicator icon-only presentation', () => {
+  it('renders the indicator display byte-identical to unset (block, via absolute positioning) in full presentation', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home" current>Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const indicator = el.shadowRoot!.querySelector(
+      '[part="current-indicator"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(indicator).display).to.not.equal('none');
+  });
+
+  it('suppresses the indicator by default in icon-only presentation', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item icon-only current href="/home">Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const indicator = el.shadowRoot!.querySelector(
+      '[part="current-indicator"]'
+    ) as HTMLElement;
+    // Still rendered (current drives its presence in the DOM, not icon-only) -- only its
+    // computed display is suppressed, so a set --lr-app-rail-item-current-indicator-display can
+    // restore it without a re-render.
+    expect(indicator).to.exist;
+    expect(getComputedStyle(indicator).display).to.equal('none');
+  });
+
+  it('restores the icon-only indicator from a set --lr-app-rail-item-current-indicator-display', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-app-rail-item-current-indicator-display: block;">
+        <lr-app-rail-item icon-only current href="/home">Home</lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const indicator = el.shadowRoot!.querySelector(
+      '[part="current-indicator"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(indicator).display).to.equal('block');
+  });
+
+  it('suppresses the icon-only indicator the same way under dir="rtl"', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item dir="rtl" icon-only current href="/home">Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const indicator = el.shadowRoot!.querySelector(
+      '[part="current-indicator"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(indicator).display).to.equal('none');
+  });
+});
+
+describe('current-ring token', () => {
+  it('renders no ring in full presentation when unset (regression)', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home" current>Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).boxShadow).to.equal('none');
+  });
+
+  it('renders no ring on a non-current icon-only item', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item icon-only href="/home">Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).boxShadow).to.equal('none');
+  });
+
+  it('adds a non-color-only ring on a current icon-only item by default, replacing the suppressed bar', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item icon-only current href="/home">Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const boxShadow = getComputedStyle(base).boxShadow;
+    expect(boxShadow).to.not.equal('none');
+    expect(boxShadow).to.contain('inset');
+  });
+
+  it('applies an explicit --lr-app-rail-item-current-ring identically in full and icon-only presentations', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-app-rail-item-current-ring: inset 0 0 0 3px rgb(9, 8, 7);">
+        <lr-app-rail-item href="/home" current id="full-current">Home</lr-app-rail-item>
+        <lr-app-rail-item icon-only current href="/inbox" id="icon-current">Inbox</lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const full = wrapper.querySelector('#full-current') as LyraAppRailItem;
+    const icon = wrapper.querySelector('#icon-current') as LyraAppRailItem;
+    const fullBase = full.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const iconBase = icon.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const expected = getComputedStyle(fullBase).boxShadow;
+    expect(expected).to.not.equal('none');
+    expect(getComputedStyle(iconBase).boxShadow).to.equal(expected);
+  });
+
+  it('keeps the ring perceivable under dir="rtl"', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item dir="rtl" icon-only current href="/home">Home</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).boxShadow).to.not.equal('none');
+  });
+
+  it('is accessible while current, icon-only, and ringed', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item href="/home" aria-label="Home" icon-only current
+        ><span slot="icon" aria-hidden="true">*</span>Home</lr-app-rail-item
+      >`
+    )) as LyraAppRailItem;
+    await expect(el).to.be.accessible();
+  });
+});
+
 describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
   function resolvedInShadow(
     el: LyraAppRailItem,
@@ -953,6 +1063,41 @@ describe('icon-only square hit area', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const rect = base.getBoundingClientRect();
     expect(rect.width).to.be.above(rect.height);
+  });
+
+  it('keeps deriving the square from a taller row height when --lr-app-rail-item-icon-only-size is unset (regression)', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-app-rail-item-min-block-size: 64px;">
+        <lr-app-rail-item icon-only href="/inbox">
+          <span slot="icon" aria-hidden="true">*</span>Inbox
+        </lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const rect = base.getBoundingClientRect();
+    expect(Math.abs(rect.width - rect.height)).to.be.below(1);
+    expect(Math.round(rect.height)).to.equal(64);
+  });
+
+  it('sizes the icon-only square from --lr-app-rail-item-icon-only-size independently of a taller row height', async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-app-rail-item-min-block-size: 64px;
+          --lr-app-rail-item-icon-only-size: 40px;
+        "
+      >
+        <lr-app-rail-item icon-only href="/inbox">
+          <span slot="icon" aria-hidden="true">*</span>Inbox
+        </lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const rect = base.getBoundingClientRect();
+    expect(Math.abs(rect.width - rect.height)).to.be.below(1);
+    expect(Math.round(rect.width)).to.equal(40);
   });
 });
 

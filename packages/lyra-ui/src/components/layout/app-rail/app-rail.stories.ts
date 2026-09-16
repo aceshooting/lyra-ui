@@ -231,6 +231,35 @@ export const MobilePanelBelowAppBar: Story = {
   `,
 };
 
+export const FlushDrawerPerCornerRadius: Story = {
+  name: "Flush drawer per-corner radius and nav spacing (cssprops)",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The mobile drawer sits flush against its own inline-start edge, so only the two corners away from it are rounded here via --lr-app-rail-panel-radius-start-end/-end-end -- the flush inline-start corners stay square. Both mirror automatically under dir=\"rtl\" with no second rule. --lr-app-rail-nav-padding/-gap retune [part=\"nav\"]'s own padding and inter-item gap.",
+      },
+    },
+  },
+  render: () => html`
+    <lr-app-rail
+      label="Primary"
+      open
+      mobile-breakpoint="9999px"
+      style="
+        block-size: var(--lr-size-22rem);
+        --lr-app-rail-panel-radius-start-end: var(--lr-radius);
+        --lr-app-rail-panel-radius-end-end: var(--lr-radius);
+        --lr-app-rail-nav-padding: var(--lr-space-m);
+        --lr-app-rail-nav-gap: var(--lr-space-m);
+      "
+    >
+      ${navItems}
+      <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
+    </lr-app-rail>
+  `,
+};
+
 export const ThemedInteractionStates: Story = {
   name: "Themed interaction states",
   parameters: {

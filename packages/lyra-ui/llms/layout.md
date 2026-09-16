@@ -2393,9 +2393,18 @@ width), `--lr-app-rail-overlay-color` (default `var(--lr-color-overlay)` — the
 color; component-specific since no shared token exists), `--lr-app-rail-panel-inset-block-start`
 (default `0`, applied to both `[part="panel"]` and `[part="backdrop"]` — raise it to leave room for
 a fixed app bar/status area above the drawer instead of the panel/scrim starting flush with the
-viewport top), `--lr-app-rail-panel-radius` (default `0` — corner radius of `[part="panel"]`; pairs
-naturally with a nonzero `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top
-corners), `--lr-app-rail-panel-overflow-block` (default `auto`) and
+viewport top), `--lr-app-rail-panel-radius` (default `0` — uniform corner radius of `[part="panel"]`;
+pairs naturally with a nonzero `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top
+corners). Four direction-aware per-corner tokens each default to `--lr-app-rail-panel-radius`, so
+setting only the uniform token still rounds all four corners exactly as before:
+`--lr-app-rail-panel-radius-start-start` and `--lr-app-rail-panel-radius-end-start` (logical
+`border-start-start-radius`/`border-end-start-radius` — the two corners at the panel's own flush
+inline-start edge, since the drawer always sits flush against `inset-inline-start: 0`) and
+`--lr-app-rail-panel-radius-start-end`/`--lr-app-rail-panel-radius-end-end` (logical
+`border-start-end-radius`/`border-end-end-radius` — the two corners away from that flush edge, the
+pair a flush-against-one-edge drawer typically rounds). All four are logical, so which physical
+corner each one paints swaps under `dir="rtl"` with no second consumer rule.
+`--lr-app-rail-panel-overflow-block` (default `auto`) and
 `--lr-app-rail-panel-overflow-inline` (default `clip`) — `[part="panel"]`'s logical overflow axes;
 either non-`visible` value clips a `position: fixed` popup opened by a slotted/nav-item control
 (e.g. a slotted `<lr-select>`/`<lr-menu>`) whenever its rendered box extends past the panel,
@@ -2411,7 +2420,10 @@ docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-pa
 `var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
 `--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
 reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
-mounts or resizes asynchronously. Plus shared
+mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail-nav-gap` (default
+`var(--lr-space-s)`/`var(--lr-space-xs)`, the values this rule hard-coded before either token
+existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm,
+previously reachable only through `::part(nav)`. Plus shared
 tokens (`--lr-color-border`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
@@ -2578,10 +2590,10 @@ nav-slot behaviour, not new to these slots.
 
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
-shipped `active-indicator` part), `tooltip` (the hover/focus label flyout, only rendered while
-`tooltip` is set, the item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around
-the `meta` slot, hidden while empty) and `end` (the wrapper around the `end` slot, hidden while
-empty).
+shipped `active-indicator` part — suppressed by default while `icon-only`, see the current-ring
+tokens below), `tooltip` (the hover/focus label flyout, only rendered while `tooltip` is set, the
+item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around the `meta` slot,
+hidden while empty) and `end` (the wrapper around the `end` slot, hidden while empty).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-app-rail-item-current-color` (default
@@ -2600,6 +2612,16 @@ before. `--lr-app-rail-item-current-font-weight` mirrors `<lr-stepper>`'s
 `--lr-app-rail-item-current-indicator-width` (default `var(--lr-size-2px)`), and
 `--lr-app-rail-item-current-indicator-inset-inline` (default `0 auto`; set `auto 0` to place the
 indicator at the inline-end edge instead) theme `[part="current-indicator"]`.
+`--lr-app-rail-item-current-indicator-display` (no default; unset resolves to `none` while
+`icon-only`) restores the indicator bar in icon-only presentation — a full-height edge bar reads
+as a rendering glitch on the square icon-only tile, so it is suppressed there by default; full
+presentation is unaffected either way, since its own `[part="current-indicator"]` rule declares no
+`display` at all. `--lr-app-rail-item-current-ring` (no default; unset resolves to `none` in full
+presentation and an inset ring in icon-only presentation) sets `box-shadow` on `[part="base"]`
+while current: unset, icon-only gets an inset ring automatically — the non-color-only signal
+(WCAG 1.4.1) that replaces the bar suppressed there, since full presentation already conveys
+current state through the indicator bar and `--lr-app-rail-item-current-font-weight`. Setting this
+token explicitly applies the same value in both presentations.
 Ordinary interaction states are independently inheritable through
 `--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
 `--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
@@ -2617,7 +2639,11 @@ floor-clamped since the icon is decorative, not itself a pointer target), and
 is retuned while family/weight/line-height stay inherited) retune the row's geometry.
 While `icon-only`, `[part="base"]` resolves to a square hit target matching the icon-button
 footprint used elsewhere in this library (`aspect-ratio: 1` against its already floor-clamped
-block size) instead of stretching across the rail's icon column.
+block size) instead of stretching across the rail's icon column. `--lr-app-rail-item-icon-only-size`
+(no default) sizes that square directly — both `inline-size` and `block-size`, and the row's own
+`min-block-size` floor — independent of `--lr-app-rail-item-min-block-size`, so a taller expanded
+row and an icon-only square pinned to `--lr-icon-button-size` can coexist. Unset, the square is
+still derived via `aspect-ratio: 1` against the row's block size exactly as before.
 
 **Optional peer deps:** none.
 

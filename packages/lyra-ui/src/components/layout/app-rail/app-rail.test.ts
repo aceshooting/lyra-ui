@@ -358,6 +358,31 @@ it("hides app-rail-item labels visually in icon-only mode while retaining their 
   expect(getComputedStyle(label).position).to.not.equal("absolute");
 });
 
+it("suppresses a current item's indicator bar while the rail-driven icon-only attribute is set, and restores it when the rail returns to full", async () => {
+  const el = (await fixture(html`
+    <lr-app-rail force-mode="icon-only">
+      <lr-app-rail-item href="/inbox" current aria-label="Inbox">
+        <span slot="icon" aria-hidden="true">📥</span>Inbox
+      </lr-app-rail-item>
+    </lr-app-rail>
+  `)) as LyraAppRail;
+  const item = el.querySelector("lr-app-rail-item")! as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await item.updateComplete;
+  expect(item.hasAttribute("icon-only")).to.be.true;
+  const indicator = item.shadowRoot!.querySelector(
+    '[part="current-indicator"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(indicator).display).to.equal("none");
+
+  el.forceMode = "full";
+  await el.updateComplete;
+  await item.updateComplete;
+  expect(item.hasAttribute("icon-only")).to.be.false;
+  expect(getComputedStyle(indicator).display).to.not.equal("none");
+});
+
 it("releases parent-owned icon-only state when an item leaves the rail", async () => {
   const wrapper = (await fixture(html`
     <div>
@@ -3052,6 +3077,65 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     expect(getComputedStyle(panel).borderTopLeftRadius).to.equal("12px");
   });
 
+  it("renders the four per-corner panel radius tokens byte-identical to 0 when unset", async () => {
+    const el = await openMobile();
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const computed = getComputedStyle(panel);
+    expect(computed.borderTopLeftRadius).to.equal("0px");
+    expect(computed.borderTopRightRadius).to.equal("0px");
+    expect(computed.borderBottomLeftRadius).to.equal("0px");
+    expect(computed.borderBottomRightRadius).to.equal("0px");
+  });
+
+  it("rounds only the two corners away from the flush inline-start edge from --lr-app-rail-panel-radius-start-end/-end-end", async () => {
+    const el = await openMobile(
+      "--lr-app-rail-panel-radius-start-end: 12px; --lr-app-rail-panel-radius-end-end: 12px;"
+    );
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const computed = getComputedStyle(panel);
+    // LTR: inline-start is physical left (the panel's own flush edge -- inset-inline-start: 0),
+    // so the -end corner tokens (inline-end, physical right) are the ones set here.
+    expect(computed.borderTopLeftRadius).to.equal("0px");
+    expect(computed.borderBottomLeftRadius).to.equal("0px");
+    expect(computed.borderTopRightRadius).to.equal("12px");
+    expect(computed.borderBottomRightRadius).to.equal("12px");
+  });
+
+  it('mirrors the same free-corner tokens to the opposite physical side under dir="rtl", with no second rule', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail
+        dir="rtl"
+        open
+        style="--lr-app-rail-panel-radius-start-end: 12px; --lr-app-rail-panel-radius-end-end: 12px;"
+        ><button>a</button></lr-app-rail
+      >`
+    )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const computed = getComputedStyle(panel);
+    // RTL: inline-start (the panel's still-flush edge) is now physical right, so the same
+    // -end corner tokens now paint the physical LEFT corners instead -- proving the mirror without
+    // touching the tokens or adding a :host(:dir(rtl)) rule of our own.
+    expect(computed.borderTopRightRadius).to.equal("0px");
+    expect(computed.borderBottomRightRadius).to.equal("0px");
+    expect(computed.borderTopLeftRadius).to.equal("12px");
+    expect(computed.borderBottomLeftRadius).to.equal("12px");
+  });
+
+  it("lets a per-corner token win over the uniform --lr-app-rail-panel-radius for just that corner", async () => {
+    const el = await openMobile(
+      "--lr-app-rail-panel-radius: 4px; --lr-app-rail-panel-radius-start-start: 20px;"
+    );
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const computed = getComputedStyle(panel);
+    expect(computed.borderTopLeftRadius).to.equal("20px");
+    expect(computed.borderTopRightRadius).to.equal("4px");
+    expect(computed.borderBottomLeftRadius).to.equal("4px");
+    expect(computed.borderBottomRightRadius).to.equal("4px");
+  });
+
   it("renders --lr-app-rail-panel-overflow-inline/-block byte-identical to clip/auto when unset", async () => {
     const el = await openMobile();
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -3173,6 +3257,34 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     await el.updateComplete;
     const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
     expect(getComputedStyle(header).minBlockSize).to.equal("96px");
+  });
+
+  it("renders [part=\"nav\"]'s padding/gap byte-identical to their prior hard-coded values when unset", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail><button>a</button></lr-app-rail>`
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const nav = el.shadowRoot!.querySelector('[part="nav"]') as HTMLElement;
+    expect(getComputedStyle(nav).padding).to.equal(
+      resolvedInShadow(el, "padding: var(--lr-space-s)", "padding")
+    );
+    expect(getComputedStyle(nav).gap).to.equal(
+      resolvedInShadow(el, "gap: var(--lr-space-xs)", "gap")
+    );
+  });
+
+  it("retunes [part=\"nav\"]'s padding/gap from --lr-app-rail-nav-padding/--lr-app-rail-nav-gap", async () => {
+    const el = (await fixture(html`
+      <lr-app-rail
+        style="--lr-app-rail-nav-padding: 20px; --lr-app-rail-nav-gap: 24px;"
+      >
+        <button>a</button>
+      </lr-app-rail>
+    `)) as LyraAppRail;
+    await el.updateComplete;
+    const nav = el.shadowRoot!.querySelector('[part="nav"]') as HTMLElement;
+    expect(getComputedStyle(nav).padding).to.equal("20px");
+    expect(getComputedStyle(nav).gap).to.equal("24px");
   });
 });
 

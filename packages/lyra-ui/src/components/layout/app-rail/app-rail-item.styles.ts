@@ -82,6 +82,11 @@ export const styles = css`
       --lr-app-rail-item-current-font-weight,
       var(--lr-font-weight-semibold)
     );
+    /* Inert (none) by default here -- full presentation already conveys current state through the
+       indicator bar below plus the font-weight above. :host([icon-only]) re-declares this same
+       custom property with a visible fallback, so an unset token still leaves full presentation
+       byte-identical while icon-only gets a ring automatically (see that rule for why). */
+    box-shadow: var(--lr-app-rail-item-current-ring, none);
   }
   /* Mirrors lr-conversation-item's shipped [part="active-indicator"] (same inset-inline/width/
      color token shape); rendered only while aria-current="page" (see the class doc), so it is
@@ -151,11 +156,51 @@ export const styles = css`
        above -- already floor-clamped to --lr-icon-button-size -- producing a square regardless of
        the floor's own value. */
     flex: 0 0 auto;
-    inline-size: auto;
+    /* var()-wrapped so an unset --lr-app-rail-item-icon-only-size still declares the exact same
+       'auto' used value as before -- inline-size resolving through aspect-ratio against the row's
+       own (block-size: auto, min-block-size floor-clamped) cross size. Set, both axes take the
+       token directly instead, sizing the square independently of the row height; aspect-ratio
+       then has nothing left to resolve, since neither axis is auto anymore. */
+    inline-size: var(--lr-app-rail-item-icon-only-size, auto);
+    block-size: var(--lr-app-rail-item-icon-only-size, auto);
+    /* Re-asserts [part="base"]'s own min-block-size formula above (more specific selector, so it
+       wins outright rather than stacking) -- unset, the fallback is that exact same formula, so
+       the floor-clamped derived square is untouched. Set, the token replaces the whole formula,
+       including the row's own --lr-app-rail-item-min-block-size: the icon-only square is then
+       sized from --lr-app-rail-item-icon-only-size alone, independent of a taller row height set
+       through that other token. */
+    min-block-size: var(
+      --lr-app-rail-item-icon-only-size,
+      max(
+        var(--lr-icon-button-size),
+        var(--lr-app-rail-item-min-block-size, var(--lr-icon-button-size))
+      )
+    );
     aspect-ratio: 1;
   }
   :host([icon-only]) {
     justify-content: center;
+  }
+  /* Presentation-aware: a full-height edge bar reads as a rendering glitch on the square
+     icon-only tile, so it is suppressed there by default. --lr-app-rail-item-current-indicator-
+     display restores it per instance. Full presentation is untouched -- [part="current-indicator"]'s
+     own rule above declares no display at all, so it keeps its unconditional absolute-positioned
+     bar exactly as before. */
+  :host([icon-only]) [part="current-indicator"] {
+    display: var(--lr-app-rail-item-current-indicator-display, none);
+  }
+  /* Non-color-only replacement for the bar suppressed above (WCAG 1.4.1): an inset ring, not
+     merely a hue change, stays perceivable without color vision. Reuses the indicator's own color
+     token so retheming one retints both. More specific than the generic
+     [part="base"][aria-current="page"] rule above (which shares this same custom property with a
+     'none' fallback), so this wins whenever icon-only applies -- a consumer setting the token on
+     an ancestor overrides both rules identically. */
+  :host([icon-only]) [part="base"][aria-current="page"] {
+    box-shadow: var(
+      --lr-app-rail-item-current-ring,
+      inset 0 0 0 var(--lr-border-width-thin)
+        var(--lr-app-rail-item-current-indicator-color, var(--lr-color-brand))
+    );
   }
   /* Secondary text follows the label: clipped out of the narrow rail's layout while staying in the
      accessibility tree. clip-path (rather than [part="label"]'s position:absolute + clip) keeps the

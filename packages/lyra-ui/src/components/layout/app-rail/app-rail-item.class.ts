@@ -71,6 +71,17 @@ import { styles } from './app-rail-item.styles.js';
  *   `[part="current-indicator"]` while current.
  * @cssprop [--lr-app-rail-item-current-indicator-inset-inline=0 auto] - Logical inline-start and
  *   inline-end insets for `[part="current-indicator"]`; set `auto 0` to place it at inline-end.
+ * @cssprop [--lr-app-rail-item-current-indicator-display] - `[part="current-indicator"]`'s
+ *   `display` while `icon-only`. Unset (the default), the indicator is suppressed there -- a
+ *   full-height edge bar on the square icon-only tile reads as a rendering glitch. Set to `block`
+ *   (or any non-`none` display) to restore it. Full presentation is unaffected either way; its own
+ *   `[part="current-indicator"]` rule declares no `display` at all.
+ * @cssprop [--lr-app-rail-item-current-ring] - `box-shadow` on `[part="base"]` while
+ *   `current`/`aria-current="page"`. Unset, icon-only gets an inset ring by default -- the
+ *   non-color-only signal that replaces the indicator bar suppressed there (WCAG 1.4.1); full
+ *   presentation, which already conveys current state through the indicator bar and
+ *   `--lr-app-rail-item-current-font-weight`, stays ring-free (`none`) by default. Setting this
+ *   token explicitly applies the same value in both presentations.
  * @cssprop [--lr-app-rail-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background.
  * @cssprop [--lr-app-rail-item-hover-color=var(--lr-color-brand)] - Hover text/icon color.
  * @cssprop --lr-app-rail-item-active-bg - Pressed background; defaults to the former brand-quiet
@@ -89,6 +100,11 @@ import { styles } from './app-rail-item.styles.js';
  *   font size.
  * @cssprop [--lr-app-rail-item-icon-size=var(--lr-icon-button-size)] - `[part="icon"]`'s inline
  *   size. Not floor-clamped -- the icon is decorative, not itself a pointer target.
+ * @cssprop [--lr-app-rail-item-icon-only-size] - When set, sizes `[part="base"]`'s icon-only
+ *   square (`inline-size` and `block-size` alike) directly, independent of the row's own
+ *   `--lr-app-rail-item-min-block-size`. Unset (the default), the square is still derived via
+ *   `aspect-ratio: 1` against the row's block size, exactly as before. Still floor-clamped to
+ *   `--lr-icon-button-size` by `[part="base"]`'s shared `min-block-size` rule.
  * @cssprop [--lr-app-rail-item-font-size=inherit] - `[part="base"]`'s font size, set after the
  *   `font` shorthand so it alone can be retuned while family/weight/line-height stay inherited.
  * @status stable

@@ -177,8 +177,29 @@ export const styles = css`
       85vw
     );
     /* 0 (the default) reproduces the flush-edged drawer described below; pairs naturally with a
-       nonzero --lr-app-rail-panel-inset-block-start, which exposes the panel's top corners. */
-    border-radius: var(--lr-app-rail-panel-radius, 0);
+       nonzero --lr-app-rail-panel-inset-block-start, which exposes the panel's top corners.
+       Direction-aware per-corner overrides below: each defaults to this same uniform token, so an
+       unset override reproduces today's four-equal-corner result exactly. The panel is always
+       flush against its own inline-start edge (inset-inline-start: 0 below), so the
+       -start-start/-end-start corners are the ones a flush drawer typically leaves square, and
+       -start-end/-end-end are the ones away from that edge it typically rounds -- logical, so
+       both pairs swap physical sides under dir="rtl" with no second rule. */
+    border-start-start-radius: var(
+      --lr-app-rail-panel-radius-start-start,
+      var(--lr-app-rail-panel-radius, 0)
+    );
+    border-start-end-radius: var(
+      --lr-app-rail-panel-radius-start-end,
+      var(--lr-app-rail-panel-radius, 0)
+    );
+    border-end-start-radius: var(
+      --lr-app-rail-panel-radius-end-start,
+      var(--lr-app-rail-panel-radius, 0)
+    );
+    border-end-end-radius: var(
+      --lr-app-rail-panel-radius-end-end,
+      var(--lr-app-rail-panel-radius, 0)
+    );
     /* [part="panel"] is this element's mobile OVERLAY promotion (see the [part="base"] note) -- a
        modal drawer over a scrim, hence the modal-panel surface. Docked in the page's flow,
        [part="base"] keeps --lr-color-surface: resting chrome, not an overlay. */
@@ -313,10 +334,12 @@ export const styles = css`
     overflow-y: auto;
     /* Pin the cross axis (see [part="base"]): overflow-y alone forces overflow-x to auto. */
     overflow-x: clip;
-    padding: var(--lr-space-s);
+    /* Unset, each falls back to the same token this rule hard-coded before either property
+       existed, so the rail's rest/vertical rhythm is unchanged. */
+    padding: var(--lr-app-rail-nav-padding, var(--lr-space-s));
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-app-rail-nav-gap, var(--lr-space-xs));
   }
   :host([mode="icon-only"]) [part="nav"] {
     align-items: center;

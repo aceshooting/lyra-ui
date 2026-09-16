@@ -239,9 +239,27 @@ export interface LyraAppRailEventMap {
  * @cssprop [--lr-app-rail-panel-inset-block-start=0] - Block-start (top) inset shared by
  *   `[part="panel"]` and `[part="backdrop"]` -- raise it to leave room for a fixed app bar/status
  *   area above the drawer instead of the panel/scrim starting flush with the viewport top.
- * @cssprop [--lr-app-rail-panel-radius=0] - Corner radius of `[part="panel"]`. `0` (the default)
- *   reproduces today's flush-edged drawer; pairs naturally with a nonzero
- *   `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top corners.
+ * @cssprop [--lr-app-rail-panel-radius=0] - Uniform corner radius of `[part="panel"]`. `0` (the
+ *   default) reproduces today's flush-edged drawer; pairs naturally with a nonzero
+ *   `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top corners. Each per-corner
+ *   token below defaults to this one, so setting only this token still rounds all four corners
+ *   uniformly, exactly as before the per-corner tokens existed.
+ * @cssprop [--lr-app-rail-panel-radius-start-start=var(--lr-app-rail-panel-radius)] - Logical
+ *   `border-start-start-radius` of `[part="panel"]` -- the corner at the drawer's own flush
+ *   inline-start edge, block-start side.
+ * @cssprop [--lr-app-rail-panel-radius-start-end=var(--lr-app-rail-panel-radius)] - Logical
+ *   `border-start-end-radius` of `[part="panel"]` -- the corner away from the flush inline-start
+ *   edge, block-start side. One of the two corners a flush-against-one-edge drawer typically
+ *   rounds.
+ * @cssprop [--lr-app-rail-panel-radius-end-start=var(--lr-app-rail-panel-radius)] - Logical
+ *   `border-end-start-radius` of `[part="panel"]` -- the corner at the drawer's own flush
+ *   inline-start edge, block-end side.
+ * @cssprop [--lr-app-rail-panel-radius-end-end=var(--lr-app-rail-panel-radius)] - Logical
+ *   `border-end-end-radius` of `[part="panel"]` -- the corner away from the flush inline-start
+ *   edge, block-end side. The other corner a flush-against-one-edge drawer typically rounds. All
+ *   four per-corner tokens are logical, so which physical corner each one paints swaps under
+ *   `dir="rtl"` with no second consumer rule -- the panel's own flush edge stays its logical
+ *   inline-start regardless of direction.
  * @cssprop [--lr-app-rail-panel-overflow-block=auto] - `[part="panel"]`'s logical
  *   `overflow-block`, paired with `--lr-app-rail-panel-overflow-inline` below.
  * @cssprop [--lr-app-rail-panel-overflow-inline=clip] - `[part="panel"]`'s logical
@@ -262,6 +280,10 @@ export interface LyraAppRailEventMap {
  *   is deliberately themed as a modal surface, not the docked rail chrome.
  * @cssprop [--lr-app-rail-header-padding=var(--lr-space-m)] - `[part="header"]`'s padding.
  * @cssprop [--lr-app-rail-footer-padding=var(--lr-space-m)] - `[part="footer"]`'s padding.
+ * @cssprop [--lr-app-rail-nav-padding=var(--lr-space-s)] - `[part="nav"]`'s padding, unset
+ *   reproducing the value this rule hard-coded before the token existed.
+ * @cssprop [--lr-app-rail-nav-gap=var(--lr-space-xs)] - Gap between slotted items inside
+ *   `[part="nav"]`, unset reproducing the value this rule hard-coded before the token existed.
  * @cssprop [--lr-app-rail-header-min-block-size=auto] - `[part="header"]`'s minimum block size.
  *   `auto` (the default) is the property's own initial value, so unset reproduces today's exact
  *   height; set it to reserve room for header content that mounts or resizes asynchronously.

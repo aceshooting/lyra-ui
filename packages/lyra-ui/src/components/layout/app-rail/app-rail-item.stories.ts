@@ -95,13 +95,51 @@ export const ThemedCurrent: StoryObj = {
   `,
 };
 
+/** In icon-only presentation the full-height `[part="current-indicator"]` bar is suppressed by
+ *  default (it reads as a rendering glitch on a square tile) and replaced automatically by an
+ *  inset `--lr-app-rail-item-current-ring`, which stays perceivable without relying on color
+ *  alone. `--lr-app-rail-item-current-indicator-display` restores the bar per instance instead. */
+export const IconOnlyCurrent: StoryObj = {
+  name: 'Icon-only current indicator (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The first item restores the full-height indicator bar via ' +
+          '`--lr-app-rail-item-current-indicator-display: block`. The second keeps the default ' +
+          'suppressed bar and its automatic ring. The third opts a non-icon-only item into the ' +
+          'same ring via `--lr-app-rail-item-current-ring`.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; gap: var(--lr-space-m);">
+      <div style="inline-size: var(--lr-icon-button-size); --lr-app-rail-item-current-indicator-display: block;">
+        <lr-app-rail-item href="/home" icon-only current
+          ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
+        >
+      </div>
+      <div style="inline-size: var(--lr-icon-button-size);">
+        <lr-app-rail-item href="/inbox" icon-only current
+          ><span slot="icon" aria-hidden="true">📥</span>Inbox</lr-app-rail-item
+        >
+      </div>
+      <div style="inline-size: var(--lr-size-12rem); --lr-app-rail-item-current-ring: inset 0 0 0 1px var(--lr-color-brand);">
+        <lr-app-rail-item href="/settings" current
+          ><span slot="icon" aria-hidden="true">⚙️</span>Settings</lr-app-rail-item
+        >
+      </div>
+    </div>
+  `,
+};
+
 export const GeometryHooks: StoryObj = {
   name: 'Geometry hooks (cssprops)',
   parameters: {
     docs: {
       description: {
         story:
-          '--lr-app-rail-item-font-size retunes the label/icon column font size without disturbing family, weight, or line-height (declared after the `font` shorthand). In icon-only presentation, [part="base"] resolves to a square hit target matching the icon-button footprint instead of stretching across the rail\'s icon column.',
+          '--lr-app-rail-item-font-size retunes the label/icon column font size without disturbing family, weight, or line-height (declared after the `font` shorthand). In icon-only presentation, [part="base"] resolves to a square hit target matching the icon-button footprint instead of stretching across the rail\'s icon column. --lr-app-rail-item-icon-only-size sizes that square independently of a taller row set through --lr-app-rail-item-min-block-size.',
       },
     },
   },
@@ -113,6 +151,17 @@ export const GeometryHooks: StoryObj = {
         >
       </div>
       <div style="inline-size: var(--lr-icon-button-size);">
+        <lr-app-rail-item href="/home" icon-only
+          ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
+        >
+      </div>
+      <div
+        style="
+          inline-size: var(--lr-icon-button-size);
+          --lr-app-rail-item-min-block-size: 3.5rem;
+          --lr-app-rail-item-icon-only-size: var(--lr-icon-button-size);
+        "
+      >
         <lr-app-rail-item href="/home" icon-only
           ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
         >
