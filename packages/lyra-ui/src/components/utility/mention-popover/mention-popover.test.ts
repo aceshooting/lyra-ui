@@ -268,6 +268,66 @@ it('moves the active row with ArrowDown/ArrowUp, clamped at the ends', async () 
   expect(el.activeDescendantId).to.equal(el.listboxId + '-opt-0');
 });
 
+describe('disabled items', () => {
+  const WITH_DISABLED: LyraMentionItem[] = [
+    { suggestionId: 'alice', label: 'Alice Johansson' },
+    { suggestionId: 'bob', label: 'Bob Nakamura', disabled: true },
+    { suggestionId: 'carol', label: 'Carol Ibarra' },
+  ];
+
+  it('renders aria-disabled on a disabled row and leaves an ordinary row unset (unset-regression)', async () => {
+    const el = await openWithItems(WITH_DISABLED);
+    const all = rows(el);
+    expect(all[0]!.getAttribute('aria-disabled')).to.equal(null);
+    expect(all[1]!.getAttribute('aria-disabled')).to.equal('true');
+    expect(all[2]!.getAttribute('aria-disabled')).to.equal(null);
+  });
+
+  it('pre-highlights the first ENABLED match when the top match is disabled', async () => {
+    const el = await openWithItems([
+      { suggestionId: 'bob', label: 'Bob Nakamura', disabled: true },
+      { suggestionId: 'alice', label: 'Alice Johansson' },
+    ]);
+    expect(el.activeDescendantId, 'a disabled row is never the resting highlight').to.equal(el.listboxId + '-opt-1');
+  });
+
+  it('a click on a disabled row emits no lr-mention-select', async () => {
+    const el = await openWithItems(WITH_DISABLED);
+    let fired = false;
+    el.addEventListener('lr-mention-select', () => (fired = true));
+    rows(el)[1]!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(fired).to.equal(false);
+  });
+
+  it('ArrowDown/ArrowUp step over a disabled row instead of landing on it', async () => {
+    const el = await openWithItems(WITH_DISABLED);
+    expect(el.activeDescendantId).to.equal(el.listboxId + '-opt-0');
+    el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+    await el.updateComplete;
+    expect(el.activeDescendantId, 'skips disabled bob straight to carol').to.equal(el.listboxId + '-opt-2');
+
+    el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true }));
+    await el.updateComplete;
+    expect(el.activeDescendantId, 'skips disabled bob straight back to alice').to.equal(el.listboxId + '-opt-0');
+  });
+
+  it('Enter commits the row actually highlighted, never the skipped-over disabled row', async () => {
+    const el = await openWithItems(WITH_DISABLED);
+    el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+    await el.updateComplete;
+    const listener = oneEvent(el, 'lr-mention-select');
+    el.handleKeyDown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+    const { detail } = (await listener) as CustomEvent<LyraMentionSelectDetail>;
+    expect(detail.suggestionId).to.equal('carol');
+  });
+
+  it('is accessible with a mix of enabled and disabled rows', async () => {
+    const el = await openWithItems(WITH_DISABLED);
+    await expect(el).to.be.accessible();
+  });
+});
+
 it("scrolls the active row into view as ArrowDown moves it past the popup's visible, height-capped area", async () => {
   const manyItems: LyraMentionItem[] = Array.from({ length: 20 }, (_, i) => ({
     suggestionId: `item-${i}`,

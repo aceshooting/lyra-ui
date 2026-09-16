@@ -77,6 +77,18 @@ export const NoMatches: Story = {
   render: () => staticDemo('mention-demo-empty', PEOPLE, { query: 'zzz', emptyText: 'No teammates match “zzz”' }),
 };
 
+/** An item can be marked `disabled`, rendering it as a genuinely non-actionable row: no selection
+ *  by click or keyboard, and ArrowDown/ArrowUp highlighting steps past it instead of landing on
+ *  it -- including the default pre-highlighted first row. */
+export const DisabledItem: Story = {
+  render: () =>
+    staticDemo('mention-demo-disabled', [
+      PEOPLE[0]!,
+      { ...PEOPLE[1]!, disabled: true, description: 'Out of office' },
+      PEOPLE[2]!,
+    ]),
+};
+
 export const NarrowLongContent: Story = {
   render: () =>
     staticDemo(

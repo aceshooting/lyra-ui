@@ -62,7 +62,7 @@ export const styles = css`
      token, retints just this component's active suggestion row without repainting every other user
      of the shared token -- the indirection lr-select's/lr-combobox's identical-looking
      [part='option'][data-active] background lacks. */
-  [part='option']:hover,
+  [part='option']:where(:not([aria-disabled='true'])):hover,
   [part='option'][data-active] {
     background: var(--lr-mention-popover-option-active-bg, var(--lr-color-brand-quiet));
   }
@@ -70,7 +70,7 @@ export const styles = css`
      --lr-mention-popover-option-active-bg gets a matching pressed state for free. It also covers
      the [part='option-description'] hover rule below, a descendant treatment of this row rather
      than a hover state of its own. */
-  [part='option']:active {
+  [part='option']:where(:not([aria-disabled='true'])):active {
     background: color-mix(
       in oklab,
       var(--lr-mention-popover-option-active-bg, var(--lr-color-brand-quiet)),
@@ -79,6 +79,14 @@ export const styles = css`
   }
   [part='option'][aria-selected='true'] {
     color: var(--lr-color-brand);
+  }
+  /* A row whose items entry declares disabled is non-actionable: it keeps its own label/icon
+     (still the datum it always was) but loses the pointer cursor and every hover/press affordance
+     that promises activation -- gated above rather than overridden here, because CSS :hover still
+     matches an aria-disabled row exactly like it would a natively disabled button. */
+  [part='option'][aria-disabled='true'] {
+    cursor: default;
+    opacity: var(--lr-mention-popover-option-disabled-opacity, 0.5);
   }
 
   [part='option-icon'] {
@@ -110,7 +118,7 @@ export const styles = css`
      their active index defaulting to -1/none until a user arrows the list; here row 0 is
      pre-highlighted on open (see the activeIndex field's own doc), so active/quiet-text is the
      default state, not an edge case, and must pass contrast alone. */
-  [part='option']:hover [part='option-description'],
+  [part='option']:where(:not([aria-disabled='true'])):hover [part='option-description'],
   [part='option'][data-active] [part='option-description'] {
     color: var(--lr-color-text);
   }

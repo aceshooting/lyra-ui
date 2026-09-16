@@ -34,6 +34,13 @@ export interface LyraMentionItem {
    *  "opaque string, not a registry lookup" convention as
    *  `<lr-tool-call-chip>`'s/`<lr-tool-select-dialog>`'s own `icon`. */
   readonly icon?: string;
+  /**
+   * Marks this row non-actionable: `aria-disabled="true"` replaces its selected/active
+   * affordances, activating it (click, or Enter/Tab while highlighted) commits nothing and emits
+   * no `lr-mention-select`, and ArrowDown/ArrowUp highlighting steps past it instead of landing on
+   * it. Omitted or `false` renders the row exactly as before this field existed.
+   */
+  readonly disabled?: boolean;
 }
 
 /** Predicate deciding whether `item` matches a (already-trimmed, locale-lowercased) `query`.
@@ -282,6 +289,12 @@ export interface LyraMentionPopoverEventMap {
  * </script>
  * ```
  *
+ * An `items` entry may also set `disabled`, marking it non-actionable: `aria-disabled="true"`
+ * replaces its selected/active affordances, activating it (click, or Enter/Tab while highlighted)
+ * commits nothing and emits no `lr-mention-select`, and ArrowDown/ArrowUp highlighting steps past
+ * it instead of landing on it -- including the default pre-highlighted first row. Omitted or
+ * `false` renders the row exactly as before this field existed.
+ *
  * @customElement lr-mention-popover
  * @event lr-mention-select - An item was committed (Enter/Tab/click).
  *   `detail: { suggestionId, index, label }`; `index` disambiguates repeated business ids.
@@ -289,13 +302,15 @@ export interface LyraMentionPopoverEventMap {
  * transitioning to `false` by any other means (a direct host assignment included). Never fires
  * for a close that followed a `lr-mention-select` commit.
  * @csspart listbox - The popover's root element (`role="listbox"`).
- * @csspart option - A candidate row (`role="option"`).
+ * @csspart option - A candidate row (`role="option"`). Carries `aria-disabled="true"` while that
+ *   row's `disabled` is set.
  * @csspart option-icon - A row's leading icon glyph, when `icon` is set.
  * @csspart option-label - Wrapper around a row's label/description.
  * @csspart option-description - A row's optional secondary line, when `description` is set.
  * @csspart empty - The "no matches" message, shown when `items`/`query` produce zero rows.
  * @cssprop [--lr-mention-popover-option-active-bg=var(--lr-color-brand-quiet)] - Background of the
  *   hovered or `[data-active]` (keyboard-highlighted) suggestion row.
+ * @cssprop [--lr-mention-popover-option-disabled-opacity=0.5] - Opacity of a row whose `items` entry sets `disabled`.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  * on the listbox.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
@@ -1027,12 +1042,12 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         // identical "no active row" fallthrough right below.
         if (!rows.length) return false;
         e.preventDefault();
-        this.activeIndex = Math.min(rows.length - 1, this.clampedIndex(rows) + 1);
+        this.activeIndex = this.stepEnabledIndex(rows, this.clampedIndex(rows), 1);
         return true;
       case 'ArrowUp':
         if (!rows.length) return false;
         e.preventDefault();
-        this.activeIndex = Math.max(0, this.clampedIndex(rows) - 1);
+        this.activeIndex = this.stepEnabledIndex(rows, this.clampedIndex(rows), -1);
         return true;
       case 'Enter':
       case 'Tab': {
@@ -1053,16 +1068,51 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     }
   }
 
+  /** Clamps `activeIndex` into range, then -- if that row is disabled -- degrades to the nearest
+   *  enabled row (forward first, then backward), so the pre-highlighted default (row 0, see
+   *  `activeIndex`'s own doc) and every other resting read of this index skip a disabled row.
+   *  Returns `-1` only when every row is disabled (including an empty list). Unset regression:
+   *  with no disabled row, this is the same `clamp(activeIndex, 0, rows.length - 1)` it always
+   *  computed. */
   private clampedIndex(rows: readonly Readonly<LyraMentionItem>[]): number {
-    if (!rows.length) return -1;
-    return Math.min(Math.max(this.activeIndex, 0), rows.length - 1);
+    const count = rows.length;
+    if (!count) return -1;
+    const clamped = Math.min(Math.max(this.activeIndex, 0), count - 1);
+    if (!rows[clamped]?.disabled) return clamped;
+    for (let forward = clamped + 1; forward < count; forward += 1) {
+      if (!rows[forward]?.disabled) return forward;
+    }
+    for (let backward = clamped - 1; backward >= 0; backward -= 1) {
+      if (!rows[backward]?.disabled) return backward;
+    }
+    return -1;
+  }
+
+  /** Steps `from` by one row in `direction`, skipping past a disabled row without wrapping -- the
+   *  same roving step contract `stepEnabledIndex()` in `internal/catalog-picker.ts` implements for
+   *  an active-descendant listbox. Unset regression: with no disabled row, this is the same
+   *  `clamp(from + direction, 0, rows.length - 1)` the arrow-key handler always computed. */
+  private stepEnabledIndex(rows: readonly Readonly<LyraMentionItem>[], from: number, direction: 1 | -1): number {
+    const count = rows.length;
+    if (!count) return 0;
+    let index = Math.min(Math.max(from + direction, 0), count - 1);
+    for (let steps = 0; steps < count; steps += 1) {
+      if (!rows[index]?.disabled) return index;
+      index += direction;
+      if (index < 0 || index >= count) break;
+    }
+    return from >= 0 && from < count && !rows[from]?.disabled ? from : this.activeIndex;
   }
 
   private rowId(index: number): string {
     return `${this._listId}-opt-${index}`;
   }
 
+  /** A `disabled` row can never be committed -- by click or by keyboard -- and activating one
+   *  emits nothing and changes no state, matching every other declared-non-actionable entry in
+   *  this library. */
   private commit(item: Readonly<LyraMentionItem>): void {
+    if (item.disabled) return;
     const index = this.items.indexOf(item);
     if (index < 0) return;
     const relationshipControl = this.anchorRelationship?.control;
@@ -1180,6 +1230,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         data-id=${item.suggestionId}
         data-index=${index}
         aria-selected=${active ? 'true' : 'false'}
+        aria-disabled=${item.disabled ? 'true' : nothing}
         tabindex=${this._ownsFocus && active ? '0' : '-1'}
         ?data-active=${active}
       >
