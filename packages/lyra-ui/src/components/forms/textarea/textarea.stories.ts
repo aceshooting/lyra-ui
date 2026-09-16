@@ -225,7 +225,8 @@ export const WithCount: Story = {
 /**
  * `debounce` coalesces rapid keystrokes into one `lr-input-settled` after the pause, while
  * `input`/`lr-input` keep firing on every keystroke. A blur or Enter flushes a pending debounce
- * immediately, and a programmatic `value` write cancels it with no stray settle.
+ * immediately, and a programmatic `value` write that changes the value cancels it with no stray
+ * settle -- a same-value write (the controlled-input pattern) leaves it pending.
  */
 export const Debounce: Story = {
   render: () => {

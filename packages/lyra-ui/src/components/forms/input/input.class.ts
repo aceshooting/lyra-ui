@@ -163,7 +163,10 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *   per-keystroke `input`/`lr-input` pair (which keep firing on every edit). `detail: { value }`,
  *   non-cancelable. A pending debounce is flushed immediately on `change`/Enter/blur, and cancelled
  *   with no stray settle on disconnect, the built-in clear button, and a programmatic `value`
- *   write. Never fires while `debounce` is unset, `0`, or non-finite.
+ *   write that actually changes the value -- a same-value write (e.g. the controlled-input pattern
+ *   of a framework re-binding `value` from the state its own handler just set) leaves the pending
+ *   debounce armed instead of silently defeating it. Never fires while `debounce` is unset, `0`, or
+ *   non-finite.
  * @event blur - Re-dispatched from the internal native `<input>`'s own `blur` — bubbling and
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.
@@ -302,11 +305,16 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   }
 
   override set value(next: string | null) {
-    super.value = next ?? '';
+    const normalized = next ?? '';
+    super.value = normalized;
     // A write reaching here that did NOT come from `onInput`'s own guarded assignment below is a
     // programmatic `value` write (including `formResetCallback()`'s restore) -- cancel any pending
-    // debounce with no stray settle, matching the built-in clear button and disconnection.
-    if (!this.settlingValueFromInput) this.settledDebounce.cancel();
+    // debounce with no stray settle, matching the built-in clear button and disconnection. But
+    // NOT when `normalized` matches the value already pending: the idiomatic controlled-input
+    // pattern re-binds `value` back from state on every render (including the render right after
+    // this element's own `input` handler updated that state), and a write that merely echoes the
+    // pending edit must never be mistaken for an external replacement of it.
+    if (!this.settlingValueFromInput) this.settledDebounce.cancelIfChanged(normalized);
   }
 
   private _type: LyraInputType = 'text';
@@ -352,7 +360,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  keystroke exactly as before, and `lr-input-settled` never fires. A pending debounce is
    *  flushed immediately by `change`/Enter/blur (so a blur never drops the last keystroke) and
    *  cancelled with no stray settle by disconnection, the built-in clear button, and a
-   *  programmatic `value` write. */
+   *  programmatic `value` write that changes the value -- a same-value write does not disturb it. */
   @property({ type: Number }) debounce?: number;
   /** Forwards native read-only behavior to the internal input and disables the clear action. */
   @property({ type: Boolean, reflect: true }) readonly = false;

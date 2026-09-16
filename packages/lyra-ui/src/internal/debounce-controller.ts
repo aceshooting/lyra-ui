@@ -108,6 +108,24 @@ export class DebounceController<T> {
     this.#pendingValue = undefined;
   }
 
+  /**
+   * Like `cancel()`, but a no-op when `nextValue` matches the value currently pending -- the
+   * primitive a host's own external-write handler needs so a controlled-input rebind (a
+   * framework template writing back the exact value it just handed the control, on the very next
+   * render) cannot silently defeat an in-flight debounce. Nothing pending: identical to `cancel()`
+   * (already a no-op there). A `nextValue` that genuinely differs from the pending one still
+   * supersedes it, exactly as an unconditional `cancel()` always did -- an external replacement
+   * is still a real edit, not an echo.
+   *
+   * `equals` defaults to `Object.is` (`===` plus correct `NaN`/`-0` handling); a caller debouncing
+   * a non-primitive `T` (an object, a `Window`-keyed marker) supplies its own, matching whatever
+   * "same value" means for that `T`.
+   */
+  cancelIfChanged(nextValue: T, equals: (a: T, b: T) => boolean = Object.is): void {
+    if (this.#pending && equals(this.#pendingValue as T, nextValue)) return;
+    this.cancel();
+  }
+
   /** Same as `cancel()`, plus permanently disables further `push()` calls. Call from
    *  `disconnectedCallback()` so a timer already in flight can never settle into a torn-down
    *  host, and so a lingering reference can't schedule a new one afterward. */

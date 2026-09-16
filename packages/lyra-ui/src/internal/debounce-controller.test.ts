@@ -176,6 +176,55 @@ it('cancel() drops the pending value as well as the flag', () => {
   expect(controller.pendingValue).to.equal(undefined);
 });
 
+it('cancelIfChanged() leaves a pending push untouched when nextValue equals the pending value', async () => {
+  const settled: string[] = [];
+  const controller = new DebounceController<string>(DELAY_MS, (value) => settled.push(value));
+
+  controller.push('typed');
+  controller.cancelIfChanged('typed');
+  expect(controller.pending, 'a same-value write must not cancel the pending push').to.equal(true);
+
+  await aTimeout(SETTLE_WAIT_MS);
+  expect(settled, 'the untouched push still settles on its own').to.deep.equal(['typed']);
+});
+
+it('cancelIfChanged() cancels a pending push when nextValue differs, exactly like cancel()', async () => {
+  const settled: string[] = [];
+  const controller = new DebounceController<string>(DELAY_MS, (value) => settled.push(value));
+
+  controller.push('typed');
+  controller.cancelIfChanged('replaced');
+  expect(controller.pending, 'a genuinely different write still supersedes the pending push').to.equal(false);
+
+  await aTimeout(NEVER_FIRES_WAIT_MS);
+  expect(settled, 'the superseded push must never fire').to.deep.equal([]);
+});
+
+it('cancelIfChanged() is a no-op when nothing is pending, exactly like cancel()', () => {
+  const controller = new DebounceController<string>(DELAY_MS, () => undefined);
+
+  expect(() => controller.cancelIfChanged('anything')).to.not.throw();
+  expect(controller.pending).to.equal(false);
+});
+
+it('cancelIfChanged() accepts a custom equality comparator for a non-primitive T', async () => {
+  const settled: Array<{ id: string }> = [];
+  const controller = new DebounceController<{ id: string }>(DELAY_MS, (value) => settled.push(value));
+  const byId = (a: { id: string }, b: { id: string }) => a.id === b.id;
+
+  controller.push({ id: 'a' });
+  // A different object identity carrying the same `id` must not cancel when the caller supplies
+  // an equality comparator that says so.
+  controller.cancelIfChanged({ id: 'a' }, byId);
+  expect(controller.pending, 'the comparator says these are equal').to.equal(true);
+
+  controller.cancelIfChanged({ id: 'b' }, byId);
+  expect(controller.pending, 'the comparator says these differ').to.equal(false);
+
+  await aTimeout(NEVER_FIRES_WAIT_MS);
+  expect(settled).to.deep.equal([]);
+});
+
 it('re-reads delayMs on every push, so a host can retune its own debounce between edits', async () => {
   const settled: string[] = [];
   const controller = new DebounceController<string>(DELAY_MS, (value) => settled.push(value));

@@ -1824,7 +1824,62 @@ describe("lr-textarea debounce", () => {
     expect(settled[1]!.detail).to.deep.equal({ value: "bb" });
   });
 
-  it("cancels a pending debounce on a programmatic value write, with no stray settle", async () => {
+  it("does not cancel a pending debounce when a programmatic write re-binds the identical value (controlled-input pattern)", async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`
+    );
+    const textarea = el.shadowRoot!.querySelector(
+      "textarea"
+    ) as HTMLTextAreaElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener("lr-input-settled", (event) =>
+      settled.push(event as CustomEvent)
+    );
+
+    textarea.value = "typed";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+
+    // The idiomatic controlled-input pattern: a framework template re-writes the value it was
+    // just handed back on the very next microtask (e.g. a Lit `.value=${state}` binding fed from
+    // this same textarea's own `lr-input` handler). That echo must not cancel the in-flight
+    // debounce.
+    await Promise.resolve();
+    el.value = "typed";
+    await el.updateComplete;
+
+    expect(settled, "a same-value rebind must not cancel the pending settle").to.have.length(0);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(1);
+    expect(settled[0]!.detail).to.deep.equal({ value: "typed" });
+  });
+
+  it("treats a null/undefined programmatic write as equal to an already-empty pending value (normalization)", async () => {
+    const el = await fixture<LyraTextarea>(
+      html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`
+    );
+    const textarea = el.shadowRoot!.querySelector(
+      "textarea"
+    ) as HTMLTextAreaElement;
+    const settled: CustomEvent[] = [];
+    el.addEventListener("lr-input-settled", (event) =>
+      settled.push(event as CustomEvent)
+    );
+
+    textarea.value = "";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+
+    el.value = null;
+    await el.updateComplete;
+
+    expect(settled, "a null write matching an already-empty pending value must not cancel").to.have.length(0);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(settled).to.have.length(1);
+    expect(settled[0]!.detail).to.deep.equal({ value: "" });
+  });
+
+  it("cancels a pending debounce on a programmatic value write that actually changes the value, with no stray settle", async () => {
     const el = await fixture<LyraTextarea>(
       html`<lr-textarea debounce="150" aria-label="Notes"></lr-textarea>`
     );
