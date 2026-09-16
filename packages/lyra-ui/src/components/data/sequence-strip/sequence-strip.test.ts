@@ -1078,6 +1078,93 @@ describe('item activation and selection', () => {
   });
 });
 
+describe('disabled items', () => {
+  const cellAt = (el: LyraSequenceStrip, index: number) =>
+    el.shadowRoot!.querySelector<HTMLElement>(`[part="cell"][data-index="${index}"]`)!;
+
+  const withDisabled = async (): Promise<LyraSequenceStrip> => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .categories=${categories}></lr-sequence-strip>`);
+    el.items = [
+      { id: 'a', categoryId: 'text' },
+      { id: 'b', categoryId: 'tool', disabled: true },
+      { id: 'c', categoryId: 'text' },
+    ];
+    await el.updateComplete;
+    return el;
+  };
+
+  it('renders aria-disabled on a disabled cell and leaves an ordinary one unset (unset-regression)', async () => {
+    const el = await withDisabled();
+    expect(cellAt(el, 0).getAttribute('aria-disabled')).to.equal(null);
+    expect(cellAt(el, 1).getAttribute('aria-disabled')).to.equal('true');
+    expect(cellAt(el, 2).getAttribute('aria-disabled')).to.equal(null);
+  });
+
+  it('starts the roving tab stop on the first enabled cell when the first cell is disabled', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .categories=${categories}></lr-sequence-strip>`);
+    el.items = [
+      { id: 'a', categoryId: 'text', disabled: true },
+      { id: 'b', categoryId: 'tool' },
+    ];
+    await el.updateComplete;
+    expect(cellAt(el, 0).getAttribute('tabindex'), 'a disabled cell is never the resting tab stop').to.equal('-1');
+    expect(cellAt(el, 1).getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('a click on a disabled cell emits no lr-item-activate', async () => {
+    const el = await withDisabled();
+    let fired = false;
+    el.addEventListener('lr-item-activate', () => (fired = true));
+    cellAt(el, 1).click();
+    expect(fired).to.equal(false);
+  });
+
+  it('Enter/Space on a disabled cell emits nothing', async () => {
+    const el = await withDisabled();
+    let fired = false;
+    el.addEventListener('lr-item-activate', () => (fired = true));
+    cellAt(el, 1).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }),
+    );
+    expect(fired).to.equal(false);
+  });
+
+  it('ArrowRight/ArrowLeft step over a disabled cell instead of landing on it', async () => {
+    const el = await withDisabled();
+    cellAt(el, 0).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(cellAt(el, 2).getAttribute('tabindex'), 'skips disabled b straight to c').to.equal('0');
+    expect(cellAt(el, 1).getAttribute('tabindex')).to.equal('-1');
+
+    cellAt(el, 2).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(cellAt(el, 0).getAttribute('tabindex'), 'skips disabled b straight back to a').to.equal('0');
+  });
+
+  it('Home/End land on the nearest enabled boundary cell', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .categories=${categories}></lr-sequence-strip>`);
+    el.items = [
+      { id: 'a', categoryId: 'text', disabled: true },
+      { id: 'b', categoryId: 'tool' },
+      { id: 'c', categoryId: 'text' },
+      { id: 'd', categoryId: 'tool', disabled: true },
+    ];
+    await el.updateComplete;
+    cellAt(el, 1).dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(cellAt(el, 2).getAttribute('tabindex'), 'End skips disabled d, landing on c').to.equal('0');
+
+    cellAt(el, 2).dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(cellAt(el, 1).getAttribute('tabindex'), 'Home skips disabled a, landing on b').to.equal('0');
+  });
+
+  it('is accessible with a mix of enabled and disabled cells', async () => {
+    const el = await withDisabled();
+    await expect(el).to.be.accessible();
+  });
+});
+
 
 // Regression: [part='cell'][data-selected] declares the same `outline`/`outline-offset` the
 // [part='cell']:hover, [part='cell']:focus-visible rule does, at the identical (0,2,0) specificity,

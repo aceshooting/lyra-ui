@@ -23,6 +23,16 @@ export interface SequenceStripItem {
   /** Per-item text shown in the hover/focus tooltip and exposed as the item's accessible name
    *  (falls back to the category's own `label`, or the localized unnamed-category label). */
   readonly label?: string;
+  /**
+   * Marks this item non-actionable: `aria-disabled="true"` replaces the selected/active
+   * affordances of the cell that represents it, activating it (click, or Enter/Space while
+   * roving-focused) emits nothing, and roving keyboard navigation (arrow keys, Home/End) steps
+   * past it instead of landing on it. Above `MAX_RENDERED_CELLS`, one cell paints a whole RANGE of
+   * items and activating it always resolves to that range's first item (`cell.start`, see
+   * `activateCell()`), so a range cell's disabled state follows that same first item. Omitted or
+   * `false` renders the item exactly as before this field existed.
+   */
+  readonly disabled?: boolean;
 }
 
 export interface SequenceStripCategory {
@@ -151,6 +161,13 @@ export interface LyraSequenceStripEventMap {
  * retains at most the first 10,000 items and categories as detached frozen snapshots; reassign a
  * collection after changing it.
  *
+ * An item may also set `disabled`, marking it non-actionable: `aria-disabled="true"` replaces the
+ * selected/active affordances of the cell that represents it, activating it (click or Enter/Space)
+ * emits nothing, and roving Left/Right/Home/End navigation -- including the default resting tab
+ * stop -- steps past it instead of landing on it. Above the cell cap, a range cell's disabled state
+ * follows its own activated item, the range's first (see `lr-item-activate` above). Omitted or
+ * `false` renders the item exactly as before this field existed.
+ *
  * @customElement lr-sequence-strip
  * @event lr-item-activate - Fired when a cell is clicked, or activated with Enter/Space on the
  *   roving-tabindex focus. `detail: { index, id, item }` identifies the picked item — the range's
@@ -159,7 +176,8 @@ export interface LyraSequenceStripEventMap {
  *   so the consumer stays the single source of truth for a playback index this strip does not own.
  * @csspart base - The root strip wrapper (`role="list"`).
  * @csspart cell - Each named, roving-focus cell, background-colored by its category — one item
- * below the render cap, one dominant-coloured item range above it.
+ * below the render cap, one dominant-coloured item range above it. Carries `aria-disabled="true"`
+ * while the item it activates sets `disabled`.
  * @csspart marker - The small bottom marker on a cell any of whose items sets `marker: true`.
  * @csspart tooltip - The hover/focus tooltip showing the active cell's label, positioned from that
  * active cell.
@@ -180,6 +198,7 @@ export interface LyraSequenceStripEventMap {
  * @cssprop [--lr-sequence-strip-marker-color=var(--lr-color-text)] - Color of the bottom marker on a `marker: true` cell, and of the marker legend row's bar.
  * @cssprop [--lr-sequence-strip-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch (category and marker rows alike).
  * @cssprop [--lr-sequence-strip-legend-marker-bg=var(--lr-color-surface-raised)] - Neutral chip background behind the marker legend row's bar; it stands in for "any cell", so it deliberately matches no category color.
+ * @cssprop [--lr-sequence-strip-disabled-opacity=0.5] - Opacity of a cell whose activated item sets `disabled`.
  * @status stable
  * @since 4.0.0
  */
@@ -219,6 +238,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
             categoryId: typeof item.categoryId === 'string' ? item.categoryId : '',
             ...(item.marker === undefined ? {} : { marker: Boolean(item.marker) }),
             ...(typeof item.label === 'string' ? { label: item.label } : {}),
+            ...(item.disabled === undefined ? {} : { disabled: Boolean(item.disabled) }),
           }));
         } catch {
           // Retain later valid entries when an untyped record getter throws.
@@ -314,7 +334,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
    */
   private activateItem(index: number): void {
     const item = this.items[index];
-    if (!item) return;
+    if (!item || item.disabled) return;
     this.emit('lr-item-activate', { index, id: item.id, item });
   }
 
@@ -325,6 +345,49 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const cell = this.cells()[cellIndex];
     if (!cell) return;
     this.activateItem(cell.start);
+  }
+
+  /** A cell's disabled state follows the item it activates -- itself below the cap, its range's
+   *  first item above it (see `activateCell()`). */
+  private cellDisabled(cell: SequenceStripCell): boolean {
+    return this.items[cell.start]?.disabled === true;
+  }
+
+  /** Degrades a candidate cell index off a disabled cell to the nearest enabled one (forward
+   *  first, then backward) -- so the resting tab stop (defaulting to cell 0) never rests on a
+   *  disabled cell. Returns `-1` only when every cell is disabled (including an empty list). Unset
+   *  regression: with no disabled item, this is the same clamped index the tab stop always used. */
+  private nearestEnabledCellIndex(cells: readonly SequenceStripCell[], index: number): number {
+    const count = cells.length;
+    if (!count) return -1;
+    const clamped = Math.min(Math.max(index, 0), count - 1);
+    if (!this.cellDisabled(cells[clamped]!)) return clamped;
+    for (let forward = clamped + 1; forward < count; forward += 1) {
+      if (!this.cellDisabled(cells[forward]!)) return forward;
+    }
+    for (let backward = clamped - 1; backward >= 0; backward -= 1) {
+      if (!this.cellDisabled(cells[backward]!)) return backward;
+    }
+    return -1;
+  }
+
+  /** Steps `from` by one cell in `direction`, skipping past a disabled cell without wrapping --
+   *  the same roving step contract `stepEnabledIndex()` in `internal/catalog-picker.ts` implements
+   *  for an active-descendant listbox. Unset regression: with no disabled item, this is the same
+   *  `clamp(from + direction, 0, cells.length - 1)` the arrow-key handler always computed. */
+  private stepEnabledCellIndex(cells: readonly SequenceStripCell[], from: number, direction: 1 | -1): number {
+    const count = cells.length;
+    if (!count) return from;
+    let index = Math.min(Math.max(from + direction, 0), count - 1);
+    for (let steps = 0; steps < count; steps += 1) {
+      if (!this.cellDisabled(cells[index]!)) return index;
+      index += direction;
+      if (index < 0 || index >= count) break;
+    }
+    // Nothing enabled was found in that direction -- stay at the roving position the call came
+    // from (guaranteed enabled by the same invariant `nearestEnabledCellIndex()` establishes for
+    // every resting stop), rather than moving onto a disabled cell.
+    return from;
   }
   /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the
    *  color-to-category mapping is readable without hovering each cell. Deliberately
@@ -541,10 +604,13 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const forwardKey = isRtl(this) ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = isRtl(this) ? 'ArrowRight' : 'ArrowLeft';
     let next = index;
-    if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = cells.length - 1;
-    else if (e.key === forwardKey) next = Math.min(cells.length - 1, index + 1);
-    else if (e.key === backwardKey) next = Math.max(0, index - 1);
+    if (e.key === 'Home') next = cells.findIndex((cell) => !this.cellDisabled(cell));
+    else if (e.key === 'End') {
+      next = cells.length - 1;
+      while (next >= 0 && this.cellDisabled(cells[next]!)) next -= 1;
+    } else if (e.key === forwardKey) next = this.stepEnabledCellIndex(cells, index, 1);
+    else if (e.key === backwardKey) next = this.stepEnabledCellIndex(cells, index, -1);
+    if (next < 0) return;
     const items = this.items;
     const targetStart = cells[next]?.start;
     const targetId = targetStart === undefined ? undefined : items[targetStart]?.id;
@@ -608,7 +674,12 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const activeIndex = this.hoverIndex ?? this.keyboardIndex;
     const active = activeIndex !== null ? cells[activeIndex] : undefined;
     const selectedCell = this.selectedCellIndex();
-    const tabStop = this.keyboardIndex ?? selectedCell ?? 0;
+    const requestedTabStop = this.keyboardIndex ?? selectedCell ?? 0;
+    // Degrades off a disabled cell to the nearest enabled one, so the resting `tabindex="0"` stop
+    // is never one a keyboard user cannot reach; falls back to the raw request only when every
+    // cell is disabled, the one case with no reachable stop to degrade to.
+    const nearestEnabledTabStop = this.nearestEnabledCellIndex(cells, requestedTabStop);
+    const tabStop = nearestEnabledTabStop >= 0 ? nearestEnabledTabStop : requestedTabStop;
     const tooltipIndex = activeIndex ?? tabStop;
     const overview = this.bucketSummary();
     return html`
@@ -632,6 +703,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
               aria-label=${this.cellLabel(cell, categoryMap)}
               aria-posinset=${index + 1}
               aria-setsize=${cells.length}
+              aria-disabled=${this.cellDisabled(cell) ? 'true' : nothing}
               tabindex=${index === tabStop ? '0' : '-1'}
               style=${styleMap({ backgroundColor: this.categoryColor(cell.categoryId, categoryMap) })}
               @pointerenter=${() => this.onCellEnter(index)}

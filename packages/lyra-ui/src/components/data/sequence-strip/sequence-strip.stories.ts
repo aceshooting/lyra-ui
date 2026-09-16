@@ -61,6 +61,21 @@ export const Empty: Story = {
   render: () => html`<lr-sequence-strip></lr-sequence-strip>`,
 };
 
+/** An item can be marked `disabled`, rendering its cell as genuinely non-actionable: no roving
+ *  tab stop, no hover/press affordance, and activating it emits nothing. Roving Left/Right/Home/End
+ *  navigation steps past it instead of landing on it. */
+export const DisabledItem: Story = {
+  render: () =>
+    html`<lr-sequence-strip
+      .items=${[
+        items[0]!,
+        { ...items[1]!, disabled: true, label: 'Turn 2: retracted' },
+        ...items.slice(2),
+      ] satisfies SequenceStripItem[]}
+      .categories=${categories()}
+    ></lr-sequence-strip>`,
+};
+
 /** A per-turn conversation timeline with a persistent key of the category colors, so the mapping
  *  stays readable without hovering each cell. The legend is static: it lists every entry of
  *  `categories` (whether or not any item uses it) and toggles nothing. */
