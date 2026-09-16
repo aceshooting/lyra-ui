@@ -4,6 +4,8 @@ import { setForcedColors } from '../../test/wtr-media.js';
 import { forceCoarsePointer } from '../../test/coarse-pointer-media.js';
 import { tag } from './prefix.js';
 import { specialistTokens } from './specialist-tokens.styles.js';
+import { sizes } from './sizes.styles.js';
+import { contextualSizes } from './contextual-vocabulary.styles.js';
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 
@@ -626,9 +628,13 @@ it('declares every bridged theme input in theme.css', async () => {
 it('names only theme inputs that a component token layer actually reads', async () => {
   const { text } = await loadThemeCss();
   const declared = [...text.matchAll(/^\s*(--lr-theme-[\w-]+):/gm)].map((match) => match[1]);
-  // All three component layers count. The semantic grid's 45 inputs are read by `palette`, while
-  // visualization and terminal inputs are read by the opt-in specialist layer.
-  const read = `${tokens.cssText}\n${palette.cssText}\n${specialistTokens.cssText}`;
+  // Every shipped component token layer counts. The semantic grid's 45 inputs are read by
+  // `palette`, visualization and terminal inputs by the opt-in specialist layer, and the
+  // form-control height/radius ladder by the shared control-sizing layers -- `sizes` paints the
+  // ladder itself and `contextualSizes` re-reads it for the density-scoped variants.
+  const read = [tokens, palette, specialistTokens, sizes, contextualSizes]
+    .map((sheet) => sheet.cssText)
+    .join('\n');
   const unused = declared.filter((name) => !read.includes(`var(${name},`));
   expect(unused.join('\n')).to.equal('');
 });
