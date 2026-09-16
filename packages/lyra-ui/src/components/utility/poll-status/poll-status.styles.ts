@@ -64,6 +64,7 @@ export const styles = css`
     cursor: pointer;
     padding: var(--lr-size-0-125rem);
     border-radius: var(--lr-radius);
+    transition: var(--lr-transition-interactive);
   }
   [part='pause-button']:hover:not(:disabled) {
     background: var(--lr-poll-status-pause-hover-bg, var(--lr-color-brand-quiet));

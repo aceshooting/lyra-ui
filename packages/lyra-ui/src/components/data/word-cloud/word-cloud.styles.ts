@@ -30,6 +30,10 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
   }
+  svg:hover {
+    outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   svg:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);

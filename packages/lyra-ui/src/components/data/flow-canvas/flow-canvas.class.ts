@@ -250,7 +250,7 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  *   colors above this one is `:hover`-gated rather than attribute-gated, so a `::part(node):hover`
  *   override would lose to this rule's own higher internal specificity rather than to the
  *   `::part()[attr]` restriction those four work around. Set to `transparent` to opt out.
- * @cssprop [--lr-flow-canvas-node-disabled-opacity=0.5] - Opacity of a node whose `FlowNode` entry
+ * @cssprop [--lr-flow-canvas-node-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a node whose `FlowNode` entry
  *   sets `disabled`.
  * @status stable
  * @since 4.0.0
@@ -1656,11 +1656,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return item.kind === 'node' && this.nodes.find((n) => n.id === item.id)?.disabled === true;
   }
 
-  /** Clamps `index` into range, then -- if that stop is disabled -- degrades to the nearest
-   *  enabled stop (forward first, then backward), so the "resting" active item this drives
-   *  (`tabindex="0"`, the un-navigated default) is never one a keyboard user cannot reach. Returns
-   *  `-1` only when every roving item is disabled. Unset regression: with no disabled node, this is
-   *  the same `clamp(index, 0, count - 1)` this always computed. */
+  /** Clamps to the nearest enabled roving stop, preferring forward then backward. */
   private normalizedItemIndex(index = this.activeItemIndex): number {
     const items = this.rovingItems();
     const count = items.length;
@@ -1676,11 +1672,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return -1;
   }
 
-  /** Steps `from` by one roving position in `direction`, skipping past a disabled node item
-   *  without wrapping -- the same roving-tabindex step contract `stepEnabledIndex()` in
-   *  `internal/catalog-picker.ts` implements for an active-descendant listbox. Unset regression:
-   *  with no disabled node, this is the same `clamp(from + direction, 0, count - 1)` the arrow-key
-   *  handler always computed. */
+  /** Steps by one roving position in `direction`, skipping disabled nodes without wrapping. */
   private nextEnabledItemIndex(from: number, direction: 1 | -1): number {
     const items = this.rovingItems();
     const count = items.length;

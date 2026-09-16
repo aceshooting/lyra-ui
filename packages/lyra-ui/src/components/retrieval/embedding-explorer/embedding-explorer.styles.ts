@@ -31,6 +31,7 @@ export const styles = css`
   [part='point'] {
     cursor: pointer;
     outline: none;
+    transition: stroke var(--lr-transition-fast), stroke-width var(--lr-transition-fast);
   }
 
   .point-hit {

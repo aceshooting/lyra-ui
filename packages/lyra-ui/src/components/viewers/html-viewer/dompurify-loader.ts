@@ -11,8 +11,7 @@ export async function loadHtmlSanitizerDeps(
 ): Promise<HtmlSanitizer | null> {
   try {
     // Different bundler/interop configurations resolve a CJS-published optional peer as either
-    // `{ default: X }` or the bare module namespace -- fall back to the bare shape, matching
-    // docx-loader.ts/email-loader.ts's `value.default ?? value` in this same family.
+    // `{ default: X }` or the bare module namespace; the shared resolver accepts both shapes.
     const module = await importDompurify();
     return resolveOptionalPeerCapability(module, isHtmlSanitizer);
   } catch (error) {

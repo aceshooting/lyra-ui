@@ -28,6 +28,7 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     text-align: start;
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part='header']:hover {
     background: var(--lr-color-brand-quiet);

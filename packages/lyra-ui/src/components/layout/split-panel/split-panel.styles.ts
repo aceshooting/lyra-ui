@@ -100,8 +100,6 @@ export const styles = css`
     cursor: col-resize;
     touch-action: none;
     user-select: none;
-    /* Hover/active below only repaint background, so that is all this needs; without it this
-       divider's fill snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast);
   }
 

@@ -86,6 +86,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
     /* The chevron renders at 1em (internal/icons.ts), so this native <button>'s own font-size IS
        the glyph's rendered size -- anchor it to the host's own --lr-font-size-sm cascade rather
        than the UA control font, mirroring [part="copy-button"]'s identical font-inherit rule. */
@@ -219,6 +220,7 @@ export const styles = css`
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     border-radius: var(--lr-radius);
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part="copy-button"]:hover {
     background: var(--lr-color-brand-quiet);
@@ -249,6 +251,8 @@ export const styles = css`
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    [part="toggle"],
+    [part="copy-button"],
     [part="toggle"] .chevron {
       transition: none !important;
     }

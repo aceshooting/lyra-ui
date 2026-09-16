@@ -987,9 +987,12 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.itemsChangedPendingPrune = true;
     }
     if (
-      isIndexedSource(this.effectiveSource) &&
-      (changed.has('items') || changed.has('source') || changed.has('keyFunction'))
+      changed.has('keyFunction') ||
+      (isIndexedSource(this.effectiveSource) &&
+        (changed.has('items') || changed.has('source')))
     ) {
+      // Measurements belong to the current row identities. A new key function can reuse an old
+      // key for a different row, so retaining the cache would apply the old row's height to it.
       this.measuredHeights.clear();
       this.measuredIndices.clear();
       this.indexedMeasurementIndexDirty = true;

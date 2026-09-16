@@ -11,6 +11,7 @@ import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   layoutWordCloud,
   MAX_FONT_SIZE_PX,
@@ -52,7 +53,7 @@ const MAX_PALETTE_ITEMS = 64;
 function warnSkippedWords(count: number, warnedSkipCounts: Set<number>): void {
   if (warnedSkipCounts.has(count)) return;
   warnedSkipCounts.add(count);
-  console.warn(
+  devWarn(
     `<lr-word-cloud> could not place ${count} word(s) (blank text, over the ${MAX_WORDS}-word cap, or ` +
       'the layout search was exhausted) -- they were dropped, not rendered.'
   );

@@ -1450,11 +1450,16 @@ it('targets the real preset-button part in the reduced-motion override, not a no
     const presetButton = el.shadowRoot!.querySelector<HTMLElement>(
       '[part="preset-button"]'
     )!;
-    expect(getComputedStyle(presetButton).transitionDuration).to.equal("2s");
+    expect(
+      getComputedStyle(presetButton).transitionDuration.split(',').map((value) => value.trim()),
+    ).to.deep.equal(['2s', '2s', '2s']);
 
     await setReducedMotion("reduce");
     await waitUntil(
-      () => getComputedStyle(presetButton).transitionDuration === "0s",
+      () =>
+        getComputedStyle(presetButton).transitionDuration
+          .split(',')
+          .every((value) => value.trim() === '0s'),
       "time-range preset transition did not stop under reduced motion"
     );
   } finally {

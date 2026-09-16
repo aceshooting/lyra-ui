@@ -128,7 +128,7 @@ ring stays intact. `--lr-context-meter-selected-arc-stroke` (default `16`, in th
 `0 0 100 100` viewBox units) is the stroke width of a selected `ring`-shape arc: every arc shares
 one bounding box, so a selected arc reports itself by thickening in place rather than by an outline
 that would trace the whole ring identically for every selection.
-`--lr-context-meter-disabled-opacity` (default `0.5`) dims a band or legend row whose entry sets
+`--lr-context-meter-disabled-opacity` (default `var(--lr-opacity-disabled)`) dims a band or legend row whose entry sets
 `disabled`; the band keeps its own colour, since that colour is the datum. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
 `--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,

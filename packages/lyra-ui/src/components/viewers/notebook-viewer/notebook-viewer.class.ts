@@ -1187,11 +1187,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     const label = viewerSemanticLabel(this, this.name || this.localize('notebookViewerLabel'));
     return html`<div
       part="base"
-      style=${sanitizeCssLength(this.maxHeight)
-        ? styleMap({ '--lr-notebook-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+      style=${maxHeight
+        ? styleMap({ '--lr-notebook-viewer-max-height': maxHeight })
         : nothing}
       role=${viewerSemanticRole(this, 'region') ?? nothing}
       aria-label=${label ?? nothing}

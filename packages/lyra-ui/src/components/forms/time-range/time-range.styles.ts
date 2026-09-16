@@ -94,7 +94,7 @@ export const styles = css`
       var(--_lr-time-range-preset-font-size)
     );
     cursor: pointer;
-    transition: var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive);
   }
   /* :where() zeroes the wrapped selectors so only :hover counts -- same match as
      [part='preset-button']:hover:not(:disabled), but it no longer out-specifies a consumer's

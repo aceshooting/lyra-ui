@@ -4,6 +4,7 @@ import type { LyraWordCloud } from './word-cloud.js';
 import { MAX_FONT_SIZE_PX, MAX_WORDS, MIN_SANE_FONT_SIZE } from './word-cloud-layout.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
@@ -115,6 +116,20 @@ it('renders one labeled [part="word"] per word, as a single tab stop on [part="s
   expect(svgEl(el).getAttribute('aria-describedby')).to.equal(null);
   expect(el.getAttribute('role')).to.be.null;
   expect(el.getAttribute('aria-label')).to.be.null;
+});
+
+it('shows a tokenized hover outline on the interactive SVG surface', async () => {
+  const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
+  const svg = svgEl(el);
+  try {
+    await hoverUntilMatched(svg, 'the word-cloud SVG never entered its hover state');
+    const computed = getComputedStyle(svg);
+    expect(computed.outlineStyle).to.equal('solid');
+    expect(computed.outlineWidth).to.not.equal('0px');
+    expect(computed.outlineOffset).to.not.equal('0px');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('renders named color overrides in an optional legend', async () => {

@@ -135,7 +135,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       if (this.focusedItem && !this.items.includes(this.focusedItem)) {
         const previousItems = changed.get('items') as readonly HighlightLayerItem[] | undefined;
         const previousIndex = previousItems?.indexOf(this.focusedItem) ?? -1;
-        const renderedIndexes = this.itemIndexesWithRects();
+        const renderedIndexes = this.itemIndexesWithRects(
+          this.items.map((item) => this.safeRects(item)),
+        );
         const nextIndex = renderedIndexes.reduce<number | null>((nearest, index) => {
           if (nearest === null) return index;
           return Math.abs(index - previousIndex) < Math.abs(nearest - previousIndex) ? index : nearest;
@@ -227,16 +229,16 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       .filter((rect): rect is SafePercentRect => rect !== undefined);
   }
 
-  private itemIndexesWithRects(): number[] {
+  private itemIndexesWithRects(rectsByItem: readonly SafePercentRect[][]): number[] {
     const indexes: number[] = [];
-    this.items.forEach((item, index) => {
-      if (this.safeRects(item).length > 0) indexes.push(index);
+    rectsByItem.forEach((rects, index) => {
+      if (rects.length > 0) indexes.push(index);
     });
     return indexes;
   }
 
-  private tabStopIndex(): number | null {
-    const renderedIndexes = this.itemIndexesWithRects();
+  private tabStopIndex(rectsByItem: readonly SafePercentRect[][]): number | null {
+    const renderedIndexes = this.itemIndexesWithRects(rectsByItem);
     if (renderedIndexes.length === 0) return null;
     if (this.focusedItem) {
       const focusedIndex = this.items.indexOf(this.focusedItem);
@@ -244,7 +246,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     }
     if (this.activeHighlightId) {
       const activeIndex = this.items.findIndex(
-        (item) => item.id === this.activeHighlightId && this.safeRects(item).length > 0,
+        (item, index) => item.id === this.activeHighlightId && rectsByItem[index]!.length > 0,
       );
       if (activeIndex >= 0) return activeIndex;
     }
@@ -288,7 +290,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     const rtl = this.effectiveDirection === 'rtl';
     const forward = e.key === 'ArrowDown' || (rtl ? e.key === 'ArrowLeft' : e.key === 'ArrowRight');
     const backward = e.key === 'ArrowUp' || (rtl ? e.key === 'ArrowRight' : e.key === 'ArrowLeft');
-    const renderedIndexes = this.itemIndexesWithRects();
+    const renderedIndexes = this.itemIndexesWithRects(
+      this.items.map((item) => this.safeRects(item)),
+    );
     const position = renderedIndexes.indexOf(itemIndex);
     let nextIndex: number | undefined;
     if (forward) nextIndex = renderedIndexes[Math.min(renderedIndexes.length - 1, position + 1)];
@@ -313,12 +317,13 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   override render(): TemplateResult | typeof nothing {
     if (this.items.length === 0) return nothing;
-    const renderedIndexes = this.itemIndexesWithRects();
+    const rectsByItem = this.items.map((item) => this.safeRects(item));
+    const renderedIndexes = this.itemIndexesWithRects(rectsByItem);
     if (renderedIndexes.length === 0) return nothing;
-    const tabStop = this.tabStopIndex();
+    const tabStop = this.tabStopIndex(rectsByItem);
     const activeIndex = this.activeHighlightId
       ? this.items.findIndex(
-          (item) => item.id === this.activeHighlightId && this.safeRects(item).length > 0,
+          (item, index) => item.id === this.activeHighlightId && rectsByItem[index]!.length > 0,
         )
       : -1;
     const renderedPosition = new Map(renderedIndexes.map((itemIndex, position) => [itemIndex, position]));
@@ -339,7 +344,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
           // Rect coordinates are physical percent-of-box over content that never mirrors (a
           // rendered image/page), so position with physical left/top -- logical
           // inset-inline-start would flip the overlay under RTL while the content stays put.
-          return this.safeRects(item).map((rect, rectIndex) => {
+          return rectsByItem[index]!.map((rect, rectIndex) => {
             const isPrimary = rectIndex === 0;
             return html`
               ${this.interactive

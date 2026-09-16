@@ -135,6 +135,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
+    transition: var(--lr-transition-interactive);
   }
   [part="previous-button"],
   [part="skip-button"],

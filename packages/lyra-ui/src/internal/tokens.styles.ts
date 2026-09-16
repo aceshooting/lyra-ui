@@ -52,32 +52,15 @@ const baseTokens = css`
     --lr-color-warning-quiet: var(--lr-color-warning-fill-quiet);
     --lr-color-danger: var(--lr-color-danger-fill-loud);
     --lr-color-danger-quiet: var(--lr-color-danger-fill-quiet);
-    /* A solid, high-contrast neutral fill -- distinct from --lr-color-surface (which is the
-       ambient page/panel background, not a "loud" accent) and from --lr-color-text (used as a
-       plain-text/outline accent, not a fill). Backs lr-button's appearance="accent" tier for
-       variant="neutral", the one variant whose other tokens all resolve to ambient/plain values. */
     --lr-color-neutral: var(--lr-color-neutral-fill-loud);
-    /* Text/icon colors paired with each solid semantic fill. These are
-       separate tokens because a theme can choose different foregrounds per
-       tone, and the bright standalone dark fills require dark content. */
     --lr-color-on-brand: var(--lr-color-brand-on-loud);
     --lr-color-on-success: var(--lr-color-success-on-loud);
     --lr-color-on-warning: var(--lr-color-warning-on-loud);
     --lr-color-on-danger: var(--lr-color-danger-on-loud);
     --lr-color-on-neutral: var(--lr-color-neutral-on-loud);
-    /* Foreground for controls and captions painted over the strong media scrim. It is independent
-       from ordinary text and semantic-tone foregrounds because the underlying surface is always
-       the strong overlay, regardless of the page theme. */
     --lr-color-on-strong-overlay: var(--lr-theme-color-on-strong-overlay, #fff);
-    /* The surface a modal panel (dialog, drawer, lightbox, command palette) paints itself with.
-       Separate from --lr-color-surface because in dark mode a panel that shares the page surface
-       token is invisible against the page; light mode keeps the page surface as its default. */
     --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, var(--lr-color-surface));
     --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.5));
-    /* Own input, chained through --lr-theme-color-overlay for back-compat: both scrims
-       previously read the same input, so defining it flattened the strong scrim's 0.92
-       down to the plain scrim's value. A theme that sets only --lr-theme-color-overlay
-       still tints both, exactly as before. */
     --lr-color-overlay-strong: var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92)));
     --lr-color-no-data: var(--lr-theme-color-no-data, rgb(128 128 128 / 25%));
     --lr-font-mono: var(--lr-theme-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
@@ -85,9 +68,6 @@ const baseTokens = css`
     --lr-space-s: var(--lr-theme-space-s, 0.5rem);
     --lr-space-m: var(--lr-theme-space-m, 0.75rem);
     --lr-space-l: var(--lr-theme-space-l, 1rem);
-    /* Semantic type, density, border, radius, and layer scales. Component styles consume
-       these names; the exact fallback values remain centralized here so a theme can retune
-       typography and geometry without editing every component. */
     --lr-space-2xs: var(--lr-theme-space-2xs, 0.125rem);
     --lr-space-2xl: var(--lr-theme-space-2xl, 2rem);
     --lr-font-size-3xs: var(--lr-theme-font-size-3xs, 0.5rem);
@@ -116,7 +96,6 @@ const baseTokens = css`
     --lr-radius-xs: var(--lr-theme-border-radius-xs, 2px);
     --lr-radius-pill: var(--lr-theme-border-radius-pill, 999px);
     --lr-color-shadow: var(--lr-theme-color-shadow, #000);
-    /* Opaque stop for mask gradients; see MASK_OPAQUE note above. */
     --lr-mask-opaque: #000;
     --lr-layer-base: var(--lr-theme-z-index-base, 0);
     --lr-layer-content: var(--lr-theme-z-index-content, 1);
@@ -256,9 +235,6 @@ const baseTokens = css`
     --lr-easing-emphasized: var(--lr-theme-easing-emphasized, ease-in-out);
     --lr-easing-linear: var(--lr-theme-easing-linear, linear);
 
-    /* Derived, so a consumer retheming either axis gets both. The legacy
-       --lr-theme-transition-* inputs still win when set, so an existing theme
-       keeps working unchanged. */
     --lr-transition-fast: var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard));
     --lr-transition-base: var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard));
     --lr-transition-ambient: var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized));
@@ -277,8 +253,6 @@ const baseTokens = css`
        including for a theme that set the legacy compound input. */
     --lr-transition-interactive: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
 
-    /* Disabled state — one opacity value for every disabled control,
-       replacing three previously-independent hardcoded values (0.5/0.4/0.35). */
     --lr-opacity-disabled: var(--lr-theme-opacity-disabled, 0.5);
 
     /* De-emphasis that is NOT disablement: still-live content the eye should reach second
@@ -304,13 +278,8 @@ const baseTokens = css`
        same declaration lightens. That is the property filter: brightness() never had. */
     --lr-color-mix-partner: var(--lr-theme-color-mix-partner, var(--lr-color-text));
 
-    /* Superseded by the two mix knobs above and retained only so a theme that set it keeps
-       rendering; no component reads it. Remove it once no consumer does. */
     --lr-hover-brightness: var(--lr-theme-hover-brightness, 1.08);
 
-    /* Popover viewport clamp — the max-inline-size cap that keeps an anchored
-       popover/menu from spilling past the viewport edge, shared by every
-       floating surface so they clamp to one consistent width. */
     --lr-popover-viewport-clamp: var(--lr-theme-popover-viewport-clamp, 92vw);
 
     /* Focus ring — every :focus-visible rule in the library should reference
@@ -345,30 +314,9 @@ const baseTokens = css`
     --lr-safe-area-inline-end: env(safe-area-inset-left, 0px);
   }
 
-  /* TOUCH_TARGET_FLOOR -- the coarse-pointer safety net behind every intentionally-shrunk
-     dense action row (see icon-button.class.ts's "No size attribute" doc block and
-     copy-button.class.ts / message-actions.class.ts's own size-ladder gotchas).
-     --lr-icon-button-size is a WCAG 2.5.8 floor, not a fixed size, and it is declared exactly
-     once, here, then re-derived on every component's own :host -- so growing it in this ONE
-     place under a coarse pointer (touch, no hover) reaches every consumer of the token without
-     touching each component's own stylesheet individually. 2.75rem (44px) matches the iOS HIG /
-     Android Material touch-target convention, ABOVE the 2.5rem default and comfortably above an
-     author's deliberately-lowered --lr-theme-icon-button-size for a dense mouse-only row: a
-     dense copy button or message-actions toolbar that opts out of the ordinary floor for a
-     fine-pointer layout still grows back to a comfortably tappable box the moment the pointer
-     that reaches it is a finger rather than a mouse. max() leaves an explicit
-     --lr-theme-icon-button-size that is ALREADY at or above 2.75rem untouched, and stacks
-     correctly on top of the --lr-theme-icon-button-size bridge above (that one changes the
-     UNCONDITIONAL default; this one raises a floor under it for a coarse pointer regardless of
-     which value fed into it). */
+  /* TOUCH_TARGET_FLOOR -- keep icon-only controls at least 44px on coarse pointers. */
   @media (hover: none), (pointer: coarse) {
     :host {
-      /* Reads --lr-theme-icon-button-size directly (with its own 2.5rem fallback) rather than
-         var(--lr-icon-button-size): the latter would make this declaration reference the very
-         property it assigns, on the same :host selector, which the Custom Properties spec treats
-         as a cycle -- the winning declaration would compute to its guaranteed-invalid value (the
-         property falls back to whatever it inherits, undoing the floor) rather than the intended
-         44px, regardless of the non-winning declaration above looking like a reasonable fallback. */
       --lr-icon-button-size: max(var(--lr-theme-icon-button-size, 2.5rem), 2.75rem);
     }
   }

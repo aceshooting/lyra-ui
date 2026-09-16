@@ -198,7 +198,7 @@ export interface LyraSequenceStripEventMap {
  * @cssprop [--lr-sequence-strip-marker-color=var(--lr-color-text)] - Color of the bottom marker on a `marker: true` cell, and of the marker legend row's bar.
  * @cssprop [--lr-sequence-strip-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch (category and marker rows alike).
  * @cssprop [--lr-sequence-strip-legend-marker-bg=var(--lr-color-surface-raised)] - Neutral chip background behind the marker legend row's bar; it stands in for "any cell", so it deliberately matches no category color.
- * @cssprop [--lr-sequence-strip-disabled-opacity=0.5] - Opacity of a cell whose activated item sets `disabled`.
+ * @cssprop [--lr-sequence-strip-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a cell whose activated item sets `disabled`.
  * @status stable
  * @since 4.0.0
  */
@@ -353,10 +353,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     return this.items[cell.start]?.disabled === true;
   }
 
-  /** Degrades a candidate cell index off a disabled cell to the nearest enabled one (forward
-   *  first, then backward) -- so the resting tab stop (defaulting to cell 0) never rests on a
-   *  disabled cell. Returns `-1` only when every cell is disabled (including an empty list). Unset
-   *  regression: with no disabled item, this is the same clamped index the tab stop always used. */
+  /** Returns the nearest enabled cell, preferring forward then backward; `-1` means none exists. */
   private nearestEnabledCellIndex(cells: readonly SequenceStripCell[], index: number): number {
     const count = cells.length;
     if (!count) return -1;
@@ -371,10 +368,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     return -1;
   }
 
-  /** Steps `from` by one cell in `direction`, skipping past a disabled cell without wrapping --
-   *  the same roving step contract `stepEnabledIndex()` in `internal/catalog-picker.ts` implements
-   *  for an active-descendant listbox. Unset regression: with no disabled item, this is the same
-   *  `clamp(from + direction, 0, cells.length - 1)` the arrow-key handler always computed. */
+  /** Steps by one cell in `direction`, skipping disabled cells without wrapping. */
   private stepEnabledCellIndex(cells: readonly SequenceStripCell[], from: number, direction: 1 | -1): number {
     const count = cells.length;
     if (!count) return from;

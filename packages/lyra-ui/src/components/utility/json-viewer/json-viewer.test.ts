@@ -328,6 +328,21 @@ it("gives tree toggles and copy controls the shared minimum hit area", async () 
   expect(getComputedStyle(copy).minBlockSize).to.equal("40px");
 });
 
+it('applies the interactive transition token to toggle and copy controls', async () => {
+  const el = (await fixture(html`
+    <lr-json-viewer
+      .data=${sample}
+      .copyable=${true}
+      style="--lr-transition-interactive: all 123ms linear"
+    ></lr-json-viewer>
+  `)) as LyraJsonViewer;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+
+  expect(getComputedStyle(toggle).transitionDuration).to.contain('0.123s');
+  expect(getComputedStyle(copy).transitionDuration).to.contain('0.123s');
+});
+
 it('anchors the toggle glyph to the component font-size token, not the UA control font (regression)', async () => {
   const el = await withData(sample);
   await el.updateComplete;

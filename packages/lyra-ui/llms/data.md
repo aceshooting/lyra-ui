@@ -2642,7 +2642,7 @@ block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` 
 (default `0.625rem` — a legend swatch's inline- and block-size, category and marker rows alike), and
 `--lr-sequence-strip-legend-marker-bg` (default `var(--lr-color-surface-raised)` — the neutral chip
 background behind the marker legend row's bar; it stands in for "any cell", so it deliberately
-matches no category color), and `--lr-sequence-strip-disabled-opacity` (default `0.5` — opacity of
+matches no category color), and `--lr-sequence-strip-disabled-opacity` (default `var(--lr-opacity-disabled)` — opacity of
 a cell whose activated item sets `disabled`); the tooltip also consumes shared tokens
 `--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
 the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
@@ -3248,7 +3248,7 @@ four above. Set it to `transparent` to opt out of the hover treatment.
 - `part="node-control"` — The visually hidden, roving selection button for a node.
 - `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-color-brand)`.
 - `--lr-flow-canvas-node-disabled-opacity` — Opacity of a node whose `FlowNode` entry sets
-  `disabled`. Default: `0.5`.
+  `disabled`. Default: `var(--lr-opacity-disabled)`.
 
 ---
 
@@ -3669,7 +3669,7 @@ ring stays intact. `--lr-context-meter-selected-arc-stroke` (default `16`, in th
 `0 0 100 100` viewBox units) is the stroke width of a selected `ring`-shape arc: every arc shares
 one bounding box, so a selected arc reports itself by thickening in place rather than by an outline
 that would trace the whole ring identically for every selection.
-`--lr-context-meter-disabled-opacity` (default `0.5`) dims a band or legend row whose entry sets
+`--lr-context-meter-disabled-opacity` (default `var(--lr-opacity-disabled)`) dims a band or legend row whose entry sets
 `disabled`; the band keeps its own colour, since that colour is the datum. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
 `--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,

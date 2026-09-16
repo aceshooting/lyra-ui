@@ -19,16 +19,8 @@ const STREAM_CONNECTION_STATE = literalSetConverter<StreamConnectionState>(
   'idle'
 );
 
-// The default slot's stalled-message content is often plain text with no
-// wrapping element at all (see the CustomStalledMessage story), so an
-// Element-only check never counts it, and ordinary indented-markup
-// whitespace (a newline + indentation before a slotted `actions` button, as
-// in the DefaultStalledMessage story) must not count either -- native <slot>
-// fallback content is suppressed by *any* assigned node, whitespace or not,
-// which previously left the message area blank in exactly that common case.
-// Mirrors lr-citation-badge's identical isRealPreviewNode: a node counts as
-// real message content if it's an element not assigned to some other named
-// slot (e.g. `actions`), or non-whitespace text.
+// Native <slot> fallback is suppressed by any assigned node, including whitespace. Count only
+// visible default-slot content: unassigned elements or non-whitespace text.
 function isRealMessageNode(n: Node): boolean {
   if (n.nodeType !== Node.ELEMENT_NODE)
     return (n.textContent ?? '').trim().length > 0;

@@ -32385,7 +32385,7 @@
             "name": "--lr-context-meter-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0.5
+            "default": "var(--lr-opacity-disabled)"
           },
           {
             "name": "--lr-context-meter-legend-swatch-size",
@@ -54379,7 +54379,7 @@
             "name": "--lr-flow-canvas-node-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0.5
+            "default": "var(--lr-opacity-disabled)"
           },
           {
             "name": "--lr-flow-canvas-node-hover-outline-color",
@@ -111321,7 +111321,7 @@
             "name": "--lr-sequence-strip-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0.5
+            "default": "var(--lr-opacity-disabled)"
           },
           {
             "name": "--lr-sequence-strip-height",

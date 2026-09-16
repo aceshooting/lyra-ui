@@ -2687,6 +2687,44 @@ describe("public offset/index queries", () => {
     }
   });
 
+  it("clears auto-height measurements when keyFunction changes row identities", async () => {
+    const items = [
+      { id: "first", height: 30 },
+      { id: "second", height: 90 },
+    ];
+    const renderMeasured = (item: unknown) => {
+      const value = item as (typeof items)[number];
+      return html`<div style="block-size:${value.height}px;box-sizing:border-box">
+        row
+      </div>`;
+    };
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        .items=${items}
+        .renderItem=${renderMeasured}
+        .keyFunction=${(item: unknown) => (item as (typeof items)[number]).id}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+
+    const measuredHeights = (
+      el as unknown as { measuredHeights: Map<string, number> }
+    ).measuredHeights;
+    expect(measuredHeights.size).to.be.greaterThan(0);
+
+    // Reuse the old second-row key for the first row. Without invalidation, its 90px measurement
+    // is applied to the first row even though the new key function identifies a different row.
+    el.keyFunction = (item: unknown) =>
+      (item as (typeof items)[number]).id === "first" ? "second" : "third";
+    await el.updateComplete;
+
+    expect(measuredHeights.size).to.equal(0);
+  });
+
   it("clamps indexAtOffset and reports -1 for an empty list", async () => {
     const el = (await fixture(
       html`<lr-virtual-list

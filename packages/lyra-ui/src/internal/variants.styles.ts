@@ -24,17 +24,6 @@ export const variants = css`
     --lr-color-on-normal: var(--lr-color-neutral-on-normal);
     --lr-color-on-loud: var(--lr-color-neutral-on-loud);
   }
-  :host([variant='neutral']) {
-    --lr-color-fill-quiet: var(--lr-color-neutral-fill-quiet);
-    --lr-color-fill-normal: var(--lr-color-neutral-fill-normal);
-    --lr-color-fill-loud: var(--lr-color-neutral-fill-loud);
-    --lr-color-border-quiet: var(--lr-color-neutral-border-quiet);
-    --lr-color-border-normal: var(--lr-color-neutral-border-normal);
-    --lr-color-border-loud: var(--lr-color-neutral-border-loud);
-    --lr-color-on-quiet: var(--lr-color-neutral-on-quiet);
-    --lr-color-on-normal: var(--lr-color-neutral-on-normal);
-    --lr-color-on-loud: var(--lr-color-neutral-on-loud);
-  }
   :host([variant='brand']),
   :host([variant='primary']) {
     --lr-color-fill-quiet: var(--lr-color-brand-fill-quiet);

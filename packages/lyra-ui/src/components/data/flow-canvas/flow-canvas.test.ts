@@ -1977,6 +1977,17 @@ describe('disabled nodes', () => {
     expect(nodeControl(el, 'b').disabled).to.equal(true);
   });
 
+  it('uses the shared disabled-opacity theme token when no component override is set', async () => {
+    const el = (await fixture(
+      html`<lr-flow-canvas style="--lr-theme-opacity-disabled: 0.37"></lr-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    el.nodes = [{ id: 'disabled', position: { x: 0, y: 0 }, disabled: true }];
+    await el.updateComplete;
+
+    const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="disabled"]')!;
+    expect(getComputedStyle(wrapper).opacity).to.equal('0.37');
+  });
+
   it('a click on a disabled node card selects nothing and emits no lr-node-activate', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = withDisabled;

@@ -252,7 +252,7 @@ export const styles = css`
      here, matching the :not(:disabled) gate a native disabled button needs. */
   [part='node'][aria-disabled='true'] {
     cursor: default;
-    opacity: var(--lr-flow-canvas-node-disabled-opacity, 0.5);
+    opacity: var(--lr-flow-canvas-node-disabled-opacity, var(--lr-opacity-disabled));
   }
   /* The selected edge's static weight. MUST stay above the :hover/:active rules below, the same
      ordering discipline as [part='node'][data-selected] above: this and [part='edge']:active are

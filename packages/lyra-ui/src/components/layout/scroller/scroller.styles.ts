@@ -147,8 +147,6 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
-    /* Hover/active below only repaint background, so that is all this needs; without it this
-       control's fill snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast);
   }
 

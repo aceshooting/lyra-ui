@@ -1100,6 +1100,16 @@ describe('disabled items', () => {
     expect(cellAt(el, 2).getAttribute('aria-disabled')).to.equal(null);
   });
 
+  it('uses the shared disabled-opacity theme token when no component override is set', async () => {
+    const el = await fixture<LyraSequenceStrip>(
+      html`<lr-sequence-strip style="--lr-theme-opacity-disabled: 0.37"></lr-sequence-strip>`,
+    );
+    el.items = [{ id: 'disabled', categoryId: 'text', disabled: true }];
+    await el.updateComplete;
+
+    expect(getComputedStyle(cellAt(el, 0)).opacity).to.equal('0.37');
+  });
+
   it('starts the roving tab stop on the first enabled cell when the first cell is disabled', async () => {
     const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .categories=${categories}></lr-sequence-strip>`);
     el.items = [

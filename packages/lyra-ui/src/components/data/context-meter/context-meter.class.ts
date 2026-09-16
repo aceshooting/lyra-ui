@@ -224,7 +224,7 @@ function formatCount(n: number, locale: string): string {
  * @cssprop [--lr-context-meter-segment-seam-color=var(--lr-color-surface)] - Color of the hairline seam painted between adjacent `bar`-shape segments.
  * @cssprop [--lr-context-meter-selected-ring-color=var(--lr-color-text)] - Colour of the inset ring marking a `bar`-shape band or a legend row whose index is in `selectedIndices`. Painted inside the shadow root because the state lives in the part name, and as a ring rather than an outline so it composes with the hover/press/focus outlines instead of being replaced by them.
  * @cssprop [--lr-context-meter-selected-ring-width=var(--lr-border-width-thick)] - Width of that selected ring.
- * @cssprop [--lr-context-meter-disabled-opacity=0.5] - Opacity of a band or legend row whose `segments` entry sets `disabled`. The band keeps its own colour -- it is still the datum it always was -- and loses only the affordances that promise activation.
+ * @cssprop [--lr-context-meter-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a band or legend row whose `segments` entry sets `disabled`. The band keeps its own colour -- it is still the datum it always was -- and loses only the affordances that promise activation.
  * @cssprop [--lr-context-meter-selected-arc-stroke=16] - Stroke width, in this component's `0 0 100 100` viewBox units, of a selected `ring`-shape arc. Arcs share one bounding box, so a selected arc reports itself by thickening in place rather than by an outline that would trace the whole ring.
  * @event lr-segment-activate - A band or its legend row was activated while `interactive` is set.
  *   `detail: { index, label, value }`. Cancelable: the default action is this component toggling

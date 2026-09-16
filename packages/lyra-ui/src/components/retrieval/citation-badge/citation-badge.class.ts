@@ -202,17 +202,12 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   @query('[part="popover"]') private popoverEl?: HTMLElement;
 
   private readonly popoverId = nextId('citation-badge-popover');
-  // A `[part]` always contains a literal `<slot>` child regardless of
-  // assigned content, so `:empty` never matches — real emptiness is tracked
-  // in JS instead, same fix lr-tool-call-chip's hasDetailSlot/lr-stat's
-  // hasIcon etc. already establish. The preview is often plain text (see the
-  // Statuses story: "No source has confirmed this yet.") with no wrapping
-  // element at all, so an element-only check would miss it; the shared
-  // controller counts non-whitespace text as real content, seeds before the
-  // first render, and stays live afterwards.
+  // A rendered slot is never empty because the slot node itself is present;
+  // the shared controller also counts bare, non-whitespace text content.
   private readonly slotPresence = new SlotPresenceController(this);
   private cleanupPositioner?: () => void;
-  private hideTimer?: ReturnType<typeof setTimeout>;
+  private hideTimer?: number;
+  private hideTimerOwner?: Window;
   // Hover and focus are tracked as independent "keep it open" reasons —
   // mirrors lr-toast-item's identical hovering/focused pair — so releasing
   // one (e.g. the pointer leaving while the badge still has keyboard focus)
@@ -250,15 +245,9 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
-    clearTimeout(this.hideTimer);
-    this.hideTimer = undefined;
-    // Reset so a reconnect (e.g. a drag-and-drop reparent, or a virtualized/reordering list
-    // moving this same element instance) re-triggers updated()'s popoverOpen-driven branch --
-    // without this, popoverOpen stays true across the disconnect/reconnect and
-    // changed.has('popoverOpen') never fires again, leaving the popover rendered open at a stale,
-    // frozen position with no positioner re-armed. Mirrors lr-mention-popover's/lr-select's
-    // identical fix. hovering/focused are reset too since the wrapper's pointerenter/focusin
-    // listeners live on light-DOM-adjacent shadow content that won't re-fire them on reconnect.
+    this.clearHideTimer();
+    // Reset transient state so reconnecting a reparented or virtualized element re-arms its
+    // positioner and does not preserve stale hover/focus ownership.
     this.popoverOpen = false;
     this.hovering = false;
     this.focused = false;
@@ -297,24 +286,34 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     // (pointerenter -> pointerleave -> pointerenter before HIDE_DELAY_MS)
     // actually cancels the scheduled hide instead of leaving it armed to
     // fire later regardless of the now-restored hover/focus state.
-    clearTimeout(this.hideTimer);
-    this.hideTimer = undefined;
+    this.clearHideTimer();
     if (this.popoverOpen) return;
     this.popoverOpen = true;
   }
 
+  private clearHideTimer(): void {
+    if (this.hideTimer !== undefined) this.hideTimerOwner?.clearTimeout(this.hideTimer);
+    this.hideTimer = undefined;
+    this.hideTimerOwner = undefined;
+  }
+
   private scheduleHidePreview(): void {
     if (!this.popoverOpen || this.hovering || this.focused) return;
-    clearTimeout(this.hideTimer);
-    this.hideTimer = setTimeout(() => {
+    this.clearHideTimer();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const handle = ownerWindow.setTimeout(() => {
+      if (this.hideTimer !== handle) return;
       this.hideTimer = undefined;
+      this.hideTimerOwner = undefined;
       this.popoverOpen = false;
     }, HIDE_DELAY_MS);
+    this.hideTimer = handle;
+    this.hideTimerOwner = ownerWindow;
   }
 
   private hidePreviewNow(): void {
-    clearTimeout(this.hideTimer);
-    this.hideTimer = undefined;
+    this.clearHideTimer();
     if (this.popoverOpen) this.popoverOpen = false;
   }
 

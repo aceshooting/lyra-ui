@@ -105,6 +105,7 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part="copy-button"]:hover {
     border-color: var(--lr-color-brand);

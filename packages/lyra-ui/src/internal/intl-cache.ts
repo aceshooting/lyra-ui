@@ -89,19 +89,37 @@ function getCached<T>(cache: Map<string, T>, key: string, create: () => T): T {
   return created;
 }
 
+function getFormatter<T>(
+  locale: string | undefined,
+  options: object | undefined,
+  cache: Map<string, T>,
+  create: (safeLocale: string) => T,
+): T {
+  const safeLocale = resolveIntlLocale(locale);
+  return getCached(cache, cacheKey(safeLocale, options), () => create(safeLocale));
+}
+
 /**
  * A shared `Intl.NumberFormat` for the given locale and options. `undefined` and malformed input
  * safely select the library's deterministic English fallback.
  */
 export function getNumberFormat(locale: string | undefined, options?: Intl.NumberFormatOptions): Intl.NumberFormat {
-  const safeLocale = resolveIntlLocale(locale);
-  return getCached(numberFormatCache, cacheKey(safeLocale, options), () => new Intl.NumberFormat(safeLocale, options));
+  return getFormatter(
+    locale,
+    options,
+    numberFormatCache,
+    (safeLocale) => new Intl.NumberFormat(safeLocale, options),
+  );
 }
 
 /** A shared `Intl.DateTimeFormat` for the given locale and options. */
 export function getDateTimeFormat(locale: string | undefined, options?: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
-  const safeLocale = resolveIntlLocale(locale);
-  return getCached(dateTimeFormatCache, cacheKey(safeLocale, options), () => new Intl.DateTimeFormat(safeLocale, options));
+  return getFormatter(
+    locale,
+    options,
+    dateTimeFormatCache,
+    (safeLocale) => new Intl.DateTimeFormat(safeLocale, options),
+  );
 }
 
 /**
@@ -110,21 +128,21 @@ export function getDateTimeFormat(locale: string | undefined, options?: Intl.Dat
  * the options throws the same `TypeError` a direct construction would.
  */
 export function getDisplayNames(locale: string, options?: Intl.DisplayNamesOptions): Intl.DisplayNames {
-  const safeLocale = resolveIntlLocale(locale);
-  return getCached(
+  return getFormatter(
+    locale,
+    options,
     displayNamesCache,
-    cacheKey(safeLocale, options),
-    () => new Intl.DisplayNames([safeLocale], options as Intl.DisplayNamesOptions),
+    (safeLocale) => new Intl.DisplayNames([safeLocale], options as Intl.DisplayNamesOptions),
   );
 }
 
 /** A shared `Intl.ListFormat` for the given locale and options. */
 export function getListFormat(locale: string | undefined, options?: Intl.ListFormatOptions): Intl.ListFormat {
-  const safeLocale = resolveIntlLocale(locale);
-  return getCached(
+  return getFormatter(
+    locale,
+    options,
     listFormatCache,
-    cacheKey(safeLocale, options),
-    () => new Intl.ListFormat(safeLocale, options),
+    (safeLocale) => new Intl.ListFormat(safeLocale, options),
   );
 }
 
@@ -133,28 +151,40 @@ export function getRelativeTimeFormat(
   locale: string | undefined,
   options?: Intl.RelativeTimeFormatOptions,
 ): Intl.RelativeTimeFormat {
-  const safeLocale = resolveIntlLocale(locale);
-  return getCached(
+  return getFormatter(
+    locale,
+    options,
     relativeTimeFormatCache,
-    cacheKey(safeLocale, options),
-    () => new Intl.RelativeTimeFormat(safeLocale, options),
+    (safeLocale) => new Intl.RelativeTimeFormat(safeLocale, options),
   );
 }
 
 /** A shared `Intl.PluralRules` instance for the given locale and options. */
 export function getPluralRules(locale: string | undefined, options?: Intl.PluralRulesOptions): Intl.PluralRules {
-  const safeLocale = resolveIntlLocale(locale);
-  return getCached(pluralRulesCache, cacheKey(safeLocale, options), () => new Intl.PluralRules(safeLocale, options));
+  return getFormatter(
+    locale,
+    options,
+    pluralRulesCache,
+    (safeLocale) => new Intl.PluralRules(safeLocale, options),
+  );
 }
 
 /** A shared `Intl.Collator` instance for the given locale and options. */
 export function getCollator(locale: string | undefined, options?: Intl.CollatorOptions): Intl.Collator {
-  const safeLocale = resolveIntlLocale(locale);
-  return getCached(collatorCache, cacheKey(safeLocale, options), () => new Intl.Collator(safeLocale, options));
+  return getFormatter(
+    locale,
+    options,
+    collatorCache,
+    (safeLocale) => new Intl.Collator(safeLocale, options),
+  );
 }
 
 /** A shared `Intl.Segmenter` instance for the given locale and options. */
 export function getSegmenter(locale: string | undefined, options?: Intl.SegmenterOptions): Intl.Segmenter {
-  const safeLocale = resolveIntlLocale(locale);
-  return getCached(segmenterCache, cacheKey(safeLocale, options), () => new Intl.Segmenter(safeLocale, options));
+  return getFormatter(
+    locale,
+    options,
+    segmenterCache,
+    (safeLocale) => new Intl.Segmenter(safeLocale, options),
+  );
 }

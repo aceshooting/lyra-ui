@@ -199,18 +199,7 @@ export function loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToo
   return promise;
 }
 
-/**
- * @internal Test-only utility: empties the default registry and its `load()` cache so
- * one test's `registerToolRenderer()` calls can't leak into the next. Mirrors
- * the fact that this module (like `toaster.ts`'s per-placement region map) is
- * deliberately singleton, module-level state -- there is no per-instance
- * registry to construct fresh in a test's own `fixture()` call instead. Not
- * part of the public API; not re-exported from the root barrel -- a
- * consuming app has no legitimate reason to wipe this page's entire
- * registered-renderer registry at runtime, only a test suite resetting
- * state between cases (import directly from this module, as the test suite
- * already does).
- */
+/** @internal Test-only utility for clearing the module-level default registry and load cache. */
 export function clearToolRenderers(): void {
   defaultRegistry.clear();
   loadCache = new WeakMap();

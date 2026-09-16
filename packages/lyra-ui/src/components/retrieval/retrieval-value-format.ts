@@ -26,6 +26,8 @@ export function formatBoundedRetrievalValue(
   const maxEntries = options.maxEntries ?? 32;
   const maxValues = options.maxValues ?? 128;
   const maxStringLength = options.maxStringLength ?? 256;
+  const numberFormat = getNumberFormat(options.locale);
+  const listFormat = getListFormat(options.locale, { type: 'conjunction' });
   const seen = new WeakSet<object>();
   let remaining = maxValues;
 
@@ -37,8 +39,7 @@ export function formatBoundedRetrievalValue(
   const format = (current: unknown, depth: number): string => {
     if (remaining-- <= 0 || depth > maxDepth) return options.truncated;
     if (typeof current === 'string') return boundedText(current);
-    if (typeof current === 'number')
-      return getNumberFormat(options.locale).format(finiteNumber(current, 0));
+    if (typeof current === 'number') return numberFormat.format(finiteNumber(current, 0));
     if (typeof current === 'boolean' || typeof current === 'bigint')
       return String(current);
     if (current == null) return '';
@@ -55,9 +56,7 @@ export function formatBoundedRetrievalValue(
         for (let index = 0; index < count; index++)
           items.push(format(current[index], depth + 1));
         if (length > count) items.push(options.truncated);
-        return getListFormat(options.locale, { type: 'conjunction' }).format(
-          items
-        );
+        return listFormat.format(items);
       }
 
       const entries: Array<readonly [string, unknown]> = [];

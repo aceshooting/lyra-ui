@@ -189,14 +189,9 @@ export interface LyraCopyButtonEventMap {
  * @csspart copy-icon - The resting copy glyph.
  * @csspart success-icon - The confirmation glyph.
  * @csspart error-icon - The failure glyph.
- * @csspart feedback - The visually hidden, `aria-hidden` mirror of the outcome text. The
- * announcement itself lands in the shared light-DOM polite region (`acquireAnnouncementSink()` in
- * `internal/announcer.ts`), because a live region inside a shadow root is not reliably announced;
- * this part is a styling/inspection surface only. This is unrelated pre-existing Lyra state, not a
- * tooltip alias: `wa-copy-button`'s own `feedback` part names its whole internal `<wa-tooltip>`,
- * which has no single-name equivalent here by design, since that name was already taken by this
- * SR-only span before the parity mapping was made — style the tooltip itself through the four
- * `tooltip__*` parts below instead.
+ * @csspart feedback - Visually hidden, `aria-hidden` mirror of the outcome text. The announcement
+ * uses the shared light-DOM polite region because live regions inside shadow roots are not reliable;
+ * style the composed tooltip through its `tooltip__*` parts.
  * @csspart tooltip__base - The nested tooltip's base wrapper.
  * @csspart tooltip__base__popup - The nested tooltip's popup wrapper.
  * @csspart tooltip__base__arrow - The nested tooltip's arrow.

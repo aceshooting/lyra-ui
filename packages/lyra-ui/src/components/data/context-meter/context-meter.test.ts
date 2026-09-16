@@ -810,6 +810,17 @@ describe('non-actionable and empty segments', () => {
     expect(rows.map((row) => row.disabled)).to.deep.equal([false, false, true]);
   });
 
+  it('uses the shared disabled-opacity theme token when no component override is set', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter interactive total="100" style="--lr-theme-opacity-disabled: 0.37"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = [{ label: 'Disabled', value: 1, disabled: true }];
+    await el.updateComplete;
+
+    const band = el.shadowRoot!.querySelector<HTMLElement>('[part~="segment"]')!;
+    expect(getComputedStyle(band).opacity).to.equal('0.37');
+  });
+
   it('emits nothing when a disabled band or its legend row is activated', async () => {
     const el = (await fixture(
       html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,

@@ -838,11 +838,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`
       <div
         part="base"
-        style=${sanitizeCssLength(this.maxHeight)
-          ? styleMap({ '--lr-document-preview-max-height': sanitizeCssLength(this.maxHeight)! })
+        style=${maxHeight
+          ? styleMap({ '--lr-document-preview-max-height': maxHeight })
           : nothing}
       >
         <div part="header" ?hidden=${!this.filename}>

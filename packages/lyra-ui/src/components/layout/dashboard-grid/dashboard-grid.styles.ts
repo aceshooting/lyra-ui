@@ -136,8 +136,6 @@ export const styles = css`
     background: transparent;
     cursor: nwse-resize;
     touch-action: none;
-    /* Hover/active below only repaint background, so that is all this needs; without it this
-       handle's fill snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast);
   }
 

@@ -8,25 +8,9 @@ export const styles = css`
      tree, so an <svg width="1em"> a consumer (or a composing component) slots here inherits the
      native button's UA font-size -- 13.33px -- not the host's. A glyph sized in em therefore
      silently shrank below the surrounding text; lr-dialog's composed close control found it. */
-  /* Every paint token below (background/color/border and their hover/active variants) resolves in
-     the SAME three tiers, in this exact order: the PUBLIC --lr-icon-button-* token (so an ancestor
-     theme override always wins first, whether it is set above a standalone button or above a
-     composing parent like lr-dialog); then a PRIVATE --_lr-icon-button-<token>-default, which a
-     composing parent sets directly on this element (its own [part] rule, from OUTSIDE this shadow
-     root) to supply that component's own default paint WITHOUT ever reading or re-declaring the
-     public token itself; then this rule's own built-in literal/formula, unchanged, for a standalone
-     button with no composing parent. A composing parent must never read the public token to derive
-     its own default and then write that derived value back onto the SAME public token name -- that
-     round trip is exactly what icon-button.test.ts's "keeps the public radius inheritable" test
-     already enforced for --lr-icon-button-radius (see --_lr-icon-button-radius-default below); this
-     generalizes the same non-looping shape to background/color/border. A scope-flattening custom
-     property resolver with no notion of which element declared what (happy-dom, at least through
-     20.14.5) sees a public-token round trip as a literal cycle -- --lr-icon-button-background would
-     depend on a private token that itself depends on --lr-icon-button-background -- and recurses
-     until it exhausts the call stack; a real, per-shadow-scoped browser never had this problem,
-     since :host and a composed child's [part] rule resolve on different elements in document order.
-     See llms/shared.md's "happy-dom's custom-property resolver and host-to-part token forwarding"
-     section for the full incident writeup. */
+  /* Paint tokens resolve public override -> private composing default -> local fallback. The
+     private tier lets a composing parent provide defaults without reading and writing the same
+     public token, which creates a custom-property cycle in scope-flattening test resolvers. */
   [part~='button'] { font: inherit; display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: 0; border: var(--lr-icon-button-border, var(--_lr-icon-button-border-default, 0)); border-radius: var(--lr-icon-button-radius, var(--_lr-icon-button-radius-default)); background: var(--lr-icon-button-background, var(--_lr-icon-button-background-default, transparent)); color: var(--lr-icon-button-color, var(--_lr-icon-button-color-default, inherit)); cursor: pointer; text-decoration: none; transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast), color var(--lr-transition-fast); }
   /* The hover fallback was once var(--lr-color-surface), the PAGE background, so hovering on a
      default page changed nothing. Mixing that surface toward --lr-color-mix-partner (the text

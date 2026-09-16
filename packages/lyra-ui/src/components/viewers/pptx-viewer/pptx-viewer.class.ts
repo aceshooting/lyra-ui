@@ -743,6 +743,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     const ariaLabel = viewerSemanticLabel(
       this,
       this.label == null ? this.name || this.localize('pptxViewerLabel') : this.label
@@ -753,8 +754,8 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         role=${viewerSemanticRole(this, 'region') ?? nothing}
         aria-label=${ariaLabel ?? nothing}
         aria-busy=${this.phase === 'loading' ? 'true' : 'false'}
-        style=${sanitizeCssLength(this.maxHeight)
-          ? styleMap({ '--lr-pptx-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+        style=${maxHeight
+          ? styleMap({ '--lr-pptx-viewer-max-height': maxHeight })
           : nothing}
       >
         <div part="header" ?hidden=${!this.name}><span part="name">${this.name}</span></div>

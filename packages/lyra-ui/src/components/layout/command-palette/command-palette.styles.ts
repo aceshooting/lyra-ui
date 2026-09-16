@@ -176,8 +176,6 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
-    /* Hover/active below only repaint background, so that is all this needs; without it this
-       row's fill snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast);
   }
   :where([part="command"]):hover:where(:not(:disabled)) {

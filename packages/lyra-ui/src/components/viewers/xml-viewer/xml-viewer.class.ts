@@ -1045,6 +1045,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     const label = viewerSemanticLabel(this, this.name || this.localize('xmlViewerLabel'));
     const state = this.xmlState;
     this.renderedHighlights = this.resolveHighlights();
@@ -1052,8 +1053,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       <div
         part="base"
         role=${viewerSemanticRole(this, 'region') ?? nothing}
-        style=${sanitizeCssLength(this.maxHeight)
-          ? styleMap({ '--lr-xml-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+        style=${maxHeight
+          ? styleMap({ '--lr-xml-viewer-max-height': maxHeight })
           : nothing}
         aria-label=${label ?? nothing}
         aria-busy=${state.kind === 'loading' ? 'true' : 'false'}

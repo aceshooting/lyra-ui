@@ -50,7 +50,7 @@ export const styles = css`
      would a natively disabled button. */
   [part='cell'][aria-disabled='true'] {
     cursor: default;
-    opacity: var(--lr-sequence-strip-disabled-opacity, 0.5);
+    opacity: var(--lr-sequence-strip-disabled-opacity, var(--lr-opacity-disabled));
   }
   /* The controlled selection reads as a persistent ring, not a colour change: a cell's background
      is data (its category colour), so tinting it would misreport the category. */

@@ -227,11 +227,11 @@ export const styles = css`
   button[part~='segment']:where(:disabled),
   button[part~='legend-item']:where(:disabled) {
     cursor: default;
-    opacity: var(--lr-context-meter-disabled-opacity, 0.5);
+    opacity: var(--lr-context-meter-disabled-opacity, var(--lr-opacity-disabled));
   }
   :host([shape='ring']) [part~='segment']:where([aria-disabled='true']) {
     cursor: default;
-    opacity: var(--lr-context-meter-disabled-opacity, 0.5);
+    opacity: var(--lr-context-meter-disabled-opacity, var(--lr-opacity-disabled));
   }
   /* The segment-empty and legend-item-empty part tokens carry NO default treatment on purpose.
      The state is derived from a zero value rather than declared, so styling it here would restyle

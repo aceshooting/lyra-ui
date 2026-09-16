@@ -84,7 +84,7 @@ function parseISO(value: string): Date | null {
   const month = Number(match[2]);
   const day = Number(match[3]);
   const date = localDate(year, month - 1, day);
-  if (isNaN(date.getTime())) return null;
+  if (Number.isNaN(date.getTime())) return null;
   if (
     date.getFullYear() !== year ||
     date.getMonth() !== month - 1 ||

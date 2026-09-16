@@ -93,7 +93,8 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
    *  component asks, seeded before the first render and kept live afterwards. */
   private readonly slotPresence = new SlotPresenceController(this);
   private cleanupPositioner?: () => void;
-  private hideTimer?: ReturnType<typeof setTimeout>;
+  private hideTimer?: number;
+  private hideTimerOwner?: Window;
   private hovering = false;
   private focused = false;
 
@@ -127,8 +128,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
-    clearTimeout(this.hideTimer);
-    this.hideTimer = undefined;
+    this.clearHideTimer();
     // Reset so a reconnect (e.g. a drag-drop reparent, or a virtualized/reordering
     // message list moving this element) re-triggers updated()'s open-driven branch --
     // without this, popoverOpen stays true across the disconnect/reconnect and
@@ -154,24 +154,34 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
   private showPreview(): void {
     if (!this.hasPreviewSlot) return;
-    clearTimeout(this.hideTimer);
-    this.hideTimer = undefined;
+    this.clearHideTimer();
     if (this.popoverOpen) return;
     this.popoverOpen = true;
   }
 
+  private clearHideTimer(): void {
+    if (this.hideTimer !== undefined) this.hideTimerOwner?.clearTimeout(this.hideTimer);
+    this.hideTimer = undefined;
+    this.hideTimerOwner = undefined;
+  }
+
   private scheduleHidePreview(): void {
     if (!this.popoverOpen || this.hovering || this.focused) return;
-    clearTimeout(this.hideTimer);
-    this.hideTimer = setTimeout(() => {
+    this.clearHideTimer();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const handle = ownerWindow.setTimeout(() => {
+      if (this.hideTimer !== handle) return;
       this.hideTimer = undefined;
+      this.hideTimerOwner = undefined;
       this.popoverOpen = false;
     }, HIDE_DELAY_MS);
+    this.hideTimer = handle;
+    this.hideTimerOwner = ownerWindow;
   }
 
   private hidePreviewNow(): void {
-    clearTimeout(this.hideTimer);
-    this.hideTimer = undefined;
+    this.clearHideTimer();
     if (this.popoverOpen) this.popoverOpen = false;
   }
 

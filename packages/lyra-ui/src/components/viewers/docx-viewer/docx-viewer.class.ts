@@ -1101,12 +1101,13 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`
       <div
         part="base"
         aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}
-        style=${sanitizeCssLength(this.maxHeight)
-          ? styleMap({ '--lr-docx-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+        style=${maxHeight
+          ? styleMap({ '--lr-docx-viewer-max-height': maxHeight })
           : nothing}
       >
         <div part="body">${this.renderBody()}${this.renderHighlightActions()}</div>

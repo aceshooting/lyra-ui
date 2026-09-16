@@ -12559,7 +12559,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 570,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14190,6 +14190,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
+          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -14229,10 +14230,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -14328,7 +14329,7 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-owned motion declaration or programmatic animation was detected.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -17033,6 +17034,7 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
+          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -17076,10 +17078,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -17167,7 +17169,7 @@
         }
       },
       "knownLimitations": [
-        "No component-owned motion declaration or programmatic animation was detected.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -19716,7 +19718,7 @@
             },
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 2088,
+              "line": 2099,
               "test": "is accessible with a mix of enabled and disabled nodes",
               "target": "el",
               "state": "populated"
@@ -19752,7 +19754,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 3203,
+              "line": 3214,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -23151,7 +23153,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
-              "line": 188,
+              "line": 190,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25122,14 +25124,14 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 998,
+              "line": 1013,
               "test": "is accessible with a populated, expanded tree",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1003,
+              "line": 1018,
               "test": "is accessible with copyable buttons and a collapsed root",
               "target": "el",
               "state": "populated"
@@ -25149,7 +25151,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 959,
+              "line": 974,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25171,7 +25173,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1610,
+              "line": 1625,
               "kind": "320px allocation test signal"
             }
           ]
@@ -40581,14 +40583,14 @@
             },
             {
               "file": "src/components/data/sequence-strip/sequence-strip.test.ts",
-              "line": 1162,
+              "line": 1172,
               "test": "is accessible with a mix of enabled and disabled cells",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/sequence-strip/sequence-strip.test.ts",
-              "line": 1491,
+              "line": 1501,
               "test": "is accessible while showing a bucketed overview with a legend and a selection",
               "target": "el",
               "state": "populated"
@@ -40693,7 +40695,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 458,
+              "line": 452,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46987,21 +46989,21 @@
             },
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 3036,
+              "line": 3041,
               "test": "is accessible with presets set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 3131,
+              "line": 3136,
               "test": "is accessible with the active-preset props themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 3387,
+              "line": 3392,
               "test": "projects both aria-invalid polarities to the focusable range handles",
               "target": "el",
               "state": "populated"
@@ -47043,7 +47045,7 @@
           "evidence": [
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 3354,
+              "line": 3359,
               "kind": "320px allocation test signal"
             }
           ]
@@ -51200,14 +51202,14 @@
             },
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "line": 3459,
+              "line": 3497,
               "test": "is accessible with the overlay present",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "line": 3790,
+              "line": 3828,
               "test": "virtualizes against an external scrollElement instead of its own viewport",
               "target": "el",
               "state": "populated"
@@ -52117,14 +52119,14 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 361,
+              "line": 376,
               "test": "forwards an authored host aria-label to the focusable SVG semantic owner",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 798,
+              "line": 813,
               "test": "is accessible with words rendered",
               "target": "el",
               "state": "populated"
@@ -52138,7 +52140,7 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 62,
+              "line": 63,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -52149,7 +52151,7 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 514,
+              "line": 529,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -52166,7 +52168,7 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 588,
+              "line": 603,
               "kind": "320px allocation test signal"
             }
           ]

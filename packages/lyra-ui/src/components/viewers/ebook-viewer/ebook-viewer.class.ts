@@ -1478,13 +1478,14 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   }
 
   override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     const disabled = this.ebookState.kind !== 'ready';
     return html`
       <div
         part="base"
         aria-busy=${this.ebookState.kind === 'loading' ? 'true' : 'false'}
-        style=${sanitizeCssLength(this.maxHeight)
-          ? styleMap({ '--lr-ebook-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+        style=${maxHeight
+          ? styleMap({ '--lr-ebook-viewer-max-height': maxHeight })
           : nothing}
       >
         <div part="toolbar">

@@ -2467,12 +2467,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   }
 
   override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`<div
       part="base"
       role=${viewerSemanticRole(this, 'region') ?? nothing}
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
-      style=${sanitizeCssLength(this.maxHeight)
-        ? styleMap({ '--lr-pdf-viewer-height': sanitizeCssLength(this.maxHeight)! })
+      style=${maxHeight
+        ? styleMap({ '--lr-pdf-viewer-height': maxHeight })
         : nothing}
       aria-label=${viewerSemanticLabel(this, this.name || this.localize('pdfViewerLabel')) ?? nothing}
     >${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;

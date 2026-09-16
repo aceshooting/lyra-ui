@@ -35,7 +35,7 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: opacity var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive);
   }
   button[part~='item']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);

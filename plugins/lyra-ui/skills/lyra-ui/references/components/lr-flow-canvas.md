@@ -226,6 +226,6 @@ four above. Set it to `transparent` to opt out of the hover treatment.
 - `part="node-control"` — The visually hidden, roving selection button for a node.
 - `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-color-brand)`.
 - `--lr-flow-canvas-node-disabled-opacity` — Opacity of a node whose `FlowNode` entry sets
-  `disabled`. Default: `0.5`.
+  `disabled`. Default: `var(--lr-opacity-disabled)`.
 
 ---
