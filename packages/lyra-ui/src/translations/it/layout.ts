@@ -30,6 +30,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Ridimensiona la navigazione',
   appRailCollapse: 'Comprimi la navigazione',
   appRailExpand: 'Espandi la navigazione',
+  appRailItemCollapse: 'Comprimi {label}',
+  appRailItemExpand: 'Espandi {label}',
   resizeValuePercent: '{value} percento',
   commandPaletteLabel: 'Tavolozza dei comandi',
   commandPalettePlaceholder: 'Cerca comandi…',

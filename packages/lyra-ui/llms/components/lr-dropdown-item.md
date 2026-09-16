@@ -97,6 +97,13 @@ an out-of-syntax value falls back cleanly instead of invalidating the whole decl
 without `CSS.registerProperty` degrades to "use `100%`, not `none`".) A menu contained by
 `<lr-dropdown>` sizes from its dropdown and is unaffected by both names.
 
+**`--lr-positioning-strategy`** (16.0.0) — the private submenu surface reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-menu>`; set the custom property on `:root`, a theme, or one clipping ancestor to
+change every unset submenu beneath it. A menu contained by `<lr-dropdown>` is positioned by the
+dropdown instead and is unaffected.
+
 **Methods:** no menu-specific public overlay methods. Use `<lr-dropdown>`'s `show()`/`hide()` and
 `open` state for an overlay. Menu-item submenu methods remain public because they drive a row's
 nested disclosure.

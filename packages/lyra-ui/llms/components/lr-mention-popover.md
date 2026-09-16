@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,6 +41,11 @@ preserving null readback; an explicitly empty query remains empty.
   pre-`query`-filtering. Assignment takes a shallow frozen snapshot. Runtime rows without a string
   `label` remain in that diagnostic snapshot but are omitted from filtering/rendering before the
   built-in or custom predicate runs, so one malformed provider row cannot take down valid siblings.
+  An entry's `disabled` marks that row non-actionable: `aria-disabled="true"` replaces its
+  selected/active affordances, activating it (click, or Enter/Tab while highlighted) commits
+  nothing and emits no `lr-mention-select`, and ArrowDown/ArrowUp highlighting -- including the
+  default pre-highlighted first row -- steps past it instead of landing on it. Omitted or `false`
+  renders the row exactly as before this field existed.
 - `query: string = ''` — the text typed since the trigger character; drives the built-in filtering
   (see `filter`).
 - `open: boolean = false` (reflected)
@@ -85,7 +90,7 @@ preserving null readback; an explicitly empty query remains empty.
   disconnect/adoption, a newer transfer, or failed ownership resolves `false` without moving focus.
 
 **Exported types:** `LyraMentionItem { suggestionId: string; label: string; description?: string;
-icon?: string }`; `LyraMentionFilter = (item: LyraMentionItem, query: string) => boolean`;
+icon?: string; disabled?: boolean }`; `LyraMentionFilter = (item: LyraMentionItem, query: string) => boolean`;
 `LyraMentionFocusOptions { ownsFocus?: () => boolean }`;
 `LyraMentionSelectDetail { suggestionId: string; index: number; label: string }`.
 
@@ -106,7 +111,9 @@ renders `open="false"` on first paint)
 `var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`
 (keyboard-highlighted) suggestion row. Component-scoped indirection over the shared
 `--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
-repainting every other component that reuses the same shared token. Plus shared tokens —
+repainting every other component that reuses the same shared token.
+`--lr-mention-popover-option-disabled-opacity` (default `0.5`) — opacity of a row whose `items`
+entry sets `disabled`. Plus shared tokens —
 `--lr-space-xs`/`-s`/`-m` (popup padding,
 row padding/gap), `--lr-radius`
 (row corners — the popup's own corner is the overlay family's, below),
@@ -122,6 +129,12 @@ The popup is a floating surface and paints from the **shared overlay-surface fam
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+
+`--lr-positioning-strategy` (16.0.0) — the popup reads this same cascading `absolute`/`fixed`
+override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
+default when nothing is set. There is no per-instance `positioning-strategy` property on
+`<lr-mention-popover>`; set the custom property on `:root`, a theme, or one clipping ancestor to
+change every unset mention popover beneath it.
 
 **Optional peer deps:** none.
 

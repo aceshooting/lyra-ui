@@ -878,6 +878,14 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   rendered panel anyway, `expandedContentElement(rowKey)` (below) resolves that `<td>`;
   `rowElement(rowKey)` does not, because the panel is a sibling `<tr>` rather than part of the row
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
+- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (attribute: false) —
+  accessible name for one row's expand/collapse chevron, read once per render for that row,
+  exactly like a column's `editLabel`/`cellTitle`; consumer-owned text used verbatim, never
+  passed through localization. Omit it and every chevron shares the same localized
+  `expand`/`collapse` name, which carries no row context — fine for a handful of rows, but each
+  chevron is its own Tab stop, so a long table otherwise announces the same two names over and
+  over with no way to tell the rows apart. There is no default row context to derive one from
+  here: this component has no row-header notion (`rowKey` is an opaque identity, not a label)
 - `expansionMode: 'none'|'single'|'multiple' = 'none'` (attribute `expansion-mode`, reflected) —
   mirrors `selectionMode` member for member, for expansion. The default `'none'` keeps
   `expandedRowKeys` fully consumer-controlled: an activation only reports `lr-row-expand-toggle`.
@@ -2634,7 +2642,8 @@ block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` 
 (default `0.625rem` — a legend swatch's inline- and block-size, category and marker rows alike), and
 `--lr-sequence-strip-legend-marker-bg` (default `var(--lr-color-surface-raised)` — the neutral chip
 background behind the marker legend row's bar; it stands in for "any cell", so it deliberately
-matches no category color); the tooltip also consumes shared tokens
+matches no category color), and `--lr-sequence-strip-disabled-opacity` (default `0.5` — opacity of
+a cell whose activated item sets `disabled`); the tooltip also consumes shared tokens
 `--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
 the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
 `--lr-color-text-quiet`, and `--lr-radius-xs`.
@@ -3238,6 +3247,8 @@ four above. Set it to `transparent` to opt out of the hover treatment.
 - `part="edge-hit-area"` — The transparent wide pointer target behind an edge.
 - `part="node-control"` — The visually hidden, roving selection button for a node.
 - `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-color-brand)`.
+- `--lr-flow-canvas-node-disabled-opacity` — Opacity of a node whose `FlowNode` entry sets
+  `disabled`. Default: `0.5`.
 
 ---
 
@@ -3556,9 +3567,13 @@ used" summary.
 **Properties:**
 
 - `segments: ContextMeterSegment[] = []` (attribute: false, JS-only) — `{ label: string; value:
-number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string }[]`. `value` is an _absolute_
+number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string; disabled?:
+boolean }[]`. `value` is an _absolute_
   quantity measured against `total`, never a pre-computed percentage.
   `color`, when supplied, is a sanitized arbitrary CSS color that takes precedence over `tone`.
+  `disabled`, when set, marks that band non-actionable while `interactive` is set: its control
+  renders genuinely disabled (no tab stop, no hover/press affordance) and activating it emits no
+  `lr-segment-activate`.
 - `total: number = 0` — the full capacity segments are measured against (e.g. a model's context
   window size).
 - `shape: ContextMeterShape = 'bar'` (`'bar' | 'ring'`, reflected) — the v9 geometry name;
@@ -4275,6 +4290,7 @@ These named interfaces and helper signatures are available to typed integrations
     value: number;
     tone?: ContextMeterTone;
     color?: string;
+    disabled?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/data/context-meter/context-meter.class.js`.
   `LyraContextMeterSegmentActivateDetail {

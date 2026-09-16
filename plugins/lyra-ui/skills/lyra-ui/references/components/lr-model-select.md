@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,7 +42,11 @@ focus move.
 
 **Exported types:**
 
-- `LyraCatalogEntry { id: string; label: string }` — the shared minimum row vocabulary.
+- `LyraCatalogEntry { id: string; label: string; disabled?: boolean }` — the shared minimum row
+  vocabulary. `disabled` marks a row non-actionable: `aria-disabled="true"` replaces its
+  selected/active affordances, activating it (click or keyboard) commits nothing and changes no
+  state, and arrow-key/Home/End active-descendant navigation steps past it instead of landing on
+  it. Omitted or `false` renders the row exactly as before this field existed.
 - `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
   — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
   shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids
@@ -236,7 +240,8 @@ use, not on `:host`, so it isn't tied to `size`. The selected row
 `--lr-model-select-option-selected-border` and `--lr-model-select-option-selected-color` (both
 `var(--lr-color-brand)`), and `--lr-model-select-option-selected-font-weight`
 (`var(--lr-font-weight-semibold)`), all inline `var()` fallbacks so the selected row is rethemeable
-without hijacking `--lr-color-brand`. `--lr-model-select-max-inline-size` (default
+without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity` (default `0.5`)
+— opacity of an option row whose catalog entry sets `disabled`. `--lr-model-select-max-inline-size` (default
 `var(--lr-size-24rem)`) publishes the host's own width ceiling, which was previously a hard-wired
 literal: set a length to retune it, or `none` to let the control fill its container the way
 `lr-select` does. Like every other name here it is read as a `var()` fallback and never declared on

@@ -179,8 +179,9 @@ The entry points, then:
   `@aceshooting/lyra-ui/translations/<locale>.js` (the eleven shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
-  (happy-dom shims, `createLyraEvent()` for building a validated test event, plus a small set of
-  interaction drivers that go through a component's own real activation path),
+  (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
+  interaction drivers that go through a component's own real activation path, and
+  `waitForLyraElement()`/`waitForToast()` for awaiting a lazily registered mount),
   `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
 
 ### Registration-free component helpers
@@ -1368,9 +1369,50 @@ per-response nonce — a static HTML entry, for example — where the documented
 nonce/hash guidance above does not apply. Serving it same-origin (copy it into your build output,
 or configure your bundler/static host to do so) needs no hash at all; hashing it for an even
 stricter policy uses the same CSP `script-src` hash mechanism browsers already apply to any
-external script resource. It only ever carries the default storage key (`'lyra-theme'`) — an
-application-owned key from `createLyraThemeBootstrap({ storageKey })` still has to be inlined,
-since a static file cannot take a call-time argument.
+external script resource.
+
+**Configuring the static asset from its own `<script>` tag.** `theme-bootstrap.js` must be loaded
+as a plain classic script — never `type="module"` and never `async` — because it reads its own
+configuration synchronously through `document.currentScript` while it runs, and that property is
+`null` for both of those loading modes (as well as for anything scheduled after the script has
+already finished executing). Two optional attributes on that same `<script>` tag override the
+defaults without regenerating the file:
+
+```html
+<head>
+  <script
+    src="/vendor/theme-bootstrap.js"
+    data-lr-theme-storage-key="my-app-theme"
+    data-lr-theme-attributes="data-lr-theme data-theme"
+  ></script>
+  <link rel="stylesheet" href="/theme.css" />
+</head>
+```
+
+- `data-lr-theme-storage-key` — the `localStorage` key to read, in place of the default
+  `'lyra-theme'`. Equivalent to `createLyraThemeBootstrap({ storageKey })`'s argument, but
+  resolved by the static file itself at parse time rather than baked in ahead of time. This is
+  what lets an application with its own pre-existing storage key use the static asset instead of
+  inlining a per-app copy.
+- `data-lr-theme-attributes` — a space-separated list of attribute names to set on
+  `<html>` in place of the default `data-lr-theme data-theme` pair, replacing that list entirely
+  rather than adding to it.
+
+Both attributes are optional and independently validated; an absent, empty, oversized, or
+malformed value falls back to the built-in default rather than throwing, so a `<script>` tag with
+neither attribute — every existing deployment — behaves exactly as before. `data-lr-theme-storage-key`
+must be a non-empty string of at most 200 characters (its content is otherwise unrestricted — it is
+only ever used as an opaque `localStorage` key, never written to the DOM). `data-lr-theme-attributes`
+must parse to one to eight tokens, each unique and each matching `data-[a-z0-9]+(-[a-z0-9]+)*` —
+which rejects an event-handler name (`onload`), a native attribute (`style`, `class`, `id`), any
+token containing whitespace, a quote, `=`, or a control character, an empty list, and a duplicated
+token — because these attribute names reach `setAttribute()`/`removeAttribute()` on the document
+root. A `document.currentScript` of `null` (module/async misuse, or a script tag re-read after it
+finished running) is treated the same as no configuration at all.
+
+An application-owned key from `createLyraThemeBootstrap({ storageKey })` can still be inlined as
+documented above; the static file's own script-tag attributes are the alternative for a strict-CSP
+deployment that cannot inline that call.
 
 **Migrating from 15.x.** `accent` used to be exactly an absolute CSS color or `null`; that shape
 still works unchanged (`setLyraTheme({ accent: '#7c3aed' })` keeps deriving only the brand ramp).
@@ -2112,6 +2154,83 @@ happy-dom/jsdom environment, not only a real browser.
 Scope: one driver per interaction named above. Not a general "drive any component" toolkit —
 render the real component and interact with it directly for anything else.
 
+## Awaiting a lazily registered mount: `waitForLyraElement()` and `waitForToast()`
+
+An imperative API can register its elements lazily -- `toast()` dynamically `import()`s
+`<lr-toast>`/`<lr-toast-item>` on first call (a deliberate bundle-size trade: importing the package
+root, or even `toast()` itself, never pulls the element classes into an eagerly loaded bundle). A
+fire-and-forget `toast(...)` call -- the normal application pattern, since a component should not
+block its own flow on a toast -- therefore leaves the document empty for at least one microtask
+after the call returns. `@aceshooting/lyra-ui/testing` exports `waitForLyraElement()` for this shape
+in general, plus `waitForToast()` as the named convenience for `toast()` specifically:
+
+```ts
+import { waitForToast } from '@aceshooting/lyra-ui/testing';
+
+toast('Saved'); // fire-and-forget; toast.class.js/toast-item.class.js may still be importing
+const item = await waitForToast('Saved'); // resolves once a matching <lr-toast-item> mounts
+expect(item.textContent?.trim()).to.equal('Saved');
+```
+
+`waitForToast(match?, options?)` resolves once a `<lr-toast-item>` is connected and upgraded. A
+string `match` compares against the item's trimmed `textContent` (what `toast('Saved')` sets
+verbatim); pass a predicate — `(item: LyraToastItem) => boolean` — for anything else (a substring,
+an icon/action check, a specific variant); omitting `match` resolves the first toast item to mount.
+
+The underlying `waitForLyraElement<T>(selector, options?)` is generic over any element reachable
+from `options.root` (`document` by default): it resolves once an element matching `selector` is
+both connected and upgraded — registered with a constructor the element is actually an instance of
+— filtered further by an optional `options.match: (element: T) => boolean`. An element already
+present in markup before its class registers (the SSR/hydration case) is not a match until it
+upgrades. Both resolve via `MutationObserver` (new elements arriving) and
+`customElements.whenDefined()` (an already-connected-but-undefined element finishing registration)
+rather than polling on a timer, and both reject with an Error describing the selector, the timeout,
+and how many non-matching candidates were found — after a bounded `options.timeoutMs` (2000ms
+default). Every underlying API is standard DOM/HTML with no `@web/test-runner`/CDP dependency, so
+both also run under a downstream suite's own happy-dom environment, not only a real browser.
+
+Scope: awaiting a lazy mount reachable from a root you already have a handle to. Not a replacement
+for `updateComplete` (a mounted element may still have a pending render) or for the interaction
+drivers above (already-mounted components' own activation paths). `toast()` is currently the only
+imperative `lyra-ui` API that registers its elements through a dynamic `import()`; `confirm()`
+registers `<lr-dialog>` synchronously (a static import plus an idempotent `defineElement()` call) and
+mounts its transient dialog before returning, so it has no equivalent gap.
+
+## happy-dom's custom-property resolver and host-to-part token forwarding
+
+In 16.0.0, seven built-in controls that each compose a real
+`<lr-icon-button>` for their icon-only action — `<lr-copy-button>`, `<lr-dialog>` (whose close
+button is inherited by `<lr-drawer>`), `<lr-reorder-item>`, `<lr-message-actions>`,
+`<lr-attachment-trigger>`, `<lr-code-block>` (shared by `<lr-code-block-core>`), and `<lr-callout>`
+— captured the composed control's public `--lr-icon-button-*` tokens on their own `:host` and
+forwarded that private token back onto the SAME public token name on the `[part]` rendering the
+composed control, so that an ancestor theme override still reached the composed child instead of
+being shadowed by the component's own default. That was legal under the CSS Custom Properties spec
+— `:host` and `[part]` resolve on different elements, so a real browser resolves the host
+declaration to a concrete value first and the part substitutes that, and per-element cycle detection
+never fired — but **happy-dom does not model that element boundary**. Its `CSSComputedStyle` merges
+ancestor and own-element custom properties into a single flat map with no notion of which element
+declared what, and (at least through 20.14.5, the newest release at time of writing)
+`CSSVariableFormatter.resolveVariables` substitutes into that map recursively with no visited set
+and no depth cap — so the capture-and-forward pair resolved into each other forever, throwing an
+unhandled `RangeError: Maximum call stack size exceeded` from `CSSVariableFormatter.resolveVariables`
+on every render of any of the seven components. Every test still reported as passing — there was no
+failing assertion to point at — but the runner counted the unhandled errors and exited non-zero
+anyway, which read as unrelated flakiness rather than a CSS issue.
+
+**Current versions are unaffected.** `<lr-icon-button>` now carries a private
+`--_lr-icon-button-<token>-default` fallback tier for every paint token (background, color, border,
+and their hover/active variants — the same shape its corner radius already used via
+`--_lr-icon-button-radius-default`), and each composing component sets its own default directly on
+that private tier rather than re-declaring the public token name. `<lr-icon-button>`'s own
+stylesheet still checks the public token first, so an ancestor override reaches a composed control
+exactly as before, but no descendant declares a public `--lr-icon-button-*` token from a private
+token that was itself derived from that same public token — so no resolver, scoped or flattened,
+ever sees a cycle. A project still hitting the `RangeError` above should upgrade
+`@aceshooting/lyra-ui`; the workarounds that version range needed (patching or upgrading the DOM
+implementation to cycle-aware/depth-limited custom-property resolution, or running the affected
+suites against a real browser engine) are no longer necessary once it does.
+
 ## Accessibility contract
 
 Semantic roles live on the shadow-DOM element that owns them, with explicit false states for
@@ -2163,18 +2282,36 @@ those four kinds must walk the declaration's own `superclass.name`/`superclass.m
 `modules[].declarations[]` itself, or read `web-types.json`/`vscode-html-data.json` instead, which
 are already fully resolved.
 
-**Which tags a per-tag entry registers (`registrations.json`).** A stable per-tag entry
-(`@aceshooting/lyra-ui/components/lr-<name>.js`) can, at import time, define more than one custom
-element: importing `lr-table.js` also registers `<lr-empty>`, `<lr-pagination>`, `<lr-skeleton>` and
-`<lr-spinner>`, because `lr-table`'s registration entry imports those composed children's own
-registration entries before defining `<lr-table>` itself. `custom-elements.json` declares one
-custom element per family source module, with no field for a stable per-tag entry specifier and
-none for the extra tags importing it registers as a side effect. For that, read the generated
-`@aceshooting/lyra-ui/registrations.json` instead: `{ schemaVersion: 1, entries: [{ tag, entry,
-registrationModule, registers }] }`, where `registers` is every `lr-*` tag importing `entry`
-defines, derived from the same transitive-import analysis
+**Which tags an entry registers, and which message keys it can reach (`registrations.json`).** A
+stable per-tag entry (`@aceshooting/lyra-ui/components/lr-<name>.js`) can, at import time, define
+more than one custom element: importing `lr-table.js` also registers `<lr-empty>`,
+`<lr-pagination>`, `<lr-skeleton>` and `<lr-spinner>`, because `lr-table`'s registration entry
+imports those composed children's own registration entries before defining `<lr-table>` itself.
+`custom-elements.json` declares one custom element per family source module, with no field for a
+stable per-tag entry specifier and none for the extra tags importing it registers as a side effect.
+For that, read the generated `@aceshooting/lyra-ui/registrations.json` instead (`schemaVersion: 1`):
+`{ entries: [{ tag, entry, registrationModule, distModule, registers, localeKeys }],
+integrations: [{ entry, registrationModule, distModule, registers, localeKeys }] }`. Every
+`entries` row describes the stable per-tag alias above and always carries `tag`. `integrations`
+lists the published integration-bridge specifiers, which install an integration — an optional-peer
+resolver, a lazy document-format registrar — without being any single component's own alias, so
+they carry no `tag`: `components/media/flag/flag-peer.js`,
+`components/viewers/archive-viewer/archive-viewer-register.js` and
+`components/viewers/ebook-viewer/ebook-viewer-register.js`, the three imports a per-tag alias cannot
+stand in for. They are a separate array rather than tag-less rows mixed into `entries`, so a reader
+that keys `entries` by `tag` keeps working; `integrations`, `distModule` and `localeKeys` are all
+additive, which is why the schema version is unchanged. `registrationModule` is the `src/` path used
+internally; `distModule` is that same module's own published deep specifier (e.g.
+`./components/data/table/table.js`) so a caller holding either a per-tag alias or a deep import can
+resolve the other without reading `src/` or walking `dist/` — for an integration bridge,
+`distModule` equals `entry`, since there is no separate alias. `registers` is every `lr-*` tag
+importing `entry` defines, direct or transitive, derived from the same transitive-import analysis
 `scripts/check-component-dependencies.mjs` already performs against the real registration graph
-(not a second hand-maintained list) and regenerated by `pnpm run registration-graph`.
+(not a second hand-maintained list). `localeKeys` is every `LyraMessageKey` the registered tags can
+reach — including a key reached only through an indirect lookup table (e.g. `lr-attachment-trigger`'s
+`{ triggerKey: 'attachmentTriggerFiles' }`-shaped map), because it reuses
+`generate-default-string-slices.mjs`'s own reachability walk rather than a literal-`localize()`-only
+scan. All of it is regenerated by `pnpm run registration-graph`.
 
 ## Independence and migration
 
@@ -2429,6 +2566,11 @@ inlineSize: number; blockSize: number }> }`.
   element: interpolating into a message template, populating a text-only property on another
   component (a stat tile's value, a chart tick label, a badge's cost text), building a search
   predicate, or composing an accessibility announcement.
+  An omitted `locale` (or the explicit `'auto'` sentinel) on any of the four resolves to the page's
+  active `setLyraLocale()` locale, exactly like a rendered `<lr-*>` component with no closer
+  `locale`/`lang` override — not a hardcoded `'en'`. It falls back to `'en'` only once no active
+  locale has ever been set, so an app that never calls `setLyraLocale()` sees no change. An
+  explicit BCP-47 tag always stays authoritative over the active locale.
   `formatNumber()` and `formatBytes()` accept a `bigint` or a decimal/integer string, not just a
   `number`, for exact-precision input (large ids, monetary amounts, exact byte counts) — a plain
   `number` is a float64 and cannot exactly represent an integer beyond `Number.MAX_SAFE_INTEGER` or
@@ -4116,6 +4258,17 @@ These named interfaces and helper signatures are available to typed integrations
   `toggleSwitch(/* public names: switchEl */): unknown`
   `activateStep(/* public names: stepper, target */): unknown`
   See "Driving a component's real activation path: interaction drivers" above for the full contract.
+
+- **`testing-wait-for-mount-contracts`** — Shared utility contracts.
+  `waitForLyraElement(/* public names: selector, options */): unknown`
+  `WaitForLyraElementOptions {
+  root: unknown;
+  match: (element: unknown) => unknown;
+  timeoutMs: unknown;
+}`
+  `waitForToast(/* public names: match, options */): unknown`
+  See "Awaiting a lazily registered mount: `waitForLyraElement()` and `waitForToast()`" above for the
+  full contract.
 
 - **`theme-gemstones-data-contracts`** — Shared utility contracts.
   `GemstoneAccent {

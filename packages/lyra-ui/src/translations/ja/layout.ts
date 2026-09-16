@@ -30,6 +30,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'ナビゲーションのサイズを変更',
   appRailCollapse: 'ナビゲーションを折りたたむ',
   appRailExpand: 'ナビゲーションを展開',
+  appRailItemCollapse: '{label} を折りたたむ',
+  appRailItemExpand: '{label} を展開',
   resizeValuePercent: '{value} パーセント',
   commandPaletteLabel: 'コマンドパレット',
   commandPalettePlaceholder: 'コマンドを検索…',

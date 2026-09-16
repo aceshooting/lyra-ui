@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -208,9 +208,18 @@ width), `--lr-app-rail-overlay-color` (default `var(--lr-color-overlay)` — the
 color; component-specific since no shared token exists), `--lr-app-rail-panel-inset-block-start`
 (default `0`, applied to both `[part="panel"]` and `[part="backdrop"]` — raise it to leave room for
 a fixed app bar/status area above the drawer instead of the panel/scrim starting flush with the
-viewport top), `--lr-app-rail-panel-radius` (default `0` — corner radius of `[part="panel"]`; pairs
-naturally with a nonzero `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top
-corners), `--lr-app-rail-panel-overflow-block` (default `auto`) and
+viewport top), `--lr-app-rail-panel-radius` (default `0` — uniform corner radius of `[part="panel"]`;
+pairs naturally with a nonzero `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top
+corners). Four direction-aware per-corner tokens each default to `--lr-app-rail-panel-radius`, so
+setting only the uniform token still rounds all four corners exactly as before:
+`--lr-app-rail-panel-radius-start-start` and `--lr-app-rail-panel-radius-end-start` (logical
+`border-start-start-radius`/`border-end-start-radius` — the two corners at the panel's own flush
+inline-start edge, since the drawer always sits flush against `inset-inline-start: 0`) and
+`--lr-app-rail-panel-radius-start-end`/`--lr-app-rail-panel-radius-end-end` (logical
+`border-start-end-radius`/`border-end-end-radius` — the two corners away from that flush edge, the
+pair a flush-against-one-edge drawer typically rounds). All four are logical, so which physical
+corner each one paints swaps under `dir="rtl"` with no second consumer rule.
+`--lr-app-rail-panel-overflow-block` (default `auto`) and
 `--lr-app-rail-panel-overflow-inline` (default `clip`) — `[part="panel"]`'s logical overflow axes;
 either non-`visible` value clips a `position: fixed` popup opened by a slotted/nav-item control
 (e.g. a slotted `<lr-select>`/`<lr-menu>`) whenever its rendered box extends past the panel,
@@ -226,7 +235,10 @@ docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-pa
 `var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
 `--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
 reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
-mounts or resizes asynchronously. Plus shared
+mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail-nav-gap` (default
+`var(--lr-space-s)`/`var(--lr-space-xs)`, the values this rule hard-coded before either token
+existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm,
+previously reachable only through `::part(nav)`. Plus shared
 tokens (`--lr-color-border`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
@@ -359,10 +371,22 @@ removing the label from the accessibility tree.
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
   since the label is already visible there. `false` (the default) reproduces the exact existing
   output.
+- `expanded: boolean = false` (reflected) — whether this item's own `children` are shown. `false`
+  reproduces exactly what an item without this property rendered before this feature existed.
+  Driven through the same request/commit pair as `<lr-app-rail-group>`'s `open`, see Events below.
 
 A host `aria-label` is copied to the rendered native link or button by attribute presence,
 including an explicitly empty value; without it, the default slot supplies the native name. The
-same precedence supplies the tooltip text when that opt-in flyout is visible.
+same precedence supplies the tooltip text when that opt-in flyout is visible, and the disclosure's
+interpolated `{label}` (see Events below).
+
+**Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
+disclosure (`detail: { open }` — the field is named `open`, matching `<lr-app-rail-group>`'s
+identical event name and detail shape exactly). Call `preventDefault()` to keep the current state,
+or assign `expanded` from the listener to resolve it yourself; a write during the dispatch
+suppresses the default commit even when it assigns the value the property already held. Not
+emitted for a direct `expanded` write. `lr-toggle` — non-cancelable, emitted after `expanded` is
+written, never for a vetoed or listener-resolved request (`detail: { open }`).
 
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
@@ -385,6 +409,28 @@ names the native control, which remains the sole action).
   control keeps its own click, keyboard activation and focus order instead of being swallowed.
   Unlike `meta` it stays visible in `icon-only` mode, where it shares the narrow rail's width with
   the icon.
+- `children` slot — nested `<lr-app-rail-item>`s disclosed beneath this item (the
+  treeitem-with-link pattern: the row itself navigates, a separate disclosure expands its own
+  child rows). Slotting anything into it grows a built-in `[part="toggle"]` disclosure button as a
+  SIBLING of the item's own link/button, never nested inside it, so the link keeps navigating on
+  its own and the disclosure keeps toggling on its own — clicking one never triggers the other.
+  Leaving `children` empty renders neither the disclosure nor `[part="children"]` at all: an item
+  authored without any `children` content renders byte-identically to one authored before this
+  slot existed. The disclosure carries `aria-expanded` (both states) and `aria-controls` pointing
+  at `[part="children"]`'s id, and a localized accessible name interpolating this item's own label
+  (`Expand {label}`/`Collapse {label}` in the default locale — no literal fallback, so a
+  `registerLyraLocale()` translation or a `.strings` override always reaches it). `<lr-app-rail-group>`
+  cannot express this pattern: its collapsible heading *is* the toggle, so a navigable link cannot
+  live inside it without nesting an interactive element inside a button.
+
+  `icon-only` forwards from this item onto every `<lr-app-rail-item>` it directly owns through
+  `children` — including ones appended later — exactly how `<lr-app-rail-group>` forwards onto the
+  items and nested groups it owns. The disclosure itself never changes shape between
+  presentations: it is always a fixed icon-button-sized square beside `[part="base"]`, reusing the
+  same hover/active/focus tokens as the link/button (`--lr-app-rail-item-hover-bg` etc.) rather than
+  a second disclosure-only set. There is no ancestor-current treatment — `<lr-app-rail-group>` has
+  no equivalent concept for a group containing the current item, so none is invented here either; a
+  current descendant stays perceivable only through its own `current` property.
 
 Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an item using neither
 renders exactly as before. Note that while the mobile overlay is open, a click anywhere in the
@@ -393,10 +439,16 @@ nav-slot behaviour, not new to these slots.
 
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
-shipped `active-indicator` part), `tooltip` (the hover/focus label flyout, only rendered while
-`tooltip` is set, the item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around
-the `meta` slot, hidden while empty) and `end` (the wrapper around the `end` slot, hidden while
-empty).
+shipped `active-indicator` part — suppressed by default while `icon-only`, see the current-ring
+tokens below), `tooltip` (the hover/focus label flyout, only rendered while `tooltip` is set, the
+item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around the `meta` slot,
+hidden while empty), `end` (the wrapper around the `end` slot, hidden while empty), `toggle` (the
+`children` disclosure, rendered only while something is slotted into `children`; a sibling of
+`base`, never nested inside it), `toggle-icon` (the wrapper around the disclosure chevron,
+direction-aware through this wrapper's own `transform` — mirrors `<lr-app-rail-group>`'s own
+`[part="toggle-icon"]`) and `children` (the wrapper around the `children` slot, rendered only
+alongside `toggle`; hidden — but present, so `aria-controls` keeps resolving — while `expanded` is
+`false`).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-app-rail-item-current-color` (default
@@ -415,6 +467,16 @@ before. `--lr-app-rail-item-current-font-weight` mirrors `<lr-stepper>`'s
 `--lr-app-rail-item-current-indicator-width` (default `var(--lr-size-2px)`), and
 `--lr-app-rail-item-current-indicator-inset-inline` (default `0 auto`; set `auto 0` to place the
 indicator at the inline-end edge instead) theme `[part="current-indicator"]`.
+`--lr-app-rail-item-current-indicator-display` (no default; unset resolves to `none` while
+`icon-only`) restores the indicator bar in icon-only presentation — a full-height edge bar reads
+as a rendering glitch on the square icon-only tile, so it is suppressed there by default; full
+presentation is unaffected either way, since its own `[part="current-indicator"]` rule declares no
+`display` at all. `--lr-app-rail-item-current-ring` (no default; unset resolves to `none` in full
+presentation and an inset ring in icon-only presentation) sets `box-shadow` on `[part="base"]`
+while current: unset, icon-only gets an inset ring automatically — the non-color-only signal
+(WCAG 1.4.1) that replaces the bar suppressed there, since full presentation already conveys
+current state through the indicator bar and `--lr-app-rail-item-current-font-weight`. Setting this
+token explicitly applies the same value in both presentations.
 Ordinary interaction states are independently inheritable through
 `--lr-app-rail-item-hover-bg`, `--lr-app-rail-item-hover-color`,
 `--lr-app-rail-item-active-bg`, and `--lr-app-rail-item-active-color`, again retaining the former
@@ -432,7 +494,22 @@ floor-clamped since the icon is decorative, not itself a pointer target), and
 is retuned while family/weight/line-height stay inherited) retune the row's geometry.
 While `icon-only`, `[part="base"]` resolves to a square hit target matching the icon-button
 footprint used elsewhere in this library (`aspect-ratio: 1` against its already floor-clamped
-block size) instead of stretching across the rail's icon column.
+block size) instead of stretching across the rail's icon column. `--lr-app-rail-item-icon-only-size`
+(no default) sizes that square directly — both `inline-size` and `block-size`, and the row's own
+`min-block-size` floor — independent of `--lr-app-rail-item-min-block-size`, so a taller expanded
+row and an icon-only square pinned to `--lr-icon-button-size` can coexist. Unset, the square is
+still derived via `aspect-ratio: 1` against the row's block size exactly as before.
+
+**`--lr-positioning-strategy`** (16.0.0) — the icon-only flyout tooltip reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-app-rail-item>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset rail item's flyout beneath it.
+
+`--lr-app-rail-item-indent` (default `var(--lr-space-l)`) sets `[part="children"]`'s
+`padding-inline-start`. Applied once per nesting level — a doubly-nested `children` list compounds
+two insets automatically, since each level's own `[part="children"]` applies the token again.
+Logical, so it mirrors under `dir="rtl"` with no separate rule.
 
 **Optional peer deps:** none.
 

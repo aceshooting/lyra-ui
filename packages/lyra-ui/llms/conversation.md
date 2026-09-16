@@ -1405,7 +1405,8 @@ use, not on `:host`, so it isn't tied to `size`. The selected row
 `--lr-model-select-option-selected-border` and `--lr-model-select-option-selected-color` (both
 `var(--lr-color-brand)`), and `--lr-model-select-option-selected-font-weight`
 (`var(--lr-font-weight-semibold)`), all inline `var()` fallbacks so the selected row is rethemeable
-without hijacking `--lr-color-brand`. `--lr-model-select-max-inline-size` (default
+without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity` (default `0.5`)
+— opacity of an option row whose catalog entry sets `disabled`. `--lr-model-select-max-inline-size` (default
 `var(--lr-size-24rem)`) publishes the host's own width ceiling, which was previously a hard-wired
 literal: set a length to retune it, or `none` to let the control fill its container the way
 `lr-select` does. Like every other name here it is read as a `var()` fallback and never declared on
@@ -1898,6 +1899,17 @@ than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and
 those public tokens ahead of any default this component supplies. For SIZE use
 `--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
 latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
+
+**Border reaches the composed copy control the same way background/color/radius do.** This
+component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
+into the copy control's private fallback tier — but that absence is not a gap. The public
+`--lr-icon-button-border` (and its `-hover`/`-active` variants) is the FIRST arm of the token
+chain, resolved by ordinary custom-property inheritance regardless of whether this component
+relays a default for that same property, so setting it on this element or an ancestor reaches the
+copy control exactly as the background/color/radius tokens do. A component with no resting
+border simply has no default to relay, which is different from border theming being broken. Size
+remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
+`--lr-icon-button-size`, as noted above.
 
 **Themeable custom properties:** `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
@@ -2768,7 +2780,8 @@ cannot do (once the chips wrap, the row fills the available inline size and each
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
 background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
-on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `0.5`) — opacity of a chip whose
+suggestion sets `disabled`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 `--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
 `--lr-focus-ring-width/-color/-offset`.
 
@@ -3579,6 +3592,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.
 - `--lr-voice-picker-option-synthetic-border-style` — Synthetic stale-value row border style. Default: `dashed`.
 - `--lr-voice-picker-option-synthetic-border-color` — Synthetic stale-value row border color. Default: `var(--lr-color-border)`.
+- `--lr-voice-picker-option-disabled-opacity` — Opacity of an option row whose catalog entry sets `disabled`. Default: `0.5`.
 - `--lr-voice-picker-option-synthetic-font-style` — Synthetic stale-value option-label font style. Default: `italic`.
 - `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.
@@ -3841,8 +3855,8 @@ Every array-valued property above is a clone-owned, bounded, frozen readonly sna
 nested source children and queued attachments. Mutating a previously assigned collection has no
 effect; create and reassign a new array after changes.
 
-`LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon? }` with
-optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`
+`LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon?, disabled? }`
+with optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`
 is preserved in the event detail. `LyraPromptInputAttachment` replaces `DocumentRef.id` with
 `attachmentId` and adds `file?`, `bytes?`, `status?: 'pending' | 'uploading' | 'error' | 'success'`,
 and numeric `progress?`.
@@ -4392,6 +4406,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly description?: string;
     readonly icon?: string;
+    readonly disabled?: boolean;
   }`
 
 - **`components-conversation-prompt-queue-prompt-queue-contracts`** — Supporting data types and helpers for this component family.

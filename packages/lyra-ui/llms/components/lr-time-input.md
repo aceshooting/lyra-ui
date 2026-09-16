@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -177,6 +177,12 @@ resolves to the plain page surface in light mode and would erase that separation
 mode the raised tone is already distinct from the page, so this panel never had the
 reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
 along with every other popup.
+
+`--lr-positioning-strategy` (16.0.0) — the `popup` panel reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-time-input>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset time input beneath it.
 
 ```html
 <lr-time-input

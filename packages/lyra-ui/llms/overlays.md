@@ -853,6 +853,17 @@ those public tokens ahead of any default this component supplies. For SIZE use
 `--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
 latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
 
+**Border reaches the composed close control the same way background/color/radius do.** This
+component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
+into the close control's private fallback tier — but that absence is not a gap. The public
+`--lr-icon-button-border` (and its `-hover`/`-active` variants) is the FIRST arm of the token
+chain, resolved by ordinary custom-property inheritance regardless of whether this component
+relays a default for that same property, so setting it on this element or an ancestor reaches the
+close control exactly as the background/color/radius tokens do. A component with no resting
+border simply has no default to relay, which is different from border theming being broken. Size
+remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
+`--lr-icon-button-size`, as noted above.
+
 **Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
 `--hide-duration`. The individual region properties override `--spacing`; mapped properties in

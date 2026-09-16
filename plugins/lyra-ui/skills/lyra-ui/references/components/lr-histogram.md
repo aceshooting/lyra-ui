@@ -37,9 +37,10 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`index-axis`), `hiddenDatasets`, `hiddenDatums`, `legendPosition` (`legend-position`),
   `legendMode` (`legend-mode`), `legendDisplay` (`legend-display`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
-  (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
+  (`without-tooltip`), `valueFormatter`, `formatter`, `tooltipTitleFormatter`,
+  `tooltipFooterFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
-  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
+  `stacked`, `stackedAxes`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
   (`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
@@ -103,5 +104,9 @@ their semantics, defaults, and gotchas.
 - `values`/`bins`/`seriesLabel` changes join the inherited connected-and-visible redraw path. There is no
   second post-update refresh, so a same-tick disconnect cannot recreate Chart.js on a detached
   canvas and off-screen sample updates do not repaint it.
+- calling `binValues()` directly (not through `<lr-histogram>`, which always passes its own
+  resolved `effectiveLocale`) with an omitted `locale` (or `'auto'`) now resolves to the page's
+  active `setLyraLocale()` locale instead of a hardcoded `'en'`, matching `utilities/format.ts`'s
+  helpers; an app that never calls `setLyraLocale()` sees no change, and an explicit tag still wins.
 
 ---

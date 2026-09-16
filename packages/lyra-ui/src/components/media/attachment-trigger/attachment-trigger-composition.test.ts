@@ -4,7 +4,7 @@ import './attachment-trigger.js';
 import type { LyraAttachmentTrigger } from './attachment-trigger.class.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px;';
+  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
 
 function part(el: LyraAttachmentTrigger, name: string): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>(`[part~="${name}"]`)!;
@@ -44,6 +44,40 @@ describe('lr-attachment-trigger: composed lr-icon-button', () => {
     const style = getComputedStyle(nativeControl(el, 'trigger'));
     expect(style.backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(style.borderTopLeftRadius).to.equal('11px');
+    expect(style.borderTopWidth, 'the ancestor border token reaches the control').to.equal('2px');
+    expect(style.borderTopColor).to.equal('rgb(9, 8, 7)');
+  });
+
+  it('lets an ancestor\'s public border win over this component\'s own relayed outlined default', async () => {
+    // appearance="outlined" is the one shape where this component DOES relay a non-zero
+    // --_lr-icon-button-border-default (--lr-border-width-thin solid --lr-color-neutral-border-loud,
+    // via --_lr-attachment-trigger-edge). The public token is still the first arm of the chain, so
+    // an ancestor override must win over that relayed default, not be shadowed by it.
+    const bare = (await fixture(html`<lr-attachment-trigger
+      .capabilities=${['files'] as const}
+      appearance="outlined"
+    ></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
+    await bare.updateComplete;
+    const defaultWidth = getComputedStyle(nativeControl(bare, 'trigger')).borderTopWidth;
+    expect(defaultWidth, 'the outlined default paints some border').to.not.equal('0px');
+
+    const host = await fixture(html`<div style=${ANCESTOR_TOKENS}>
+      <lr-attachment-trigger
+        .capabilities=${['files'] as const}
+        appearance="outlined"
+      ></lr-attachment-trigger>
+    </div>`);
+    const overridden = host.querySelector<LyraAttachmentTrigger>('lr-attachment-trigger')!;
+    await overridden.updateComplete;
+    const style = getComputedStyle(nativeControl(overridden, 'trigger'));
+    expect(style.borderTopWidth, 'the public token overrides the outlined default width').to.equal(
+      '2px'
+    );
+    expect(
+      style.borderTopColor,
+      'the public token overrides the outlined default color'
+    ).to.equal('rgb(9, 8, 7)');
+    expect(style.borderTopWidth).to.not.equal(defaultWidth);
   });
 
   it('opens the picker on Enter from the actually focused control', async () => {

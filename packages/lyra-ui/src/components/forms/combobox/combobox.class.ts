@@ -46,7 +46,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import { tag } from '../../../internal/prefix.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
@@ -632,8 +636,9 @@ export type LyraComboboxSourceErrorEvent =
  * @cssstate valid - Matches while the control satisfies its constraints.
  * @cssstate invalid - Matches while it does not — including a pristine required-and-empty
  *   combobox, exactly like native `:invalid`.
- * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the filter
- *   input, committed a selection, or been through a `reportValidity()`/submit attempt).
+ * @cssstate user-valid - `valid`, but only after the user has interacted: blurred the filter
+ *   input, committed a selection, `reportValidity()`, or a submission attempt. Not after a
+ *   silent `checkValidity()` alone.
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a required combobox
  *   nobody has touched yet is invalid without being styled as an error.
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
@@ -1105,6 +1110,11 @@ export class LyraCombobox<
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init)
     );
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like blurring or committing a selection; `checkValidity()`'s own call below runs inside
+    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
+    // other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
   }
 
   get form(): HTMLFormElement | null {
@@ -1894,17 +1904,28 @@ export class LyraCombobox<
     this.updateValidity();
     this.requestUpdate();
   }
+  private markInteracted = (): void => {
+    if (this.touched) return;
+    this.touched = true;
+    this.updateValidity();
+    this.syncCustomStates();
+  };
   checkValidity(): boolean {
     // Recomputed at call time, like a native control: `validators` is a plain JS array whose
     // entries can start failing without any property on this host changing, so a check that read
     // only the last published state would answer from a stale snapshot.
     this.updateValidity();
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
   reportValidity(): boolean {
     // Reporting is what a submit attempt does, and a failed submit is precisely when native
     // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
-    // `FormAssociated` mixin.
+    // `FormAssociated` mixin. (A submission attempt itself never calls this method -- it drives
+    // `ElementInternals` directly -- which is what `installInteractionOnInvalid()` above covers.)
     this.touched = true;
     this.updateValidity();
     this.syncCustomStates();

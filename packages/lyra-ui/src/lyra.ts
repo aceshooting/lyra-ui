@@ -870,6 +870,10 @@ export {
   computeAppRailMode,
 } from './components/layout/app-rail/app-rail.class.js';
 export { LyraAppRailItem } from './components/layout/app-rail/app-rail-item.class.js';
+export type {
+  LyraAppRailItemEventMap,
+  LyraAppRailItemToggleDetail,
+} from './components/layout/app-rail/app-rail-item.class.js';
 export { LyraAppRailGroup } from './components/layout/app-rail-group/app-rail-group.class.js';
 export type {
   LyraAppRailGroupEventMap,

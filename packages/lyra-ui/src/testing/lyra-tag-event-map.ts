@@ -116,6 +116,7 @@ import type { LyraTextareaEventMap } from '../components/forms/textarea/textarea
 import type { LyraTimeRangeEventMap } from '../components/forms/time-range/time-range.class.js';
 import type { LyraTokenInputEventMap } from '../components/forms/token-input/token-input.class.js';
 import type { LyraAppRailGroupEventMap } from '../components/layout/app-rail-group/app-rail-group.class.js';
+import type { LyraAppRailItemEventMap } from '../components/layout/app-rail/app-rail-item.class.js';
 import type { LyraAppRailEventMap } from '../components/layout/app-rail/app-rail.class.js';
 import type { LyraCardEventMap } from '../components/layout/card/card.class.js';
 import type { LyraCarouselEventMap } from '../components/layout/carousel/carousel.class.js';
@@ -256,6 +257,7 @@ export interface LyraTagEventTypes {
   'lr-animation': LyraAnimationEventMap;
   'lr-app-rail': LyraAppRailEventMap;
   'lr-app-rail-group': LyraAppRailGroupEventMap;
+  'lr-app-rail-item': LyraAppRailItemEventMap;
   'lr-approval-queue': LyraApprovalQueueEventMap;
   'lr-archive-viewer': LyraArchiveViewerEventMap;
   'lr-artifact-panel': LyraArtifactPanelEventMap;
@@ -504,6 +506,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-alert': { 'lr-hide': true, 'lr-show': true },
   'lr-app-rail': { 'lr-rail-resize-request': true, 'lr-toggle': true },
   'lr-app-rail-group': { 'lr-toggle-request': true },
+  'lr-app-rail-item': { 'lr-toggle-request': true },
   'lr-approval-queue': { 'lr-approval-decision': true },
   'lr-bar-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true },
   'lr-box-plot': { 'lr-before-legend-visibility-change': true },

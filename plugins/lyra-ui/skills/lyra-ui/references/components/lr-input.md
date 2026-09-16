@@ -153,7 +153,9 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   before. Omitted, `0`, or a non-finite value means no debounce at all: `lr-input-settled` never
   fires. A pending debounce is flushed immediately by `change`/Enter/blur (so a blur never drops
   the last keystroke) and cancelled with no stray settle by disconnection, the built-in clear
-  button, and a programmatic `value` write. Shares its `DebounceController` primitive with
+  button, and a programmatic `value` write that changes the value. A write of the value already
+  held leaves it pending, so a framework binding that writes the just-typed value back on each
+  render (the controlled-input pattern) still settles. Shares its `DebounceController` primitive with
   `lr-filter-bar`'s own per-filter `debounce` and with `lr-textarea`'s identical property
 - `name`/`disabled`/`required` (from `FormAssociated`)
 

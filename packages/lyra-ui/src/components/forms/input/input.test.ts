@@ -838,6 +838,50 @@ describe('lr-input', () => {
     });
   });
 
+  describe('sr-only required description and the error part', () => {
+    it('clips the required-field description to the shared sr-only geometry on a pristine input, keeps the error part hidden, and reveals a real validation error only after a failed submission attempt', async () => {
+      // Regression test for the sr-only class rendering as ordinary visible text: composing the
+      // shared `srOnly` export into this component's own `static override styles` is what
+      // actually clips the required-field description -- the class name alone does nothing (see
+      // check-visually-hidden.mjs).
+      const form = (await fixture(html`
+        <form><lr-input name="name" label="Name" required></lr-input></form>
+      `)) as HTMLFormElement;
+      const el = form.querySelector('lr-input') as LyraInput;
+      const required = el.shadowRoot!.querySelector('#input-required') as HTMLElement;
+      const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+
+      // Pristine: the required-field description exists for assistive tech but is not visible
+      // (rendered result, not `hidden` -- it is deliberately never `?hidden` while required), and
+      // no error is shown yet.
+      expect(required.hidden, 'the description is present, not display:none-hidden').to.be.false;
+      expect(required.textContent).to.equal('This field is required.');
+      const requiredStyles = getComputedStyle(required);
+      expect(requiredStyles.position).to.equal('absolute');
+      expect(requiredStyles.clipPath).to.not.equal('none');
+      expect(required.getBoundingClientRect().width).to.be.at.most(1);
+      expect(errorPart.hidden, 'no error is authored yet').to.be.true;
+
+      // A failed submission attempt: the empty required field blocks native constraint
+      // validation, so `submit` never fires and `invalid` does -- exactly the signal a real
+      // consumer wires to its own error message.
+      let submits = 0;
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        submits += 1;
+      });
+      el.addEventListener('invalid', () => {
+        el.errorText = 'Name is required.';
+      });
+      form.requestSubmit();
+      await el.updateComplete;
+
+      expect(submits, 'the empty required field blocks submission').to.equal(0);
+      expect(errorPart.hidden, 'the wired-up error is now shown').to.be.false;
+      expect(errorPart.textContent).to.contain('Name is required.');
+    });
+  });
+
   describe('.strings override', () => {
     it('localizes the required-field validation message (the pre-first-render fallback path, before the native input mounts)', () => {
       // updateValidity()'s `!native` branch -- the base mixin's plain required-and-empty check,

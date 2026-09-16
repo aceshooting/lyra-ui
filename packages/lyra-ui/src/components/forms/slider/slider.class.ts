@@ -13,7 +13,11 @@ import {
 } from '../../../internal/form-associated.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -266,8 +270,10 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @cssstate optional - The `required` form flag is not set.
  * @cssstate valid - The slider has no custom validity error.
  * @cssstate invalid - The slider has a custom validity error.
- * @cssstate user-valid - Valid after user interaction or an explicit validity report.
- * @cssstate user-invalid - Invalid after user interaction or an explicit validity report.
+ * @cssstate user-valid - Valid after user interaction (dragging, keying, blurring a thumb),
+ * `reportValidity()`, or a submission attempt. Not after a silent `checkValidity()` alone.
+ * @cssstate user-invalid - Invalid after that same interaction or interactive validation. Not
+ * after a silent `checkValidity()` alone.
  * @status stable
  * @since 4.0.0
  */
@@ -386,6 +392,11 @@ export class LyraSlider extends LyraSliderBase {
     this.addEventListener('input', this.markInteracted);
     this.addEventListener('change', this.markInteracted);
     this.addEventListener('focusout', this.markFocusoutInteracted);
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like editing or blurring; `checkValidity()`'s own call below runs inside
+    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
+    // other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     this.syncValidityStates();
   }
 
@@ -947,7 +958,11 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   checkValidity(): boolean {
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine slider as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
 
   reportValidity(): boolean {

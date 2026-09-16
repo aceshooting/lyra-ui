@@ -2865,6 +2865,37 @@ it("exposes the group willValidate flag and reports validity on demand", async (
   expect(group.reportValidity()).to.equal(true);
 });
 
+it("marks the group user-invalid from a blocked native submission attempt, but never from a bare checkValidity() call", async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const form = (await fixture(html`
+    <form>
+      <lr-radio-group name="choice" required label="Choice">
+        <lr-radio value="a">A</lr-radio>
+        <lr-radio value="b">B</lr-radio>
+      </lr-radio-group>
+      <button type="submit">Go</button>
+    </form>
+  `)) as HTMLFormElement;
+  // Defensive only: a truly invalid required group never reaches the `submit` event at all -- the
+  // platform's interactive validation aborts submission before it is dispatched.
+  form.addEventListener("submit", (event) => event.preventDefault());
+  const group = form.querySelector("lr-radio-group") as LyraRadioGroup;
+  await group.updateComplete;
+
+  expect(group.checkValidity(), "checkValidity() itself").to.be.false;
+  expect(
+    group.matches(":state(user-invalid)"),
+    "a silent checkValidity() must not mark interaction, however invalid the group already is"
+  ).to.be.false;
+
+  (form.querySelector("button") as HTMLButtonElement).click();
+  await group.updateComplete;
+  expect(
+    group.matches(":state(user-invalid)"),
+    "a blocked submission attempt counts as interaction, even though it never calls reportValidity()"
+  ).to.be.true;
+});
+
 it("keeps pristine required group ARIA neutral until validation is revealed", async () => {
   const group = (await fixture(html`
     <lr-radio-group required label="Choice">
@@ -2878,7 +2909,14 @@ it("keeps pristine required group ARIA neutral until validation is revealed", as
   expect(group.validity.valueMissing).to.be.true;
   expect(radiogroup.getAttribute("aria-invalid")).to.equal("false");
 
+  // A silent checkValidity() query must never reveal anything -- it is the one validity path
+  // that deliberately does not count as interaction.
   expect(group.checkValidity()).to.equal(false);
+  await group.updateComplete;
+  expect(radiogroup.getAttribute("aria-invalid")).to.equal("false");
+
+  // reportValidity() is interactive validation, so it is what reveals it.
+  expect(group.reportValidity()).to.equal(false);
   await group.updateComplete;
   expect(radiogroup.getAttribute("aria-invalid")).to.equal("true");
 

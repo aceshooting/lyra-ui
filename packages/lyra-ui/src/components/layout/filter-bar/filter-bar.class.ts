@@ -16,7 +16,13 @@ import {
 } from '../../../internal/intl-cache.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './filter-bar.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 // Deliberately NOT a bare side-effect import of the composed controls' own `.class.js` modules
 // (select/combobox/dropdown/dropdown-item/option/date-input/input/chip/chip-group/button/
 // spinner): every composed element below is rendered by tag name in `html` templates with zero
@@ -29,11 +35,6 @@ import { styles } from './filter-bar.styles.js';
 // (the default entry) keeps importing every composed control's own registration module directly,
 // so an existing `import '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.js'`
 // keeps registering everything it always has.
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Which existing Lyra input family renders a given filter -- this component composes these,
  *  it never invents a new filter-input type of its own. `'date'` and `'date-range'` both map
@@ -990,14 +991,10 @@ export class LyraFilterBar<
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     filterBarActiveFilters: LYRA_DEFAULT_filterBarActiveFilters,
     filterBarReset: LYRA_DEFAULT_filterBarReset,
-    loading: LYRA_DEFAULT_loading,
-    noData: LYRA_DEFAULT_noData,
-    retry: LYRA_DEFAULT_retry,
-    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-validity-change',
   ]);

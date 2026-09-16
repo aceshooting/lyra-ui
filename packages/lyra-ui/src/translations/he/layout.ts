@@ -30,6 +30,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'שנה את גודל הניווט',
   appRailCollapse: 'כווץ את הניווט',
   appRailExpand: 'הרחב את הניווט',
+  appRailItemCollapse: 'כווץ {label}',
+  appRailItemExpand: 'הרחב את {label}',
   resizeValuePercent: '{value} אחוזים',
   commandPaletteLabel: 'לוח פקודות',
   commandPalettePlaceholder: 'חפש פקודות…',

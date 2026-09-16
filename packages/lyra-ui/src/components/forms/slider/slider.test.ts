@@ -2124,6 +2124,44 @@ it("clears the interacted flag but preserves a custom validity error across form
   ).to.be.true;
 });
 
+it("marks a blocked native submission attempt as interaction, but never a bare checkValidity() call", async function () {
+  let supported = false;
+  try {
+    supported =
+      typeof CustomStateSet === "function" &&
+      document.createElement("div").matches(":state(x)") === false;
+  } catch {
+    supported = false;
+  }
+  if (!supported) this.skip();
+
+  const form = (await fixture(html`
+    <form><lr-slider name="gain"></lr-slider></form>
+  `)) as HTMLFormElement;
+  // Defensive only: a truly invalid slider never reaches the `submit` event at all -- the
+  // platform's interactive validation aborts submission before it is dispatched.
+  form.addEventListener("submit", (event) => event.preventDefault());
+  const el = form.querySelector("lr-slider") as LyraSlider;
+  await elementUpdated(el);
+  // A slider always has a numeric value, so `required` alone never makes it invalid --
+  // `setCustomValidity()` is the one channel that does, exactly like the reset test above.
+  el.setCustomValidity("Rejected by server.");
+  await elementUpdated(el);
+
+  expect(el.checkValidity(), "checkValidity() itself").to.be.false;
+  expect(
+    el.matches(":state(user-invalid)"),
+    "a silent checkValidity() must not mark interaction, however invalid the slider already is"
+  ).to.be.false;
+
+  form.requestSubmit();
+  await elementUpdated(el);
+  expect(
+    el.matches(":state(user-invalid)"),
+    "a blocked submission attempt counts as interaction, even though it never calls reportValidity()"
+  ).to.be.true;
+});
+
 it("formDisabledCallback disables the control via a fieldset", async () => {
   const form = (await fixture(html`
     <form>

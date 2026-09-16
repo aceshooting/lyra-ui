@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -103,6 +103,12 @@ shared ceiling that keeps any floating surface inside a narrow viewport. `lr-tou
 `lr-mention-popover`, and `lr-export-button` all `min()` their own max-inline-size against it, so
 retuning `--lr-theme-popover-viewport-clamp` once at `:root` narrows or widens all three together
 rather than per component.
+
+`--lr-positioning-strategy` (16.0.0) — the step popover reads this same cascading `absolute`/`fixed`
+override documented on `<lr-popover>` when a step is (re)positioned, falling back to its own `fixed`
+default when nothing is set. There is no per-instance `positioning-strategy` property on `<lr-tour>`;
+set the custom property on `:root`, a theme, or one clipping ancestor to change every unset tour
+beneath it.
 
 **Known gotchas:**
 

@@ -30,6 +30,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Изменить размер навигации',
   appRailCollapse: 'Свернуть навигацию',
   appRailExpand: 'Развернуть навигацию',
+  appRailItemCollapse: 'Свернуть {label}',
+  appRailItemExpand: 'Развернуть {label}',
   resizeValuePercent: '{value} процентов',
   commandPaletteLabel: 'Палитра команд',
   commandPalettePlaceholder: 'Поиск команд…',

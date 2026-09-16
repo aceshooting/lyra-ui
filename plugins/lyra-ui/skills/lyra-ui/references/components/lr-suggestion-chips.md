@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,12 +25,15 @@ identifier disappears, focus repairs to the nearest surviving occurrence without
 external focus move.
 
 **Properties:** `suggestions: readonly LyraChatSuggestion[] = []` (attribute: false) —
-`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string }`
+`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string; disabled?: boolean }`
 (exported here). Identifiers must be nonempty and unique; invalid/later duplicates are omitted with
 the first valid occurrence winning. The input is clone-owned, bounded, and frozen; reassign a new
 array after changing the sequence or a row. `icon` is an optional
 peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
-`detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
+`detail` is an optional secondary line. `disabled` marks a suggestion non-actionable: its chip
+renders a genuinely disabled `<button>` (no roving tab stop, no hover/press affordance), activating
+it emits nothing, and arrow-key/Home/End roving navigation steps past it. Empty renders nothing at
+all. `wrap: boolean = false`
 (reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label?:
 string` — accessible name for the group. Omitting it uses the localized `suggestionsLabel`; an
 explicit empty string intentionally leaves the group unnamed.
@@ -49,7 +52,8 @@ cannot do (once the chips wrap, the row fills the available inline size and each
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
 background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
-on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `0.5`) — opacity of a chip whose
+suggestion sets `disabled`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 `--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
 `--lr-focus-ring-width/-color/-offset`.
 

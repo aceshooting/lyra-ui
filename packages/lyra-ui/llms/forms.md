@@ -2945,7 +2945,14 @@ action-height ladder as `lr-input` instead of remaining at the default tier for 
 identical meaning. This component changes the mapped defaults to `appearance='outlined'`,
 `inputMode='numeric'`, and `step=1`. `clearable` (and its `with-clear` spelling),
 `passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but
-inert — see gotchas.
+inert — see gotchas. Also inherited from `lr-input`, with identical meaning:
+`defaultValue: string = ''` (attribute `value`, reflected) — the reset value; and
+`customError: string | null = null` (attribute `custom-error`, reflected) — a consumer-supplied
+validation message. `getForm()` returns the browser-resolved form owner, including an external
+owner selected by `form`; `setCustomValidity(message)` sets or clears `customError` without
+discarding intrinsic validity; `resetValidity()` clears only that consumer layer and recomputes
+the current intrinsic constraints, leaving `value`/`defaultValue` and prior interaction state
+unchanged.
 
 Stepper switches:
 
@@ -3255,7 +3262,14 @@ properties apply. `step` is native seconds; `showPicker()`, `stepUp()`, and `ste
 native-wrapper behavior. The control row carries `base input-wrapper time-input` part tokens on one
 node. Its native picker UI and AM/PM presentation are browser-owned and intentionally unstyled.
 The inherited `--lr-input-*` theme inputs therefore remain configurable from an ancestor theme
-wrapper without being shadowed by the subclass.
+wrapper without being shadowed by the subclass. Among those inherited properties and methods:
+`defaultValue: string = ''` (attribute `value`, reflected) is the reset value, and
+`customError: string | null = null` (attribute `custom-error`, reflected) is a consumer-supplied
+validation message. `getForm()` returns the browser-resolved form owner, including an external
+owner selected by `form`; `setCustomValidity(message)` sets or clears `customError` without
+discarding intrinsic validity; `resetValidity()` clears only that consumer layer and recomputes
+the current intrinsic constraints, leaving `value`/`defaultValue` and prior interaction state
+unchanged.
 
 **Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
 `lr-input` / `lr-change` aliases with `{ value }`;
@@ -5814,6 +5828,8 @@ of authoring `positioning-strategy`/`hoist` on each instance.
   `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
   `var(--lr-color-surface)`.
+- `--lr-color-picker-swatch-disabled-opacity` — Opacity of a palette swatch whose own entry sets
+  `disabled`. Default: `0.5`.
 
 ```html
 <lr-color-picker

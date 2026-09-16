@@ -53,8 +53,8 @@ Every array-valued property above is a clone-owned, bounded, frozen readonly sna
 nested source children and queued attachments. Mutating a previously assigned collection has no
 effect; create and reassign a new array after changes.
 
-`LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon? }` with
-optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`
+`LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon?, disabled? }`
+with optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`
 is preserved in the event detail. `LyraPromptInputAttachment` replaces `DocumentRef.id` with
 `attachmentId` and adds `file?`, `bytes?`, `status?: 'pending' | 'uploading' | 'error' | 'success'`,
 and numeric `progress?`.

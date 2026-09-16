@@ -10,7 +10,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
-import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -271,7 +271,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
 
   /** The plan. Controlled and never mutated by this component -- pass a new array to update it.
    *  Runtime non-record rows and rows without a nonempty string id are omitted before rendering,

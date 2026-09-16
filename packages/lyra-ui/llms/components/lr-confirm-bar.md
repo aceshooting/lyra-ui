@@ -82,13 +82,21 @@ real overlays use.
 `returnFocusTo: ConfirmBarReturnFocusTarget = null` (attribute: false) — where focus goes once a
 decision lands, instead of parking on `[part="status"]`.
 `ConfirmBarReturnFocusTarget = HTMLElement | null | (() => HTMLElement | null)`; the thunk form is
-resolved at handoff time, because a host that swaps a focused control out for this bar often
-re-creates that control on the way back. It applies to every path that reaches a decision, a
-`pending` decision finalized externally included. A named target that is missing, detached, `inert`,
-or otherwise refuses focus falls back to `[part="status"]` rather than to `<body>` — an `inert`
-element refuses `focus()` silently. Left unset, the handoff is byte-identical to the shipped one.
-The pending state is deliberately *not* affected: while a decision is awaiting resolution, focus
-still parks on `[part="status"]`, because that is not the return journey yet.
+called at handoff time, because a host that swaps a focused control out for this bar often
+re-creates that control on the way back — and, because every supported host framework re-renders
+asynchronously relative to that synchronous handoff, the control frequently does not exist yet at
+that first call. When the first call does not yet name a live, focusable element, the same handoff
+calls the thunk again once the host has had a real chance to react (its own re-render committed),
+and moves focus there if it has since appeared and nothing else has claimed focus in the meantime —
+this is what makes the swap-a-trigger-for-this-bar case actually work, rather than only working when
+the host happens to re-create its control before the decision lands. A plain element value is
+resolved once, synchronously, and never retried: it names something that either already exists or
+never will. It applies to every path that reaches a decision, a `pending` decision finalized
+externally included. A named target that is missing, detached, `inert`, or otherwise refuses focus
+falls back to `[part="status"]` rather than to `<body>` — an `inert` element refuses `focus()`
+silently. Left unset, the handoff is byte-identical to the shipped one. The pending state is
+deliberately *not* affected: while a decision is awaiting resolution, focus still parks on
+`[part="status"]`, because that is not the return journey yet.
 
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
@@ -211,5 +219,26 @@ bar.addEventListener("lr-approve", (e) => {
     .catch(() => {
       bar.pending = null;
     }); // bounce back, retry
+});
+```
+
+A host that reveals this bar in place of a control it just hid — the `returnFocusTo` motivating
+case — does not need to order that swap relative to the line above. A reactive host's own re-render
+(replacing this bar with its trigger again) runs on its own update cycle, which lands asynchronously
+either way, so `returnFocusTo`'s thunk is written to be called twice: once immediately, in case the
+control already exists, and once more after the host has had a chance to react if the first call
+found nothing yet:
+
+```ts
+bar.returnFocusTo = () => document.querySelector('[data-action="delete"]');
+bar.addEventListener("lr-approve", (e) => {
+  e.preventDefault();
+  runApproval(e.detail.args)
+    .then(() => {
+      bar.decision = "approved"; // the host's own state clear can happen before or after this
+    })
+    .catch(() => {
+      bar.pending = null;
+    });
 });
 ```

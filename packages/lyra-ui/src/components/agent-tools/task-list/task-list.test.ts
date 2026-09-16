@@ -39,6 +39,20 @@ it('renders one [part="item"] row per top-level item, carrying data-status/data-
   expect(rows[1]!.dataset['depth']).to.equal('0');
 });
 
+it('clips each row\'s sr-only status label to the shared sr-only geometry, keeping the text in the DOM', async () => {
+  // Regression test for the sr-only class rendering as ordinary visible text: composing the
+  // shared `srOnly` export into this component's own `static override styles` is what actually
+  // clips this span -- the class name alone does nothing (see check-visually-hidden.mjs).
+  const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+  const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
+  const statusLabel = rows[0]!.querySelector('.sr-only') as HTMLElement;
+  expect(statusLabel.textContent).to.equal('Success');
+  const computed = getComputedStyle(statusLabel);
+  expect(computed.position).to.equal('absolute');
+  expect(computed.clipPath).to.not.equal('none');
+  expect(statusLabel.getBoundingClientRect().width).to.be.at.most(1);
+});
+
 it('renders each item label and optional detail text', async () => {
   const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];

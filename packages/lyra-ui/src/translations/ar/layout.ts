@@ -30,6 +30,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'تغيير حجم التنقل',
   appRailCollapse: 'طي التنقل',
   appRailExpand: 'توسيع التنقل',
+  appRailItemCollapse: 'طي {label}',
+  appRailItemExpand: 'توسيع {label}',
   resizeValuePercent: '{value} بالمئة',
   commandPaletteLabel: 'لوحة الأوامر',
   commandPalettePlaceholder: 'ابحث في الأوامر…',

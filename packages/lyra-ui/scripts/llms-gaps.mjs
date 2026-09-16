@@ -518,6 +518,26 @@ export function collectGaps(
 
 export { FAMILIES };
 
+/**
+ * Orders `collectGaps()` output for the authoring report: the requested families first, in FAMILIES
+ * order, then any other family value a gap actually carries.
+ *
+ * `collectGaps()` files its cross-cutting source-contract findings under the pseudo-family
+ * `shared`, which is deliberately absent from FAMILIES because it maps to no
+ * `src/components/<family>/` directory. A printer that loops over FAMILIES alone therefore drops
+ * every one of those findings from its worklist while still counting them in its total -- the
+ * report prints an empty per-family breakdown above a non-zero "N gap lines total", which reads as
+ * a bug in the counter rather than as real, addressable work. Deriving the print order from the
+ * gaps themselves keeps the two numbers reconciled by construction.
+ */
+export function groupGapsForReport(gaps, families = FAMILIES.map(([family]) => family)) {
+  const order = [...families];
+  for (const { family } of gaps) if (!order.includes(family)) order.push(family);
+  return order
+    .map((family) => [family, gaps.filter((gap) => gap.family === family)])
+    .filter(([, familyGaps]) => familyGaps.length > 0);
+}
+
 function tagFactsFor() {
   const manifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
   return readTagFacts(manifest);

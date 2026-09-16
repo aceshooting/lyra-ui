@@ -47,7 +47,11 @@ import {
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import {
   omittedEmptyStringConverter,
   optionalLiteralSetConverter,
@@ -302,7 +306,7 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * @cssstate invalid - Matches while it does not — from the very first render, before the user has
  * touched anything.
  * @cssstate user-valid - `valid`, but only after the user has interacted: picking an option, a
- * blur, or a `reportValidity()` call (which is what a submit attempt runs).
+ * blur, `reportValidity()`, or a submission attempt. Not after a silent `checkValidity()` alone.
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required select is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
@@ -652,9 +656,10 @@ export class LyraSelect<
   /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
    *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
    *  `data-invalid`/`aria-invalid` pair and is set on blur alone): picking an option is an
-   *  interaction the instant it happens, and `reportValidity()` — what a submit attempt runs —
-   *  counts as one too, exactly as it does for native `:user-invalid`. Not `@state`: nothing in
-   *  `render()` reads it. */
+   *  interaction the instant it happens, and so is interactive validation — `reportValidity()` and
+   *  a submission attempt alike, via `installInteractionOnInvalid()` — exactly as it does for
+   *  native `:user-invalid`. A silent `checkValidity()` alone never counts. Not `@state`: nothing
+   *  in `render()` reads it. */
   private hasInteracted = false;
   // `[part]:empty` never matches because the literal `<slot>` child itself counts as content.
   // The shared controller seeds light DOM synchronously and delegates every named slot through one
@@ -807,6 +812,11 @@ export class LyraSelect<
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init)
     );
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like picking an option or a blur; `checkValidity()`'s own call below runs inside
+    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
+    // other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(
       this,
@@ -1409,15 +1419,28 @@ export class LyraSelect<
     this.updateValidity();
     this.requestUpdate();
   }
+  private markInteracted = (): void => {
+    if (this.hasInteracted) return;
+    this.hasInteracted = true;
+    this.reflectValidityStates();
+  };
+
   checkValidity(): boolean {
     this.updateValidity();
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
   reportValidity(): boolean {
     this.updateValidity();
-    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
-    // point, so it counts as interaction for the `user-*` custom states. `checkValidity()`
-    // deliberately does not: it is the silent query.
+    // Marked explicitly rather than left to the `installInteractionOnInvalid()` listener: that
+    // listener only fires when the check actually fails, but a `reportValidity()` call on an
+    // already-valid control still counts as interaction (native `:user-valid` matches on it too).
+    // A submission attempt reaches the same listener without ever calling this method at all --
+    // it drives `ElementInternals` directly. `checkValidity()` deliberately marks neither path:
+    // it is the silent query, and wraps its own call in `withStaticValidityCheck()` accordingly.
     this.hasInteracted = true;
     this.reflectValidityStates();
     return this.internals.reportValidity();

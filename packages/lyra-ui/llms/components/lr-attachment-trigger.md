@@ -79,6 +79,27 @@ painted surface sits one boundary deeper),
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).
 
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
+`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
+paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
+`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
+than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
+those public tokens ahead of any default this component supplies. For SIZE use
+`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
+latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
+
+**An ancestor's public border wins over this component's own relayed default, not just its
+absence.** Unlike most composing components, the `outlined`/`filled-outlined` appearances here DO
+relay a non-zero `--_lr-icon-button-border-default` (a themed edge) into the trigger's private
+fallback tier. That does not change the resolution order: `--lr-icon-button-border` (and its
+`-hover`/`-active` variants) is still the FIRST arm of the token chain, read by the composed
+trigger ahead of whatever this component relays, so setting it on this element or an ancestor
+overrides the outlined edge exactly as it overrides the `plain`/`filled`/`accent` appearances'
+zero default. The private relay is only this component's own default opinion, never a gate the
+public token must pass through. Size remains the one exception that does not cross this way: use
+`--lr-theme-icon-button-size`, never `--lr-icon-button-size`, as noted above.
+
 **Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-color-text`/
 `-text-quiet`, `--lr-icon-button-size`, `--lr-focus-ring-*`, `--lr-opacity-disabled`,
 `--lr-radius`, `--lr-transition-fast`.

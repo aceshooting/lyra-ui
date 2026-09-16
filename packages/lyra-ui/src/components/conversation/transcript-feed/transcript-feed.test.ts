@@ -91,6 +91,24 @@ it('renders interim entries outside the log, marked data-interim with a visually
   expect(interimEntry.querySelector('.sr-only')!.textContent).to.equal('Transcribing…');
 });
 
+it('clips the interim "Transcribing…" marker to the shared sr-only geometry, keeping the text in the DOM', async () => {
+  // Regression test for the sr-only class rendering as ordinary visible text: composing the
+  // shared `srOnly` export into this component's own `static override styles` is what actually
+  // clips this span -- the class name alone does nothing (see check-visually-hidden.mjs). The
+  // sibling test above only proves the text is present; this one proves it is actually invisible
+  // to sighted users.
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  el.entries = [{ id: '1', speaker: 'You', text: 'partial...', interim: true }];
+  await el.updateComplete;
+
+  const marker = el.shadowRoot!.querySelector('[part="interim-area"] .sr-only') as HTMLElement;
+  expect(marker.textContent).to.equal('Transcribing…');
+  const computed = getComputedStyle(marker);
+  expect(computed.position).to.equal('absolute');
+  expect(computed.clipPath).to.not.equal('none');
+  expect(marker.getBoundingClientRect().width).to.be.at.most(1);
+});
+
 it('styles direct and interim token-list entry parts, including reduced motion', async () => {
   await setReducedMotion('no-preference');
   try {

@@ -8,7 +8,11 @@ import {
   VALIDITY_ANCHOR,
 } from './anchored-validity.js';
 import { syncValidityStates } from './custom-states.js';
-import { installInvalidEventAlias } from './invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from './invalid-event-alias.js';
 import { omittedEmptyStringConverter } from './converters.js';
 import { attachInternalsSafely, createFallbackInternals } from './element-internals.js';
 import { installFormControlLabelSupport } from './form-control-labels.js';
@@ -480,6 +484,13 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
         if (this.effectiveDisabled) return;
         markInteracted();
       });
+      // Interactive validation is also interaction: a submission attempt (`requestSubmit()`, a
+      // submit button, implicit Enter submission) never calls this control's own
+      // `reportValidity()` method — it drives `ElementInternals` directly — so it would otherwise
+      // never mark `_hasInteracted` at all. `checkValidity()` below wraps its own internal call in
+      // `withStaticValidityCheck()` so this listener can tell that silent query apart from every
+      // other path that raises the same `invalid` event.
+      installInteractionOnInvalid(this, markInteracted);
       this.syncValidityStates();
     }
 
@@ -868,7 +879,11 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     checkValidity(): boolean {
       this.syncConstraintsToNative();
       this.updateValidity();
-      return this.internals.checkValidity();
+      // Silent query: must never mark a pristine control as interacted, however invalid it already
+      // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+      // that whatever `invalid` event fires synchronously inside this call is this call, not a
+      // submission attempt.
+      return withStaticValidityCheck(this, () => this.internals.checkValidity());
     }
 
     reportValidity(): boolean {

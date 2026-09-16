@@ -41,7 +41,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings.generated.js';
@@ -220,8 +224,9 @@ const stringArrayConverter = {
  * @cssstate valid - Matches while the control satisfies its constraints.
  * @cssstate invalid - Matches while it does not — including a pristine required control with no
  *   tokens yet, exactly like native `:invalid`.
- * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the text input,
- *   or been through a `reportValidity()`/submit attempt).
+ * @cssstate user-valid - `valid`, but only after the user has interacted: blurred the text
+ *   input, `reportValidity()`, or a submission attempt. Not after a silent `checkValidity()`
+ *   alone.
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a required control
  *   nobody has touched yet is invalid without being styled as an error.
  * @status stable
@@ -475,6 +480,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init)
     );
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like blurring; `checkValidity()`'s own call below runs inside `withStaticValidityCheck()`
+    // so this listener can tell the silent query apart from every other path that raises the
+    // same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
   }
   override connectedCallback(): void {
     super.connectedCallback();
@@ -547,12 +557,22 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       null
     );
   }
+  private markInteracted = (): void => {
+    if (this.touched) return;
+    this.touched = true;
+    this.syncValidity();
+  };
   checkValidity(): boolean {
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
   /** Reporting is what a submit attempt does, and a failed submit is precisely when native
    *  `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
-   *  `FormAssociated` mixin. */
+   *  `FormAssociated` mixin. (A submission attempt itself never calls this method -- it drives
+   *  `ElementInternals` directly -- which is what `installInteractionOnInvalid()` above covers.) */
   reportValidity(): boolean {
     this.touched = true;
     this.syncValidity();

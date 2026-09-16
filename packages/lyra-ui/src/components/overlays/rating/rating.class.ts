@@ -33,7 +33,11 @@ import {
 } from '../../../internal/variants.js';
 import { styles } from './rating.styles.js';
 import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import {
   EXTERNAL_LABEL_HOST_SEMANTICS,
@@ -189,8 +193,8 @@ function starSolid(): SVGTemplateResult {
  * @cssstate invalid - The control currently fails its constraints — true for a pristine
  * `required` rating that has never been set, which is why validation styling should key off
  * `user-invalid` instead.
- * @cssstate user-valid - Valid, and the user has interacted: rated it, blurred it, or triggered
- * validation (a submit attempt runs `reportValidity()`).
+ * @cssstate user-valid - Valid, and the user has interacted: rated it, blurred it,
+ * `reportValidity()`, or a submission attempt. Not after a silent `checkValidity()` alone.
  * @cssstate user-invalid - Invalid, and the user has interacted. This is the state to paint red;
  * a form reset returns the control to pristine and drops it again.
  * @status stable
@@ -303,11 +307,13 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   private _valueDirty = false;
   private settingDefaultValue = false;
   private reflectingDefaultValue = false;
-  /** Whether the user has driven this control yet — rated it, blurred it, or triggered validation.
-   *  Gates the `user-valid`/`user-invalid` custom states: a pristine `required` rating IS invalid,
-   *  but painting it red before anyone has touched it is hostile. Mirrors the `FormAssociated`
-   *  mixin's own flag; this control drives `ElementInternals` directly (its value is a number, not
-   *  the string that mixin assumes) so it has to track the flag itself. */
+  /** Whether the user has driven this control yet — rated it, blurred it, or triggered interactive
+   *  validation (`reportValidity()` or a submission attempt, via `installInteractionOnInvalid()`).
+   *  A silent `checkValidity()` alone never counts. Gates the `user-valid`/`user-invalid` custom
+   *  states: a pristine `required` rating IS invalid, but painting it red before anyone has touched
+   *  it is hostile. Mirrors the `FormAssociated` mixin's own flag; this control drives
+   *  `ElementInternals` directly (its value is a number, not the string that mixin assumes) so it
+   *  has to track the flag itself. */
   private _hasInteracted = false;
   private authorAriaLabel: string | null = null;
   private syncingHostSemantics = false;
@@ -323,6 +329,11 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init)
     );
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like rating or blurring; `checkValidity()`'s own call below runs inside
+    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
+    // other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     // Shares the mixin's attach-or-degrade helper so both paths handle a missing *and* a throwing
     // `attachInternals()` (SSR/test DOMs, partial polyfills) without breaking construction.
     this.internals = attachInternalsSafely(this);
@@ -536,13 +547,19 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   checkValidity(): boolean {
     this.updateValidity();
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
 
   reportValidity(): boolean {
     this.updateValidity();
     // Reporting is what a submit attempt does, and a failed submit is precisely when native
-    // `:user-invalid` starts matching — so it counts as interaction here too.
+    // `:user-invalid` starts matching — so it counts as interaction here too. (A submission
+    // attempt itself never calls this method -- it drives `ElementInternals` directly -- which is
+    // what `installInteractionOnInvalid()` above covers.)
     this.markInteracted();
     return this.internals.reportValidity();
   }

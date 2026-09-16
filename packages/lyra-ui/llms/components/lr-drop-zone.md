@@ -39,16 +39,25 @@ reimplemented.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check), `maxFiles:
   number = 0` (attribute `max-files`), `maxTotalSize: number = 0` (attribute `max-total-size`) —
   identical contract and invalid-override fail-safe fallback to `lr-file-input`'s own three limits.
-  Since this component retains nothing between drops, `maxFiles`/`maxTotalSize` always cover only
-  the current drop (there is no persisted count/total to add).
+  Since this component retains nothing of its own between drops, `maxFiles`/`maxTotalSize` would
+  otherwise always cover only the current drop — `heldFileCount`/`heldTotalSize` below are what let
+  a cumulative cap span separate drops.
+- `heldFileCount: number = 0` (attribute `held-file-count`) and `heldTotalSize: number = 0`
+  (attribute `held-total-size`) — externally held baseline added to the running count/byte-total
+  `maxFiles`/`maxTotalSize` evaluate against, identical contract to `lr-file-input`'s own
+  `heldFileCount`/`heldTotalSize`: `0` (the default) means "nothing held" and reproduces prior
+  behavior exactly, and a negative, `NaN`, or `Infinity` override is normalized to `0` via
+  `finiteCount` rather than corrupting every later comparison.
 - `readonly dragging: boolean` — `true` during an active drag session
 
 **Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
-`rejected` arrays and frozen rejected-file records, fired on drop; immutable `File` objects retain
-identity) — typed as `LyraDropZoneFilesEvent`, so `event.target`/`event.currentTarget` are
-`LyraDropZone` without a cast. `LyraDropZoneRejectedFile = { readonly file: File; readonly reason:
-'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`, the
-same reason vocabulary as `lr-file-input`'s `LyraFileInputRejectedFile`.
+`rejected` arrays and frozen rejected-file records, plus `remainingFiles`/`remainingTotalSize`
+reporting the allowance still left under `maxFiles`/`maxTotalSize` after this drop (`null` while
+that limit is unset), fired on drop; immutable `File` objects retain identity) — typed as
+`LyraDropZoneFilesEvent`, so `event.target`/`event.currentTarget` are `LyraDropZone` without a
+cast. `LyraDropZoneRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size'
+| 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`, the same reason vocabulary as
+`lr-file-input`'s `LyraFileInputRejectedFile`.
 
 **Slots:** the default slot is the wrapped region, rendered as ordinary light DOM; `overlay`
 overrides the localized accept/reject overlay text.

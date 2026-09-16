@@ -19,13 +19,15 @@
 A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `languages` map already
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
-`lr-content-settled` event, the `languages` property — is identical to `<lr-streaming-text>`; only
-which Markdown element Markdown mode composes differs: this variant renders `<lr-markdown-core>`
-(`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this entry point instead
-of `streaming-text.js` never references `<lr-markdown>`'s ~200-language dynamic-import table at
-all. A fenced code block whose language isn't a key in `languages` always renders the plain-text
-fallback — there is no default/full-table highlighter here to fall back to, mirroring
-`<lr-markdown-core>`'s own contract.
+`lr-content-settled` event, the `languages` property, and the full forwarded Markdown configuration
+surface (`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+`highlightCode`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
+only which Markdown element Markdown mode composes differs: this variant renders
+`<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
+entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
+dynamic-import table at all. A fenced code block whose language isn't a key in `languages` always
+renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
+mirroring `<lr-markdown-core>`'s own contract.
 
 **Properties:** `content: string = ''` — the full current text so far, identical contract to
 `<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
@@ -34,7 +36,18 @@ fallback — there is no default/full-table highlighter here to fall back to, mi
 `content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
 Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
-`<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s.
+`<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s (defaulting the composed
+element's own `languages` to `{}` when unset, unlike the full variant's `undefined`). The rest of
+`<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
+attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
+`tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
+'sanitize'` (attribute `html-mode`); `gfm: boolean = true`; `linkTarget: string | null = '_blank'`
+(attribute `link-target`, still guarded by the composed element's own
+`rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
+(attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
+`highlightCode: boolean = true` (attribute `highlight-code`); `headingAnchors: boolean = false`
+(attribute `heading-anchors`); `math: boolean = false`; `maxHeight: string = ''` (attribute
+`max-height`).
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
 `<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags

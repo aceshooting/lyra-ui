@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,14 +47,19 @@ import type {
 **Properties:**
 
 - `nodes: readonly FlowNode[] = []` (attribute: false) — each record has readonly `id`, optional
-  `type`, `position`, `data`, `accessibleLabel`, `inputs`, and `outputs`. A missing `position` opts
-  into layered layout. String `data.label` and `data.description` feed the declarative fallback
-  card. Assignment takes a detached, deeply frozen snapshot of plain arrays/records, omitting blank
-  ids and later duplicates first-wins before layout, focus, selection, gestures, companion
-  snapshots, and events. At most the first 10,000 source nodes are retained, with finite nested
-  depth/entry budgets; reassign `nodes` after changes. Replacing the model cancels node-drag and
-  connect gestures whose ids belonged to the old model and silently prunes selected ids that no
-  longer exist.
+  `type`, `position`, `data`, `accessibleLabel`, `inputs`, `outputs`, and `disabled`. A missing
+  `position` opts into layered layout. String `data.label` and `data.description` feed the
+  declarative fallback card. Assignment takes a detached, deeply frozen snapshot of plain
+  arrays/records, omitting blank ids and later duplicates first-wins before layout, focus,
+  selection, gestures, companion snapshots, and events. At most the first 10,000 source nodes are
+  retained, with finite nested depth/entry budgets; reassign `nodes` after changes. Replacing the
+  model cancels node-drag and connect gestures whose ids belonged to the old model and silently
+  prunes selected ids that no longer exist. `disabled` marks a node non-actionable: it keeps its
+  position and card content but cannot be selected/activated by click or keyboard, roving-tabindex
+  navigation (arrow keys, Home/End) steps past it, it cannot be dragged even while
+  `nodes-draggable`, and it is excluded from starting or receiving a new connection while
+  `connectable` (an edge already touching it is left alone). Omitted or `false` renders the node
+  exactly as before this field existed.
 - `edges: readonly FlowEdge[] = []` (attribute: false) — readonly `id`, `source`, `target`, optional
   handle ids, optional drawn `label`, and optional `tone: LyraVariant`. The canonical brand value is
   `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract. Blank
@@ -220,5 +225,7 @@ four above. Set it to `transparent` to opt out of the hover treatment.
 - `part="edge-hit-area"` — The transparent wide pointer target behind an edge.
 - `part="node-control"` — The visually hidden, roving selection button for a node.
 - `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-color-brand)`.
+- `--lr-flow-canvas-node-disabled-opacity` — Opacity of a node whose `FlowNode` entry sets
+  `disabled`. Default: `0.5`.
 
 ---

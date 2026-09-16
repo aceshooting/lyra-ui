@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -90,12 +90,15 @@ and:
   applies to the whole string, function names included (`RGB(255, 0, 0)`)
 - `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
   `;`-separated string, an array of colour strings, or an array of
-  `{ color: string; label?: string }` objects. Any colour the picker can parse is accepted; blank
-  entries are dropped. An entry that is _not_ parseable is kept in the list and still renders a
-  swatch — it just paints no colour (the bare checkerboard) and clicking it does nothing, so filter
-  the palette yourself if that matters. `label` becomes the swatch's accessible name; a missing,
-  empty, or whitespace-only label falls back to announcing the raw colour string. The palette
-  container renders only while the normalized list is non-empty
+  `{ color: string; label?: string; disabled?: boolean }` objects. Any colour the picker can parse
+  is accepted; blank entries are dropped. An entry that is _not_ parseable is kept in the list and
+  still renders a swatch — it just paints no colour (the bare checkerboard) and clicking it does
+  nothing, so filter the palette yourself if that matters. `label` becomes the swatch's accessible
+  name; a missing, empty, or whitespace-only label falls back to announcing the raw colour string.
+  `disabled` marks that one swatch non-actionable, independent of the whole control's own
+  `disabled`: it renders a genuinely disabled `<button>` (no tab stop, no hover/press affordance)
+  and clicking it commits nothing; omitted or `false` renders the swatch exactly as before this
+  field existed. The palette container renders only while the normalized list is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
   that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
   reaches the same behavior; either one wins
@@ -279,6 +282,8 @@ of authoring `positioning-strategy`/`hoist` on each instance.
   `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
   `var(--lr-color-surface)`.
+- `--lr-color-picker-swatch-disabled-opacity` — Opacity of a palette swatch whose own entry sets
+  `disabled`. Default: `0.5`.
 
 ```html
 <lr-color-picker

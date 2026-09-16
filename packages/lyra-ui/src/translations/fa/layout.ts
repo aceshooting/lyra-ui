@@ -30,6 +30,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'تغییر اندازهٔ بخش پیمایش',
   appRailCollapse: 'جمع کردن بخش پیمایش',
   appRailExpand: 'گسترش بخش پیمایش',
+  appRailItemCollapse: 'جمع کردن {label}',
+  appRailItemExpand: 'گسترش {label}',
   resizeValuePercent: '{value} درصد',
   commandPaletteLabel: 'پالت فرمان',
   commandPalettePlaceholder: 'جست‌وجوی فرمان‌ها…',

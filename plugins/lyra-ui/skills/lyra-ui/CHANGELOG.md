@@ -65,6 +65,15 @@
   reading a painted value off it (`getComputedStyle(node).backgroundColor`) needs
   `node.shadowRoot.querySelector('[part~="button"]')`.
   
+  **Size is the one token that does NOT follow that rule.** `--lr-icon-button-background`/`-color`/
+  `-radius`/`-border` inherit down to a composed action, but `--lr-icon-button-size` set on the
+  wrapping component does not reach it, and `min-inline-size`/`min-block-size` written on the old
+  part cannot push the nested control past its own floor — so a pre-16 rule that sized one of these
+  controls, including a coarse-pointer touch-target pair, is inert with no visible symptom. Use
+  `--lr-theme-icon-button-size` instead; it is the hook that crosses into the composed child. This
+  applies to every component in the table above, not only `<lr-copy-button>`, whose reference page
+  was previously the only place it was written down.
+  
   **Not affected by this change.** Other icon-sized built-in buttons deliberately stay native
   `<button>`s in 16.0.0, so every rule you already wrote against them still applies: `<lr-alert>`,
   `<lr-toast-item>`, `<lr-lightbox>` and `<lr-tool-result-dialog>` close buttons; `<lr-chip>`,

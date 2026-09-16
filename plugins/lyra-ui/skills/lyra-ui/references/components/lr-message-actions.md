@@ -89,3 +89,13 @@ or an ancestor, or reach a built-in's composed native control directly through
 `::part(regenerate-button__control)` / `::part(edit-button__control)`. A coarse-pointer/no-hover
 media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
 override lowered it, so the shrink is safe on a touch device.
+
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only actions are composed
+`<lr-icon-button>`s, so a part naming one of them now names the composed child's HOST, which paints
+nothing. A `border`, `background` or `border-radius` set on it is silently dead — only `color` still
+appears to work, because it inherits, which makes such a rule look half-alive rather than broken.
+Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their `-hover`/`-active`
+variants) on this element or an ancestor instead: the composed control reads those public tokens
+ahead of any default this component supplies. For SIZE use `--lr-theme-icon-button-size`, not
+`--lr-icon-button-size` — every `LyraElement` re-declares the latter on its own `:host`, so it never
+reaches a composed child (see `llms/tokens.md`).

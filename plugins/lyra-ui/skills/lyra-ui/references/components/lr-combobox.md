@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -155,6 +155,18 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   that window instead, since the value is not yet known to be unmatched at all
 - `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected)
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
+- `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) —
+  the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
+  `lr-popover`, `lr-dropdown`, `lr-tooltip` and `lr-color-picker`. `fixed` is this control's
+  default and what it has always rendered: it positions against the viewport and escapes most
+  clipping ancestors, which suits a typeahead list that usually sits inside a scrollable region.
+  `absolute` positions against the nearest containing block and scrolls with it. An unsupported
+  value resolves to the default. Like `placement`, a change takes effect the next time the listbox
+  opens. When the instance sets nothing, the cascading `--lr-positioning-strategy` custom property
+  (`absolute`/`fixed`, set on `:root`, a theme, or one clipping ancestor) is honoured ahead of the
+  default; an explicit instance value always wins. There is deliberately no `hoist` alias here:
+  unlike on `lr-select`, where it is Shoelace's established spelling, it would be a boolean
+  defaulting to `true`, so its attribute could only ever express the value the control already has
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or _visible_ filter text. See
   "the clear button covers two axes" below

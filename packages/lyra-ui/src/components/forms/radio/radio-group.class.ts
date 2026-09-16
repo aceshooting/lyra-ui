@@ -17,6 +17,7 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
 import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
+import { isStaticValidityCheckInProgress, withStaticValidityCheck } from '../../../internal/invalid-event-alias.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
@@ -61,8 +62,10 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
 /**
  * `<lr-radio-group>` — a labeled, keyboard-navigable group of radios.
  * A required but pristine group exposes `aria-invalid="false"`; intrinsic invalidity is projected
- * to the radiogroup only after user interaction or a native validity check (`checkValidity()`,
- * `reportValidity()`, or form-level validation), while explicit error chrome remains immediate.
+ * to the radiogroup only after user interaction (selecting a radio, blurring the group) or
+ * interactive validation (`reportValidity()`, or a submission attempt), while explicit error
+ * chrome remains immediate. `checkValidity()` alone is a silent query and never marks a pristine
+ * group interacted.
  *
  * Host `aria-describedby` references resolve onto the internal radiogroup before local hint/error
  * guidance. References track target replacement/removal, reconnect and document adoption.
@@ -84,8 +87,11 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * @cssstate optional - Matches while `required` is not set.
  * @cssstate valid - Matches while the aggregate value satisfies every constraint.
  * @cssstate invalid - Matches while the aggregate value fails a constraint.
- * @cssstate user-valid - Matches `valid` after user interaction or a native validity check.
- * @cssstate user-invalid - Matches `invalid` after user interaction or a native validity check.
+ * @cssstate user-valid - Matches `valid` after user interaction (selecting a radio, blurring the
+ * group) or interactive validation (`reportValidity()`, or a submission attempt); not after a
+ * silent `checkValidity()` alone.
+ * @cssstate user-invalid - Matches `invalid` after that same interaction or interactive validation;
+ * not after a silent `checkValidity()` alone.
  * @csspart base - The radiogroup wrapper.
  * @csspart form-control - Mapped form-control wrapper.
  * @csspart label - The group label.
@@ -312,7 +318,10 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     // API initiated the check, so it is the shared observable signal that validation was revealed.
     // Group-owned children are valid while aggregated, so a form-level pass still reaches this
     // branch exactly once through the FACE host.
-    this.hasInteracted = true;
+    // `checkValidity()` is the one silent path: it wraps its own `internals.checkValidity()` call
+    // in `withStaticValidityCheck()`, which is what this checks for -- a pristine group must not
+    // become interacted just because something asked it whether it's valid.
+    if (!isStaticValidityCheckInProgress(this)) this.hasInteracted = true;
     this.reflectValidityStates();
     this.requestUpdate();
     // A real veto point, exactly as in `installInvalidEventAlias()`: cancelling the alias cancels
@@ -805,7 +814,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     });
   }
 
-  checkValidity(): boolean { return this.internals.checkValidity(); }
+  checkValidity(): boolean { return withStaticValidityCheck(this, () => this.internals.checkValidity()); }
   reportValidity(): boolean {
     this.hasInteracted = true;
     this.updateValidity();

@@ -2163,6 +2163,32 @@ it("exposes the native form-association surface", async () => {
   expect(el.reportValidity()).to.equal(true);
 });
 
+it("marks a blocked native submission attempt as interaction, but never a bare checkValidity() call", async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lr-file-input name="attachment" required></lr-file-input>
+    </form>
+  `);
+  // Defensive only: a truly invalid required control never reaches the `submit` event at all --
+  // the platform's interactive validation aborts submission before it is dispatched.
+  form.addEventListener("submit", (event) => event.preventDefault());
+  const el = form.querySelector<LyraFileInput>("lr-file-input")!;
+  await el.updateComplete;
+
+  expect(el.checkValidity(), "checkValidity() itself").to.equal(false);
+  expect(
+    el.matches(":state(user-invalid)"),
+    "a silent checkValidity() must not mark interaction, however invalid the control already is"
+  ).to.equal(false);
+
+  form.requestSubmit();
+  await el.updateComplete;
+  expect(
+    el.matches(":state(user-invalid)"),
+    "a blocked submission attempt counts as interaction, even though it never calls reportValidity()"
+  ).to.equal(true);
+});
+
 it("detaches from its form owner when the form property is reassigned", async () => {
   const root = await fixture(html`
     <div>

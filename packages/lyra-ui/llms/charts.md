@@ -1489,6 +1489,7 @@ These named interfaces and helper signatures are available to typed integrations
     hidden?: boolean;
     axis?: string;
     yAxisID?: string;
+    stack?: string;
     noTooltip?: boolean;
     fill?: unknown;
     backgroundColor?: unknown;
@@ -1571,6 +1572,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly dash?: boolean;
     readonly noTooltip?: boolean;
     readonly axis?: 'y' | 'y2';
+    readonly stack?: string;
     readonly pointColors?: readonly string[];
     readonly pointRadius?: number | readonly number[];
     readonly segmentColors?: readonly string[];

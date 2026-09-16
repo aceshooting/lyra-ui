@@ -1024,11 +1024,21 @@ test('the CEM FormAssociated projection is truthful, scoped, and idempotent', ()
     member('setCustomValidity').description,
     /consumer-supplied validation message/i
   );
-  assert.equal(
-    derived.members.find(({ name }) => name === 'defaultValue')?.inheritedFrom
-      ?.name,
-    'FormControl',
+  // A subclass must RECEIVE the mixin surface that CEM inheritance ran too early to copy, and must
+  // receive it UNTAGGED. `manifest-compact.mjs` prunes any member carrying an `inheritedFrom` that
+  // resolves identically on the named superclass, so tagging these back-filled members would delete
+  // them from the published manifest again -- the exact regression the chain-walk fix removed.
+  const derivedDefaultValue = derived.members.find(
+    ({ name }) => name === 'defaultValue'
+  );
+  assert.ok(
+    derivedDefaultValue,
     'a subclass receives the mixin surface that CEM inheritance ran too early to copy'
+  );
+  assert.equal(
+    derivedDefaultValue.inheritedFrom,
+    undefined,
+    'back-filled mixin members stay untagged so compaction cannot prune them'
   );
   assert.equal(
     derived.attributes.find(({ name }) => name === 'value')?.fieldName,
@@ -6866,8 +6876,14 @@ test('the raw CEM projects complete effective wrapper and source-only mixin surf
     );
   }
 
+  // `--lr-positioning-strategy` is a CASCADE INPUT, not a per-component value: it is deliberately
+  // left unset on every one of the 18 tags that read it, so the component's own
+  // `positioningStrategy` default ('fixed' or 'absolute', per component) is what applies when no
+  // ancestor sets it. Documenting a default here would assert a value the property does not have.
   const contextualCssDefaults = new Set([
     'lr-source-picker:--lr-source-picker-checked-bg',
+    'lr-citation-badge:--lr-positioning-strategy',
+    'lr-entity-chip:--lr-positioning-strategy',
   ]);
   for (const module of (liveManifest.modules ?? []).filter(({ path }) =>
     path?.includes('/retrieval/')

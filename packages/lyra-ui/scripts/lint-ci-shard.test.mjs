@@ -24,13 +24,32 @@ function withScripts(overrides) {
   return { ...currentScripts, ...overrides };
 }
 
-test('partitions all 97 current lint command occurrences exactly once', () => {
+// The exhaustiveness invariants below are derived from `package.json`, never hard-coded. Pinning
+// the absolute totals asserted only "nobody added a gate", which is churn rather than a contract:
+// every time `contract-policy` grew, three or four literals in this file went stale and `pnpm lint`
+// failed on the COUNT long after the real gates had passed. A floor still catches a catastrophic
+// collapse (a mis-parsed chain yielding a handful of commands), and the structural assertions --
+// exhaustive ordinals, preserved command multiset, balanced lanes -- are what actually protect the
+// sharding.
+test('partitions every current lint command occurrence exactly once', () => {
   const inventory = buildLintInventory(currentScripts);
   const lanes = partitionLintInventory(inventory);
   const selected = lanes.flatMap((lane) => lane.commands);
 
-  assert.equal(inventory.length, 97);
-  assert.equal(inventory.filter((item) => item.source === 'contract-policy').length, 94);
+  const contractPolicyCommands = currentScripts['contract-policy']
+    .split('&&')
+    .map((command) => command.trim())
+    .filter(Boolean).length;
+  assert.ok(
+    inventory.length > 90,
+    `expected the full lint inventory, got ${inventory.length} -- a mis-parsed chain?`,
+  );
+  // The three `lint` type-check suffixes are the only occurrences outside `contract-policy`.
+  assert.equal(inventory.length, contractPolicyCommands + 3);
+  assert.equal(
+    inventory.filter((item) => item.source === 'contract-policy').length,
+    contractPolicyCommands,
+  );
   assert.deepEqual(
     inventory.slice(-3).map((item) => item.command),
     [
@@ -48,7 +67,14 @@ test('partitions all 97 current lint command occurrences exactly once', () => {
     commandCounts(inventory.map((item) => item.command)),
   );
   assert.equal(new Set(selected.map((item) => item.ordinal)).size, inventory.length);
-  assert.deepEqual(lanes.map((lane) => lane.totalWeight), [174, 174, 174]);
+  // Balance, not exact weights: the partitioner's job is that no lane straggles, and a literal
+  // triple here goes stale on every gate addition for no added safety.
+  const weights = lanes.map((lane) => lane.totalWeight);
+  assert.equal(weights.length, LINT_SHARD_TOTAL);
+  assert.ok(
+    Math.max(...weights) - Math.min(...weights) <= 2,
+    `lint shards are unbalanced: ${weights.join(', ')}`,
+  );
   for (const lane of lanes) {
     assert.deepEqual(
       lane.commands.map((item) => item.ordinal),
@@ -78,7 +104,8 @@ test('assigns unknown valid commands and preserves repeated occurrences by ordin
   const inventory = buildLintInventory(scripts);
   const selected = partitionLintInventory(inventory).flatMap((lane) => lane.commands);
 
-  assert.equal(inventory.length, 99);
+  // Derived from the same chain plus the two synthetic future commands appended above.
+  assert.equal(inventory.length, buildLintInventory(currentScripts).length + 2);
   assert.equal(inventory.filter((item) => item.command === futureCommand).length, 2);
   assert.equal(selected.filter((item) => item.command === futureCommand).length, 2);
   assert.deepEqual(

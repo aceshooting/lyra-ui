@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -158,6 +158,12 @@ them declared on `:host`, so one declaration on `:root` — or on any ancestor, 
 this listbox together with every other floating surface. `--lr-overlay-radius` reaches the listbox
 only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
 set: a component-scoped override outranks the shared family, never the other way round.
+
+`--lr-positioning-strategy` (16.0.0) — the listbox reads this same cascading `absolute`/`fixed`
+override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
+default when nothing is set. There is no per-instance `positioning-strategy` property on
+`<lr-locale-picker>`; set the custom property on `:root`, a theme, or one clipping ancestor to
+change every unset locale picker beneath it.
 
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional

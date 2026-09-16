@@ -28,7 +28,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -741,8 +745,8 @@ export interface LyraToolParamFormEventMap {
  * @cssstate valid - Every field currently satisfies the supported schema subset, whether or not the
  * user has touched anything.
  * @cssstate invalid - At least one field, or the schema shape itself, is currently in error.
- * @cssstate user-valid - `valid`, and the user has interacted (edited a field, left one, or a
- * `reportValidity()` call — which is what a submit attempt runs).
+ * @cssstate user-valid - `valid`, and the user has interacted: edited a field, left one,
+ * `reportValidity()`, or a submission attempt. Not after a silent `checkValidity()` alone.
  * @cssstate user-invalid - `invalid`, and the user has interacted. A pristine required field is
  * invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling
  * cannot paint the form red before the user has typed anything. A form reset makes it pristine
@@ -832,7 +836,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   // wholesale by `reportValidity()` *when there are errors*, so a
   // `reportValidity()` that passes would leave it empty and a valid form
   // could never reach `user-valid`. This flag answers the different
-  // question "has the user done anything at all here yet".
+  // question "has the user done anything at all here yet" -- set on a field edit/blur, or by
+  // interactive validation (`reportValidity()` or a submission attempt, via
+  // `installInteractionOnInvalid()`); a silent `checkValidity()` alone never sets it.
   private hasInteracted = false;
   private errorAnnouncementSink?: AnnouncementSink;
   private visibleErrorSnapshot = new Map<string, string>();
@@ -846,6 +852,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init),
     );
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like editing or leaving a field; `checkValidity()`'s own call below runs inside
+    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
+    // other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     this.syncFormState();
   }
 
@@ -1190,10 +1201,20 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return { errors: out, flags };
   }
 
+  private markInteracted = (): void => {
+    if (this.hasInteracted) return;
+    this.hasInteracted = true;
+    this.syncValidityCustomStates();
+  };
+
   /** Resynchronizes validity without revealing inline errors. */
   checkValidity(): boolean {
     this.syncFormState();
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
 
   /**
@@ -1205,7 +1226,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   reportValidity(): boolean {
     // A reportValidity() call is what a submit attempt runs, so it counts as interaction for the
     // `user-valid`/`user-invalid` states — set before syncFormState(), which is what republishes
-    // them.
+    // them. (A real submission attempt never calls this method -- it drives `ElementInternals`
+    // directly -- which is what `installInteractionOnInvalid()` above covers.)
     this.hasInteracted = true;
     this.syncFormState();
     if (Object.keys(this._errors).length > 0) {

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,9 +26,13 @@ used" summary.
 **Properties:**
 
 - `segments: ContextMeterSegment[] = []` (attribute: false, JS-only) — `{ label: string; value:
-number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string }[]`. `value` is an _absolute_
+number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string; disabled?:
+boolean }[]`. `value` is an _absolute_
   quantity measured against `total`, never a pre-computed percentage.
   `color`, when supplied, is a sanitized arbitrary CSS color that takes precedence over `tone`.
+  `disabled`, when set, marks that band non-actionable while `interactive` is set: its control
+  renders genuinely disabled (no tab stop, no hover/press affordance) and activating it emits no
+  `lr-segment-activate`.
 - `total: number = 0` — the full capacity segments are measured against (e.g. a model's context
   window size).
 - `shape: ContextMeterShape = 'bar'` (`'bar' | 'ring'`, reflected) — the v9 geometry name;
@@ -95,7 +99,14 @@ color hook as `segment`) and `legend-label`, plus `legend-value` and `legend-per
 matching `legendDisplay` settings. While `interactive` is set, `segment` and `legend-item` are
 `<button>`s (a `role="button"` arc under `shape="ring"`) and a selected one carries a second part
 token — `segment-selected` / `legend-item-selected` — because nothing but a pseudo-class may follow
-`::part()`, so the state has to live in the part name
+`::part()`, so the state has to live in the part name. Two further state tokens join them, and they
+compose: `segment-empty` / `legend-item-empty` on a band whose `value` is 0, and
+`segment-disabled` / `legend-item-disabled` on a band whose `segments` entry sets `disabled`. The
+empty pair is DERIVED and carries no built-in treatment — it is the hook for your own "nothing in
+this bucket" styling, and a zero band stays actionable. The disabled pair is DECLARED: that control
+renders genuinely disabled (no tab stop, no hover or press affordance) and activating it emits no
+`lr-segment-activate`. Inertness is never inferred from a zero value, because a zero band is
+legitimately clickable in a budget meter
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
 `color` field is supplied, and is read by both `segment` and its matching `legend-swatch` so the
@@ -116,7 +127,9 @@ selected band stays visibly selected exactly while it is being pointed at or foc
 ring stays intact. `--lr-context-meter-selected-arc-stroke` (default `16`, in this component's
 `0 0 100 100` viewBox units) is the stroke width of a selected `ring`-shape arc: every arc shares
 one bounding box, so a selected arc reports itself by thickening in place rather than by an outline
-that would trace the whole ring identically for every selection. Otherwise the component consumes shared tokens
+that would trace the whole ring identically for every selection.
+`--lr-context-meter-disabled-opacity` (default `0.5`) dims a band or legend row whose entry sets
+`disabled`; the band keeps its own colour, since that colour is the datum. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
 `--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
 `--lr-transition-base`.

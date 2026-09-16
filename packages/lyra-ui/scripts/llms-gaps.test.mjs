@@ -21,6 +21,7 @@ import {
   contractBlockMentionsName,
   contractDeclarationBlock,
   exportedContractNames,
+  groupGapsForReport,
   inheritsAllPublicSurface,
   mentionsName,
   ownsToken,
@@ -1668,6 +1669,30 @@ test('exact helper locators retain nested generic defaults and indented overload
   assert.equal(contractDeclarationBlock(signature, 'create', 'function'), signature);
   assert.equal(contractDeclarationBlock(overloads, 'load', 'function'), overloads);
   assert.equal(contractDeclarationBlock('\x60create<Record<string, unknown>>(value)\x60', 'create', 'function'), '');
+});
+
+test('the report grouping prints every gap it counts, including cross-cutting families', () => {
+  // `collectGaps()` files source-contract findings under the pseudo-family `shared`, which owns no
+  // src/components/<family>/ directory and so is absent from FAMILIES. The report used to loop over
+  // FAMILIES alone, dropping those findings from the printed worklist while still counting them in
+  // its total -- an empty breakdown above a non-zero total, which reads as a broken counter rather
+  // than as real work. Grouping must stay reconciled with the count for any family value.
+  const gaps = [
+    { family: 'forms', tag: 'lr-input', lines: 3, kind: 'property', names: ['label'] },
+    { family: 'shared', tag: 'public-source-contract-census', lines: 0, kind: 'census', names: ['drift'] },
+  ];
+  const grouped = groupGapsForReport(gaps, ['forms']);
+  assert.deepEqual(grouped.map(([family]) => family), ['forms', 'shared']);
+  assert.equal(
+    grouped.reduce((total, [, familyGaps]) => total + familyGaps.length, 0),
+    gaps.length,
+  );
+  // An empty family never earns a heading, and a requested family keeps its FAMILIES-order slot.
+  assert.deepEqual(groupGapsForReport([], ['forms', 'data']), []);
+  assert.deepEqual(
+    groupGapsForReport(gaps, ['data', 'forms']).map(([family]) => family),
+    ['forms', 'shared'],
+  );
 });
 
 if (failures > 0) {

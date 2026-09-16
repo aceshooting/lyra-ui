@@ -30,6 +30,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: '调整导航宽度',
   appRailCollapse: '收起导航',
   appRailExpand: '展开导航',
+  appRailItemCollapse: '收起{label}',
+  appRailItemExpand: '展开{label}',
   resizeValuePercent: '百分之{value}',
   commandPaletteLabel: '命令面板',
   commandPalettePlaceholder: '搜索命令…',

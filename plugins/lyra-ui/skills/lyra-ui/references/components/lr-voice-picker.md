@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -43,8 +43,11 @@ popup. Ordinary keyboard behavior resumes after composition.
 **Exported types:** `LyraVoiceCatalogEntry extends LyraCatalogEntry { language?: string;
 description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
 `[part="option-meta"]` second line. Voice catalogs use the shared
-`LyraCatalog<LyraVoiceCatalogEntry>` homogeneous readonly union documented under `lr-model-select`.
-The public `size` property uses `LyraSize`, including the long-form aliases.
+`LyraCatalog<LyraVoiceCatalogEntry>` homogeneous readonly union documented under `lr-model-select`,
+including the shared `disabled` field: a disabled voice row cannot be selected by click or keyboard
+and is stepped over by arrow-key/Home/End navigation, but its own `[part="option-preview"]` stays
+independently clickable, since previewing a voice is a separate affordance from selecting it. The
+public `size` property uses `LyraSize`, including the long-form aliases.
 `LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
 selection direction exposed in free-text mode.
 
@@ -204,6 +207,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.
 - `--lr-voice-picker-option-synthetic-border-style` — Synthetic stale-value row border style. Default: `dashed`.
 - `--lr-voice-picker-option-synthetic-border-color` — Synthetic stale-value row border color. Default: `var(--lr-color-border)`.
+- `--lr-voice-picker-option-disabled-opacity` — Opacity of an option row whose catalog entry sets `disabled`. Default: `0.5`.
 - `--lr-voice-picker-option-synthetic-font-style` — Synthetic stale-value option-label font style. Default: `italic`.
 - `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.

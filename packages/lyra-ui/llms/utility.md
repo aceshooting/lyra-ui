@@ -952,7 +952,9 @@ renders `open="false"` on first paint)
 `var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`
 (keyboard-highlighted) suggestion row. Component-scoped indirection over the shared
 `--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
-repainting every other component that reuses the same shared token. Plus shared tokens —
+repainting every other component that reuses the same shared token.
+`--lr-mention-popover-option-disabled-opacity` (default `0.5`) — opacity of a row whose `items`
+entry sets `disabled`. Plus shared tokens —
 `--lr-space-xs`/`-s`/`-m` (popup padding,
 row padding/gap), `--lr-radius`
 (row corners — the popup's own corner is the overlay family's, below),

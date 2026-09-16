@@ -92,8 +92,14 @@ structured points retain their y-value formatting.
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraChartSeries[] = []` (attribute: false) — `LyraChartSeries { readonly
   label: string; readonly data?: readonly (number|null)[]; readonly points?: readonly
-  LyraChartPoint[]; readonly color?: string|readonly string[]; ... }`. The deprecated `Series` and
-  `ChartPoint` names were removed in 9.0.0 — import `LyraChartSeries`/`LyraChartPoint` instead.
+  LyraChartPoint[]; readonly color?: string|readonly string[]; readonly stack?: string; ... }`. The
+  deprecated `Series` and `ChartPoint` names were removed in 9.0.0 — import
+  `LyraChartSeries`/`LyraChartPoint` instead.
+  - `stack` is a Chart.js dataset `stack` group id: series sharing one `stack` value on the same
+    (stacked) axis accumulate into one stack; a different id starts an independent stack Chart.js
+    draws side by side with the first on that axis. Omitted series share one implicit group, so
+    every chart written before `stack` existed sums exactly as it always did. Only meaningful on an
+    axis that is actually stacked — see `stacked`/`stackedAxes` below.
   `LyraChartPoint { readonly x: number; readonly
   y: number; readonly r?: number; readonly label?: string }`: `r` is the bubble
   radius, and the optional per-point `label` is retained by events, CSV export, keyboard
@@ -188,6 +194,16 @@ structured points retain their y-value formatting.
   and the stack's own `axis`, but no `datasetIndex` and no `seriesLabel` — naming the topmost
   series would make a unit-switching formatter render that one series' unit for a cross-series
   number. `lr-lite-chart`'s total cells drop the same two fields.
+- `tooltipTitleFormatter?: LyraChartTooltipGroupFormatter` (attribute: false) — tooltip title
+  formatter (e.g. a scatter point's own name). `LyraChartTooltipGroupFormatter = (items:
+  readonly LyraChartFormatterContext[]) => string`: unlike `formatter`, which runs once per item,
+  this runs once per tooltip render and receives every hovered item's context at once (one entry
+  per dataset the tooltip covers, each in the same shape `formatter`'s `'tooltip'` surface already
+  produces). Unset (the default) leaves Chart.js's own default title — the shared category label.
+- `tooltipFooterFormatter?: LyraChartTooltipGroupFormatter` (attribute: false) — tooltip footer
+  formatter (e.g. a category's stack total under the items), in the same shape and calling
+  convention as `tooltipTitleFormatter`. Unset (the default) leaves Chart.js's own default: no
+  footer.
 - `area: boolean = false` — chart-wide default for whether line-type series fill the region under
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
@@ -202,6 +218,14 @@ structured points retain their y-value formatting.
 - `stacked: boolean = false` — stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only
   meaningful for `bar`/`line` types (scatter/bubble's linear `x` scale and the radial `r` scale used
   by radar/polar-area are out of scope)
+- `stackedAxes?: Partial<Record<'y' | 'y2', boolean>>` (attribute: false) — per-value-axis override
+  of `stacked`, keyed by `'y'`/`'y2'`. An axis absent from this record — including every axis when
+  the whole property is unset — falls back to `stacked`, so a chart that never sets this renders
+  byte-identically to before. Lets a `stacked` bar series on the primary axis sit next to an
+  unstacked overlay series on `y2` (via `LyraChartSeries.axis: 'y2'`): e.g. `stacked` plus
+  `stackedAxes: { y2: false }`. The shared categorical axis (`x` for a vertical bar/line, or `y`
+  under a horizontal `indexAxis`) has no entry of its own — it always mirrors the resolved `'y'`
+  value, matching Chart.js's own paired index/value-scale stacking contract.
 - `withoutAnimation: boolean = false` (attribute `without-animation`, reflected) — disables Chart.js
   construction animation; reduced-motion preference also disables it regardless of this value
 - `withoutTooltip: boolean = false` (attribute `without-tooltip`, reflected) — disables the
@@ -214,14 +238,20 @@ structured points retain their y-value formatting.
   `feature-warning` plus assertive announcement explains the nonfatal limitation. The screen-reader
   equivalent is the always-present accessible data table (`show-data-table` makes it visible) —
   labels are a purely visual, canvas-only addition and add no new a11y surface.
-- `stackTotals: boolean = false` (attribute `stack-totals`) — with `stacked` (bar/line only), draws
-  the per-category stack total above each stack, via the same `chartjs-plugin-datalabels` peer.
-  Null/undefined points are skipped; a category whose every value is null shows no total (not
-  `0`). The generated accessible table receives the same formatted total column; a dual-axis stack
-  receives separately labelled primary- and secondary-axis total columns. The table totals do not
-  depend on the optional visual-label peer being installed. If that peer is unavailable, the chart
-  retains its core rendering and generated table totals while a localized nonfatal warning explains
-  that the canvas labels cannot be drawn.
+- `stackTotals: boolean = false` (attribute `stack-totals`) — on an actually-stacked axis (`stacked`
+  or `stackedAxes`, bar/line only), draws the per-category stack total above each stack, via the
+  same `chartjs-plugin-datalabels` peer. Computed per `LyraChartSeries.stack` group as well as per
+  axis: two stack groups sharing one axis each get their own total, drawn above their own topmost
+  dataset, and a dataset on an axis that isn't stacked (e.g. an unstacked `stackedAxes` overlay)
+  never gets one. Null/undefined points are skipped; a category whose every value is null shows no
+  total (not `0`). The generated accessible table receives one formatted total column per stacked
+  axis (a dual-axis stack gets separately labelled primary- and secondary-axis columns); with
+  multiple stack groups on one axis, that column still totals only the implicit group of series
+  that never set their own `stack` id — a per-group breakdown is available programmatically but not
+  yet surfaced as extra table columns. The table totals do not depend on the optional visual-label
+  peer being installed. If that peer is unavailable, the chart retains its core rendering and
+  generated table totals while a localized nonfatal warning explains that the canvas labels cannot
+  be drawn.
 - `config?: LyraChartConfiguration` (attribute: false) — peer-neutral configuration structurally
   compatible with Chart.js's `ChartConfiguration`, deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
@@ -542,8 +572,9 @@ announced. In particular, unavailable data labels do not remove generated table 
   pending. Independently, `updated()` only reaches
   Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `axes`, `compact`, `indexAxis`,
   `label`, `hiddenDatasets`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
-  position, `valueFormatter`, `formatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
-  `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
+  position, `valueFormatter`, `formatter`, `tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`,
+  `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
+  `stacked`, `stackedAxes`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
   slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in
   that update (so an
   unrelated property/state update, or a bare `requestUpdate()`, draws nothing). Resize callbacks

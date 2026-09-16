@@ -145,6 +145,18 @@ rotation and activation, while background, radius, hover/press mixes, focus ring
 come from `--lr-icon-button-*`, and the component's own `--lr-reorder-item-move-button-*` hooks still
 win over those defaults), `content` (default-slot wrapper).
 
+**Border reaches the composed move controls the same way background/color/radius do.** This
+component paints no resting border on either move control, so it relays no
+`--_lr-icon-button-border-default` into their private fallback tier — but that absence is not a
+gap. The public `--lr-icon-button-border` (and its `-hover`/`-active` variants) is the FIRST arm
+of the token chain, resolved by ordinary custom-property inheritance regardless of whether this
+component relays a default for that same property, so setting it on either move control or an
+ancestor reaches it exactly as the background/color/radius tokens do. A component with no resting
+border simply has no default to relay, which is different from border theming being broken. Size
+remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
+`--lr-icon-button-size` — every `LyraElement` re-declares the latter on its own `:host`, so it
+never reaches a composed child (see `llms/tokens.md`).
+
 **Themeable custom properties:** `--lr-reorder-item-gap` (default `var(--lr-space-xs)`) — gap
 between the move buttons and the row content. The move-button interaction paints are independent,
 inherited inline fallbacks: `--lr-reorder-item-move-button-hover-bg` (default

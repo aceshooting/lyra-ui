@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,6 +55,12 @@ family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overl
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this surface together with every other floating surface in the
 library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+
+`--lr-positioning-strategy` (16.0.0) — the breakdown tooltip reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-usage-badge>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset usage badge beneath it.
 
 ```html
 <lr-chat-message message-role="assistant" status="sent">

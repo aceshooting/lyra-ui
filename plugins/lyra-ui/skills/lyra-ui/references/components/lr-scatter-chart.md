@@ -28,9 +28,10 @@ of every entry in these lists.**
 **Properties:** `description`, `grid`, `axes`, `compact`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
 (`legend-position`), `hiddenDatums`, `legendMode` (`legend-mode`), `legendDisplay` (`legend-display`),
 `max`, `min`, `plugins`, `scaleType` (`scale-type`), `annotations`,
-`stacked`, `withoutAnimation` (`without-animation`),
+`stacked`, `stackedAxes`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
-`yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`, `area`, `zoom`,
+`yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`,
+`tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`, `zoom`,
 `height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
 (`data-labels`), `stackTotals` (`stack-totals`), `config`, `showDataTable`
 (`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly), and `chart`.

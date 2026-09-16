@@ -26,7 +26,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart } from '../../../internal/default-strings.generated.js';
@@ -198,8 +202,8 @@ export interface LyraTimeRangeEventMap {
  *   `setCustomValidity()` error is set.
  * @cssstate invalid - Matches while a `setCustomValidity()` error is set.
  * @cssstate user-valid - `valid`, but only after the user has interacted: moving a handle, picking
- *   a preset, blurring the control, or a `reportValidity()` call (which is what a submit attempt
- *   runs).
+ *   a preset, blurring the control, `reportValidity()`, or a submission attempt. Not after a
+ *   silent `checkValidity()` alone.
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  *   rather than `invalid`: a range the consumer rejected before the user touched anything is
  *   genuinely invalid, but colouring it red on first paint is hostile. A `form.reset()` puts the
@@ -378,10 +382,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   /** Reflected consumer validity message; only `setCustomValidity('')` clears it. */
   declare customError: string | null;
   /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
-   *  `user-invalid` custom states: a committed handle move, a preset pick, a blur, or a
-   *  `reportValidity()` call. A range a consumer has already rejected is genuinely invalid, but
-   *  styling it as an error before the user has done anything is hostile, which is the entire
-   *  reason the `user-*` pair exists. Not a reactive property: nothing in `render()` reads it. */
+   *  `user-invalid` custom states: a committed handle move, a preset pick, a blur, or
+   *  interactive validation (`reportValidity()` or a submission attempt, via
+   *  `installInteractionOnInvalid()`). A silent `checkValidity()` alone never counts. A range a
+   *  consumer has already rejected is genuinely invalid, but styling it as an error before the
+   *  user has done anything is hostile, which is the entire reason the `user-*` pair exists. Not a
+   *  reactive property: nothing in `render()` reads it. */
   private hasInteracted = false;
 
   constructor() {
@@ -398,6 +404,11 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // host-level `blur` listener would never fire for the internal handles. Registered in the
     // constructor, on the host itself, so reconnecting cannot stack duplicates.
     this.addEventListener('focusout', this.markInteracted);
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like moving a handle or blurring; `checkValidity()`'s own call below runs inside
+    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
+    // other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     this.reflectValidityStates();
   }
 
@@ -480,9 +491,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   }
 
   /** Whether the control currently satisfies its constraints — the silent query, so it
-   *  deliberately does not count as interaction for the `user-*` custom states. */
+   *  deliberately does not count as interaction for the `user-*` custom states.
+   *  `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above that
+   *  whatever `invalid` event fires synchronously inside this call is this call, not a
+   *  submission attempt. */
   checkValidity(): boolean {
-    return this.internals.checkValidity();
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
 
   /** `checkValidity()`, plus the browser's own validation UI on failure. */

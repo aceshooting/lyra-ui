@@ -61,9 +61,11 @@ unchanged.
 headerCell?, width?, minWidth?, maxWidth?,
 resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
 priority?: 'medium'|'low',
-sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editType?: 'text'|'number'|'select',
+sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editLabel?: (row) => string,
+editType?: 'text'|'number'|'select',
 editOptions?: { value: string; label: string }[], footer?, cellStyle?, heatValue?,
-cell: (row) => unknown }` —
+cell: (row) => unknown }` — `cell` is required for every `editTrigger` except `'always'`, whose
+  persistent editor renders unconditionally so the table's render path never falls back to it —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
   client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
   `Intl.Collator` built from the component's effective locale with `numeric: true` (so `item2`
@@ -103,13 +105,15 @@ cell: (row) => unknown }` —
   own ramp-token convention; `cellStyle` is applied directly to the generated `<td>` via `styleMap` — e.g. a computed heat-tint
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
   no per-cell style override (the default, unchanged output);
-  `editTrigger: 'double-click'` opens a native editor on that cell's double-click (one cell at a
-  time), while `'always'` renders a persistent editor in every body cell from first paint, for a
+  `editTrigger: 'double-click'` opens a native editor on that cell's double-click, `F2`, or `Enter`
+  (one cell at a time), while `'always'` renders a persistent editor in every body cell from first paint, for a
   settings/rate-style column meant to be typed straight into — while `editValue` supplies the editor
   value and `editType` selects `'text'`, `'number'`, or `'select'` (a native `<select>` populated
   from `editOptions: { value: string; label: string }[]`, one `<option>` per entry in order; a
   `'select'` column with no `editOptions` renders an empty, valueless `<select>` instead of
-  throwing)
+  throwing); `editLabel(row) => string`, read once per row exactly like `editValue`/`cellTitle`,
+  overrides that editor's accessible name — omit it and every editor in the column shares the same
+  interpolated `tableEditCell` name instead (see the accessibility note under `editTrigger` below)
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -131,8 +135,21 @@ cell: (row) => unknown }` —
   Enter commits and closes, Escape cancels and closes, and blur-after-change commits. `'always'`
   renders an editor in
   every body cell of that column, permanently:
-  - **Focus model.** Each editor is a plain tab stop — no `tabindex` of its own — exactly like the
-    existing row-expand toggle, and stays _outside_ the header/row roving-tabindex model. Tab walks
+  - **Keyboard entry (`'double-click'` columns).** The resting (not-currently-editing) cell of a
+    `'double-click'` column is its own roving-focus stop — `tabindex="-1"`, carrying `[data-editable]`
+    — reachable once the row itself has focus: ArrowRight (ArrowLeft under RTL) enters at the first
+    editable cell in the row and steps forward through any further ones; ArrowLeft (ArrowRight under
+    RTL) steps back and, from the first editable cell, returns focus to the row. None of this is a Tab
+    stop — a table with a `'double-click'` column gains no new entry in the page's Tab order, only a
+    new arrow-reachable one — and a table with no `editTrigger` column at all renders no `tabindex`/
+    `[data-editable]` anywhere. `F2` or `Enter` on the focused cell opens its editor; `Enter` on the
+    row itself (no cell focused) still only activates the row. `editCell(rowKey, columnKey)` (see
+    Methods above) is the same open action as a public method. Closing the editor, by commit or by
+    cancel, returns focus to the cell that opened it.
+  - **Focus model (`'always'` columns).** Each editor is a plain tab stop — no `tabindex` of its own
+    — exactly like the
+    existing row-expand toggle, and stays _outside_ the header/row/cell roving-tabindex model. Tab
+    walks
     down the column; arrow keys still navigate the grid from a row's own roving stop, and act as
     ordinary caret movement once focus is inside a field. Non-editable columns are unaffected.
   - **Value binding.** A persistent `'text'`/`'number'` editor binds its `value` as a **content
@@ -151,8 +168,14 @@ cell: (row) => unknown }` —
     `<input>` (the typed value rides along) and the table restores focus to the same logical cell
     afterwards. If the focused row leaves the rendered page entirely (pagination, filtering), focus
     is simply lost rather than yanked to whichever unrelated row now sits in that position.
-  - Each editor keeps its own interpolated `tableEditCell` accessible name (`Edit {column}`), so a
-    column of otherwise-identical inputs is still individually named to a screen reader.
+  - **Accessible name.** Each editor's name is `columns[].editLabel(row)` when the column defines
+    it, or otherwise the interpolated `tableEditCell` string (`Edit {column}`) — identical for every
+    row in that column, since the default has no row context. That default is adequate for
+    `'double-click'`, where at most one editor is ever open, but not for `'always'`: every row's
+    editor there is a permanent, individually focusable Tab stop, so leaving `editLabel` unset on an
+    `'always'` column exposes as many identically named controls as there are rows (e.g. fifty "Edit
+    Status" comboboxes), failing WCAG 2.4.6 and 1.3.1. Define `editLabel` for any `'always'` column
+    to give each row's editor its own name.
 - `hasHiddenPriorityColumns: boolean = false` (attribute `has-hidden-priority-columns`, reflected) —
   computed/read-only and true only while a priority column is actually hidden. It becomes false
   when `priorityColumnsVisible` reveals the columns. Measured via a `ResizeObserver` on
@@ -290,6 +313,14 @@ cell: (row) => unknown }` —
   rendered panel anyway, `expandedContentElement(rowKey)` (below) resolves that `<td>`;
   `rowElement(rowKey)` does not, because the panel is a sibling `<tr>` rather than part of the row
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
+- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (attribute: false) —
+  accessible name for one row's expand/collapse chevron, read once per render for that row,
+  exactly like a column's `editLabel`/`cellTitle`; consumer-owned text used verbatim, never
+  passed through localization. Omit it and every chevron shares the same localized
+  `expand`/`collapse` name, which carries no row context — fine for a handful of rows, but each
+  chevron is its own Tab stop, so a long table otherwise announces the same two names over and
+  over with no way to tell the rows apart. There is no default row context to derive one from
+  here: this component has no row-header notion (`rowKey` is an opaque identity, not a label)
 - `expansionMode: 'none'|'single'|'multiple' = 'none'` (attribute `expansion-mode`, reflected) —
   mirrors `selectionMode` member for member, for expansion. The default `'none'` keeps
   `expandedRowKeys` fully consumer-controlled: an activation only reports `lr-row-expand-toggle`.
@@ -396,8 +427,14 @@ cell: (row) => unknown }` —
 - `expandedContentElement(rowKey)` — the rendered `[part='expanded-cell']` holding that row's
   `expandedContent(row)` output, or `null` when the row is not currently rendered, is not expanded,
   or the table sets no `expandedContent`
+- `editCell(rowKey, columnKey)` — opens the inline editor at that row/column pair, exactly as a
+  double-click, `F2`, or `Enter` on the cell's own focus stop would (see `columns[].editTrigger`
+  below) — the entry point for a consumer's own key binding or menu action. A no-op for an unknown
+  row key, an unknown column key, or a column with no `editTrigger`. For an `editTrigger: 'always'`
+  column (already open from first paint) it moves focus into that editor instead of opening
+  anything.
 
-All three exist for code that has to reach content a `cell(row)`/`expandedContent(row)` callback
+The first three exist for code that has to reach content a `cell(row)`/`expandedContent(row)` callback
 rendered into this component's shadow root — measuring it, scrolling it into view, or applying a
 style `::part()` cannot express, since only pseudo-classes may follow a part selector. One method per
 callback, and the split is not cosmetic: the expansion panel is a **sibling** `<tr part='expanded-row'>`

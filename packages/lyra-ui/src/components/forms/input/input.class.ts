@@ -14,6 +14,7 @@ import {
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
+import { srOnly } from '../../../internal/a11y.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import {
   autocorrectConverter,
@@ -297,7 +298,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
   // so every `--lr-input-*` geometry knob can simply point at the active tier's value -- and so
   // both spellings of every tier (`s` and `small`, …) work with no per-component rule.
-  static override styles = [LyraElement.styles, sizes, styles];
+  static override styles = [LyraElement.styles, sizes, srOnly, styles];
 
   /** Live string value. A Web Awesome-compatible null write clears it without widening reads. */
   override get value(): string {

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,13 +61,18 @@ numeric disclosure.
 **Properties:**
 
 - `items: readonly SequenceStripItem[] = []` (attribute: false) — `{ readonly id, readonly
-categoryId, readonly marker?, readonly label? }`;
+categoryId, readonly marker?, readonly label?, readonly disabled? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
   subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
   `role="listitem"` accessible name, falling back to the matching category's own nonblank `label`,
   then localized `sequenceStripUnnamedCategory` (`"Unnamed category"` in the built-in English
   catalog) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
-  summarizes by category/count only
+  summarizes by category/count only. `disabled` marks the item non-actionable:
+  `aria-disabled="true"` replaces the selected/active affordances of the cell that represents it,
+  activating it (click or Enter/Space) emits nothing, and roving Left/Right/Home/End navigation —
+  including the default resting tab stop — steps past it. Above the 200-cell cap, a range cell's
+  disabled state follows its own activated item, the range's first. Omitted or `false` renders the
+  item exactly as before this field existed
 - `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
 readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
@@ -143,7 +148,8 @@ block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` 
 (default `0.625rem` — a legend swatch's inline- and block-size, category and marker rows alike), and
 `--lr-sequence-strip-legend-marker-bg` (default `var(--lr-color-surface-raised)` — the neutral chip
 background behind the marker legend row's bar; it stands in for "any cell", so it deliberately
-matches no category color); the tooltip also consumes shared tokens
+matches no category color), and `--lr-sequence-strip-disabled-opacity` (default `0.5` — opacity of
+a cell whose activated item sets `disabled`); the tooltip also consumes shared tokens
 `--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
 the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
 `--lr-color-text-quiet`, and `--lr-radius-xs`.

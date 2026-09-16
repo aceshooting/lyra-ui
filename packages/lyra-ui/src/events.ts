@@ -110,6 +110,7 @@ import type { LyraTextareaEventMap } from './components/forms/textarea/textarea.
 import type { LyraTimeRangeEventMap } from './components/forms/time-range/time-range.class.js';
 import type { LyraTokenInputEventMap } from './components/forms/token-input/token-input.class.js';
 import type { LyraAppRailGroupEventMap } from './components/layout/app-rail-group/app-rail-group.class.js';
+import type { LyraAppRailItemEventMap } from './components/layout/app-rail/app-rail-item.class.js';
 import type { LyraAppRailEventMap } from './components/layout/app-rail/app-rail.class.js';
 import type { LyraCardEventMap } from './components/layout/card/card.class.js';
 import type { LyraCarouselEventMap } from './components/layout/carousel/carousel.class.js';
@@ -3303,19 +3304,20 @@ export type LyraTimeChangeEvent = LyraAvPlayerEventMap['lr-time-change'];
 export type LyraToastOverflowEvent = LyraToastEventMap['lr-toast-overflow'];
 
 /**
- * `lr-toggle` — dispatched by 16 components: `<lr-activity-feed>`, `<lr-app-rail-group>`,
- * `<lr-app-rail>`, `<lr-chat-message>`, `<lr-code-block-core>`, `<lr-code-block>`,
- * `<lr-commit-card>`, `<lr-details>`, `<lr-entity-dossier>`, `<lr-message-parts>`,
- * `<lr-multi-split>`, `<lr-provenance-panel>`, `<lr-source-list>`, `<lr-task-list>`,
- * `<lr-test-results>`, `<lr-thinking-panel>`.
+ * `lr-toggle` — dispatched by 17 components: `<lr-activity-feed>`, `<lr-app-rail-group>`,
+ * `<lr-app-rail-item>`, `<lr-app-rail>`, `<lr-chat-message>`, `<lr-code-block-core>`,
+ * `<lr-code-block>`, `<lr-commit-card>`, `<lr-details>`, `<lr-entity-dossier>`,
+ * `<lr-message-parts>`, `<lr-multi-split>`, `<lr-provenance-panel>`, `<lr-source-list>`,
+ * `<lr-task-list>`, `<lr-test-results>`, `<lr-thinking-panel>`.
  *
- * A union of 14 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 15 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraActivityFeedEventMap['lr-toggle']`.
  */
 export type LyraToggleEvent =
   | LyraActivityFeedEventMap['lr-toggle']
   | LyraAppRailEventMap['lr-toggle']
   | LyraAppRailGroupEventMap['lr-toggle']
+  | LyraAppRailItemEventMap['lr-toggle']
   | LyraChatMessageEventMap['lr-toggle']
   | LyraCodeBlockCoreEventMap['lr-toggle']
   | LyraCodeBlockEventMap['lr-toggle']
@@ -3329,16 +3331,18 @@ export type LyraToggleEvent =
   | LyraThinkingPanelEventMap['lr-toggle'];
 
 /**
- * `lr-toggle-request` — dispatched by 6 components: `<lr-accordion>`, `<lr-app-rail-group>`,
- * `<lr-chat-message>`, `<lr-code-block-core>`, `<lr-code-block>`, `<lr-thinking-panel>`.
+ * `lr-toggle-request` — dispatched by 7 components: `<lr-accordion>`, `<lr-app-rail-group>`,
+ * `<lr-app-rail-item>`, `<lr-chat-message>`, `<lr-code-block-core>`, `<lr-code-block>`,
+ * `<lr-thinking-panel>`.
  *
- * A union of 6 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 7 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraAccordionEventMap['lr-toggle-request']`.
  */
 export type LyraToggleRequestEvent =
   | LyraAccordionEventMap['lr-toggle-request']
   | LyraAppRailGroupEventMap['lr-toggle-request']
+  | LyraAppRailItemEventMap['lr-toggle-request']
   | LyraChatMessageEventMap['lr-toggle-request']
   | LyraCodeBlockCoreEventMap['lr-toggle-request']
   | LyraCodeBlockEventMap['lr-toggle-request']

@@ -22,7 +22,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import {
   acquireResolvedAriaRelationship,
   type ResolvedAriaRelationshipLease,
@@ -366,8 +370,9 @@ export interface LyraGraphQueryBuilderEventMap {
  * `minHops <= maxHops`), whether or not the user has touched anything.
  * @cssstate invalid - Matches while it does not — from the very first render, before any
  * interaction, since an empty query has no start anchor.
- * @cssstate user-valid - `valid`, and the user has interacted: an edit to any field, a blur of the
- * start-entity input, or a `reportValidity()` call (which is what the Run button runs).
+ * @cssstate user-valid - `valid`, and the user has interacted: an edit to any field, a blur of
+ * the start-entity input, `reportValidity()` (what the Run button runs), or a submission
+ * attempt. Not after a silent `checkValidity()` alone.
  * @cssstate user-invalid - `invalid` after that same interaction. A pristine empty query is
  * invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling
  * cannot paint the form red before the user has typed anything. A form reset makes it pristine
@@ -498,7 +503,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   private defaultValueCaptured = false;
   private _disabled = false;
   // Drives the user-valid/user-invalid pair: an empty required query is invalid from the first
-  // render, but styling it red before the user has done anything is hostile.
+  // render, but styling it red before the user has done anything is hostile. Set on an edit, a
+  // blur, or interactive validation (`reportValidity()` or a submission attempt, via
+  // `installInteractionOnInvalid()`); a silent `checkValidity()` alone never sets it.
   private hasInteracted = false;
   // Guards lr-validity-change so it only fires on an actual change -- `undefined` guarantees the
   // first computed state always "changes" from it, mirroring lr-rubric-form's identical guard.
@@ -528,6 +535,11 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) => this.emit('lr-invalid', null, init));
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like an edit or a blur; `checkValidity()`'s own call below runs inside
+    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
+    // other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     this.syncFormState();
   }
 
@@ -721,10 +733,20 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     });
   }
 
+  private markInteracted = (): void => {
+    if (this.hasInteracted) return;
+    this.hasInteracted = true;
+    this.syncValidityCustomStates();
+  };
+
   /** Resynchronizes validity without revealing inline errors. */
   checkValidity(): boolean {
     this.syncFormState();
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
 
   /** Reveals every current field error and returns overall validity -- the hook Run calls before
@@ -732,7 +754,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   reportValidity(): boolean {
     // A reportValidity() call is what a submit attempt (here, the Run button) runs, so it counts as
     // interaction for the user-valid/user-invalid pair — set before syncFormState(), which is what
-    // republishes them.
+    // republishes them. (A real `<form>` submission attempt never calls this method -- it drives
+    // `ElementInternals` directly -- which is what `installInteractionOnInvalid()` above covers.)
     this.hasInteracted = true;
     this.syncFormState();
     if (Object.keys(this._errors).length > 0) {

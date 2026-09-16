@@ -72,6 +72,58 @@ lint run does not produce:
 - `check:coverage-floors` (`scripts/write-coverage-floors.mjs`) reads a finished coverage report;
   see "Coverage floors" below.
 
+## `pnpm regen`: the single regeneration command
+
+`contract-policy` pairs a committed artifact with a freshness gate roughly twenty times over —
+manifest, framework types, events, the testing event registry, component metadata, component
+inventory, tag aliases, registration artifacts/graph, the autoloader manifest, default-string and
+translation slices, the three palette generators, design tokens, reservation styles, and more. Each
+gate fails with its own "X is stale; run `pnpm run Y`", but nothing previously forced any single
+command to run all of them in the right order — the order lived only in a human's memory, which is
+how `registration-graph` was simply left off a remembered list and burned a full `pnpm lint` run to
+discover.
+
+**`pnpm run regen` (`packages/lyra-ui/package.json#scripts.regen`) is that command.** It chains every
+generator's own named script (`pnpm run manifest`, `pnpm run tag-aliases`, …) in real dependency
+order — never a re-spelled `node scripts/...` path, so the chain cannot drift from what each script
+actually does. Read the script itself for the exact order and the dependency reasoning belongs there,
+not here in prose a second time; a prose copy of the order is exactly what caused the drift `pnpm
+regen` exists to fix.
+
+Two steps are deliberately **not** part of `regen`, and must still be run separately, in this order,
+after it:
+
+1. **`pnpm build`, before `component-quality`.** `component-quality` (`generate-component-quality.mjs
+   --write --measure-gzip`) measures the _built_ `dist/` output's gzip size and reads
+   `src/**/*.test.ts` for test-quality scoring — it needs a fresh build to measure, and running it
+   before one, or before a later regen step edits `src/`, produces a stale or wrong measurement (see
+   "Regenerate component-quality LAST" below).
+2. **`./package.sh`, afterwards.** It regenerates `packages/lyra-ui/llms/` (already covered by
+   `regen`'s own `llms` step) and then repackages the plugin's `skills/lyra-ui/references/` and the
+   standalone skill archives from that fresh `llms/` output — CI's `static-checks` job diffs those
+   packaged artifacts, and `regen` has no reason to know about packaging.
+
+`scripts/check-regen-coverage.mjs` (`pnpm run check:regen-coverage`, plus its colocated
+`check-regen-coverage.test.mjs` via `pnpm run test:regen-coverage`; both chained into
+`contract-policy`) is what keeps `regen` from silently falling behind again. It never hand-lists
+"the generators" — that list is exactly the thing that goes stale. Instead it derives required
+generators from the gates themselves, three mechanical ways: a same-file `--check`/write argument
+pair (how it catches `generate-registration-graph.mjs` and `build-testing-event-registry.mjs`
+without either script's name resembling the other), a gate's own backtick-quoted `pnpm run <name>`
+(or `pnpm --filter <pkg> <name>`) remedy text, and a gate that imports or string-references a
+generator file directly (`check-tag-aliases.mjs` importing `./generate-tag-aliases.mjs`,
+`check-palette-freshness.mjs`'s `PALETTE_GENERATORS` array). Every generator file surfaced any of
+those three ways must then be reachable by recursively expanding `pnpm run` references from `regen`,
+or carry a one-line reasoned exemption in `check-regen-coverage.mjs`'s own `EXEMPTIONS` map — an
+exemption with no reason fails the gate outright. The current exemptions are `component-quality` and
+`build` itself (both above), the pinned-manifest-only `component-inventory.mjs` library CLI (the
+committed artifact is produced by the network-verified `component-inventory` script instead), the two
+manual/occasional viewer fixture generators, `generate-theme-bootstrap.mjs` (a `dist/`-only build
+output, regenerated inside `scripts/build.mjs` itself), `generate-side-effects.mjs` (already invoked
+internally by `registrations`), `component-metadata:history` (a manual git-history reconciliation),
+and `coverage-floors` (reviewed limits, not derived output — already outside `contract-policy` for
+the same reason).
+
 ## CI: `.github/workflows/ci.yml` is authoritative
 
 **`ci.yml` is the authoritative gate list and reproduction sequence.** Read it directly rather

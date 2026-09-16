@@ -91,6 +91,9 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   /** Forwarded verbatim to the composed Markdown element's own `tabSize` -- the tab-stop width
    *  used to expand tabs in leading indentation before parsing. `4` (the default) matches the
    *  composed element's own default. */
+  // numeric-guard-exempt: forwarded verbatim, never used for math here -- the composed Markdown
+  // element clamps it at its point of use (`finiteInteger(this.tabSize, 4, 1, 32)` in
+  // markdown-base.class.ts). A second guard here would duplicate that range and could diverge.
   @property({ type: Number, attribute: 'tab-size' }) tabSize = 4;
 
   /** Forwarded verbatim to the composed Markdown element's own `htmlMode` -- how authored raw
@@ -117,6 +120,9 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
 
   /** Forwarded verbatim to the composed Markdown element's own `headingOffset`. `0` (the
    *  default) matches the composed element's own default. */
+  // numeric-guard-exempt: forwarded verbatim, never used for math here -- the composed Markdown
+  // element clamps it at its point of use (`finiteInteger(this.headingOffset, 0, 0, 6)` in
+  // markdown-base.class.ts). A second guard here would duplicate that range and could diverge.
   @property({ type: Number, attribute: 'heading-offset' }) headingOffset = 0;
 
   /** Forwarded verbatim to the composed Markdown element's own `highlightCode`. `true` (the

@@ -44,22 +44,11 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
   // Not form-associated at all; form-associated.ts only reaches this graph transitively through
   // the composed form controls it renders, and each of those owns its own slice.
 
-  // The composed date/combobox controls put a dynamic segment-key map in this graph, which makes
-  // the conservative fallback inspect transitive helpers. These generic catalog-shaped literals
-  // come from those helpers; the filter bar itself localizes only its own three keys.
-  'src/components/layout/filter-bar/filter-bar.class.ts': Object.freeze([
-    'collapse',
-    'date',
-    'details',
-    'map',
-    'navigation',
-    'open',
-    'popover',
-    'progress',
-    'restore',
-    'search',
-    'select',
-  ]),
+  // `lr-filter-bar` needed a long exclusion list here while its class module bare-imported every
+  // composed control it could render: those imports dragged the controls' own helper graphs in, and
+  // the conservative fallback surfaced their generic catalog-shaped literals as if the bar localized
+  // them. The bar renders each control by tag name only and no longer imports any of them, so its
+  // graph reaches nothing but its own keys and the list became stale in full.
 
   // Kbd forwards a closed set of kbd* map values through a localize callback. The generic values
   // below are incidental literals in its own remaining a11y helper graph, not keys the callback

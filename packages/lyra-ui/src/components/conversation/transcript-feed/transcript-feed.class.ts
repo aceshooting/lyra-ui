@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { captureComposedFocusRepair, applyComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { styles } from './transcript-feed.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -92,7 +93,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
 
   @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;

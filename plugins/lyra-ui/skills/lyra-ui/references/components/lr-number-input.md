@@ -46,7 +46,14 @@ action-height ladder as `lr-input` instead of remaining at the default tier for 
 identical meaning. This component changes the mapped defaults to `appearance='outlined'`,
 `inputMode='numeric'`, and `step=1`. `clearable` (and its `with-clear` spelling),
 `passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but
-inert — see gotchas.
+inert — see gotchas. Also inherited from `lr-input`, with identical meaning:
+`defaultValue: string = ''` (attribute `value`, reflected) — the reset value; and
+`customError: string | null = null` (attribute `custom-error`, reflected) — a consumer-supplied
+validation message. `getForm()` returns the browser-resolved form owner, including an external
+owner selected by `form`; `setCustomValidity(message)` sets or clears `customError` without
+discarding intrinsic validity; `resetValidity()` clears only that consumer layer and recomputes
+the current intrinsic constraints, leaving `value`/`defaultValue` and prior interaction state
+unchanged.
 
 Stepper switches:
 

@@ -925,6 +925,17 @@ const supportsCustomStates = (() => {
   }
 })();
 
+// `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
+// where either is missing -- an unguarded assertion fails on WebKit rather than skipping.
+const supportsStateSelector = (() => {
+  try {
+    document.createElement('div').matches(':state(x)');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 describe('validity custom states', () => {
   it('exposes required/optional and valid/invalid, kept in sync with validity', async function () {
     if (!supportsCustomStates) this.skip();
@@ -962,12 +973,45 @@ describe('validity custom states', () => {
     expect(ctl.internals.states.has('user-invalid')).to.be.false;
   });
 
-  it('counts a reportValidity() call — what a submit attempt runs — as interaction', async function () {
+  it('counts an explicit reportValidity() call as interaction', async function () {
     if (!supportsCustomStates) this.skip();
     const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
     expect(ctl.internals.states.has('user-invalid')).to.be.false;
     ctl.reportValidity();
     expect(ctl.internals.states.has('user-invalid')).to.be.true;
+  });
+
+  it('never counts a silent checkValidity() call as interaction, however invalid the control already is', async function () {
+    if (!supportsCustomStates) this.skip();
+    const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
+    const host = ctl as unknown as HTMLElement;
+    expect(ctl.checkValidity(), 'checkValidity() itself').to.be.false;
+    expect(ctl.internals.states.has('user-invalid'), 'user-invalid').to.be.false;
+    expect(ctl.internals.states.has('user-valid'), 'user-valid').to.be.false;
+    if (supportsStateSelector) {
+      expect(host.matches(':state(user-invalid)'), ':state(user-invalid)').to.be.false;
+      expect(host.matches(':state(user-valid)'), ':state(user-valid)').to.be.false;
+    }
+  });
+
+  it('counts a blocked native submission attempt as interaction, even though it never calls reportValidity()', async () => {
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-demo-ctl name="x" required></lr-demo-ctl><button type="submit">Go</button></form>`,
+    );
+    // Defensive only: a truly invalid required field never reaches the `submit` event at all --
+    // the platform's interactive validation aborts submission before it is dispatched.
+    form.addEventListener('submit', (event) => event.preventDefault());
+    const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
+    const host = ctl as unknown as HTMLElement;
+    const button = form.querySelector('button') as HTMLButtonElement;
+
+    if (supportsCustomStates) expect(ctl.internals.states.has('user-invalid')).to.be.false;
+    if (supportsStateSelector) expect(host.matches(':state(user-invalid)')).to.be.false;
+
+    button.click();
+
+    if (supportsCustomStates) expect(ctl.internals.states.has('user-invalid')).to.be.true;
+    if (supportsStateSelector) expect(host.matches(':state(user-invalid)')).to.be.true;
   });
 
   it('goes pristine again after a form reset', async function () {
@@ -977,6 +1021,20 @@ describe('validity custom states', () => {
     );
     const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
     (ctl as unknown as HTMLElement).dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(ctl.internals.states.has('user-invalid')).to.be.true;
+    form.reset();
+    expect(ctl.internals.states.has('user-invalid')).to.be.false;
+    expect(ctl.internals.states.has('invalid')).to.be.true;
+  });
+
+  it('goes pristine again after a form reset, even when interaction came from a blocked submission attempt', async function () {
+    if (!supportsCustomStates) this.skip();
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-demo-ctl name="x" required></lr-demo-ctl><button type="submit">Go</button></form>`,
+    );
+    form.addEventListener('submit', (event) => event.preventDefault());
+    const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
+    (form.querySelector('button') as HTMLButtonElement).click();
     expect(ctl.internals.states.has('user-invalid')).to.be.true;
     form.reset();
     expect(ctl.internals.states.has('user-invalid')).to.be.false;

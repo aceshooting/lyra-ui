@@ -123,6 +123,27 @@ header gap — a rule that sets `display` on it must qualify itself with `:not([
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)
 
+**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
+`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
+paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
+`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
+than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
+those public tokens ahead of any default this component supplies. For SIZE use
+`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
+latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
+
+**Border reaches the composed copy control the same way background/color/radius do.** This
+component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
+into the copy control's private fallback tier — but that absence is not a gap. The public
+`--lr-icon-button-border` (and its `-hover`/`-active` variants) is the FIRST arm of the token
+chain, resolved by ordinary custom-property inheritance regardless of whether this component
+relays a default for that same property, so setting it on this element or an ancestor reaches the
+copy control exactly as the background/color/radius tokens do. A component with no resting
+border simply has no default to relay, which is different from border theming being broken. Size
+remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
+`--lr-icon-button-size`, as noted above.
+
 **Themeable custom properties:** `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
 `--lr-code-block-font` (default

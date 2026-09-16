@@ -5,7 +5,7 @@ import './code-block-core.js';
 import type { LyraCodeBlock } from './code-block.class.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px;';
+  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
 
 function copyButton(el: Element): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>('[part~="copy-button"]')!;
@@ -51,6 +51,13 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
       const style = getComputedStyle(nativeControl(el));
       expect(style.backgroundColor).to.equal('rgb(1, 2, 3)');
       expect(style.borderTopLeftRadius).to.equal('11px');
+      // This component sets no --_lr-icon-button-border-default of its own (its resting copy
+      // control has no border to relay), so the public token is the only arm of the chain that
+      // can paint a border here -- and ordinary custom-property inheritance reaches it regardless.
+      expect(style.borderTopWidth, 'the ancestor border token reaches the control').to.equal(
+        '2px'
+      );
+      expect(style.borderTopColor).to.equal('rgb(9, 8, 7)');
     });
 
     it('keeps the text copy label by default', async () => {

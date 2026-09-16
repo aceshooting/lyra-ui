@@ -4411,6 +4411,36 @@ describe('labelVisibility', () => {
       ).to.be.greaterThan(1);
     }
   });
+
+  it("clips a touched-and-required 'checkbox-menu' trigger's inline error to the shared sr-only geometry, keeping the text in the DOM", async () => {
+    // Regression test for the sr-only class rendering as ordinary visible text: composing the
+    // shared `srOnly` export into filter-bar's own `static override styles` is what actually
+    // clips this span -- the class name alone does nothing (see check-visually-hidden.mjs).
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamMenu({ required: true })}></lr-filter-bar>`
+    );
+    const trigger = control(el, 'teams').querySelector('lr-button') as HTMLElement;
+    expect(
+      trigger.querySelectorAll('.sr-only').length,
+      'no inline error until the field is touched'
+    ).to.equal(0);
+
+    control(el, 'teams').dispatchEvent(
+      new FocusEvent('focusout', { bubbles: true, composed: true })
+    );
+    await el.updateComplete;
+
+    const errorSpans = trigger.querySelectorAll('.sr-only');
+    expect(errorSpans.length, 'the touched-required error renders exactly one sr-only span').to.equal(1);
+    const errorSpan = errorSpans[0] as HTMLElement;
+    expect(errorSpan.textContent, 'the accessible error text is still present in the DOM').to.equal(
+      'This field is required.'
+    );
+    const computed = getComputedStyle(errorSpan);
+    expect(computed.position).to.equal('absolute');
+    expect(computed.clipPath).to.not.equal('none');
+    expect(errorSpan.getBoundingClientRect().width).to.be.at.most(1);
+  });
 });
 
 describe("'checkbox-menu' filter type", () => {

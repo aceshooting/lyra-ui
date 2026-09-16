@@ -154,6 +154,12 @@ The exact-320px RTL story covers an eight-cell row and an unbroken localized lab
 horizontal reachability for every cell.
 The internal role token `--lr-otp-input-segment-size` supplies that `2.5em` default and can be
 retuned through `--lr-theme-otp-input-segment-size` when the `--segment-size` override is absent.
+Like `--lr-icon-button-size`, `--lr-otp-input-segment-size` is element-scoped: the shared token
+layer re-declares it on every `lr-*` host, so a rule that sets it on an ancestor wrapper is reset at
+the first intervening `lr-*` component and never reaches a nested `<lr-otp-input>`. Set it directly
+on the element, or set `--lr-theme-otp-input-segment-size` on an ancestor to resize every OTP input
+in the subtree at once — the retained per-cell hooks below are not re-declared anywhere in the
+shared layer and inherit normally.
 
 The retained per-cell hooks are `--lr-otp-input-segment-fill` (default `transparent`),
 `--lr-otp-input-segment-border-color` (default `var(--lr-color-border)`), and

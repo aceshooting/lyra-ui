@@ -19,7 +19,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import {
   declaredDefaultConverter,
   omittedEmptyStringConverter } from '../../../internal/converters.js';
@@ -107,8 +111,9 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * `setCustomValidity()` error.
  * @cssstate invalid - Matches while it does not — from the very first render, before the user has
  * touched anything.
- * @cssstate user-valid - `valid`, but only after the user has interacted with this radio: selecting
- * it, blurring it, or a `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-valid - `valid`, but only after the user has interacted with this radio:
+ * selecting it, blurring it, `reportValidity()`, or a submission attempt. Not after a silent
+ * `checkValidity()` alone.
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required radio is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
@@ -229,9 +234,11 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   @state() private hasEnd = false;
   private labelObserver?: MutationObserver;
   /** Whether the user has acted on this radio yet, which is what gates the `user-valid`/
-   *  `user-invalid` custom states: a selection or a blur. A pristine required radio is genuinely
-   *  invalid, but styling it as an error before the user has done anything is hostile, which is the
-   *  entire reason the `user-*` pair exists. Not `@state`: nothing in `render()` reads it. */
+   *  `user-invalid` custom states: a selection, a blur, or interactive validation
+   *  (`reportValidity()` or a submission attempt, via `installInteractionOnInvalid()`). A silent
+   *  `checkValidity()` alone never counts. A pristine required radio is genuinely invalid, but
+   *  styling it as an error before the user has done anything is hostile, which is the entire
+   *  reason the `user-*` pair exists. Not `@state`: nothing in `render()` reads it. */
   private hasInteracted = false;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -360,6 +367,11 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     );
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init));
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like selecting or blurring; `checkValidity()`'s own call below runs inside
+    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
+    // other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     this.syncFormState();
   }
 
@@ -590,16 +602,27 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.syncFormState();
   }
 
+  private markInteracted = (): void => {
+    if (this.hasInteracted) return;
+    this.hasInteracted = true;
+    this.reflectValidityStates();
+  };
+
   /** Whether the radio currently satisfies its constraints — the silent query, so it deliberately
-   *  does not count as interaction for the `user-*` custom states. */
+   *  does not count as interaction for the `user-*` custom states.
+   *  `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above that
+   *  whatever `invalid` event fires synchronously inside this call is this call, not a
+   *  submission attempt. */
   checkValidity(): boolean {
-    return this.internals.checkValidity();
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
 
   /** `checkValidity()`, plus the browser's own validation UI on failure. */
   reportValidity(): boolean {
     // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
-    // point, so it counts as interaction for the `user-*` custom states.
+    // point, so it counts as interaction for the `user-*` custom states. (A submission attempt
+    // itself never calls this method -- it drives `ElementInternals` directly -- which is what
+    // `installInteractionOnInvalid()` above covers.)
     this.hasInteracted = true;
     this.reflectValidityStates();
     return this.internals.reportValidity();

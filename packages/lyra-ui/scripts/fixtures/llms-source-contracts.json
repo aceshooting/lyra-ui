@@ -3334,7 +3334,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartConfiguration",
       "kind": "interface",
-      "fingerprint": "52e45998c63243b758b2",
+      "fingerprint": "f2f78c7fe5cef7a01028",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3357,7 +3357,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartDataConfiguration",
       "kind": "interface",
-      "fingerprint": "bdcde45c188ee7b6dcbd",
+      "fingerprint": "e19206630bcc444d642e",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3380,7 +3380,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartDatasetConfiguration",
       "kind": "interface",
-      "fingerprint": "3eb6e640c6d715922688",
+      "fingerprint": "8b30b9a29ad11862ef78",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3449,7 +3449,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartInstance",
       "kind": "interface",
-      "fingerprint": "f589fe66466b7b3a1d8e",
+      "fingerprint": "7a3d3c92e57d0b266d4e",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -3518,7 +3518,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartSeries",
       "kind": "interface",
-      "fingerprint": "051957c83141cde9836e",
+      "fingerprint": "aaf0c15afee5677cc15c",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -4330,7 +4330,7 @@
       "module": "src/components/conversation/model-select/model-select.class.ts",
       "exportName": "LyraModelCatalogEntry",
       "kind": "interface",
-      "fingerprint": "61fed4722ea0cd8ad048",
+      "fingerprint": "55437d9db9c7078519c9",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4399,7 +4399,7 @@
       "module": "src/components/conversation/prompt-input/prompt-input.class.ts",
       "exportName": "LyraPromptSuggestion",
       "kind": "interface",
-      "fingerprint": "f06bb790f8040d79832c",
+      "fingerprint": "368dc26bbf7b4949833e",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4520,7 +4520,7 @@
       "module": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
       "exportName": "LyraChatSuggestion",
       "kind": "interface",
-      "fingerprint": "0f1ee7eae86120583714",
+      "fingerprint": "c95242b6cd7be4c7fd8b",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4635,7 +4635,7 @@
       "module": "src/components/conversation/voice-picker/voice-picker.class.ts",
       "exportName": "LyraVoiceCatalogEntry",
       "kind": "interface",
-      "fingerprint": "da3ca6bcf9dc4d2f8734",
+      "fingerprint": "7773cdd11631c51c1694",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -5047,7 +5047,7 @@
       "module": "src/components/data/context-meter/context-meter.class.ts",
       "exportName": "ContextMeterSegment",
       "kind": "interface",
-      "fingerprint": "6a18bcb931da9fb1fabf",
+      "fingerprint": "9c515011cfe4bb6e0910",
       "routes": [
         "src/all.ts",
         "src/components/data/context-meter/context-meter.class.ts",
@@ -5901,7 +5901,7 @@
       "module": "src/components/data/flow-canvas/flow-types.ts",
       "exportName": "FlowNode",
       "kind": "interface",
-      "fingerprint": "a183c9e48a37a587fb40",
+      "fingerprint": "46faa5f084818b3f5cd2",
       "routes": [
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
@@ -6573,7 +6573,7 @@
       "module": "src/components/data/sequence-strip/sequence-strip.class.ts",
       "exportName": "LyraSequenceStripActivateDetail",
       "kind": "interface",
-      "fingerprint": "6f870345289f6516bdfe",
+      "fingerprint": "428dc2494c8ccfb03723",
       "routes": [
         "src/all.ts",
         "src/components/data/index.ts",
@@ -6619,7 +6619,7 @@
       "module": "src/components/data/sequence-strip/sequence-strip.class.ts",
       "exportName": "SequenceStripItem",
       "kind": "interface",
-      "fingerprint": "8b70600427c3a0aa90d1",
+      "fingerprint": "22c60edbe179b99a5f43",
       "routes": [
         "src/all.ts",
         "src/components/data/index.ts",
@@ -6659,29 +6659,6 @@
         "kind": "utility",
         "name": "components-data-stat-stat-contracts",
         "declaration": "StatRow"
-      }
-    },
-    {
-      "module": "src/components/data/table/table.class.ts",
-      "exportName": "TableColumn",
-      "kind": "interface",
-      "fingerprint": "74d842abffd25d7fa9b3",
-      "routes": [
-        "src/all.ts",
-        "src/components/data/index.ts",
-        "src/components/data/table/table.class.ts",
-        "src/components/data/table/table.ts",
-        "src/components/lr-table.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/data.md",
-      "family": "data",
-      "locator": {
-        "kind": "utility",
-        "name": "components-data-table-table-contracts",
-        "declaration": "TableColumn"
       }
     },
     {
@@ -6918,7 +6895,7 @@
       "module": "src/components/forms/color-picker/color-picker.class.ts",
       "exportName": "LyraColorPickerSwatch",
       "kind": "interface",
-      "fingerprint": "d90b8936e7ea1be62442",
+      "fingerprint": "3f51e9e79608b671f3b0",
       "routes": [
         "src/all.ts",
         "src/components/forms/color-picker/color-picker.class.ts",
@@ -8243,9 +8220,10 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarCheckboxMenuDefinition",
       "kind": "interface",
-      "fingerprint": "9e4d27932d52ee45256e",
+      "fingerprint": "1f6365c2096727b8d8e7",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8266,9 +8244,10 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarComboboxDefinition",
       "kind": "interface",
-      "fingerprint": "21f3379137c77e998f20",
+      "fingerprint": "f559aede0545d65b5d10",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8292,6 +8271,7 @@
       "fingerprint": "5b5dc8d500b5b3aafd90",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8315,6 +8295,7 @@
       "fingerprint": "79c5d88941ef9e18e92e",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8338,6 +8319,7 @@
       "fingerprint": "6c3f040646b31dcd33de",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8361,6 +8343,7 @@
       "fingerprint": "c1b09259f31ea68e34ab",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8384,6 +8367,7 @@
       "fingerprint": "c6e6fa2b6e6a7fda1d8f",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8407,6 +8391,7 @@
       "fingerprint": "4a368b255c6598569286",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8427,9 +8412,10 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarInputDetail",
       "kind": "interface",
-      "fingerprint": "08001f5782e4632b82d4",
+      "fingerprint": "9030763b708ddf193ca7",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8450,9 +8436,10 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarOption",
       "kind": "interface",
-      "fingerprint": "5d5d7111516d748f9b0c",
+      "fingerprint": "9dd39f2c46eecd22d73e",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8473,9 +8460,10 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarResetDetail",
       "kind": "interface",
-      "fingerprint": "da10c75ec02152c29b81",
+      "fingerprint": "b78150016ef70e07397f",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8496,9 +8484,10 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarSelectDefinition",
       "kind": "interface",
-      "fingerprint": "d0c47781f8bacc07c2b4",
+      "fingerprint": "bf81e468a8748c0711bc",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8522,6 +8511,7 @@
       "fingerprint": "7be703e57887cda22bd1",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -8545,6 +8535,7 @@
       "fingerprint": "3b5253b1d06dfce9d314",
       "routes": [
         "src/all.ts",
+        "src/components/layout/filter-bar/filter-bar-register.ts",
         "src/components/layout/filter-bar/filter-bar.class.ts",
         "src/components/layout/filter-bar/filter-bar.ts",
         "src/components/layout/index.ts",
@@ -9480,7 +9471,7 @@
       "module": "src/components/media/file-input/file-input.class.ts",
       "exportName": "LyraFileInputFilesDetail",
       "kind": "interface",
-      "fingerprint": "824330046d6c971175db",
+      "fingerprint": "46f1ec5709e1fc194615",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-input.ts",
@@ -9595,7 +9586,7 @@
       "module": "src/components/media/drop-zone/drop-zone.class.ts",
       "exportName": "LyraDropZoneFilesDetail",
       "kind": "interface",
-      "fingerprint": "4cc05dfc89d4e79538fc",
+      "fingerprint": "f42e29f77f26b731fd37",
       "routes": [
         "src/all.ts",
         "src/components/lr-drop-zone.ts",
@@ -9618,7 +9609,7 @@
       "module": "src/components/media/drop-zone/drop-zone.class.ts",
       "exportName": "LyraDropZoneFilesEvent",
       "kind": "interface",
-      "fingerprint": "9b660ae009a4abb33f12",
+      "fingerprint": "af54de9b27a19fdc3e7e",
       "routes": [
         "src/all.ts",
         "src/components/lr-drop-zone.ts",
@@ -9641,7 +9632,7 @@
       "module": "src/components/media/file-input/file-input.class.ts",
       "exportName": "LyraFileInputFilesEvent",
       "kind": "interface",
-      "fingerprint": "108ebc85653731216391",
+      "fingerprint": "7b02befbc438149dff33",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-input.ts",
@@ -12289,7 +12280,7 @@
       "module": "src/components/utility/mention-popover/mention-popover.class.ts",
       "exportName": "LyraMentionItem",
       "kind": "interface",
-      "fingerprint": "1a3c7cec19e3fece6f11",
+      "fingerprint": "ef32097eb006b6bbb169",
       "routes": [
         "src/all.ts",
         "src/components/lr-mention-popover.ts",
@@ -14233,7 +14224,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "b48146b4944d3454ae23",
+      "fingerprint": "c8f7980ffb7636ebf497",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14464,7 +14455,7 @@
       "module": "src/internal/catalog-picker.ts",
       "exportName": "LyraCatalogEntry",
       "kind": "interface",
-      "fingerprint": "331a1f07d60ac9788467",
+      "fingerprint": "c9666d7fba8f28682fbc",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -15266,7 +15257,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "3e51365a81dbad4dcfc4",
+      "fingerprint": "04334d26a3524c8363a0",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15407,7 +15398,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "2fce800ef2f3e89704eb",
+      "fingerprint": "30d35d16871adba19269",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16028,7 +16019,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "1dfc5d2ae841e0b90524",
+      "fingerprint": "3a09c6fb3e69c6386e87",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16076,7 +16067,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "8f0fb42d8068d4a9503c",
+      "fingerprint": "20d4a99e5ecacd797ca7",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16570,7 +16561,7 @@
       "module": "src/utilities/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "4902e2f91e43e3d2e3e7",
+      "fingerprint": "be35a279003c0b8fc8eb",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/localization.ts"
@@ -16608,7 +16599,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "735125d2fb07620c6f0c",
+      "fingerprint": "c25cb59670882c89ef68",
       "routes": [
         "src/vue.ts"
       ],
@@ -16618,6 +16609,29 @@
         "kind": "utility",
         "name": "vue-contracts",
         "declaration": "LyraVueGlobalComponents"
+      }
+    },
+    {
+      "module": "src/components/layout/app-rail/app-rail-item.class.ts",
+      "exportName": "LyraAppRailItemToggleDetail",
+      "kind": "interface",
+      "fingerprint": "d5bb6d665eb14401f1e2",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/app-rail/app-rail-item.class.ts",
+        "src/components/layout/app-rail/app-rail-item.ts",
+        "src/components/layout/index.ts",
+        "src/components/lr-app-rail-item.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-app-rail-item-app-rail-item-contracts",
+        "declaration": "LyraAppRailItemToggleDetail"
       }
     }
   ],

@@ -1615,6 +1615,36 @@ describe('lr-checkbox-group validity custom states', () => {
     el.reportValidity();
     expect(el.matches(':state(user-invalid)')).to.be.true;
   });
+
+  it('marks a blocked native submission attempt as interaction, but never a bare checkValidity() call', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const form = (await fixture(html`
+      <form>
+        <lr-checkbox-group name="topics" required label="Topics">
+          <lr-checkbox value="a">A</lr-checkbox>
+          <lr-checkbox value="b">B</lr-checkbox>
+        </lr-checkbox-group>
+      </form>
+    `)) as HTMLFormElement;
+    // Defensive only: a truly invalid required group never reaches the `submit` event at all --
+    // the platform's interactive validation aborts submission before it is dispatched.
+    form.addEventListener('submit', (event) => event.preventDefault());
+    const el = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    await el.updateComplete;
+
+    expect(el.checkValidity(), 'checkValidity() itself').to.be.false;
+    expect(
+      el.matches(':state(user-invalid)'),
+      'a silent checkValidity() must not mark interaction, however invalid the group already is',
+    ).to.be.false;
+
+    form.requestSubmit();
+    await el.updateComplete;
+    expect(
+      el.matches(':state(user-invalid)'),
+      'a blocked submission attempt counts as interaction, even though it never calls reportValidity()',
+    ).to.be.true;
+  });
 });
 
 describe('lr-checkbox-group setCustomValidity()', () => {

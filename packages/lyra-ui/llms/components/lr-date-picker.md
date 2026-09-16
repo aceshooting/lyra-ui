@@ -336,6 +336,12 @@ state hooks are `--lr-date-input-action-hover-color`, `--lr-date-input-action-ho
 `--lr-date-input-action-active-radius` for the pressed state. They inherit from theme ancestors;
 direct values on `lr-date-input` win without retuning library-wide tokens.
 
+`--lr-positioning-strategy` (16.0.0) — the calendar popup reads this same cascading
+`absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
+its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
+property on `<lr-date-input>`; set the custom property on `:root`, a theme, or one clipping
+ancestor to change every unset date input beneath it.
+
 **Optional peer deps:** none.
 
 ```html

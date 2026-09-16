@@ -36,6 +36,32 @@ not a delta — this component does no accumulation or ordering of its own.
   `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
   untouched.
 
+The rest of `<lr-markdown>`'s configuration surface forwards verbatim too, each defaulting to
+exactly `<lr-markdown>`'s own default so leaving it unset renders identically to before these
+properties existed:
+
+- `tabSize: number = 4` (attribute `tab-size`) — forwarded to the composed `<lr-markdown>`'s own
+  `tabSize`.
+- `htmlMode: 'sanitize' | 'escape' | 'trusted' = 'sanitize'` (attribute `html-mode`) — forwarded to
+  the composed `<lr-markdown>`'s own `htmlMode`.
+- `gfm: boolean = true` — forwarded to the composed `<lr-markdown>`'s own `gfm`.
+- `linkTarget: string | null = '_blank'` (attribute `link-target`) — forwarded to the composed
+  `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
+  `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
+  non-default value, and never a bare `opener`.
+- `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — forwarded to the composed
+  `<lr-markdown>`'s own `internalLinkPrefix`.
+- `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
+  `<lr-markdown>`'s own `headingOffset`.
+- `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
+  `<lr-markdown>`'s own `highlightCode`.
+- `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
+  `<lr-markdown>`'s own `headingAnchors`.
+- `math: boolean = false` — forwarded to the composed `<lr-markdown>`'s own `math`; the transitive
+  `katex` peer is requested only once this is set.
+- `maxHeight: string = ''` (attribute `max-height`) — forwarded to the composed `<lr-markdown>`'s
+  own `maxHeight`.
+
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — runs a fixed, ordered list of
 lightweight regexes (ATX heading, fenced code block, `**bold**`, `_italic_`, inline code, bullet
 list item, numbered list item, `[text](url)` link, blockquote) against the whole string and returns
@@ -72,8 +98,9 @@ does not register it separately), so its optional-peer module graph includes `ma
 stay on the peer-free plain-text path; Markdown rendering lazy-loads `marked` plus the default
 `dompurify` sanitizer and falls back to readable plain text if either is unavailable. Fenced code
 can additionally use `shiki`, whose absence only leaves code unhighlighted. The composed Markdown
-implementation contains the opt-in `katex` loader, but this wrapper does not enable its `math`
-property and therefore never requests `katex` itself.
+implementation contains the opt-in `katex` loader; this wrapper forwards its own `math` property
+(default `false`) to the composed element verbatim, so `katex` is requested only once a consumer
+sets `math` here.
 
 ```html
 <lr-streaming-text id="out" coalesce-ms="80" streaming></lr-streaming-text>
@@ -98,8 +125,11 @@ never be left stranded mid-window, and a stream restarting on a reused element c
 showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
-forwarding this component's own `streaming` through as that component's `streaming` hint prop and
-`languages` verbatim; plain-text mode renders into a `white-space: pre-wrap` span instead. The
+forwarding this component's own `streaming` through as that component's `streaming` hint prop,
+`languages` verbatim, and the rest of `<lr-markdown>`'s configuration surface verbatim too
+(`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+`highlightCode`, `headingAnchors`, `math`, `maxHeight` — see **Properties** above); plain-text mode
+renders into a `white-space: pre-wrap` span instead. The
 blinking cursor degrades
 to a static, always-visible bar under `prefers-reduced-motion: reduce`. In plain-text mode it sits
 inline at the tail of the final character; in Markdown mode it renders as its own trailing block

@@ -376,6 +376,52 @@ function namesFromTemplates(source) {
     }
   }
 
+  // `statePart()` (internal/state-part.ts) composes a state-carrying part name at RUNTIME --
+  // `part=${this.segmentPart('segment', ...)}` where that helper returns
+  // `statePart(base, { selected, empty, disabled })`, emitting "segment segment-empty ...". The
+  // names are real rendered markup and MUST stay documented (`::part()` takes no attribute
+  // selector, so encoding state in the part name is the only way a consumer can reach it), but no
+  // literal for them exists anywhere in the file. Without this rule the gate's only remedy is to
+  // delete the `@csspart` entries -- trading real public API documentation for a green check.
+  // Resolve the base through one level of wrapper: a literal base is read directly, and an
+  // identifier base is resolved to the literal first arguments its enclosing method is called with.
+  for (const match of source.matchAll(/\bstatePart\s*\(/g)) {
+    const argumentList = balancedArguments(source, match.index + match[0].length - 1);
+    if (argumentList.length < 2) continue;
+    const [baseArgument, statesArgument, optionsArgument] = argumentList;
+
+    const separators = [];
+    for (const separator of (optionsArgument ?? '').matchAll(/(['"])(-{1,2})\1/g)) separators.push(separator[2]);
+    if (separators.length === 0) separators.push('-');
+
+    // Keys of the states object literal; a parameterized state also publishes `<key>-<value>` for
+    // each literal value, matching statePart()'s own `${state}-${active}` branch.
+    const states = [];
+    for (const entry of statesArgument.matchAll(/(?:^|[{,])\s*(?:\.\.\.)?([A-Za-z_$][\w$]*)\s*:/g)) {
+      states.push(entry[1]);
+    }
+    if (states.length === 0) continue;
+
+    const bases = new Set();
+    const literalBase = baseArgument.trim().match(/^(['"])([\w-]+)\1$/);
+    if (literalBase) bases.add(literalBase[2]);
+    else {
+      const identifier = baseArgument.trim();
+      if (!/^[A-Za-z_$][\w$]*$/.test(identifier)) continue;
+      // Nearest method declaration above this call that takes `identifier` as a parameter.
+      const before = source.slice(0, match.index);
+      const owner = [...before.matchAll(/(?:private|protected|public)?\s*([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*(?::[^{]+)?\{/g)].pop();
+      if (!owner || !new RegExp(`\\b${identifier}\\b`).test(owner[2])) continue;
+      const callSite = new RegExp(`\\b${owner[1]}\\s*\\(\\s*(['"])([\\w-]+)\\1`, 'g');
+      for (const call of source.matchAll(callSite)) bases.add(call[2]);
+    }
+
+    for (const base of bases) {
+      names.add(base);
+      for (const state of states) for (const separator of separators) names.add(`${base}${separator}${state}`);
+    }
+  }
+
   // Fetched SVGs retain sanitizer-approved third-party part names while adding Lyra's public
   // token through a Set. Only accept `.add('token')` when that exact Set is spread into a
   // `setAttribute('part', ...)` sink, so unrelated Set values cannot mask a missing rendered part.

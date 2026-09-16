@@ -37,7 +37,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -266,8 +270,8 @@ export interface LyraLocalePickerEventMap {
  * @cssstate valid - Matches while the control satisfies its constraints.
  * @cssstate invalid - Matches while it does not — including a pristine required picker with
  *   nothing committed, exactly like native `:invalid`.
- * @cssstate user-valid - `valid`, but only after the user has interacted (blurred the trigger, or
- *   been through a `reportValidity()`/submit attempt).
+ * @cssstate user-valid - `valid`, but only after the user has interacted: blurred the trigger,
+ *   `reportValidity()`, or a submission attempt. Not after a silent `checkValidity()` alone.
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a required picker
  *   nobody has touched yet is invalid without being styled as an error.
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the listbox's
@@ -425,6 +429,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init));
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like a blur; `checkValidity()`'s own call below runs inside `withStaticValidityCheck()` so
+    // this listener can tell the silent query apart from every other path that raises the same
+    // `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     this.internals.setFormValue('');
   }
 
@@ -690,8 +699,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    * `user-valid`/`user-invalid`). Shared implementation in `internal/custom-states.ts`: this
    * component drives `ElementInternals` directly rather than through the `FormAssociated` mixin,
    * so it calls the helper itself instead of inheriting the call. `touched` is its own interaction
-   * flag (set when the trigger blurs), which is what keeps the `user-*` pair off a pristine
-   * control the way native `:user-invalid` does.
+   * flag (set when the trigger blurs, or by interactive validation -- `reportValidity()` and a
+   * submission attempt alike, via `installInteractionOnInvalid()`), which is what keeps the
+   * `user-*` pair off a pristine control the way native `:user-invalid` does. A silent
+   * `checkValidity()` alone never counts.
    */
   private syncCustomStates(): void {
     syncValidityStates(this.internals, {
@@ -700,6 +711,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       barred: this.isBarred(),
     });
   }
+
+  private markInteracted = (): void => {
+    if (this.touched) return;
+    this.touched = true;
+    this.syncCustomStates();
+  };
 
   formResetCallback(): void {
     // Pristine again, so the `user-*` states stop matching even though a required picker is
@@ -731,12 +748,17 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.requestUpdate();
   }
   checkValidity(): boolean {
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
   reportValidity(): boolean {
     // Reporting is what a submit attempt does, and a failed submit is precisely when native
     // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
-    // `FormAssociated` mixin.
+    // `FormAssociated` mixin. (A submission attempt itself never calls this method -- it drives
+    // `ElementInternals` directly -- which is what `installInteractionOnInvalid()` above covers.)
     this.touched = true;
     this.syncCustomStates();
     return this.internals.reportValidity();

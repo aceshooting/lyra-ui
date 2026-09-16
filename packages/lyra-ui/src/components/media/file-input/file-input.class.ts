@@ -19,7 +19,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { DropSessionController, type DropSessionState } from '../../../internal/drop-session-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -242,7 +246,8 @@ export interface LyraFileInputEventMap {
  * touched anything. Neither this nor `user-invalid` matches while the control is barred from
  * constraint validation (disabled, or inside a disabled fieldset).
  * @cssstate user-valid - `valid`, but only after the user has interacted: choosing or dropping
- * files, removing one, a blur, or a `reportValidity()` call (which is what a submit attempt runs).
+ * files, removing one, a blur, `reportValidity()`, or a submission attempt. Not after a silent
+ * `checkValidity()` alone.
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required file input is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
@@ -514,6 +519,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init));
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like choosing/dropping/removing a file or a blur; `checkValidity()`'s own call below runs
+    // inside `withStaticValidityCheck()` so this listener can tell the silent query apart from
+    // every other path that raises the same `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     this.internals.setFormValue(null);
     this.dropSession = new DropSessionController(this, {
       isDisabled: () => this.liveDisabled,
@@ -930,17 +940,30 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.toggleAttribute('dragging', this.dragging);
   }
 
+  private markInteracted = (): void => {
+    if (this.touched) return;
+    this.touched = true;
+    this.updateValidity();
+    this.publishCustomStates();
+  };
+
   checkValidity(): boolean {
     // Recomputed at call time, like a native control: `validators` is a plain JS array whose
     // entries can start failing without any property on this host changing, so a check that read
     // only the last published state would answer from a stale snapshot.
     this.updateValidity();
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
 
   reportValidity(): boolean {
     // Reporting is what a submit attempt does, and a failed submit is precisely when native
-    // `:user-invalid` starts matching — so it counts as interaction.
+    // `:user-invalid` starts matching — so it counts as interaction. (A submission attempt itself
+    // never calls this method -- it drives `ElementInternals` directly -- which is what
+    // `installInteractionOnInvalid()` above covers.)
     this.touched = true;
     this.updateValidity();
     this.publishCustomStates();

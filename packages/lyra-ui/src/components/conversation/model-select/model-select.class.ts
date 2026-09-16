@@ -28,7 +28,11 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+import {
+  installInteractionOnInvalid,
+  installInvalidEventAlias,
+  withStaticValidityCheck,
+} from '../../../internal/invalid-event-alias.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -124,7 +128,8 @@ export interface LyraModelSelectEventMap {
  * @cssstate invalid - Matches while it does not — from the very first render, before the user has
  * touched anything.
  * @cssstate user-valid - `valid`, but only after the user has interacted: a blur of the
- * trigger/combobox, or a `reportValidity()` call (which is what a submit attempt runs).
+ * trigger/combobox, `reportValidity()`, or a submission attempt. Not after a silent
+ * `checkValidity()` alone.
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required picker is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
@@ -338,6 +343,11 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init));
+    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
+    // like a blur; `checkValidity()`'s own call below runs inside `withStaticValidityCheck()` so
+    // this listener can tell the silent query apart from every other path that raises the same
+    // `invalid` event.
+    installInteractionOnInvalid(this, this.markInteracted);
     // Native <input> always has a submission value ("") from construction —
     // without this, a control whose `value` is never touched is entirely
     // absent from FormData instead of present as "" (see form-associated.ts).
@@ -596,8 +606,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    *  can move -- {@linkcode updateValidity}, `reportValidity()`, and `updated()` for `touched` --
    *  because this control drives `ElementInternals` directly rather than through the
    *  `FormAssociated` mixin, which does this for the controls that do use it. `touched` is the
-   *  interaction flag: it flips on the trigger's/input's first blur, and on a `reportValidity()`
-   *  call, which is what a submit attempt runs. */
+   *  interaction flag: it flips on the trigger's/input's first blur, and on interactive validation
+   *  -- `reportValidity()` and a submission attempt alike, via `installInteractionOnInvalid()`. A
+   *  silent `checkValidity()` alone never counts. */
   private publishValidityStates(): void {
     syncValidityStates(this.internals, {
       required: this.required,
@@ -623,14 +634,25 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.updateValidity();
     this.requestUpdate();
   }
+  private markInteracted = (): void => {
+    if (this.touched) return;
+    this.touched = true;
+    this.publishValidityStates();
+  };
   checkValidity(): boolean {
-    return this.internals.checkValidity();
+    // Silent query: must never mark a pristine control as interacted, however invalid it already
+    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
+    // that whatever `invalid` event fires synchronously inside this call is this call, not a
+    // submission attempt.
+    return withStaticValidityCheck(this, () => this.internals.checkValidity());
   }
   reportValidity(): boolean {
     // A reportValidity() call is what a submit attempt runs, and it is the moment native controls
     // start matching :user-invalid -- so it counts as interaction here too. `touched` also gates
     // the data-invalid/aria-invalid reflection, which is the point: after a rejected submit the
-    // control should read as invalid, not stay pristine.
+    // control should read as invalid, not stay pristine. (A submission attempt itself never calls
+    // this method -- it drives `ElementInternals` directly -- which is what
+    // `installInteractionOnInvalid()` above covers.)
     this.touched = true;
     this.publishValidityStates();
     return this.internals.reportValidity();
