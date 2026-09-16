@@ -633,13 +633,43 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  current by each slot's `slotchange` — mirrors `<lr-input>`'s identical pattern. */
   @state() private hasStartSlot = false;
   @state() private hasEndSlot = false;
+  /** Whether the default slot's visible content is a single icon-like element (see
+   *  `hasIconOnlyDefaultContent()`). Seeded synchronously in `willUpdate` before the first paint,
+   *  then kept current by the default slot's own `slotchange` for a DOM mutation AND by
+   *  `resizeObserver` below for a CSS-only visibility flip (a container/media query hiding or
+   *  revealing a slotted label) that mutates no DOM at all and so fires no `slotchange`. */
   @state() private isIconButton = false;
+
+  /** Watches `labelEl` -- the internal default-slot wrapper, never the host or `baseEl` -- so a
+   *  consumer's CSS-only rule (a container/media query hiding the visible label at a narrow width,
+   *  with no accompanying DOM mutation) still re-evaluates `isIconButton`. `slotchange` only fires
+   *  on a DOM mutation, and there is no `matchMedia` here bound to a breakpoint this component
+   *  doesn't know about, so a resize of the element that actually wraps the label is the
+   *  mechanism-agnostic signal a vanishing/returning label produces. Deliberately NOT the host or
+   *  `baseEl`: once `isIconButton` is `true`, `[part~='base'][data-icon-button]` gives `baseEl` (and
+   *  therefore the content-sized host) a fixed, definite `inline-size` that no longer depends on the
+   *  label at all -- watching either one would report a resize on the way IN, then never resize
+   *  again on the way back out no matter how much wider the label's own container becomes,
+   *  permanently wedging the button in icon-only mode. `labelEl`'s own box is never touched by
+   *  `data-icon-button`, so it keeps tracking the label's actual rendered presence in both
+   *  directions. Armed once `labelEl` exists (from `updated()`, and from a reconnect's
+   *  `connectedCallback`), torn down in `disconnectedCallback`. */
+  private resizeObserver?: ResizeObserver;
+  /** The pending "commit the recompute" animation-frame token armIconOnlyResizeObserver() schedules,
+   *  and the window that owns it -- both cleared in `disconnectedCallback` so a frame callback never
+   *  fires against a torn-down or reparented host. */
+  private iconOnlyResizeRaf?: number;
+  private iconOnlyResizeRafOwner?: Window;
 
   // Matches either root: the native `<button>` (default) or the `<a>` rendered in anchor mode, so
   // `click()`/`focus()`/`blur()` work in both.
   @query('[part~="base"]') private baseEl?:
     | HTMLButtonElement
     | HTMLAnchorElement;
+
+  // The default-slot label wrapper -- see armIconOnlyResizeObserver() for why this, and not baseEl
+  // or the host itself, is the element the resize observer watches.
+  @query('[part="label"]') private labelEl?: HTMLElement;
 
   /** Activates the internal base element. In `<button>` mode this also runs the component's
    *  submit/reset behavior (via the button's own `@click`); in anchor mode it triggers native
@@ -828,10 +858,24 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     if (this.hasUpdated) this.syncDescribedByElements();
     this.updateValidity();
     this.syncButtonStates();
+    // `disconnectedCallback` tears the observer down, and a reconnect (drag-drop reparent, a
+    // repeat() re-key, a tab panel detaching/reattaching) fires no property change and therefore no
+    // `updated()` -- rearm here so a live CSS-only label flip isn't missed until some unrelated
+    // property happens to change. `labelEl` already exists on a reconnect (the shadow tree survives
+    // disconnect); on the very first connect it does not yet, so this is a no-op until `updated()`
+    // arms it after the first render -- mirrors textarea.class.ts's identical reconnect handling.
+    if (this.hasUpdated) this.armIconOnlyResizeObserver();
   }
 
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    if (this.iconOnlyResizeRaf !== undefined) {
+      this.iconOnlyResizeRafOwner?.cancelAnimationFrame(this.iconOnlyResizeRaf);
+    }
+    this.iconOnlyResizeRaf = undefined;
+    this.iconOnlyResizeRafOwner = undefined;
     super.disconnectedCallback();
   }
 
@@ -905,6 +949,45 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     this.syncButtonStates();
   };
 
+  /** Starts watching `labelEl`, unless already watching, `labelEl` doesn't exist yet (true before
+   *  the first render), or the realm provides no `ResizeObserver` at all (absent under SSR).
+   *  Idempotent -- safe to call from every `updated()` and from a reconnect's `connectedCallback`. */
+  private armIconOnlyResizeObserver(): void {
+    const labelEl = this.labelEl;
+    if (this.resizeObserver || !labelEl) return;
+    const view = this.ownerDocument.defaultView;
+    const ResizeObserverCtor = view?.ResizeObserver;
+    if (!view || !ResizeObserverCtor) return;
+    this.resizeObserver = new ResizeObserverCtor(() => {
+      if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
+      // Defer the actual recompute to the next animation frame, past this ResizeObserver
+      // delivery's own synchronous callback pass -- mirrors textarea.class.ts's identical
+      // armResizeObserver()/fitToContent() deferral, needed for the same underlying reason: a
+      // *microtask* still resolves inside the same delivery (Lit's own update scheduling is
+      // microtask-based, and the platform re-checks for further resizes only after the microtask
+      // queue drains), so committing there still trips Chromium's "ResizeObserver loop completed
+      // with undelivered notifications" the moment applying the flip changes [part~='base']'s own
+      // geometry -- verified empirically; only pushing the write past a real frame boundary avoids
+      // it. What hasIconOnlyDefaultContent() reads (the slotted label's computed visibility) is the
+      // consumer's CSS state, untouched by this recompute, so the value is stable across whatever
+      // delivery ends up observing the resulting resize.
+      if (this.iconOnlyResizeRaf !== undefined) {
+        this.iconOnlyResizeRafOwner?.cancelAnimationFrame(this.iconOnlyResizeRaf);
+      }
+      this.iconOnlyResizeRafOwner = view;
+      this.iconOnlyResizeRaf = view.requestAnimationFrame(() => {
+        this.iconOnlyResizeRaf = undefined;
+        this.iconOnlyResizeRafOwner = undefined;
+        if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
+        const next = this.hasIconOnlyDefaultContent();
+        if (next === this.isIconButton) return;
+        this.isIconButton = next;
+        this.syncButtonStates();
+      });
+    });
+    this.resizeObserver.observe(labelEl);
+  }
+
   /** Whether the label takes the row's slack so a trailing affordance stays pinned to the trailing
    *  content edge. Exactly the caret and the `end`/`suffix` adornment qualify: both read as
    *  detached glyphs when they float mid-row. A plain button (or one with only a `start`
@@ -917,6 +1000,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     super.updated(changed);
     syncAriaControlsElements(this, this.baseEl, this.triggerControls);
     this.syncDescribedByElements();
+    // `labelEl` exists from this point on (every render keeps the same wrapper node in place), so
+    // this is where the initial mount arms the observer -- idempotent past the first successful
+    // call, mirroring how textarea.class.ts's own updated() re-arms its resize observer every
+    // render instead of needing a dedicated firstUpdated() hook.
+    this.armIconOnlyResizeObserver();
     // Rendering can replace the native button with an anchor, and `loading` disables only the
     // rendered control. Reconcile validation after that mode transition so non-actions never block
     // their form, then restore the retained intrinsic/custom state when button mode returns.
