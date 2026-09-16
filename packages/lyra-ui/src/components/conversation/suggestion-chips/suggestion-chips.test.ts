@@ -296,6 +296,98 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+describe('disabled suggestions', () => {
+  const withDisabled = [
+    { suggestionId: 'a', label: 'Summarize this' },
+    { suggestionId: 'b', label: 'Explain the error', disabled: true },
+    { suggestionId: 'c', label: 'Draft a reply' },
+  ];
+
+  it('renders a genuinely disabled chip and leaves an ordinary one unset (unset-regression)', async () => {
+    const el = (await fixture(
+      html`<lr-suggestion-chips .suggestions=${withDisabled}></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
+    expect(chips[0]!.disabled, 'an ordinary chip is not disabled').to.equal(false);
+    expect(chips[1]!.disabled).to.equal(true);
+    expect(chips[2]!.disabled).to.equal(false);
+  });
+
+  it('a click on a disabled chip emits no lr-suggestion-select', async () => {
+    const el = (await fixture(
+      html`<lr-suggestion-chips .suggestions=${withDisabled}></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    let fired = false;
+    el.addEventListener('lr-suggestion-select', () => (fired = true));
+    const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
+    chips[1]!.click();
+    expect(fired).to.equal(false);
+  });
+
+  it('starts the roving tab stop on the first enabled chip when the first chip is disabled', async () => {
+    const leadingDisabled = [
+      { suggestionId: 'a', label: 'Summarize this', disabled: true },
+      { suggestionId: 'b', label: 'Explain the error' },
+      { suggestionId: 'c', label: 'Draft a reply' },
+    ];
+    const el = (await fixture(
+      html`<lr-suggestion-chips .suggestions=${leadingDisabled}></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
+    expect(chips[0]!.tabIndex, 'a disabled chip is never the resting tab stop').to.equal(-1);
+    expect(chips[1]!.tabIndex).to.equal(0);
+  });
+
+  it('ArrowRight steps over a disabled chip instead of landing on it, and Home/End skip it too', async () => {
+    const el = (await fixture(
+      html`<lr-suggestion-chips .suggestions=${withDisabled}></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(chips[2]!.tabIndex, 'skips disabled b straight to c').to.equal(0);
+
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(chips[0]!.tabIndex, 'wraps back to a, skipping disabled b').to.equal(0);
+
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(chips[2]!.tabIndex, 'End lands on the last enabled chip').to.equal(0);
+  });
+
+  it('never invokes an accessor-backed suggestion disabled, and never treats it as disabled', async () => {
+    const el = (await fixture(html`<lr-suggestion-chips></lr-suggestion-chips>`)) as LyraSuggestionChips;
+    let reads = 0;
+    const hostile: Record<string, unknown> = { suggestionId: 'b', label: 'Beta' };
+    Object.defineProperty(hostile, 'disabled', {
+      get() {
+        reads += 1;
+        return true;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    el.suggestions = [{ suggestionId: 'a', label: 'Alpha' }, hostile] as unknown as LyraSuggestionChips['suggestions'];
+    await el.updateComplete;
+
+    expect(reads, 'the getter is never invoked').to.equal(0);
+    const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
+    expect(
+      chips.map((chip) => chip.disabled),
+      'the entry survives as an ordinary, non-disabled chip',
+    ).to.deep.equal([false, false]);
+  });
+
+  it('is accessible with a mix of enabled and disabled chips', async () => {
+    const el = (await fixture(
+      html`<lr-suggestion-chips .suggestions=${withDisabled}></lr-suggestion-chips>`,
+    )) as LyraSuggestionChips;
+    await expect(el).to.be.accessible();
+  });
+});
+
 describe('part="row" / --lr-suggestion-chips-justify', () => {
   const row = (el: LyraSuggestionChips) => el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]');
 

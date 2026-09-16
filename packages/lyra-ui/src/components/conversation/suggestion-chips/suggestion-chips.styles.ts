@@ -48,19 +48,27 @@ export const styles = css`
     flex: none;
     line-height: var(--lr-line-height-compact);
   }
-  [part~='chip']:hover {
+  [part~='chip']:where(:not(:disabled)):hover {
     background: var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-suggestion-chips-hover-border, var(--lr-color-brand));
   }
   /* Mixes the SAME --lr-suggestion-chips-hover-bg the rule above uses, so a consumer retinting the
      hover fill gets a matching pressed step without a second custom property to keep in sync. */
-  [part~='chip']:active {
+  [part~='chip']:where(:not(:disabled)):active {
     background: color-mix(
       in oklab,
       var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
     border-color: var(--lr-suggestion-chips-hover-border, var(--lr-color-brand));
+  }
+  /* A disabled suggestion keeps its own label/detail text (still the datum it always was) but
+     loses the pointer cursor and every hover/press affordance that promises activation -- the
+     hover/active rules above are gated on :not(:disabled) rather than overridden here, because CSS
+     :hover still matches a natively disabled button. */
+  [part~='chip']:disabled {
+    cursor: default;
+    opacity: var(--lr-suggestion-chips-disabled-opacity, 0.5);
   }
   [part~='chip']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

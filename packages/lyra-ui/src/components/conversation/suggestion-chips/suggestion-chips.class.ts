@@ -23,6 +23,13 @@ export interface LyraChatSuggestion {
   icon?: string;
   /** An optional secondary line (Perplexity-style related questions). */
   detail?: string;
+  /**
+   * Marks this suggestion non-actionable: its chip renders a genuinely disabled `<button>` (no
+   * roving tab stop, no hover/press affordance, no `lr-suggestion-select`), and arrow-key/Home/End
+   * roving navigation steps past it instead of landing on it. Omitted or `false` renders the chip
+   * exactly as before this field existed.
+   */
+  disabled?: boolean;
 }
 
 export interface LyraSuggestionChipsEventMap {
@@ -48,6 +55,12 @@ interface PendingSuggestionFocus {
  * Suggestions are a clone-owned, bounded readonly snapshot; create and reassign a new array after
  * changing the sequence or a row.
  *
+ * A suggestion may also set `disabled`, marking it non-actionable: its chip renders a genuinely
+ * disabled `<button>` (no roving tab stop, no hover/press affordance) and activating it -- by click
+ * or keyboard -- emits nothing and changes no state. Arrow-key/Home/End roving navigation steps
+ * past it instead of landing on it. Omitted or `false` renders the chip exactly as before this
+ * field existed.
+ *
  * @customElement lr-suggestion-chips
  * @event lr-suggestion-select - `detail: { suggestionId, label }`.
  * @csspart base - The labeled group.
@@ -61,6 +74,7 @@ interface PendingSuggestionFocus {
  *   centers every line, the wrapped final one included — what `::part(base)` alone cannot do.
  * @cssprop [--lr-suggestion-chips-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered chip.
  * @cssprop [--lr-suggestion-chips-hover-border=var(--lr-color-brand)] - Border color of a hovered chip.
+ * @cssprop [--lr-suggestion-chips-disabled-opacity=0.5] - Opacity of a chip whose suggestion sets `disabled`.
  * @status stable
  * @since 4.0.0
  */
@@ -179,7 +193,10 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     applyComposedFocusRepair(pending.repair, target);
   }
 
+  /** A `disabled` suggestion cannot be activated -- by click or keyboard -- and emits nothing and
+   *  changes no state, matching every other declared-non-actionable entry in this library. */
   private select(suggestion: LyraChatSuggestion): void {
+    if (suggestion.disabled) return;
     this.emit('lr-suggestion-select', {
       suggestionId: suggestion.suggestionId,
       label: suggestion.label,
@@ -198,29 +215,85 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     this.activeIndex = index;
   }
 
+  private isSuggestionDisabled(suggestion: LyraChatSuggestion | undefined): boolean {
+    return suggestion?.disabled === true;
+  }
+
+  /** Degrades `this.activeIndex` off a disabled suggestion to the nearest enabled one (forward
+   *  first, then backward), so the `tabindex="0"` resting stop this drives is never one a keyboard
+   *  user cannot reach. Returns `-1` only when every suggestion is disabled. Unset regression: with
+   *  no disabled suggestion, this is the same `clamp(activeIndex, 0, count - 1)` the tabindex
+   *  comparison always used. */
+  private effectiveActiveIndex(suggestions: readonly LyraChatSuggestion[]): number {
+    const count = suggestions.length;
+    if (!count) return -1;
+    const clamped = Math.min(Math.max(this.activeIndex, 0), count - 1);
+    if (!this.isSuggestionDisabled(suggestions[clamped])) return clamped;
+    for (let forward = clamped + 1; forward < count; forward += 1) {
+      if (!this.isSuggestionDisabled(suggestions[forward])) return forward;
+    }
+    for (let backward = clamped - 1; backward >= 0; backward -= 1) {
+      if (!this.isSuggestionDisabled(suggestions[backward])) return backward;
+    }
+    return -1;
+  }
+
+  /** Steps `from` by one chip in `direction`, wrapping around while skipping a disabled chip --
+   *  the wrap-around analogue of `stepEnabledIndex()` in `internal/catalog-picker.ts`. Returns `-1`
+   *  only when every suggestion is disabled. Unset regression: with no disabled suggestion, this
+   *  is the same `(from + direction + n) % n` the arrow-key handler always computed. */
+  private stepEnabledIndex(
+    suggestions: readonly LyraChatSuggestion[],
+    from: number,
+    direction: 1 | -1,
+  ): number {
+    const n = suggestions.length;
+    if (!n) return -1;
+    let index = from;
+    for (let steps = 0; steps < n; steps += 1) {
+      index = (index + direction + n) % n;
+      if (!this.isSuggestionDisabled(suggestions[index])) return index;
+    }
+    return -1;
+  }
+
+  private firstEnabledIndex(suggestions: readonly LyraChatSuggestion[]): number {
+    return suggestions.findIndex((suggestion) => !this.isSuggestionDisabled(suggestion));
+  }
+
+  private lastEnabledIndex(suggestions: readonly LyraChatSuggestion[]): number {
+    for (let index = suggestions.length - 1; index >= 0; index -= 1) {
+      if (!this.isSuggestionDisabled(suggestions[index])) return index;
+    }
+    return -1;
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
-    const n = this.effectiveSuggestions.length;
+    const suggestions = this.effectiveSuggestions;
+    const n = suggestions.length;
     if (n === 0) return;
     const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
     let target: number;
-    if (e.key === forwardKey) target = (this.activeIndex + 1) % n;
-    else if (e.key === backwardKey) target = (this.activeIndex - 1 + n) % n;
-    else if (e.key === 'Home') target = 0;
-    else if (e.key === 'End') target = n - 1;
+    if (e.key === forwardKey) target = this.stepEnabledIndex(suggestions, this.activeIndex, 1);
+    else if (e.key === backwardKey) target = this.stepEnabledIndex(suggestions, this.activeIndex, -1);
+    else if (e.key === 'Home') target = this.firstEnabledIndex(suggestions);
+    else if (e.key === 'End') target = this.lastEnabledIndex(suggestions);
     else return;
     e.preventDefault();
+    if (target < 0) return;
     this.activeIndex = target;
     this.focusChip(target);
   };
 
-  private renderChip(suggestion: LyraChatSuggestion, index: number): TemplateResult {
+  private renderChip(suggestion: LyraChatSuggestion, index: number, activeIndex: number): TemplateResult {
     return html`
       <button
         type="button"
         part="chip"
         data-suggestion-id=${suggestion.suggestionId}
-        tabindex=${index === this.activeIndex ? '0' : '-1'}
+        tabindex=${index === activeIndex ? '0' : '-1'}
+        ?disabled=${suggestion.disabled === true}
         @click=${() => this.select(suggestion)}
         @focus=${() => this.onChipFocus(index)}
       >
@@ -240,10 +313,11 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     if (suggestions.length === 0) return html``;
     const label = this.label == null ? this.localize('suggestionsLabel') : this.label;
     const ariaLabel = this.getAttribute('aria-label') ?? label;
+    const activeIndex = this.effectiveActiveIndex(suggestions);
     const chips = repeat(
       suggestions,
       (s) => s.suggestionId,
-      (s, i) => this.renderChip(s, i),
+      (s, i) => this.renderChip(s, i, activeIndex),
     );
     return html`
       <div part="base" role="group" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>

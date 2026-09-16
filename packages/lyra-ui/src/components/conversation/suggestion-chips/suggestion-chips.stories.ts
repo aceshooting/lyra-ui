@@ -28,6 +28,19 @@ export const ScrollableRow: Story = {
   render: () => html`<lr-suggestion-chips .suggestions=${followUps}></lr-suggestion-chips>`,
 };
 
+/** A suggestion can be marked `disabled`, rendering it as a genuinely non-actionable chip: no
+ *  roving tab stop, no hover/press affordance, and activating it emits nothing. */
+export const DisabledSuggestion: Story = {
+  render: () => html`
+    <lr-suggestion-chips
+      .suggestions=${[
+        ...followUps,
+        { suggestionId: 'd', label: 'Escalate to on-call (unavailable)', disabled: true },
+      ]}
+    ></lr-suggestion-chips>
+  `,
+};
+
 export const WrappedStarterGrid: Story = {
   render: () => html`
     <lr-suggestion-chips
