@@ -97,7 +97,7 @@ function authorityFixture() {
     },
     packageManagers: {
       npm: '10.9.8',
-      pnpm: '12.4.1',
+      pnpm: '12.4.2',
     },
     profiles: Object.entries(PROFILE_FLOOR_PEERS).map(([id, floorPeers]) => ({
       id,
@@ -194,15 +194,15 @@ function environmentLockfileFixture() {
     '    configDependencies: {}',
     '    packageManagerDependencies:',
     '      pnpm:',
-    '        specifier: 12.4.1',
-    '        version: 12.4.1',
+    '        specifier: 12.4.2',
+    '        version: 12.4.2',
     '',
     'packages:',
-    '  pnpm@12.4.1:',
-    `    resolution: {integrity: ${peerIntegrity('pnpm', '12.4.1')}}`,
+    '  pnpm@12.4.2:',
+    `    resolution: {integrity: ${peerIntegrity('pnpm', '12.4.2')}}`,
     '',
     'snapshots:',
-    '  pnpm@12.4.1: {}',
+    '  pnpm@12.4.2: {}',
     '',
   ].join('\n');
 }
@@ -2318,29 +2318,29 @@ test('exports isolated strict npm/pnpm command plans and validates both exact au
 
   const versionByCommand = new Map([
     ['npm', '10.9.8'],
-    ['pnpm', '12.4.1'],
+    ['pnpm', '12.4.2'],
   ]);
   await assertExecutionToolchain({
     actualNodeVersion: '22.23.2',
     authority,
     captureVersion: async (command) => versionByCommand.get(command),
     nvmrcText: '22.23.2\n',
-    rootManifest: { packageManager: 'pnpm@12.4.1' },
+    rootManifest: { packageManager: 'pnpm@12.4.2' },
   });
   await assertExecutionToolchain({
     actualNodeVersion: '22.23.2',
     authority,
     captureVersion: async (command) => versionByCommand.get(command),
     nvmrcText: '22.23.2\r\n',
-    rootManifest: { packageManager: 'pnpm@12.4.1' },
+    rootManifest: { packageManager: 'pnpm@12.4.2' },
   });
   await assert.rejects(
     assertExecutionToolchain({
       actualNodeVersion: '22.23.2',
       authority,
-      captureVersion: async (command) => command === 'npm' ? '10.9.7' : '12.4.1',
+      captureVersion: async (command) => command === 'npm' ? '10.9.7' : '12.4.2',
       nvmrcText: '22.23.2\n',
-      rootManifest: { packageManager: 'pnpm@12.4.1' },
+      rootManifest: { packageManager: 'pnpm@12.4.2' },
     }),
     /requires npm 10\.9\.8.*10\.9\.7/iu,
   );
@@ -2352,7 +2352,7 @@ test('exports isolated strict npm/pnpm command plans and validates both exact au
       nvmrcText: '22.23.2\n',
       rootManifest: { packageManager: 'pnpm@11.24.0' },
     }),
-    /root packageManager.*pnpm@12\.4\.1/iu,
+    /root packageManager.*pnpm@12\.4\.2/iu,
   );
 });
 
