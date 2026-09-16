@@ -2836,6 +2836,49 @@ it('does not render [part="reveal-columns-button"] when a wide container has no 
   expect(el.hasAttribute('has-hidden-priority-columns')).to.be.false;
 });
 
+it('restores priority-hidden columns once the container widens back out, driven by real container resizes', async () => {
+  // Reproduces the reported one-way lock: narrowing hides low+medium (matches the 300px case
+  // above), and widening back to the ORIGINAL 1000px container -- which the "does not render
+  // reveal-columns-button when wide" case above proves never needs to hide anything -- must
+  // restore both tiers rather than staying stuck. Driven by real `el.style.width` mutations so
+  // the component's own ResizeObserver does the measuring, not a direct private-method call.
+  const el = (await fixture(html`<lr-table style="display: block; width: 1000px;"></lr-table>`)) as LyraTable<Row>;
+  el.columns = priorityColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  expect(el.hasHiddenPriorityColumns).to.be.false;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
+  const mediumHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="medium"]') as HTMLElement;
+
+  el.style.width = '300px';
+  await waitUntil(() => el.hasHiddenPriorityColumns === true);
+  expect(getComputedStyle(lowHeader).display).to.equal('none');
+  expect(getComputedStyle(mediumHeader).display).to.equal('none');
+
+  // Back to the original width, which comfortably fit every column before anything was hidden.
+  el.style.width = '1000px';
+  await waitUntil(() => el.hasHiddenPriorityColumns === false);
+  expect(getComputedStyle(lowHeader).display).to.not.equal('none');
+  expect(getComputedStyle(mediumHeader).display).to.not.equal('none');
+  expect(base.hasAttribute('data-hide-priority-low')).to.be.false;
+  expect(base.hasAttribute('data-hide-priority-medium')).to.be.false;
+  expect(el.hasAttribute('has-hidden-priority-columns')).to.be.false;
+  expect((el.shadowRoot!.querySelector('[part="reveal-columns-button"]')) == null).to.be.true;
+
+  // Oscillation guard: a restored column must not immediately re-hide on a later measurement pass
+  // triggered by the resize the restoration itself causes (mirrors the existing
+  // "settles into a stable hidden state ... without oscillating" narrowing test above).
+  const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  for (let i = 0; i < 6; i++) {
+    await nextFrame();
+    expect(el.hasHiddenPriorityColumns).to.be.false;
+    expect(getComputedStyle(lowHeader).display).to.not.equal('none');
+    expect(getComputedStyle(mediumHeader).display).to.not.equal('none');
+  }
+});
+
 it('renders [part="reveal-columns-button"] and sets hasHiddenPriorityColumns when a priority column is hidden', async () => {
   const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;

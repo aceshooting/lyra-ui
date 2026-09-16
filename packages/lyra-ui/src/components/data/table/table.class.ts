@@ -1541,6 +1541,25 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  tier is visible. */
   private readonly priorityTierNaturalWidth = new Map<'low' | 'medium', number>();
 
+  /** Last-measured natural (unstretched) rendered width of every ALWAYS-visible (no `priority`)
+   *  header combined, mirroring `priorityTierNaturalWidth` above for the one group that is never
+   *  itself hidden. It exists for the same reason: once any tier is hidden, `[part='table']`'s own
+   *  `inline-size: 100%` (table.styles.ts) makes the browser's auto table layout stretch every
+   *  still-rendered column to fill whatever room the hidden ones vacated, so `[part='base']`'s own
+   *  `scrollWidth` stops carrying the always-visible group's true content width and starts tracking
+   *  `clientWidth` instead -- reconstructing "how wide would everything be" from that stretched
+   *  number silently turns "would the full set fit" into "does the CURRENT container happen to have
+   *  spare room", which never re-admits a hidden tier once the remainder alone fits any container.
+   *  Refreshed only on a pass where `[part='base']` is genuinely too wide for its container
+   *  (`scrollWidth - clientWidth` exceeds the tolerance, computed from whatever the previous pass
+   *  left rendered) -- the one condition under which nothing on screen has spare room to stretch
+   *  into, so every currently-rendered header's own rect reports its real content width. That
+   *  condition necessarily holds on the pass that first decides to hide anything (the hide decision
+   *  itself requires it), so this is always populated before `recomputeHiddenPriorityColumns()` ever
+   *  needs it for a widening pass, and a stale entry only lingers while nothing overflows -- exactly
+   *  when substituting it for a live, potentially-stretched reading is the correction, not a risk. */
+  private alwaysVisibleNaturalWidth: number | undefined;
+
   private parsePixelLength(value: string | undefined): number | undefined {
     if (!value) return undefined;
     const trimmed = value.trim();
@@ -1981,14 +2000,14 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  its `clientWidth` -- with `syncAutoScrollMode()`'s `scroll-mode="auto"` check, so the two
    *  responsive systems key off the same measurement instead of disagreeing about whether the table
    *  is actually too wide for its container. A tier hides only once hiding it would actually help:
-   *  `'low'` first (reconstructing the fully-visible width from the current `scrollWidth` plus every
-   *  already-hidden tier's cached natural width below), then `'medium'` on top of that if the table
-   *  would still overflow with just `'low'` gone. Writing the same decision this function already
-   *  reached is a no-op `toggleAttribute()` call, which keeps the `ResizeObserver` round-trip this
-   *  triggers (hiding a column changes `[part='base']`'s/`[part='table']`'s own measured size) a
-   *  fixed point rather than a layout thrash: the next pass reconstructs the same full width from the
-   *  same cached tier widths and the now-smaller `scrollWidth`, reaches the same decision, and writes
-   *  nothing further. Called from `updated()` (covers a change driven by
+   *  `'low'` first (reconstructing the fully-visible width from every group's cached natural width
+   *  below), then `'medium'` on top of that if the table would still overflow with just `'low'` gone.
+   *  Writing the same decision this function already reached is a no-op `toggleAttribute()` call,
+   *  which keeps the `ResizeObserver` round-trip this triggers (hiding a column changes
+   *  `[part='base']`'s/`[part='table']`'s own measured size) a fixed point rather than a layout
+   *  thrash: the next pass reconstructs the same full width from the same cached natural widths,
+   *  reaches the same decision, and writes nothing further -- in either direction, hiding or
+   *  restoring. Called from `updated()` (covers a change driven by
    *  `columns`/`rows`/`priorityColumnsVisible` rather than a container resize) and
    *  from the `ResizeObserver` callback (covers a container resize with no
    *  Lit-tracked property change at all). */
@@ -1999,6 +2018,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
     if (!hasLowColumn && !hasMediumColumn) {
       this.priorityTierNaturalWidth.clear();
+      this.alwaysVisibleNaturalWidth = undefined;
       base?.removeAttribute('data-hide-priority-low');
       base?.removeAttribute('data-hide-priority-medium');
       this.rehomeFocusedColumn();
@@ -2015,12 +2035,20 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       return;
     }
 
+    // Trustworthy only while nothing rendered has spare room to stretch into -- see
+    // `alwaysVisibleNaturalWidth`'s doc comment. Computed from whatever the PREVIOUS pass left
+    // rendered, before any of this pass's own attribute writes below take effect.
+    const genuineOverflow = base.scrollWidth - base.clientWidth > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
+
     const lowHeaders = hasLowColumn ? this.priorityTierHeaders('low') : [];
     const mediumHeaders = hasMediumColumn ? this.priorityTierHeaders('medium') : [];
     const refreshNaturalWidth = (tier: 'low' | 'medium', headers: HTMLElement[]): boolean => {
       if (headers.length === 0) return false;
       const currentlyHidden = headers.every((header) => header.offsetParent === null);
-      if (!currentlyHidden) {
+      // Gated on `genuineOverflow`, not just visibility: a visible tier sharing the table with an
+      // already-hidden sibling can itself be stretched to fill the room that sibling vacated, so a
+      // live reading is only trusted on a pass where nothing has spare room to stretch into.
+      if (!currentlyHidden && genuineOverflow) {
         const width = headers.reduce((sum, header) => sum + header.getBoundingClientRect().width, 0);
         if (width > 0) this.priorityTierNaturalWidth.set(tier, width);
       }
@@ -2029,13 +2057,30 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const lowActuallyHidden = refreshNaturalWidth('low', lowHeaders);
     const mediumActuallyHidden = refreshNaturalWidth('medium', mediumHeaders);
 
+    if (genuineOverflow) {
+      const alwaysHeaders = [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].filter(
+        (header) => !header.hasAttribute('data-priority')
+      );
+      const alwaysWidth = alwaysHeaders.reduce((sum, header) => sum + header.getBoundingClientRect().width, 0);
+      if (alwaysWidth > 0) this.alwaysVisibleNaturalWidth = alwaysWidth;
+    }
+
     const lowNaturalWidth = this.priorityTierNaturalWidth.get('low') ?? 0;
     const mediumNaturalWidth = this.priorityTierNaturalWidth.get('medium') ?? 0;
-    // The table's fully-visible width, reconstructed from what's actually rendered right now plus
-    // whatever a currently-hidden tier would add back -- so this reflects the real content
-    // regardless of which tiers this same function hid on an earlier pass.
-    const fullWidth =
-      base.scrollWidth + (lowActuallyHidden ? lowNaturalWidth : 0) + (mediumActuallyHidden ? mediumNaturalWidth : 0);
+    const anyTierHidden = lowActuallyHidden || mediumActuallyHidden;
+    // The table's fully-visible width. While nothing is hidden, `[part='base']`'s own live
+    // `scrollWidth` already IS that width (every column renders together, so there's nothing to
+    // reconstruct). Once a tier is hidden, `scrollWidth` reports only the remaining columns --
+    // stretched by `[part='table']`'s `inline-size: 100%` to fill whatever room the hidden tier
+    // vacated once the remainder no longer overflows -- so it tracks `clientWidth` rather than the
+    // remaining content's real width. Reconstructing from that stretched number would make "would
+    // everything fit" track the CURRENT container size instead of the actual content, which never
+    // re-admits a hidden tier once the remainder alone fits any container -- the one-way lock this
+    // measures around. Summing the three independently cached natural widths instead answers "what
+    // does the FULL set need" regardless of how much of it is currently rendered or stretched.
+    const fullWidth = anyTierHidden
+      ? (this.alwaysVisibleNaturalWidth ?? 0) + lowNaturalWidth + mediumNaturalWidth
+      : base.scrollWidth;
     const overflowAtFull = fullWidth - base.clientWidth;
 
     const needsLow = hasLowColumn && overflowAtFull > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
