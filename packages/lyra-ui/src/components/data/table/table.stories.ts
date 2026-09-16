@@ -494,7 +494,7 @@ export const EditableCells: Story = {
     docs: {
       description: {
         story:
-          'Double-click a cell to edit it. Draft native `input`/`change` events stay internal; a commit publishes the documented `lr-cell-edit` transaction.',
+          'Double-click a cell to edit it, or use the keyboard: focus a row, ArrowRight onto its editable cell (ArrowLeft returns to the row), then F2 or Enter to open the editor. Enter commits and Escape cancels, either way returning focus to the cell; Enter on the row itself still only activates the row. Draft native `input`/`change` events stay internal; a commit publishes the documented `lr-cell-edit` transaction.',
       },
     },
   },

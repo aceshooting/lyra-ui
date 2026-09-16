@@ -8,6 +8,25 @@ interface Row {
 const columns: TableColumn<Row>[] = [{ key: 'name', label: 'Name', cell: (r) => r.name }];
 void columns;
 
+// --- `cell` is optional exactly for an `editTrigger: 'always'` column, since that column's editor
+// renders unconditionally and the table's render path never falls back to `cell` for it -----------
+const alwaysColumnWithoutCell: TableColumn<Row> = { key: 'name', label: 'Name', editTrigger: 'always' };
+void alwaysColumnWithoutCell;
+
+// @ts-expect-error `cell` stays required for a column with no `editTrigger` at all -- its resting
+// (only) state is exactly what `cell` renders
+const plainColumnWithoutCell: TableColumn<Row> = { key: 'name', label: 'Name' };
+void plainColumnWithoutCell;
+
+// @ts-expect-error `cell` stays required for an `editTrigger: 'double-click'` column too -- its
+// resting cell (not currently being edited) is what `cell` renders, unlike an `'always'` column
+const doubleClickColumnWithoutCell: TableColumn<Row> = {
+  key: 'name',
+  label: 'Name',
+  editTrigger: 'double-click',
+};
+void doubleClickColumnWithoutCell;
+
 // --- a table parameterized with a concrete key type reads that type with no cast ----------------
 declare const numberKeyedTable: LyraTable<Row, number>;
 

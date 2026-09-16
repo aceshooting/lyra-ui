@@ -367,6 +367,29 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     color: var(--lr-table-cell-color, inherit);
   }
+  /* [data-editable] marks an editTrigger: 'double-click' column's resting (not currently open)
+     cell -- the one the table gives its own tabindex=-1 roving-focus stop, reachable via
+     ArrowLeft/ArrowRight from the row (see onRowLateralKeyDown in table.class.ts) and opened with
+     F2/Enter/double-click. Hover mirrors the focus ring below, matching every other interactive
+     part in this stylesheet. */
+  [part='cell'][data-editable] {
+    transition: var(--lr-transition-interactive);
+  }
+  :where([part='cell'][data-editable]):hover {
+    cursor: pointer;
+    background: var(--lr-color-brand-quiet);
+  }
+  :where([part='cell'][data-editable]):active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part='cell'][data-editable]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   /* A column's cell(row) may return any TemplateResult, rendered in this shadow root -- unreachable
      from the page's stylesheet, and ::part() cannot select past its first compound selector, so a
      returned anchor would compute to the UA default link blue. :where() keeps specificity at zero

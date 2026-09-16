@@ -1442,6 +1442,201 @@ it('commits an inline edit with Enter', async () => {
   expect((el.shadowRoot!.querySelector('[part="cell-editor"]')) == null).to.be.true;
 });
 
+describe('keyboard entry into double-click cell editing (WCAG 2.1.1)', () => {
+  /** The focus move on open (double-click/F2/Enter) and on close (commit/cancel) is deferred to a
+   *  microtask inside `updated()` -- matching the double-click autofocus helper elsewhere in this
+   *  file -- so a macrotask turn after `updateComplete` guarantees it has actually run. */
+  const settle = async (el: LyraTable<Row>): Promise<void> => {
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+
+  it('opens the editor with F2 on a focused editable cell, commits with Enter, and returns focus to the cell', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = editableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const cell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    cell.focus();
+    expect(el.shadowRoot!.activeElement === cell, 'the cell must actually be focused before F2').to.be.true;
+
+    await sendKeys({ press: 'F2' });
+    await settle(el);
+    const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement | null;
+    expect(input != null, 'F2 on a focused editable cell must open its editor').to.be.true;
+    expect(el.shadowRoot!.activeElement === input, 'the opened editor must take focus').to.be.true;
+
+    input!.value = 'Renamed';
+    const eventPromise = oneEvent(el, 'lr-cell-edit');
+    await sendKeys({ press: 'Enter' });
+    const event = await eventPromise;
+    expect(event.detail.value).to.equal('Renamed');
+
+    await settle(el);
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]').length).to.equal(0);
+    const restored = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    expect(el.shadowRoot!.activeElement === restored, 'focus must return to the originating cell on commit').to.be
+      .true;
+  });
+
+  it('opens the editor with Enter on a focused editable cell and cancels with Escape, restoring the prior value and focus', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = editableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const cell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    cell.focus();
+
+    await sendKeys({ press: 'Enter' });
+    await settle(el);
+    const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement | null;
+    expect(input != null, 'Enter on a focused editable cell must open its editor').to.be.true;
+
+    input!.value = 'Should not commit';
+    let emitted = false;
+    el.addEventListener('lr-cell-edit', () => (emitted = true));
+    await sendKeys({ press: 'Escape' });
+    await settle(el);
+
+    expect(emitted, 'Escape must not emit lr-cell-edit').to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]').length).to.equal(0);
+    const restored = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    expect(restored.textContent).to.contain('Alpha');
+    expect(el.shadowRoot!.activeElement === restored, 'focus must return to the originating cell on cancel').to.be
+      .true;
+  });
+
+  it('activates the row on Enter when focus is on the row itself, even with an editable column present', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = editableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.selectionMode = 'single';
+    await el.updateComplete;
+
+    const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    row.focus();
+    const clickPromise = oneEvent(el, 'lr-row-click');
+    await sendKeys({ press: 'Enter' });
+    const event = await clickPromise;
+    expect(event.detail.row).to.deep.equal(rows[0]);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="cell-editor"]').length,
+      'Enter on the row itself must not open an editor'
+    ).to.equal(0);
+    expect([...el.selectedRowKeys]).to.deep.equal(['a']);
+  });
+
+  it('moves focus between the row and its editable cells with ArrowRight/ArrowLeft, without disturbing row navigation', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = editableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    const nameCell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    const scoreCell = el.shadowRoot!.querySelector('td[data-col-key="score"]') as HTMLElement;
+    row.focus();
+
+    await sendKeys({ press: 'ArrowRight' });
+    expect(el.shadowRoot!.activeElement === nameCell, 'ArrowRight from the row enters the first editable cell').to.be
+      .true;
+
+    await sendKeys({ press: 'ArrowRight' });
+    expect(el.shadowRoot!.activeElement === scoreCell, 'ArrowRight again moves to the next editable cell').to.be
+      .true;
+
+    await sendKeys({ press: 'ArrowLeft' });
+    expect(el.shadowRoot!.activeElement === nameCell, 'ArrowLeft steps back to the previous editable cell').to.be
+      .true;
+
+    await sendKeys({ press: 'ArrowLeft' });
+    expect(el.shadowRoot!.activeElement === row, 'ArrowLeft from the first editable cell returns focus to the row')
+      .to.be.true;
+
+    const bodyRows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-row-key]')];
+    await sendKeys({ press: 'ArrowDown' });
+    expect(el.shadowRoot!.activeElement === bodyRows[1], 'ArrowDown still moves to the next row').to.be.true;
+  });
+
+  it('renders no tabindex or data-editable attribute on a body cell when no column declares editTrigger', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    expect(cell.hasAttribute('tabindex')).to.be.false;
+    expect(cell.hasAttribute('data-editable')).to.be.false;
+  });
+
+  it('passes axe with an editable cell open for editing', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    el.columns = editableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const cell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+    cell.focus();
+    await sendKeys({ press: 'F2' });
+    await settle(el);
+    expect(
+      el.shadowRoot!.querySelector('[part="cell-editor"]') != null,
+      'the editor must actually be open before the axe check'
+    ).to.be.true;
+    await expect(el).to.be.accessible();
+  });
+
+  it('opens the always-on editor and moves focus into it via the public editCell method', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = [
+      { key: 'name', label: 'Name', editTrigger: 'always', editValue: (r) => r.name },
+      { key: 'score', label: 'Score', cell: (r) => r.score },
+    ];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    el.editCell('a', 'name');
+    await settle(el);
+    const editor = el.shadowRoot!.querySelector('td[data-col-key="name"] [part="cell-editor"]') as HTMLElement;
+    expect(el.shadowRoot!.activeElement === editor, 'editCell() must focus the always-on editor').to.be.true;
+  });
+
+  it('opens a double-click editor via the public editCell method', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = editableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    el.editCell('a', 'name');
+    await settle(el);
+    const editor = el.shadowRoot!.querySelector('td[data-col-key="name"] [part="cell-editor"]');
+    expect(editor != null).to.be.true;
+  });
+
+  it('no-ops editCell for an unknown row, an unknown column, and a column with no editTrigger', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = [...editableColumns, { key: 'plain', label: 'Plain', cell: () => 'x' }];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    el.editCell('does-not-exist', 'name');
+    el.editCell('a', 'does-not-exist');
+    el.editCell('a', 'plain');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]').length).to.equal(0);
+  });
+});
+
 it('shows a rendered hover affordance on the public filter control', async () => {
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -5334,7 +5529,14 @@ describe('TableColumn.cellTitle', () => {
   it('suppresses the cell title while that cell is in edit mode', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = [
-      { ...titledColumns[0]!, editTrigger: 'double-click', editValue: (r) => r.name },
+      {
+        key: 'name',
+        label: 'Name',
+        cellTitle: (r: Row) => `Full name: ${r.name}`,
+        cell: (r: Row) => r.name,
+        editTrigger: 'double-click',
+        editValue: (r: Row) => r.name,
+      },
       titledColumns[1]!,
     ];
     el.rows = rows;
@@ -7736,7 +7938,7 @@ describe('v9 bounded and transactional contracts', () => {
 
   it('contains native cell-editor input/change events while publishing the committed edit', async () => {
     const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
-    el.columns = [{ ...columns[0]!, editTrigger: 'double-click' }];
+    el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: (r: Row) => r.name, editTrigger: 'double-click' }];
     el.rows = rows;
     el.rowKey = (row) => row.id;
     await el.updateComplete;
@@ -7896,10 +8098,13 @@ describe('v9 bounded and transactional contracts', () => {
 
     el.columns = [
       {
-        ...columns[0]!,
+        key: 'name',
+        label: 'Name',
+        sortable: true,
+        cell: (row: Row) => row.name,
         sticky: 'start',
         editTrigger: 'double-click',
-        editValue: (row) => row.name,
+        editValue: (row: Row) => row.name,
       },
     ];
     await el.updateComplete;

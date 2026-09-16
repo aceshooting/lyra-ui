@@ -243,7 +243,7 @@ export interface TableSortCommitDetail {
 /** One discriminated detail vocabulary shared across the sort request and commit phases. */
 export type TableSortDetail = TableSortRequestDetail | TableSortCommitDetail;
 
-export interface TableColumn<T> {
+interface TableColumnCommon<T> {
   key: string;
   label: string;
   /** Renders custom content into this column's <th>, in place of the plain `label` text -- e.g. a
@@ -330,21 +330,6 @@ export interface TableColumn<T> {
    *  that returns `background`/`backgroundColor` silently wins over this tint -- see `cellStyle`'s
    *  own doc for why. */
   heatValue?(row: T): number | null | undefined;
-  /** Enables inline editing for this cell. `'double-click'` opens an editor on
-   *  double-click, one cell at a time. `'always'` instead renders a persistent
-   *  editor in every body cell of this column from first paint -- a
-   *  settings/rate-style column the user is expected to type straight into.
-   *  Either way the table emits the proposed value through `lr-cell-edit` and
-   *  never mutates `row`; apply the change in the consumer and pass the updated
-   *  `rows` back in.
-   *
-   *  Persistent (`'always'`) editors are plain tab stops outside the roving
-   *  header/row tabindex model, and bind their `value` as a content attribute,
-   *  so native dirty-value-flag semantics apply: once the user has typed into
-   *  one, an out-of-band `rows` update to that same cell no longer replaces
-   *  what they are still editing. An untouched editor picks up a new `rows`
-   *  value normally. */
-  editTrigger?: TableColumnEditTrigger;
   /** Reads the value shown in the inline editor. When omitted, `row[key]` is
    *  used for record-like rows. For `editType: 'select'`, this is the selected option's
    *  `value` -- match one entry of `editOptions`, or none of them renders selected. */
@@ -356,8 +341,42 @@ export interface TableColumn<T> {
   /** Choices offered by an `editType: 'select'` column's editor. Ignored for every other
    *  `editType`. */
   editOptions?: TableColumnEditOption[];
-  cell: (row: T) => unknown;
 }
+
+/** One column definition. `cell` is required for every `editTrigger` except `'always'` -- the
+ *  table's render path calls it to paint that column's plain-text resting state, which an
+ *  `'always'` column never has (its editor is unconditional from first paint, see `editTrigger`'s
+ *  own doc). Supplying `cell` on an `'always'` column stays valid; it is simply never required. */
+export type TableColumn<T> =
+  | (TableColumnCommon<T> & {
+      /** Enables inline editing for this cell, opened by a double-click or, once the cell holds
+       *  keyboard focus (Tab/arrow into the row, then Right/Left onto the cell -- see the
+       *  class-level keyboard doc), by `F2` or `Enter`. One editor is open at a time; the table
+       *  emits the proposed value through `lr-cell-edit` and never mutates `row` -- apply the
+       *  change in the consumer and pass the updated `rows` back in. Omit for a column with no
+       *  inline editor at all. */
+      editTrigger?: 'double-click';
+      /** Renders this cell's content. Required whenever the column can be in its plain-text
+       *  resting state -- i.e. always, for a `'double-click'` or unset `editTrigger`. */
+      cell: (row: T) => unknown;
+    })
+  | (TableColumnCommon<T> & {
+      /** `'always'` renders a persistent editor in every body cell of this column from first
+       *  paint -- a settings/rate-style column the user is expected to type straight into. The
+       *  table emits the proposed value through `lr-cell-edit` and never mutates `row`.
+       *
+       *  These editors are plain tab stops outside the roving header/row/cell tabindex model, and
+       *  bind their `value` as a content attribute, so native dirty-value-flag semantics apply:
+       *  once the user has typed into one, an out-of-band `rows` update to that same cell no
+       *  longer replaces what they are still editing. An untouched editor picks up a new `rows`
+       *  value normally. */
+      editTrigger: 'always';
+      /** Omittable for this `editTrigger: 'always'` arm: the persistent editor renders
+       *  unconditionally, so the table's render path never falls back to this renderer. Still
+       *  consulted as the `sortValue`-less sort fallback when `sortable` is set -- define
+       *  `sortValue` on such a column instead of relying on this being present. */
+      cell?: (row: T) => unknown;
+    });
 
 /** Interactive elements a nested `cell()` template may render (e.g. an
  *  actions-column button). Clicks/keydowns landing on one of these — or
@@ -462,7 +481,12 @@ function asElement(value: EventTarget): Element | null {
 /** The first genuinely interactive entry in a delegated event's composed path. Open-shadow
  * custom controls expose their native/role/tabindex owner through this path, while a passive
  * custom element remains part of the row's activation surface. An opaque closed-shadow control
- * can declare `data-table-interactive` on its visible host as an explicit escape hatch. */
+ * can declare `data-table-interactive` on its visible host as an explicit escape hatch.
+ *
+ * An editable body `<td>`'s own roving-focus stop is deliberately `tabindex="-1"` rather than a
+ * toggling `"0"`/`"-1"` pair (see the render template) -- among other things, that keeps it out of
+ * `INTERACTIVE_SELECTOR`'s `[tabindex]:not([tabindex="-1"])` clause for free, so it never needs an
+ * exclusion entry here the way `[data-row-key]`/`th[data-col-key]` do. */
 function eventInteractiveTarget(event: Event, boundary: HTMLElement): Element | null {
   for (const value of event.composedPath()) {
     if (value === boundary) break;
@@ -534,6 +558,21 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * clamps to the nearest surviving index; an update never reclaims focus once
  * the user has moved it outside the table. Effective locale changes use the same current
  * page identity for activation, editing, and direct row-focus restoration.
+ *
+ * A column with `editTrigger: 'double-click'` additionally gives its own resting cell a
+ * `tabindex="-1"` roving-focus stop — reachable, once the row itself has focus, with ArrowRight
+ * (ArrowLeft under RTL) to enter at the first editable cell in the row and step forward, ArrowLeft
+ * (ArrowRight under RTL) to step back and, from the first editable cell, return focus to the row —
+ * never through Tab, so a table with one or more editable columns gains no new Tab stop, only a
+ * new arrow-reachable one, and a table with none renders no `tabindex`/`part='cell'[data-editable]`
+ * at all. `F2` or `Enter` on that focused cell opens its editor (`startEditing()`); `editCell()` is
+ * the same effect as a public method, for a consumer's own key binding, menu action, or other
+ * trigger. `Enter` on the row itself (not a focused cell) still only activates the row, exactly as
+ * before — the two coexist because the table tells them apart from which of the two currently has
+ * focus, not from the key alone. Escape and Enter inside the open editor keep cancelling/committing
+ * as already documented below; either one now also returns focus to the cell that opened it (the
+ * editor's own DOM node is what closes), matching a conventional grid's F2/Escape contract and
+ * closing the WCAG 2.1.1 (Keyboard) gap a pointer-only `double-click` trigger otherwise leaves.
  * Priority-hidden columns hide their header, body, and footer cells together; revealing
  * priority columns restores all three bands.
  * Blank and later-duplicate column keys are omitted first-wins at assignment. Rows retain their
@@ -638,7 +677,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * loading appearance appends to the shared light-DOM polite sink — including repeated cycles —
  * while every placeholder opts out of `<lr-skeleton>`'s own announcement.
  * Columns with `editTrigger: 'double-click'` open a native text/number/select editor on
- * double-click and emit `lr-cell-edit`; row mutation remains consumer-owned. `editType: 'select'`
+ * double-click, `F2`, or `Enter` on the cell's own roving focus stop (see the keyboard paragraph
+ * above), and emit `lr-cell-edit`; row mutation remains consumer-owned. `editType: 'select'`
  * renders a native `<select>` populated from `editOptions` (`{ value, label }[]`) instead of an
  * `<input>` -- a column with no `editOptions` renders an empty, valueless `<select>` rather than
  * throwing. `editTrigger: 'always'` instead renders that editor in every body cell of the
@@ -766,7 +806,9 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   numeric ARIA range remains in CSS pixels while `aria-valuetext` reports the current value
  *   through the effective locale.
  * @csspart row - Each body `<tr>`.
- * @csspart cell - Each body `<td>`.
+ * @csspart cell - Each body `<td>`. An `editTrigger: 'double-click'` column's resting (not
+ *   currently editing) cell additionally carries `[data-editable]` and its own `tabindex="-1"`
+ *   roving-focus stop -- see the keyboard paragraph above.
  * @csspart row-total-cell - Each body row's trailing `<td>` holding `rowTotal(row)`, rendered only
  *   when `rowTotal` is set. The corresponding footer-row cell (holding `grandTotal`) is a
  *   `footer-cell` instead, matching every other footer cell.
@@ -2705,9 +2747,22 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // Scoped to the cell that actually opened: an unqualified `[part="cell-editor"]` lookup would
     // steal focus to whichever editor happens to be first in the tree, which stopped being "the
     // one that just opened" as soon as a column could render persistent editors of its own.
-    if (changed.has('editingCell') && this.editingCell) {
-      const { rowKey, columnKey } = this.editingCell;
-      queueMicrotask(() => this.editorElementFor(rowKey, columnKey)?.focus());
+    if (changed.has('editingCell')) {
+      if (this.editingCell) {
+        const { rowKey, columnKey } = this.editingCell;
+        queueMicrotask(() => this.editorElementFor(rowKey, columnKey)?.focus());
+      } else {
+        // The reverse transition: a double-click/F2/Enter-opened editor just closed (commit or
+        // cancel). `changed.get()` still holds the pre-update value -- the cell that opened it --
+        // so focus lands back there instead of falling out to `<body>` when the editor's own node
+        // is removed from the DOM. A no-op, via optional chaining, when that cell is no longer
+        // rendered (its row or column left in the same update that closed the editor).
+        const previous = changed.get('editingCell') as { rowKey: string; columnKey: string } | null | undefined;
+        if (previous) {
+          const { rowKey, columnKey } = previous;
+          queueMicrotask(() => this.cellElementForToken(rowKey, columnKey)?.focus());
+        }
+      }
     }
     // Deferred to a microtask rather than called synchronously here: a real
     // priority-hidden transition mutates the reactive `hasHiddenPriorityColumns`
@@ -2975,6 +3030,29 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return this.cellElementForToken(encodeKey(rowKey), columnKey);
   }
 
+  /** Opens the inline editor at one `(rowKey, columnKey)` pair -- the imperative entry point behind
+   *  the `F2`/`Enter` keyboard shortcuts (`onRowKeyDown`) and the double-click pointer path
+   *  (`onTableDoubleClick`), for a consumer that wants to bind its own key, menu action, or other
+   *  trigger to the same effect. A no-op, not a throw, for an unknown row key, an unknown column
+   *  key, or a column with no `editTrigger` at all -- exactly `startEditing`'s own guard, so this
+   *  never opens a second, competing editor and never targets a column that has no editor to open.
+   *
+   *  An `editTrigger: 'always'` column's editor is already open from first paint, so there is
+   *  nothing to *start*; this instead moves focus into that column's already-rendered editor,
+   *  mirroring what `F2`/`Enter`/double-click do for a `'double-click'` column. Fire-and-forget --
+   *  await `table.updateComplete` first if the newly-opened editor needs to be read back
+   *  synchronously afterward (e.g. via {@link cellElement}). */
+  editCell(rowKey: K, columnKey: string): void {
+    const token = encodeKey(rowKey);
+    const trigger = normalizedEditTrigger(this.columnsByKey.get(columnKey)?.editTrigger);
+    if (trigger === undefined || !this.rowsByKey.has(token)) return;
+    if (trigger === 'always') {
+      this.editorElementFor(token, columnKey)?.focus();
+      return;
+    }
+    this.startEditing(token, columnKey);
+  }
+
   /** The rendered `[part='expanded-cell']` holding one row's `expandedContent(row)` output, or
    *  `null` when that row is not currently rendered, is not expanded, or renders no panel at all.
    *  {@link rowElement} deliberately cannot reach this: the panel is a *sibling* `<tr>` of the data
@@ -3118,10 +3196,50 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     }
   }
 
+  /** The editable (`editTrigger: 'double-click'`) `<td>` that owns `target`, if any -- i.e. `target`
+   *  itself is that cell, since it is the only body-cell shape that ever carries a `tabindex` (see
+   *  the render template). Used to tell "a row's own keydown" apart from "a keydown on the row's
+   *  own cell-level focus stop" without a second piece of `@state`: the answer is recomputed from
+   *  `e.target` on every keydown instead of tracked. */
+  private editableCellFor(target: HTMLElement): { element: HTMLElement; columnKey: string } | null {
+    const columnKey = target.dataset['colKey'];
+    if (target.tagName !== 'TD' || columnKey === undefined) return null;
+    return normalizedEditTrigger(this.columnsByKey.get(columnKey)?.editTrigger) === 'double-click'
+      ? { element: target, columnKey }
+      : null;
+  }
+
+  /** This row's own editable cells, in DOM (visual, LTR) order, skipping one a priority-collapse
+   *  hid (`offsetParent === null`, matching `visibleHeaders()`) or an inert ancestor would refuse
+   *  `focus()` on silently (matching `lr-menu`'s `isNavigable()` shape) -- so ArrowLeft/ArrowRight
+   *  below can never strand the cell-level focus stop on a target that cannot actually take it. */
+  private editableCellsInRow(tr: HTMLElement): HTMLElement[] {
+    return [...tr.querySelectorAll<HTMLElement>('td[data-editable]')].filter(
+      (td) => td.offsetParent !== null && !td.inert && !td.closest('[inert]')
+    );
+  }
+
+  /** `tr` is always the row that owns the keydown -- resolved by the delegated caller via
+   *  `closest('[data-row-key]')` -- regardless of whether `e.target` is the row itself or one of
+   *  its own editable cells, so every branch below that reads `tr` (the roving ArrowUp/ArrowDown/
+   *  Home/End switch) keeps working unchanged from a cell-focused keydown, with zero code of its
+   *  own aware that cell-level focus exists. Only Enter/F2 (open an editor) and Space (still always
+   *  row activation, on a cell exactly as on the row -- neither key is part of the conventional
+   *  grid editing idiom) need to know which of the two actually has focus, via `editableCellFor`. */
   private onRowKeyDown(e: KeyboardEvent, tr: HTMLElement): void {
+    const cell = this.editableCellFor(e.target as HTMLElement);
+    if ((e.key === 'Enter' || e.key === 'F2') && cell) {
+      e.preventDefault();
+      this.startEditing(tr.dataset['rowKey']!, cell.columnKey);
+      return;
+    }
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this.activateRow(tr.dataset['rowKey']!);
+      return;
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      this.onRowLateralKeyDown(e, tr, cell);
       return;
     }
     const bodyRows = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')];
@@ -3152,6 +3270,44 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         return;
       default:
         return;
+    }
+  }
+
+  /** ArrowLeft/ArrowRight roving between a row's own tab stop and its editable cells -- the
+   *  smallest addition that keeps the row's existing ArrowUp/ArrowDown/Home/End roving (above)
+   *  fully authoritative: this only ever moves focus sideways, within the current row, and a row
+   *  with no editable cell keeps its pre-existing behavior exactly (neither arrow key did anything
+   *  at the row level before this method existed, so `cells.length === 0` intentionally leaves the
+   *  key unhandled rather than calling `preventDefault()`).
+   *
+   *  Direction is visual, not literal, matching `onHeaderKeyDown`'s own `isRtl()` mirroring: under
+   *  RTL, ArrowLeft moves toward the visual end (forward) and ArrowRight toward the visual start
+   *  (backward). From the row itself (`cell === null`), the forward key enters at the first
+   *  editable cell and the backward key enters at the last, so a table with editable columns on
+   *  both a left- and right-heavy layout is reachable from either direction. From a cell, the
+   *  backward key at the first editable cell returns focus to the row (mirroring the header's own
+   *  "ArrowUp from the first body row returns to the header" boundary); the forward key at the last
+   *  editable cell simply stays put, matching the header's own clamped ends. */
+  private onRowLateralKeyDown(
+    e: KeyboardEvent,
+    tr: HTMLElement,
+    cell: { element: HTMLElement; columnKey: string } | null
+  ): void {
+    const cells = this.editableCellsInRow(tr);
+    if (cells.length === 0) return;
+    e.preventDefault();
+    const forward = e.key === (isRtl(this) ? 'ArrowLeft' : 'ArrowRight');
+    if (cell === null) {
+      (forward ? cells[0] : cells[cells.length - 1])?.focus();
+      return;
+    }
+    const index = cells.indexOf(cell.element);
+    if (forward) {
+      cells[index + 1]?.focus();
+    } else if (index <= 0) {
+      this.focusRow(tr);
+    } else {
+      cells[index - 1]?.focus();
     }
   }
 
@@ -3573,10 +3729,22 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                             // An `'always'` column renders its editor unconditionally, from first
                             // paint and with no interaction; `editingCell` (a single nullable object,
                             // one open editor at a time) only ever drives the double-click flavor.
-                            const alwaysOn = normalizedEditTrigger(col.editTrigger) === 'always';
+                            const trigger = normalizedEditTrigger(col.editTrigger);
+                            const alwaysOn = trigger === 'always';
+                            // A `'double-click'` column's *resting* cell (not currently open for
+                            // editing) is the one WCAG 2.1.1 gap this cell-level focus stop exists to
+                            // close -- see the class-level keyboard doc. A constant `tabindex="-1"`
+                            // (never a toggling `"0"`/`"-1"` pair) keeps the cell out of the native
+                            // Tab order entirely: it is reached only by the row's own ArrowLeft/
+                            // ArrowRight handling in `onRowKeyDown`, never by Tab, so a table with an
+                            // editable column never gains a new Tab stop, only a new arrow-reachable
+                            // one. A column with no `editTrigger` at all, or `'always'`, renders no
+                            // `tabindex` here, so a table with no `'double-click'` column emits
+                            // byte-identical markup to before this feature.
+                            const doubleClickEditable = trigger === 'double-click';
                             const editing =
                               alwaysOn ||
-                              (normalizedEditTrigger(col.editTrigger) === 'double-click' &&
+                              (doubleClickEditable &&
                                 this.editingCell?.rowKey === encodeKey(key) &&
                                 this.editingCell.columnKey === col.key);
                             // `|| nothing`, not `?? nothing`: an empty `title=""` is not "no tooltip",
@@ -3593,6 +3761,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                               data-priority=${col.priority ?? nothing}
                               data-sticky=${stickyDirection(col.sticky) ?? nothing}
                               ?data-heat=${heatShare !== null}
+                              ?data-editable=${doubleClickEditable}
+                              tabindex=${doubleClickEditable ? '-1' : nothing}
                               title=${cellTitle || nothing}
                               style=${Object.keys(cellStyle).length ? styleMap(cellStyle) : nothing}
                             >
