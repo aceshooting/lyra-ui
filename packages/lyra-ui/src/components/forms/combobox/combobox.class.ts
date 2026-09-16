@@ -31,8 +31,11 @@ import './option.class.js';
 import {
   autocorrectConverter,
   omittedEmptyStringConverter,
+  optionalLiteralSetConverter,
   spellcheckConverter,
 } from '../../../internal/converters.js';
+import type { PlaceStrategy } from '../../../internal/positioner.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
@@ -95,6 +98,10 @@ function normalizeSelectionValues(
   return typeof next === 'string' ? [next] : [];
 }
 export type LyraComboboxPlacement = 'top' | 'bottom';
+
+/** Unsupported values resolve to *absent*, so the listbox falls back to this control's own
+ *  default rather than to a member baked into the converter. */
+const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>(['absolute', 'fixed']);
 export type LyraComboboxTagRenderer = (
   option: LyraOption,
   index: number
@@ -628,6 +635,11 @@ export type LyraComboboxSourceErrorEvent =
  *   input, committed a selection, or been through a `reportValidity()`/submit attempt).
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a required combobox
  *   nobody has touched yet is invalid without being styled as an error.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
+ *   {@link positioningStrategy}, read from computed style when the listbox is positioned. Set it
+ *   once on `:root`, a theme, or one clipping ancestor to change every unset combobox beneath it
+ *   instead of authoring `positioning-strategy` on each instance; an explicit value on the
+ *   instance always wins over it.
  * @status stable
  * @since 4.0.0
  */
@@ -766,6 +778,42 @@ export class LyraCombobox<
   appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined';
   /** Preferred vertical side for the floating listbox. */
   @property({ reflect: true }) placement: LyraComboboxPlacement = 'bottom';
+  private _positioningStrategy?: PlaceStrategy;
+  /**
+   * CSS positioning scheme the listbox is laid out with -- the property `<lr-select>`,
+   * `<lr-popover>`, `<lr-dropdown>`, `<lr-tooltip>` and `<lr-color-picker>` all spell the same way.
+   * `fixed` (this control's default, and what it has always rendered) positions against the
+   * viewport and escapes most clipping ancestors, which is why it suits a typeahead list that
+   * usually lives inside a scrollable region; `absolute` positions against the nearest containing
+   * block and scrolls with it. An unsupported value resolves back to the default. Like
+   * `placement`, a change takes effect the next time the listbox opens.
+   *
+   * This reports only the instance's own authored value (or the default). When the instance sets
+   * nothing, the listbox is placed with the `--lr-positioning-strategy` cascading custom property
+   * honoured ahead of that default -- see that `@cssprop`.
+   *
+   * No `hoist` alias, deliberately, unlike `<lr-select>`. There it is Shoelace's established
+   * spelling; here it would be a boolean whose default is `true`, so the attribute could only ever
+   * express the value the control already has. Use `positioning-strategy="absolute"` to opt out.
+   * @default 'fixed'
+   */
+  @property({
+    attribute: 'positioning-strategy',
+    reflect: true,
+    converter: POSITIONING_STRATEGY,
+  })
+  get positioningStrategy(): PlaceStrategy {
+    return this._positioningStrategy ?? 'fixed';
+  }
+  set positioningStrategy(next: PlaceStrategy) {
+    const normalized = POSITIONING_STRATEGY.normalize(next) ?? 'fixed';
+    const old = this.positioningStrategy;
+    // Recorded even when it matches the default: an author who explicitly writes the default
+    // still authored a value, and the shared resolver has to tell that apart from "unset" --
+    // only "unset" falls through to a cascading ancestor override.
+    this._positioningStrategy = normalized;
+    if (normalized !== old) this.requestUpdate('positioningStrategy', old);
+  }
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`/`lr-select`. The
    *  Web Awesome / Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a
    *  migration is a tag rename with no attribute rewrite. */
@@ -2504,6 +2552,7 @@ export class LyraCombobox<
       }
       const cleanup = place(anchor, listbox, {
         placement: `${this.placement}-start`,
+        strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'fixed'),
         onPlaced: () => {
           if (generation !== this.positioningGeneration) return;
           this.listboxPositioned = true;
