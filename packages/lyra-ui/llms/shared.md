@@ -2155,48 +2155,38 @@ mounts its transient dialog before returning, so it has no equivalent gap.
 
 ## happy-dom's custom-property resolver and host-to-part token forwarding
 
-Since 16.0.0, seven built-in controls each compose a real `<lr-icon-button>` for their icon-only
-action instead of hand-rolling one: `<lr-copy-button>`, `<lr-dialog>` (whose close button is
-inherited by `<lr-drawer>`), `<lr-reorder-item>`, `<lr-message-actions>`, `<lr-attachment-trigger>`,
-`<lr-code-block>` (shared by `<lr-code-block-core>`), and `<lr-callout>`. Each captures the composed
-control's public `--lr-icon-button-*` tokens on its own `:host` — deriving a private `--_lr-*`
-token with a `var(<public-token>, <component-default>)` fallback — then forwards that private token
-back onto the same public token name on the `[part]` (or, for `<lr-attachment-trigger>`, the
-class-selected element that also carries that part) rendering the composed control, so an ancestor
-theme override still reaches the composed child instead of being shadowed by the component's own
-default. `<lr-dialog>`'s close button is the smallest example, from its own stylesheet:
+In 16.0.0, seven built-in controls that each compose a real
+`<lr-icon-button>` for their icon-only action — `<lr-copy-button>`, `<lr-dialog>` (whose close
+button is inherited by `<lr-drawer>`), `<lr-reorder-item>`, `<lr-message-actions>`,
+`<lr-attachment-trigger>`, `<lr-code-block>` (shared by `<lr-code-block-core>`), and `<lr-callout>`
+— captured the composed control's public `--lr-icon-button-*` tokens on their own `:host` and
+forwarded that private token back onto the SAME public token name on the `[part]` rendering the
+composed control, so that an ancestor theme override still reached the composed child instead of
+being shadowed by the component's own default. That was legal under the CSS Custom Properties spec
+— `:host` and `[part]` resolve on different elements, so a real browser resolves the host
+declaration to a concrete value first and the part substitutes that, and per-element cycle detection
+never fired — but **happy-dom does not model that element boundary**. Its `CSSComputedStyle` merges
+ancestor and own-element custom properties into a single flat map with no notion of which element
+declared what, and (at least through 20.14.5, the newest release at time of writing)
+`CSSVariableFormatter.resolveVariables` substitutes into that map recursively with no visited set
+and no depth cap — so the capture-and-forward pair resolved into each other forever, throwing an
+unhandled `RangeError: Maximum call stack size exceeded` from `CSSVariableFormatter.resolveVariables`
+on every render of any of the seven components. Every test still reported as passing — there was no
+failing assertion to point at — but the runner counted the unhandled errors and exited non-zero
+anyway, which read as unrelated flakiness rather than a CSS issue.
 
-```css
-:host {
-  --_lr-dialog-close-background: var(--lr-icon-button-background, transparent);
-}
-[part~='close-button'] {
-  --lr-icon-button-background: var(--_lr-dialog-close-background);
-}
-```
-
-This is legal under the CSS Custom Properties spec: `:host` and `[part]` resolve on different
-elements, so a real browser resolves the host declaration to a concrete value first and the part
-substitutes that — no cycle exists, so per-element cycle detection never fires. **happy-dom does
-not model that element boundary.** Its `CSSComputedStyle` merges ancestor and own-element custom
-properties into a single flat map, and (at least through 20.14.5, the newest release at time of
-writing) `CSSVariableFormatter.resolveVariables` substitutes into that map recursively with no
-visited set and no depth cap, so the two declarations resolve into each other forever.
-
-**Symptom:** a vitest + happy-dom suite that renders any of the seven components above starts
-throwing unhandled `RangeError: Maximum call stack size exceeded` from
-`CSSVariableFormatter.resolveVariables`. Every test still reports as passing — there is no failing
-assertion to point at — but the runner counts the unhandled errors and exits non-zero anyway, which
-reads as unrelated flakiness rather than a CSS issue.
-
-The pattern is deliberate and spec-correct — it is what lets an ancestor `--lr-icon-button-*`
-override reach a composed control instead of being shadowed by that component's own default — so
-it will not be removed to work around a DOM shim's limitation. A suite that hits this has two
-options: patch or upgrade the DOM implementation to one with cycle-aware (or depth-limited)
-custom-property resolution — one consumer resolved it with a small pnpm patch threading a visited
-set through `resolveVariables` so a re-entrant lookup resolves as unset and the `var()` fallback
-applies, the same value a real browser reaches anyway — or run the affected suites against a real
-browser engine instead, as this repository's own test suite does.
+**Current versions are unaffected.** `<lr-icon-button>` now carries a private
+`--_lr-icon-button-<token>-default` fallback tier for every paint token (background, color, border,
+and their hover/active variants — the same shape its corner radius already used via
+`--_lr-icon-button-radius-default`), and each composing component sets its own default directly on
+that private tier rather than re-declaring the public token name. `<lr-icon-button>`'s own
+stylesheet still checks the public token first, so an ancestor override reaches a composed control
+exactly as before, but no descendant declares a public `--lr-icon-button-*` token from a private
+token that was itself derived from that same public token — so no resolver, scoped or flattened,
+ever sees a cycle. A project still hitting the `RangeError` above should upgrade
+`@aceshooting/lyra-ui`; the workarounds that version range needed (patching or upgrading the DOM
+implementation to cycle-aware/depth-limited custom-property resolution, or running the affected
+suites against a real browser engine) are no longer necessary once it does.
 
 ## Accessibility contract
 

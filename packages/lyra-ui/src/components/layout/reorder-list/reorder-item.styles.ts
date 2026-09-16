@@ -5,31 +5,26 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* Captured on the HOST, where this component declares no --lr-icon-button-* of its own, so each
-       var() reads whatever an ancestor theme wrapper set and falls back to this row's own move-arrow
-       treatment only when nothing did. The move-button rule below re-declares the public tokens from
-       these captures; declaring the treatment directly there would shadow the inherited value
-       instead of falling back to it. */
-    --_lr-reorder-item-move-bg: var(--lr-icon-button-background, transparent);
-    --_lr-reorder-item-move-bg-hover: var(
-      --lr-icon-button-background-hover,
-      var(--lr-color-brand-quiet)
+    /* This row's own default paint for its move arrows, set on the HOST for organization only --
+       nothing here reads an --lr-icon-button-* token to compute it. The move-button rule below
+       writes these onto lr-icon-button's own --_lr-icon-button-<token>-default tier (never the
+       public --lr-icon-button-* name), so an ancestor theme wrapper's own --lr-icon-button-* still
+       wins: lr-icon-button's own stylesheet already checks the public token FIRST, ahead of any
+       default a composing parent supplies. */
+    --_lr-reorder-item-move-bg: transparent;
+    --_lr-reorder-item-move-bg-hover: var(--lr-color-brand-quiet);
+    /* Reads the PUBLIC hover token (not this component's own -bg-hover default) so that an
+       ancestor override of just the hover tier still shapes the press mix -- a cross-reference to a
+       DIFFERENT public token than the one being defined here, so it introduces no loop. */
+    --_lr-reorder-item-move-bg-active: color-mix(
+      in oklab,
+      var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
-    --_lr-reorder-item-move-bg-active: var(
-      --lr-icon-button-background-active,
-      color-mix(
-        in oklab,
-        var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-    --_lr-reorder-item-move-color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
-    --_lr-reorder-item-move-color-hover: var(--lr-icon-button-color-hover, var(--lr-color-brand));
-    --_lr-reorder-item-move-color-active: var(
-      --lr-icon-button-color-active,
-      var(--lr-icon-button-color-hover, var(--lr-color-brand))
-    );
-    --_lr-reorder-item-move-radius: var(--lr-icon-button-radius, var(--lr-radius));
+    --_lr-reorder-item-move-color: var(--lr-color-text-quiet);
+    --_lr-reorder-item-move-color-hover: var(--lr-color-brand);
+    --_lr-reorder-item-move-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));
+    --_lr-reorder-item-move-radius: var(--lr-radius);
   }
   [part='base'] {
     display: flex;
@@ -41,32 +36,33 @@ export const styles = css`
   /* Both move controls ARE lr-icon-buttons now, so the hit-area floor, the radius, the hover/press
      mixes, the focus ring, the disabled dimming and the transition all come from that one
      component. What stays here is placement, the rotation, and this component's own two
-     hover/press hooks re-expressed through the composed control's public token contract. The
-     capture pattern on :host is what lets an ancestor theme wrapper's --lr-icon-button-* still
-     win rather than being shadowed by these defaults. */
+     hover/press hooks, re-expressed through lr-icon-button's private
+     --_lr-icon-button-<token>-default tier rather than the public token itself, so an ancestor
+     theme wrapper's own --lr-icon-button-* still wins rather than being shadowed by these
+     defaults. */
   [part='move-up-button'],
   [part='move-down-button'] {
     flex: 0 0 auto;
     font-size: var(--lr-font-size-m);
-    --lr-icon-button-background: var(--_lr-reorder-item-move-bg);
-    --lr-icon-button-background-hover: var(
+    --_lr-icon-button-background-default: var(--_lr-reorder-item-move-bg);
+    --_lr-icon-button-background-hover-default: var(
       --lr-reorder-item-move-button-hover-bg,
       var(--_lr-reorder-item-move-bg-hover)
     );
-    --lr-icon-button-background-active: var(
+    --_lr-icon-button-background-active-default: var(
       --lr-reorder-item-move-button-active-bg,
       var(--_lr-reorder-item-move-bg-active)
     );
-    --lr-icon-button-color: var(--_lr-reorder-item-move-color);
-    --lr-icon-button-color-hover: var(
+    --_lr-icon-button-color-default: var(--_lr-reorder-item-move-color);
+    --_lr-icon-button-color-hover-default: var(
       --lr-reorder-item-move-button-hover-color,
       var(--_lr-reorder-item-move-color-hover)
     );
-    --lr-icon-button-color-active: var(
+    --_lr-icon-button-color-active-default: var(
       --lr-reorder-item-move-button-active-color,
       var(--_lr-reorder-item-move-color-active)
     );
-    --lr-icon-button-radius: var(--_lr-reorder-item-move-radius);
+    --_lr-icon-button-radius-default: var(--_lr-reorder-item-move-radius);
   }
   /* chevronIcon() bakes in no rotation (see icons.ts), so the whole button rotates -- as
      lr-tree-item's [part='toggle'] does. */
@@ -78,13 +74,16 @@ export const styles = css`
   }
   /* A disabled arrow stays flat whatever the pointer does to it: the composed control's own
      :disabled rules already suppress its hover/press paint, and these restate the resting colour
-     so the two hover hooks above cannot repaint it either. */
+     so the two hover hooks above cannot repaint it either. Selector specificity (this compound
+     beats the plain [part='move-up-button'] rule above) decides the winner between reorder-item's
+     own rules for the same --_lr-icon-button-<token>-default property, exactly as it did when both
+     rules declared the public token directly. */
   [part='move-up-button'][disabled],
   [part='move-down-button'][disabled] {
-    --lr-icon-button-background-hover: var(--_lr-reorder-item-move-bg);
-    --lr-icon-button-background-active: var(--_lr-reorder-item-move-bg);
-    --lr-icon-button-color-hover: var(--_lr-reorder-item-move-color);
-    --lr-icon-button-color-active: var(--_lr-reorder-item-move-color);
+    --_lr-icon-button-background-hover-default: var(--_lr-reorder-item-move-bg);
+    --_lr-icon-button-background-active-default: var(--_lr-reorder-item-move-bg);
+    --_lr-icon-button-color-hover-default: var(--_lr-reorder-item-move-color);
+    --_lr-icon-button-color-active-default: var(--_lr-reorder-item-move-color);
   }
   [part='content'] {
     flex: 1 1 auto;

@@ -2,13 +2,19 @@
 "@aceshooting/lyra-ui": patch
 ---
 
-Docs: the consumer testing reference (`llms/shared.md`) now names a happy-dom limitation that a
-vitest + happy-dom suite can hit after upgrading to 16.0.0. The seven built-in controls that now
-compose `<lr-icon-button>` capture its public `--lr-icon-button-*` tokens on `:host` and forward
-them back through `[part]` — legal per the CSS Custom Properties spec because `:host` and `[part]`
-resolve on different elements, so no cycle exists. happy-dom (through 20.14.5) flattens both onto
-one element and its `CSSVariableFormatter.resolveVariables` recurses without a visited set,
-throwing an unhandled `RangeError: Maximum call stack size exceeded` per affected render — every
-test still passes, but the runner exits non-zero anyway. The new note names the symptom, the cause,
-and the two workarounds (patch/upgrade the DOM implementation, or run the affected suites on a real
-browser). No component CSS or TypeScript changed.
+Fix: the seven built-in controls that compose `<lr-icon-button>` for an icon-only action
+(`<lr-callout>`, `<lr-dialog>` — inherited by `<lr-drawer>` — `<lr-code-block>`, shared by
+`<lr-code-block-core>`, `<lr-message-actions>`, `<lr-reorder-item>`, `<lr-attachment-trigger>`, and
+`<lr-copy-button>`) no longer capture a public `--lr-icon-button-*` token on their own `:host` and
+re-declare that same public name on the composed part. `<lr-icon-button>` now carries a private
+`--_lr-icon-button-<token>-default` fallback tier for every paint token (background/color/border and
+their hover/active variants), generalizing the existing `--_lr-icon-button-radius-default` shape;
+each composing component sets its own default directly on that private tier instead of the public
+one. An ancestor `--lr-icon-button-*` override still wins exactly as before — `<lr-icon-button>`'s
+own stylesheet checks the public token first, ahead of any default a composing parent supplies — but
+no descendant declares the public name from a private token derived from that same public token
+anymore, so a scope-flattening custom-property resolver with no notion of which element declared
+what (happy-dom, at least through 20.14.5) no longer sees a cycle: rendering any of the seven
+controls under such an environment no longer throws `RangeError: Maximum call stack size exceeded`.
+Revises the `llms/shared.md` testing note added in 16.0.0 to match — current versions are
+unaffected. No public API changed.

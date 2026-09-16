@@ -7,31 +7,32 @@ export const styles = css`
     max-inline-size: 100%;
     /* The close hover is independently themeable so retinting it never changes the host surface. */
     --_lr-callout-close-hover-bg: var(--lr-color-brand-quiet);
-    /* Captured on the HOST, where this component declares no --lr-icon-button-* of its own, so each
-       var() reads whatever an ancestor theme wrapper set and falls back to this callout's own close
-       treatment only when nothing did. The close-button rule below re-declares the public tokens
-       from these captures; declaring the treatment directly on that element would shadow the
-       inherited value instead of falling back to it.
-       No --lr-icon-button-color capture: this control's resting glyph colour was always inherit,
-       which is lr-icon-button's own default, so leaving the token undeclared lets an ancestor's
-       value flow straight through. */
-    --_lr-callout-close-background: var(--lr-icon-button-background, transparent);
+    /* This callout's own default paint for the close control, set on the HOST for organization
+       only -- nothing here reads an --lr-icon-button-* token to compute it. The close-button rule
+       below writes these onto lr-icon-button's own --_lr-icon-button-<token>-default tier (never
+       the public --lr-icon-button-* name), so an ancestor theme wrapper's own --lr-icon-button-*
+       still wins: lr-icon-button's own stylesheet already checks the public token FIRST, ahead of
+       any default a composing parent supplies.
+       No --lr-icon-button-color default: this control's resting glyph colour was always inherit,
+       which is lr-icon-button's own built-in default, so leaving no default here lets an ancestor's
+       value flow straight through exactly as before. */
+    --_lr-callout-close-background: transparent;
     --_lr-callout-close-background-hover: var(
-      --lr-icon-button-background-hover,
-      var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg))
+      --lr-callout-close-hover-bg,
+      var(--_lr-callout-close-hover-bg)
     );
-    --_lr-callout-close-background-active: var(
-      --lr-icon-button-background-active,
-      color-mix(
-        in oklab,
-        var(
-          --lr-icon-button-background-hover,
-          var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg))
-        ),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+    /* Reads the PUBLIC hover token (not this callout's own -background-hover default) so that an
+       ancestor override of just the hover tier still shapes the press mix -- a cross-reference to a
+       DIFFERENT public token than the one being defined here, so it introduces no loop. */
+    --_lr-callout-close-background-active: color-mix(
+      in oklab,
+      var(
+        --lr-icon-button-background-hover,
+        var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg))
+      ),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
-    --_lr-callout-close-radius: var(--lr-icon-button-radius, var(--lr-radius-pill));
+    --_lr-callout-close-radius: var(--lr-radius-pill);
     /* Unset nested callouts inherit the generic semantic and size slots. The second arms are the
        standalone brand/m defaults; explicit attributes re-point the generic slots in the
        contextual vocabulary sheets. */
@@ -103,10 +104,11 @@ export const styles = css`
      The close control IS an lr-icon-button now, so the tappable floor, the radius, the hover/press
      fills, the focus ring, the cursor and the transition all come from that one component. What
      stays here is this callout's grid placement plus the one paint opinion it always had -- the
-     independently themeable hover fill -- expressed through the composed control's public token
-     contract. The capture pattern on :host above is what lets an ancestor theme wrapper's own
-     --lr-icon-button-* still win rather than being shadowed by these defaults. */
-  [part='close-button'] { grid-column: 3; --lr-icon-button-background: var(--_lr-callout-close-background); --lr-icon-button-background-hover: var(--_lr-callout-close-background-hover); --lr-icon-button-background-active: var(--_lr-callout-close-background-active); --lr-icon-button-radius: var(--_lr-callout-close-radius); }
+     independently themeable hover fill -- expressed through lr-icon-button's private
+     --_lr-icon-button-<token>-default tier rather than the public token itself, so an ancestor
+     theme wrapper's own --lr-icon-button-* still wins instead of being shadowed by these
+     defaults. */
+  [part='close-button'] { grid-column: 3; --_lr-icon-button-background-default: var(--_lr-callout-close-background); --_lr-icon-button-background-hover-default: var(--_lr-callout-close-background-hover); --_lr-icon-button-background-active-default: var(--_lr-callout-close-background-active); --_lr-icon-button-radius-default: var(--_lr-callout-close-radius); }
   :host(:where([inline])) {
     padding: 0;
     border: 0;

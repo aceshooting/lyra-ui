@@ -1,5 +1,6 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './callout.js';
 import type { LyraCallout } from './callout.class.js';
 
@@ -49,14 +50,21 @@ describe('lr-callout: composed close lr-icon-button', () => {
       >`
     )) as LyraCallout;
     await el.updateComplete;
-    // The component-scoped hook is captured into --lr-icon-button-background-hover, which is the
-    // only channel the composed control reads. Asserting the resolved custom property proves the
-    // wiring without depending on a synthesized pointer landing.
-    expect(
-      getComputedStyle(nativeControl(el))
-        .getPropertyValue('--lr-icon-button-background-hover')
-        .trim()
-    ).to.equal('rgb(4, 5, 6)');
+    // Asserts the RENDERED hover fill of the real native control, not an intermediate custom
+    // property: the callout hands its hook to the composed control through a private default
+    // tier rather than by re-declaring the public token, so reading a token would only prove
+    // wiring that no longer exists. The pointer is landed with hoverUntilMatched() and the paint
+    // polled, because the fill transitions and a hover read straight after sendMouse is racy.
+    const control = nativeControl(el);
+    try {
+      await hoverUntilMatched(control, 'the callout close control is hovered');
+      await waitUntil(
+        () => getComputedStyle(control).backgroundColor === 'rgb(4, 5, 6)',
+        'the callout-specific hover fill never painted over lr-icon-button own default',
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('inherits the composed control\'s non-zero paint transition, since callout.styles.ts declares none of its own', async () => {

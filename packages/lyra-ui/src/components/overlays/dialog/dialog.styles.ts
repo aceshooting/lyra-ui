@@ -12,38 +12,30 @@ export const styles = css`
        override it for every other step. See the size property's own doc comment in
        dialog.class.ts. */
     --_lr-dialog-max-width: var(--lr-size-32rem);
-    /* Captured on the HOST, where this component declares no --lr-icon-button-* of its own, so each
-       var() reads whatever an ancestor theme wrapper set and falls back to this dialog's own close
-       treatment only when nothing did. The close-button rule below re-declares the public tokens
-       from these captures; declaring the treatment directly on that element would shadow the
-       inherited value instead of falling back to it. */
-    --_lr-dialog-close-background: var(--lr-icon-button-background, transparent);
-    --_lr-dialog-close-background-hover: var(
-      --lr-icon-button-background-hover,
-      var(--lr-color-brand-quiet)
-    );
+    /* This dialog's own default paint for the close control, set on the HOST for organization only
+       -- unlike the old shape, nothing here reads an --lr-icon-button-* token to compute it. The
+       close-button rule below writes each of these onto lr-icon-button's own
+       --_lr-icon-button-<token>-default tier (never the public --lr-icon-button-* name), so an
+       ancestor theme wrapper's own --lr-icon-button-* still wins: lr-icon-button's own stylesheet
+       already checks the public token FIRST, ahead of any default a composing parent supplies. */
+    --_lr-dialog-close-background: transparent;
+    --_lr-dialog-close-background-hover: var(--lr-color-brand-quiet);
     /* Drives the hover's quiet brand fill toward --lr-color-mix-partner, which follows the text
        colour, so it darkens on a light theme and lightens on a dark one without knowing which is in
-       force -- the property filter: brightness() never had. */
-    --_lr-dialog-close-background-active: var(
-      --lr-icon-button-background-active,
-      color-mix(
-        in oklab,
-        var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+       force -- the property filter: brightness() never had. Reads the PUBLIC hover token (not this
+       dialog's own -background-hover default) so that an ancestor override of just the hover tier
+       still shapes the press mix -- a cross-reference to a DIFFERENT public token than the one being
+       defined here, so it introduces no loop. */
+    --_lr-dialog-close-background-active: color-mix(
+      in oklab,
+      var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
-    --_lr-dialog-close-color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
+    --_lr-dialog-close-color: var(--lr-color-text-quiet);
     /* Restated for the press state because keyboard activation raises :active with no :hover. */
-    --_lr-dialog-close-color-hover: var(--lr-icon-button-color-hover, var(--lr-color-brand));
-    --_lr-dialog-close-color-active: var(
-      --lr-icon-button-color-active,
-      var(--lr-icon-button-color-hover, var(--lr-color-brand))
-    );
-    --_lr-dialog-close-radius: var(
-      --lr-icon-button-radius,
-      var(--lr-overlay-radius, var(--lr-radius))
-    );
+    --_lr-dialog-close-color-hover: var(--lr-color-brand);
+    --_lr-dialog-close-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));
+    --_lr-dialog-close-radius: var(--lr-overlay-radius, var(--lr-radius));
     display: none;
     position: fixed;
     inset: 0;
@@ -202,21 +194,22 @@ export const styles = css`
   }
   /* The close control IS an lr-icon-button now, so the hit-area floor, the hover/press mixes, the
      focus ring and the transition all come from that one component. What stays here is this
-     dialog's own placement plus the two paint opinions it always had, expressed through the
-     composed control's public token contract. The capture pattern on :host above is what lets an
-     ancestor theme wrapper's own --lr-icon-button-* still win. */
+     dialog's own placement plus the two paint opinions it always had, expressed through
+     lr-icon-button's private --_lr-icon-button-<token>-default tier rather than the public token
+     itself -- see icon-button.styles.ts's own comment for why a composed child never re-declares
+     the public name a composing parent read to derive its default. */
   [part~="close-button"] {
     flex: 0 0 auto;
     margin-inline-start: auto;
-    --lr-icon-button-background: var(--_lr-dialog-close-background);
-    --lr-icon-button-background-hover: var(--_lr-dialog-close-background-hover);
-    --lr-icon-button-background-active: var(--_lr-dialog-close-background-active);
-    --lr-icon-button-color: var(--_lr-dialog-close-color);
-    --lr-icon-button-color-hover: var(--_lr-dialog-close-color-hover);
-    --lr-icon-button-color-active: var(--_lr-dialog-close-color-active);
+    --_lr-icon-button-background-default: var(--_lr-dialog-close-background);
+    --_lr-icon-button-background-hover-default: var(--_lr-dialog-close-background-hover);
+    --_lr-icon-button-background-active-default: var(--_lr-dialog-close-background-active);
+    --_lr-icon-button-color-default: var(--_lr-dialog-close-color);
+    --_lr-icon-button-color-hover-default: var(--_lr-dialog-close-color-hover);
+    --_lr-icon-button-color-active-default: var(--_lr-dialog-close-color-active);
     /* Follows the panel's corner radius: a squared-off overlay theme that left this control rounded
        would read as a stray pill in the corner of a square panel. */
-    --lr-icon-button-radius: var(--_lr-dialog-close-radius);
+    --_lr-icon-button-radius-default: var(--_lr-dialog-close-radius);
   }
   /* Once header-actions has claimed the auto margin, a second one on the close button would push
      it away from the group it belongs beside. */

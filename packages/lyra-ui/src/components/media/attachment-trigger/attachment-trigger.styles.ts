@@ -17,10 +17,13 @@ export const styles = css`
     display: none;
   }
 
-  /* Captured on the HOST, where this component declares no --lr-icon-button-* of its own, so each
-     var() reads whatever an ancestor theme wrapper set and falls back to this component's own
-     treatment only when nothing did. The appearance tiers below re-point the fallback arm, never
-     the capture, so an ancestor override still wins in every tier.
+  /* This component's own default paint, set on the HOST for organization only -- nothing here
+     reads an --lr-icon-button-* token to compute it (except -color-active's cross-reference to the
+     PUBLIC hover tier, noted below). The appearance tiers move only the fill/foreground/edge inputs
+     these read, and the .trigger-button rule further down writes the results onto lr-icon-button's
+     own --_lr-icon-button-<token>-default tier (never the public --lr-icon-button-* name), so an
+     ancestor theme wrapper's own --lr-icon-button-* still wins: lr-icon-button's own stylesheet
+     already checks the public token FIRST, ahead of any default a composing parent supplies.
      The neutral row of the semantic grid is named directly rather than importing
      internal/variants.styles.ts: that sheet is ~45 declarations per shadow root and exists to swap
      the generic slots per the variant attribute, which this component deliberately does not take. */
@@ -28,51 +31,33 @@ export const styles = css`
     --_lr-attachment-trigger-fill: transparent;
     --_lr-attachment-trigger-on-fill: var(--lr-color-text-quiet);
     --_lr-attachment-trigger-edge: 0;
-    --_lr-attachment-trigger-bg: var(
-      --lr-icon-button-background,
-      var(--_lr-attachment-trigger-fill)
+    --_lr-attachment-trigger-bg: var(--_lr-attachment-trigger-fill);
+    --_lr-attachment-trigger-bg-hover: color-mix(
+      in oklab,
+      var(--_lr-attachment-trigger-fill),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
-    --_lr-attachment-trigger-bg-hover: var(
-      --lr-icon-button-background-hover,
-      color-mix(
-        in oklab,
-        var(--_lr-attachment-trigger-fill),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
+    --_lr-attachment-trigger-bg-active: color-mix(
+      in oklab,
+      var(--_lr-attachment-trigger-fill),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
-    --_lr-attachment-trigger-bg-active: var(
-      --lr-icon-button-background-active,
-      color-mix(
-        in oklab,
-        var(--_lr-attachment-trigger-fill),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-    --_lr-attachment-trigger-color: var(
-      --lr-icon-button-color,
-      var(--_lr-attachment-trigger-on-fill)
-    );
-    --_lr-attachment-trigger-color-hover: var(
+    --_lr-attachment-trigger-color: var(--_lr-attachment-trigger-on-fill);
+    --_lr-attachment-trigger-color-hover: var(--_lr-attachment-trigger-on-fill);
+    /* Reads the PUBLIC hover token (not this component's own -color-hover default) so that an
+       ancestor override of just the hover tier still shapes the press colour -- a cross-reference
+       to a DIFFERENT public token than the one being defined here, so it introduces no loop. */
+    --_lr-attachment-trigger-color-active: var(
       --lr-icon-button-color-hover,
       var(--_lr-attachment-trigger-on-fill)
     );
-    --_lr-attachment-trigger-color-active: var(
-      --lr-icon-button-color-active,
-      var(--lr-icon-button-color-hover, var(--_lr-attachment-trigger-on-fill))
-    );
-    --_lr-attachment-trigger-border: var(
-      --lr-icon-button-border,
-      var(--_lr-attachment-trigger-edge)
-    );
-    --_lr-attachment-trigger-radius: var(
-      --lr-icon-button-radius,
-      calc(var(--lr-radius) * 0.6)
-    );
+    --_lr-attachment-trigger-border: var(--_lr-attachment-trigger-edge);
+    --_lr-attachment-trigger-radius: calc(var(--lr-radius) * 0.6);
     /* The default tier. Unset, this is byte-identical to the --lr-font-size-lg this control painted
        before it had a size property. */
     --_lr-attachment-trigger-font-size: var(--lr-font-size-lg);
   }
-  /* The appearance tiers move only the three fill/foreground/edge inputs the captures above read,
+  /* The appearance tiers move only the three fill/foreground/edge inputs the formulas above read,
      so an ancestor's own --lr-icon-button-* still out-ranks every one of them. "plain" needs no
      rule: the :host defaults ARE that tier, byte-identical to the pre-property treatment. */
   :host([appearance='filled']) {
@@ -123,18 +108,20 @@ export const styles = css`
      on top of their own distinct part names.
      Both ARE lr-icon-buttons now, so the tappable floor, the radius, the hover/press mixes, the
      focus ring, the disabled dimming and the transition all come from that one component; the
-     appearance and size tiers below only re-point its public tokens. */
+     appearance and size tiers below only re-point the defaults this rule feeds into lr-icon-button's
+     private --_lr-icon-button-<token>-default tier, never the public token itself, so an ancestor
+     theme wrapper's own --lr-icon-button-* still wins. */
   .trigger-button {
     flex: 0 0 auto;
     line-height: var(--lr-line-height-none);
-    --lr-icon-button-background: var(--_lr-attachment-trigger-bg);
-    --lr-icon-button-background-hover: var(--_lr-attachment-trigger-bg-hover);
-    --lr-icon-button-background-active: var(--_lr-attachment-trigger-bg-active);
-    --lr-icon-button-color: var(--_lr-attachment-trigger-color);
-    --lr-icon-button-color-hover: var(--_lr-attachment-trigger-color-hover);
-    --lr-icon-button-color-active: var(--_lr-attachment-trigger-color-active);
-    --lr-icon-button-border: var(--_lr-attachment-trigger-border);
-    --lr-icon-button-radius: var(--_lr-attachment-trigger-radius);
+    --_lr-icon-button-background-default: var(--_lr-attachment-trigger-bg);
+    --_lr-icon-button-background-hover-default: var(--_lr-attachment-trigger-bg-hover);
+    --_lr-icon-button-background-active-default: var(--_lr-attachment-trigger-bg-active);
+    --_lr-icon-button-color-default: var(--_lr-attachment-trigger-color);
+    --_lr-icon-button-color-hover-default: var(--_lr-attachment-trigger-color-hover);
+    --_lr-icon-button-color-active-default: var(--_lr-attachment-trigger-color-active);
+    --_lr-icon-button-border-default: var(--_lr-attachment-trigger-border);
+    --_lr-icon-button-radius-default: var(--_lr-attachment-trigger-radius);
     /* The size tier scales the GLYPH. The tappable box stays on the shared
        --lr-icon-button-size floor, which lr-icon-button applies for us. */
     font-size: var(--_lr-attachment-trigger-font-size);

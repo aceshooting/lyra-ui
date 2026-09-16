@@ -4,34 +4,26 @@ export const styles = css`
   :host {
     display: inline-flex;
     max-inline-size: 100%;
-    /* Captured on the HOST, where this component declares no --lr-icon-button-* of its own, so each
-       var() reads whatever an ancestor theme wrapper set and falls back to this toolbar's own
-       treatment only when nothing did. The action rule below re-declares the public tokens from
-       these captures; declaring the treatment directly there would shadow the inherited value
-       instead of falling back to it. */
-    --_lr-message-actions-button-bg: var(--lr-icon-button-background, transparent);
-    --_lr-message-actions-button-bg-hover: var(
-      --lr-icon-button-background-hover,
-      var(--lr-color-surface-raised)
+    /* This toolbar's own default paint for its actions, set on the HOST for organization only --
+       nothing here reads an --lr-icon-button-* token to compute it. The action rule below writes
+       these onto lr-icon-button's own --_lr-icon-button-<token>-default tier (never the public
+       --lr-icon-button-* name), so an ancestor theme wrapper's own --lr-icon-button-* still wins:
+       lr-icon-button's own stylesheet already checks the public token FIRST, ahead of any default a
+       composing parent supplies. */
+    --_lr-message-actions-button-bg: transparent;
+    --_lr-message-actions-button-bg-hover: var(--lr-color-surface-raised);
+    /* Reads the PUBLIC hover token (not this component's own -bg-hover default) so that an
+       ancestor override of just the hover tier still shapes the press mix -- a cross-reference to a
+       DIFFERENT public token than the one being defined here, so it introduces no loop. */
+    --_lr-message-actions-button-bg-active: color-mix(
+      in oklab,
+      var(--lr-icon-button-background-hover, var(--lr-color-surface-raised)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
-    --_lr-message-actions-button-bg-active: var(
-      --lr-icon-button-background-active,
-      color-mix(
-        in oklab,
-        var(--lr-icon-button-background-hover, var(--lr-color-surface-raised)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-    --_lr-message-actions-button-color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
-    --_lr-message-actions-button-color-hover: var(
-      --lr-icon-button-color-hover,
-      var(--lr-color-text)
-    );
-    --_lr-message-actions-button-color-active: var(
-      --lr-icon-button-color-active,
-      var(--lr-icon-button-color-hover, var(--lr-color-text))
-    );
-    --_lr-message-actions-button-radius: var(--lr-icon-button-radius, var(--lr-radius));
+    --_lr-message-actions-button-color: var(--lr-color-text-quiet);
+    --_lr-message-actions-button-color-hover: var(--lr-color-text);
+    --_lr-message-actions-button-color-active: var(--lr-icon-button-color-hover, var(--lr-color-text));
+    --_lr-message-actions-button-radius: var(--lr-radius);
   }
   :host([reveal-on-interaction]) {
     opacity: 0;
@@ -59,17 +51,18 @@ export const styles = css`
   }
   /* Both built-in actions ARE lr-icon-buttons now, so the hit-area floor, the radius, the
      hover/press mixes, the focus ring and the disabled dimming all come from that one component.
-     What stays is this toolbar's own resting/hover paint, re-expressed through the composed
-     control's public token contract. The capture pattern on :host above is what lets an ancestor
-     theme wrapper's --lr-icon-button-* still win rather than being shadowed by these defaults. */
+     What stays is this toolbar's own resting/hover paint, re-expressed through lr-icon-button's
+     private --_lr-icon-button-<token>-default tier rather than the public token itself, so an
+     ancestor theme wrapper's own --lr-icon-button-* still wins rather than being shadowed by these
+     defaults. */
   [part~='regenerate-button'],
   [part~='edit-button'] {
-    --lr-icon-button-background: var(--_lr-message-actions-button-bg);
-    --lr-icon-button-background-hover: var(--_lr-message-actions-button-bg-hover);
-    --lr-icon-button-background-active: var(--_lr-message-actions-button-bg-active);
-    --lr-icon-button-color: var(--_lr-message-actions-button-color);
-    --lr-icon-button-color-hover: var(--_lr-message-actions-button-color-hover);
-    --lr-icon-button-color-active: var(--_lr-message-actions-button-color-active);
-    --lr-icon-button-radius: var(--_lr-message-actions-button-radius);
+    --_lr-icon-button-background-default: var(--_lr-message-actions-button-bg);
+    --_lr-icon-button-background-hover-default: var(--_lr-message-actions-button-bg-hover);
+    --_lr-icon-button-background-active-default: var(--_lr-message-actions-button-bg-active);
+    --_lr-icon-button-color-default: var(--_lr-message-actions-button-color);
+    --_lr-icon-button-color-hover-default: var(--_lr-message-actions-button-color-hover);
+    --_lr-icon-button-color-active-default: var(--_lr-message-actions-button-color-active);
+    --_lr-icon-button-radius-default: var(--_lr-message-actions-button-radius);
   }
 `;
