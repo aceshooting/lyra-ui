@@ -444,6 +444,48 @@ export const OptionIcons: Story = {
   },
 };
 
+/** A choice option can be marked `disabled` -- forwarded to `<lr-option disabled>` for
+ *  `'select'`/`'combobox'` and to the composed `<lr-dropdown-item disabled>` for
+ *  `'checkbox-menu'` -- to render it as a genuinely non-actionable row: no tab/roving stop, no
+ *  hover or press affordance, and arrow-key navigation already steps past it. */
+export const DisabledOptions: Story = {
+  render: () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        placeholder: 'Any status',
+        options: [
+          { value: 'open', label: 'Open' },
+          { value: 'archived', label: 'Archived (read-only)', disabled: true },
+        ],
+      },
+      {
+        filterId: 'owner',
+        label: 'Owner',
+        type: 'combobox',
+        placeholder: 'Any owner',
+        options: [
+          { value: 'ada', label: 'Ada Lovelace' },
+          { value: 'grace', label: 'Grace Hopper (on leave)', disabled: true },
+        ],
+      },
+      {
+        filterId: 'teams',
+        label: 'Teams',
+        type: 'checkbox-menu',
+        placeholder: 'Any team',
+        options: [
+          { value: 'core', label: 'Core' },
+          { value: 'legacy', label: 'Legacy (retired)', disabled: true },
+        ],
+      },
+    ];
+    return html`<lr-filter-bar style="max-width: 56rem" .filters=${filters}></lr-filter-bar>`;
+  },
+};
+
 /** A `'date-range'` filter can declare `presets`, forwarded to its composed `<lr-date-input>`
  *  exactly like `min`/`max`, so the quick-range row and the filter bar built for the same
  *  dashboard use case finally combine. Which entry produced a commit rides that edit's own

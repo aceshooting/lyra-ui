@@ -37,6 +37,15 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   // the entry chunk plus an unreachable dompurify chunk. This is their documented opt-out, so it
   // needs a real route -- an exports map blocks everything it does not list.
   'src/components/forms/icon-button/icon-button-register.ts',
+  // The lean `<lr-filter-bar>` registration entry. `./filter-bar.js` eagerly imports every
+  // composed control the bar could possibly render (select/combobox/checkbox-menu's
+  // dropdown+dropdown-item/date-input/input/chip/chip-group/button/spinner) because `filters` is a
+  // runtime value it cannot inspect ahead of time; a bar that only ever declares `'select'`/`'text'`
+  // filters still pays for `<lr-combobox>` and `<lr-date-input>` through that entry (a measured
+  // ~+69.5 kB gzip). This is their documented opt-out -- import it plus each composed control's own
+  // registration entry for the filter `type`s actually declared (see this file's own header
+  // comment) -- so it needs a real route, exactly like `icon-button-register.ts` above.
+  'src/components/layout/filter-bar/filter-bar-register.ts',
   'src/components/media/attachment-chip/file-size.ts',
   'src/components/media/flag/flag-peer.ts',
   'src/components/media/flag/flag-peer-bulk.ts',

@@ -17,17 +17,18 @@ import {
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { styles } from './filter-bar.styles.js';
-import '../../forms/select/select.class.js';
-import '../../forms/combobox/combobox.class.js';
-import '../../overlays/overlay/dropdown.class.js';
-import '../menu/dropdown-item.class.js';
-import '../../forms/combobox/option.class.js';
-import '../../forms/date-picker/date-input.class.js';
-import '../../forms/input/input.class.js';
-import '../../overlays/chip/chip.class.js';
-import '../../overlays/chip/chip-group.class.js';
-import '../../forms/button/button.class.js';
-import '../../overlays/spinner/spinner.class.js';
+// Deliberately NOT a bare side-effect import of the composed controls' own `.class.js` modules
+// (select/combobox/dropdown/dropdown-item/option/date-input/input/chip/chip-group/button/
+// spinner): every composed element below is rendered by tag name in `html` templates with zero
+// compile-time coupling, exactly like `<lr-icon-button>` composes `<lr-icon>` without importing
+// `icon.class.js` from its own class module. This file is therefore a genuinely side-effect-free
+// class module (see coding-conventions.md's "Tree-shakeable exports"), which is what makes
+// `filter-bar-register.ts` (the lean registration entry -- see its own header comment) actually
+// lean: registering only `<lr-filter-bar>` and leaving every composed control's own registration
+// to whichever entry, default or per-control, the consumer separately imports. `filter-bar.ts`
+// (the default entry) keeps importing every composed control's own registration module directly,
+// so an existing `import '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.js'`
+// keeps registering everything it always has.
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings.generated.js';
@@ -74,6 +75,16 @@ export interface LyraFilterBarOption {
    *  `'checkbox-menu'` has no text entry to match against at all. Omitted leaves the control's
    *  default (match on the label alone). */
   readonly searchText?: string;
+  /**
+   * Marks this option non-actionable: forwarded to `<lr-option>`'s own `disabled` for a `'select'`
+   * or `'combobox'` filter, and to the composed `<lr-dropdown-item>`'s own `disabled` for a
+   * `'checkbox-menu'` filter. The composed control already renders it as a genuinely disabled row
+   * (no tab stop / roving stop, no hover or press affordance, `aria-disabled`) and already steps
+   * roving/arrow-key navigation past it -- this field only forwards a value that control already
+   * knows how to honour. Omitted or `false` renders the option exactly as before this field
+   * existed.
+   */
+  readonly disabled?: boolean;
 }
 
 /** One filter's current value. Built-in controls use strings/string arrays; an untyped boolean
@@ -150,6 +161,9 @@ export interface LyraFilterBarCustomControl {
  *  to that control's accessible name instead (`'hidden'`), for a compact toolbar row. */
 export type LyraFilterBarLabelVisibility = 'visible' | 'hidden';
 
+/** Which currently-active filters `render()`'s chip row shows -- see `LyraFilterBar.activeFiltersDisplay`. */
+export type LyraFilterBarActiveFiltersDisplay = 'all' | 'changed' | 'hidden';
+
 interface LyraFilterBarDefinitionBase {
   /** Stable, unique business identity and the key used in `LyraFilterBarValue`. */
   readonly filterId: string;
@@ -215,6 +229,14 @@ export interface LyraFilterBarCheckboxMenuDefinition extends LyraFilterBarCompos
 export interface LyraFilterBarComboboxDefinition extends LyraFilterBarClearableDefinitionBase {
   readonly type: 'combobox';
   readonly options: readonly LyraFilterBarOption[];
+  /** A `multiple` combobox filter collapses past the composed `<lr-combobox>`'s own
+   *  `max-options-visible` (default `3`, not forwarded by this component) into a localized "+N"
+   *  overflow indicator -- the same substance as `<lr-select>`'s own `multiple`-mode overflow chip.
+   *  The one remaining gap: `<lr-select>`'s overflow chip carries a second, distinguishing
+   *  `tag-overflow` part so a consumer can style just that chip; `<lr-combobox>`'s carries only the
+   *  plain `tag` part, so there is no equivalent token for this component to forward as
+   *  `filter-control-tag-overflow`. That is `<lr-combobox>`'s own surface to grow, not something
+   *  `exportparts` can manufacture for a part its composed child never renders. */
   readonly multiple?: boolean;
   /** `'combobox'` only -- how long (ms) to wait after the last selection change (a pick, a
    *  multi-select toggle, an `allowCustomValue`/`allowCreate` commit, or the clear action) before
@@ -603,6 +625,14 @@ const SELECT_EXPORT_PARTS = [
   'hint: filter-control-hint',
 ].join(', ');
 
+/** `tag__remove-button`/`tag__remove-button__base` reach a selected tag's own remove button and
+ * its inner icon wrapper -- the same reach a standalone `<lr-combobox>`/`<lr-select>` consumer
+ * already has, now available from `<lr-filter-bar>` too. The alias targets follow this scheme's
+ * own hyphenated convention (`filter-control-tag-remove-button`(`-base`)) rather than carrying the
+ * source part's double-underscore compatibility spelling through verbatim, matching every other
+ * entry here (`combobox-input` -> `filter-control-input`, not a mechanical rename). Without these
+ * a consumer re-skinning filter tags as pills gets a pill with an unstyleable default remove
+ * target inside it. */
 const COMBOBOX_EXPORT_PARTS = [
   'form-control-label: filter-control-label',
   'combobox: filter-control-field',
@@ -614,6 +644,8 @@ const COMBOBOX_EXPORT_PARTS = [
   'tags: filter-control-tags',
   'tag: filter-control-tag',
   'tag-label: filter-control-tag-label',
+  'tag__remove-button: filter-control-tag-remove-button',
+  'tag__remove-button__base: filter-control-tag-remove-button-base',
   'clear-button: filter-control-clear-button',
   'expand-icon: filter-control-expand-icon',
   'error: filter-control-error',
@@ -646,13 +678,17 @@ const CHECKBOX_MENU_EXPORT_PARTS = [
  * nothing at all here. Forwarding `base` puts the name on the element that actually draws the
  * field frame. `start` is forwarded for the same reason every other type forwards its own:
  * `'checkbox-menu'` accepts a definition `icon`, and lr-button's adornment wrapper is otherwise
- * unreachable across that shadow boundary. lr-button's `label` wrapper is deliberately NOT
- * forwarded -- this component renders its own `filter-control-label` and `filter-control-input`
- * spans inside it, so forwarding would put a third element under a name two real elements already
- * carry. */
+ * unreachable across that shadow boundary. lr-button's own `label` wrapper (the flex row this
+ * component lays its `filter-control-label`/`filter-control-input` spans out in -- see
+ * `filter-bar.styles.ts`'s `.checkbox-menu lr-button::part(label)`) forwards to
+ * `filter-control-label-group`, a THIRD, collision-resistant name distinct from either span it
+ * contains. `caret` forwards to `filter-control-expand-icon`, the same name every other filter
+ * type's own disclosure chevron already uses, so one consumer rule styles all of them. */
 const CHECKBOX_MENU_TRIGGER_EXPORT_PARTS = [
   'base: filter-control-field',
   'start: filter-control-start',
+  'label: filter-control-label-group',
+  'caret: filter-control-expand-icon',
 ].join(', ');
 
 const DATE_INPUT_EXPORT_PARTS = [
@@ -716,6 +752,32 @@ function isBuiltInSet(value: LyraFilterBarFieldValue): boolean {
   return Array.isArray(value) ? value.length > 0 : value !== '';
 }
 
+/** Whether `value` equals a filter definition's own declared `defaultValue` -- the equality
+ *  `activeFiltersDisplay: 'changed'` filters active entries against. A `readonly string[]` value
+ *  (a multi-select `'combobox'`/`'checkbox-menu'`) compares against a `readonly string[]` default
+ *  positionally -- same length, same entry at each index -- matching this component's only other
+ *  array-equality precedent, `LyraFilterBarCustomControlAdapter.isEmpty`'s own default `clearValue`
+ *  comparison, rather than an order-insensitive set comparison this component has never used
+ *  anywhere else. Every other pairing (string, boolean, or a mismatched array/non-array pairing)
+ *  compares with `Object.is`, which already covers a `'date-range'` filter's value correctly: it is
+ *  a single composed `"start/end"` string (see `displayValueFor`), so two of them are either the
+ *  same string or they are not -- no date parsing involved. */
+function filterValueEqualsDefault(
+  value: LyraFilterBarFieldValue,
+  defaultValue: LyraFilterBarDefinitionBase['defaultValue'],
+): boolean {
+  const valueIsArray = Array.isArray(value);
+  const defaultIsArray = Array.isArray(defaultValue);
+  if (valueIsArray || defaultIsArray) {
+    if (!valueIsArray || !defaultIsArray) return false;
+    return (
+      value.length === defaultValue.length &&
+      value.every((entry, index) => entry === defaultValue[index])
+    );
+  }
+  return Object.is(value, defaultValue);
+}
+
 /** Defines an arbitrary public filter id as an own data property. Assignment cannot be used here:
  * `__proto__` is a valid id and invokes Object.prototype's legacy setter on an ordinary record. */
 function defineFilterValueEntry(
@@ -759,8 +821,10 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * than invented by this component: every filter composes an existing Lyra input --
  * `<lr-select>`/`<lr-combobox>` for closed choice sets, `<lr-date-input>` (single or `mode="range"`)
  * for dates, `<lr-input>` for a free-text query -- plus a `<lr-chip-group>` of removable
- * `<lr-chip>`s summarizing the currently-active filters, an `<lr-button>` that resets every
- * filter, and (while `loading`) an `<lr-spinner>` status indicator.
+ * `<lr-chip>`s summarizing the currently-active filters (which filters that row admits is
+ * `activeFiltersDisplay`'s own contract; removing a chip always clears that filter, regardless of
+ * which chips the row is currently showing), an `<lr-button>` that resets every filter, and (while
+ * `loading`) an `<lr-spinner>` status indicator.
  *
  * A `'text'` filter is the one control that is *not* a fully controlled `.value=` binding: a text
  * field re-rendered from `value` mid-typing would push a stale value back into the field and drop
@@ -866,6 +930,11 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  *   is visually hidden (never removed) under `labelVisibility: 'hidden'` -- except in the one case
  *   where the trigger's selection summary already IS the label (hidden routing, no declared
  *   `placeholder`, nothing selected), where it is omitted rather than naming the button twice.
+ * @csspart filter-control-label-group - A `'checkbox-menu'` trigger's composed `<lr-button>`'s own
+ *   label wrapper: the flex row laying out `filter-control-label` and `filter-control-input`
+ *   beside each other and, with `with-caret`, growing to fill the stretched trigger so its content
+ *   starts at the leading edge instead of centring. No other filter type renders this part -- every
+ *   other type's label and input are two independent elements with no shared wrapper of their own.
  * @csspart filter-control-field - A built-in control's field frame: select trigger, combobox
  *   container, text/date input wrapper, or a `'checkbox-menu'` trigger button's own frame (the
  *   element inside `<lr-button>` that draws the border, background and radius -- not the
@@ -883,9 +952,14 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * @csspart filter-control-tag - A combobox's individual selected tag.
  * @csspart filter-control-tag-label - A combobox tag's wrapping/ellipsis-safe label; capped by
  *   that control's own `--tag-max-size`.
+ * @csspart filter-control-tag-remove-button - A combobox tag's own remove button.
+ * @csspart filter-control-tag-remove-button-base - Compatibility name for the icon wrapper inside
+ *   a combobox tag's remove button; the same reach a standalone `lr-combobox`/`lr-select` consumer
+ *   already has.
  * @csspart filter-control-clear-button - A built-in control's clear action, when rendered.
  * @csspart filter-control-expand-button - A date input's calendar-popup action.
- * @csspart filter-control-expand-icon - A select, combobox, or date-input expansion icon.
+ * @csspart filter-control-expand-icon - A select, combobox, or date-input expansion icon, or a
+ *   `'checkbox-menu'` trigger's own `with-caret` disclosure chevron.
  * @csspart filter-control-popup - A date input's positioned calendar popup.
  * @csspart filter-control-error - A built-in control's validation message. A `'checkbox-menu'`
  *   renders this one itself (its composed dropdown has no error chrome), `aria-hidden` because the
@@ -894,7 +968,9 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * @csspart filter-control-hint - A built-in control's hint message.
  * @csspart reset-button - The reset `<lr-button>`.
  * @csspart status - The loading `<lr-spinner>`, only rendered while `loading`.
- * @csspart active-filters - The `role="group"` wrapper around the active-filter chip row, only rendered while any filter is set.
+ * @csspart active-filters - The `role="group"` wrapper around the active-filter chip row, only
+ *   rendered while `activeFiltersDisplay` admits at least one currently-active filter (never, for
+ *   `'hidden'`).
  * @csspart chips - The `<lr-chip-group>` inside `active-filters`.
  * @csspart chip - One active-filter `<lr-chip>`.
  * @cssprop [--lr-filter-bar-field-basis=var(--lr-size-12rem)] - Flex-basis of each filter's
@@ -945,6 +1021,22 @@ export class LyraFilterBar<
    *  still in flight; only the reset button (which would otherwise race a fresh, unrequeried
    *  reset against an in-flight fetch for the *previous* value) is disabled by it. */
   @property({ type: Boolean, reflect: true }) loading = false;
+
+  /** Which currently-active filters render as removable chips in the row below the fields.
+   *  `'all'` (default, and the only behaviour this component had before this property existed)
+   *  shows one chip per filter that is not empty -- including a filter sitting at its own
+   *  `defaultValue`, since a declared default is itself a value the filter currently holds.
+   *  `'changed'` shows a chip only for a filter whose current value differs from its own
+   *  `defaultValue` (see `filterValueEqualsDefault`) -- so a bar whose defaults narrow the view on
+   *  load does not claim the user narrowed it, while a filter with no declared `defaultValue`
+   *  counts as changed the moment it has any value at all, since there is nothing for it to still
+   *  equal. `'hidden'` never renders the row, regardless of any filter's state. Every value other
+   *  than `'changed'`/`'hidden'` (including a foreign attribute value) behaves like `'all'`,
+   *  matching `labelVisibility`'s own foreign-value handling. Removing a chip always clears that
+   *  filter, exactly as it always has -- this property only changes which already-active filters
+   *  get a chip in the row, never what removing one does. */
+  @property({ reflect: true, attribute: 'active-filters-display' })
+  activeFiltersDisplay: LyraFilterBarActiveFiltersDisplay = 'all';
 
   /** Filters that have been visited (focusout'd) at least once -- gates only the *visual*
    *  inline-error presentation on each composed control, matching every other form control in
@@ -1494,12 +1586,23 @@ export class LyraFilterBar<
     return end ? formatter.formatRange(start, end) : formatter.format(start);
   }
 
+  /** The filters `render()`'s chip row shows -- every non-empty filter under `'all'` (the
+   *  default), only those whose value differs from their own `defaultValue` under `'changed'`, or
+   *  none at all under `'hidden'` -- see `activeFiltersDisplay`. `clearFilter()`'s own focus-repair
+   *  index is computed against this same list, so it always matches the chips actually rendered
+   *  regardless of display mode. */
   private get activeEntries(): {
     def: LyraFilterBarFilterDefinition;
     display: string;
   }[] {
+    if (this.activeFiltersDisplay === 'hidden') return [];
     return this._filters
       .filter((def) => !this.isEmpty(def, this.valueFor(def)))
+      .filter(
+        (def) =>
+          this.activeFiltersDisplay !== 'changed' ||
+          !filterValueEqualsDefault(this.valueFor(def), def.defaultValue)
+      )
       .map((def) => ({
         def,
         display: this.displayValueFor(def, this.valueFor(def)),
@@ -1612,6 +1715,7 @@ export class LyraFilterBar<
     return html`<lr-option
       value=${option.value}
       search-text=${option.searchText ?? nothing}
+      ?disabled=${option.disabled === true}
       >${this.renderStartAdornment(option.icon)}${option.label}</lr-option
     >`;
   }
@@ -1696,7 +1800,27 @@ export class LyraFilterBar<
    *    neither matches this structure: the host is not the required field, and this trigger's label
    *    part is `filter-control-label`. Re-typing the `::after` locally is precisely what that
    *    shared sheet exists to prevent, and renaming the span to `label`/`form-control-label` to fit
-   *    would mint a permanent public part name on `<lr-filter-bar>` for a styling side effect. */
+   *    would mint a permanent public part name on `<lr-filter-bar>` for a styling side effect.
+   *  - **No stacked label above the field.** Every other built-in type's stacked label is rendered
+   *    by the COMPOSED control itself (its own `form-control-label`, fed by this component's
+   *    `.label=` binding) -- there is no shared "stacked label" template inside `<lr-filter-bar>`
+   *    for this branch to opt into without inventing one. `labelVisibility` therefore keeps its
+   *    existing, narrower meaning here (whether the label baked into the trigger's own text is
+   *    visible or screen-reader-only), not "stacked vs. inline". Revisit only once a concrete
+   *    layout is designed for it, rather than approximating one here.
+   *
+   *  The trigger DOES get the same `with-caret` disclosure chevron a `'select'`'s own trigger
+   *  shows, both because a menu button with no expand indicator otherwise reads as a
+   *  call-to-action rather than a field, and because `<lr-button>`'s own `with-caret` layout (the
+   *  label grows to fill the stretched button, pinning the caret to the trailing edge -- see
+   *  `button.class.ts`) is what left-aligns this trigger's content instead of centring it: no new
+   *  layout of this component's own is involved. `label`/`caret` are forwarded from the composed
+   *  `<lr-button>` under collision-resistant `filter-control-*` names -- `filter-control-label` and
+   *  `filter-control-input` already name this component's OWN two spans rendered inside that label
+   *  wrapper, so the wrapper itself needs a third, distinct name
+   *  (`filter-control-label-group`) rather than colliding with either; the caret reuses
+   *  `filter-control-expand-icon`, the same name a select/combobox/date-input's own disclosure
+   *  chevron already forwards to, so one consumer rule styles every filter type's chevron. */
   private renderCheckboxMenu(
     def: LyraFilterBarCheckboxMenuDefinition,
     value: LyraFilterBarFieldValue,
@@ -1729,6 +1853,7 @@ export class LyraFilterBar<
           slot="trigger"
           exportparts=${CHECKBOX_MENU_TRIGGER_EXPORT_PARTS}
           appearance="outlined"
+          with-caret
           .size=${size}
           ?disabled=${this.disabled}
           >${this.renderStartAdornment(def.icon)}${showLabel
@@ -1749,6 +1874,7 @@ export class LyraFilterBar<
             type="checkbox"
             value=${option.value}
             ?checked=${selected.includes(option.value)}
+            ?disabled=${option.disabled === true}
             @lr-menu-item-change=${(event: Event) => this.onCheckboxMenuToggle(def, event)}
             >${this.renderStartAdornment(option.icon, 'icon')}${option.label}</lr-dropdown-item
           >`
@@ -1824,13 +1950,18 @@ export class LyraFilterBar<
       // push the stale committed value back over the user's own pending pick.
       const pending = this.debounceControllers.get(def.filterId)?.pendingValue;
       const effectiveValue = pending !== undefined ? pending : value;
+      // A single-value combobox's `.value=` binds `undefined`, never `''`, when this filter is
+      // unset: `<lr-combobox>` treats `undefined`/`null` as "clear the selection" but treats every
+      // string -- including `''` -- as a real, committed (if unmatched) value, rendering its
+      // dashed/italic not-in-catalog treatment instead of the declared placeholder. See the
+      // `'select'` branch below for the identical collision on `<lr-select>`.
       const comboValue = multiple
         ? Array.isArray(effectiveValue)
           ? effectiveValue
           : []
         : typeof effectiveValue === 'string'
         ? effectiveValue
-        : '';
+        : undefined;
       return html`<lr-combobox
         part="filter-control"
         exportparts=${COMBOBOX_EXPORT_PARTS}
@@ -1924,7 +2055,13 @@ export class LyraFilterBar<
     }
 
     // 'select' (also the fallback for an unrecognized type, so a filter with a bad `type` still
-    // renders a usable, if empty, control instead of vanishing silently).
+    // renders a usable, if empty, control instead of vanishing silently). `.value=` below binds
+    // `undefined`, never `''`, while this filter is unset: `<lr-select>` treats `undefined`/`null`
+    // as "clear the selection" but treats every string -- including `''` -- as a real, committed
+    // (if unmatched) value, rendering its dashed/italic not-in-catalog treatment in place of the
+    // declared placeholder. `def.type === 'date' || def.type === 'date-range'` above keeps its own
+    // `''` fallback: `<lr-date-input>` has no catalog to mismatch against, so there is nothing for
+    // an empty string to collide with there.
     return html`<lr-select
       part="filter-control"
       exportparts=${SELECT_EXPORT_PARTS}
@@ -1936,7 +2073,7 @@ export class LyraFilterBar<
       ?clearable=${Boolean(def.clearable)}
       .size=${def.size ?? 'm'}
       .errorText=${errorText}
-      .value=${typeof value === 'string' ? value : ''}
+      .value=${typeof value === 'string' ? value : undefined}
       ?disabled=${this.disabled}
       @change=${onChange}
       @lr-activate=${this.stopControlAlias}

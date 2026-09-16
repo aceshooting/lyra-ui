@@ -1892,6 +1892,178 @@ describe("active-filter chips", () => {
   });
 });
 
+describe('activeFiltersDisplay', () => {
+  const chipTexts = (el: LyraFilterBar): string[] =>
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="chip"]')].map((chip) =>
+      chip.textContent!.trim()
+    );
+  // Never assert `el.shadowRoot!.querySelector(...)` directly against `.to.equal(null)`: a DOM
+  // node as chai's `actual` on a FAILING assertion hangs the whole test file (see testing.md).
+  // Comparing the boolean `=== null` result instead keeps `actual` a primitive either way.
+  const hasActiveFiltersRow = (el: LyraFilterBar): boolean =>
+    el.shadowRoot!.querySelector('[part="active-filters"]') !== null;
+
+  it('defaults to "all", reproducing pre-existing behavior exactly (unset-regression)', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        { filterId: 'status', label: 'Status', type: 'select', defaultValue: 'open', options: [
+          { value: 'open', label: 'Open' },
+          { value: 'closed', label: 'Closed' },
+        ] },
+      ] as LyraFilterBarFilterDefinition[]}
+      .value=${{ status: 'open' }}
+    ></lr-filter-bar>`);
+
+    expect(el.activeFiltersDisplay).to.equal('all');
+    // Explicitly AT its own declared defaultValue -- 'all' still shows it, matching this
+    // component's only behavior before this property existed.
+    expect(chipTexts(el)).to.deep.equal(['Status: Open']);
+  });
+
+  it('"changed" hides a filter sitting at its own defaultValue, and shows one that has moved off it', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        defaultValue: 'open',
+        options: [
+          { value: 'open', label: 'Open' },
+          { value: 'closed', label: 'Closed' },
+        ],
+      },
+      { filterId: 'q', label: 'Query', type: 'text', defaultValue: 'urgent' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="changed"
+      .filters=${filters}
+      .value=${{ status: 'open', q: 'urgent' }}
+    ></lr-filter-bar>`);
+
+    // Both filters are explicitly set to exactly their own declared default -- a bar whose
+    // defaults narrow the view on load must not claim the user narrowed it.
+    expect(
+      hasActiveFiltersRow(el),
+      'no row at all while every active filter is still at its default'
+    ).to.equal(false);
+
+    el.value = { status: 'closed', q: 'urgent' };
+    await el.updateComplete;
+    expect(
+      chipTexts(el),
+      'status moved off its default and is shown; q is still at its default and stays hidden'
+    ).to.deep.equal(['Status: Closed']);
+  });
+
+  it('"changed" shows a filter with no declared defaultValue as soon as it has any value', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="changed"
+      .filters=${[
+        { filterId: 'q', label: 'Query', type: 'text' },
+      ] as LyraFilterBarFilterDefinition[]}
+      .value=${{ q: 'urgent' }}
+    ></lr-filter-bar>`);
+
+    expect(chipTexts(el)).to.deep.equal(['Query: urgent']);
+  });
+
+  it('"changed" compares a multi-select array to defaultValue positionally, not as an order-insensitive set', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="changed"
+      .filters=${[
+        {
+          filterId: 'tags',
+          label: 'Tags',
+          type: 'combobox',
+          multiple: true,
+          defaultValue: ['urgent', 'billing'],
+          options: [
+            { value: 'urgent', label: 'Urgent' },
+            { value: 'billing', label: 'Billing' },
+          ],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    // Identical set, reversed order: NOT treated as still-at-default (positional comparison).
+    el.value = { tags: ['billing', 'urgent'] };
+    await el.updateComplete;
+    expect(
+      hasActiveFiltersRow(el),
+      'a reordered array is a different value under positional comparison'
+    ).to.equal(true);
+
+    // Exact same order: at-default, hidden.
+    el.value = { tags: ['urgent', 'billing'] };
+    await el.updateComplete;
+    expect(
+      hasActiveFiltersRow(el),
+      'the exact default array, in the same order, is at-default'
+    ).to.equal(false);
+  });
+
+  it('"changed" compares a date-range value to its defaultValue as a plain string', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="changed"
+      .filters=${[
+        {
+          filterId: 'range',
+          label: 'Active period',
+          type: 'date-range',
+          defaultValue: '2026-01-01/2026-01-31',
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    el.value = { range: '2026-01-01/2026-01-31' };
+    await el.updateComplete;
+    expect(hasActiveFiltersRow(el), 'exactly its own default range: hidden').to.equal(false);
+
+    el.value = { range: '2026-02-01/2026-02-28' };
+    await el.updateComplete;
+    expect(chipTexts(el).length, 'a different range: shown').to.equal(1);
+  });
+
+  it('"hidden" never renders the row, even while filters are active', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="hidden"
+      .filters=${basicFilters}
+      .value=${{ status: 'open', tags: ['urgent'] }}
+    ></lr-filter-bar>`);
+
+    expect(hasActiveFiltersRow(el)).to.equal(false);
+    expect(el.hasActiveFilters, 'reset-button gating is unaffected by this property').to.be.true;
+  });
+
+  it('removing a chip under "changed" still clears the filter, exactly like "all"', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        defaultValue: 'open',
+        options: [
+          { value: 'open', label: 'Open' },
+          { value: 'closed', label: 'Closed' },
+        ],
+      },
+    ];
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="changed"
+      .filters=${filters}
+      .value=${{ status: 'closed' }}
+    ></lr-filter-bar>`);
+
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    expect(Object.hasOwn(el.value, 'status'), 'the filter is cleared, not reset to its default').to.equal(
+      false
+    );
+  });
+});
+
 describe("reset()", () => {
   it("keeps the reset action on the same default size tier and rendered height as adjacent fields", async () => {
     const el = (await fixture(html`
@@ -3692,6 +3864,93 @@ describe('definition passthrough completeness (select/date adornment, empty-text
     expect(comboOption.getAttribute('search-text')).to.equal('urgent p1 sev1');
   });
 
+  it("forwards an option's disabled to <lr-option disabled> for select and combobox (unset-regression)", async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'status',
+          label: 'Status',
+          type: 'select',
+          options: [
+            { value: 'open', label: 'Open' },
+            { value: 'archived', label: 'Archived', disabled: true },
+          ],
+        },
+        {
+          filterId: 'tags',
+          label: 'Tags',
+          type: 'combobox',
+          options: [
+            { value: 'urgent', label: 'Urgent' },
+            { value: 'legacy', label: 'Legacy', disabled: true },
+          ],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    const selectOptions = [...control(el, 'status').querySelectorAll<HTMLElement & { disabled: boolean }>('lr-option')];
+    expect(
+      selectOptions.map((option) => option.disabled),
+      'an option with no disabled field renders exactly as before this field existed'
+    ).to.deep.equal([false, true]);
+
+    const comboOptions = [...control(el, 'tags').querySelectorAll<HTMLElement & { disabled: boolean }>('lr-option')];
+    expect(comboOptions.map((option) => option.disabled)).to.deep.equal([false, true]);
+  });
+
+  it('never invokes an accessor-backed option disabled, and never treats it as disabled', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar></lr-filter-bar>`);
+    let reads = 0;
+    const hostile: Record<string, unknown> = { value: 'a', label: 'Alpha' };
+    Object.defineProperty(hostile, 'disabled', {
+      get() {
+        reads += 1;
+        return true;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    el.filters = [
+      { filterId: 'status', label: 'Status', type: 'select', options: [hostile, { value: 'b', label: 'Beta' }] },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    await el.updateComplete;
+
+    expect(reads, 'the getter is never invoked').to.equal(0);
+    const options = [...control(el, 'status').querySelectorAll<HTMLElement & { disabled: boolean }>('lr-option')];
+    expect(
+      options.map((option) => option.disabled),
+      'the entry survives as an ordinary, non-disabled option'
+    ).to.deep.equal([false, false]);
+  });
+
+  it("forwards an option's disabled to the composed lr-dropdown-item for a 'checkbox-menu' filter", async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'teams',
+          label: 'Teams',
+          type: 'checkbox-menu',
+          options: [
+            { value: 'core', label: 'Core' },
+            { value: 'archived', label: 'Archived', disabled: true },
+          ],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    const rows = [
+      ...control(el, 'teams').querySelectorAll<HTMLElement & { disabled: boolean; select: () => void }>(
+        'lr-dropdown-item'
+      ),
+    ];
+    expect(rows.map((row) => row.disabled)).to.deep.equal([false, true]);
+
+    const before = el.value['teams'];
+    rows[1]!.select();
+    await el.updateComplete;
+    expect(el.value['teams'], 'a disabled row cannot be toggled').to.equal(before);
+  });
+
   it("matches a 'combobox' filter's option on its searchText, which a 'select' filter ignores", async () => {
     const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
       .filters=${[
@@ -3861,6 +4120,117 @@ describe('definition passthrough completeness (select/date adornment, empty-text
     expect(dateInput.withClear).to.equal(false);
     expect(dateInput.size).to.equal('m');
     expect(dateInput.querySelector('[slot="start"]') === null, 'no adornment').to.be.true;
+  });
+});
+
+describe('unset catalog-aware filters render their placeholder, never "not in catalog" (regression)', () => {
+  it('renders the declared placeholder, not the not-in-catalog badge, for an unset select filter', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'status',
+          label: 'Status',
+          type: 'select',
+          placeholder: 'Any status',
+          options: [
+            { value: 'open', label: 'Open' },
+            { value: 'closed', label: 'Closed' },
+          ],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    const select = control(el, 'status') as HTMLElement & {
+      value: string;
+      shadowRoot: ShadowRoot;
+    };
+    const displayInput = select.shadowRoot.querySelector('[part="display-input"]') as HTMLElement;
+    expect(
+      displayInput.hasAttribute('data-unknown-value'),
+      'an unset filter must never commit "" as a real (if unmatched) value'
+    ).to.equal(false);
+    expect(
+      displayInput.querySelector('[part="unknown-value"]') === null,
+      'no not-in-catalog badge'
+    ).to.equal(true);
+    expect(displayInput.textContent!.trim()).to.equal('Any status');
+  });
+
+  it('renders the declared placeholder, not the not-in-catalog badge, for an unset single-value combobox filter', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'owner',
+          label: 'Owner',
+          type: 'combobox',
+          placeholder: 'Any owner',
+          options: [
+            { value: 'ada', label: 'Ada' },
+            { value: 'grace', label: 'Grace' },
+          ],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    const combo = control(el, 'owner') as HTMLElement & { shadowRoot: ShadowRoot };
+    const input = combo.shadowRoot.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(
+      input.hasAttribute('data-unknown-value'),
+      'an unset single-value combobox filter must never commit "" as a real value either'
+    ).to.equal(false);
+    expect(
+      combo.shadowRoot.querySelector('[part="unknown-value"]') === null,
+      'no not-in-catalog badge'
+    ).to.equal(true);
+    expect(input.placeholder).to.equal('Any owner');
+  });
+
+  it('a multi-select combobox filter is unaffected (unset-regression): still renders no tags', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'tags',
+          label: 'Tags',
+          type: 'combobox',
+          multiple: true,
+          options: [{ value: 'urgent', label: 'Urgent' }],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    const combo = control(el, 'tags') as HTMLElement & { value: readonly string[] };
+    expect(combo.value).to.deep.equal([]);
+  });
+
+  it('still commits and displays a genuinely selected value for select and combobox', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'status',
+          label: 'Status',
+          type: 'select',
+          options: [
+            { value: 'open', label: 'Open' },
+            { value: 'closed', label: 'Closed' },
+          ],
+        },
+        {
+          filterId: 'owner',
+          label: 'Owner',
+          type: 'combobox',
+          options: [
+            { value: 'ada', label: 'Ada' },
+            { value: 'grace', label: 'Grace' },
+          ],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+      .value=${{ status: 'closed', owner: 'ada' }}
+    ></lr-filter-bar>`);
+
+    const select = control(el, 'status') as HTMLElement & { value: string };
+    expect(select.value).to.equal('closed');
+    const combo = control(el, 'owner') as HTMLElement & { value: string };
+    expect(combo.value).to.equal('ada');
   });
 });
 
@@ -4494,4 +4864,167 @@ it('closes an open checkbox-menu across a disconnect and reconnect', async () =>
     () => (control(el, 'teams') as HTMLElement & { open: boolean }).open === false,
     'the composed checkbox menu reopens closed'
   );
+});
+
+describe("'checkbox-menu' trigger parity (caret, start-aligned content, part forwarding)", () => {
+  const teamsFilters = (): LyraFilterBarFilterDefinition[] => [
+    {
+      filterId: 'teams',
+      label: 'Teams',
+      type: 'checkbox-menu',
+      options: [
+        { value: 'core', label: 'Core' },
+        { value: 'design', label: 'Design' },
+      ],
+    },
+  ];
+
+  it('renders a with-caret disclosure chevron on the trigger, matching a select field', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${teamsFilters()}></lr-filter-bar>`
+    );
+    const trigger = control(el, 'teams').querySelector('lr-button') as HTMLElement & {
+      withCaret: boolean;
+      shadowRoot: ShadowRoot;
+    };
+    expect(trigger.withCaret, 'with-caret is set unconditionally on the trigger').to.equal(true);
+    expect(
+      trigger.shadowRoot.querySelector('[part="caret"]') !== null,
+      'the disclosure chevron renders'
+    ).to.equal(true);
+  });
+
+  it('start-aligns the trigger label/summary instead of centring them once the field stretches', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      style="inline-size: 480px"
+      .filters=${teamsFilters()}
+    ></lr-filter-bar>`);
+    const trigger = control(el, 'teams').querySelector('lr-button') as HTMLElement & {
+      shadowRoot: ShadowRoot;
+      updateComplete: Promise<unknown>;
+    };
+    await trigger.updateComplete;
+    const base = trigger.shadowRoot.querySelector('[part~="base"]') as HTMLElement;
+    const labelSpan = trigger.querySelector('[part="filter-control-label"]') as HTMLElement;
+    const baseRect = base.getBoundingClientRect();
+    const labelRect = labelSpan.getBoundingClientRect();
+    // A centred icon+label group in a 480px-wide trigger would sit far from the trigger's own
+    // leading (padding) edge; start-aligned content sits right after it instead.
+    expect(
+      labelRect.left - baseRect.left,
+      "the label starts near the trigger's own leading edge, not the middle of a 480px-wide trigger"
+    ).to.be.lessThan(40);
+  });
+
+  it('forwards the trigger label wrapper and caret through filter-control-label-group/filter-control-expand-icon', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <style>
+          lr-filter-bar::part(filter-control-label-group) {
+            background-color: rgb(1, 2, 3);
+          }
+          lr-filter-bar::part(filter-control-expand-icon) {
+            color: rgb(4, 5, 6);
+          }
+        </style>
+        <lr-filter-bar .filters=${teamsFilters()}></lr-filter-bar>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+    const trigger = control(el, 'teams').querySelector('lr-button') as HTMLElement & {
+      shadowRoot: ShadowRoot;
+    };
+
+    const labelWrapper = trigger.shadowRoot.querySelector('[part~="label"]') as HTMLElement;
+    expect(
+      getComputedStyle(labelWrapper).backgroundColor,
+      'label alias reaches the rendered wrapper'
+    ).to.equal('rgb(1, 2, 3)');
+
+    const caret = trigger.shadowRoot.querySelector('[part="caret"]') as HTMLElement;
+    expect(
+      getComputedStyle(caret).color,
+      'caret alias reaches the rendered chevron'
+    ).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('leaves every other filter type unaffected (unset-regression): no caret, no filter-control-label-group', async () => {
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    );
+    const select = control(el, 'status') as HTMLElement & { shadowRoot: ShadowRoot };
+    expect(
+      select.shadowRoot.querySelector('[part="caret"]') !== null,
+      "a select field has its own expand-icon, never lr-button's caret"
+    ).to.equal(false);
+  });
+});
+
+describe('combobox tag remove-button part forwarding', () => {
+  it('forwards tag__remove-button/tag__remove-button__base through filter-control-* aliases, reaching the rendered button', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'tags',
+        label: 'Tags',
+        type: 'combobox',
+        multiple: true,
+        options: [{ value: 'urgent', label: 'Urgent' }],
+      },
+    ];
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <style>
+          lr-filter-bar::part(filter-control-tag-remove-button) {
+            background-color: rgb(7, 8, 9);
+          }
+          lr-filter-bar::part(filter-control-tag-remove-button-base) {
+            color: rgb(10, 11, 12);
+          }
+        </style>
+        <lr-filter-bar .filters=${filters} .value=${{ tags: ['urgent'] }}></lr-filter-bar>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+
+    const combobox = control(el, 'tags') as HTMLElement & { updateComplete: Promise<unknown> };
+    await combobox.updateComplete;
+
+    const removeButton = combobox.shadowRoot!.querySelector<HTMLElement>(
+      '[part~="tag__remove-button"]'
+    );
+    expect(removeButton !== null, "the tag's remove button renders").to.equal(true);
+    expect(
+      getComputedStyle(removeButton!).backgroundColor,
+      'tag__remove-button alias reaches the rendered remove button'
+    ).to.equal('rgb(7, 8, 9)');
+
+    const removeButtonBase = combobox.shadowRoot!.querySelector<HTMLElement>(
+      '[part~="tag__remove-button__base"]'
+    );
+    expect(removeButtonBase !== null, "the remove button's icon wrapper renders").to.equal(true);
+    expect(
+      getComputedStyle(removeButtonBase!).color,
+      'tag__remove-button__base alias reaches the rendered icon wrapper'
+    ).to.equal('rgb(10, 11, 12)');
+  });
+
+  it('is unaffected for a single-value combobox with no selected tags (unset-regression)', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        {
+          filterId: 'owner',
+          label: 'Owner',
+          type: 'combobox',
+          options: [{ value: 'ada', label: 'Ada' }],
+        },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+    const combobox = control(el, 'owner') as HTMLElement & { shadowRoot: ShadowRoot };
+    expect(
+      combobox.shadowRoot.querySelector('[part~="tag__remove-button"]') !== null,
+      'no tag, so no remove button, exactly as before this forwarding existed'
+    ).to.equal(false);
+  });
 });
