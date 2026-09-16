@@ -101,13 +101,15 @@ test('groups inline and multiline story metadata while preserving the legacy met
   const fileName = '/repo/src/components/viewers/notebook-viewer/notebook-viewer.stories.ts';
   const source = `export default { title: 'DocumentViewer/NotebookViewer', component: 'lr-notebook-viewer' };`;
   const multiline = `export default {\n  title: 'DocumentViewer/NotebookViewer',\n  component: 'lr-notebook-viewer',\n};`;
+  const precededByData = `export const data = [{ title: 'Keep this title', value: 1 }];\nconst meta = { title: 'DocumentViewer/NotebookViewer', component: 'lr-notebook-viewer' };\nexport default meta;`;
   const expectedTitle = 'Viewers/DocumentViewer/NotebookViewer';
   const expectedId = 'documentviewer-notebookviewer';
-  for (const fixture of [source, multiline]) {
+  for (const fixture of [source, multiline, precededByData]) {
     const transformed = transformStoryTitle(fixture, fileName);
-    const { default: metadata } = await import(`data:text/javascript,${encodeURIComponent(transformed)}`);
+    const { default: metadata, data } = await import(`data:text/javascript,${encodeURIComponent(transformed)}`);
     assert.equal(metadata.title, expectedTitle);
     assert.equal(metadata.id, expectedId);
+    if (data) assert.deepEqual(data, [{ title: 'Keep this title', value: 1 }]);
   }
   const [indexed] = await createGroupedStoryIndexer({
     test: /\.stories\.ts$/,

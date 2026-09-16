@@ -9,7 +9,16 @@ const TITLE_PROPERTY = /(^|[{,])(\s*title\s*:\s*)(['"`])([^'"`\r\n]+)\3(\s*,)/m;
 export function transformStoryTitle(source, fileName) {
   if (!STORY_FILE.test(fileName)) return source;
 
-  const match = source.match(TITLE_PROPERTY);
+  const defaultExport = /\bexport\s+default\s+(?:([A-Za-z_$][\w$]*)\s*;|(?=\{))/.exec(source);
+  if (!defaultExport) return source;
+  const declaration = defaultExport[1]
+    ? new RegExp(`\\bconst\\s+${defaultExport[1]}\\b`).exec(source)
+    : defaultExport;
+  if (!declaration || declaration.index > defaultExport.index) return source;
+  const start = declaration.index;
+  const end = defaultExport[1] ? defaultExport.index : source.length;
+  const metadata = source.slice(start, end);
+  const match = metadata.match(TITLE_PROPERTY);
   if (!match) return source;
 
   const [, prefix, property, quote, originalTitle, comma] = match;
@@ -18,7 +27,7 @@ export function transformStoryTitle(source, fileName) {
 
   const indentation = property.match(/(?:^|\n)([^\S\r\n]*)title/)?.[1] ?? '';
   const replacement = `${prefix}${property}${quote}${groupedTitle}${quote}${comma}\n${indentation}id: '${toId(originalTitle)}',`;
-  return source.replace(match[0], replacement);
+  return source.slice(0, start) + metadata.replace(match[0], replacement) + source.slice(end);
 }
 
 export function storyTitlePlugin() {

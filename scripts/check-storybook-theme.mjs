@@ -159,7 +159,7 @@ assert.equal(groupedInput.title, 'Forms/Checkbox');
 assert.equal(groupedInput.metaId, 'checkbox');
 
 const transformedStory = transformStoryTitle(
-  `const meta = {\n  title: 'Checkbox',\n  component: 'lr-checkbox',\n};`,
+  `const meta = {\n  title: 'Checkbox',\n  component: 'lr-checkbox',\n};\nexport default meta;`,
   '/repo/src/components/forms/checkbox/checkbox.stories.ts',
 );
 assert.match(transformedStory, /title: 'Forms\/Checkbox',\n  id: 'checkbox',/);
