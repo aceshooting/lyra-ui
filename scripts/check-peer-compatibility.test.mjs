@@ -1555,10 +1555,14 @@ test('bounds child time and output, kills a hung process tree, and preserves pri
   const root = await mkdtemp(join(tmpdir(), 'lyra-peer-process-security-'));
   try {
     const lateMarker = join(root, 'grandchild-survived');
-    const grandchild = `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(lateMarker)}, 'late'), 600)`;
+    // The marker path travels as an argv, not interpolated into the constructed source: building
+    // code from a value is the shape CodeQL js/bad-code-sanitization flags, and `process.argv[1]`
+    // needs no escaping at all.
+    const grandchild =
+      "setTimeout(() => require('node:fs').writeFileSync(process.argv[1], 'late'), 600)";
     const parent = [
       "const { spawn } = require('node:child_process');",
-      `spawn(process.execPath, ['-e', ${JSON.stringify(grandchild)}], { stdio: 'ignore' });`,
+      `spawn(process.execPath, ['-e', ${JSON.stringify(grandchild)}, ${JSON.stringify(lateMarker)}], { stdio: 'ignore' });`,
       'setInterval(() => {}, 1_000);',
     ].join('\n');
     await assert.rejects(
@@ -1580,12 +1584,12 @@ test('bounds child time and output, kills a hung process tree, and preserves pri
       const failedPidPath = join(root, 'failed-leader.pid');
       const failedMarker = join(root, 'failed-grandchild-survived');
       const failedGrandchild =
-        `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(failedMarker)}, 'late'), 600)`;
+        "setTimeout(() => require('node:fs').writeFileSync(process.argv[1], 'late'), 600)";
       const failedParent = [
         "const { spawn } = require('node:child_process');",
         "const { writeFileSync } = require('node:fs');",
         `writeFileSync(${JSON.stringify(failedPidPath)}, String(process.pid));`,
-        `spawn(process.execPath, ['-e', ${JSON.stringify(failedGrandchild)}], { stdio: 'ignore' });`,
+        `spawn(process.execPath, ['-e', ${JSON.stringify(failedGrandchild)}, ${JSON.stringify(failedMarker)}], { stdio: 'ignore' });`,
         'setTimeout(() => process.exit(7), 20);',
       ].join('\n');
       let failedGroupPid;
@@ -1621,10 +1625,10 @@ test('bounds child time and output, kills a hung process tree, and preserves pri
 
       const successfulMarker = join(root, 'successful-grandchild-survived');
       const successfulGrandchild =
-        `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(successfulMarker)}, 'late'), 600)`;
+        "setTimeout(() => require('node:fs').writeFileSync(process.argv[1], 'late'), 600)";
       const successfulParent = [
         "const { spawn } = require('node:child_process');",
-        `spawn(process.execPath, ['-e', ${JSON.stringify(successfulGrandchild)}], { stdio: 'ignore' }).unref();`,
+        `spawn(process.execPath, ['-e', ${JSON.stringify(successfulGrandchild)}, ${JSON.stringify(successfulMarker)}], { stdio: 'ignore' }).unref();`,
         "process.stdout.write('success-output');",
       ].join('\n');
       assert.equal(

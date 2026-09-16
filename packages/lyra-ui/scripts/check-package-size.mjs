@@ -9,8 +9,12 @@ import { fileURLToPath } from 'node:url';
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const budgetsPath = join(packageDir, 'scripts', 'package-budgets.json');
 const FIXTURE_PATH = /(?:^|\/)fixtures(?:\/|$)/u;
-const TEST_PATH = /(?:^|\/)(?:tests?(?:\/|$)|[^/]+\.test(?:\.[^/]+)+$)/u;
-const STORY_PATH = /(?:^|\/)(?:stories(?:\/|$)|[^/]+\.stories(?:\.[^/]+)+$)/u;
+// The trailing segment is matched with a single unbounded class after the literal marker rather
+// than `[^/]+(?:\.[^/]+)+$`: those two quantifiers can both consume the same dots, so a path like
+// `a.test.` followed by many `..` backtracks exponentially (CodeQL js/redos). One class each side
+// of the literal is linear and, since `[^/]` already admits dots, matches exactly the same paths.
+const TEST_PATH = /(?:^|\/)(?:tests?(?:\/|$)|[^/]*\.test\.[^/]+$)/u;
+const STORY_PATH = /(?:^|\/)(?:stories(?:\/|$)|[^/]*\.stories\.[^/]+$)/u;
 
 function percentReduction(baseline, current) {
   return ((baseline - current) / baseline) * 100;

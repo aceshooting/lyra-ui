@@ -4726,9 +4726,41 @@ async function main() {
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+/**
+ * Strips environment-variable VALUES out of text bound for the log. A fatal error here can carry
+ * an env-derived path (this script resolves Windows executables by walking `PATH`), and on CI the
+ * same environment holds registry tokens and signing secrets, so a stack trace is the last place
+ * either should surface -- CodeQL js/clear-text-logging flags exactly that flow. Values shorter
+ * than eight characters are left alone: `CI=true`-style flags carry nothing sensitive, and
+ * redacting them would corrupt ordinary prose in the message.
+ */
+const LOGGABLE_LOCATION_VARIABLES = new Set([
+  'HOME',
+  'INIT_CWD',
+  'OLDPWD',
+  'PWD',
+  'TMPDIR',
+]);
+
+function redactEnvironmentValues(text) {
+  let redacted = text;
+  for (const [name, value] of Object.entries(process.env)) {
+    if (typeof value !== 'string' || value.length < 8) continue;
+    // The working directory and friends are not secrets, and blanking them turns every stack frame
+    // into `<PWD>/scripts/...`, which is exactly the context a reader needs. `PATH` is deliberately
+    // NOT in this set: it is the value this script walks to resolve Windows executables, and it is
+    // the flow that put a resolved path into a logged stack in the first place.
+    if (LOGGABLE_LOCATION_VARIABLES.has(name)) continue;
+    if (!redacted.includes(value)) continue;
+    redacted = redacted.split(value).join(`<${name}>`);
+  }
+  return redacted;
+}
+
 if (isMain) {
   main().catch((error) => {
-    console.error(error instanceof Error ? error.stack ?? error.message : error);
+    const detail = error instanceof Error ? error.stack ?? error.message : String(error);
+    console.error(redactEnvironmentValues(detail));
     process.exitCode = 1;
   });
 }
