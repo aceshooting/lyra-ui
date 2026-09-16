@@ -16153,6 +16153,54 @@
       }
     },
     {
+      "module": "src/testing/wait-for-mount.ts",
+      "exportName": "waitForLyraElement",
+      "kind": "function",
+      "fingerprint": "031b1f5e511271cfd285",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-wait-for-mount-contracts",
+        "declaration": "waitForLyraElement"
+      }
+    },
+    {
+      "module": "src/testing/wait-for-mount.ts",
+      "exportName": "WaitForLyraElementOptions",
+      "kind": "interface",
+      "fingerprint": "d2f806bd9abc9f696302",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-wait-for-mount-contracts",
+        "declaration": "WaitForLyraElementOptions"
+      }
+    },
+    {
+      "module": "src/testing/wait-for-mount.ts",
+      "exportName": "waitForToast",
+      "kind": "function",
+      "fingerprint": "488bfbe3f79035a0324b",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-wait-for-mount-contracts",
+        "declaration": "waitForToast"
+      }
+    },
+    {
       "module": "src/theme/gemstones-data.ts",
       "exportName": "GemstoneAccent",
       "kind": "interface",

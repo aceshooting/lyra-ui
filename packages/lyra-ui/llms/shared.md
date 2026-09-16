@@ -177,8 +177,9 @@ The entry points, then:
   `@aceshooting/lyra-ui/translations/<locale>.js` (the eleven shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
-  (happy-dom shims, `createLyraEvent()` for building a validated test event, plus a small set of
-  interaction drivers that go through a component's own real activation path),
+  (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
+  interaction drivers that go through a component's own real activation path, and
+  `waitForLyraElement()`/`waitForToast()` for awaiting a lazily registered mount),
   `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
 
 ### Registration-free component helpers
@@ -2109,6 +2110,48 @@ happy-dom/jsdom environment, not only a real browser.
 
 Scope: one driver per interaction named above. Not a general "drive any component" toolkit —
 render the real component and interact with it directly for anything else.
+
+## Awaiting a lazily registered mount: `waitForLyraElement()` and `waitForToast()`
+
+An imperative API can register its elements lazily -- `toast()` dynamically `import()`s
+`<lr-toast>`/`<lr-toast-item>` on first call (a deliberate bundle-size trade: importing the package
+root, or even `toast()` itself, never pulls the element classes into an eagerly loaded bundle). A
+fire-and-forget `toast(...)` call -- the normal application pattern, since a component should not
+block its own flow on a toast -- therefore leaves the document empty for at least one microtask
+after the call returns. `@aceshooting/lyra-ui/testing` exports `waitForLyraElement()` for this shape
+in general, plus `waitForToast()` as the named convenience for `toast()` specifically:
+
+```ts
+import { waitForToast } from '@aceshooting/lyra-ui/testing';
+
+toast('Saved'); // fire-and-forget; toast.class.js/toast-item.class.js may still be importing
+const item = await waitForToast('Saved'); // resolves once a matching <lr-toast-item> mounts
+expect(item.textContent?.trim()).to.equal('Saved');
+```
+
+`waitForToast(match?, options?)` resolves once a `<lr-toast-item>` is connected and upgraded. A
+string `match` compares against the item's trimmed `textContent` (what `toast('Saved')` sets
+verbatim); pass a predicate — `(item: LyraToastItem) => boolean` — for anything else (a substring,
+an icon/action check, a specific variant); omitting `match` resolves the first toast item to mount.
+
+The underlying `waitForLyraElement<T>(selector, options?)` is generic over any element reachable
+from `options.root` (`document` by default): it resolves once an element matching `selector` is
+both connected and upgraded — registered with a constructor the element is actually an instance of
+— filtered further by an optional `options.match: (element: T) => boolean`. An element already
+present in markup before its class registers (the SSR/hydration case) is not a match until it
+upgrades. Both resolve via `MutationObserver` (new elements arriving) and
+`customElements.whenDefined()` (an already-connected-but-undefined element finishing registration)
+rather than polling on a timer, and both reject with an Error describing the selector, the timeout,
+and how many non-matching candidates were found — after a bounded `options.timeoutMs` (2000ms
+default). Every underlying API is standard DOM/HTML with no `@web/test-runner`/CDP dependency, so
+both also run under a downstream suite's own happy-dom environment, not only a real browser.
+
+Scope: awaiting a lazy mount reachable from a root you already have a handle to. Not a replacement
+for `updateComplete` (a mounted element may still have a pending render) or for the interaction
+drivers above (already-mounted components' own activation paths). `toast()` is currently the only
+imperative `lyra-ui` API that registers its elements through a dynamic `import()`; `confirm()`
+registers `<lr-dialog>` synchronously (a static import plus an idempotent `defineElement()` call) and
+mounts its transient dialog before returning, so it has no equivalent gap.
 
 ## happy-dom's custom-property resolver and host-to-part token forwarding
 
@@ -4159,6 +4202,17 @@ These named interfaces and helper signatures are available to typed integrations
   `toggleSwitch(/* public names: switchEl */): unknown`
   `activateStep(/* public names: stepper, target */): unknown`
   See "Driving a component's real activation path: interaction drivers" above for the full contract.
+
+- **`testing-wait-for-mount-contracts`** — Shared utility contracts.
+  `waitForLyraElement(/* public names: selector, options */): unknown`
+  `WaitForLyraElementOptions {
+  root: unknown;
+  match: (element: unknown) => unknown;
+  timeoutMs: unknown;
+}`
+  `waitForToast(/* public names: match, options */): unknown`
+  See "Awaiting a lazily registered mount: `waitForLyraElement()` and `waitForToast()`" above for the
+  full contract.
 
 - **`theme-gemstones-data-contracts`** — Shared utility contracts.
   `GemstoneAccent {
