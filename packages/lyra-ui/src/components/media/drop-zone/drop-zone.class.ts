@@ -103,7 +103,7 @@ export interface LyraDropZoneEventMap {
  * @cssprop [--lr-drop-zone-reject-bg=color-mix(in srgb, var(--lr-color-danger) 12%, transparent)] -
  * Background of `[part="overlay"][data-drag-state="reject"]`.
  * @status experimental
- * @since unreleased
+ * @since 16.0.0
  */
 export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

@@ -102,7 +102,7 @@ export interface LyraAppRailGroupEventMap {
  * </lr-app-rail>
  * ```
  * @status experimental
- * @since unreleased
+ * @since 16.0.0
  */
 export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

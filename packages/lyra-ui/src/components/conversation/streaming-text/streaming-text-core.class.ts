@@ -36,7 +36,7 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * bar (also its border radius).
  * @cssprop [--lr-inline-cursor-height=var(--lr-size-1em)] - Shared height of the inline cursor bar.
  * @status experimental
- * @since unreleased
+ * @since 16.0.0
  */
 export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
   protected override renderMarkdown(): TemplateResult {
