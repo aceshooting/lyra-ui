@@ -92,6 +92,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   resizeNavigation: 'Resize navigation',
   appRailCollapse: 'Collapse navigation',
   appRailExpand: 'Expand navigation',
+  appRailItemCollapse: 'Collapse {label}',
+  appRailItemExpand: 'Expand {label}',
   resizeColumn: 'Resize {label} column',
   resizeValuePixels: '{value} pixels',
   resizeValuePercent: '{value} percent',

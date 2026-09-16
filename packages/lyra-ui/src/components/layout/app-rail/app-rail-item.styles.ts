@@ -2,10 +2,21 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* A row, so [part="meta"]/[part="end"] can sit BESIDE the item's own link/button rather than
-       inside it (see the class doc). Both wrappers are display:none while empty, and a flex
-       container creates no gap around a display:none child, so an item with neither slot filled
-       lays out exactly as it did when :host was a block. */
+    /* A column of [.row, [part="children"]] rather than a single row, so a disclosed child list
+       stacks BELOW the item's own control instead of squeezing into its row. [part="children"]
+       does not exist at all while nothing is slotted into children (see the class doc), and a
+       flex container creates no gap around an absent child, so an item with no nested items
+       lays out exactly as it did before this feature existed -- gap only ever applies between
+       .row and a REAL [part="children"]. */
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-app-rail-item-gap, var(--lr-space-s));
+    inline-size: 100%;
+  }
+  /* Everything this item rendered before it could own children: the link/button and its
+     meta/end/toggle adornments. Carries the exact flex/gap/alignment :host itself used to declare
+     -- moved here, not changed, so this row's own children measure identically either way. */
+  .row {
     display: flex;
     align-items: center;
     gap: var(--lr-app-rail-item-gap, var(--lr-space-s));
@@ -178,7 +189,7 @@ export const styles = css`
     );
     aspect-ratio: 1;
   }
-  :host([icon-only]) {
+  :host([icon-only]) .row {
     justify-content: center;
   }
   /* Presentation-aware: a full-height edge bar reads as a rendering glitch on the square
@@ -215,6 +226,81 @@ export const styles = css`
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+  /* A sibling of [part="base"], never nested inside it (see the class doc). Always a fixed
+     icon-button-sized square in BOTH presentations -- unlike [part="base"], it never carries a
+     label to shrink around, so it needs no separate icon-only rule of its own. */
+  [part="toggle"] {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    aspect-ratio: 1;
+    padding: 0;
+    border: 0;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    /* Reuses [part="base"]'s own hover/active/focus tokens rather than introducing a second,
+       disclosure-only set -- both controls belong to the same item and one retheme should recolor
+       both consistently. */
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+  [part="toggle"]:hover {
+    background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-app-rail-item-hover-color, var(--lr-color-brand));
+  }
+  [part="toggle"]:active {
+    background: var(
+      --lr-app-rail-item-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    color: var(--lr-app-rail-item-active-color, var(--lr-color-brand));
+  }
+  [part="toggle"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* icons.ts ships one right-pointing chevron and asks callers to rotate the WRAPPING element.
+     Open points down (the content below it), closed points along the reading direction --
+     mirrors <lr-app-rail-group>'s own [part="toggle-icon"] exactly. */
+  [part="toggle-icon"] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    transform: rotate(90deg);
+    transition: transform var(--lr-transition-fast);
+  }
+  [part="toggle"]:where([aria-expanded="false"]) [part="toggle-icon"] {
+    transform: none;
+  }
+  :host(:dir(rtl)) [part="toggle"]:where([aria-expanded="false"]) [part="toggle-icon"] {
+    transform: rotate(180deg);
+  }
+  /* A column stack of the slotted nested items, indented one step from this item's own row.
+     Rendered only alongside [part="toggle"] (see the class doc); [hidden] while collapsed. */
+  [part="children"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-app-rail-item-gap, var(--lr-space-s));
+    padding-inline-start: var(--lr-app-rail-item-indent, var(--lr-space-l));
+    inline-size: 100%;
+  }
+  [part="children"][hidden] {
+    display: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part="toggle"],
+    [part="toggle-icon"] {
+      transition: none !important;
+    }
   }
   [part="tooltip"] {
     position: fixed;

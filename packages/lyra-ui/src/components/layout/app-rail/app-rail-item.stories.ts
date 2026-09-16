@@ -188,3 +188,40 @@ export const WithMetaAndEndSlots: StoryObj = {
     </div>
   `,
 };
+
+/** The treeitem-with-link pattern: the row itself navigates (`href`) while a separate built-in
+ *  disclosure -- a sibling of the link, never nested inside it -- expands that one item's own
+ *  `children`. Clicking the chevron never navigates; activating the link never toggles. */
+export const NestedChildren: StoryObj = {
+  name: 'Nested children (disclosure)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Nested `<lr-app-rail-item>`s slotted into `children` grow a built-in disclosure ' +
+          '(`[part="toggle"]`) as a sibling of the parent item\'s own link. `expanded` is ' +
+          'reflected and drives a cancelable `lr-toggle-request`/settled `lr-toggle` pair, ' +
+          'mirroring `<lr-app-rail-group>`\'s collapsible contract exactly. An item with nothing ' +
+          'slotted into `children` (Settings, below) renders no disclosure at all.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="inline-size: 16rem; border: 1px solid var(--lr-color-border); border-radius: 0.5rem; padding: 0.5rem;"
+    >
+      <lr-app-rail-item href="/projects" expanded>
+        <span slot="icon" aria-hidden="true">📁</span>Projects
+        <lr-app-rail-item slot="children" href="/projects/atlas">
+          <span slot="icon" aria-hidden="true">🛰️</span>Atlas
+        </lr-app-rail-item>
+        <lr-app-rail-item slot="children" href="/projects/beacon" current>
+          <span slot="icon" aria-hidden="true">🔦</span>Beacon
+        </lr-app-rail-item>
+      </lr-app-rail-item>
+      <lr-app-rail-item href="/settings">
+        <span slot="icon" aria-hidden="true">⚙️</span>Settings
+      </lr-app-rail-item>
+    </div>
+  `,
+};

@@ -1,19 +1,37 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
   isComposedFocusAvailable,
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { tag } from '../../../internal/prefix.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { styles } from './app-rail-item.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_appRailItemCollapse, LYRA_DEFAULT_appRailItemExpand } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+export interface LyraAppRailItemToggleDetail {
+  open: boolean;
+}
+
+export interface LyraAppRailItemEventMap {
+  'lr-toggle-request': CustomEvent<LyraAppRailItemToggleDetail>;
+  'lr-toggle': CustomEvent<LyraAppRailItemToggleDetail>;
+}
 
 /**
  * `<lr-app-rail-item>` — an explicit icon/label navigation item for
@@ -29,6 +47,30 @@ import { styles } from './app-rail-item.styles.js';
  * to the stable owning rail surface when there is no return target; a newer external focus move
  * always wins.
  *
+ * An item may own its own expandable child list -- the treeitem-with-link pattern used by
+ * repository trees, Notion-style page trees and IDE explorers, where the row itself is a
+ * destination and a SEPARATE disclosure expands that one item's own nested rows beneath it.
+ * `<lr-app-rail-group>` cannot express this: its collapsible heading IS the toggle, so nesting a
+ * navigable link inside it would put an interactive element inside a button. Slotting one or more
+ * `<lr-app-rail-item>`s into `children` instead renders a built-in disclosure -- a SIBLING of
+ * `[part="base"]`, never nested inside it, so the link keeps navigating on its own and the
+ * disclosure keeps toggling on its own; clicking one never triggers the other. The disclosure
+ * carries `aria-expanded`/`aria-controls` and a localized accessible name interpolating this
+ * item's own label, mirroring `<lr-app-rail-group>`'s collapsible contract for event name, detail
+ * shape and cancelable request/commit semantics exactly (see `lr-toggle-request`/`lr-toggle`
+ * below). An item with nothing slotted into `children` renders no disclosure and no extra
+ * wrapper -- byte-identical to an item with no children slot at all.
+ *
+ * `icon-only` forwards onto every `<lr-app-rail-item>` this item DIRECTLY owns through `children`,
+ * exactly how `<lr-app-rail-group>` forwards onto the items and nested groups it owns -- so a
+ * nested item's own icon/label presentation tracks the rail's presentation without the rail
+ * reaching through two hosts. The disclosure itself never changes shape between presentations: it
+ * is always a fixed icon-button-sized square beside `[part="base"]`, the same footprint `end` and
+ * icon-only `[part="base"]` already use, so it needs no icon-only-specific styling of its own.
+ * There is no ancestor-current treatment: `<lr-app-rail-group>` has no equivalent concept for a
+ * group containing the current item, so none is invented here either -- a current descendant
+ * stays perceivable only through its own `current` property, exactly as an unnested item would.
+ *
  * @customElement lr-app-rail-item
  * @slot - The visible navigation label.
  * @slot icon - The leading decorative icon. Its flattened subtree is inert and hidden from
@@ -42,6 +84,19 @@ import { styles } from './app-rail-item.styles.js';
  *   `header-actions`), so a slotted control keeps its own click, keyboard activation and focus
  *   order instead of being swallowed by the item's own activation target. Unlike `meta` it stays
  *   visible in `icon-only` mode, where it shares the narrow rail's width with the icon.
+ * @slot children - Nested `<lr-app-rail-item>`s disclosed beneath this item. Rendering anything
+ *   into this slot grows a built-in disclosure button (`[part="toggle"]`) as a sibling of
+ *   `[part="base"]`; leaving it empty renders neither the disclosure nor `[part="children"]`.
+ * @event lr-toggle-request - Cancelable proposal emitted before `expanded` changes from the
+ *   built-in disclosure. Call `preventDefault()` to keep the current state, or assign `expanded`
+ *   from the listener to resolve it yourself -- a write during the dispatch suppresses the default
+ *   commit even when it assigns the value the property already held. Not emitted for a direct
+ *   `expanded` write. `detail: LyraAppRailItemToggleDetail` (`{ open: boolean }` -- the field is
+ *   named `open`, matching `<lr-app-rail-group>`'s identical event name and detail shape exactly,
+ *   so a listener bound to both components' `lr-toggle-request` need not branch on which fired).
+ * @event lr-toggle - The item finished expanding or collapsing its `children`. Non-cancelable,
+ *   emitted after `expanded` is written, and never emitted for a vetoed or listener-resolved
+ *   request. `detail: LyraAppRailItemToggleDetail`.
  * @csspart base - The link or button receiving focus and activation.
  * @csspart icon - The icon wrapper.
  * @csspart label - The label wrapper; visually clipped in icon-only mode.
@@ -52,6 +107,17 @@ import { styles } from './app-rail-item.styles.js';
  *   an item without secondary text renders exactly as before the slot existed.
  * @csspart end - The wrapper around the `end` slot, following `[part="meta"]`. Hidden while empty
  *   for the same reason.
+ * @csspart toggle - The disclosure control, rendered only while something is slotted into
+ *   `children`. A sibling of `[part="base"]`, never nested inside it, so activating one never
+ *   triggers the other. Carries `aria-expanded` in both states and `aria-controls` pointing at
+ *   `[part="children"]`'s id; its accessible name is a localized `this.localize()` template
+ *   interpolating this item's own label, with no literal fallback.
+ * @csspart toggle-icon - The wrapper around the disclosure chevron. Direction-aware through this
+ *   wrapper's own `transform`, never a second mirrored glyph -- mirrors
+ *   `<lr-app-rail-group>`'s `[part="toggle-icon"]`.
+ * @csspart children - The wrapper around the `children` slot. Rendered only while something is
+ *   slotted into `children`; hidden (but present, so `aria-controls` keeps resolving) while
+ *   `expanded` is `false`.
  * @csspart tooltip - The hover/focus label flyout, only rendered while `tooltip` is set, the item
  *   is `icon-only`, and it is hovered or focused.
  * @cssprop [--lr-app-rail-item-current-bg=var(--lr-color-brand-quiet)] - Background of the
@@ -107,10 +173,27 @@ import { styles } from './app-rail-item.styles.js';
  *   `--lr-icon-button-size` by `[part="base"]`'s shared `min-block-size` rule.
  * @cssprop [--lr-app-rail-item-font-size=inherit] - `[part="base"]`'s font size, set after the
  *   `font` shorthand so it alone can be retuned while family/weight/line-height stay inherited.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the icon-only
+ *   flyout tooltip's `fixed` default, read from computed style when it is (re)positioned. Set it
+ *   once on `:root`, a theme, or one clipping ancestor to change every unset rail item beneath it;
+ *   an unrecognized value falls back to `fixed`.
+ * @cssprop [--lr-app-rail-item-indent=var(--lr-space-l)] - `[part="children"]`'s
+ *   `padding-inline-start`. Applied once per nesting level -- a doubly-nested `children` list
+ *   compounds two insets automatically, since each level's own `[part="children"]` applies the
+ *   token again. Logical, so it mirrors under `dir="rtl"` with no separate rule.
  * @status stable
  * @since 4.0.0
  */
-export class LyraAppRailItem extends LyraElement {
+export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    appRailItemCollapse: LYRA_DEFAULT_appRailItemCollapse,
+    appRailItemExpand: LYRA_DEFAULT_appRailItemExpand,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   static override styles = [LyraElement.styles, styles];
   static override get observedAttributes(): string[] {
     return [...super.observedAttributes, 'icon-only'];
@@ -138,6 +221,26 @@ export class LyraAppRailItem extends LyraElement {
    *  `false` (the default) reproduces today's exact output. */
   @property({ type: Boolean, reflect: true }) tooltip = false;
 
+  /** Whether this item's `children` are shown. `false` by default -- a nested list expanding
+   *  itself on first paint would be a surprising default, and it reproduces exactly what an item
+   *  with no `expanded` property rendered before this feature existed. Mirrors
+   *  `<lr-app-rail-group>`'s `open` accessor: every write, including one that assigns the value
+   *  already held, marks the veto guard so a synchronous `lr-toggle-request` listener resolving
+   *  this itself is observed correctly (see {@link VetoWriteGuard}). */
+  @property({ type: Boolean, reflect: true })
+  get expanded(): boolean {
+    return this._expanded;
+  }
+  set expanded(next: boolean) {
+    const old = this._expanded;
+    this._expanded = next;
+    markVetoGuardWrite(this.toggleGuard);
+    this.requestUpdate('expanded', old);
+  }
+  private _expanded = false;
+
+  private readonly toggleGuard = new VetoWriteGuard();
+
   @state() private showTooltip = false;
   /** `:empty` cannot see slotted light-DOM content (the wrapper always holds a `<slot>` element),
    *  so emptiness is tracked from `slotchange` the same way `<lr-details>` tracks its own
@@ -146,12 +249,26 @@ export class LyraAppRailItem extends LyraElement {
   @state() private hasMetaSlot = false;
   private stopPositioning?: () => void;
   private labelObserver?: MutationObserver;
+  private childrenObserver?: MutationObserver;
   private semanticFocusRepair?: ComposedFocusRepairSnapshot;
   private focusReturnTarget?: HTMLElement;
+  private readonly childrenId = nextId('app-rail-item-children');
+
+  /** Reads the light-DOM `slot` attribute directly rather than a live `assignedNodes()` snapshot
+   *  -- the same WebKit-safe pattern `<lr-app-rail>`'s own `onHeaderSlotChange`/`onFooterSlotChange`
+   *  use -- so the very first render (before any mutation has ever fired) already renders the
+   *  disclosure and `[part="children"]` when the item was authored with children in markup,
+   *  with no flash of the childless state. Only ELEMENT children can carry a `slot` attribute, so
+   *  reading `this.children` (not `this.childNodes`) already excludes stray text nodes. */
+  private get hasChildrenSlotted(): boolean {
+    return Array.from(this.children).some((el) => el.getAttribute('slot') === 'children');
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.armLabelObserver();
+    this.armChildrenObserver();
+    this.syncOwnedChildren();
   }
 
   private armLabelObserver(): void {
@@ -164,15 +281,77 @@ export class LyraAppRailItem extends LyraElement {
     this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
   }
 
-  // Only the default slot's own content counts toward the tooltip text --
-  // text incidentally living inside the (decorative) `icon` slot shouldn't
-  // leak into the flyout label. Mirrors `lr-chip`'s `labelText` getter.
+  /** Watches the light DOM for a `children`-slotted node being added, removed, or re-slotted, so
+   *  `hasChildrenSlotted` (read fresh from `render()`, never cached) triggers a re-render at the
+   *  moment the disclosure/`[part="children"]` should appear or disappear -- including the very
+   *  first time a consumer appends a nested item after construction. `childList` catches
+   *  add/remove; the `subtree`-scoped `slot`-only `attributes` filter catches an existing child
+   *  being re-slotted into or out of `children`, mirroring what a real `slotchange` listener would
+   *  see for an always-rendered slot (this slot is instead rendered on demand, so there is no
+   *  `<slot>` element to listen on while it does not exist). Also re-syncs this item's own
+   *  `icon-only` forwarding onto whatever it owns, since either kind of mutation can change which
+   *  nodes this item owns. */
+  private armChildrenObserver(): void {
+    this.childrenObserver?.disconnect();
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    this.childrenObserver = new MutationObserverCtor(() => {
+      this.syncOwnedChildren();
+      this.requestUpdate();
+    });
+    this.childrenObserver.observe(this, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['slot'],
+    });
+  }
+
+  /** Mirrors this item's own `icon-only` state onto every `<lr-app-rail-item>` it DIRECTLY owns
+   *  through `children` -- exactly how `<lr-app-rail-group>`'s `syncOwnedItems()` forwards onto the
+   *  items and nested groups it owns. One owner per node: ownership is resolved from the node's
+   *  PARENT, never the node itself, so a grandchild's own next sync does not immediately undo a
+   *  grandparent's write, and a nested item's own `attributeChangedCallback` cascades the same
+   *  forwarding one level further down in turn. Gated on `isConnected` so a detached item stops
+   *  claiming ownership of nodes appended to it afterwards. */
+  private syncOwnedChildren(): void {
+    if (!this.isConnected) return;
+    const iconOnly = this.hasAttribute('icon-only');
+    const itemTag = tag('app-rail-item');
+    for (const node of this.querySelectorAll(itemTag)) {
+      if ((node.parentElement?.closest(itemTag) ?? null) !== this) continue;
+      node.toggleAttribute('icon-only', iconOnly);
+    }
+  }
+
+  private onToggleClick = (event: Event): void => {
+    // The rail's own nav slot listener closes the mobile overlay on any click reaching it
+    // (composed events cross the shadow boundary): toggling a disclosure is not navigation, so it
+    // must never trigger that close, unlike activating the link itself.
+    event.stopPropagation();
+    const next = !this._expanded;
+    requestThenCommit({
+      requestDetail: { open: next },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-toggle-request', detail, init),
+      guard: this.toggleGuard,
+      commit: () => {
+        this.expanded = next;
+        this.emit('lr-toggle', { open: next });
+      },
+    });
+  };
+
+  // Only the default slot's own content counts toward the tooltip text and the disclosure's
+  // interpolated {label} -- text incidentally living inside the (decorative) `icon` slot or a
+  // nested `children` item shouldn't leak into either. Mirrors `lr-chip`'s `labelText` getter.
   private get labelText(): string {
     return Array.from(this.childNodes)
       .filter((node): node is Text | Element => {
         if (node.nodeType === 3) return true;
         if (node.nodeType !== 1) return false;
-        return (node as Element).getAttribute('slot') !== 'icon';
+        const slot = (node as Element).getAttribute('slot');
+        return slot !== 'icon' && slot !== 'children';
       })
       .map((n) => n.textContent ?? '')
       .join('')
@@ -216,6 +395,7 @@ export class LyraAppRailItem extends LyraElement {
     super.attributeChangedCallback(name, oldValue, newValue);
     if (name !== 'icon-only' || oldValue === newValue) return;
     if (newValue === null) this.showTooltip = false;
+    this.syncOwnedChildren();
     this.requestUpdate();
   }
 
@@ -266,6 +446,7 @@ export class LyraAppRailItem extends LyraElement {
       // rail) rather than staying pinned to the physical right under RTL.
       this.stopPositioning = place(anchor, popup, {
         placement: rtlAwarePlacement('right', this),
+        strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
       });
     }
   }
@@ -276,6 +457,8 @@ export class LyraAppRailItem extends LyraElement {
     this.focusReturnTarget = undefined;
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
+    this.childrenObserver?.disconnect();
+    this.childrenObserver = undefined;
     this.stopPositioning?.();
     this.stopPositioning = undefined;
     this.showTooltip = false;
@@ -317,37 +500,63 @@ export class LyraAppRailItem extends LyraElement {
       ><span part="end" ?hidden=${!this.hasEndSlot}
         ><slot name="end" @slotchange=${this.onEndSlotChange}></slot></span
       >`;
-    if (href && !this.disabled) {
-      return html`
-        <a
-          part="base"
-          href=${href}
-          target=${this.target || nothing}
-          rel=${this.target ? 'noopener noreferrer' : nothing}
-          aria-label=${label ?? nothing}
-          aria-disabled="false"
-          aria-current=${this.current ? 'page' : 'false'}
-          @mouseenter=${this.onFocusShow}
-          @mouseleave=${this.onBlurHide}
-          @focus=${this.onFocusShow}
-          @blur=${this.onBlurHide}
-        >${content}</a>${adornments}${tooltip}
-      `;
-    }
-    return html`
-      <button
-        part="base"
-        type="button"
-        ?disabled=${this.disabled}
-        aria-disabled=${this.disabled ? 'true' : 'false'}
-        aria-label=${label ?? nothing}
-        aria-current=${this.current ? 'page' : 'false'}
-        @mouseenter=${this.onFocusShow}
-        @mouseleave=${this.onBlurHide}
-        @focus=${this.onFocusShow}
-        @blur=${this.onBlurHide}
-      >${content}</button>${adornments}${tooltip}
-    `;
+    const hasChildren = this.hasChildrenSlotted;
+    // A sibling of [part="base"], never nested inside it -- the link keeps navigating on its own
+    // and this keeps toggling on its own (see the class doc). Omitted entirely, not merely
+    // hidden, while nothing is slotted into `children`, so an item with no nested items renders
+    // no disclosure at all, byte-identical to an item authored before this feature existed.
+    const toggle = hasChildren
+      ? html`<button
+          part="toggle"
+          type="button"
+          aria-expanded=${this._expanded ? 'true' : 'false'}
+          aria-controls=${this.childrenId}
+          aria-label=${this.localize(
+            this._expanded ? 'appRailItemCollapse' : 'appRailItemExpand',
+            undefined,
+            { label: this.tooltipText },
+          )}
+          @click=${this.onToggleClick}
+        ><span part="toggle-icon" aria-hidden="true">${chevronIcon()}</span></button>`
+      : nothing;
+    // Rendered (hidden while collapsed, never removed) only alongside the toggle that controls
+    // it, so `aria-controls` always resolves to a real element whenever the toggle exists.
+    const childrenList = hasChildren
+      ? html`<span part="children" id=${this.childrenId} ?hidden=${!this._expanded}
+          ><slot name="children"></slot
+        ></span>`
+      : nothing;
+    const row = href && !this.disabled
+      ? html`<a
+            part="base"
+            href=${href}
+            target=${this.target || nothing}
+            rel=${this.target ? 'noopener noreferrer' : nothing}
+            aria-label=${label ?? nothing}
+            aria-disabled="false"
+            aria-current=${this.current ? 'page' : 'false'}
+            @mouseenter=${this.onFocusShow}
+            @mouseleave=${this.onBlurHide}
+            @focus=${this.onFocusShow}
+            @blur=${this.onBlurHide}
+          >${content}</a>${adornments}${toggle}${tooltip}`
+      : html`<button
+            part="base"
+            type="button"
+            ?disabled=${this.disabled}
+            aria-disabled=${this.disabled ? 'true' : 'false'}
+            aria-label=${label ?? nothing}
+            aria-current=${this.current ? 'page' : 'false'}
+            @mouseenter=${this.onFocusShow}
+            @mouseleave=${this.onBlurHide}
+            @focus=${this.onFocusShow}
+            @blur=${this.onBlurHide}
+          >${content}</button>${adornments}${toggle}${tooltip}`;
+    // :host lays out as a column of [row, children-list] so `[part="children"]` stacks BELOW the
+    // row instead of squeezing into it; the row's own flex/gap/alignment CSS (unchanged from
+    // before this feature existed) now lives on this wrapper instead of :host. When `hasChildren`
+    // is false, `childrenList` is `nothing` and the row alone reproduces the exact prior layout.
+    return html`<div class="row">${row}</div>${childrenList}`;
   }
 }
 

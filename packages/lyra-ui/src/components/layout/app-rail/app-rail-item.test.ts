@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./app-rail-item.js";
 import "./app-rail.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
@@ -1188,7 +1188,12 @@ describe('end and meta slots', () => {
       </lr-app-rail-item>
     `)) as LyraAppRailItem;
     await el.updateComplete;
-    const nodes = Array.from(el.shadowRoot!.children)
+    // Queries `.row` -- the internal structural wrapper the `children` feature introduced to
+    // stack `[part="children"]` beneath the row -- rather than `shadowRoot.children` directly;
+    // see the no-children regression test below for proof that wrapper adds nothing observable
+    // when an item has no nested items.
+    const row = el.shadowRoot!.querySelector('.row')!;
+    const nodes = Array.from(row.children)
       .map((node) => node.getAttribute('part'))
       .filter((part): part is string => part !== null);
     expect(nodes.join(' ')).to.equal('base meta end');
@@ -1264,5 +1269,324 @@ describe('end and meta slots', () => {
     `)) as LyraAppRailItem;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('nested children (treeitem-with-link)', () => {
+  it('renders no disclosure and no [part="children"] when nothing is slotted into children (regression)', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item href="/projects">Projects</lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="toggle"]') === null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="children"]') === null).to.equal(true);
+    // The row still fills the item's full width, exactly as it did before `children` existed --
+    // proves the new :host column layout and its (absent) second flex item add no visual seam.
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getBoundingClientRect().width).to.equal(el.getBoundingClientRect().width);
+  });
+
+  it('renders a disclosure and [part="children"] once something is slotted into children, wired to each other', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item href="/projects">
+        Projects
+        <lr-app-rail-item slot="children" href="/projects/one">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    const children = el.shadowRoot!.querySelector('[part="children"]') as HTMLElement;
+    expect(toggle).to.not.equal(null);
+    expect(children).to.not.equal(null);
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
+    expect(toggle.getAttribute('aria-controls')).to.equal(children.id);
+    expect(children.hasAttribute('hidden')).to.equal(true);
+    // A sibling of [part="base"], never nested inside it.
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.contains(toggle)).to.equal(false);
+    expect(toggle.parentNode === base.parentNode).to.equal(true);
+  });
+
+  it('toggles through the request/commit pair and announces the settled state', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    const order: string[] = [];
+    el.addEventListener('lr-toggle-request', () => order.push('request'));
+    el.addEventListener('lr-toggle', () => order.push('toggle'));
+    const settled = oneEvent(el, 'lr-toggle');
+    toggle.click();
+    const event = await settled;
+    expect((event as CustomEvent<{ open: boolean }>).detail.open).to.equal(true);
+    expect(order.join()).to.equal('request,toggle');
+    await el.updateComplete;
+    expect(el.expanded).to.equal(true);
+    expect(
+      (el.shadowRoot!.querySelector('[part="children"]') as HTMLElement).hasAttribute('hidden')
+    ).to.equal(false);
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+  });
+
+  it('keeps the item collapsed when the request is vetoed, and emits no settled event', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    let settled = 0;
+    el.addEventListener('lr-toggle', () => {
+      settled += 1;
+    });
+    el.addEventListener('lr-toggle-request', (event) => {
+      event.preventDefault();
+    });
+    (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.expanded).to.equal(false);
+    expect(settled).to.equal(0);
+  });
+
+  it('lets a listener resolve the toggle itself without the default commit clobbering it', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    // Writes back the value the property already holds: a before/after value compare cannot see
+    // this, which is exactly why the pair tracks writes instead (see VetoWriteGuard).
+    el.addEventListener('lr-toggle-request', () => {
+      el.expanded = false;
+    });
+    let settled = 0;
+    el.addEventListener('lr-toggle', () => {
+      settled += 1;
+    });
+    (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.expanded).to.equal(false);
+    expect(settled).to.equal(0);
+  });
+
+  it('toggles from the keyboard when the disclosure itself holds focus', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    toggle.focus();
+    expect(el.shadowRoot!.activeElement === toggle).to.equal(true);
+    // A real key press, and no programmatic .click(): a synthetic KeyboardEvent never produces a
+    // native click, so a dispatch-then-click pair would assert nothing about the keyboard.
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(() => el.expanded === true, 'Enter on the focused disclosure expands the item');
+    await sendKeys({ press: ' ' });
+    await waitUntil(() => el.expanded === false, 'Space on the focused disclosure collapses it again');
+  });
+
+  it('never activates the link/button when the disclosure is clicked, and never toggles when it is activated', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    let baseClicks = 0;
+    base.addEventListener('click', () => {
+      baseClicks += 1;
+    });
+    toggle.click();
+    await el.updateComplete;
+    expect(baseClicks).to.equal(0);
+    expect(el.expanded).to.equal(true);
+
+    base.click();
+    await el.updateComplete;
+    expect(el.expanded).to.equal(true);
+  });
+
+  it("stops a toggle click from crossing the item's own host boundary, so it can never reach the rail's nav-slot click listener that closes the mobile overlay", async () => {
+    // <lr-app-rail>'s own nav slot listens for any click reaching it (composed events cross
+    // shadow boundaries) to close the mobile overlay -- toggling a disclosure is not navigation,
+    // so it must never trigger that close the way activating the link does. Asserted here at the
+    // item's own host boundary rather than with a full rail+mobile-overlay fixture: stopping
+    // propagation this early already guarantees nothing further up the light-DOM tree ever sees
+    // the event.
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    let hostClicks = 0;
+    el.addEventListener('click', () => {
+      hostClicks += 1;
+    });
+    (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+    expect(hostClicks).to.equal(0);
+    (el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).click();
+    expect(hostClicks).to.equal(1);
+  });
+
+  it('forwards icon-only to its own children, including one added later', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Projects
+        <lr-app-rail-item slot="children" id="one">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    el.setAttribute('icon-only', '');
+    await el.updateComplete;
+    await waitUntil(
+      () => (el.querySelector('#one') as HTMLElement).hasAttribute('icon-only'),
+      'the slotted child mirrors the parent item icon-only state'
+    );
+
+    const late = document.createElement('lr-app-rail-item');
+    late.setAttribute('slot', 'children');
+    el.appendChild(late);
+    await waitUntil(() => late.hasAttribute('icon-only'), 'a later child mirrors it too');
+
+    el.removeAttribute('icon-only');
+    await waitUntil(
+      () =>
+        !(el.querySelector('#one') as HTMLElement).hasAttribute('icon-only') &&
+        !late.hasAttribute('icon-only'),
+      'clearing the parent state clears every child'
+    );
+  });
+
+  it('stops forwarding icon-only once it disconnects', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item icon-only>
+        Projects
+        <lr-app-rail-item slot="children" id="one">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    await waitUntil(() => (el.querySelector('#one') as HTMLElement).hasAttribute('icon-only'));
+    el.remove();
+    const late = document.createElement('lr-app-rail-item');
+    late.setAttribute('slot', 'children');
+    el.appendChild(late);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(late.hasAttribute('icon-only')).to.equal(false);
+  });
+
+  it('points the toggle glyph the opposite way under dir="rtl"', async () => {
+    const glyph = (el: LyraAppRailItem): string =>
+      getComputedStyle(el.shadowRoot!.querySelector('[part="toggle-icon"]') as HTMLElement)
+        .transform;
+    const ltr = (await fixture(html`
+      <lr-app-rail-item>A<lr-app-rail-item slot="children">B</lr-app-rail-item></lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    const rtl = (await fixture(html`
+      <lr-app-rail-item dir="rtl">A<lr-app-rail-item slot="children">B</lr-app-rail-item></lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await ltr.updateComplete;
+    await rtl.updateComplete;
+    expect(glyph(rtl)).to.not.equal(glyph(ltr));
+  });
+
+  it('indents [part="children"] via --lr-app-rail-item-indent, mirrored under dir="rtl"', async () => {
+    const el = (await fixture(html`
+      <div style="--lr-app-rail-item-indent: 40px;">
+        <lr-app-rail-item>
+          Projects
+          <lr-app-rail-item slot="children">One</lr-app-rail-item>
+        </lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const item = el.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    item.expanded = true;
+    await item.updateComplete;
+    const children = item.shadowRoot!.querySelector('[part="children"]') as HTMLElement;
+    expect(getComputedStyle(children).paddingInlineStart).to.equal('40px');
+
+    const rtl = (await fixture(html`
+      <div dir="rtl" style="--lr-app-rail-item-indent: 40px;">
+        <lr-app-rail-item>
+          Projects
+          <lr-app-rail-item slot="children">One</lr-app-rail-item>
+        </lr-app-rail-item>
+      </div>
+    `)) as HTMLElement;
+    const rtlItem = rtl.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    rtlItem.expanded = true;
+    await rtlItem.updateComplete;
+    const rtlChildren = rtlItem.shadowRoot!.querySelector('[part="children"]') as HTMLElement;
+    const nested = rtlItem.querySelector('lr-app-rail-item') as HTMLElement;
+    const hostRect = rtlItem.getBoundingClientRect();
+    const nestedRect = nested.getBoundingClientRect();
+    // padding-inline-start under dir="rtl" resolves to the physical right edge -- the nested
+    // item's right edge must sit inset from the host's own right edge, not its left.
+    expect(hostRect.right - nestedRect.right).to.be.greaterThan(20);
+    expect(getComputedStyle(rtlChildren).paddingRight).to.equal('40px');
+  });
+
+  it('is accessible expanded and collapsed', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item href="/projects">
+        Projects
+        <lr-app-rail-item slot="children" href="/projects/one">One</lr-app-rail-item>
+        <lr-app-rail-item slot="children" href="/projects/two">Two</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+
+    el.expanded = true;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+
+  it('renders the English fallback disclosure name interpolating this item\'s own label, with no locale registered', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).to.equal('Expand Projects');
+    el.expanded = true;
+    await el.updateComplete;
+    expect(
+      (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
+    ).to.equal('Collapse Projects');
+  });
+
+  it('honors a strings override for the disclosure name', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item .strings=${{ appRailItemCollapse: 'Replier {label}', appRailItemExpand: 'Déplier {label}' }}>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).to.equal('Déplier Projects');
+    el.expanded = true;
+    await el.updateComplete;
+    expect(
+      (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
+    ).to.equal('Replier Projects');
   });
 });
