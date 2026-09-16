@@ -575,8 +575,11 @@ function isRuntimeHelper(rootFile, candidate, sourceRoot) {
  * `localName !== 'details'` and `hasAttribute('open')` checks made `collapse`/`details`/`open` look
  * like reachable message keys for every component that touches a11y helpers -- e.g.
  * `lr-typing-indicator`, which only ever localizes `thinking`.
+ *
+ * Exported so `generate-registration-graph.mjs` can reuse this exact per-class reachability walk
+ * (rather than a second ad-hoc scan) to derive each registration entry's `localeKeys`.
  */
-async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, sourceCache) {
+export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, sourceCache) {
   const found = new Set();
   const visited = new Set();
   // Phase 1: walk the graph once, parsing each reachable module and recording whether any of them
@@ -683,7 +686,14 @@ function validateConfiguredExclusions(config, catalogKeys, classFiles) {
   }
 }
 
-function applyConfiguredExclusions({
+/**
+ * Exported so `generate-registration-graph.mjs` can apply the same configured, validated
+ * exclusions when deriving `localeKeys`, rather than shipping the more conservative raw
+ * `reachableCatalogKeys()` result -- which would over-report for the handful of classes
+ * `DEFAULT_STRING_SLICE_EXCLUSIONS` narrows (their real `defaultStrings` slice ships fewer keys
+ * than their whole-graph literal walk conservatively finds).
+ */
+export function applyConfiguredExclusions({
   packageDir,
   file,
   source,
