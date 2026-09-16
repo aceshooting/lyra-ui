@@ -118,3 +118,36 @@ export const ValueThresholds: Story = {
     </div>
   `,
 };
+
+export const CompactLinearMeter: Story = {
+  name: 'Compact linear meter (dense row)',
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 0.375rem; max-inline-size: 16rem">
+      ${[
+        { label: 'Team A', value: 42 },
+        { label: 'Team B', value: 84 },
+        { label: 'Team C', value: 100 },
+      ].map(
+        (row) => html`
+          <div style="display: flex; align-items: center; gap: 0.5rem">
+            <span style="inline-size: 4rem">${row.label}</span>
+            <lr-gauge
+              shape="linear"
+              size="xs"
+              show-value="false"
+              value=${row.value}
+              max="100"
+              aria-label=${row.label}
+              .thresholds=${[
+                { at: 0, variant: 'neutral' },
+                { at: 80, variant: 'warning' },
+                { at: 100, variant: 'danger' },
+              ]}
+            ></lr-gauge>
+            <span>${row.value}%</span>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};

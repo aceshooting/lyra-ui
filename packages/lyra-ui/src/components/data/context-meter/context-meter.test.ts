@@ -398,6 +398,40 @@ it('is accessible with a populated ring meter', async () => {
   await expect(el).to.be.accessible({ ignoredRules: ['color-contrast'] });
 });
 
+it('scales the ring caption font-size with the host font, not the document root', async () => {
+  const rootFontSizePx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const defaultEl = (await fixture(
+    html`<lr-context-meter shape="ring" total="100" label="72%"></lr-context-meter>`,
+  )) as LyraContextMeter;
+  // The precondition this byte-identical claim relies on: the ring's 8em box has no size ladder
+  // of its own, so its host font-size is whatever it inherits -- here, the document root's.
+  expect(getComputedStyle(defaultEl).fontSize, 'host inherits the root font-size here').to.equal(
+    `${rootFontSizePx}px`,
+  );
+  const defaultCaption = defaultEl.shadowRoot!.querySelector('.ring-label') as HTMLElement;
+  // 0.625rem before this fix, now 0.625em of the host's own (here: root-equal) font-size -- the
+  // same resolved pixel value either way at this default tier.
+  expect(getComputedStyle(defaultCaption).fontSize, 'default caption').to.equal(
+    `${rootFontSizePx * 0.625}px`,
+  );
+
+  const wrapper = (await fixture(html`
+    <div style="font-size: 4px">
+      <lr-context-meter shape="ring" total="100" label="72%"></lr-context-meter>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-context-meter') as LyraContextMeter;
+  await el.updateComplete;
+  expect(getComputedStyle(el).fontSize, 'inherited host font-size').to.equal('4px');
+  const caption = el.shadowRoot!.querySelector('.ring-label') as HTMLElement;
+  // Before this fix this stayed at 0.625rem (10px given a 16px root), unaffected by the ring's
+  // own 8em box shrinking to 32px square here -- the same defect shape <lr-gauge>'s linear
+  // caption had.
+  expect(getComputedStyle(caption).fontSize, 'caption follows the host, not the root').to.equal(
+    '2.5px',
+  );
+});
+
 it('can shrink to a 320px allocation with a long visible label', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">

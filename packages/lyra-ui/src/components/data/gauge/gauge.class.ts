@@ -4,6 +4,7 @@ import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
@@ -97,8 +98,8 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * @csspart base - The root `<svg>`.
  * @csspart track - The background track arc/line.
  * @csspart fill - The animated fill arc/line.
- * @csspart value - The value text.
- * @csspart label - The label text.
+ * @csspart value - The value text. Rendered only while `showValue` is true.
+ * @csspart label - The label text. Rendered only while `label` is non-empty.
  * @cssprop [--lr-gauge-fill=var(--lr-color-brand)] - Fill stroke for radial, ring, and linear
  * gauges. The token default follows the effective variant -- `variant`, or the matching
  * `thresholds` entry -- rather than always `brand`.
@@ -151,6 +152,20 @@ export class LyraGauge extends LyraElement {
   /** Displayed/announced value text, e.g. `'72°F'` for a raw `value` of `72`.
    * An empty string is treated the same as unset and falls back to the numeric `value`. */
   @property({ attribute: 'value-text' }) valueText?: string;
+  /** Whether the decorative `part="value"` caption renders at all. The accessible value --
+   *  `aria-valuenow`/`aria-valuetext` and the host's computed accessible name -- comes from
+   *  `value`/`valueText` directly and stays correct either way, since the caption itself is
+   *  always `aria-hidden`. Mirrors `<lr-progress-bar>`'s and `<lr-progress-ring>`'s own
+   *  `showValue` name and meaning; the default differs (`true` here, `false` there) because
+   *  unlike a progress indicator, a gauge's whole purpose is showing the reading it announces, so
+   *  hiding the caption is the opt-out rather than the opt-in -- leaving it unset renders exactly
+   *  as before this property existed. Uses the shared parse-only `trueDefaultBooleanConverter`
+   *  rather than Lit's default presence-based `type: Boolean` handling, so a plain-HTML consumer
+   *  with no way to write a `.showValue` property binding can still turn this off with
+   *  `show-value="false"`. Deliberately not reflected: nothing styles or queries
+   *  `[show-value]`. */
+  @property({ attribute: 'show-value', converter: trueDefaultBooleanConverter })
+  showValue = true;
   /** Semantic palette for the fill, read from the library's shared semantic-tone vocabulary
    *  (the same one `<lr-progress-bar>` uses). This is the fallback color: whenever `thresholds`
    *  is non-empty and `value` matches at least one entry, the matching entry's variant wins
@@ -330,12 +345,14 @@ export class LyraGauge extends LyraElement {
         stroke-dasharray=${RADIAL_ARC_LENGTH}
         stroke-dashoffset=${dashoffset}
       ></path>
-      <text
-        part="value"
-        x="50"
-        y="52"
-        aria-hidden="true"
-      >${text}</text>
+      ${this.showValue
+        ? svg`<text
+            part="value"
+            x="50"
+            y="52"
+            aria-hidden="true"
+          >${text}</text>`
+        : nothing}
       ${this.label
         ? svg`<text
             part="label"
@@ -387,12 +404,14 @@ export class LyraGauge extends LyraElement {
             aria-hidden="true"
           >${label}</text>`
         : nothing}
-      <text
-        part="value"
-        x=${endX}
-        y=${LINEAR_TEXT_Y}
-        aria-hidden="true"
-      >${text}</text>
+      ${this.showValue
+        ? svg`<text
+            part="value"
+            x=${endX}
+            y=${LINEAR_TEXT_Y}
+            aria-hidden="true"
+          >${text}</text>`
+        : nothing}
     </svg>`;
   }
 
@@ -419,12 +438,14 @@ export class LyraGauge extends LyraElement {
         stroke-dashoffset=${dashoffset}
         transform="rotate(-90 50 50)"
       ></circle>
-      <text
-        part="value"
-        x="50"
-        y="52"
-        aria-hidden="true"
-      >${text}</text>
+      ${this.showValue
+        ? svg`<text
+            part="value"
+            x="50"
+            y="52"
+            aria-hidden="true"
+          >${text}</text>`
+        : nothing}
       ${this.label
         ? svg`<text
             part="label"

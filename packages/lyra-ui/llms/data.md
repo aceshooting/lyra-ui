@@ -1617,6 +1617,12 @@ explicitly empty labels remain empty and later labels render normally.
 - `valueText?: string` (attribute `value-text` — overrides both the visible text and the host's
   `aria-valuetext`; an empty string is treated the same as unset and falls back to the numeric
   `value` while removing `aria-valuetext`)
+- `showValue: boolean = true` (attribute `show-value`, not reflected) — whether the decorative
+  `part="value"` caption renders at all; `show-value="false"` omits it the same way an empty
+  `label` already omits `part="label"`. `aria-valuenow`/`aria-valuetext` and the host's accessible
+  name are unaffected either way, since the caption itself is always `aria-hidden`. Mirrors
+  `<lr-progress-bar>`'s/`<lr-progress-ring>`'s own `showValue` name and meaning; the default here
+  is `true` (a gauge's whole purpose is showing the reading it announces) where theirs is `false`.
 - `variant: LyraProgressVariant = 'brand'` (reflected) — the same shared semantic-tone vocabulary
   `<lr-progress-bar>` uses (`'neutral'|'brand'|'success'|'warning'|'danger'`). The fallback color
   whenever `thresholds` is empty or matches nothing.
@@ -1633,7 +1639,8 @@ explicitly empty labels remain empty and later labels render normally.
 
 **Slots:** none.
 
-**CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value`, `label`
+**CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value` (rendered only while `showValue` is
+true), `label` (rendered only while `label` is non-empty)
 
 **Themeable custom properties:** `--lr-gauge-fill` (fill stroke; overrides `variant`/`thresholds`
 entirely and falls back to the effective variant's shared semantic token —
@@ -1650,6 +1657,15 @@ entirely and falls back to the effective variant's shared semantic token —
   style="--lr-gauge-fill: var(--lr-color-success)"
 ></lr-gauge>
 <lr-gauge shape="linear" value="0.4" max="1" value-text="72°F"></lr-gauge>
+<!-- compact dashboard meter: a slim, captionless, thresholded row -->
+<lr-gauge
+  shape="linear"
+  size="xs"
+  show-value="false"
+  aria-label="Spend"
+  value="84"
+  max="100"
+></lr-gauge>
 <!-- automatic threshold coloring: same rule, opposite direction -->
 <lr-gauge id="cpu" value="82" label="CPU"></lr-gauge>
 <script>
@@ -1693,7 +1709,11 @@ entirely and falls back to the effective variant's shared semantic token —
 - no documented component-specific sizing custom property. The host box is fixed em values
   (`8em` radial/ring, `12em`/`1.5em` linear) against the host font size, so `size` is the supported
   way to step it; for a dimension off the ladder, set plain CSS `width`/`height` (or `font-size`)
-  on the element instead.
+  on the element instead. The value/label captions are `em`-sized against that same host font-size,
+  so they shrink right along with the frame at a smaller tier or a smaller host `font-size` —
+  combine a small tier (or a small host `font-size`) with `show-value="false"` for a slim,
+  thresholded dashboard meter, matching `<lr-progress-bar size="xs">`'s footprint but with
+  `role="meter"` and one `thresholds` array instead of a hand-written ratio-to-variant mapping.
 - Divide-by-zero guarded, and radial/linear share one component via the `shape`
   attribute.
 - non-finite `value` text remains blank unless `valueText` supplies a truthful fallback; that
@@ -4770,6 +4790,7 @@ These named interfaces and helper signatures are available to typed integrations
     heatValue?(row: T): number | null | undefined;
     editTrigger?: TableColumnEditTrigger;
     editValue?: (row: T) => string | number;
+    editLabel?: (row: T) => string;
     editType?: 'text' | 'number' | 'select';
     editOptions?: TableColumnEditOption[];
     cell: (row: T) => unknown;
@@ -4790,7 +4811,6 @@ These named interfaces and helper signatures are available to typed integrations
     readonly phase: 'request';
     readonly sortKey: string;
     readonly sortDir: TableSortDirection;
-    editLabel?: (row: T) => string;
   }`
 
 - **`components-data-tree-tree-types-contracts`** — Supporting data types and helpers for this component family.

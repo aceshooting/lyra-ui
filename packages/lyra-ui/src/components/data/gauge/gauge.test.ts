@@ -679,6 +679,17 @@ describe('size ladder', () => {
       expect(rect.width, `size=${tier.size} inline size`).to.be.closeTo(tier.fontSize * 8, 0.5);
       expect(rect.height, `size=${tier.size} block size`).to.be.closeTo(tier.fontSize * 8, 0.5);
       expect(el.size, `size=${tier.size} readback`).to.equal(tier.size);
+
+      // The comment above this describe block promises captions scale with the frame -- assert
+      // it directly instead of trusting the frame-only checks above to imply it.
+      const valueEl = el.shadowRoot!.querySelector('[part="value"]');
+      const labelEl = el.shadowRoot!.querySelector('[part="label"]');
+      expect(getComputedStyle(valueEl!).fontSize, `size=${tier.size} value caption`).to.equal(
+        `${tier.fontSize}px`,
+      );
+      expect(getComputedStyle(labelEl!).fontSize, `size=${tier.size} label caption`).to.equal(
+        `${tier.fontSize * 0.625}px`,
+      );
     }
   });
 
@@ -719,6 +730,13 @@ describe('size ladder', () => {
     // draws the same 8em frame it drew before the ladder reached this component.
     expect(getComputedStyle(el).fontSize, 'inherited font-size').to.equal('10px');
     expect(el.getBoundingClientRect().width, 'inherited inline size').to.be.closeTo(80, 0.5);
+    // The value caption follows the same inherited font-size (10px), not the document root
+    // (16px in this test environment) -- the fix for the caption's previous root-anchored rem.
+    const valueEl = el.shadowRoot!.querySelector('[part="value"]');
+    expect(
+      getComputedStyle(valueEl!).fontSize,
+      'value caption follows the inherited font-size',
+    ).to.equal('10px');
   });
 
   it('treats an unsupported tier as no size at all rather than snapping to one', async () => {
@@ -774,6 +792,162 @@ describe('size ladder', () => {
     `)) as LyraGauge;
 
     expect(el.size, 'tier applied').to.equal('l');
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('linear caption sizing scales with the host font, not the document root', () => {
+  it('renders the linear value/label captions at the same resolved font-size as before this fix, with no size tier and no ambient override', async () => {
+    const el = (await fixture(
+      html`<lr-gauge shape="linear" value="10" max="100" label="Battery"></lr-gauge>`,
+    )) as LyraGauge;
+    const rootFontSizePx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    // The precondition this byte-identical claim relies on: with no size tier, the host's own
+    // font-size is whatever it inherits, which in this fixture is the same as the document root's.
+    expect(getComputedStyle(el).fontSize, 'host inherits the root font-size here').to.equal(
+      `${rootFontSizePx}px`,
+    );
+    const valueEl = el.shadowRoot!.querySelector('[part="value"]');
+    const labelEl = el.shadowRoot!.querySelector('[part="label"]');
+    // 0.5rem before this fix, now 0.5em of the host's own (here: root-equal) font-size -- the same
+    // resolved pixel value either way at this default tier.
+    expect(getComputedStyle(valueEl!).fontSize, 'value caption').to.equal(
+      `${rootFontSizePx * 0.5}px`,
+    );
+    expect(getComputedStyle(labelEl!).fontSize, 'label caption').to.equal(
+      `${rootFontSizePx * 0.5}px`,
+    );
+  });
+
+  it("scales the linear value/label captions with a caller's own font-size on the host, not just the document root", async () => {
+    const wrapper = (await fixture(html`
+      <div style="font-size: 4px">
+        <lr-gauge shape="linear" value="10" max="100" label="Battery"></lr-gauge>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-gauge') as LyraGauge;
+    await el.updateComplete;
+
+    expect(getComputedStyle(el).fontSize, 'inherited host font-size').to.equal('4px');
+    const valueEl = el.shadowRoot!.querySelector('[part="value"]');
+    const labelEl = el.shadowRoot!.querySelector('[part="label"]');
+    // Before this fix these stayed at 0.5rem (8px given a 16px root), overflowing the 6px-tall box
+    // this ambient font-size produces below.
+    expect(getComputedStyle(valueEl!).fontSize, 'value caption follows the host, not the root').to.equal(
+      '2px',
+    );
+    expect(getComputedStyle(labelEl!).fontSize, 'label caption follows the host, not the root').to.equal(
+      '2px',
+    );
+    const rect = el.getBoundingClientRect();
+    expect(rect.height, 'linear block size at this ambient font-size').to.be.closeTo(6, 0.5);
+    expect(
+      parseFloat(getComputedStyle(valueEl!).fontSize),
+      'caption fits inside the shrunk box',
+    ).to.be.lessThan(rect.height);
+  });
+
+  it('scales the linear frame and its captions together at every tier of the shared ladder, never overflowing the box', async () => {
+    const tiers = [
+      { size: '2xs', fontSize: 10 },
+      { size: 'xs', fontSize: 12 },
+      { size: 's', fontSize: 13 },
+      { size: 'm', fontSize: 16 },
+      { size: 'l', fontSize: 18 },
+      { size: 'xl', fontSize: 20 },
+    ] as const;
+    for (const tier of tiers) {
+      const el = (await fixture(
+        html`<lr-gauge shape="linear" size=${tier.size} value="40" max="100" label="Disk"></lr-gauge>`,
+      )) as LyraGauge;
+      const rect = el.getBoundingClientRect();
+      const valueEl = el.shadowRoot!.querySelector('[part="value"]');
+      const labelEl = el.shadowRoot!.querySelector('[part="label"]');
+
+      expect(getComputedStyle(el).fontSize, `size=${tier.size} host font-size`).to.equal(
+        `${tier.fontSize}px`,
+      );
+      expect(rect.height, `size=${tier.size} block size`).to.be.closeTo(tier.fontSize * 1.5, 0.5);
+      // Half the host's own font-size at this tier -- a fixed 8px caption (this component's old,
+      // root-anchored rendering) would not have scaled down at all across this loop.
+      expect(getComputedStyle(valueEl!).fontSize, `size=${tier.size} value caption`).to.equal(
+        `${tier.fontSize * 0.5}px`,
+      );
+      expect(getComputedStyle(labelEl!).fontSize, `size=${tier.size} label caption`).to.equal(
+        `${tier.fontSize * 0.5}px`,
+      );
+      expect(
+        parseFloat(getComputedStyle(valueEl!).fontSize),
+        `size=${tier.size} caption fits the box`,
+      ).to.be.lessThan(rect.height);
+    }
+  });
+});
+
+describe('showValue', () => {
+  for (const shape of ['radial', 'ring', 'linear'] as const) {
+    it(`renders the value caption by default in ${shape} mode, unchanged from before showValue existed`, async () => {
+      const el = (await fixture(
+        html`<lr-gauge shape=${shape} value="42" max="100"></lr-gauge>`,
+      )) as LyraGauge;
+      expect(el.showValue, `${shape} readback`).to.equal(true);
+      const valueEl = el.shadowRoot!.querySelector('[part="value"]');
+      expect(valueEl != null, `${shape} value caption exists`).to.equal(true);
+      expect(valueEl!.textContent, `${shape} value caption text`).to.equal('42');
+    });
+
+    it(`omits the value caption in ${shape} mode when show-value is set to false, leaving the label caption alone`, async () => {
+      const el = (await fixture(
+        html`<lr-gauge shape=${shape} value="42" max="100" label="CPU" show-value="false"></lr-gauge>`,
+      )) as LyraGauge;
+      expect(el.showValue, `${shape} readback`).to.equal(false);
+      const valueEl = el.shadowRoot!.querySelector('[part="value"]');
+      const labelEl = el.shadowRoot!.querySelector('[part="label"]');
+      expect(valueEl == null, `${shape} value caption is omitted`).to.equal(true);
+      expect(labelEl != null, `${shape} label caption still renders`).to.equal(true);
+      expect(labelEl!.textContent, `${shape} label caption text`).to.equal('CPU');
+    });
+  }
+
+  it('accepts a .showValue = false property binding the same way the show-value attribute does', async () => {
+    const el = (await fixture(
+      html`<lr-gauge .showValue=${false} value="10" max="100"></lr-gauge>`,
+    )) as LyraGauge;
+    expect(el.shadowRoot!.querySelector('[part="value"]') == null).to.equal(true);
+  });
+
+  it('leaves aria-valuenow/aria-valuemin/aria-valuemax/aria-valuetext/aria-label/role unaffected by omitting the decorative value caption', async () => {
+    const shown = (await fixture(
+      html`<lr-gauge value="72" min="0" max="100" value-text="72%" label="CPU"></lr-gauge>`,
+    )) as LyraGauge;
+    const hidden = (await fixture(
+      html`<lr-gauge value="72" min="0" max="100" value-text="72%" label="CPU" show-value="false"></lr-gauge>`,
+    )) as LyraGauge;
+    for (const attr of [
+      'role',
+      'aria-valuenow',
+      'aria-valuemin',
+      'aria-valuemax',
+      'aria-valuetext',
+      'aria-label',
+    ]) {
+      expect(hidden.getAttribute(attr), attr).to.equal(shown.getAttribute(attr));
+    }
+    expect(hidden.getAttribute('role')).to.equal('meter');
+  });
+
+  it('is accessible with show-value set to false and a populated label', async () => {
+    const el = (await fixture(html`
+      <lr-gauge
+        shape="linear"
+        value="72"
+        max="100"
+        label="CPU"
+        value-text="72%"
+        show-value="false"
+      ></lr-gauge>
+    `)) as LyraGauge;
+    expect(el.showValue).to.equal(false);
     await expect(el).to.be.accessible();
   });
 });

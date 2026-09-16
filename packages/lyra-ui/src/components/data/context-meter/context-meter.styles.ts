@@ -285,6 +285,12 @@ export const styles = css`
   }
   :host([shape='ring']) [part='label'] {
     overflow: hidden;
+    /* Re-anchors the em chain for .ring-label below: the unscoped [part='label'] rule further up
+       this sheet sets a rem-based font-size for the bar shape's own (non-em-sized) visible label,
+       and 'em' on the font-size property is relative to the PARENT's font-size -- so without this,
+       .ring-label's own em multiplier would resolve against that unrelated rem value instead of
+       against this host's own font-size. */
+    font-size: var(--lr-size-1em);
   }
   :host([shape='ring']) .ring-label {
     display: flex;
@@ -295,7 +301,13 @@ export const styles = css`
     overflow: hidden;
     overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-2xs);
+    /* The ring itself is --lr-size-8em (em-based, so it tracks the host's own font-size), but
+       --lr-font-size-2xs is rem-based and would stay pinned to the document root regardless of a
+       caller's own font-size on the host -- the same mismatch <lr-gauge>'s linear caption had.
+       --lr-font-size-2xs has no em-suffixed sibling token, so this multiplies the existing
+       --lr-size-1em token instead of introducing a new value-named one; that catalog's growth is
+       frozen. */
+    font-size: calc(var(--lr-size-1em) * 0.625);
     line-height: var(--lr-line-height-compact);
     text-align: center;
     text-transform: uppercase;

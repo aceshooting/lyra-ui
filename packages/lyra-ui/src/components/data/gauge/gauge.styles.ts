@@ -56,15 +56,24 @@ export const styles = css`
     stroke-linecap: round;
     transition: stroke-dashoffset var(--lr-transition-base);
   }
+  /* Both captions are em-based, like every box in this file: the radial/ring frame is
+     --lr-size-8em and the linear frame is --lr-size-12em by --lr-size-1-5em, so one host
+     font-size (ambient, or a size tier's --lr-form-control-font-size) settles the frame and the
+     caption together. A rem value here would stay pinned to the document root regardless of a
+     smaller tier or a caller's own font-size on the host, so the frame could shrink while the
+     caption did not -- the linear shape's previous defect, whose caption was --lr-size-0-5rem.
+     --lr-font-size-2xs has no em-suffixed sibling token, so the label multiplies the existing
+     --lr-size-1em token instead of introducing a new value-named token -- that catalog's growth
+     is frozen. */
   [part='value'] {
-    font-size: var(--lr-font-size-m);
+    font-size: var(--lr-size-1em);
     font-weight: var(--lr-font-weight-bold);
     text-anchor: middle;
     fill: var(--lr-color-text);
     font-family: var(--lr-font);
   }
   [part='label'] {
-    font-size: var(--lr-font-size-2xs);
+    font-size: calc(var(--lr-size-1em) * 0.625);
     text-anchor: middle;
     fill: var(--lr-color-text-quiet);
     font-family: var(--lr-font);
@@ -75,7 +84,7 @@ export const styles = css`
   }
   :host([shape='linear']) [part='value'],
   :host([shape='linear']) [part='label'] {
-    font-size: var(--lr-size-0-5rem);
+    font-size: var(--lr-size-0-5em);
   }
   :host([shape='linear']) [part='value'] {
     text-anchor: end;
