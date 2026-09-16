@@ -18,6 +18,12 @@ import {
   TEXT_QUOTE_LIMITS,
   TEXT_SELECTION_RECT_LIMIT,
 } from "../../../internal/text-quote.js";
+// Registers the real 'ar'/'fr' catalogs so the lang="ar" digit-formatting test and the
+// locale="fr" re-search-reactivity test below -- neither of which exercises string-catalog
+// completeness -- resolve the keys their renders incidentally touch (ebookViewerPreviousChapter,
+// loadingDocument, ...) instead of tripping the partial-catalog fallback warning.
+import "../../../translations/ar.js";
+import "../../../translations/fr.js";
 
 function response(ok = true): Response {
   const binary = atob(MINIMAL_EPUB_BASE64);

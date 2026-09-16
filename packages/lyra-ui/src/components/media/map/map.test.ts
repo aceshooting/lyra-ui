@@ -24,6 +24,13 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+// Registers the real 'ar'/'fr' catalogs so the lang="ar"/"fr-FR" tests below -- which exercise
+// RTL layout containment and localized-ownership plumbing, not string-catalog completeness --
+// resolve the keys their renders incidentally touch (loading, mapStyleRequired, zoomIn, zoomOut,
+// mapResetNorth, map, mapLegend, ...) instead of tripping the partial-catalog fallback warning.
+// 'fr-FR' chains down to the registered base 'fr'.
+import '../../../translations/ar.js';
+import '../../../translations/fr.js';
 
 interface TestMapSource {
   setData?(data: unknown): unknown;

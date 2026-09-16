@@ -21,6 +21,11 @@ import {
   VIEWER_SEARCH_QUERY_LIMIT,
   VIEWER_SEARCH_WORK_LIMIT,
 } from "../viewer-search-limits.js";
+// Registers the real 'fr' catalog so the "re-runs the active search after an effective locale
+// change" test below -- which exercises locale-change reactivity, not string-catalog
+// completeness -- resolves pptxViewerLabel instead of tripping the partial-catalog fallback
+// warning.
+import "../../../translations/fr.js";
 
 function zipWithDeclaredSize(uncompressedBytes = 1): ArrayBuffer {
   const localSize = 32;

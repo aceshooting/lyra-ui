@@ -13,6 +13,11 @@ import "./json-viewer.js";
 import type { LyraJsonViewer } from "./json-viewer.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { resolveLyraLocale } from "../../../internal/localization-runtime.js";
+// Registers the real 'ar' catalog so the lang="ar"/"ar-EG" tests below -- which exercise
+// number/case-folding formatting, not string-catalog completeness -- resolve every key they
+// incidentally touch (jsonObject, jsonExpandLabel, jsonKeyCount, jsonCollapseLabel) instead of
+// tripping the partial-catalog fallback warning. 'ar-EG' chains down to the registered base 'ar'.
+import "../../../translations/ar.js";
 
 const sample = {
   name: "Ada Lovelace",
@@ -1061,12 +1066,25 @@ describe("imperative search API", () => {
   });
 
   it("case-folds keys and values with the effective locale", async () => {
-    const el = (await fixture(
-      html`<lr-json-viewer
-        lang="tr"
-        .data=${{ city: "IĞDIR" }}
-      ></lr-json-viewer>`
-    )) as LyraJsonViewer;
+    // Turkish has no shipped lyra-ui catalog at all, so this deliberately falls back to the
+    // English defaults for every key the render touches -- expected, not a bug -- while it
+    // isolates the Turkish dotless-i case-folding behavior under test. Capture and assert the
+    // one-time fallback warning rather than letting it escape under WTR_STRICT_CONSOLE.
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(" "));
+    let el!: LyraJsonViewer;
+    try {
+      el = (await fixture(
+        html`<lr-json-viewer
+          lang="tr"
+          .data=${{ city: "IĞDIR" }}
+        ></lr-json-viewer>`
+      )) as LyraJsonViewer;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.some((message) => message.includes('locale "tr"'))).to.equal(true);
     expect(await el.runSearch("ığdır")).to.equal(1);
     expect(el.shadowRoot!.querySelector('[part="value"][data-match]')).to.exist;
   });

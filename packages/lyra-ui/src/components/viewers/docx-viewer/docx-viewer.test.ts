@@ -58,6 +58,22 @@ async function loadWithMarkup(markup: string): Promise<{ el: LyraDocxViewer; res
   return { el, restore };
 }
 
+/** Turkish has no shipped lyra-ui catalog at all, so the `lang = 'tr'` Turkish-dotless-i
+ *  case-folding tests below deliberately fall back to the English default for docxViewerLabel --
+ *  expected, not a bug -- while they isolate the locale-aware search/anchor behavior under test.
+ *  Suppresses (rather than lets escape under WTR_STRICT_CONSOLE) the resulting fallback warning;
+ *  not asserted here because `devWarnOnce` dedupes per (locale, key) for the whole page, so only
+ *  the first of these several call sites would ever actually observe it. */
+async function withSuppressedLocaleFallbackWarning<T>(operation: () => Promise<T>): Promise<T> {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    return await operation();
+  } finally {
+    console.warn = originalWarn;
+  }
+}
+
 /** Whether a `text-quote` highlight painted with `tone` is currently visible, via whichever paint
  *  path this browser uses -- the CSS Custom Highlight API registers ranges with no DOM element to
  *  query, so this checks the shared `CSS.highlights` registry directly there, and falls back to the
@@ -1716,9 +1732,12 @@ describe('search', () => {
       expect(await el.search('istanbul')).to.equal(0);
 
       const eventPromise = oneEvent(el, 'lr-search-change');
-      el.lang = 'tr';
-      const event = await eventPromise as CustomEvent<{ query: string; matchCount: number }>;
-      await el.updateComplete;
+      const event = await withSuppressedLocaleFallbackWarning(async () => {
+        el.lang = 'tr';
+        const resolvedEvent = (await eventPromise) as CustomEvent<{ query: string; matchCount: number }>;
+        await el.updateComplete;
+        return resolvedEvent;
+      });
       expect(event.detail.query).to.equal('istanbul');
       expect(event.detail.matchCount).to.equal(1);
       expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(1);
@@ -1731,8 +1750,10 @@ describe('search', () => {
   it('case-folds with the effective locale', async () => {
     const { el, restore } = await loadWithMarkup('<p>İSTANBUL</p>');
     try {
-      el.lang = 'tr';
-      await el.updateComplete;
+      await withSuppressedLocaleFallbackWarning(async () => {
+        el.lang = 'tr';
+        await el.updateComplete;
+      });
       expect(await el.search('istanbul')).to.equal(1);
     } finally { restore(); }
   });
@@ -1754,8 +1775,10 @@ describe('search', () => {
   it('keeps fold-expansion offsets correct across text-node boundaries and combining marks', async () => {
     const { el, restore } = await loadWithMarkup('<p>ÍS<strong>TAN</strong>BUL</p>');
     try {
-      el.lang = 'lt';
-      await el.updateComplete;
+      await withSuppressedLocaleFallbackWarning(async () => {
+        el.lang = 'lt';
+        await el.updateComplete;
+      });
       expect(await el.search('stan')).to.equal(1);
       const marks = [...el.shadowRoot!.querySelectorAll('[part~="search-match"]')];
       expect(marks.map((mark) => mark.textContent).join('')).to.equal('STAN');
@@ -2037,13 +2060,15 @@ describe('back-compat', () => {
 it('case-folds a text-quote ANCHOR with the effective locale, matching search()', async () => {
   const { el, restore } = await loadWithMarkup('<p>İSTANBUL</p>');
   try {
-    el.lang = 'tr';
-    await el.updateComplete;
-    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
-    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
-    // Turkish folds "İ" to "i", not "i̇", so a root-locale fold never matches. search() already
-    // passed effectiveLocale; the anchor and highlight paths did not, so the identical quote
-    // resolved in lr-email-viewer and silently failed here.
-    expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'istanbul' })).to.be.true;
+    await withSuppressedLocaleFallbackWarning(async () => {
+      el.lang = 'tr';
+      await el.updateComplete;
+      (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+      (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+      // Turkish folds "İ" to "i", not "i̇", so a root-locale fold never matches. search() already
+      // passed effectiveLocale; the anchor and highlight paths did not, so the identical quote
+      // resolved in lr-email-viewer and silently failed here.
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'istanbul' })).to.be.true;
+    });
   } finally { restore(); }
 });

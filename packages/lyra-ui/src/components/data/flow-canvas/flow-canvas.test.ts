@@ -564,13 +564,58 @@ function truncatedFlow(): { nodes: FlowNode[]; edges: FlowEdge[] } {
   };
 }
 
+/** Waits for a `nodes`/`edges`-triggered layout pass (and any resulting announcement) to fully
+ *  settle, by polling the actual internal signals instead of assuming a fixed frame count
+ *  delivers them. `scheduleLayoutPass()` requests exactly one animation frame and clears its
+ *  `layoutRaf` handle back to `null` as the very first synchronous step once that frame lands, so
+ *  polling that handle (rather than counting three nested `requestAnimationFrame` calls) waits for
+ *  precisely the condition that matters. Under CPU contention a sibling test page can suspend
+ *  animation-frame delivery for an unpredictable stretch -- a fixed triple-rAF wait either
+ *  resolves too early (if the pass needed more frames than assumed) or burns time waiting on
+ *  frames the production code never scheduled, and neither failure mode is visible from the
+ *  test's own assertions. `Announcer.isPending` (`../../../internal/announcer.ts`) is polled the
+ *  same way for the throttled `announce()` flush, which lands on a real `setTimeout` rather than
+ *  a frame at all. */
 async function settleFlowLayout(el: LyraFlowCanvas): Promise<void> {
-  await el.updateComplete;
-  await new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
-  );
-  await el.updateComplete;
-  await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+  const internals = el as unknown as {
+    layoutRaf: unknown;
+    announcer: { isPending: boolean };
+  };
+  // A layout pass measures node-wrapper sizes with getBoundingClientRect()/offsetWidth before a
+  // freshly-created default lr-flow-node card's own content has necessarily painted at its final
+  // size, so a ResizeObserver-driven second pass (onNodesResized() -> scheduleLayoutPass()) can
+  // still be in flight after the first layoutRaf clears and this function's own updateComplete
+  // resolves -- that second scheduling happens on the browser's own resize-observation callback,
+  // which `el.updateComplete` never waits on. Loop on the actual signal until no further pass gets
+  // (re)scheduled, instead of assuming one pass is always the last. Bounded to a handful of
+  // rounds -- a real settle needs at most one re-measurement, so more than that indicates a
+  // genuine bug rather than a settle still in progress.
+  const MAX_LAYOUT_SETTLE_ROUNDS = 5;
+  let round = 0;
+  for (;;) {
+    round += 1;
+    await el.updateComplete;
+    await waitUntil(() => internals.layoutRaf == null, 'flow-canvas layout pass never completed', {
+      timeout: 5000,
+      interval: 20,
+    });
+    // The layout pass's requestUpdate() (and any resulting layoutTruncated state change) still
+    // needs its own Lit update cycle to flush before updated()'s announcement decision runs.
+    await el.updateComplete;
+    // Give a same-frame ResizeObserver callback a turn to schedule another pass before treating
+    // this one as final.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    if (internals.layoutRaf == null) break;
+    if (round >= MAX_LAYOUT_SETTLE_ROUNDS) {
+      throw new Error(
+        `flow-canvas layout never reached quiescence after ${MAX_LAYOUT_SETTLE_ROUNDS} rounds`,
+      );
+    }
+  }
+  await waitUntil(() => !internals.announcer.isPending, 'flow-canvas announcement never flushed', {
+    timeout: 3000,
+    interval: 20,
+  });
 }
 
 async function settleDirectChildReconciliation(el: LyraFlowCanvas): Promise<void> {
@@ -4056,7 +4101,18 @@ describe('flow layout truth and parity', () => {
   });
 });
 
-describe('layout-limit announcement baseline', () => {
+describe('layout-limit announcement baseline', function () {
+  // These two cases each build TWO full 151-node <lr-flow-node> DOM cycles and drive a
+  // disconnect/reconnect across four `settleFlowLayout()` round-trips, so their real cost is
+  // several seconds of genuine layout work -- not a hang. Mocha's default 6000ms per-test budget
+  // is enough in isolation (the file passes 193/193 on all three engines) but not when this file
+  // shares a runner with other pointer-heavy suites: a sibling page stealing foreground suspends
+  // this page's animation frames, stretching real work past the default. Every wait below is
+  // condition-polled via `waitUntil` on the component's own completion signals, and instrumenting
+  // each phase individually showed none of them ever stalls -- the cost is cumulative and real, so
+  // the budget is what needs to fit the work. Same rationale as `performance.test.ts`'s heavier
+  // benchmarks, which carry their own `this.timeout()` for the same reason.
+  this.timeout(30000);
   it('keeps a pre-connect truncated first layout silent while retaining its visible localized notice and later transition', async () => {
     const marker = 'FLOW-LAYOUT-LIMIT-MARKER';
     const graph = truncatedFlow();

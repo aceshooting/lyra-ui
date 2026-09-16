@@ -5,6 +5,11 @@ import './lightbox.js';
 import type { LyraLightbox, LyraLightboxImage } from './lightbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+// Registers the real 'ar' catalog so the lang="ar-EG" counter/live-region digit-formatting test
+// below resolves every key it incidentally touches (lightboxImagePosition, lightboxLabel, close,
+// previous, next, zoom controls, ...) instead of tripping the partial-catalog fallback warning.
+// 'ar-EG' chains down to the registered base 'ar'.
+import '../../../translations/ar.js';
 
 const image = {
   src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3Crect width="8" height="8" fill="%230969da"/%3E%3C/svg%3E',

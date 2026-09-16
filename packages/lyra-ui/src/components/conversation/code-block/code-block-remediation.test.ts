@@ -4,6 +4,11 @@ import './code-block.js';
 import './code-block-core.js';
 import type { LyraCodeBlock } from './code-block.js';
 import type { LyraCodeBlockCore } from './code-block-core.js';
+// Registers the real 'ar' catalog so the "inherited locale changes" test below -- which exercises
+// digit-formatting reactivity, not string-catalog completeness -- resolves codeBlockLineLabel and
+// the other keys it incidentally touches instead of tripping the partial-catalog fallback warning.
+// 'ar-EG' chains down to the registered base 'ar'.
+import '../../../translations/ar.js';
 
 type CodeBlock = LyraCodeBlock | LyraCodeBlockCore;
 const source = '{\n  "answer": 42\n}';

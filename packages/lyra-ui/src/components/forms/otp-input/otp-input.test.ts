@@ -598,16 +598,31 @@ it('accepts letters when type is alphanumeric and applies the case transform', a
 });
 
 it('keeps the declared ASCII alpha vocabulary under a Turkish locale case transform', async () => {
-  const upper = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" locale="tr" type="alpha" case="upper"></lr-otp-input>
-  `);
-  await type(upper, 'i');
-  expect(upper.value).to.equal('I');
+  // Turkish has no shipped lyra-ui catalog at all, so typing a single (incomplete) character
+  // below deliberately falls back to the English default for otpInputIncomplete -- expected, not
+  // a bug -- while this isolates the Turkish dotless-i case-folding behavior under test. Capture
+  // and assert the one-time fallback warning rather than letting it escape under
+  // WTR_STRICT_CONSOLE.
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+  let upper!: LyraOtpInput;
+  let lower!: LyraOtpInput;
+  try {
+    upper = await fixture<LyraOtpInput>(html`
+      <lr-otp-input label="Code" locale="tr" type="alpha" case="upper"></lr-otp-input>
+    `);
+    await type(upper, 'i');
 
-  const lower = await fixture<LyraOtpInput>(html`
-    <lr-otp-input label="Code" locale="tr" type="alpha" case="lower"></lr-otp-input>
-  `);
-  await type(lower, 'I');
+    lower = await fixture<LyraOtpInput>(html`
+      <lr-otp-input label="Code" locale="tr" type="alpha" case="lower"></lr-otp-input>
+    `);
+    await type(lower, 'I');
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(warnings.some((message) => message.includes('locale "tr"'))).to.equal(true);
+  expect(upper.value).to.equal('I');
   expect(lower.value).to.equal('i');
 });
 

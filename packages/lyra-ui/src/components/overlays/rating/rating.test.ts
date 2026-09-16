@@ -2,6 +2,11 @@ import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./rating.js";
 import { LyraRating } from "./rating.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
+// Registers the real 'ar' catalog so the lang="ar" digit-formatting test below -- which exercises
+// aria-valuetext number formatting, not string-catalog completeness -- resolves the "rating" key
+// it incidentally touches (the generated accessible name) instead of tripping the partial-catalog
+// fallback warning.
+import "../../../translations/ar.js";
 
 it("exposes fresh callable static validators that project live rating validity", async () => {
   const first = LyraRating.validators;

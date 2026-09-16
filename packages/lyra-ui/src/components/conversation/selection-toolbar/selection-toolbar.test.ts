@@ -1195,23 +1195,35 @@ it("uses owner-window geometry and observers, and retires an adopted positioning
     const toolbar = el.shadowRoot!.querySelector(
       '[part="toolbar"]'
     ) as HTMLElement;
+    // Each built-in action is a real <lr-button>, which arms its own owner-window
+    // ResizeObserver for live icon-only detection (see button.class.ts's
+    // armIconOnlyResizeObserver()) and re-arms it on every reconnect -- including the
+    // reconnect this adoption cascades onto every shadow-included descendant, not just the
+    // toolbar host. That is correct, independent button behavior, not a toolbar leak, so
+    // count only the record whose observed target is the toolbar's own surface rather than
+    // the window's raw construction count (mirrors the "attribute each call to a caller"
+    // rule for a shared-global spy).
+    const ownToolbarRecords = (records: ObserverRecord[]): ObserverRecord[] =>
+      records.filter((record) => record.observed.includes(toolbar));
 
     expect(
       toolbar.style.getPropertyValue("--_lr-selection-toolbar-inline-start")
     ).to.equal("210px");
     expect(mainRecords.length).to.equal(0);
-    expect(frameRecords.length).to.equal(1);
-    expect(frameRecords[0]!.observed.length).to.equal(1);
-    expect(frameRecords[0]!.observed[0] === toolbar).to.be.true;
+    const frameToolbarRecords = ownToolbarRecords(frameRecords);
+    expect(frameToolbarRecords.length).to.equal(1);
+    expect(frameToolbarRecords[0]!.observed.length).to.equal(1);
+    expect(frameToolbarRecords[0]!.observed[0] === toolbar).to.be.true;
 
     document.body.append(document.adoptNode(el));
     await el.updateComplete;
-    expect(frameRecords[0]!.disconnects).to.equal(1);
-    expect(mainRecords.length).to.equal(1);
+    expect(frameToolbarRecords[0]!.disconnects).to.equal(1);
+    const mainToolbarRecords = ownToolbarRecords(mainRecords);
+    expect(mainToolbarRecords.length).to.equal(1);
 
     toolbar.removeAttribute("data-positioned");
     toolbar.style.removeProperty("--_lr-selection-toolbar-inline-start");
-    frameRecords[0]!.callback([], {} as ResizeObserver);
+    frameToolbarRecords[0]!.callback([], {} as ResizeObserver);
     await new Promise<void>((resolve) =>
       frameWindow.requestAnimationFrame(() => resolve())
     );
@@ -1220,7 +1232,7 @@ it("uses owner-window geometry and observers, and retires an adopted positioning
       toolbar.style.getPropertyValue("--_lr-selection-toolbar-inline-start")
     ).to.equal("");
 
-    mainRecords[0]!.callback([], {} as ResizeObserver);
+    mainToolbarRecords[0]!.callback([], {} as ResizeObserver);
     await new Promise<void>((resolve) =>
       window.requestAnimationFrame(() => resolve())
     );

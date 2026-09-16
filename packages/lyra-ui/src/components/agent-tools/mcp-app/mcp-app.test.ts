@@ -2,6 +2,11 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './mcp-app.js';
 import type { LyraMcpApp, McpAppResource } from './mcp-app.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+// Registers the real 'de' catalog so the lang="de-DE" host-context test below -- which exercises
+// locale propagation, not string-catalog completeness -- resolves mcpAppLabel and the other keys
+// its render incidentally touches instead of tripping the partial-catalog fallback warning.
+// 'de-DE' chains down to the registered base 'de'.
+import '../../../translations/de.js';
 
 function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
   return Array.from(

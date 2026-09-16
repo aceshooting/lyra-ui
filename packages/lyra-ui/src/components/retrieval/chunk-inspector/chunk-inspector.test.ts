@@ -3,6 +3,11 @@ import { sendKeys } from '@web/test-runner-commands';
 import './chunk-inspector.js';
 import type { LyraChunkInspector, LyraChunk } from './chunk-inspector.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+// Registers the real 'ar' catalog so the ar-EG/ar-u-nu-arab locale tests below -- which exercise
+// number-formatting and score-percentage rendering, not string-catalog completeness -- resolve
+// every key they incidentally touch (chunkInspectorLabel, sourcePageSuffix, chunkScore,
+// scoreTierHigh, showMore) instead of tripping the partial-catalog fallback warning.
+import '../../../translations/ar.js';
 
 const chunks: LyraChunk[] = [
   { id: 'c1', text: 'Radium and polonium were both discovered by Marie and Pierre Curie in 1898.', score: 0.92, sourceId: 's1', title: 'curie-bio.pdf', page: 3 },
@@ -197,9 +202,14 @@ it('shows chunkInspectorEmpty when chunks is empty', async () => {
 });
 
 it('routes every localized string through this.localize(), provable via a .strings override reaching the rendered DOM', async () => {
+  // .chunks is supplied in the initial template, not assigned after mount: the empty-state
+  // branch calls this.localize('chunkInspectorEmpty'), a key this test's .strings override
+  // deliberately omits (it is not what this test asserts), so a transient empty first render
+  // under locale="fr" would otherwise fall through to the unregistered 'fr' catalog and warn.
   const el = (await fixture(
     html`<lr-chunk-inspector
       locale="fr"
+      .chunks=${[{ id: 'c1', text: 'texte', score: 0.92, sourceId: 's1' }]}
       .strings=${{
         chunkInspectorLabel: 'Extraits récupérés',
         chunkScore: 'Pertinence {percent}%',
@@ -210,7 +220,6 @@ it('routes every localized string through this.localize(), provable via a .strin
       }}
     ></lr-chunk-inspector>`,
   )) as LyraChunkInspector;
-  el.chunks = [{ id: 'c1', text: 'texte', score: 0.92, sourceId: 's1' }];
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Extraits récupérés');
@@ -562,8 +571,16 @@ it('isolates chunk text bidi under dir="rtl" so trailing punctuation does not ju
 it('formats finite numeric page locators with the effective locale while retaining string locators verbatim', async () => {
   const locale = 'ar-u-nu-arab';
   const numericPage = new Intl.NumberFormat(locale).format(3);
+  // This test isolates digit formatting (the {page} placeholder), not the sourcePageSuffix
+  // template wording, so it pins the template text explicitly rather than depending on which
+  // locale happens to be registered -- the real 'ar' catalog's own translation would otherwise
+  // satisfy the assertions below just as well, but implicitly and in a different language.
   const el = (await fixture(
-    html`<lr-chunk-inspector lang=${locale} sort="none"></lr-chunk-inspector>`,
+    html`<lr-chunk-inspector
+      lang=${locale}
+      sort="none"
+      .strings=${{ sourcePageSuffix: '{base} — p. {page}' }}
+    ></lr-chunk-inspector>`,
   )) as LyraChunkInspector;
   el.chunks = [
     { id: 'numeric-page', text: 'numeric', score: 0.9, sourceId: 's1', title: 'Report', page: 3 },
