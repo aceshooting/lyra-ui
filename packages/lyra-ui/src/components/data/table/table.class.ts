@@ -1272,6 +1272,16 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  alignment) but it renders empty — no button, no `aria-expanded`, no
    *  click handler. */
   @property({ attribute: false }) canExpand?: (row: T) => boolean;
+  /** Accessible name for one row's expand/collapse chevron, read once per render for that row,
+   *  exactly like a column's `editLabel`/`cellTitle`. Consumer-owned text: it is used verbatim and
+   *  never passed through the localization runtime.
+   *
+   *  Omit it and every chevron in the table shares the same localized `expand`/`collapse` name,
+   *  which carries no row context. That is fine for a handful of rows, but each chevron is its own
+   *  Tab stop, so a long table otherwise announces the same two names over and over with no way to
+   *  tell the rows apart. There is no default row context to add here: this component has no
+   *  row-header notion to derive one from (`rowKey` is an opaque identity, not a label). */
+  @property({ attribute: false }) rowExpandLabel?: (row: T, expanded: boolean) => string;
   /** Open/closed state, bounded to 10,000 keys and keyed the same way as `rowKey`/
    *  `selectedRowKeys`. Under the default `expansionMode: 'none'` the table never mutates this
    *  itself — it only reads it to decide which rows currently render `expandedContent`, and the
@@ -3726,7 +3736,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                                       type="button"
                                       part="row-expand-toggle"
                                       aria-expanded=${String(rowExpanded)}
-                                      aria-label=${this.localize(rowExpanded ? 'collapse' : 'expand')}
+                                      aria-label=${this.rowExpandLabel?.(row, rowExpanded) ??
+                                      this.localize(rowExpanded ? 'collapse' : 'expand')}
                                       @click=${() => this.activateExpandToggle(key)}
                                     >
                                       <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>

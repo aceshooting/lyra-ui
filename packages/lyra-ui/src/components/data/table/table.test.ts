@@ -8863,3 +8863,51 @@ describe("lr-table contains the composed lr-pagination's lr-activate", () => {
     ).to.equal(0);
   });
 });
+
+describe('row expand toggle accessible name', () => {
+  const expandNameColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+  ];
+
+  async function expandableTable(): Promise<LyraTable<Row>> {
+    const el = (await fixture(html`<lr-table accessible-label="People"></lr-table>`)) as LyraTable<Row>;
+    el.columns = expandNameColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+    return el;
+  }
+
+  const toggleNames = (el: LyraTable<Row>): string[] =>
+    [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="row-expand-toggle"]')].map(
+      (button) => button.getAttribute('aria-label') ?? '',
+    );
+
+  it('shares one localized name across rows when rowExpandLabel is unset', async () => {
+    const el = await expandableTable();
+    const names = toggleNames(el);
+    expect(names.length).to.equal(rows.length);
+    expect(new Set(names).size, 'the default name carries no row context').to.equal(1);
+    expect(names[0]).to.not.equal('');
+  });
+
+  it('names each row its own way when rowExpandLabel is set', async () => {
+    const el = await expandableTable();
+    el.rowExpandLabel = (row) => `Show details for ${row.name}`;
+    await el.updateComplete;
+    expect(toggleNames(el)).to.deep.equal([
+      'Show details for Alpha',
+      'Show details for Beta',
+    ]);
+  });
+
+  it('passes the row expanded state so the name can describe the action', async () => {
+    const el = await expandableTable();
+    el.rowExpandLabel = (row, expanded) =>
+      `${expanded ? 'Collapse' : 'Expand'} ${row.name}`;
+    el.expandedRowKeys = new Set(['a']);
+    await el.updateComplete;
+    expect(toggleNames(el)).to.deep.equal(['Collapse Alpha', 'Expand Beta']);
+  });
+});
