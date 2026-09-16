@@ -8743,3 +8743,104 @@ describe("all-columns visibility menu (lr-dropdown + checkbox items)", () => {
     );
   });
 });
+
+describe("controlled re-binds of filters and sort", () => {
+  async function serverGrid(): Promise<{
+    element: LyraDataGrid<Person>;
+    requests: () => number;
+  }> {
+    let requests = 0;
+    const element = await dataGrid(html`
+      <lr-data-grid
+        label="Controlled rebind"
+        server
+        filter-debounce="60"
+        .columns=${columns}
+        .data=${rows}
+        .dataSource=${async () => {
+          requests += 1;
+          return { rows, total: rows.length };
+        }}
+      ></lr-data-grid>
+    `);
+    await waitUntil(() => requests > 0, "the grid never made its initial request");
+    return { element, requests: () => requests };
+  }
+
+  it("does not reschedule a server request when filters are re-bound unchanged", async () => {
+    const { element, requests } = await serverGrid();
+    const initial = requests();
+
+    // The controlled pattern: hand back an equal-but-new array on every render.
+    for (let index = 0; index < 5; index += 1) {
+      element.filters = [{ id: "name", value: "ada" }];
+      await element.updateComplete;
+    }
+    // The first write is a real change, so exactly one more request may settle.
+    await waitUntil(() => requests() === initial + 1, "the real change never requested");
+    const afterRealChange = requests();
+
+    for (let index = 0; index < 5; index += 1) {
+      element.filters = [{ id: "name", value: "ada" }];
+      await element.updateComplete;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(
+      requests(),
+      "an unchanged re-bind must not restart the request debounce"
+    ).to.equal(afterRealChange);
+  });
+
+  it("still requests when a filter value actually changes", async () => {
+    const { element, requests } = await serverGrid();
+    element.filters = [{ id: "name", value: "ada" }];
+    await element.updateComplete;
+    await waitUntil(() => requests() >= 2, "the first change never requested");
+    const before = requests();
+
+    element.filters = [{ id: "name", value: "grace" }];
+    await element.updateComplete;
+    await waitUntil(
+      () => requests() > before,
+      "a genuinely different filter value must request again"
+    );
+  });
+
+  it("does not reschedule when sort is re-bound unchanged, but does when it changes", async () => {
+    const { element, requests } = await serverGrid();
+    element.sort = [{ id: "name", desc: false }];
+    await element.updateComplete;
+    await waitUntil(() => requests() >= 2, "the first sort never requested");
+    const before = requests();
+
+    for (let index = 0; index < 5; index += 1) {
+      element.sort = [{ id: "name", desc: false }];
+      await element.updateComplete;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(requests(), "an unchanged sort re-bind must not request").to.equal(before);
+
+    element.sort = [{ id: "name", desc: true }];
+    await element.updateComplete;
+    await waitUntil(
+      () => requests() > before,
+      "a real sort change must request again"
+    );
+  });
+
+  it("keeps the previous frozen reference when an unchanged collection is re-bound", async () => {
+    const element = await dataGrid(html`
+      <lr-data-grid label="Reference stability" .columns=${columns} .data=${rows}></lr-data-grid>
+    `);
+    element.filters = [{ id: "name", value: ["ada", "grace"] }];
+    await element.updateComplete;
+    const firstFilters = element.filters;
+    element.filters = [{ id: "name", value: ["ada", "grace"] }];
+    await element.updateComplete;
+    expect(element.filters, "an equal re-bind keeps the held value").to.equal(firstFilters);
+
+    element.filters = [{ id: "name", value: ["ada"] }];
+    await element.updateComplete;
+    expect(element.filters, "a different array length is a real change").to.not.equal(firstFilters);
+  });
+});

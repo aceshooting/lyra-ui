@@ -396,6 +396,50 @@ function frozenArray<Value>(values: Iterable<Value>): readonly Value[] {
   return Object.freeze([...values]);
 }
 
+/**
+ * Whether a re-normalized controlled collection is the same VALUE as the one already held.
+ *
+ * Both setters below rebuild a fresh frozen array on every write, so the new reference is never
+ * `===` the previous one and Lit's dirty check always reports a change. `updated()` turns any
+ * `filters`/`sort` change into `scheduleServerRequest()`, which RESTARTS the request debounce -- so
+ * a host that re-binds these properties on every render (the ordinary controlled pattern, often
+ * driven by this grid's own events) kept pushing the server request further away and re-rendered
+ * for nothing. Comparing the normalized content instead means only a real change schedules work.
+ */
+function sameFilterState(
+  left: readonly DataGridFilter[],
+  right: readonly DataGridFilter[],
+): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((filter, index) => {
+    const other = right[index];
+    if (!other || filter.id !== other.id) return false;
+    const value = filter.value;
+    const otherValue = other.value;
+    if (Array.isArray(value) || Array.isArray(otherValue)) {
+      if (!Array.isArray(value) || !Array.isArray(otherValue)) return false;
+      return (
+        value.length === otherValue.length &&
+        value.every((entry, position) => Object.is(entry, otherValue[position]))
+      );
+    }
+    return Object.is(value, otherValue);
+  });
+}
+
+function sameSortState(
+  left: readonly DataGridSortingState[number][],
+  right: readonly DataGridSortingState[number][],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((entry, index) => {
+      const other = right[index];
+      return other !== undefined && entry.id === other.id && entry.desc === other.desc;
+    })
+  );
+}
+
 /** Converts arbitrary filter state into an isolated JSON-safe value. Sets intentionally become
  * arrays because the filter matcher already treats both as the same multi-value vocabulary. */
 function serializableFilterValue(value: unknown): DataGridJsonValue {
@@ -902,7 +946,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   @property({ type: Boolean, attribute: 'filter-from-leaf-rows' })
   filterFromLeafRows = false;
   private _filters: readonly DataGridFilter[] = Object.freeze([]);
-  /** Clone-owned controlled per-column filters. */
+  /** Clone-owned controlled per-column filters. Re-binding an equal value is not a change: the
+   *  held value and its reference survive, nothing re-renders, and no server request is
+   *  rescheduled, so a host that re-binds on every render cannot postpone the request forever. */
   @property({ attribute: false })
   get filters(): readonly DataGridFilter[] {
     return this._filters;
@@ -926,6 +972,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         }
       }
     }
+    // A re-bind carrying the same values is not a change: keep the existing frozen reference so
+    // Lit's dirty check stays quiet and the server-request debounce is not restarted.
+    if (sameFilterState(previous, next)) return;
     this._filters = Object.freeze(next);
     this.requestUpdate('filters', previous);
   }
@@ -1108,7 +1157,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Density on the shared Lyra size ladder. */
   @property({ reflect: true }) size: DataGridSize = 'm';
   private _sort: SortingState = Object.freeze([]);
-  /** Clone-owned controlled multi-column sorting state. */
+  /** Clone-owned controlled multi-column sorting state. Like `filters`, re-binding an equal value
+   *  is not a change and reschedules nothing. */
   @property({ attribute: false })
   get sort(): SortingState {
     return this._sort;
@@ -1126,6 +1176,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         }
       }
     }
+    // Same reasoning as `filters` above: an unchanged re-bind must not reschedule anything.
+    if (sameSortState(previous, next)) return;
     this._sort = Object.freeze(next);
     this.requestUpdate('sort', previous);
   }
