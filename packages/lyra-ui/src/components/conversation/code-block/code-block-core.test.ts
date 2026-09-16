@@ -2043,15 +2043,35 @@ describe('languages lazy grammar loaders', () => {
   it('falls back to plain text without throwing when a loader rejects', async () => {
     const grammar = lazyGrammar();
     const languages = { [grammar.name]: () => Promise.reject(new Error('network down')) };
-    const el = (await fixture(
-      html`<lr-code-block-core
-        language=${grammar.name}
-        .languages=${languages}
-        .code=${'alpha'}
-      ></lr-code-block-core>`,
-    )) as LyraCodeBlockCore;
-    type Internals = { shikiReady: boolean };
-    await waitUntil(() => (el as unknown as Internals).shikiReady, undefined, { timeout: 8000 });
+    // ensureShikiLanguageLoaded()'s catch() reports a rejected loader through a one-time
+    // console.warn by design, so capture it rather than letting the expected diagnostic reach a
+    // strict-console lane -- and assert it, since that warning is the contract for how the
+    // failure surfaces. The dedupe key is cleared first so the assertion holds on a retry too.
+    (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete(
+      'lyra-shiki-lazy-language-source-failed',
+    );
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args);
+    };
+    let el: LyraCodeBlockCore;
+    try {
+      el = (await fixture(
+        html`<lr-code-block-core
+          language=${grammar.name}
+          .languages=${languages}
+          .code=${'alpha'}
+        ></lr-code-block-core>`,
+      )) as LyraCodeBlockCore;
+      type Internals = { shikiReady: boolean };
+      await waitUntil(() => (el as unknown as Internals).shikiReady, undefined, { timeout: 8000 });
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.map((w) => String(w[0])).join('\n')).to.include(
+      'could not load a lazy `languages` grammar loader',
+    );
     expect(el.shadowRoot!.querySelector('.shiki') === null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.include('alpha');
   });

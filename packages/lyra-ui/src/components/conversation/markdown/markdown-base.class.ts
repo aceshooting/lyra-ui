@@ -472,6 +472,16 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       // fallback. Without this catch, `void this.highlightPending(...)`'s fire-and-forget call in
       // `renderMarkdown()` would leave an unhandled rejection AND skip the `renderMarkdown()` call
       // below, silently withholding every other already-tokenized block's highlighted output too.
+      //
+      // The batch's keys are recorded as failed here as well. `tokenizeOne` only records a failure
+      // it observed as a `null`/`false` result, so a rejection that escapes it leaves its key
+      // neither cached nor failed -- and the `renderMarkdown()` below would then re-queue that key
+      // into the very same rejection on every render. With a memoized loader failure
+      // (ensureShikiLanguageLoaded() caches each key's settled promise) that re-queue never waits
+      // on anything, so the component spun in a microtask-tight loop that never yielded to the
+      // page. A key that did tokenize before the batch rejected keeps its cached HTML: the cache
+      // is consulted before the failed set.
+      for (const { key } of work) addFailedHighlightKey(this.failedHighlightKeys, key);
       devWarnOnce(HIGHLIGHT_FAILURE_WARNING_KEY, HIGHLIGHT_FAILURE_WARNING);
     } finally {
       for (const { key } of work) this.inFlightHighlightKeys.delete(key);

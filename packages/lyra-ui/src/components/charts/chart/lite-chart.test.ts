@@ -163,6 +163,25 @@ function categoryAxisLabels(el: LyraLiteChart): SVGTextElement[] {
   );
 }
 
+type TextBox = { left: number; right: number; top: number; bottom: number };
+
+/** Client-space box of an SVG `<text>` from its geometry box (`getBBox()` mapped through the
+ *  screen CTM). `getBoundingClientRect()` on an SVG `<text>` is Gecko's ink-overflow rect, padded
+ *  about 1px per side for antialiasing, so two adjacent labels whose glyph boxes sit 0.9px apart
+ *  read as overlapping by 1.1px on Firefox alone while Chromium and WebKit report the geometry box
+ *  either way. The geometry box is also what fitOneCategoryLabel() measures
+ *  (getComputedTextLength()), so it is the only box a sub-pixel assertion can hold across engines. */
+function textGeometryBox(label: SVGTextElement): TextBox {
+  const box = label.getBBox();
+  const ctm = label.getScreenCTM()!;
+  return {
+    left: ctm.a * box.x + ctm.e,
+    right: ctm.a * (box.x + box.width) + ctm.e,
+    top: ctm.d * box.y + ctm.f,
+    bottom: ctm.d * (box.y + box.height) + ctm.f,
+  };
+}
+
 function valueAxisLabels(el: LyraLiteChart): SVGTextElement[] {
   return [
     ...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][dominant-baseline]'),
@@ -1365,20 +1384,20 @@ it('keeps decimated date labels clear of each other and the y-axis ticks at narr
   ></lr-lite-chart>`);
   const xLabels = categoryAxisLabels(el);
   const yLabels = valueAxisLabels(el);
-  const overlaps = (left: DOMRect, right: DOMRect) =>
+  const overlaps = (left: TextBox, right: TextBox) =>
     left.left < right.right &&
     left.right > right.left &&
     left.top < right.bottom &&
     left.bottom > right.top;
 
   for (let index = 0; index < xLabels.length; index++) {
-    const rect = xLabels[index]!.getBoundingClientRect();
+    const rect = textGeometryBox(xLabels[index]!);
     expect(
-      xLabels.slice(index + 1).some((label) => overlaps(rect, label.getBoundingClientRect())),
+      xLabels.slice(index + 1).some((label) => overlaps(rect, textGeometryBox(label))),
       `x-axis label ${xLabels[index]!.textContent} overlaps another x-axis label`,
     ).to.be.false;
     expect(
-      yLabels.some((label) => overlaps(rect, label.getBoundingClientRect())),
+      yLabels.some((label) => overlaps(rect, textGeometryBox(label))),
       `x-axis label ${xLabels[index]!.textContent} overlaps a y-axis tick`,
     ).to.be.false;
   }
@@ -3618,7 +3637,7 @@ describe('lite-chart semantics and geometry', () => {
     expect(getComputedStyle(svg).overflow).to.equal('hidden');
 
     const svgRect = svg.getBoundingClientRect();
-    const labelRects = axisLabels.map((label) => label.getBoundingClientRect());
+    const labelRects = axisLabels.map((label) => textGeometryBox(label));
     for (const rect of labelRects) {
       expect(rect.left).to.be.at.least(svgRect.left - 0.5);
       expect(rect.right).to.be.at.most(svgRect.right + 0.5);
@@ -3649,13 +3668,13 @@ describe('lite-chart semantics and geometry', () => {
     const first = labels[0]!;
     expect(first.textContent).to.equal('S1');
     expect(first.getAttribute('text-anchor')).to.equal('start');
-    const firstRect = first.getBoundingClientRect();
+    const firstRect = textGeometryBox(first);
     expect(firstRect.left).to.be.at.least(svgRect.left - 0.5);
 
     const last = labels[2]!;
     expect(last.textContent).to.equal('September 2026');
     expect(last.getAttribute('text-anchor')).to.equal('end');
-    const lastRect = last.getBoundingClientRect();
+    const lastRect = textGeometryBox(last);
     expect(lastRect.left).to.be.at.least(svgRect.left - 0.5);
     expect(lastRect.right).to.be.at.most(svgRect.right + 0.5);
   });
@@ -3680,7 +3699,7 @@ describe('lite-chart semantics and geometry', () => {
     const first = labels[0]!;
     expect(first.textContent).to.equal('September 2026');
     expect(first.getAttribute('text-anchor')).to.equal('start');
-    const firstRect = first.getBoundingClientRect();
+    const firstRect = textGeometryBox(first);
     expect(firstRect.left).to.be.at.least(svgRect.left - 0.5);
     expect(firstRect.right).to.be.at.most(svgRect.right + 0.5);
   });
@@ -3710,7 +3729,7 @@ describe('lite-chart semantics and geometry', () => {
     // leftmost (first) tick needs here, since `plotX` swaps to the small `PAD_RIGHT` pad under
     // rtl instead of the wide `axisGutter` reserve it gets in ltr.
     expect(first.getAttribute('text-anchor')).to.equal('end');
-    const firstRect = first.getBoundingClientRect();
+    const firstRect = textGeometryBox(first);
     expect(firstRect.left).to.be.at.least(svgRect.left - 0.5);
     expect(firstRect.right).to.be.at.most(svgRect.right + 0.5);
 
@@ -3740,7 +3759,7 @@ describe('lite-chart semantics and geometry', () => {
     const last = labels[2]!;
     expect(last.textContent).to.equal('September 2026');
     expect(last.getAttribute('text-anchor')).to.equal('start');
-    const lastRect = last.getBoundingClientRect();
+    const lastRect = textGeometryBox(last);
     expect(lastRect.left).to.be.at.least(svgRect.left - 0.5);
     expect(lastRect.right).to.be.at.most(svgRect.right + 0.5);
   });
@@ -3770,7 +3789,7 @@ describe('lite-chart semantics and geometry', () => {
     const svgRect = svg.getBoundingClientRect();
     const middle = labels[2]!;
     const expectedCenterX = svgRect.left + Number(middle.getAttribute('x'));
-    const middleRect = middle.getBoundingClientRect();
+    const middleRect = textGeometryBox(middle);
     const actualCenterX = (middleRect.left + middleRect.right) / 2;
     expect(Math.abs(actualCenterX - expectedCenterX)).to.be.at.most(1);
   });

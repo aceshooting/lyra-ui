@@ -826,10 +826,29 @@ describe("languages lazy grammar loaders", () => {
     const el = (await fixture(
       html`<lr-markdown-core></lr-markdown-core>`
     )) as LyraMarkdownCore;
-    el.languages = { typescript: () => Promise.reject(new Error("network down")) };
-    el.content = "```typescript\nconst x = 1;\n```";
-    await el.updateComplete;
-    await aTimeout(500);
+    // ensureShikiLanguageLoaded()'s catch() reports a rejected loader through a one-time
+    // console.warn by design, so capture it rather than letting the expected diagnostic reach a
+    // strict-console lane -- and assert it, since that warning is the contract for how the
+    // failure surfaces. The dedupe key is cleared first so the assertion holds on a retry too.
+    (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete(
+      "lyra-shiki-lazy-language-source-failed"
+    );
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args);
+    };
+    try {
+      el.languages = { typescript: () => Promise.reject(new Error("network down")) };
+      el.content = "```typescript\nconst x = 1;\n```";
+      await el.updateComplete;
+      await aTimeout(500);
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.map((w) => String(w[0])).join("\n")).to.include(
+      "could not load a lazy `languages` grammar loader"
+    );
     expect(el.shadowRoot!.querySelector('[part="code-block"] span') === null).to.be.true;
     expect(
       el.shadowRoot!.querySelector('[part="code-block"] code')!.textContent

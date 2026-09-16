@@ -23141,7 +23141,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/histogram.test.ts",
-              "line": 61,
+              "line": 67,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -26473,21 +26473,21 @@
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 693,
+              "line": 712,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 4195,
+              "line": 4214,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 4195,
+              "line": 4214,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
@@ -27451,7 +27451,7 @@
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 2473,
+              "line": 2492,
               "test": "is accessible with a custom tab size on a tab-indented fenced block",
               "target": "el",
               "state": "populated"

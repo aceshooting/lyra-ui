@@ -92,8 +92,12 @@ it('falls through to a registered locale catalog for cancel/confirm when no labe
   // ConfirmOptions has no `.strings`/`locale` field of its own -- the dialog is transient and
   // unparented at button-creation time, so the only way resolveLyraString() reaches a registered
   // catalog (rather than the hardcoded English default) is via the global active locale.
+  // The catalog carries every key the transient dialog reads while rendering, not only the two
+  // this test asserts on: its close button localizes `close`, and strict-console platform lanes
+  // treat the dev-mode locale-fallback warning a still-partial catalog triggers as fatal.
   registerLyraLocale('x-test-confirm', {
     cancel: 'Annuler',
+    close: 'Fermer',
     confirm: 'Confirmer',
   });
   setLyraLocale('x-test-confirm');
