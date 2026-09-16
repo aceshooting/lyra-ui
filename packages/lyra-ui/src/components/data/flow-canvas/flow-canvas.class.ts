@@ -162,6 +162,13 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * collections reject blank ids and later duplicates at assignment, so the first valid occurrence
  * owns layout, focus, selection, gestures, companion snapshots, and emitted identity.
  *
+ * A `FlowNode` may also set `disabled`, marking it non-actionable: it keeps its position and card
+ * content but cannot be selected or activated by click or keyboard, roving-tabindex navigation
+ * (arrow keys, Home/End) steps past it instead of landing on it, it cannot be dragged even while
+ * `nodes-draggable`, and it is excluded from starting or receiving a new connection while
+ * `connectable` -- an edge that already touches a since-disabled node is left alone. Omitted or
+ * `false` renders the node exactly as before this field existed.
+ *
  * @customElement lr-flow-canvas
  * @slot - Consumer-authored node cards matched by `node-id`. Each matching card is assigned to the
  *   generated `node-{id}` slot; a declarative `lr-flow-node` fallback remains in shadow DOM and no
@@ -188,8 +195,10 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * @csspart arrowhead - A tone-matched directed-edge arrowhead marker.
  * @csspart stub - A dangling-edge stub line.
  * @csspart connection-line - The in-progress connect-gesture path.
- * @csspart node - A node's positioned wrapper. Carries `data-selected` while selected.
- * @csspart node-control - The visually hidden, roving selection button for a node.
+ * @csspart node - A node's positioned wrapper. Carries `data-selected` while selected, and
+ *   `aria-disabled="true"` while its `FlowNode.disabled` is set.
+ * @csspart node-control - The visually hidden, roving selection button for a node. Renders a
+ *   genuine `disabled` `<button>` while `FlowNode.disabled` is set.
  * @csspart node-card - The declarative fallback card.
  * @csspart node-card-base - The fallback `lr-flow-node` handle/card row.
  * @csspart node-card-surface - The fallback card's bordered surface.
@@ -241,6 +250,8 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  *   colors above this one is `:hover`-gated rather than attribute-gated, so a `::part(node):hover`
  *   override would lose to this rule's own higher internal specificity rather than to the
  *   `::part()[attr]` restriction those four work around. Set to `transparent` to opt out.
+ * @cssprop [--lr-flow-canvas-node-disabled-opacity=0.5] - Opacity of a node whose `FlowNode` entry
+ *   sets `disabled`.
  * @status stable
  * @since 4.0.0
  */
@@ -1640,9 +1651,59 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return this.nodes.length + this.focusableEdges().length;
   }
 
+  /** Only a `kind: 'node'` roving item can be non-actionable; an edge item is never excluded. */
+  private isRovingItemDisabled(item: { kind: 'node' | 'edge'; id: string }): boolean {
+    return item.kind === 'node' && this.nodes.find((n) => n.id === item.id)?.disabled === true;
+  }
+
+  /** Clamps `index` into range, then -- if that stop is disabled -- degrades to the nearest
+   *  enabled stop (forward first, then backward), so the "resting" active item this drives
+   *  (`tabindex="0"`, the un-navigated default) is never one a keyboard user cannot reach. Returns
+   *  `-1` only when every roving item is disabled. Unset regression: with no disabled node, this is
+   *  the same `clamp(index, 0, count - 1)` this always computed. */
   private normalizedItemIndex(index = this.activeItemIndex): number {
-    const count = this.itemCount();
-    return count ? Math.min(Math.max(index, 0), count - 1) : -1;
+    const items = this.rovingItems();
+    const count = items.length;
+    if (!count) return -1;
+    const clamped = Math.min(Math.max(index, 0), count - 1);
+    if (!this.isRovingItemDisabled(items[clamped]!)) return clamped;
+    for (let forward = clamped + 1; forward < count; forward += 1) {
+      if (!this.isRovingItemDisabled(items[forward]!)) return forward;
+    }
+    for (let backward = clamped - 1; backward >= 0; backward -= 1) {
+      if (!this.isRovingItemDisabled(items[backward]!)) return backward;
+    }
+    return -1;
+  }
+
+  /** Steps `from` by one roving position in `direction`, skipping past a disabled node item
+   *  without wrapping -- the same roving-tabindex step contract `stepEnabledIndex()` in
+   *  `internal/catalog-picker.ts` implements for an active-descendant listbox. Unset regression:
+   *  with no disabled node, this is the same `clamp(from + direction, 0, count - 1)` the arrow-key
+   *  handler always computed. */
+  private nextEnabledItemIndex(from: number, direction: 1 | -1): number {
+    const items = this.rovingItems();
+    const count = items.length;
+    if (!count) return -1;
+    let index = Math.min(Math.max(from + direction, 0), count - 1);
+    for (let steps = 0; steps < count; steps += 1) {
+      if (!this.isRovingItemDisabled(items[index]!)) return index;
+      index += direction;
+      if (index < 0 || index >= count) break;
+    }
+    return from >= 0 && from < count && !this.isRovingItemDisabled(items[from]!) ? from : -1;
+  }
+
+  private firstEnabledItemIndex(): number {
+    return this.rovingItems().findIndex((item) => !this.isRovingItemDisabled(item));
+  }
+
+  private lastEnabledItemIndex(): number {
+    const items = this.rovingItems();
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      if (!this.isRovingItemDisabled(items[index]!)) return index;
+    }
+    return -1;
   }
 
   private itemAccessibleText(item: { kind: 'node' | 'edge'; id: string }): string {
@@ -1777,7 +1838,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     );
   }
 
+  /** A `disabled` node is non-actionable: activating it -- by click on its card, its hidden
+   *  `node-control` button, or Enter/Space while roving-focused -- emits nothing and changes no
+   *  selection state, matching every other declared-non-actionable entry in this library. */
   private onNodeActivate(node: FlowNode, additive: boolean): void {
+    if (node.disabled) return;
     this.emit('lr-node-activate', Object.freeze({ nodeId: node.id }));
     this.applySelection('node', node.id, additive);
   }
@@ -1873,14 +1938,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const rtl = isRtl(this);
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
-    let next = index;
-    if (e.key === forwardKey || e.key === 'ArrowDown') next = Math.min(count - 1, index + 1);
-    else if (e.key === backwardKey || e.key === 'ArrowUp') next = Math.max(0, index - 1);
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = count - 1;
+    let next: number;
+    if (e.key === forwardKey || e.key === 'ArrowDown') next = this.nextEnabledItemIndex(index, 1);
+    else if (e.key === backwardKey || e.key === 'ArrowUp') next = this.nextEnabledItemIndex(index, -1);
+    else if (e.key === 'Home') next = this.firstEnabledItemIndex();
+    else if (e.key === 'End') next = this.lastEnabledItemIndex();
     else return;
     e.preventDefault();
-    this.focusActiveItem(next);
+    if (next >= 0) this.focusActiveItem(next);
   }
 
   private setActiveItemQuiet(index: number): void {
@@ -1962,7 +2027,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private onNodePointerDown(e: PointerEvent, node: FlowNode): void {
-    if (!this.nodesDraggable || this.locked) return;
+    if (!this.nodesDraggable || this.locked || node.disabled) return;
     const wrapper = e.currentTarget as HTMLElement;
     // An unscoped `closest()` match cannot be trusted on its own here: `[part='viewport']` is an
     // ANCESTOR of every node wrapper that itself carries `tabindex="0"` and a `part` other than
@@ -2109,10 +2174,12 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    *  node counts as a duplicate target, regardless of which handles it uses -- checked in the
    *  source -> target direction only, since edges are directed and a reverse edge (hovered -> source)
    *  represents a different relationship, not a duplicate of this one. Matches
-   *  `eligibleConnectTargets()`'s equivalent one-directional rule for the keyboard connect flow. */
+   *  `eligibleConnectTargets()`'s equivalent one-directional rule for the keyboard connect flow, and
+   *  the same function's `disabled` exclusion: a disabled node is never a valid drop target either. */
   private isInvalidConnectTarget(hoveredId: string): boolean {
     if (!this.connectState) return false;
     if (hoveredId === this.connectState.sourceId) return true;
+    if (this.nodes.find((n) => n.id === hoveredId)?.disabled) return true;
     return this.edges.some((e) => e.source === this.connectState!.sourceId && e.target === hoveredId);
   }
 
@@ -2132,7 +2199,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private startConnectGesture(nodeId: string, handleId: string, clientX: number, clientY: number): void {
     const sourceNode = this.nodes.find((n) => n.id === nodeId);
-    if (!sourceNode) return;
+    if (!sourceNode || sourceNode.disabled) return;
     const startPt = this.handlePoint(this.resolvedNode(sourceNode), 'output', handleId);
     this.connectState = {
       sourceId: nodeId,
@@ -2227,6 +2294,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    *  cleared by `endConnectGesture()` -- takes the snapshotted state explicitly instead. */
   private isInvalidConnectTargetFor(state: { sourceId: string }, hoveredId: string): boolean {
     if (hoveredId === state.sourceId) return true;
+    if (this.nodes.find((n) => n.id === hoveredId)?.disabled) return true;
     return this.edges.some((e) => e.source === state.sourceId && e.target === hoveredId);
   }
 
@@ -2264,14 +2332,21 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.keyboardConnectTargetIndex = 0;
   }
 
+  /** A disabled node is excluded on both ends: it never appears as an eligible target (a
+   *  non-actionable node should not gain a new incoming connection either), and the caller-side
+   *  guards below refuse it as a source. An edge that already touches a since-disabled node is left
+   *  alone -- disabling only prevents new interactions, never retracts existing model state. */
   private eligibleConnectTargets(sourceId: string): FlowNode[] {
-    return this.nodes.filter((n) => n.id !== sourceId && !this.edges.some((e) => e.source === sourceId && e.target === n.id));
+    return this.nodes.filter(
+      (n) => n.id !== sourceId && !n.disabled && !this.edges.some((e) => e.source === sourceId && e.target === n.id),
+    );
   }
 
   private startKeyboardConnect(sourceId: string): void {
+    const sourceNode = this.nodes.find((n) => n.id === sourceId);
+    if (!sourceNode || sourceNode.disabled) return;
     const targets = this.eligibleConnectTargets(sourceId);
     if (targets.length === 0) return;
-    const sourceNode = this.nodes.find((n) => n.id === sourceId);
     this.keyboardConnectSourceId = sourceId;
     this.keyboardConnectTargetIndex = 0;
     if (sourceNode) this.announceKeyboardConnectTarget();
@@ -2465,6 +2540,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
           data-selected=${selected ? '' : nothing}
           role="group"
           aria-label=${this.nodeAccessibleText(node)}
+          aria-disabled=${node.disabled ? 'true' : nothing}
           style="transform:translate(${resolved.x}px,${resolved.y}px)"
           @click=${(e: MouseEvent) => this.onNodeClick(e, node)}
           @pointerdown=${(e: PointerEvent) => this.onNodePointerDown(e, node)}
@@ -2473,6 +2549,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
             part="node-control"
             class="sr-only"
             type="button"
+            ?disabled=${node.disabled === true}
             tabindex=${active ? '0' : '-1'}
             aria-label=${this.nodeAccessibleText(node)}
             aria-pressed=${selected ? 'true' : 'false'}

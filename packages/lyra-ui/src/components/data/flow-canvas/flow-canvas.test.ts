@@ -1913,6 +1913,138 @@ describe('selection & roving focus', () => {
   });
 });
 
+describe('disabled nodes', () => {
+  const withDisabled: FlowNode[] = [
+    { id: 'a', position: { x: 0, y: 0 } },
+    { id: 'b', position: { x: 200, y: 0 }, disabled: true },
+    { id: 'c', position: { x: 400, y: 0 } },
+  ];
+
+  it('renders aria-disabled on the wrapper and a genuinely disabled node-control (unset-regression)', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = withDisabled;
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    expect(wrapperA.getAttribute('aria-disabled'), 'an ordinary node renders unchanged').to.equal(null);
+    expect(wrapperB.getAttribute('aria-disabled')).to.equal('true');
+    expect(nodeControl(el, 'a').disabled, 'an ordinary node-control is not disabled').to.equal(false);
+    expect(nodeControl(el, 'b').disabled).to.equal(true);
+  });
+
+  it('a click on a disabled node card selects nothing and emits no lr-node-activate', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = withDisabled;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-node-activate', () => (fired = true));
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    wrapperB.click();
+    expect(fired).to.be.false;
+    expect(el.selectedNodeIds).to.deep.equal([]);
+  });
+
+  it('roving ArrowRight steps over a disabled node instead of landing on it', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = withDisabled;
+    await el.updateComplete;
+    expect(nodeControl(el, 'a').getAttribute('tabindex'), 'the resting active stop skips a disabled first node').to.equal('0');
+    nodeControl(el, 'a').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(nodeControl(el, 'c').getAttribute('tabindex'), 'skips disabled b straight to c').to.equal('0');
+    expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('does not drag a disabled node even while nodes-draggable', async () => {
+    const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 0, y: 0 }, disabled: true }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40, clientY: 0 }));
+    expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
+  });
+
+  it('refuses to start a connect gesture from a disabled node output handle', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 }, disabled: true },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const outputHandle = document.createElement('div');
+    outputHandle.dataset['handleKind'] = 'output';
+    outputHandle.dataset['handleId'] = 'out';
+    wrapperA.appendChild(outputHandle);
+    outputHandle.dispatchEvent(
+      new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true, composed: true }),
+    );
+    expect(el.shadowRoot!.querySelector('[part="connection-line"]')).to.equal(null);
+  });
+
+  it('marks a disabled hovered node data-connect-invalid and refuses to complete the connection there', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 }, disabled: true },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    const outputHandle = document.createElement('div');
+    outputHandle.dataset['handleKind'] = 'output';
+    outputHandle.dataset['handleId'] = 'out';
+    wrapperA.appendChild(outputHandle);
+    const inputHandle = document.createElement('div');
+    inputHandle.dataset['handleKind'] = 'input';
+    inputHandle.dataset['handleId'] = 'in';
+    wrapperB.appendChild(inputHandle);
+    let fired = false;
+    el.addEventListener('lr-connect', () => (fired = true));
+
+    outputHandle.dispatchEvent(
+      new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true, composed: true }),
+    );
+    wrapperB.dispatchEvent(
+      new PointerEvent('pointermove', { pointerId: 1, clientX: 200, clientY: 0, bubbles: true, composed: true }),
+    );
+    expect(wrapperB.hasAttribute('data-connect-invalid')).to.be.true;
+    inputHandle.dispatchEvent(
+      new PointerEvent('pointerup', { pointerId: 1, clientX: 200, clientY: 0, bubbles: true, composed: true }),
+    );
+    expect(fired).to.be.false;
+  });
+
+  it('excludes a disabled node from the keyboard-connect eligible target cycle', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 }, disabled: true },
+      { id: 'c', position: { x: 400, y: 0 } },
+    ];
+    await el.updateComplete;
+    nodeControl(el, 'a').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    const wrapperC = el.shadowRoot!.querySelector('[data-node-id="c"]') as HTMLElement;
+    const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    expect(wrapperC.hasAttribute('data-connect-target'), 'the only eligible target is c').to.be.true;
+    expect(wrapperB.hasAttribute('data-connect-target'), 'a disabled node is never an eligible target').to.be.false;
+  });
+
+  it('is accessible with a mix of enabled and disabled nodes', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = withDisabled;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
 describe('node drag', () => {
   it('pointer-drags a node (grid-snapped) and emits lr-node-move on release', async () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;

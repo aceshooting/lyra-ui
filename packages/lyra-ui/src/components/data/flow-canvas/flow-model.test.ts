@@ -117,7 +117,7 @@ describe('snapshotFlowNodes', () => {
     expect(result.map((node) => node.id)).to.deep.equal(['a', 'b']);
   });
 
-  it('omits type, position, data, accessibleLabel, inputs, and outputs keys when absent', () => {
+  it('omits type, position, data, accessibleLabel, inputs, outputs, and disabled keys when absent', () => {
     const [node] = snapshotFlowNodes([{ id: 'bare' }]);
     expect('type' in node!).to.be.false;
     expect('position' in node!).to.be.false;
@@ -125,6 +125,7 @@ describe('snapshotFlowNodes', () => {
     expect('accessibleLabel' in node!).to.be.false;
     expect('inputs' in node!).to.be.false;
     expect('outputs' in node!).to.be.false;
+    expect('disabled' in node!).to.be.false;
   });
 
   it('includes every optional field and freezes the position when supplied', () => {
@@ -137,6 +138,7 @@ describe('snapshotFlowNodes', () => {
         accessibleLabel: 'Full node accessible label',
         inputs: [{ id: 'in' }],
         outputs: [{ id: 'out' }],
+        disabled: true,
       },
     ]);
     expect(node!.type).to.equal('task');
@@ -146,6 +148,25 @@ describe('snapshotFlowNodes', () => {
     expect(node!.accessibleLabel).to.equal('Full node accessible label');
     expect(node!.inputs!.map((h) => h.id)).to.deep.equal(['in']);
     expect(node!.outputs!.map((h) => h.id)).to.deep.equal(['out']);
+    expect(node!.disabled).to.equal(true);
+  });
+
+  it('drops a non-boolean disabled value', () => {
+    const [node] = snapshotFlowNodes([
+      { id: 'bad-disabled', disabled: 'yes' as unknown as boolean },
+    ]);
+    expect('disabled' in node!).to.be.false;
+  });
+
+  it('skips a node whose disabled accessor throws instead of aborting the whole collection', () => {
+    const poisoned = {
+      id: 'poisoned',
+      get disabled(): boolean {
+        throw new Error('boom');
+      },
+    };
+    const result = snapshotFlowNodes([poisoned as unknown as FlowNode, { id: 'safe' }]);
+    expect(result.map((node) => node.id)).to.deep.equal(['safe']);
   });
 
   it('retains finite negative coordinates on the canvas model', () => {

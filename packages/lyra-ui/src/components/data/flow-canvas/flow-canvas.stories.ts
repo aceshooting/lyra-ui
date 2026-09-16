@@ -102,6 +102,28 @@ export const Editable: Story = {
   `,
 };
 
+/** A node can be marked `disabled`, rendering it as a genuinely non-actionable card: no selection
+ *  by click or keyboard, roving-tabindex navigation steps past it, it cannot be dragged, and it
+ *  cannot start or receive a new connection while `connectable`. */
+export const DisabledNode: Story = {
+  render: () => {
+    const disabledNodes: readonly FlowNode[] = [
+      nodes[0]!,
+      { ...nodes[1]!, disabled: true, data: { label: 'Summarize (unavailable)' } },
+      nodes[2]!,
+    ];
+    return html`
+      <lr-flow-canvas
+        style="width:100%;height:24rem"
+        nodes-draggable
+        connectable
+        .nodes=${disabledNodes}
+        .edges=${edges}
+      ></lr-flow-canvas>
+    `;
+  },
+};
+
 export const RunningEdgeMotion: Story = {
   name: 'Running-edge motion duration',
   parameters: {

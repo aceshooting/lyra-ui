@@ -160,6 +160,7 @@ export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode
           : {}),
         ...(inputs ? { inputs } : {}),
         ...(outputs ? { outputs } : {}),
+        ...(typeof node?.disabled === 'boolean' ? { disabled: node.disabled } : {}),
       });
       seen.add(id);
       nodes.push(snapshot);

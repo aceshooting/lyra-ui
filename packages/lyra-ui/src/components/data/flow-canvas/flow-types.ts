@@ -25,6 +25,15 @@ export interface FlowNode {
   readonly accessibleLabel?: string;
   readonly inputs?: readonly FlowHandle[];
   readonly outputs?: readonly FlowHandle[];
+  /**
+   * Marks this node non-actionable: it cannot be selected or activated by click or keyboard (its
+   * `node-control` renders a genuinely disabled `<button>`), roving-tabindex navigation steps past
+   * it instead of landing on it, it cannot be dragged even while `nodes-draggable`, and it is
+   * excluded from starting or receiving a new connection while `connectable` (an already-existing
+   * edge touching it is left alone). Omitted or `false` renders the node exactly as before this
+   * field existed.
+   */
+  readonly disabled?: boolean;
 }
 
 /** A directed edge in a flow canvas. `id` must be nonempty and unique within `edges`; the first

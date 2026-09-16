@@ -232,7 +232,7 @@ export const styles = css`
     outline-offset: var(--lr-size-2px);
     border-radius: var(--lr-radius);
   }
-  [part='node']:hover {
+  [part='node']:where(:not([aria-disabled='true'])):hover {
     outline: var(--lr-size-1px) solid
       var(--lr-flow-canvas-node-hover-outline-color, var(--lr-color-border-strong));
     outline-offset: var(--lr-size-2px);
@@ -241,10 +241,18 @@ export const styles = css`
      drag -- and both must read immediately. The colour is shared with the hover rule above (one
      knob for the pointer being on this node); only the weight steps up, so the press reads heavier
      without a second colour to keep in sync. */
-  [part='node']:active {
+  [part='node']:where(:not([aria-disabled='true'])):active {
     outline: var(--lr-size-2px) solid
       var(--lr-flow-canvas-node-hover-outline-color, var(--lr-color-border-strong));
     outline-offset: var(--lr-size-2px);
+  }
+  /* A disabled node is non-actionable: it keeps its own card content and position (still the
+     datum it always was) but loses every affordance that promises activation or dragging -- the
+     hover/active rules above are gated on :not([aria-disabled='true']) rather than overridden
+     here, matching the :not(:disabled) gate a native disabled button needs. */
+  [part='node'][aria-disabled='true'] {
+    cursor: default;
+    opacity: var(--lr-flow-canvas-node-disabled-opacity, 0.5);
   }
   /* The selected edge's static weight. MUST stay above the :hover/:active rules below, the same
      ordering discipline as [part='node'][data-selected] above: this and [part='edge']:active are
