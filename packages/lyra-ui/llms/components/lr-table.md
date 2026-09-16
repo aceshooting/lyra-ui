@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 45 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 46 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -259,6 +259,15 @@ cell: (row) => unknown }` —
 - `paginationMode: 'client'|'server' = 'client'` (attribute `pagination-mode`, reflected) — client
   mode slices rows and updates `page`; server mode leaves `page` controlled and bounds the supplied
   page to `pageSize`
+- `unknownTotal: boolean = false` (attribute `unknown-total`, reflected) — server pagination for a
+  caller with no total item count, only whether one more page exists (`hasNext`). Forwarded to the
+  nested `<lr-pagination>` as its own indeterminate mode (`total="-1"`): previous/next only, no
+  numbered page list, no item-range summary. Ignored outside `paginationMode: 'server'` — client
+  mode always knows the exact row count it slices. A dedicated boolean rather than reusing
+  `totalItems`'s own `-1` sentinel, which already means "derive from the currently matching rows"
+- `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
+  exists past the current one; consulted only alongside `unknownTotal` and forwarded verbatim to
+  the nested `<lr-pagination>`'s own `hasNext`
 - Editable columns emit `lr-cell-edit` on commit and never mutate the supplied row object.
 - `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
   group row wherever this key changes between consecutive rendered rows. Supply `rows` with each
@@ -316,6 +325,18 @@ cell: (row) => unknown }` —
   including `''`, renders verbatim. Has no effect once the `error` slot is filled.
 - `errorDescription: string = ''` (attribute `error-description`) — never localized, the same
   contract as `emptyDescription`. Has no effect once the `error` slot is filled.
+- `announce: boolean = false` (reflected) — opts the table into announcing a failed-load state it
+  already carries when it first mounts, through the same shared assertive region and the same
+  heading text the later `error` transition announces, so the two paths cannot drift. Leave unset
+  for a table that is part of the page a user is arriving on: the built-in error state renders in
+  document order and repeating it is noise. Set it when the table is created in response to a user
+  action — a reload that rejects mounts a fresh `error` table whose failure would otherwise never
+  be spoken. Read once, on the first update: a later reconnection or adoption stages the same
+  state again rather than replaying the announcement, and later `error` transitions announce
+  either way. Deliberately not forwarded to the composed `[part='error']` `<lr-empty>`, whose own
+  `announce` stays unset so the failure is spoken once, not twice. Remove any host
+  `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  otherwise the failure is announced a third time, through the native role as well.
 - `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `noColumnsHeading?: string` (attribute `no-columns-heading`) — omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
@@ -451,7 +472,9 @@ column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each bo
 `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set — the corresponding footer-row
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
 `expand-toggle-cell`, `row-expand-toggle`,
-`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading` (under
+`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `filter-clear`
+(clears the filter field, replacing the native search-cancel glyph the component resets; rendered
+only while it has a value), `loading` (under
 `loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
 visually-hidden, `aria-hidden` announcement mirror, since the placeholder rows are the visible
 affordance; the part has no live-region role in either appearance),
@@ -539,10 +562,10 @@ indicator; these tokens style the header cell itself. Use `::part(sort-icon-inac
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
-`[part="base"]`, the table's own scroll container, also reads the shared
-`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
-unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
-ancestor for one declaration to retheme every internal scroll container in the library, including
+`[part="base"]`, the table's own scroll container, also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
+its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library, including
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
 **Optional peer deps:** none.

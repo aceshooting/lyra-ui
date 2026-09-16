@@ -41,10 +41,15 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
  * the ring. The private fallback steps with `size` across the shared six-step ladder (`1.25rem` at
  * `2xs` up to `3.5rem` at `xl`, `2.5rem` unchanged at the `m` default); an inherited or direct
  * value here (or the upstream `--size` alias) still wins outright over every tier.
- * @cssprop [--lr-progress-ring-track-width=var(--lr-theme-border-width-thick,var(--lr-size-4px))] - Track stroke
- *   width. Bridges the shared border-width theme input directly (not the `--lr-border-width-*`
- *   alias, whose own literal default is a different value) so retuning it moves this ring's
- *   stroke the same way it moves every other bordered/ringed surface in the family.
+ * @cssprop [--lr-progress-ring-track-width=var(--lr-theme-progress-ring-track-width,var(--lr-size-4px))] - Track
+ *   stroke width, `4px` by default. Bridges its own dedicated `--lr-theme-progress-ring-track-width`
+ *   theme input rather than the widely-shared `--lr-theme-border-width-thick` (fed to the
+ *   `--lr-border-width-thick` alias): `theme.css` declares that shared input at `3px` -- its correct
+ *   default for the many surfaces that genuinely want it -- and bridging it directly here would have
+ *   let importing `theme.css` alone silently repaint this ring's stroke to `3px` even with no
+ *   consumer override. Set `--lr-theme-progress-ring-track-width` on `:root` or any ancestor to retune
+ *   this ring specifically; it stays unset (and this default applies) whether or not `theme.css` is
+ *   imported.
  * @cssprop [--lr-progress-ring-track-color=var(--lr-color-brand-quiet)] - Track stroke color.
  * @cssprop [--lr-progress-ring-indicator-width=var(--lr-progress-ring-track-width)] - Indicator stroke width.
  * @cssprop [--lr-progress-ring-indicator-color=var(--lr-progress-ring-indicator-variant-color)] -

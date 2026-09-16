@@ -858,6 +858,33 @@ describe('keyboard navigation', () => {
     expect(changes).to.equal(1);
   });
 
+  it('renders a localized, keyboard-reachable clear button once the search field has a value, and hides it again once empty', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.equal(true);
+
+    const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    search.value = 'dog';
+    search.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    const clearButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]');
+    expect(clearButton).to.not.equal(null);
+    expect(clearButton!.tagName).to.equal('BUTTON');
+    expect(clearButton!.getAttribute('type')).to.equal('button');
+    expect(clearButton!.getAttribute('aria-label')).to.equal('Clear');
+    expect(clearButton!.tabIndex).to.equal(0);
+
+    clearButton!.click();
+    await el.updateComplete;
+
+    expect(search.value).to.equal('');
+    expect(el.shadowRoot!.activeElement === search).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.equal(true);
+  });
+
   it('navigates the grid from the search input via the combobox contract', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;

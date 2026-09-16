@@ -243,9 +243,9 @@ themeable with `--lr-virtual-list-hover-outline-width` (default
 `--lr-virtual-list-hover-outline-offset` (default
 `calc(-1 * var(--lr-border-width-thin))`). All four hover-outline hooks are inline fallbacks and
 there is intentionally no pressed state: the list viewport is a scroll surface rather than an
-activation target. `[part="base"]` also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
-tokens (default `auto`/`auto`, matching its previous unset behavior) — set
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+activation target. `[part="base"]` also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
+its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library, including `lr-table`,
 `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 

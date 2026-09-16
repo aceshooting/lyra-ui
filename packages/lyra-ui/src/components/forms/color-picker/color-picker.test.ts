@@ -534,6 +534,22 @@ it("lets a consumer hover rule override the trigger part without important", asy
   }
 });
 
+it("declares a non-zero transition on the trigger border so hover paint eases like lr-button", async () => {
+  const el = (await fixture(
+    html`<lr-color-picker label="A"></lr-color-picker>`
+  )) as LyraColorPicker;
+  const computed = getComputedStyle(part(el, "trigger"));
+  expect(computed.transitionDuration).to.not.equal("0s");
+  expect(computed.transitionProperty).to.include("border-color");
+});
+
+it("leaves the resting trigger border colour unchanged (unset-regression)", async () => {
+  const el = (await fixture(
+    html`<lr-color-picker label="A"></lr-color-picker>`
+  )) as LyraColorPicker;
+  expect(getComputedStyle(part(el, "trigger")).borderTopColor).to.equal("rgba(0, 0, 0, 0)");
+});
+
 it("renders the resting trigger border unchanged when --lr-color-picker-border-color is unset", async () => {
   const el = (await fixture(
     html`<lr-color-picker label="A"></lr-color-picker>`

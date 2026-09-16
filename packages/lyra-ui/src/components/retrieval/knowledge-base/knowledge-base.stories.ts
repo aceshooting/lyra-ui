@@ -92,6 +92,16 @@ export const Empty: Story = {
   render: () => html`<lr-knowledge-base style="max-width:56rem"></lr-knowledge-base>`,
 };
 
+export const LoadFailed: Story = {
+  name: 'Load failed (error)',
+  render: () => html`<lr-knowledge-base
+    style="max-width:56rem"
+    error
+    error-description="Check your connection and retry."
+    .sources=${sources}
+  ></lr-knowledge-base>`,
+};
+
 export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`<div style="max-width:320px"><lr-knowledge-base .sources=${sources}></lr-knowledge-base></div>`,

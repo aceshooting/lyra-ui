@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationJumpToPage: 'Vai alla pagina {page}',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationApplied: 'Pagina {page} di {totalPages}',
+  paginationAppliedUnknownTotal: 'Pagina {page}',
   trendOf: 'Tendenza di {count} valori, ultimo {value}',
   wordCloud: 'Nuvola di parole di {count} {word}',
   wordCloudLegend: 'Legenda colori della nuvola di parole',

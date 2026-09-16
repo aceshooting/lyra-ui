@@ -1690,7 +1690,10 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   of the page a user is arriving on — those rows render in document order and repeating them is
   noise. Read once per element lifetime: a later reconnection or adoption stages the same rows
   again rather than replaying the announcement, and failures added or changed after mount announce
-  either way. A queue carrying no `stage="failed"` row with an `error` announces nothing
+  either way. A queue carrying no `stage="failed"` row with an `error` announces nothing. Remove
+  any host `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  otherwise the initial failures are announced twice, through the native role and again through
+  the shared sink
 
 Queue item ids must be nonblank and unique. Malformed rows and later duplicates are omitted
 first-wins before empty state, counts, virtualization, failure announcements, rendering, or actions.
@@ -1767,6 +1770,13 @@ errorMessage?: string }` (all four types exported here), where
   total/synced/syncing/needs-attention row
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
   affordance, e.g. for a read-only or permission-gated view
+- `error: boolean = false` (reflected) — reports a failed source-list load. Forwarded to the nested
+  `lr-table`, whose own built-in failed-load state (with retry button) replaces the source rows
+  while it's set; `error` beats the empty state, matching `lr-table`'s own precedence
+- `errorHeading?: string` (attribute `error-heading`) — failed-load heading override, forwarded to
+  the nested table. Omitted localizes the table's own `tableLoadFailed` default
+- `errorDescription: string = ''` (attribute `error-description`) — failed-load supporting copy,
+  forwarded to the nested table
 
 Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
 before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
@@ -1780,23 +1790,31 @@ names.
 before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-base-admin>` already
 re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
+`lr-retry` (`detail: null`, cancelable) — the nested table's built-in retry button was activated,
+only rendered while `error` is set; the default action clears `error`, `preventDefault()` leaves it
+set. This component intercepts the nested table's own `lr-retry` and re-proposes its own, so the
+outer `error` property never drifts out of sync with the table's internal state.
 
-**Slots:** none.
+**Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
+button, while `error` is set.
 
 **CSS parts:** `base`, `toolbar` (heading + "Add source" row), `heading` (the heading text),
 `create-button` (omitted while `hideCreate`), `summary` (omitted while `hideSummary` or `sources` is
 empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
-`actions-menu`, `actions-trigger` (the kebab `<button>`).
+`actions-menu`, `actions-trigger` (the kebab `<button>`), `error-row`, `error-cell`, `error` (the
+nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
+`error-description`, `error-actions`, `retry-button`.
 
-The 13 row parts — `name-cell`, `source-name`, `source-type`, `sync-cell`, `sync-badge`,
+The row and error-state parts — `name-cell`, `source-name`, `source-type`, `sync-cell`, `sync-badge`,
 `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`, `document-count`,
-`permission-badge`, `actions-menu`, and `actions-trigger` — are forwarded from the composed table
-through `[part="table"]`/`exportparts`, so they are styleable as
-`lr-knowledge-base::part(actions-trigger)`. `actions-trigger` is the forwarded kebab button: it
-inherits the row font, has the shared `--lr-icon-button-size` minimum hit area (40px by default),
-and keeps independent hover, pressed, and focus treatment.
+`permission-badge`, `actions-menu`, `actions-trigger`, `error-row`, `error-cell`, `error`,
+`error-base`, `error-icon`, `error-heading`, `error-description`, `error-actions`, and
+`retry-button` — are forwarded from the composed table through `[part="table"]`/`exportparts`, so
+they are styleable as `lr-knowledge-base::part(actions-trigger)`. `actions-trigger` is the forwarded
+kebab button: it inherits the row font, has the shared `--lr-icon-button-size` minimum hit area
+(40px by default), and keeps independent hover, pressed, and focus treatment.
 
 **Themeable custom properties:** shared tokens only.
 
@@ -1840,7 +1858,7 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
   label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' }`, and
   `LyraGraphCommunity { id: string; label?: string; memberIds: string[]; color?: string }` — the full
   field-by-field semantics (color/shape resolution precedence, dangling-link handling, hull
-  membership, etc.) are in this file's `lr-graph` section's own **Properties** list
+  membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
@@ -1878,14 +1896,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'container'` makes the composed graph draw at exactly the pane this component's own layout gave
   it — the reservation minus whatever the toolbar, search results, pinned row and path strip take,
   which is not derivable from `height` — and follow it live as the explorer is resized. `'none'`
-  keeps forwarding the numeric `width`/`height` below unchanged. See that property's own entry in
-  this file's `lr-graph` section
+  keeps forwarding the numeric `width`/`height` below unchanged. See `fitTo`'s own entry in
+  `llms/components/lr-graph.md`
 - `width: number = 800`, `height: number = 600` — `height` also sizes the composed graph's own
   rendered box (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback
   chain `lr-graph.height` uses on its own host
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — forwarded to
   `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to apply its own
-  per-renderer default — see that property's own entry in this file's `lr-graph` section
+  per-renderer default — see `nodeLabels`'s own entry in `llms/components/lr-graph.md`
 - `highlight: 'selection' | 'hover' | 'none' = 'selection'` — what drives the dimming forwarded to
   `lr-graph`'s `dimmedNodeIds`/`dimmedLinkIds`, on top of the always-active search-match dimming:
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
@@ -1946,7 +1964,7 @@ name, so setting `--lr-canvas-reserved-height` anywhere above the explorer overr
 the composed graph too. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-node-fill`,
 `--lr-link-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
 `--lr-graph-focus-halo-color`, `--lr-graph-selected-color`, `--lr-graph-dimmed-opacity`, and
-`--lr-graph-hull-fill`/`-opacity` — documented in this file's `lr-graph` section's own
+`--lr-graph-hull-fill`/`-opacity` — documented in `llms/components/lr-graph.md`'s own
 **Themeable custom properties** list.
 
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
@@ -2129,7 +2147,9 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   to a retrieval the user just ran and nothing else reports the outcome; leave it unset for a panel
   that is part of the page a user is arriving on. Read once, when the panel first mounts: a later
   reconnection or adoption stages the existing state again rather than replaying it, and later
-  transitions are announced either way
+  transitions are announced either way. Remove any host `role="status"`/`role="alert"` hand-added
+  before this property existed once it is set — otherwise the initial state is announced twice,
+  through the native role and again through the shared sink
 - `label?: string` — fallback name for the populated result group; omission uses localized
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty
@@ -2245,7 +2265,10 @@ at the same size tier, so the toolbar row renders as one flush line.
   the user just ran and nothing else reports the outcome; leave it unset for a search that is part
   of the page a user is arriving on, whose visible error or empty state is already read in document
   order. Read once, when the search first mounts: a later reconnection or adoption stages the
-  existing state again rather than replaying it, and later transitions are announced either way
+  existing state again rather than replaying it, and later transitions are announced either way.
+  Remove any host `role="status"`/`role="alert"` hand-added before this property existed once it
+  is set — otherwise the initial state is announced twice, through the native role and again
+  through the shared sink
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
 - `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized
@@ -2380,6 +2403,16 @@ or source fetching.
 (attribute: false); `loading: boolean = false`; `errorText: string = ''` (attribute `error-text`;
 neutral visible caller text; new non-empty values announce through a shared assertive light-DOM
 region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
+`announce: boolean = false` (reflected) — opt-in: announce the error the answer already carries
+the first time it mounts, through the same shared assertive light-DOM region and the same verbatim
+caller-supplied text a later `errorText` change takes. Set it where the answer is rendered in
+response to a request the user just made and nothing else reports the failure; leave it unset for
+an answer that is part of the page a user is arriving on, whose error text is already read in
+document order. Read once, when the answer first mounts: a later reconnection or adoption stages
+the existing error again rather than replaying it, and later `errorText` changes are announced
+either way. An answer with no error announces nothing. Remove any host
+`role="status"`/`role="alert"` hand-added before this property existed once it is set — otherwise
+the initial error is announced twice, through the native role and again through the shared sink;
 `showSources: boolean = true`; `showClaims: boolean = true`
 (attribute `show-claims`); `label?: string` (omission uses the localized answer label; an explicit
 empty string stays empty); `accessibleLabel: string | null = null` (attribute

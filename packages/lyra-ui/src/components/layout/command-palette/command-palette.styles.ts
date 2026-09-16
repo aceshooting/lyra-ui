@@ -89,6 +89,38 @@ export const styles = css`
     appearance: none;
     display: none;
   }
+  /* Replaces the native ::-webkit-search-cancel-button suppressed above -- same "opt-out chrome
+     needs a rendered replacement" contract lr-input's own [part='clear-button'] documents. */
+  [part="clear-button"] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: 0;
+    border-radius: var(--lr-radius-xs);
+    background: transparent;
+    cursor: pointer;
+    color: var(--lr-color-text-quiet);
+    padding: var(--lr-space-xs);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+  [part="clear-button"]:hover {
+    color: var(--lr-color-text);
+  }
+  [part="clear-button"]:active {
+    color: var(--lr-color-text);
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part="clear-button"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
   [part="list"] {
     position: relative;
     max-block-size: var(

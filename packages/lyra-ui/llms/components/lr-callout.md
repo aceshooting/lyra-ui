@@ -139,4 +139,7 @@ callout (`open="false"`) announces nothing. `announce` is read once, when the ca
 a later reconnection or adoption stages the existing content again rather than replaying the
 announcement, and later content updates are announced whether or not it is set. Leave it unset for
 a callout that is simply part of the page a user is arriving on — that text is already read in
-document order, and announcing it again is noise.
+document order, and announcing it again is noise. If a consumer previously hand-added a host
+`role="status"`/`role="alert"` to work around the missing initial announcement, remove it once
+`announce` is set: leaving both in place announces the same initial text twice, once through the
+native role and once through the shared sink.

@@ -165,13 +165,36 @@ disabled under forced-colors while the native scroll owner remains available. Ot
 **Known gotchas:**
 
 - `orientationBreakpointBasis='container'` (the default) observes **the stepper's own allocated
-  inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. In
-  a row where the stepper is a fixed-width sidebar beside another element, its own width never
-  changes with the viewport at all, so no container breakpoint can react to that row stacking via a
-  CSS `@media` rule. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper
-  and its sibling the same `orientation-breakpoint` and both flip in lockstep with the CSS rule. See
-  `<lr-multi-split>`'s own note above for the full explanation of why a shared row can't be inferred from
-  one element's measurement, and for a worked example.
+  inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. It
+  does **not** fit a stepper sitting beside a fixed-width sibling in a row that stacks via a CSS
+  `@media` rule: while the row is a row, the stepper's width shrinks with the viewport; the instant
+  the row stacks (a pure-CSS event no component can observe) it jumps to the _full_ row width —
+  wider than it was just before the transition. Because the measured width is not monotonic across
+  that transition, no single container threshold both stays wide while the row is a row and goes
+  narrow exactly when it stacks — and a fixed-width sibling is worse still, since its own width
+  never changes with the viewport at all, so no container breakpoint on it can ever react to the
+  stacking. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper and its
+  sibling the same `orientation-breakpoint` and `orientation-breakpoint-basis='viewport'` and they
+  flip together, in lockstep with the CSS rule that stacks the row:
+  ```html
+  <lr-stepper
+    orientation-breakpoint="56.25rem"
+    orientation-breakpoint-basis="viewport"
+  ></lr-stepper>
+  <lr-multi-split
+    orientation-breakpoint="56.25rem"
+    orientation-breakpoint-basis="viewport"
+  ></lr-multi-split>
+  <style>
+    @media (max-width: 56.25rem) {
+      .shell {
+        flex-direction: column;
+      }
+    }
+  </style>
+  ```
+  A consumer-side `matchMedia()` controller driving the `orientation` attribute directly is still
+  supported and still correct — it is simply no longer required for this case.
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
   `state` values.

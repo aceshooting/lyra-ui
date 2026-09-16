@@ -620,6 +620,46 @@ it("steps its edge-anchored panel back to the lower modal tier, overriding the d
   el.close("api");
 });
 
+describe("inherited dialog size property", () => {
+  const maxInlineSizeFor = async (size?: string): Promise<string> => {
+    const el = (await fixture(
+      size == null
+        ? html`<lr-drawer open label="Filters"><p>Body</p></lr-drawer>`
+        : html`<lr-drawer open label="Filters" size=${size}><p>Body</p></lr-drawer>`
+    )) as LyraDrawer;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    return getComputedStyle(panel).maxInlineSize;
+  };
+
+  it("renders the panel at its pre-existing default width when size is left unset (regression)", async () => {
+    const el = (await fixture(html`<lr-drawer open label="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+    await el.updateComplete;
+    expect(el.size, "size defaults to the pre-existing m tier without markup authoring it").to.equal("m");
+    // The m tier's cap (32rem) is looser than the panel's own default inline-size formula
+    // (24rem), so it stays a no-op and the rendered width is unchanged from before size was
+    // wired up on the drawer's max-inline-size.
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(panel.getBoundingClientRect().width).to.equal(24 * remPx);
+  });
+
+  it("caps the panel's max-inline-size with the inherited size tier instead of leaving it inert", async () => {
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(await maxInlineSizeFor("2xs")).to.equal(`min(${20 * remPx}px, 100%)`);
+    expect(await maxInlineSizeFor("xl")).to.equal(`min(${48 * remPx}px, 100%)`);
+  });
+
+  it("still honors an explicit --lr-dialog-max-width override over the size tier", async () => {
+    const el = (await fixture(
+      html`<lr-drawer open label="Filters" size="2xs" style="--lr-dialog-max-width: 500px"><p>Body</p></lr-drawer>`
+    )) as LyraDrawer;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).maxInlineSize).to.equal("min(500px, 100%)");
+  });
+});
+
 describe("contained drawer compatibility", () => {
   it("renders in its containing block without modal ownership, overlay, or Escape dismissal", async () => {
     const wrapper = await fixture<HTMLElement>(html`

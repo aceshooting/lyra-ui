@@ -25,6 +25,16 @@ or source fetching.
 (attribute: false); `loading: boolean = false`; `errorText: string = ''` (attribute `error-text`;
 neutral visible caller text; new non-empty values announce through a shared assertive light-DOM
 region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
+`announce: boolean = false` (reflected) — opt-in: announce the error the answer already carries
+the first time it mounts, through the same shared assertive light-DOM region and the same verbatim
+caller-supplied text a later `errorText` change takes. Set it where the answer is rendered in
+response to a request the user just made and nothing else reports the failure; leave it unset for
+an answer that is part of the page a user is arriving on, whose error text is already read in
+document order. Read once, when the answer first mounts: a later reconnection or adoption stages
+the existing error again rather than replaying it, and later `errorText` changes are announced
+either way. An answer with no error announces nothing. Remove any host
+`role="status"`/`role="alert"` hand-added before this property existed once it is set — otherwise
+the initial error is announced twice, through the native role and again through the shared sink;
 `showSources: boolean = true`; `showClaims: boolean = true`
 (attribute `show-claims`); `label?: string` (omission uses the localized answer label; an explicit
 empty string stays empty); `accessibleLabel: string | null = null` (attribute

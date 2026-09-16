@@ -217,6 +217,35 @@ it("contains the native search input event at the component boundary", async () 
   expect(el.shadowRoot!.querySelectorAll('[part="command"]')).to.have.length(1);
 });
 
+it("renders a localized, keyboard-reachable clear button once the search field has a value, and hides it again once empty", async () => {
+  const el = (await fixture(html`<lr-command-palette
+    .commands=${[{ commandId: "save", label: "Save" }]}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="clear-button"]') === null).to.be.true;
+
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  input.value = "save";
+  input.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  const clearButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]');
+  expect(clearButton).to.not.equal(null);
+  expect(clearButton!.tagName).to.equal("BUTTON");
+  expect(clearButton!.getAttribute("type")).to.equal("button");
+  expect(clearButton!.getAttribute("aria-label")).to.equal("Clear");
+  expect(clearButton!.tabIndex).to.equal(0);
+
+  clearButton!.click();
+  await el.updateComplete;
+
+  expect(input.value).to.equal("");
+  expect(el.shadowRoot!.activeElement === input).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="clear-button"]') === null).to.be.true;
+});
+
 it("is accessible while open", async () => {
   const el = (await fixture(
     html`<lr-command-palette
@@ -1078,7 +1107,7 @@ it("renders the search-input's ::placeholder in the shared quiet-text token's co
   expect(getComputedStyle(input, "::placeholder").opacity).to.equal("1");
 });
 
-it("resets supported native search decorations without adding a Firefox-only control", async () => {
+it("resets supported native search decorations, replacing them with the component's own clear button", async () => {
   const el = (await fixture(
     html`<lr-command-palette .commands=${[{ commandId: "search", label: "Search" }]}></lr-command-palette>`
   )) as LyraCommandPalette;
@@ -1087,8 +1116,8 @@ it("resets supported native search decorations without adding a Firefox-only con
   const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLElement;
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   if (!CSS.supports('selector(input::-webkit-search-cancel-button)')) {
-    // Firefox exposes no WebKit search pseudo-controls; the component keeps one native search
-    // input rather than appending a browser-specific clear button of its own.
+    // Firefox exposes no WebKit search pseudo-controls, so there is nothing to positive-control
+    // against here; the empty-query state still renders no clear button at all.
     expect(search.querySelectorAll("button").length).to.equal(0);
     return;
   }
@@ -1108,7 +1137,6 @@ it("resets supported native search decorations without adding a Firefox-only con
   `;
   el.shadowRoot!.append(nativeDecoration);
   input.focus();
-  const rect = input.getBoundingClientRect();
   try {
     let cancelPosition: [number, number] | undefined;
     for (let offset = 2; offset <= 48; offset += 2) {
@@ -1117,6 +1145,13 @@ it("resets supported native search decorations without adding a Firefox-only con
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve())
       );
+      // Captured fresh each iteration (not once, up front): the sibling `[part='clear-button']`
+      // this component now renders once the field is non-empty shrinks the input's own box, so a
+      // rect taken before that button ever mounted would place candidates past the input's real
+      // right edge -- inside the *new* button's box instead of the native glyph's zone the input
+      // itself paints. Re-measuring keeps every candidate inside the input, which is the surface
+      // under test here.
+      const rect = input.getBoundingClientRect();
       const candidate: [number, number] = [
         Math.round(rect.right - offset),
         Math.round(rect.top + rect.height / 2),
@@ -1452,6 +1487,39 @@ it("bridges the search input's native focus/blur out through the shadow boundary
   const blurEvent = await blurPromise;
   expect(blurEvent.bubbles).to.be.true;
   expect(blurEvent.composed).to.be.true;
+});
+
+it("declares a non-zero transition on the command row background so hover/active paint eases like lr-button", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette
+      .commands=${[{ commandId: "save", label: "Save" }]}
+    ></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector('[part="command"]') as HTMLElement;
+  const computed = getComputedStyle(row);
+  expect(computed.transitionDuration).to.not.equal("0s");
+  expect(computed.transitionProperty).to.include("background-color");
+});
+
+it("leaves the resting (non-highlighted) command row background transparent (unset-regression)", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette
+      .commands=${[
+        { commandId: "save", label: "Save" },
+        { commandId: "close", label: "Close" },
+      ]}
+    ></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const rows = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="command"]');
+  // The first row is the keyboard-highlighted default; the second is the one with no data-active
+  // styling to interfere with the resting-background assertion.
+  const row = [...rows].find((r) => r.getAttribute("data-active") !== "true")!;
+  expect(row, "expected a non-highlighted row").to.exist;
+  expect(getComputedStyle(row).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
 });
 
 describe("pressed feedback on the keyboard-highlighted row", () => {

@@ -126,7 +126,10 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * Initial content is not announced as a new live update unless `announce` opts in; with it set,
  * the content present when the callout first mounts is announced once, at the same urgency the
  * later-update path derives from `variant`, and reconnection or adoption stages that content
- * again instead of replaying the announcement. Once the first render and slot
+ * again instead of replaying the announcement. A host `role="status"`/`role="alert"` hand-added as
+ * a workaround before `announce` existed should be removed once `announce` is set: leaving both in
+ * place announces the same initial text twice, once through the native role and once through the
+ * shared sink. Once the first render and slot
  * distribution settle, later content updates are appended to a shared light-DOM polite sink, or
  * an assertive one for `variant="danger"`. Announcements normalize accessible heading/message
  * text, excluding icon and close chrome plus subtree-pruned descendants. A visibility-hidden
@@ -297,7 +300,10 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
    *  later-update path uses. Leave unset for a callout that is part of the page a user is
    *  arriving on: its text is read in document order and repeating it is noise. This is read once,
    *  when the callout first mounts -- a later reconnection or adoption stages the existing content
-   *  again rather than replaying it, and later content updates are announced either way. */
+   *  again rather than replaying it, and later content updates are announced either way. Remove
+   *  any host `role="status"`/`role="alert"` hand-added before this property existed once it is
+   *  set -- otherwise the initial text is announced twice, through the native role and again
+   *  through the shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;
 
   @property({

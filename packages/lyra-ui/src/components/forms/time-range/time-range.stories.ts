@@ -8,9 +8,9 @@ import type {
 import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
 const presets: TimeRangePreset[] = [
-  { label: "Last 7 days", start: 0, end: 7 },
-  { label: "Last 30 days", start: 0, end: 30 },
-  { label: "Last 90 days", start: 0, end: 90 },
+  { label: "Last 7 days", start: 0, end: 7, id: "last-7-days" },
+  { label: "Last 30 days", start: 0, end: 30, id: "last-30-days" },
+  { label: "Last 90 days", start: 0, end: 90, id: "last-90-days" },
 ];
 
 const monthLabels = ["April 2023", "May 2023", "June 2023"];

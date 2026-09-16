@@ -41,7 +41,7 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
   label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' }`, and
   `LyraGraphCommunity { id: string; label?: string; memberIds: string[]; color?: string }` — the full
   field-by-field semantics (color/shape resolution precedence, dangling-link handling, hull
-  membership, etc.) are in this file's `lr-graph` section's own **Properties** list
+  membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
@@ -79,14 +79,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'container'` makes the composed graph draw at exactly the pane this component's own layout gave
   it — the reservation minus whatever the toolbar, search results, pinned row and path strip take,
   which is not derivable from `height` — and follow it live as the explorer is resized. `'none'`
-  keeps forwarding the numeric `width`/`height` below unchanged. See that property's own entry in
-  this file's `lr-graph` section
+  keeps forwarding the numeric `width`/`height` below unchanged. See `fitTo`'s own entry in
+  `llms/components/lr-graph.md`
 - `width: number = 800`, `height: number = 600` — `height` also sizes the composed graph's own
   rendered box (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback
   chain `lr-graph.height` uses on its own host
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — forwarded to
   `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to apply its own
-  per-renderer default — see that property's own entry in this file's `lr-graph` section
+  per-renderer default — see `nodeLabels`'s own entry in `llms/components/lr-graph.md`
 - `highlight: 'selection' | 'hover' | 'none' = 'selection'` — what drives the dimming forwarded to
   `lr-graph`'s `dimmedNodeIds`/`dimmedLinkIds`, on top of the always-active search-match dimming:
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
@@ -147,7 +147,7 @@ name, so setting `--lr-canvas-reserved-height` anywhere above the explorer overr
 the composed graph too. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-node-fill`,
 `--lr-link-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
 `--lr-graph-focus-halo-color`, `--lr-graph-selected-color`, `--lr-graph-dimmed-opacity`, and
-`--lr-graph-hull-fill`/`-opacity` — documented in this file's `lr-graph` section's own
+`--lr-graph-hull-fill`/`-opacity` — documented in `llms/components/lr-graph.md`'s own
 **Themeable custom properties** list.
 
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.

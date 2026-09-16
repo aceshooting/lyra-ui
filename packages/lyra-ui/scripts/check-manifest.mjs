@@ -122,6 +122,27 @@ function addPartBindingHelperLiterals(source, expression, names) {
  * Parenthesis/bracket/brace depth and quoting (including template literals) are tracked so a
  * comma inside a nested object, array, call or string cannot split an argument. Returns an empty
  * list when the call is unterminated. */
+/**
+ * The part-name suffixes `internal/data-state-renderer.ts` forwards from the composed `<lr-empty>`
+ * as `<hostPrefix>-<suffix>` via `exportparts`, read from that module's own `exportPartsFor()` so
+ * this checker cannot fall out of step with what the renderer actually publishes.
+ */
+let dataStateExportPartSuffixCache;
+function dataStateExportPartSuffixes() {
+  if (dataStateExportPartSuffixCache) return dataStateExportPartSuffixCache;
+  const rendererPath = path.join(packageDir, 'src', 'internal', 'data-state-renderer.ts');
+  const rendererSource = fs.readFileSync(rendererPath, 'utf8');
+  const body = rendererSource.slice(rendererSource.indexOf('function exportPartsFor('));
+  const suffixes = [...body.slice(0, body.indexOf('.join(')).matchAll(/\$\{prefix\}-([a-z-]+)/g)].map(
+    (match) => match[1],
+  );
+  if (suffixes.length === 0) {
+    throw new Error('check-manifest: could not read exportPartsFor() suffixes from data-state-renderer.ts');
+  }
+  dataStateExportPartSuffixCache = suffixes;
+  return suffixes;
+}
+
 function balancedArguments(source, openIndex) {
   const args = [];
   let depth = 0;
@@ -132,6 +153,21 @@ function balancedArguments(source, openIndex) {
     if (quote) {
       if (character === '\\') index += 1;
       else if (character === quote) quote = null;
+      continue;
+    }
+    // Skip comments before the quote scan below: an apostrophe in ordinary comment prose
+    // (`resizeColumnTo()'s own shape`) would otherwise open a string that swallows the rest of the
+    // call, silently truncating the argument list and hiding real part evidence from this checker.
+    if (character === '/' && source[index + 1] === '/') {
+      const lineEnd = source.indexOf('\n', index);
+      if (lineEnd === -1) return [];
+      index = lineEnd;
+      continue;
+    }
+    if (character === '/' && source[index + 1] === '*') {
+      const commentEnd = source.indexOf('*/', index + 2);
+      if (commentEnd === -1) return [];
+      index = commentEnd + 1;
       continue;
     }
     if (character === "'" || character === '"' || character === '`') {
@@ -325,7 +361,19 @@ function namesFromTemplates(source) {
   // `slotNames` map whose values are slot names, not parts, and the fourth is an event name.
   for (const match of source.matchAll(/\brenderDataState\s*\(/g)) {
     const argumentList = balancedArguments(source, match.index + match[0].length - 1);
-    if (argumentList.length >= 3) addLiteralPartNames(argumentList[2], names);
+    if (argumentList.length < 3) continue;
+    const prefixNames = new Set();
+    addLiteralPartNames(argumentList[2], prefixNames);
+    for (const prefix of prefixNames) {
+      names.add(prefix);
+      // The renderer also forwards the composed `<lr-empty>`'s own parts under `<prefix>-<slot>`
+      // aliases (`exportPartsFor()` in internal/data-state-renderer.ts). Those aliases are real
+      // rendered markup for the host, but they are spelled inside the renderer, not here -- so
+      // read the suffix list out of that module rather than restating it, or the two drift the
+      // moment the renderer forwards one more part.
+      const suffixes = dataStateExportPartSuffixes();
+      for (const suffix of suffixes) names.add(`${prefix}-${suffix}`);
+    }
   }
 
   // Fetched SVGs retain sanitizer-approved third-party part names while adding Lyra's public

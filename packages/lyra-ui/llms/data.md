@@ -318,6 +318,16 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
+- `error: boolean = false` (`error`, reflected) — reports a failed load. The body's single row
+  becomes the built-in failed-load `<lr-empty>` (matching `<lr-table>`'s own `error` contract),
+  keeping the header/toolbar/pager mounted around it; `loading` beats `error` beats every
+  empty/no-columns/no-results branch. Host-controlled, like `<lr-table>`'s: the internal
+  `dataSource` request cycle's own `lr-data-error` does NOT set it (that event's contract keeps
+  prior rows rendered on a rejection), so a consumer that wants a specific rejection to replace the
+  row content sets `error = true` from its own `lr-data-error` listener.
+- `errorHeading?: string` (`error-heading`) — failed-load heading override. Omitted localizes
+  `<lr-table>`'s own `tableLoadFailed` default.
+- `errorDescription: string = ''` (`error-description`) — failed-load supporting copy.
 - `expandedRowKeys: readonly Array<string | number> = []` (JS-only).
   The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
@@ -461,21 +471,35 @@ details use canonical `rowKey` plus mirrored `key`; cancelable `lr-sort-request`
 contract;
 `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
-notification with no raw platform error text). Every library event bubbles and is composed; only
-`lr-cell-contextmenu` and `lr-sort-request` are cancelable. Structured details and their owned
-collections are frozen. The toolbar search and active column-filter inputs re-dispatch `focus` and
-`blur` once from the grid host as bubbling, composed native `FocusEvent`s, preserving `relatedTarget` so
-delegated ancestors can observe editor entry and exit without crossing the shadow boundary.
+notification with no raw platform error text); `lr-data-error` does NOT itself set the built-in
+`error` state (see `error` above); `lr-retry` (`detail: null`, cancelable) — the built-in
+`[part='retry-button']` was activated, only rendered while `error` is set; the default action
+clears `error`, `preventDefault()` leaves it set instead. Every library event bubbles and is
+composed; only `lr-cell-contextmenu`, `lr-sort-request`, and `lr-retry` are cancelable. Structured
+details and their owned collections are frozen. The toolbar search and active column-filter inputs
+re-dispatch `focus` and `blur` once from the grid host as bubbling, composed native `FocusEvent`s,
+preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
+crossing the shadow boundary.
 
-**Slots:** `empty`, `loading`, `no-results`.
+**Slots:** `empty`, `loading`, `no-results`, `error` (replaces the built-in failed-load state,
+including its retry button, while `error` is set).
 
 **CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
-`drag-ghost`, `ellipsis`, `empty`, `expand-button`, `filter-button`, `filter-panel`, `first-button`,
+`drag-ghost`, `ellipsis`, `empty`, `error-row` (the single full-width row that replaces the body
+content while `error` is set), `error-cell`, `error` (the built-in `<lr-empty>` host), `error-base`,
+`error-icon`, `error-heading`, `error-description`, `error-actions` (all four exported from the
+built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`,
+`filter-button`, `filter-panel`,
+`filter-panel-clear` (clears the active column filter editor, replacing the native search-cancel
+glyph the component resets; rendered only while it has a value), `first-button`,
 `first-icon`, `footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`,
 `header`, `header-cell`, `last-button`, `last-icon`, `live-region`, `loading-overlay`,
 `next-button`, `next-icon`, `no-results`, `page`, `page-current`, `page-size`, `pager`,
 `pager-button`, `pin-indicator`, `previous-button`, `previous-icon`,
-`resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
+`resize-handle`, `row`, `row-detail`, `search`, `search-wrapper` (the row wrapper around `search`
+and `search-clear`), `search-clear` (clears the global row-search input, replacing the native
+search-cancel glyph the component resets; rendered only while it has a value),
+`select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`, `tree-limit`.
 
 Each per-column disclosure opens an honestly named native-control `group`, not a false ARIA menu:
@@ -800,6 +824,15 @@ cell: (row) => unknown }` —
 - `paginationMode: 'client'|'server' = 'client'` (attribute `pagination-mode`, reflected) — client
   mode slices rows and updates `page`; server mode leaves `page` controlled and bounds the supplied
   page to `pageSize`
+- `unknownTotal: boolean = false` (attribute `unknown-total`, reflected) — server pagination for a
+  caller with no total item count, only whether one more page exists (`hasNext`). Forwarded to the
+  nested `<lr-pagination>` as its own indeterminate mode (`total="-1"`): previous/next only, no
+  numbered page list, no item-range summary. Ignored outside `paginationMode: 'server'` — client
+  mode always knows the exact row count it slices. A dedicated boolean rather than reusing
+  `totalItems`'s own `-1` sentinel, which already means "derive from the currently matching rows"
+- `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
+  exists past the current one; consulted only alongside `unknownTotal` and forwarded verbatim to
+  the nested `<lr-pagination>`'s own `hasNext`
 - Editable columns emit `lr-cell-edit` on commit and never mutate the supplied row object.
 - `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
   group row wherever this key changes between consecutive rendered rows. Supply `rows` with each
@@ -857,6 +890,18 @@ cell: (row) => unknown }` —
   including `''`, renders verbatim. Has no effect once the `error` slot is filled.
 - `errorDescription: string = ''` (attribute `error-description`) — never localized, the same
   contract as `emptyDescription`. Has no effect once the `error` slot is filled.
+- `announce: boolean = false` (reflected) — opts the table into announcing a failed-load state it
+  already carries when it first mounts, through the same shared assertive region and the same
+  heading text the later `error` transition announces, so the two paths cannot drift. Leave unset
+  for a table that is part of the page a user is arriving on: the built-in error state renders in
+  document order and repeating it is noise. Set it when the table is created in response to a user
+  action — a reload that rejects mounts a fresh `error` table whose failure would otherwise never
+  be spoken. Read once, on the first update: a later reconnection or adoption stages the same
+  state again rather than replaying the announcement, and later `error` transitions announce
+  either way. Deliberately not forwarded to the composed `[part='error']` `<lr-empty>`, whose own
+  `announce` stays unset so the failure is spoken once, not twice. Remove any host
+  `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  otherwise the failure is announced a third time, through the native role as well.
 - `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `noColumnsHeading?: string` (attribute `no-columns-heading`) — omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
@@ -992,7 +1037,9 @@ column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each bo
 `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set — the corresponding footer-row
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
 `expand-toggle-cell`, `row-expand-toggle`,
-`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading` (under
+`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `filter-clear`
+(clears the filter field, replacing the native search-cancel glyph the component resets; rendered
+only while it has a value), `loading` (under
 `loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
 visually-hidden, `aria-hidden` announcement mirror, since the placeholder rows are the visible
 affordance; the part has no live-region role in either appearance),
@@ -1080,10 +1127,10 @@ indicator; these tokens style the header cell itself. Use `::part(sort-icon-inac
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
-`[part="base"]`, the table's own scroll container, also reads the shared
-`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
-unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
-ancestor for one declaration to retheme every internal scroll container in the library, including
+`[part="base"]`, the table's own scroll container, also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
+its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library, including
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
 **Optional peer deps:** none.
@@ -1229,6 +1276,18 @@ a compact layout that swaps the list for a validated numeric page jump, and a po
 after the host applies a requested page. The component owns no data fetching and never mutates
 `page`.
 
+**Indeterminate mode (`total="-1"`):** for a server API that never returns a total — limit/offset and
+cursor/keyset APIs typically don't — set `total="-1"` and use `hasNext` to report whether one more
+page exists. The component then renders previous/next plus a page-number field only: no numbered
+page list, no item-range summary, and no `/ totalPages` readout, regardless of `format`,
+`withSummary`, or `withEdges`. Previous is disabled at page 1 exactly as in the known-total path;
+next is disabled once `hasNext` is `false`. Events, focus management, and the applied-page
+announcement all use the same contract as known-total pagination — `lr-before-page-change`/
+`lr-page-change`/`lr-activate` fire the same way, and focus still follows the applied page — except
+the announcement text has no total-pages figure (`"Page {page}"` instead of `"Page {page} of
+{totalPages}"`). Any negative `total` other than exactly `-1` still renders the ordinary empty
+state.
+
 **9.0.0 migration:** remove reads of `pageCount` and use the required mirrored `totalPages` getter.
 There is no alias or compatibility shim; keeping both names made one derived total look like two
 independent concepts.
@@ -1255,14 +1314,23 @@ independent concepts.
 - `pageSize: number = 10` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
-  to a non-negative integer for display and page-count calculations
+  to a non-negative integer for display and page-count calculations, except for the exact sentinel
+  `-1`, which enters indeterminate mode (see below) instead of clamping to the ordinary empty state.
+  Any other negative value — including one arrived at by a miscalculation — still clamps to `0` and
+  renders the empty state, unchanged
 - `totalPages: number` (readonly getter) — `ceil(total / pageSize)` after the normalization above,
-  or `0` when either normalized input is zero
+  or `0` when either normalized input is zero (always `0` in indeterminate mode too, since there is
+  no total to derive a page count from)
+- `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
+  exists past the current one. Consulted only in indeterminate mode; previous availability is always
+  derivable from `page` alone
 - `disabled: boolean = false` (reflected)
 - `loading: boolean = false` (reflected) — disables all controls and sets `aria-busy="true"` on the
   internal navigation landmark
 - `withSummary: boolean = false` (attribute `with-summary`, reflected) — renders the built-in range
-  summary while retaining the controls. Opt-in since 8.0.0; see the rename note above
+  summary while retaining the controls. Opt-in since 8.0.0, when the old `hide-summary` attribute
+  (shown-by-default) was renamed to `with-summary` (hidden-by-default) — the **8.0.0 migration**
+  bullet above has the full inverted-default detail
 - `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — control footprint, on the library's shared
   six-step ladder: `--lr-pagination-control-size` and `--lr-pagination-font-size` read the same
   `--lr-form-control-height`/`--lr-form-control-font-size` knobs `lr-button`/`lr-input`/`lr-select`
@@ -1360,7 +1428,8 @@ pages into its skipped run. `button` is shared by every page, ellipsis, and navi
 `::part(page-current)` selects it and `::part(page)` still selects every page including the current
 one — the state lives in the part name because `::part(page)[aria-current='page']` is invalid CSS
 and would silently never match. `first-button`/`first-icon` and `last-button`/`last-icon` exist only
-while `with-edges` is set.
+while `with-edges` is set — and never in indeterminate mode, along with `pages`, `summary`, and
+`page-count`, none of which have a total to render against (see indeterminate mode above).
 
 `live-region` is a visually hidden, `aria-hidden` **mirror** of the applied-page announcement — a
 styling and inspection surface, with no live-region role of its own. The announcement itself goes
@@ -3862,15 +3931,31 @@ each resolves its tier inside its own shadow root, so no custom property on this
 there. The two always stay on the same tier as each other, so the toolbar row never goes ragged.
 With no `size` both keep their own `m` default; an unsupported value normalizes to the omitted state
 and removes the attribute.
+`error: boolean = false` (reflected) — reports a failed document-list load. Forwarded to the nested
+`lr-table`, whose own built-in failed-load state (with retry button) replaces the document rows
+while it's set; `error` beats the empty state, matching `lr-table`'s own precedence.
+`errorHeading?: string` (`error-heading`) — failed-load heading override, forwarded to the nested
+table. Omitted localizes the table's own `tableLoadFailed` default.
+`errorDescription: string = ''` (`error-description`) — failed-load supporting copy, forwarded to
+the nested table.
 
 **Events:** `lr-filter-change` emits a fresh frozen readonly
 `{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly
 `{ phase: 'request', sortKey, sortDir }`; accepted `lr-sort` commits the same canonical vocabulary
-with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`; and
-`lr-open` emits frozen readonly `{ documentId }`.
+with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`;
+`lr-open` emits frozen readonly `{ documentId }`; and `lr-retry` (`detail: null`, cancelable) — the
+nested table's built-in retry button was activated, only rendered while `error` is set; the default
+action clears `error`, `preventDefault()` leaves it set. This component intercepts the nested
+table's own `lr-retry` and re-proposes its own, so the outer `error` property never drifts out of
+sync with the table's internal state.
+
+**Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
+button, while `error` is set.
 
 **CSS parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
-`clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
+`clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`, `error-row`, `error-cell`,
+`error` (the nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
+`error-description`, `error-actions`, `retry-button`.
 
 `selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
 selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count

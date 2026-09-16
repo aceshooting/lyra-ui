@@ -263,6 +263,19 @@
        value at or above 24px — anything smaller fails WCAG 2.2 SC 2.5.8. */
     --lr-theme-icon-button-size: 2.5rem;
 
+    /* Form-control height ladder (src/internal/sizes.styles.ts). One override per size tier, so a
+       button/input/select/combobox/date-input at the same `size` line up in a toolbar row.
+       --lr-theme-form-control-radius is deliberately NOT declared here: its own component-side
+       fallback is `var(--lr-radius)`, not a literal, precisely so retuning
+       --lr-theme-border-radius-m already retunes it too; a literal here would freeze it and break
+       that inheritance for every consumer who imports this file. */
+    --lr-theme-form-control-height-2xs: 1.25rem;
+    --lr-theme-form-control-height-xs: 1.5rem;
+    --lr-theme-form-control-height-s: 1.875rem;
+    --lr-theme-form-control-height-m: 2.5rem;
+    --lr-theme-form-control-height-l: 3rem;
+    --lr-theme-form-control-height-xl: 3.5rem;
+
     /* Stacking layers. Raise these together if the host app owns a higher stacking
        context; -popover and -modal share a default deliberately. */
     --lr-theme-z-index-base: 0;

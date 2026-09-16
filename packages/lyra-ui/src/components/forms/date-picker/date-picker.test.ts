@@ -3699,6 +3699,17 @@ describe('range preset identity and open bounds', () => {
       'with no min/max there is nothing to resolve an open bound to',
     ).to.be.true;
   });
+
+  it('echoes a caller-supplied id on appliedPreset, unread by the component itself', async () => {
+    const source = { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19', id: 'last-7-days' };
+    const el = await pickerWith([source]);
+
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+
+    expect(el.appliedPreset).to.equal(source);
+    expect(el.appliedPreset?.id).to.equal('last-7-days');
+  });
 });
 
 it("keeps single and partial range date views mode-correct", async () => {

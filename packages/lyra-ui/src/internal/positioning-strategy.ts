@@ -5,7 +5,7 @@ import type { PlaceStrategy } from './positioner.js';
  * its `PlaceStrategy` when the consumer set no explicit value on the instance -- see
  * {@link resolveEffectivePositioningStrategy}.
  */
-export const POSITIONING_STRATEGY_CUSTOM_PROPERTY = '--lr-positioning-strategy';
+const POSITIONING_STRATEGY_CUSTOM_PROPERTY = '--lr-positioning-strategy';
 
 /**
  * Resolves which `PlaceStrategy` an anchored overlay should place with, honoring a cascading

@@ -2313,8 +2313,8 @@ export type LyraCodeBlockSvelteProps = LyraSvelteElementProps<
   | '--lr-code-block-language-color'
   | '--lr-code-block-max-height'
   | '--lr-code-block-tab-size'
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width',
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width',
   {
     'activatable-lines'?: LyraCodeBlock['activatableLines'];
     'active-highlight-id'?: LyraCodeBlock['activeHighlightId'];
@@ -2361,8 +2361,8 @@ export type LyraCodeBlockCoreSvelteProps = LyraSvelteElementProps<
   | '--lr-code-block-language-color'
   | '--lr-code-block-max-height'
   | '--lr-code-block-tab-size'
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width',
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width',
   {
     'activatable-lines'?: LyraCodeBlockCore['activatableLines'];
     'active-highlight-id'?: LyraCodeBlockCore['activeHighlightId'];
@@ -2437,8 +2437,8 @@ export type LyraCodeEditorSvelteProps = LyraSvelteElementProps<
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width',
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width',
   {
     'aria-label'?: LyraCodeEditor['accessibleLabel'];
     'custom-error'?: LyraCodeEditor['customError'];
@@ -3052,6 +3052,9 @@ export type LyraDataGridSvelteProps = LyraSvelteElementProps<
   | 'columns'
   | 'data'
   | 'dataSource'
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'expandedKeys'
   | 'expandedRowKeys'
   | 'filterDebounce'
@@ -3109,6 +3112,7 @@ export type LyraDataGridSvelteProps = LyraSvelteElementProps<
   | 'lr-group-collapse'
   | 'lr-group-expand'
   | 'lr-page-change'
+  | 'lr-retry'
   | 'lr-row-collapse'
   | 'lr-row-expand'
   | 'lr-row-select'
@@ -3144,6 +3148,8 @@ export type LyraDataGridSvelteProps = LyraSvelteElementProps<
   | '--transition-duration',
   {
     'child-rows'?: LyraDataGrid['childRows'];
+    'error-description'?: LyraDataGrid['errorDescription'];
+    'error-heading'?: LyraDataGrid['errorHeading'];
     'filter-debounce'?: LyraDataGrid['filterDebounce'];
     'filter-from-leaf-rows'?: LyraDataGrid['filterFromLeafRows'];
     'group-by'?: LyraDataGrid['groupBy'];
@@ -3612,6 +3618,9 @@ export type LyraDocumentCompareSvelteProps = LyraSvelteElementProps<
 export type LyraDocumentLibrarySvelteProps = LyraSvelteElementProps<
   LyraDocumentLibrary,
   | 'documents'
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'filter'
   | 'label'
   | 'loading'
@@ -3627,11 +3636,14 @@ export type LyraDocumentLibrarySvelteProps = LyraSvelteElementProps<
   LyraDocumentLibraryEventMap,
   | 'lr-filter-change'
   | 'lr-open'
+  | 'lr-retry'
   | 'lr-selection-change'
   | 'lr-sort'
   | 'lr-sort-request',
 never,
   {
+    'error-description'?: LyraDocumentLibrary['errorDescription'];
+    'error-heading'?: LyraDocumentLibrary['errorHeading'];
     'search-term'?: LyraDocumentLibrary['searchTerm'];
     'sort-dir'?: LyraDocumentLibrary['sortDir'];
     'sort-key'?: LyraDocumentLibrary['sortKey'];
@@ -4202,6 +4214,7 @@ export type LyraEmojiPickerSvelteProps = LyraSvelteElementProps<
   | '--lr-emoji-picker-radius'
   | '--lr-emoji-picker-row-height'
   | '--lr-emoji-picker-search-border-color'
+  | '--lr-emoji-picker-search-clear-gap'
   | '--lr-emoji-picker-search-fill'
   | '--lr-emoji-picker-search-font-size'
   | '--lr-emoji-picker-search-hover-border-color'
@@ -5835,6 +5848,9 @@ never,
 
 export type LyraKnowledgeBaseSvelteProps = LyraSvelteElementProps<
   LyraKnowledgeBase,
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'hideCreate'
   | 'hideSummary'
   | 'label'
@@ -5843,12 +5859,15 @@ export type LyraKnowledgeBaseSvelteProps = LyraSvelteElementProps<
   | 'strings',
   {},
   LyraKnowledgeBaseEventMap,
+  | 'lr-retry'
   | 'lr-source-create'
   | 'lr-source-delete'
   | 'lr-source-pause'
   | 'lr-source-sync',
 never,
   {
+    'error-description'?: LyraKnowledgeBase['errorDescription'];
+    'error-heading'?: LyraKnowledgeBase['errorHeading'];
     'hide-create'?: LyraKnowledgeBase['hideCreate'];
     'hide-summary'?: LyraKnowledgeBase['hideSummary'];
   }
@@ -7386,6 +7405,7 @@ export type LyraPaginationSvelteProps = LyraSvelteElementProps<
   | 'disabled'
   | 'firstLabel'
   | 'format'
+  | 'hasNext'
   | 'hideSinglePage'
   | 'hrefTemplate'
   | 'itemLabel'
@@ -7438,6 +7458,7 @@ export type LyraPaginationSvelteProps = LyraSvelteElementProps<
     'aria-label'?: LyraPagination['accessibleLabel'];
     'boundary-count'?: LyraPagination['boundaryCount'];
     'first-label'?: LyraPagination['firstLabel'];
+    'has-next'?: LyraPagination['hasNext'];
     'hide-single-page'?: LyraPagination['hideSinglePage'];
     'href-template'?: LyraPagination['hrefTemplate'];
     'item-label'?: LyraPagination['itemLabel'];
@@ -10085,6 +10106,7 @@ export type LyraTableSvelteProps = LyraSvelteElementProps<
   | 'groupLabel'
   | 'hasHiddenPriorityColumns'
   | 'hasMore'
+  | 'hasNext'
   | 'heatTintScale'
   | 'hideColumnsLabel'
   | 'layout'
@@ -10114,7 +10136,8 @@ export type LyraTableSvelteProps = LyraSvelteElementProps<
   | 'spellcheck'
   | 'storageKey'
   | 'strings'
-  | 'totalItems',
+  | 'totalItems'
+  | 'unknownTotal',
   {},
   LyraTableEventMap,
   | 'blur'
@@ -10132,8 +10155,6 @@ export type LyraTableSvelteProps = LyraSvelteElementProps<
   | 'lr-selection-change'
   | 'lr-sort'
   | 'lr-sort-request',
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width'
   | '--lr-table-cell-color'
   | '--lr-table-cell-link-color'
   | '--lr-table-cell-link-hover-color'
@@ -10154,7 +10175,9 @@ export type LyraTableSvelteProps = LyraSvelteElementProps<
   | '--lr-table-resize-min-width'
   | '--lr-table-row-selected-bg'
   | '--lr-table-row-stripe-bg'
-  | '--lr-table-sticky-offset',
+  | '--lr-table-sticky-offset'
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width',
   {
     'accessible-label'?: LyraTable['accessibleLabel'];
     'autocorrect'?: LyraTable['autoCorrect'];
@@ -10170,6 +10193,7 @@ export type LyraTableSvelteProps = LyraSvelteElementProps<
     'filter-text'?: LyraTable['filterText'];
     'has-hidden-priority-columns'?: LyraTable['hasHiddenPriorityColumns'];
     'has-more'?: LyraTable['hasMore'];
+    'has-next'?: LyraTable['hasNext'];
     'hide-columns-label'?: LyraTable['hideColumnsLabel'];
     'loading-appearance'?: LyraTable['loadingAppearance'];
     'loading-label'?: LyraTable['loadingLabel'];
@@ -10189,6 +10213,7 @@ export type LyraTableSvelteProps = LyraSvelteElementProps<
     'sort-mode'?: LyraTable['sortMode'];
     'storage-key'?: LyraTable['storageKey'];
     'total-items'?: LyraTable['totalItems'];
+    'unknown-total'?: LyraTable['unknownTotal'];
   }
 >;
 
@@ -10474,6 +10499,9 @@ export type LyraThreadListSvelteProps = LyraSvelteElementProps<
   | 'activeConversationId'
   | 'collapsedGroupIds'
   | 'compact'
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'filter'
   | 'formatDate'
   | 'getGroupLabel'
@@ -10505,6 +10533,7 @@ export type LyraThreadListSvelteProps = LyraSvelteElementProps<
   | 'lr-group-toggle'
   | 'lr-group-toggle-request'
   | 'lr-query-change'
+  | 'lr-retry'
   | 'lr-select'
   | 'lr-thread-archive'
   | 'lr-thread-delete'
@@ -10532,6 +10561,8 @@ export type LyraThreadListSvelteProps = LyraSvelteElementProps<
   | '--lr-thread-list-search-radius',
   {
     'active-conversation-id'?: LyraThreadList['activeConversationId'];
+    'error-description'?: LyraThreadList['errorDescription'];
+    'error-heading'?: LyraThreadList['errorHeading'];
     'show-archived'?: LyraThreadList['showArchived'];
     'sticky-groups'?: LyraThreadList['stickyGroups'];
   }
@@ -11449,8 +11480,8 @@ export type LyraVirtualListSvelteProps = LyraSvelteElementProps<
   | 'lr-load-more'
   | 'lr-virtual-scroll'
   | 'lr-visible-range-change',
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width'
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width'
   | '--lr-virtual-list-height'
   | '--lr-virtual-list-hover-outline-color'
   | '--lr-virtual-list-hover-outline-offset'

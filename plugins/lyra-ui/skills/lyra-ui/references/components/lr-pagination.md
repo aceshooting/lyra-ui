@@ -22,6 +22,18 @@ a compact layout that swaps the list for a validated numeric page jump, and a po
 after the host applies a requested page. The component owns no data fetching and never mutates
 `page`.
 
+**Indeterminate mode (`total="-1"`):** for a server API that never returns a total — limit/offset and
+cursor/keyset APIs typically don't — set `total="-1"` and use `hasNext` to report whether one more
+page exists. The component then renders previous/next plus a page-number field only: no numbered
+page list, no item-range summary, and no `/ totalPages` readout, regardless of `format`,
+`withSummary`, or `withEdges`. Previous is disabled at page 1 exactly as in the known-total path;
+next is disabled once `hasNext` is `false`. Events, focus management, and the applied-page
+announcement all use the same contract as known-total pagination — `lr-before-page-change`/
+`lr-page-change`/`lr-activate` fire the same way, and focus still follows the applied page — except
+the announcement text has no total-pages figure (`"Page {page}"` instead of `"Page {page} of
+{totalPages}"`). Any negative `total` other than exactly `-1` still renders the ordinary empty
+state.
+
 **9.0.0 migration:** remove reads of `pageCount` and use the required mirrored `totalPages` getter.
 There is no alias or compatibility shim; keeping both names made one derived total look like two
 independent concepts.
@@ -48,14 +60,23 @@ independent concepts.
 - `pageSize: number = 10` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
-  to a non-negative integer for display and page-count calculations
+  to a non-negative integer for display and page-count calculations, except for the exact sentinel
+  `-1`, which enters indeterminate mode (see below) instead of clamping to the ordinary empty state.
+  Any other negative value — including one arrived at by a miscalculation — still clamps to `0` and
+  renders the empty state, unchanged
 - `totalPages: number` (readonly getter) — `ceil(total / pageSize)` after the normalization above,
-  or `0` when either normalized input is zero
+  or `0` when either normalized input is zero (always `0` in indeterminate mode too, since there is
+  no total to derive a page count from)
+- `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
+  exists past the current one. Consulted only in indeterminate mode; previous availability is always
+  derivable from `page` alone
 - `disabled: boolean = false` (reflected)
 - `loading: boolean = false` (reflected) — disables all controls and sets `aria-busy="true"` on the
   internal navigation landmark
 - `withSummary: boolean = false` (attribute `with-summary`, reflected) — renders the built-in range
-  summary while retaining the controls. Opt-in since 8.0.0; see the rename note above
+  summary while retaining the controls. Opt-in since 8.0.0, when the old `hide-summary` attribute
+  (shown-by-default) was renamed to `with-summary` (hidden-by-default) — the **8.0.0 migration**
+  bullet above has the full inverted-default detail
 - `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — control footprint, on the library's shared
   six-step ladder: `--lr-pagination-control-size` and `--lr-pagination-font-size` read the same
   `--lr-form-control-height`/`--lr-form-control-font-size` knobs `lr-button`/`lr-input`/`lr-select`
@@ -153,7 +174,8 @@ pages into its skipped run. `button` is shared by every page, ellipsis, and navi
 `::part(page-current)` selects it and `::part(page)` still selects every page including the current
 one — the state lives in the part name because `::part(page)[aria-current='page']` is invalid CSS
 and would silently never match. `first-button`/`first-icon` and `last-button`/`last-icon` exist only
-while `with-edges` is set.
+while `with-edges` is set — and never in indeterminate mode, along with `pages`, `summary`, and
+`page-count`, none of which have a total to render against (see indeterminate mode above).
 
 `live-region` is a visually hidden, `aria-hidden` **mirror** of the applied-page announcement — a
 styling and inspection surface, with no live-region role of its own. The announcement itself goes

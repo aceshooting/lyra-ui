@@ -32,7 +32,12 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @event lr-request-close - Inherited cancelable built-in dismissal request with a source detail.
  * @event lr-close - Inherited conditionally cancelable close event; detail is the dismissal
  *   reason. Ordinary dismissal can be vetoed; an `'unmount'` notification after external removal
- *   cannot be.
+ *   cannot be. **The name is not drawer-scoped, so filter by target.** `lr-close` is also emitted
+ *   by several components commonly nested inside a drawer body (`<lr-callout>`, `<lr-tab>`/
+ *   `<lr-tab-group>`, `<lr-command-palette>`, `<lr-document-viewer>`), and library events bubble
+ *   and are composed, so a listener bound directly on `<lr-drawer>` also receives a descendant's
+ *   close. Guard on the target exactly as documented on `<lr-dialog>`'s own `lr-close`:
+ *   `if (event.target !== event.currentTarget) return;`.
  * It inherits every `<lr-dialog>` CSS part unchanged, with one deliberate layout exception:
  * `<lr-dialog>`'s `[part="body"]` grows to fill the panel once a consumer sets
  * `--lr-dialog-height`, because that panel is otherwise content-sized. A drawer's panel is
@@ -40,6 +45,12 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * growth — `body` keeps its natural content size and `footer` follows immediately after it,
  * exactly as before `--lr-dialog-height` existed, instead of always being pushed to the panel's
  * far edge.
+ * The `size` property, inherited unchanged from `<lr-dialog>`, caps the panel's `max-inline-size`
+ * for `start`/`end` placements on the same six-step ladder documented there (`'m'`'s 32rem cap
+ * exceeds the panel's own 24rem default inline size, so it stays a no-op at the default tier);
+ * `top`/`bottom` placements are unaffected, since those axes are already unconditionally 100%.
+ * Not to be confused with the drawer-specific `--size` CSS custom property below, which maps to
+ * this same panel's own `inline-size`/`block-size` for the active axis.
  * @cssprop --size - Mapped drawer size for the active axis.
  * @cssprop --backdrop-filter - Mapped backdrop-filter alias.
  * @cssprop --spacing - Web Awesome shared region spacing.

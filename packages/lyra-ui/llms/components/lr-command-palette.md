@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -72,7 +72,9 @@ never fired at all.
 **Slots:** none.
 
 **CSS parts:** `backdrop`, `dialog` (the `role="dialog" aria-modal="true"` panel), `search` (the
-input row), `input` (the `type="search"` field), `list` (the `role="listbox"`), `group` (a group
+input row), `input` (the `type="search"` field), `clear-button` (clears the search field,
+replacing the native search-cancel glyph the component resets; rendered only while it has a
+value), `list` (the `role="listbox"`), `group` (a group
 heading), `command-group` (a labeled ARIA group of commands), `command` (a `role="option"` button),
 `icon` (a command's leading icon glyph; only rendered when the command has one), `label`,
 `description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`.

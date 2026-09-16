@@ -695,6 +695,75 @@ Three things follow from `content` being a consumer-supplied string:
   `:state(required)`, and still fails `valueMissing`. If the marker is the only way a form
   communicates requiredness, replace it with visible copy rather than removing it.
 
+## Presenting hint text as a compact disclosure
+
+Every form control's `hint` chrome (props + matching named slot + `hint` CSS part, the same shape
+`<lr-select>` documents) renders as permanent text under the control. **There is no
+`hint-display`/`hint-placement` attribute anywhere in the library, on any control, and none is
+planned** — a compact icon-triggered presentation is a composition you build from existing pieces,
+not a built-in render mode. Permanent text is also the reason a hint reads reliably across a form in
+the first place: a control that silently switched between "text under the control" and "icon that
+opens a popup" from one attribute would desync sibling field heights at exactly the moment it
+removed the visual cue that anything had changed.
+
+The recipe: compose an icon-only `<lr-icon-button>` inside an `<lr-tooltip>` — or `<lr-details>` for
+an inline expand/collapse instead of a hover/focus popup — and slot the pair into the control's
+`label` slot, beside its regular label text. This works on every control shipping that label/hint
+slot pair (`lr-input`, `lr-textarea`, `lr-select`, `lr-combobox`, `lr-number-input`, `lr-date-input`,
+and siblings). Keep the same copy in the control's own `hint` slot as well, wrapped in the
+`lr-visually-hidden` utility class (opt into it with `@import "@aceshooting/lyra-ui/utilities.css";`
+— see "Optional native styles and CSS utilities" below): that keeps the text wired into the
+control's `aria-describedby`, which is the entire reason the built-in `hint` chrome exists, while
+removing its visible, height-affecting rendering. The compact trigger is additive to that
+description, not a replacement for it — `<lr-tooltip>` separately gives its own trigger (the icon
+button) an accessible description built from the tooltip's content while open, which is a second,
+narrower win: it reaches only the icon button's own focus, not the field's `aria-describedby` chain,
+which is exactly why the visually-hidden copy in `hint` still matters.
+
+```html
+<lr-input label="API key" name="apiKey">
+  <lr-tooltip
+    slot="label"
+    content="Used to authenticate requests server-side. Rotate it if it leaks."
+  >
+    <lr-icon-button
+      icon="info-circle"
+      label="More info about API key"
+    ></lr-icon-button>
+  </lr-tooltip>
+  <span slot="hint" class="lr-visually-hidden"
+    >Used to authenticate requests server-side. Rotate it if it leaks.</span
+  >
+</lr-input>
+```
+
+```js
+import '@aceshooting/lyra-ui/components/lr-input.js';
+import '@aceshooting/lyra-ui/components/lr-tooltip.js';
+import '@aceshooting/lyra-ui/components/lr-icon-button.js';
+```
+
+`icon="info-circle"` above illustrates the pattern; `<lr-icon>`'s own built-in glyph set has no info
+symbol (see `llms/components/lr-icon.md` for the exact list), so register a real icon library with
+`registerIconLibrary()`, set `library` alongside `icon`, or slot custom SVG geometry into the icon
+button's own default slot instead.
+
+`lr-checkbox` and `lr-switch` have no separate `label` slot — their default slot _is_ the clickable
+label — so there is nowhere inside either control to slot the trigger into. Render it as a DOM
+sibling instead, still paired with a visually-hidden copy inside the control's own `hint` slot:
+
+```html
+<span class="lr-cluster lr-items-center lr-gap-xs">
+  <lr-checkbox name="marketingOptIn">
+    Send me product updates
+    <span slot="hint" class="lr-visually-hidden">We email at most once a month.</span>
+  </lr-checkbox>
+  <lr-tooltip content="We email at most once a month.">
+    <lr-icon-button icon="info-circle" label="More info about product updates"></lr-icon-button>
+  </lr-tooltip>
+</span>
+```
+
 ## The shared styling vocabulary
 
 Four property names carry one meaning library-wide, so a value learned on one component transfers to
@@ -824,8 +893,7 @@ convenience: `--lr-ramp-*` (a step encodes a light-mode choice and has no theme 
 palettes (generated ramps that move with the palette tooling), `--lr-layer-*` (stacking order is
 your decision), `--lr-color-mix-*` and `--lr-hover-brightness` (inputs to the library's own
 interaction recipe), `--lr-line-height-*`, the per-control internals (`--lr-icon-button-size`,
-`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-scrollbar-width`,
-`--lr-scrollbar-gutter`, `--lr-popover-viewport-clamp`,
+`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-popover-viewport-clamp`,
 `--lr-safe-area-*`, `--lr-mask-opaque`, `--lr-color-no-data`), and the nine variant-following slots
 (`--lr-color-fill-loud` and friends), which mean "the variant _this_ element is set to" and are
 meaningless on `:root`. If you need one of these, ask for it to be added rather than reading it out
@@ -1420,11 +1488,17 @@ lr-chart:not(:defined) {
 
 Three things worth knowing:
 
-- It is a **light-DOM stylesheet**: load it the same way as the token sheet — a `<link>`/`@import`
-  reaching the document (or whatever light-DOM tree your `lr-*` markup actually lives in). It is
-  inert if adopted into a component's own shadow root (`shadowRoot.adoptedStyleSheets = [...]`):
-  none of its `lr-chart`/`lr-select`/etc. selectors can match anything there, because a component's
-  shadow root never contains the application's own `<lr-*>` usages — only the light DOM does.
+- **It reserves layout only for `lr-*` usages in the exact tree it is loaded into.** A `<link>`/
+  `@import` reaching the document reserves the document's own light-DOM `lr-*` usages; it does not
+  reach one that a *different* component renders inside *that component's own* shadow root, because
+  a document stylesheet never crosses a shadow boundary. If your own component's template composes
+  `lr-*` elements, load the reservations there too, in whichever form matches how your component is
+  built: adopt `@aceshooting/lyra-ui/reservations.styles.js`'s `reservationStyles` export (a Lit
+  `CSSResult` generated from the same `reservations.css`, so the two can never drift) —
+  `static styles = [reservationStyles, css\`…\`]`, or
+  `shadowRoot.adoptedStyleSheets = [reservationStyles.styleSheet!]` outside Lit — or `<link>`/
+  `@import` `reservations.css` again inside that shadow root if you are not using constructed
+  stylesheets at all.
 - A per-instance override needs the matching custom property to be set as well, not only the
   attribute, or the pre-upgrade frame and the upgraded frame will disagree. `<lr-chart height="500px">`
   should carry `style="--lr-chart-height: 500px"` too if it sits above the fold.
@@ -5683,8 +5757,10 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 
 - `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
 - `presets: LyraDateRangePreset[] = []` (JS only, new in 11.0.0) —
-  `LyraDateRangePreset { label: string; start?: string; end?: string }`, where `start`/`end` are ISO
-  `YYYY-MM-DD`. **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
+  `LyraDateRangePreset { label: string; start?: string; end?: string; id?: string }`, where
+  `start`/`end` are ISO `YYYY-MM-DD` and `id` is an optional caller-owned
+  correlation key, echoed verbatim on `appliedPreset` and never read by the picker itself.
+  **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
   the picker's `min` / `max` respectively — that is how an "All time" preset is expressed. When the
   corresponding `min`/`max` is unset there is nothing to resolve to (a `value` of
   `YYYY-MM-DD/YYYY-MM-DD` has no unbounded spelling), so that preset's button renders **disabled**
@@ -5704,7 +5780,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   Interior dates need not all be enabled. A same-day manual completion obeys those same inclusive
   length limits. Long preset labels wrap in narrow allocations, including unbroken text and RTL.
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
-  `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
+  `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
   button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.
@@ -7996,13 +8072,15 @@ semantics.
   return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
   Leaving the property unset preserves the numeric-only contract
 - `presets: readonly TimeRangePreset[] = []` (attribute: false) — readonly `TimeRangePreset {
-label: string; start: number; end: number }`; a bounded frozen snapshot of optional discrete
-  presets (e.g. "Last 7 days") rendered as a
+label: string; start: number; end: number; id?: string }`; a bounded frozen snapshot of optional
+  discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
   native/prefixed input and change sequences a committed drag or keyboard step would. Preset
   endpoints are clamped and ordered once, and that same normalized pair drives both application
-  and `aria-pressed`/`data-active` projection
+  and `aria-pressed`/`data-active` projection. The optional `id` is a caller-owned
+  correlation key copied into the snapshot verbatim and never read by the control itself; an
+  untagged preset is unaffected
 - `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the frozen
   `presets` snapshot whose button produced the current range. Preset application updates this
   identity before its synchronous event sequence, so it can be read inside `input`/`change` or
@@ -9136,7 +9214,7 @@ calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge leng
   the gap beside it. The rendered gap is derived from it, so the advertised value and the real offset
   cannot drift; setting it on the element (or on `lr-radio` in your own stylesheet) moves the label.
   Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
-  see `lr-checkbox` above for the formula to align a sibling hint element.
+  see `llms/components/lr-checkbox.md` for the formula to align a sibling hint element.
 
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
 (default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background
@@ -9912,9 +9990,9 @@ hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
-The `editor` scroll frame also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
-tokens (default `auto`/`auto`, matching its previous unset behavior) — set
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+The `editor` scroll frame also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
+its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library, including `lr-table`,
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
 
@@ -10321,7 +10399,10 @@ transferring focus, so End and long row jumps never strand focus on a removed vi
 content, overrides the `errorText` attribute when provided).
 
 **CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
-`form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
+`form-control-label` (the visible label), `base`, `search-wrapper` (the row wrapper around
+`search` and `search-clear`), `search` (`role="combobox"`), `search-clear` (clears the search
+field, replacing the native search-cancel glyph the component resets; rendered only while it has a
+value), `grid`
 (`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
 button), `empty` (shown when the search matches nothing, or when a consumer deliberately opted out
 with `groups = []`), `load-error` (the failure surface shown in `empty`'s place when the optional
@@ -10401,6 +10482,8 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
 **Additional API surface:**
 
 - `--lr-emoji-picker-control-gap` — Gap between field sections. Default: `var(--lr-space-xs)`.
+- `--lr-emoji-picker-search-clear-gap` — Gap between the search field and the clear button inside
+  `search-wrapper`. Default: `var(--lr-space-xs)`.
 - `--lr-emoji-picker-radius` — Outer picker corner radius. Default: `var(--lr-radius)`.
 - `--lr-emoji-picker-item-radius` — Search and emoji corner radius. Default: `var(--lr-radius-xs)`.
 - `--lr-emoji-picker-search-border-color` — Resting search border color, independent of the hover
@@ -10811,6 +10894,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly start?: string;
     readonly end?: string;
+    readonly id?: string;
   }`
 
 - **`components-forms-emoji-picker-emoji-types-contracts`** — Supporting data types and helpers for this component family.
@@ -10961,6 +11045,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly start: number;
     readonly end: number;
+    readonly id?: string;
   }`
 
 # Data display, dashboards & flow canvas (`components/data/`)
@@ -11285,6 +11370,16 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
+- `error: boolean = false` (`error`, reflected) — reports a failed load. The body's single row
+  becomes the built-in failed-load `<lr-empty>` (matching `<lr-table>`'s own `error` contract),
+  keeping the header/toolbar/pager mounted around it; `loading` beats `error` beats every
+  empty/no-columns/no-results branch. Host-controlled, like `<lr-table>`'s: the internal
+  `dataSource` request cycle's own `lr-data-error` does NOT set it (that event's contract keeps
+  prior rows rendered on a rejection), so a consumer that wants a specific rejection to replace the
+  row content sets `error = true` from its own `lr-data-error` listener.
+- `errorHeading?: string` (`error-heading`) — failed-load heading override. Omitted localizes
+  `<lr-table>`'s own `tableLoadFailed` default.
+- `errorDescription: string = ''` (`error-description`) — failed-load supporting copy.
 - `expandedRowKeys: readonly Array<string | number> = []` (JS-only).
   The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
@@ -11428,21 +11523,35 @@ details use canonical `rowKey` plus mirrored `key`; cancelable `lr-sort-request`
 contract;
 `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
-notification with no raw platform error text). Every library event bubbles and is composed; only
-`lr-cell-contextmenu` and `lr-sort-request` are cancelable. Structured details and their owned
-collections are frozen. The toolbar search and active column-filter inputs re-dispatch `focus` and
-`blur` once from the grid host as bubbling, composed native `FocusEvent`s, preserving `relatedTarget` so
-delegated ancestors can observe editor entry and exit without crossing the shadow boundary.
+notification with no raw platform error text); `lr-data-error` does NOT itself set the built-in
+`error` state (see `error` above); `lr-retry` (`detail: null`, cancelable) — the built-in
+`[part='retry-button']` was activated, only rendered while `error` is set; the default action
+clears `error`, `preventDefault()` leaves it set instead. Every library event bubbles and is
+composed; only `lr-cell-contextmenu`, `lr-sort-request`, and `lr-retry` are cancelable. Structured
+details and their owned collections are frozen. The toolbar search and active column-filter inputs
+re-dispatch `focus` and `blur` once from the grid host as bubbling, composed native `FocusEvent`s,
+preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
+crossing the shadow boundary.
 
-**Slots:** `empty`, `loading`, `no-results`.
+**Slots:** `empty`, `loading`, `no-results`, `error` (replaces the built-in failed-load state,
+including its retry button, while `error` is set).
 
 **CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
-`drag-ghost`, `ellipsis`, `empty`, `expand-button`, `filter-button`, `filter-panel`, `first-button`,
+`drag-ghost`, `ellipsis`, `empty`, `error-row` (the single full-width row that replaces the body
+content while `error` is set), `error-cell`, `error` (the built-in `<lr-empty>` host), `error-base`,
+`error-icon`, `error-heading`, `error-description`, `error-actions` (all four exported from the
+built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`,
+`filter-button`, `filter-panel`,
+`filter-panel-clear` (clears the active column filter editor, replacing the native search-cancel
+glyph the component resets; rendered only while it has a value), `first-button`,
 `first-icon`, `footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`,
 `header`, `header-cell`, `last-button`, `last-icon`, `live-region`, `loading-overlay`,
 `next-button`, `next-icon`, `no-results`, `page`, `page-current`, `page-size`, `pager`,
 `pager-button`, `pin-indicator`, `previous-button`, `previous-icon`,
-`resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
+`resize-handle`, `row`, `row-detail`, `search`, `search-wrapper` (the row wrapper around `search`
+and `search-clear`), `search-clear` (clears the global row-search input, replacing the native
+search-cancel glyph the component resets; rendered only while it has a value),
+`select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`, `tree-limit`.
 
 Each per-column disclosure opens an honestly named native-control `group`, not a false ARIA menu:
@@ -11767,6 +11876,15 @@ cell: (row) => unknown }` —
 - `paginationMode: 'client'|'server' = 'client'` (attribute `pagination-mode`, reflected) — client
   mode slices rows and updates `page`; server mode leaves `page` controlled and bounds the supplied
   page to `pageSize`
+- `unknownTotal: boolean = false` (attribute `unknown-total`, reflected) — server pagination for a
+  caller with no total item count, only whether one more page exists (`hasNext`). Forwarded to the
+  nested `<lr-pagination>` as its own indeterminate mode (`total="-1"`): previous/next only, no
+  numbered page list, no item-range summary. Ignored outside `paginationMode: 'server'` — client
+  mode always knows the exact row count it slices. A dedicated boolean rather than reusing
+  `totalItems`'s own `-1` sentinel, which already means "derive from the currently matching rows"
+- `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
+  exists past the current one; consulted only alongside `unknownTotal` and forwarded verbatim to
+  the nested `<lr-pagination>`'s own `hasNext`
 - Editable columns emit `lr-cell-edit` on commit and never mutate the supplied row object.
 - `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
   group row wherever this key changes between consecutive rendered rows. Supply `rows` with each
@@ -11824,6 +11942,18 @@ cell: (row) => unknown }` —
   including `''`, renders verbatim. Has no effect once the `error` slot is filled.
 - `errorDescription: string = ''` (attribute `error-description`) — never localized, the same
   contract as `emptyDescription`. Has no effect once the `error` slot is filled.
+- `announce: boolean = false` (reflected) — opts the table into announcing a failed-load state it
+  already carries when it first mounts, through the same shared assertive region and the same
+  heading text the later `error` transition announces, so the two paths cannot drift. Leave unset
+  for a table that is part of the page a user is arriving on: the built-in error state renders in
+  document order and repeating it is noise. Set it when the table is created in response to a user
+  action — a reload that rejects mounts a fresh `error` table whose failure would otherwise never
+  be spoken. Read once, on the first update: a later reconnection or adoption stages the same
+  state again rather than replaying the announcement, and later `error` transitions announce
+  either way. Deliberately not forwarded to the composed `[part='error']` `<lr-empty>`, whose own
+  `announce` stays unset so the failure is spoken once, not twice. Remove any host
+  `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  otherwise the failure is announced a third time, through the native role as well.
 - `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `noColumnsHeading?: string` (attribute `no-columns-heading`) — omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
@@ -11959,7 +12089,9 @@ column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each bo
 `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set — the corresponding footer-row
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
 `expand-toggle-cell`, `row-expand-toggle`,
-`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading` (under
+`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `filter-clear`
+(clears the filter field, replacing the native search-cancel glyph the component resets; rendered
+only while it has a value), `loading` (under
 `loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
 visually-hidden, `aria-hidden` announcement mirror, since the placeholder rows are the visible
 affordance; the part has no live-region role in either appearance),
@@ -12047,10 +12179,10 @@ indicator; these tokens style the header cell itself. Use `::part(sort-icon-inac
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
-`[part="base"]`, the table's own scroll container, also reads the shared
-`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
-unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
-ancestor for one declaration to retheme every internal scroll container in the library, including
+`[part="base"]`, the table's own scroll container, also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
+its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
+declaration to retheme every internal scroll container in the library, including
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
 **Optional peer deps:** none.
@@ -12196,6 +12328,18 @@ a compact layout that swaps the list for a validated numeric page jump, and a po
 after the host applies a requested page. The component owns no data fetching and never mutates
 `page`.
 
+**Indeterminate mode (`total="-1"`):** for a server API that never returns a total — limit/offset and
+cursor/keyset APIs typically don't — set `total="-1"` and use `hasNext` to report whether one more
+page exists. The component then renders previous/next plus a page-number field only: no numbered
+page list, no item-range summary, and no `/ totalPages` readout, regardless of `format`,
+`withSummary`, or `withEdges`. Previous is disabled at page 1 exactly as in the known-total path;
+next is disabled once `hasNext` is `false`. Events, focus management, and the applied-page
+announcement all use the same contract as known-total pagination — `lr-before-page-change`/
+`lr-page-change`/`lr-activate` fire the same way, and focus still follows the applied page — except
+the announcement text has no total-pages figure (`"Page {page}"` instead of `"Page {page} of
+{totalPages}"`). Any negative `total` other than exactly `-1` still renders the ordinary empty
+state.
+
 **9.0.0 migration:** remove reads of `pageCount` and use the required mirrored `totalPages` getter.
 There is no alias or compatibility shim; keeping both names made one derived total look like two
 independent concepts.
@@ -12222,14 +12366,23 @@ independent concepts.
 - `pageSize: number = 10` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
-  to a non-negative integer for display and page-count calculations
+  to a non-negative integer for display and page-count calculations, except for the exact sentinel
+  `-1`, which enters indeterminate mode (see below) instead of clamping to the ordinary empty state.
+  Any other negative value — including one arrived at by a miscalculation — still clamps to `0` and
+  renders the empty state, unchanged
 - `totalPages: number` (readonly getter) — `ceil(total / pageSize)` after the normalization above,
-  or `0` when either normalized input is zero
+  or `0` when either normalized input is zero (always `0` in indeterminate mode too, since there is
+  no total to derive a page count from)
+- `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
+  exists past the current one. Consulted only in indeterminate mode; previous availability is always
+  derivable from `page` alone
 - `disabled: boolean = false` (reflected)
 - `loading: boolean = false` (reflected) — disables all controls and sets `aria-busy="true"` on the
   internal navigation landmark
 - `withSummary: boolean = false` (attribute `with-summary`, reflected) — renders the built-in range
-  summary while retaining the controls. Opt-in since 8.0.0; see the rename note above
+  summary while retaining the controls. Opt-in since 8.0.0, when the old `hide-summary` attribute
+  (shown-by-default) was renamed to `with-summary` (hidden-by-default) — the **8.0.0 migration**
+  bullet above has the full inverted-default detail
 - `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — control footprint, on the library's shared
   six-step ladder: `--lr-pagination-control-size` and `--lr-pagination-font-size` read the same
   `--lr-form-control-height`/`--lr-form-control-font-size` knobs `lr-button`/`lr-input`/`lr-select`
@@ -12327,7 +12480,8 @@ pages into its skipped run. `button` is shared by every page, ellipsis, and navi
 `::part(page-current)` selects it and `::part(page)` still selects every page including the current
 one — the state lives in the part name because `::part(page)[aria-current='page']` is invalid CSS
 and would silently never match. `first-button`/`first-icon` and `last-button`/`last-icon` exist only
-while `with-edges` is set.
+while `with-edges` is set — and never in indeterminate mode, along with `pages`, `summary`, and
+`page-count`, none of which have a total to render against (see indeterminate mode above).
 
 `live-region` is a visually hidden, `aria-hidden` **mirror** of the applied-page announcement — a
 styling and inspection surface, with no live-region role of its own. The announcement itself goes
@@ -14829,15 +14983,31 @@ each resolves its tier inside its own shadow root, so no custom property on this
 there. The two always stay on the same tier as each other, so the toolbar row never goes ragged.
 With no `size` both keep their own `m` default; an unsupported value normalizes to the omitted state
 and removes the attribute.
+`error: boolean = false` (reflected) — reports a failed document-list load. Forwarded to the nested
+`lr-table`, whose own built-in failed-load state (with retry button) replaces the document rows
+while it's set; `error` beats the empty state, matching `lr-table`'s own precedence.
+`errorHeading?: string` (`error-heading`) — failed-load heading override, forwarded to the nested
+table. Omitted localizes the table's own `tableLoadFailed` default.
+`errorDescription: string = ''` (`error-description`) — failed-load supporting copy, forwarded to
+the nested table.
 
 **Events:** `lr-filter-change` emits a fresh frozen readonly
 `{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly
 `{ phase: 'request', sortKey, sortDir }`; accepted `lr-sort` commits the same canonical vocabulary
-with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`; and
-`lr-open` emits frozen readonly `{ documentId }`.
+with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`;
+`lr-open` emits frozen readonly `{ documentId }`; and `lr-retry` (`detail: null`, cancelable) — the
+nested table's built-in retry button was activated, only rendered while `error` is set; the default
+action clears `error`, `preventDefault()` leaves it set. This component intercepts the nested
+table's own `lr-retry` and re-proposes its own, so the outer `error` property never drifts out of
+sync with the table's internal state.
+
+**Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
+button, while `error` is set.
 
 **CSS parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
-`clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
+`clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`, `error-row`, `error-cell`,
+`error` (the nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
+`error-description`, `error-actions`, `retry-button`.
 
 `selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
 selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count
@@ -17056,13 +17226,36 @@ disabled under forced-colors while the native scroll owner remains available. Ot
 **Known gotchas:**
 
 - `orientationBreakpointBasis='container'` (the default) observes **the stepper's own allocated
-  inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. In
-  a row where the stepper is a fixed-width sidebar beside another element, its own width never
-  changes with the viewport at all, so no container breakpoint can react to that row stacking via a
-  CSS `@media` rule. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper
-  and its sibling the same `orientation-breakpoint` and both flip in lockstep with the CSS rule. See
-  `<lr-multi-split>`'s own note above for the full explanation of why a shared row can't be inferred from
-  one element's measurement, and for a worked example.
+  inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. It
+  does **not** fit a stepper sitting beside a fixed-width sibling in a row that stacks via a CSS
+  `@media` rule: while the row is a row, the stepper's width shrinks with the viewport; the instant
+  the row stacks (a pure-CSS event no component can observe) it jumps to the _full_ row width —
+  wider than it was just before the transition. Because the measured width is not monotonic across
+  that transition, no single container threshold both stays wide while the row is a row and goes
+  narrow exactly when it stacks — and a fixed-width sibling is worse still, since its own width
+  never changes with the viewport at all, so no container breakpoint on it can ever react to the
+  stacking. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper and its
+  sibling the same `orientation-breakpoint` and `orientation-breakpoint-basis='viewport'` and they
+  flip together, in lockstep with the CSS rule that stacks the row:
+  ```html
+  <lr-stepper
+    orientation-breakpoint="56.25rem"
+    orientation-breakpoint-basis="viewport"
+  ></lr-stepper>
+  <lr-multi-split
+    orientation-breakpoint="56.25rem"
+    orientation-breakpoint-basis="viewport"
+  ></lr-multi-split>
+  <style>
+    @media (max-width: 56.25rem) {
+      .shell {
+        flex-direction: column;
+      }
+    }
+  </style>
+  ```
+  A consumer-side `matchMedia()` controller driving the `orientation` attribute directly is still
+  supported and still correct — it is simply no longer required for this case.
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
   `state` values.
@@ -17740,9 +17933,9 @@ themeable with `--lr-virtual-list-hover-outline-width` (default
 `--lr-virtual-list-hover-outline-offset` (default
 `calc(-1 * var(--lr-border-width-thin))`). All four hover-outline hooks are inline fallbacks and
 there is intentionally no pressed state: the list viewport is a scroll surface rather than an
-activation target. `[part="base"]` also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
-tokens (default `auto`/`auto`, matching its previous unset behavior) — set
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+activation target. `[part="base"]` also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
+its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library, including `lr-table`,
 `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
@@ -19195,7 +19388,9 @@ never fired at all.
 **Slots:** none.
 
 **CSS parts:** `backdrop`, `dialog` (the `role="dialog" aria-modal="true"` panel), `search` (the
-input row), `input` (the `type="search"` field), `list` (the `role="listbox"`), `group` (a group
+input row), `input` (the `type="search"` field), `clear-button` (clears the search field,
+replacing the native search-cancel glyph the component resets; rendered only while it has a
+value), `list` (the `role="listbox"`), `group` (a group
 heading), `command-group` (a labeled ARIA group of commands), `command` (a `role="option"` button),
 `icon` (a command's leading icon glyph; only rendered when the command has one), `label`,
 `description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`.
@@ -19987,11 +20182,13 @@ other transient state the bar owns.
 A `'date-range'` definition also accepts `presets?: readonly LyraDateRangePreset[]` (new in 12.0.0),
 forwarded to its composed `<lr-date-input>` exactly like `min`/`max`, so the quick-range row
 ("Today", "Last 7 days", "All time") renders inside that filter's own calendar popover. Entries are
-`LyraDateRangePreset { label, start?, end? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is open
-and resolves to the filter's `min`/`max`, and an open bound with no corresponding limit renders that
-button disabled. `presets` is deliberately **not** accepted on a single `'date'` filter: a preset
-names two dates, so `lr-date-picker` ignores the list outside range mode, and a list passed there is
-dropped rather than rendering a row that cannot do anything.
+`LyraDateRangePreset { label, start?, end?, id? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is
+open and resolves to the filter's `min`/`max`, and an open bound with no corresponding limit renders
+that button disabled. The optional `id` is a caller-owned correlation key, never read by the bar
+itself -- it exists purely so `appliedPreset.id` (below) is typed without a cast. `presets` is
+deliberately **not** accepted on a single `'date'` filter: a preset names two dates, so
+`lr-date-picker` ignores the list outside range mode, and a list passed there is dropped rather
+than rendering a row that cannot do anything.
 
 The `lr-input` emitted by such a commit carries `appliedPreset`, the definition entry whose button
 produced it — the bar's own frozen snapshot, so it compares identical to `filters[i].presets[j]`. It
@@ -21274,6 +21471,9 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
   observed without turning initial distribution into a live update;
   a host `aria-label` names the host but does not replace that visible update text;
   the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
+  Remove any host `role="status"`/`role="alert"` hand-added before `announce` existed once it is
+  set — otherwise the initial text is announced twice, through the native role and again through
+  the shared sink.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
   inside can never match `:empty`) by tracking real flattened slot content in JS, including a bare
   non-whitespace text node such as an emoji as default icon content —
@@ -21374,11 +21574,18 @@ the slide animation are its own.
   `without-header`, Web Awesome's spelling, reflected; neither is deprecated),
   `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
-  dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
-  wins-over-everything semantics documented under `lr-dialog` below.
+  dismissal options. A plain `aria-label` attribute on the host is honored too, inherited unchanged
+  from `lr-dialog`: it is the strongest naming override, by attribute presence including an
+  explicitly empty value, ahead of `accessible-label` and any slotted heading.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
   the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
   heading retains its own native level.
+- `size: LyraSize = 'm'` (reflected) — inherited unchanged from `lr-dialog`; caps the panel's
+  `max-inline-size` on the same six-step ladder for `start`/`end` placements (`top`/`bottom` are
+  unaffected, since those axes are already unconditionally `100%`). At the `m` default the 32rem
+  cap exceeds the panel's own 24rem default inline size, so it stays a no-op unless set. Distinct
+  from the drawer-specific `--size` CSS custom property below, which maps to this same panel's own
+  `inline-size`/`block-size` for the active axis.
 
 **Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
@@ -21389,7 +21596,12 @@ promise settles after the matching `lr-after-*` event.
 (`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
-animation compared with the state flip.
+animation compared with the state flip. **`lr-close` is not drawer-scoped, same as on `lr-dialog`:**
+several components nested inside a drawer (`lr-callout`, `lr-tab`/`lr-tab-group`, the tool dialogs,
+and so on) emit the same bubbling, composed `lr-close` name, so a listener bound on `<lr-drawer>`
+also receives a descendant's close. Guard with
+`if (event.target !== event.currentTarget) return;` before reading `event.detail`, which those
+descendants either omit or shape differently from `DialogCloseReason`.
 
 **Animation registry:** the panel uses placement-specific names:
 `drawer.showStart`/`drawer.hideStart`, `drawer.showEnd`/`drawer.hideEnd`,
@@ -21408,7 +21620,8 @@ composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` 
 
 **Themeable custom properties:** mapped `--size` controls the active axis. For start/end drawers,
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
-`--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap.
+`--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap,
+falling back to the `size` property's own tier value (see Properties above) when unset.
 The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
 `--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
 `--lr-drawer-width` (default `--lr-size-24rem`; used by
@@ -22609,7 +22822,7 @@ later text renders normally.
 - `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
   reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
-  same arrow trio `<lr-popover>` documents above, new in 8.0.0
+  same arrow trio `<lr-popover>` documents (`llms/components/lr-popover.md`), new in 8.0.0
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
@@ -22625,7 +22838,8 @@ origin-aware migration emits those tokens.
 - `hide(): Promise<void>` — close immediately, bypassing `hide-delay`, then resolve after
   `lr-after-hide`
 - `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?: HTMLElement })`
-  — same virtual-anchor contract as `lr-popover.showAt()` above (anchors to an arbitrary rectangle
+  — same virtual-anchor contract as `lr-popover.showAt()` (`llms/components/lr-popover.md`)
+  (anchors to an arbitrary rectangle
   instead of any DOM anchor, `width`/`height` default to `0`, `contextElement` gives
   `autoUpdate()` something to observe, Escape returns focus to `options.returnFocusTo` or skips
   focus-return, re-call with fresh coordinates to re-anchor a moving point). Opens immediately,
@@ -22634,7 +22848,8 @@ origin-aware migration emits those tokens.
   owner. Close it with `hide()` or `open = false`. Non-finite coordinates or dimensions are a no-op.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — the
-same four-event contract, timing and veto semantics `<lr-popover>` documents above, and all four are
+same four-event contract, timing and veto semantics `<lr-popover>` documents
+(`llms/components/lr-popover.md`), and all four are
 new to this component in 8.0.0. A vetoed `lr-show` leaves the tooltip closed whether the delay
 elapsed, `show()` was called, or `open` was assigned.
 
@@ -22664,7 +22879,8 @@ panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`,
 and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
 
 `--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
-`absolute`/`fixed` override `<lr-popover>` documents above, ahead of its own mirrored `absolute`
+`absolute`/`fixed` override `<lr-popover>` documents (`llms/components/lr-popover.md`), ahead of
+its own mirrored `absolute`
 default, when neither `positioning-strategy` nor `hoist` is authored on the instance.
 
 ```html
@@ -22867,7 +23083,8 @@ default; style it only to debug the travel region.
 `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
 `--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
-`--lr-positioning-strategy` override documented on `<lr-popover>` above.
+`--lr-positioning-strategy` override documented on `<lr-popover>`
+(`llms/components/lr-popover.md`).
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">
@@ -23017,7 +23234,11 @@ value updates and reconnection while the offset updates live.
 **Themeable custom properties:** `--lr-progress-ring-size` (default
 `var(--size, var(--_lr-progress-ring-size))`; `--size` is the upstream alias, and the private
 `--_lr-progress-ring-size` is the `size` property's own tier value, `2.5rem` at the `m` default,
-unchanged — the ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
+unchanged — the ring's inline and block size), `--lr-progress-ring-track-width` (default
+`var(--lr-theme-progress-ring-track-width, var(--lr-size-4px))` — a dedicated, opt-in theme hook, set
+on `:root` or any ancestor to retune this ring specifically; it stays unset, and `4px` applies, whether
+or not `theme.css` is imported, unlike the widely-shared `--lr-theme-border-width-thick` this used to
+bridge directly, which `theme.css` declares at `3px`),
 `--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
 `--lr-progress-ring-indicator-color` (default
@@ -23454,7 +23675,10 @@ callout (`open="false"`) announces nothing. `announce` is read once, when the ca
 a later reconnection or adoption stages the existing content again rather than replaying the
 announcement, and later content updates are announced whether or not it is set. Leave it unset for
 a callout that is simply part of the page a user is arriving on — that text is already read in
-document order, and announcing it again is noise.
+document order, and announcing it again is noise. If a consumer previously hand-added a host
+`role="status"`/`role="alert"` to work around the missing initial announcement, remove it once
+`announce` is set: leaving both in place announces the same initial text twice, once through the
+native role and once through the shared sink.
 
 ## `lr-rating`
 
@@ -25205,7 +25429,8 @@ JavaScript fall back to their documented defaults.
 ## `lr-format-date`
 
 `Intl.DateTimeFormat` output. Text-only host — no CSS parts, events, or own tokens; locale
-resolution and `Intl`-instance caching are as described under `lr-format-number` above.
+resolution and `Intl`-instance caching are as described in
+`llms/components/lr-format-number.md`.
 
 **Properties:**
 
@@ -35275,14 +35500,16 @@ fallback — there is no default/full-table highlighter here to fall back to, mi
 
 **Properties:** `content: string = ''` — the full current text so far, identical contract to
 `<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
-(attribute `coalesce-ms`) — same trailing-edge coalesce window described under `<lr-streaming-text>`
-above; `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
+(attribute `coalesce-ms`) — same trailing-edge coalesce window described in
+`llms/components/lr-streaming-text.md`; `contentMode: StreamingTextContentMode = 'auto'` (attribute
+`content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
 Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
 `<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
-`<lr-streaming-text>` exports and documents above; both tags share one implementation.
+`<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
+share one implementation.
 
 **Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — identical contract to
 `<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
@@ -35296,11 +35523,12 @@ Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verb
 **Themeable custom properties:** `--lr-inline-cursor-width` (default `var(--lr-size-0-125rem)`) and
 `--lr-inline-cursor-height` (default `var(--lr-size-1em)`) — the same shared inline-cursor tokens
 `<lr-streaming-text>`/`<lr-typing-indicator>` use, plus the same `--lr-space-xs`/
-`--lr-transition-ambient` fallbacks described above.
+`--lr-transition-ambient` fallbacks described in `llms/components/lr-streaming-text.md`.
 
 Every other capability — token coalescing mechanics, the first-assignment/`streaming`-transition
 immediate-flush rules, the reduced-motion cursor degradation, and the known gotchas — is identical
-to `<lr-streaming-text>`; see that section above for the full write-up of shared behavior.
+to `<lr-streaming-text>`; see `llms/components/lr-streaming-text.md` for the full write-up of
+shared behavior.
 
 ```html
 <lr-streaming-text-core id="out" streaming></lr-streaming-text-core>
@@ -35551,9 +35779,9 @@ background and text color, independent of the active-line outline above — plus
 `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
-`--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also reads the shared
-`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
-unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
+`--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in
+theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`,
+matching its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any
 ancestor for one declaration to retheme every internal scroll container in the library, including
 `lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 
@@ -35738,7 +35966,7 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`), and
 `--lr-code-block-language-color` (default `var(--lr-color-brand)`), plus the same shared
-tokens, including the `--lr-scrollbar-width`/`--lr-scrollbar-gutter` theme hooks `body` reads —
+tokens, including the `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks `body` honors —
 this component reuses `<lr-code-block>`'s stylesheet, so both share exactly the same scroll
 container. The last five are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
@@ -36509,7 +36737,12 @@ pinned copy is inert, pointer-transparent presentation content: its toggle and a
 receive interaction, and it adds no second tab stop. Default `false` renders exactly as before; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
 Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
-list unnamed. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
+list unnamed. `error: boolean = false` (reflected) — data mode only: reports a failed thread-list
+load. While set, the built-in `<lr-empty>` failed-load state (matching `<lr-table>`'s own `error`
+contract) replaces the virtual list/empty state; `error` beats the built-in empty state.
+`errorHeading?: string` (`error-heading`) — failed-load heading override; omitted localizes the
+same `tableLoadFailed` default `<lr-table>` uses. `errorDescription: string = ''`
+(`error-description`) — failed-load supporting copy. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
 TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
 `lr-conversation-item` with host-supplied content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
@@ -36555,7 +36788,8 @@ do. It reads the DOM as it stands, so `await threadList.updateComplete` first an
 `null` while it is scrolled outside the virtualized window.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
-`empty` — replaces the built-in empty state.
+`empty` — replaces the built-in empty state. `error` — replaces the built-in failed-load state,
+including its retry button, while `error` is set.
 
 **Events:** data mode: `lr-select` (`detail: { conversationId }`), `lr-thread-pin`
 (`detail: { conversationId, pinned }` — the requested new state), `lr-thread-archive`
@@ -36574,12 +36808,16 @@ and reassigns `collapsedGroupIds` itself keeps working unchanged: this component
 it happens, always precedes that listener in the same synchronous dispatch, so the host's own
 assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
-which are neither.
+which are neither. `lr-retry` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
+was activated, only rendered while `error` is set; the default action clears `error`,
+`preventDefault()` leaves it set instead.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
-`viewport` (the actual internal virtual-list
+`error` (the built-in `<lr-empty>` host rendered while `error` is set, with `error-base`/
+`error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
+`retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
 `group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
@@ -43639,7 +43877,10 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   of the page a user is arriving on — those rows render in document order and repeating them is
   noise. Read once per element lifetime: a later reconnection or adoption stages the same rows
   again rather than replaying the announcement, and failures added or changed after mount announce
-  either way. A queue carrying no `stage="failed"` row with an `error` announces nothing
+  either way. A queue carrying no `stage="failed"` row with an `error` announces nothing. Remove
+  any host `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  otherwise the initial failures are announced twice, through the native role and again through
+  the shared sink
 
 Queue item ids must be nonblank and unique. Malformed rows and later duplicates are omitted
 first-wins before empty state, counts, virtualization, failure announcements, rendering, or actions.
@@ -43716,6 +43957,13 @@ errorMessage?: string }` (all four types exported here), where
   total/synced/syncing/needs-attention row
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
   affordance, e.g. for a read-only or permission-gated view
+- `error: boolean = false` (reflected) — reports a failed source-list load. Forwarded to the nested
+  `lr-table`, whose own built-in failed-load state (with retry button) replaces the source rows
+  while it's set; `error` beats the empty state, matching `lr-table`'s own precedence
+- `errorHeading?: string` (attribute `error-heading`) — failed-load heading override, forwarded to
+  the nested table. Omitted localizes the table's own `tableLoadFailed` default
+- `errorDescription: string = ''` (attribute `error-description`) — failed-load supporting copy,
+  forwarded to the nested table
 
 Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
 before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
@@ -43729,23 +43977,31 @@ names.
 before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-base-admin>` already
 re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
+`lr-retry` (`detail: null`, cancelable) — the nested table's built-in retry button was activated,
+only rendered while `error` is set; the default action clears `error`, `preventDefault()` leaves it
+set. This component intercepts the nested table's own `lr-retry` and re-proposes its own, so the
+outer `error` property never drifts out of sync with the table's internal state.
 
-**Slots:** none.
+**Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
+button, while `error` is set.
 
 **CSS parts:** `base`, `toolbar` (heading + "Add source" row), `heading` (the heading text),
 `create-button` (omitted while `hideCreate`), `summary` (omitted while `hideSummary` or `sources` is
 empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
-`actions-menu`, `actions-trigger` (the kebab `<button>`).
+`actions-menu`, `actions-trigger` (the kebab `<button>`), `error-row`, `error-cell`, `error` (the
+nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
+`error-description`, `error-actions`, `retry-button`.
 
-The 13 row parts — `name-cell`, `source-name`, `source-type`, `sync-cell`, `sync-badge`,
+The row and error-state parts — `name-cell`, `source-name`, `source-type`, `sync-cell`, `sync-badge`,
 `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`, `document-count`,
-`permission-badge`, `actions-menu`, and `actions-trigger` — are forwarded from the composed table
-through `[part="table"]`/`exportparts`, so they are styleable as
-`lr-knowledge-base::part(actions-trigger)`. `actions-trigger` is the forwarded kebab button: it
-inherits the row font, has the shared `--lr-icon-button-size` minimum hit area (40px by default),
-and keeps independent hover, pressed, and focus treatment.
+`permission-badge`, `actions-menu`, `actions-trigger`, `error-row`, `error-cell`, `error`,
+`error-base`, `error-icon`, `error-heading`, `error-description`, `error-actions`, and
+`retry-button` — are forwarded from the composed table through `[part="table"]`/`exportparts`, so
+they are styleable as `lr-knowledge-base::part(actions-trigger)`. `actions-trigger` is the forwarded
+kebab button: it inherits the row font, has the shared `--lr-icon-button-size` minimum hit area
+(40px by default), and keeps independent hover, pressed, and focus treatment.
 
 **Themeable custom properties:** shared tokens only.
 
@@ -43789,7 +44045,7 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
   label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' }`, and
   `LyraGraphCommunity { id: string; label?: string; memberIds: string[]; color?: string }` — the full
   field-by-field semantics (color/shape resolution precedence, dangling-link handling, hull
-  membership, etc.) are in this file's `lr-graph` section's own **Properties** list
+  membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
@@ -43827,14 +44083,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'container'` makes the composed graph draw at exactly the pane this component's own layout gave
   it — the reservation minus whatever the toolbar, search results, pinned row and path strip take,
   which is not derivable from `height` — and follow it live as the explorer is resized. `'none'`
-  keeps forwarding the numeric `width`/`height` below unchanged. See that property's own entry in
-  this file's `lr-graph` section
+  keeps forwarding the numeric `width`/`height` below unchanged. See `fitTo`'s own entry in
+  `llms/components/lr-graph.md`
 - `width: number = 800`, `height: number = 600` — `height` also sizes the composed graph's own
   rendered box (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback
   chain `lr-graph.height` uses on its own host
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — forwarded to
   `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to apply its own
-  per-renderer default — see that property's own entry in this file's `lr-graph` section
+  per-renderer default — see `nodeLabels`'s own entry in `llms/components/lr-graph.md`
 - `highlight: 'selection' | 'hover' | 'none' = 'selection'` — what drives the dimming forwarded to
   `lr-graph`'s `dimmedNodeIds`/`dimmedLinkIds`, on top of the always-active search-match dimming:
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
@@ -43895,7 +44151,7 @@ name, so setting `--lr-canvas-reserved-height` anywhere above the explorer overr
 the composed graph too. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-node-fill`,
 `--lr-link-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
 `--lr-graph-focus-halo-color`, `--lr-graph-selected-color`, `--lr-graph-dimmed-opacity`, and
-`--lr-graph-hull-fill`/`-opacity` — documented in this file's `lr-graph` section's own
+`--lr-graph-hull-fill`/`-opacity` — documented in `llms/components/lr-graph.md`'s own
 **Themeable custom properties** list.
 
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
@@ -44078,7 +44334,9 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   to a retrieval the user just ran and nothing else reports the outcome; leave it unset for a panel
   that is part of the page a user is arriving on. Read once, when the panel first mounts: a later
   reconnection or adoption stages the existing state again rather than replaying it, and later
-  transitions are announced either way
+  transitions are announced either way. Remove any host `role="status"`/`role="alert"` hand-added
+  before this property existed once it is set — otherwise the initial state is announced twice,
+  through the native role and again through the shared sink
 - `label?: string` — fallback name for the populated result group; omission uses localized
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty
@@ -44194,7 +44452,10 @@ at the same size tier, so the toolbar row renders as one flush line.
   the user just ran and nothing else reports the outcome; leave it unset for a search that is part
   of the page a user is arriving on, whose visible error or empty state is already read in document
   order. Read once, when the search first mounts: a later reconnection or adoption stages the
-  existing state again rather than replaying it, and later transitions are announced either way
+  existing state again rather than replaying it, and later transitions are announced either way.
+  Remove any host `role="status"`/`role="alert"` hand-added before this property existed once it
+  is set — otherwise the initial state is announced twice, through the native role and again
+  through the shared sink
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
 - `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized
@@ -44329,6 +44590,16 @@ or source fetching.
 (attribute: false); `loading: boolean = false`; `errorText: string = ''` (attribute `error-text`;
 neutral visible caller text; new non-empty values announce through a shared assertive light-DOM
 region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
+`announce: boolean = false` (reflected) — opt-in: announce the error the answer already carries
+the first time it mounts, through the same shared assertive light-DOM region and the same verbatim
+caller-supplied text a later `errorText` change takes. Set it where the answer is rendered in
+response to a request the user just made and nothing else reports the failure; leave it unset for
+an answer that is part of the page a user is arriving on, whose error text is already read in
+document order. Read once, when the answer first mounts: a later reconnection or adoption stages
+the existing error again rather than replaying it, and later `errorText` changes are announced
+either way. An answer with no error announces nothing. Remove any host
+`role="status"`/`role="alert"` hand-added before this property existed once it is set — otherwise
+the initial error is announced twice, through the native role and again through the shared sink;
 `showSources: boolean = true`; `showClaims: boolean = true`
 (attribute `show-claims`); `label?: string` (omission uses the localized answer label; an explicit
 empty string stays empty); `accessibleLabel: string | null = null` (attribute

@@ -42,6 +42,16 @@ describe('lr-dialog: composed close lr-icon-button', () => {
     expect(style.borderTopWidth, 'the ancestor border token reaches the control').to.equal('2px');
   });
 
+  it('inherits the composed control\'s non-zero paint transition, since dialog.styles.ts declares none of its own', async () => {
+    const el = (await fixture(
+      html`<lr-dialog label="Edit user" open>body</lr-dialog>`
+    )) as LyraDialog;
+    await el.updateComplete;
+    const computed = getComputedStyle(nativeControl(el));
+    expect(computed.transitionDuration).to.not.equal('0s');
+    expect(computed.transitionProperty).to.include('background-color');
+  });
+
   it('closes on Enter from the actually focused control, with the close-button reason', async () => {
     const el = (await fixture(
       html`<lr-dialog label="Edit user" open>body</lr-dialog>`

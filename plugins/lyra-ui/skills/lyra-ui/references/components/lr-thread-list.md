@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 41 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -109,7 +109,12 @@ pinned copy is inert, pointer-transparent presentation content: its toggle and a
 receive interaction, and it adds no second tab stop. Default `false` renders exactly as before; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
 Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
-list unnamed. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
+list unnamed. `error: boolean = false` (reflected) — data mode only: reports a failed thread-list
+load. While set, the built-in `<lr-empty>` failed-load state (matching `<lr-table>`'s own `error`
+contract) replaces the virtual list/empty state; `error` beats the built-in empty state.
+`errorHeading?: string` (`error-heading`) — failed-load heading override; omitted localizes the
+same `tableLoadFailed` default `<lr-table>` uses. `errorDescription: string = ''`
+(`error-description`) — failed-load supporting copy. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
 TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
 `lr-conversation-item` with host-supplied content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
@@ -155,7 +160,8 @@ do. It reads the DOM as it stands, so `await threadList.updateComplete` first an
 `null` while it is scrolled outside the virtualized window.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
-`empty` — replaces the built-in empty state.
+`empty` — replaces the built-in empty state. `error` — replaces the built-in failed-load state,
+including its retry button, while `error` is set.
 
 **Events:** data mode: `lr-select` (`detail: { conversationId }`), `lr-thread-pin`
 (`detail: { conversationId, pinned }` — the requested new state), `lr-thread-archive`
@@ -174,12 +180,16 @@ and reassigns `collapsedGroupIds` itself keeps working unchanged: this component
 it happens, always precedes that listener in the same synchronous dispatch, so the host's own
 assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
-which are neither.
+which are neither. `lr-retry` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
+was activated, only rendered while `error` is set; the default action clears `error`,
+`preventDefault()` leaves it set instead.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
-`viewport` (the actual internal virtual-list
+`error` (the built-in `<lr-empty>` host rendered while `error` is set, with `error-base`/
+`error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
+`retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
 `group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current

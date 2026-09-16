@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 47 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 59 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,6 +60,16 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
+- `error: boolean = false` (`error`, reflected) — reports a failed load. The body's single row
+  becomes the built-in failed-load `<lr-empty>` (matching `<lr-table>`'s own `error` contract),
+  keeping the header/toolbar/pager mounted around it; `loading` beats `error` beats every
+  empty/no-columns/no-results branch. Host-controlled, like `<lr-table>`'s: the internal
+  `dataSource` request cycle's own `lr-data-error` does NOT set it (that event's contract keeps
+  prior rows rendered on a rejection), so a consumer that wants a specific rejection to replace the
+  row content sets `error = true` from its own `lr-data-error` listener.
+- `errorHeading?: string` (`error-heading`) — failed-load heading override. Omitted localizes
+  `<lr-table>`'s own `tableLoadFailed` default.
+- `errorDescription: string = ''` (`error-description`) — failed-load supporting copy.
 - `expandedRowKeys: readonly Array<string | number> = []` (JS-only).
   The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
@@ -203,21 +213,35 @@ details use canonical `rowKey` plus mirrored `key`; cancelable `lr-sort-request`
 contract;
 `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
-notification with no raw platform error text). Every library event bubbles and is composed; only
-`lr-cell-contextmenu` and `lr-sort-request` are cancelable. Structured details and their owned
-collections are frozen. The toolbar search and active column-filter inputs re-dispatch `focus` and
-`blur` once from the grid host as bubbling, composed native `FocusEvent`s, preserving `relatedTarget` so
-delegated ancestors can observe editor entry and exit without crossing the shadow boundary.
+notification with no raw platform error text); `lr-data-error` does NOT itself set the built-in
+`error` state (see `error` above); `lr-retry` (`detail: null`, cancelable) — the built-in
+`[part='retry-button']` was activated, only rendered while `error` is set; the default action
+clears `error`, `preventDefault()` leaves it set instead. Every library event bubbles and is
+composed; only `lr-cell-contextmenu`, `lr-sort-request`, and `lr-retry` are cancelable. Structured
+details and their owned collections are frozen. The toolbar search and active column-filter inputs
+re-dispatch `focus` and `blur` once from the grid host as bubbling, composed native `FocusEvent`s,
+preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
+crossing the shadow boundary.
 
-**Slots:** `empty`, `loading`, `no-results`.
+**Slots:** `empty`, `loading`, `no-results`, `error` (replaces the built-in failed-load state,
+including its retry button, while `error` is set).
 
 **CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
-`drag-ghost`, `ellipsis`, `empty`, `expand-button`, `filter-button`, `filter-panel`, `first-button`,
+`drag-ghost`, `ellipsis`, `empty`, `error-row` (the single full-width row that replaces the body
+content while `error` is set), `error-cell`, `error` (the built-in `<lr-empty>` host), `error-base`,
+`error-icon`, `error-heading`, `error-description`, `error-actions` (all four exported from the
+built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`,
+`filter-button`, `filter-panel`,
+`filter-panel-clear` (clears the active column filter editor, replacing the native search-cancel
+glyph the component resets; rendered only while it has a value), `first-button`,
 `first-icon`, `footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`,
 `header`, `header-cell`, `last-button`, `last-icon`, `live-region`, `loading-overlay`,
 `next-button`, `next-icon`, `no-results`, `page`, `page-current`, `page-size`, `pager`,
 `pager-button`, `pin-indicator`, `previous-button`, `previous-icon`,
-`resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
+`resize-handle`, `row`, `row-detail`, `search`, `search-wrapper` (the row wrapper around `search`
+and `search-clear`), `search-clear` (clears the global row-search input, replacing the native
+search-cancel glyph the component resets; rendered only while it has a value),
+`select-all-checkbox`, `sort-indicator`,
 `sort-number`, `table`, `toolbar`, `tree-limit`.
 
 Each per-column disclosure opens an honestly named native-control `group`, not a false ARIA menu:

@@ -231,6 +231,32 @@ export const AssertiveHeight: Story = {
   `,
 };
 
+export const SizeTiers: Story = {
+  name: 'Size tiers',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`size` steps the panel\'s width cap on the library\'s shared six-step ladder, from a compact `2xs` (20rem) up to a roomy `xl` (48rem); `m` (32rem) is the unchanged, unset default. An explicit `--lr-dialog-width` or `--lr-dialog-max-width` still wins over every tier. Each button opens the same content at a different tier.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`
+          <div>
+            <button @click=${openDialog}>Open size="${size}"</button>
+            <lr-dialog size=${size} label="Size ${size}" closable>
+              <p style="margin: 0;">This panel's width cap is <code>size="${size}"</code>.</p>
+            </lr-dialog>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};
+
 export const WithoutHeader: Story = {
   parameters: {
     docs: {

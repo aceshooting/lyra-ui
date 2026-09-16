@@ -97,11 +97,22 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
 
-  [part="search"] {
-    box-sizing: border-box;
-    min-block-size: var(--lr-icon-button-size);
+  /* Row wrapper introduced alongside [part='search-clear'] -- [part='search'] previously carried
+     the toolbar's own flex-basis directly; nested one level deeper now, the wrapper carries the
+     same sizing so the pair together occupy exactly the space the bare input used to. */
+  [part="search-wrapper"] {
+    display: flex;
+    align-items: stretch;
     min-inline-size: min(var(--lr-size-20rem), 100%);
     flex: 1 1 var(--lr-size-12rem);
+    gap: var(--lr-space-2xs);
+  }
+
+  [part="search"] {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-s) var(--lr-space-m);
     border: var(--border-width, var(--_lr-data-grid-border-width)) solid
       var(--border-color, var(--_lr-data-grid-border-color));
@@ -124,6 +135,57 @@ export const styles = css`
     appearance: none;
     -webkit-appearance: none;
     display: none;
+  }
+
+  /* Replaces the native ::-webkit-search-cancel-button suppressed above -- same "opt-out chrome
+     needs a rendered replacement" contract lr-input's own [part='clear-button'] documents. */
+  [part="search-clear"],
+  [part="filter-panel-clear"] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: 0;
+    border-radius: var(--border-radius, var(--_lr-data-grid-border-radius));
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-color, var(--_lr-data-grid-text-color));
+    padding: var(--lr-space-xs);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+  [part="search-clear"]:hover,
+  [part="filter-panel-clear"]:hover {
+    background: var(
+      --lr-data-grid-control-hover-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-hover),
+        transparent
+      )
+    );
+  }
+  /* Pressed-fill counterpart to the :hover rule above, reusing the same
+     --lr-data-grid-control-active-background/accent-color-mix pattern [part="search"]:active and
+     the generic button:active rule below already establish in this file. */
+  [part="search-clear"]:active,
+  [part="filter-panel-clear"]:active {
+    background: var(
+      --lr-data-grid-control-active-background,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color))
+          var(--lr-color-mix-active),
+        transparent
+      )
+    );
+  }
+  [part="search-clear"]:focus-visible,
+  [part="filter-panel-clear"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
 
   [part="search"]:hover {

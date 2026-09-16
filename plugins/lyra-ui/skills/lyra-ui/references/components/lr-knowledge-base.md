@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,6 +41,13 @@ errorMessage?: string }` (all four types exported here), where
   total/synced/syncing/needs-attention row
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
   affordance, e.g. for a read-only or permission-gated view
+- `error: boolean = false` (reflected) — reports a failed source-list load. Forwarded to the nested
+  `lr-table`, whose own built-in failed-load state (with retry button) replaces the source rows
+  while it's set; `error` beats the empty state, matching `lr-table`'s own precedence
+- `errorHeading?: string` (attribute `error-heading`) — failed-load heading override, forwarded to
+  the nested table. Omitted localizes the table's own `tableLoadFailed` default
+- `errorDescription: string = ''` (attribute `error-description`) — failed-load supporting copy,
+  forwarded to the nested table
 
 Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
 before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
@@ -54,23 +61,31 @@ names.
 before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-base-admin>` already
 re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
+`lr-retry` (`detail: null`, cancelable) — the nested table's built-in retry button was activated,
+only rendered while `error` is set; the default action clears `error`, `preventDefault()` leaves it
+set. This component intercepts the nested table's own `lr-retry` and re-proposes its own, so the
+outer `error` property never drifts out of sync with the table's internal state.
 
-**Slots:** none.
+**Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
+button, while `error` is set.
 
 **CSS parts:** `base`, `toolbar` (heading + "Add source" row), `heading` (the heading text),
 `create-button` (omitted while `hideCreate`), `summary` (omitted while `hideSummary` or `sources` is
 empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
-`actions-menu`, `actions-trigger` (the kebab `<button>`).
+`actions-menu`, `actions-trigger` (the kebab `<button>`), `error-row`, `error-cell`, `error` (the
+nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
+`error-description`, `error-actions`, `retry-button`.
 
-The 13 row parts — `name-cell`, `source-name`, `source-type`, `sync-cell`, `sync-badge`,
+The row and error-state parts — `name-cell`, `source-name`, `source-type`, `sync-cell`, `sync-badge`,
 `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`, `document-count`,
-`permission-badge`, `actions-menu`, and `actions-trigger` — are forwarded from the composed table
-through `[part="table"]`/`exportparts`, so they are styleable as
-`lr-knowledge-base::part(actions-trigger)`. `actions-trigger` is the forwarded kebab button: it
-inherits the row font, has the shared `--lr-icon-button-size` minimum hit area (40px by default),
-and keeps independent hover, pressed, and focus treatment.
+`permission-badge`, `actions-menu`, `actions-trigger`, `error-row`, `error-cell`, `error`,
+`error-base`, `error-icon`, `error-heading`, `error-description`, `error-actions`, and
+`retry-button` — are forwarded from the composed table through `[part="table"]`/`exportparts`, so
+they are styleable as `lr-knowledge-base::part(actions-trigger)`. `actions-trigger` is the forwarded
+kebab button: it inherits the row font, has the shared `--lr-icon-button-size` minimum hit area
+(40px by default), and keeps independent hover, pressed, and focus treatment.
 
 **Themeable custom properties:** shared tokens only.
 

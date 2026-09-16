@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationJumpToPage: 'עבור לעמוד {page}',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationApplied: 'עמוד {page} מתוך {totalPages}',
+  paginationAppliedUnknownTotal: 'עמוד {page}',
   trendOf: 'מגמה של {count} ערכים, הערך האחרון הוא {value}',
   wordCloud: 'ענן מילים של {count} {word}',
   wordCloudLegend: 'מפתח צבע ענן מילים',

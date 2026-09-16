@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationJumpToPage: '跳转到第 {page} 页',
   paginationEmptySummary: '共{total}{itemLabel}',
   paginationApplied: '第{page}页，共{totalPages}页',
+  paginationAppliedUnknownTotal: '第{page}页',
   trendOf: '{count}个值的趋势，最新值为{value}',
   wordCloud: '包含{count}{word}的词云',
   wordCloudLegend: '词云颜色图例',

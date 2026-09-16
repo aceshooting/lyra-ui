@@ -702,6 +702,31 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
   }
 });
 
+it('declares a non-zero transition on the navigation-button paint so hover/press ease like lr-button', async () => {
+  const el = (await fixture(
+    html`<lr-carousel navigation><div>One</div><div>Two</div></lr-carousel>`
+  )) as LyraCarousel;
+  const navigation = el.shadowRoot!.querySelector<HTMLElement>('[part~="navigation-button-next"]')!;
+  const computed = getComputedStyle(navigation);
+  expect(computed.transitionDuration).to.not.equal('0s');
+  expect(computed.transitionProperty).to.include('background-color');
+  expect(computed.transitionProperty).to.include('border-color');
+});
+
+it('leaves the resting navigation-button background and border unchanged (unset-regression)', async () => {
+  const el = (await fixture(
+    html`<lr-carousel navigation><div>One</div><div>Two</div></lr-carousel>`
+  )) as LyraCarousel;
+  const navigation = el.shadowRoot!.querySelector<HTMLElement>('[part~="navigation-button-next"]')!;
+  const sharedSurface = getComputedStyle(el).getPropertyValue('--lr-color-surface').trim();
+  const probe = document.createElement('div');
+  probe.style.color = sharedSurface;
+  el.shadowRoot!.appendChild(probe);
+  const resolvedSurface = getComputedStyle(probe).color;
+  probe.remove();
+  expect(getComputedStyle(navigation).backgroundColor).to.equal(resolvedSurface);
+});
+
 it('lets each scroll-container hover-outline longhand be retinted independently and keeps them unchanged while pressed', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="
@@ -826,6 +851,67 @@ it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the scrol
   const computed = getComputedStyle(scrollContainer);
   expect(readScrollbarWidth(scrollContainer, '[part~="scroll-container"]')).to.equal('thin');
   expect(computed.scrollbarGutter).to.equal('stable');
+});
+
+// The scrollbar theme inputs are opt-in: importing theme.css must not itself introduce a global
+// default that overrides a component's own literal fallback. This is the regression the wrong fix
+// for CI.scrollbar-theme-bridge would have caused -- a `--lr-theme-scrollbar-width: auto` (or any
+// other single value) declared in theme.css would retune EVERY wired component, including this
+// scroll-container, whose own default is deliberately not 'auto' (it hides the scrollbar).
+let scrollbarThemeSheetPromise: Promise<CSSStyleSheet> | undefined;
+
+function loadScrollbarThemeSheet(): Promise<CSSStyleSheet> {
+  scrollbarThemeSheetPromise ??= fetch(new URL('../../../theme.css', import.meta.url))
+    .then((response) => response.text())
+    .then((text) => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(text);
+      return sheet;
+    });
+  return scrollbarThemeSheetPromise;
+}
+
+async function withScrollbarThemeCss<T>(run: () => Promise<T>): Promise<T> {
+  const sheet = await loadScrollbarThemeSheet();
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  try {
+    return await run();
+  } finally {
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
+  }
+}
+
+it('leaves the scroll-container at its own none/auto default when theme.css is imported with no ancestor override', async () => {
+  await withScrollbarThemeCss(async () => {
+    const el = (await fixture(
+      html`<lr-carousel><div>One</div><div>Two</div></lr-carousel>`,
+    )) as LyraCarousel;
+    await el.updateComplete;
+    const scrollContainer = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part~="scroll-container"]'
+    )!;
+    const computed = getComputedStyle(scrollContainer);
+    expect(readScrollbarWidth(scrollContainer, '[part~="scroll-container"]')).to.equal('none');
+    expect(computed.scrollbarGutter).to.equal('auto');
+  });
+});
+
+it('still lets an ancestor override retune the scroll-container with theme.css imported', async () => {
+  await withScrollbarThemeCss(async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+        <lr-carousel><div>One</div><div>Two</div></lr-carousel>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-carousel') as LyraCarousel;
+    await el.updateComplete;
+    const scrollContainer = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part~="scroll-container"]'
+    )!;
+    const computed = getComputedStyle(scrollContainer);
+    expect(readScrollbarWidth(scrollContainer, '[part~="scroll-container"]')).to.equal('thin');
+    expect(computed.scrollbarGutter).to.equal('stable');
+  });
 });
 
 it("exposes one active slide and localized navigation controls", async () => {

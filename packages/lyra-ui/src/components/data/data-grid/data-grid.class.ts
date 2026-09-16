@@ -13,7 +13,7 @@ import {
   getNumberFormat,
   resolveIntlLocale,
 } from '../../../internal/intl-cache.js';
-import { chevronIcon } from '../../../internal/icons.js';
+import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   acquireAnnouncementSink,
@@ -26,6 +26,7 @@ import {
   finiteRange,
 } from '../../../internal/numbers.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
+import { renderDataState } from '../../../internal/data-state-renderer.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -74,7 +75,7 @@ import type {
 } from './data-grid-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export * from './data-grid-types.js';
@@ -581,10 +582,22 @@ function normalizedGroupBy(
  * covers that current page plus the header. A server `total` drives `pageCount` and the pager but
  * does not inflate `aria-rowcount` without corresponding dataset-global `aria-rowindex` values.
  *
+ * A separate `error` state reports a failed load: while `error` is set, the body's single row
+ * becomes the built-in failed-load `<lr-empty>` (the same `error`-prefixed exported parts and
+ * `[part='retry-button']` as `<lr-table>`), behind its own `error` slot -- `<thead>`/toolbar/pager
+ * stay mounted around it. `loading` beats `error` beats every empty/no-columns/no-results branch,
+ * matching `<lr-table>`'s own precedence. `error` is host-controlled, exactly like `<lr-table>`'s:
+ * the internal `dataSource` request cycle's own `lr-data-error` does NOT set it, since that event's
+ * own contract keeps prior rows rendered on a rejection -- a consumer that wants this specific
+ * failure to replace the row content instead sets `error = true` from its own `lr-data-error`
+ * listener.
+ *
  * @customElement lr-data-grid
  * @slot empty - Content rendered when the source has no rows.
  * @slot loading - Content rendered over the grid while data is loading.
  * @slot no-results - Content rendered when active search or filters match no rows.
+ * @slot error - Replaces the built-in failed-load state, including its retry button, while
+ *   `error` is set.
  * @event request - Fired when server data is requested. `detail` contains sort, filter, search,
  *   page, page-size, and abort-signal state.
  * @event lr-cell-click - Fired when a data cell is activated with canonical `rowKey` and
@@ -603,7 +616,13 @@ function normalizedGroupBy(
  * @event lr-copy-error - A clipboard write failed. Frozen detail:
  *   `{ ok: false, text, reason, error }`.
  * @event lr-error - A clipboard write failed; compatibility notification without raw error text.
- * @event lr-data-error - Fired when a server request rejects; prior rows remain rendered.
+ * @event lr-data-error - Fired when a server request rejects; prior rows remain rendered. Does
+ *   NOT set `error` itself -- `error` is a separate, host-controlled property (see `@slot error`),
+ *   so a consumer that wants this rejection to replace the row content with the built-in
+ *   failed-load state sets `error = true` from its own listener.
+ * @event lr-retry - The built-in `[part='retry-button']` was activated, only rendered while
+ *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
+ *   set instead.
  * @event lr-filter-change - Fired after a user changes a column filter.
  * @event lr-group-collapse - Fired after a user collapses a client-side group. Frozen detail:
  *   `{ key, columnId, value, rows }`.
@@ -637,9 +656,22 @@ function normalizedGroupBy(
  * @csspart drag-ghost - Preview shown while a column is dragged.
  * @csspart ellipsis - Omitted-page indicator in the pager.
  * @csspart empty - Empty-data state.
+ * @csspart error-row - The single full-width row that replaces the body content while `error` is
+ *   set.
+ * @csspart error-cell - The cell inside `error-row` that holds the failed-load content.
+ * @csspart error - The built-in `<lr-empty>` host rendered while `error` is set.
+ * @csspart error-base - Exported from the built-in error `<lr-empty>`'s own `base` part.
+ * @csspart error-icon - Exported from the built-in error `<lr-empty>`'s `icon` part.
+ * @csspart error-heading - Exported from the built-in error `<lr-empty>`'s `heading` part.
+ * @csspart error-description - Exported from the built-in error `<lr-empty>`'s `description` part.
+ * @csspart error-actions - Exported from the built-in error `<lr-empty>`'s `actions` part.
+ * @csspart retry-button - The built-in retry control rendered into the error state's `actions`.
  * @csspart expand-button - A tree/detail/group expand control.
  * @csspart filter-button - A column filter trigger.
  * @csspart filter-panel - The active column filter editor.
+ * @csspart filter-panel-clear - The button that clears the active column filter editor's value,
+ *   replacing the native search-cancel glyph suppressed by its own reset; rendered only while it
+ *   has a value.
  * @csspart first-button - First-page button.
  * @csspart first-icon - The first-page directional icon.
  * @csspart footer - Footer container.
@@ -673,6 +705,9 @@ function normalizedGroupBy(
  * @csspart row - A data row.
  * @csspart row-detail - Expanded detail content.
  * @csspart search - Global row-search input.
+ * @csspart search-wrapper - The row wrapper around `search` and `search-clear`.
+ * @csspart search-clear - The button that clears the global row-search input, replacing the
+ *   native search-cancel glyph suppressed by its own reset; rendered only while it has a value.
  * @csspart select-all-checkbox - Current-page select-all checkbox.
  * @csspart sort-indicator - Current sort-direction indicator.
  * @csspart sort-number - Multi-sort priority number.
@@ -720,6 +755,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
     copied: LYRA_DEFAULT_copied,
     copyFailed: LYRA_DEFAULT_copyFailed,
@@ -742,10 +778,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     previous: LYRA_DEFAULT_previous,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
+    retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
     tableFilterLabel: LYRA_DEFAULT_tableFilterLabel,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -914,6 +952,19 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   @property() label: string | null = null;
   /** Shows the loading overlay. */
   @property({ type: Boolean, reflect: true }) loading = false;
+  /** Reports a failed load: the body renders the built-in failed-load state (matching
+   *  `<lr-table>`'s own `error` contract) instead of the row/empty content, behind an `error`
+   *  slot. `loading` beats `error` beats the empty/no-columns/no-results branches, so a loading
+   *  grid never flashes a stale failure and a failed grid never falls through to "no results"
+   *  copy that hides the retry affordance. The internal `dataSource` request cycle sets this
+   *  automatically alongside `lr-data-error`; a grid driven externally (`data`/`total` assigned by
+   *  the host, no `dataSource`) is set and cleared by the host like every other sibling. */
+  @property({ type: Boolean, reflect: true }) error = false;
+  /** Failed-load heading override. Omitted localizes `<lr-table>`'s own `tableLoadFailed`
+   *  default. */
+  @property({ attribute: 'error-heading' }) errorHeading?: string;
+  /** Failed-load supporting copy. */
+  @property({ attribute: 'error-description' }) errorDescription = '';
   /** Maximum simultaneous sorts; zero is unlimited. */
   @property({ type: Number, attribute: 'max-multi-sort' }) maxMultiSort = 0;
   /** Zero-based page index. */
@@ -2022,6 +2073,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (this.page !== 0) this.page = 0;
   }
 
+  // The native `::-webkit-search-cancel-button` reset in data-grid.styles.ts removes the
+  // browser's own clear affordance with no replacement -- this button, and the search input's
+  // refocus afterward, restore a real one-click way to reset the toolbar search.
+  private onClearSearch = (): void => {
+    if (this.searchTerm === '') return;
+    this.applySearchTermChange('');
+    this.renderRoot.querySelector<HTMLInputElement>('[part="search"]')?.focus();
+  };
+
   /** Pins or unpins a column without emitting the user-only pin event. Accepts `'left'`/`'right'`
    *  (RTL-relative, not physical -- see `DataGridPinSide`) or their `'start'`/`'end'` aliases. */
   pinColumn(columnId: string, side: DataGridPinSide): void {
@@ -2417,6 +2477,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         return;
       this.loading = false;
       this.ownsLoadingState = false;
+      // Deliberately does NOT set `this.error` -- `lr-data-error`'s own documented contract keeps
+      // prior rows rendered on a rejection, and unconditionally replacing them with the failed-load
+      // state here would break that for every existing `dataSource` consumer. `error` stays a host-
+      // controlled property, exactly like `<lr-table>`'s: a listener that wants to escalate this
+      // specific rejection to the full failed-load state sets `error = true` itself from its own
+      // `lr-data-error` handler.
       this.emit(
         'lr-data-error',
         Object.freeze({ error, request: requestDetail() })
@@ -3437,7 +3503,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private onFilterInput(event: Event, id: string): void {
     const control = valueControl(event.currentTarget);
     if (!control) return;
-    const value = control.value;
+    this.commitFilterValue(id, control.value);
+  }
+
+  private commitFilterValue(id: string, value: string): void {
     const next = this.filters.filter((filter) => filter.id !== id);
     if (value) next.push({ id, value });
     this.filters = next;
@@ -3450,6 +3519,17 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         ),
       })
     );
+  }
+
+  // The native `::-webkit-search-cancel-button` reset in data-grid.styles.ts removes the
+  // browser's own clear affordance from the per-column filter panel with no replacement -- this
+  // button, and the filter input's refocus afterward, restore a real one-click way to reset it.
+  private onClearFilterInput(id: string): void {
+    if (!this.filters.some((filter) => filter.id === id)) return;
+    this.commitFilterValue(id, '');
+    this.renderRoot
+      .querySelector<HTMLInputElement>(`[part="filter-panel"] input[type="search"]`)
+      ?.focus();
   }
 
   /** Reads the authoritative body position after native scrolling or a layout-driven clamp. */
@@ -4106,16 +4186,28 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       <div part="toolbar">
         ${this.withSearch
           ? html`
-              <input
-                part="search"
-                type="search"
-                .value=${this.searchTerm}
-                aria-label=${this.localize('search')}
-                placeholder=${this.localize('search')}
-                @input=${this.applySearchTermChange}
-                @focus=${this.relayEditorFocus}
-                @blur=${this.relayEditorBlur}
-              />
+              <div part="search-wrapper">
+                <input
+                  part="search"
+                  type="search"
+                  .value=${this.searchTerm}
+                  aria-label=${this.localize('search')}
+                  placeholder=${this.localize('search')}
+                  @input=${this.applySearchTermChange}
+                  @focus=${this.relayEditorFocus}
+                  @blur=${this.relayEditorBlur}
+                />
+                ${this.searchTerm !== ''
+                  ? html`<button
+                      part="search-clear"
+                      type="button"
+                      aria-label=${this.localize('clear')}
+                      @click=${this.onClearSearch}
+                    >
+                      <span aria-hidden="true" inert>${closeIcon()}</span>
+                    </button>`
+                  : nothing}
+              </div>
             `
           : nothing}
         ${this.withColumnsMenu ? this.renderColumnsMenu() : nothing}
@@ -4446,6 +4538,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                         @focus=${this.relayEditorFocus}
                         @blur=${this.relayEditorBlur}
                       />
+                      ${this.filters.some((filter) => filter.id === id)
+                        ? html`<button
+                            part="filter-panel-clear"
+                            type="button"
+                            aria-label=${this.localize('clear')}
+                            @click=${() => this.onClearFilterInput(id)}
+                          >
+                            <span aria-hidden="true" inert>${closeIcon()}</span>
+                          </button>`
+                        : nothing}
                     </div>
                   `
                 : nothing}
@@ -4692,7 +4794,44 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     `;
   }
 
+  /** `renderDataState()`'s built-in `[part='retry-button']` activation. Mirrors `<lr-table>`'s own
+   *  "propose, then react to the veto" onRetryClick shape: the default action clears `error`;
+   *  `preventDefault()` leaves it set for a consumer that owns its own retry timing (and its own
+   *  reload -- `error` is host-controlled here exactly like every other sibling, so this grid never
+   *  re-issues a `dataSource` request on its own). */
+  private onErrorRetry = (): void => {
+    this.error = false;
+  };
+
   private renderBodyContent(): TemplateResult {
+    // `error` beats every empty/no-columns/no-results branch below, matching `<lr-table>`'s own
+    // precedence. `loading` beats `error` in turn: while `loading` is set, this body keeps
+    // rendering whatever it already would (rows, most often, since `loading` here is an overlay
+    // rather than a whole-body replacement -- see `render()`'s `part="loading-overlay"`), so a
+    // loading grid never flashes a stale failure underneath its own spinner.
+    if (this.error && !this.loading) {
+      return html`
+        <div role="row" aria-rowindex="2" part="error-row">
+          <div part="error-cell" role="gridcell" aria-colspan=${this.ariaColumnCount}>
+            ${renderDataState(
+              this,
+              {
+                loading: false,
+                error: true,
+                empty: false,
+                errorHeading: this.errorHeading,
+                errorDescription: this.errorDescription,
+                onRetry: this.onErrorRetry,
+                emitRetry: (detail, init: { cancelable: true }) =>
+                  this.emit('lr-retry', detail, init),
+              },
+              'error',
+              'lr-retry'
+            )}
+          </div>
+        </div>
+      `;
+    }
     if (this.columns.length === 0 || this.visibleColumns.length === 0) {
       return html`
         <div role="row" aria-rowindex="2">

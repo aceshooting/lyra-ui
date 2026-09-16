@@ -17,10 +17,11 @@ export const styles = css`
     /* Page flow below drops both; auto restores them only while inline content really overflows. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- unset, both resolve to
-       the same 'auto' this scrollport always rendered with. */
-    scrollbar-width: var(--lr-scrollbar-width);
-    scrollbar-gutter: var(--lr-scrollbar-gutter);
+    /* Opt-in theme-level scrollbar hooks -- each reads --lr-theme-scrollbar-* directly, with this
+       scrollport's own previous literal ('auto') as the fallback, so a consumer who never sets the
+       --lr-theme-* input on an ancestor sees no change. */
+    scrollbar-width: var(--lr-theme-scrollbar-width, auto);
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
   }
 
   /* A scroll container clips both axes, so overflow: auto makes [part='base'] the header's sticky
@@ -77,6 +78,38 @@ export const styles = css`
   [part='filter'][type='search']::-webkit-search-cancel-button,
   [part='filter'][type='search']::-webkit-search-decoration {
     appearance: none;
+  }
+  /* Replaces the native ::-webkit-search-cancel-button suppressed above -- same "opt-out chrome
+     needs a rendered replacement" contract lr-input's own [part='clear-button'] documents. */
+  [part='filter-clear'] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: 0;
+    border-radius: var(--lr-radius-xs);
+    background: transparent;
+    cursor: pointer;
+    color: var(--lr-color-text-quiet);
+    padding: var(--lr-space-xs);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+  [part='filter-clear']:hover {
+    color: var(--lr-color-text);
+  }
+  [part='filter-clear']:active {
+    color: var(--lr-color-text);
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part='filter-clear']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   /* The visible spinner block, scoped away from the skeleton-appearance status node, which reuses
      [part='loading'] but is sr-only: the placeholder rows are its affordance, so it must not also

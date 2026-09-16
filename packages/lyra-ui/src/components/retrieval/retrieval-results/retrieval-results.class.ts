@@ -307,7 +307,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  in document order. Read once, when the panel first mounts: a later reconnection or adoption
    *  stages the existing state again rather than replaying it, and later transitions are
    *  announced either way. A panel that already has chunks announces nothing -- rendered results
-   *  are ordinary content. */
+   *  are ordinary content. Remove any host `role="status"`/`role="alert"` hand-added before this
+   *  property existed once it is set -- otherwise the initial state is announced twice, through
+   *  the native role and again through the shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;
 
   /** Fallback name for the results region. Omitting it falls back to the localized

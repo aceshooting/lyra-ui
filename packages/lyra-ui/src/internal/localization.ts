@@ -130,6 +130,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   paginationSummary: '{start}–{end} of {total} {itemLabel}',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationApplied: 'Page {page} of {totalPages}',
+  paginationAppliedUnknownTotal: 'Page {page}',
   cancel: 'Cancel',
   confirm: 'Confirm',
   search: 'Search',

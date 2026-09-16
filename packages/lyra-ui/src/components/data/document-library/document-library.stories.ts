@@ -145,6 +145,15 @@ export const Empty: Story = {
   render: () => html`<lr-document-library></lr-document-library>`,
 };
 
+export const LoadFailed: Story = {
+  name: "Load failed (error)",
+  render: () => html`<lr-document-library
+    error
+    error-description="Check your connection and retry."
+    .documents=${documents}
+  ></lr-document-library>`,
+};
+
 export const NarrowAllocation: Story = {
   name: "Document inventory at a 320px allocation",
   parameters: {

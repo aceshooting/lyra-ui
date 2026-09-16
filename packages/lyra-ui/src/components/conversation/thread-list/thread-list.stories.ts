@@ -208,6 +208,19 @@ export const Empty: Story = {
     </div>`,
 };
 
+export const LoadFailed: Story = {
+  name: 'Load failed (error)',
+  render: () =>
+    html`<div style="block-size:280px;inline-size:320px;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        searchable
+        error
+        error-description="Check your connection and retry."
+        .threads=${threads}
+      ></lr-thread-list>
+    </div>`,
+};
+
 /** Exact 320px RTL stress allocation: searchable data mode, active/pinned and archived rows, and
  * all built-in row actions keep long unbroken content inside the sidebar rather than widening it. */
 export const Narrow320px: Story = {

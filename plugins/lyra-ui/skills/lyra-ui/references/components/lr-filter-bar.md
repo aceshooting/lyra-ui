@@ -231,11 +231,13 @@ other transient state the bar owns.
 A `'date-range'` definition also accepts `presets?: readonly LyraDateRangePreset[]` (new in 12.0.0),
 forwarded to its composed `<lr-date-input>` exactly like `min`/`max`, so the quick-range row
 ("Today", "Last 7 days", "All time") renders inside that filter's own calendar popover. Entries are
-`LyraDateRangePreset { label, start?, end? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is open
-and resolves to the filter's `min`/`max`, and an open bound with no corresponding limit renders that
-button disabled. `presets` is deliberately **not** accepted on a single `'date'` filter: a preset
-names two dates, so `lr-date-picker` ignores the list outside range mode, and a list passed there is
-dropped rather than rendering a row that cannot do anything.
+`LyraDateRangePreset { label, start?, end?, id? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is
+open and resolves to the filter's `min`/`max`, and an open bound with no corresponding limit renders
+that button disabled. The optional `id` is a caller-owned correlation key, never read by the bar
+itself -- it exists purely so `appliedPreset.id` (below) is typed without a cast. `presets` is
+deliberately **not** accepted on a single `'date'` filter: a preset names two dates, so
+`lr-date-picker` ignores the list outside range mode, and a list passed there is dropped rather
+than rendering a row that cannot do anything.
 
 The `lr-input` emitted by such a commit carries `appliedPreset`, the definition entry whose button
 produced it — the bar's own frozen snapshot, so it compares identical to `filters[i].presets[j]`. It

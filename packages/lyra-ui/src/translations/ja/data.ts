@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationJumpToPage: '{page}ページに移動',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationApplied: '{totalPages} ページ中 {page} ページ目',
+  paginationAppliedUnknownTotal: '{page} ページ目',
   trendOf: '{count} 件の値の推移、最新は {value}',
   wordCloud: '{count} {word}のワードクラウド',
   wordCloudLegend: 'ワードクラウドの色の凡例',

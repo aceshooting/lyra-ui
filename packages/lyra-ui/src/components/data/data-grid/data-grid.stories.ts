@@ -436,6 +436,13 @@ export const CustomStates: Story = {
       >
         <p slot="no-results">No engineers match the active filters.</p>
       </lr-data-grid>
+      <lr-data-grid
+        label="Failed roster load"
+        error
+        error-description="Check your connection and retry."
+        .columns=${columns}
+        .data=${rows}
+      ></lr-data-grid>
     </div>
   `,
 };

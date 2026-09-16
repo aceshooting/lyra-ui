@@ -67,7 +67,7 @@ later text renders normally.
 - `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
   reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
-  same arrow trio `<lr-popover>` documents above, new in 8.0.0
+  same arrow trio `<lr-popover>` documents (`llms/components/lr-popover.md`), new in 8.0.0
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
@@ -83,7 +83,8 @@ origin-aware migration emits those tokens.
 - `hide(): Promise<void>` — close immediately, bypassing `hide-delay`, then resolve after
   `lr-after-hide`
 - `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?: HTMLElement })`
-  — same virtual-anchor contract as `lr-popover.showAt()` above (anchors to an arbitrary rectangle
+  — same virtual-anchor contract as `lr-popover.showAt()` (`llms/components/lr-popover.md`)
+  (anchors to an arbitrary rectangle
   instead of any DOM anchor, `width`/`height` default to `0`, `contextElement` gives
   `autoUpdate()` something to observe, Escape returns focus to `options.returnFocusTo` or skips
   focus-return, re-call with fresh coordinates to re-anchor a moving point). Opens immediately,
@@ -92,7 +93,8 @@ origin-aware migration emits those tokens.
   owner. Close it with `hide()` or `open = false`. Non-finite coordinates or dimensions are a no-op.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — the
-same four-event contract, timing and veto semantics `<lr-popover>` documents above, and all four are
+same four-event contract, timing and veto semantics `<lr-popover>` documents
+(`llms/components/lr-popover.md`), and all four are
 new to this component in 8.0.0. A vetoed `lr-show` leaves the tooltip closed whether the delay
 elapsed, `show()` was called, or `open` was assigned.
 
@@ -122,7 +124,8 @@ panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`,
 and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
 
 `--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
-`absolute`/`fixed` override `<lr-popover>` documents above, ahead of its own mirrored `absolute`
+`absolute`/`fixed` override `<lr-popover>` documents (`llms/components/lr-popover.md`), ahead of
+its own mirrored `absolute`
 default, when neither `positioning-strategy` nor `hoist` is authored on the instance.
 
 ```html

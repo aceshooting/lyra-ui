@@ -4809,6 +4809,24 @@ describe('applied preset readback', () => {
     expect(el.appliedPreset).to.equal(PRESETS[1]);
   });
 
+  it('round-trips a caller-supplied id through the nested picker onto appliedPreset', async () => {
+    const el = (await fixture(
+      html`<lr-date-input mode="range"></lr-date-input>`,
+    )) as LyraDateInput;
+    el.presets = [
+      { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19', id: 'last-7-days' },
+      { label: 'This month', start: '2026-08-01', end: '2026-08-31', id: 'this-month' },
+    ];
+    el.open = true;
+    await el.updateComplete;
+    await picker(el).updateComplete;
+
+    presetButtons(el)[1]!.click();
+    await el.updateComplete;
+
+    expect(el.appliedPreset?.id).to.equal('this-month');
+  });
+
   it('reports the preset inside the input handler that precedes the change', async () => {
     const el = await openedInput();
     let seen: string | undefined = 'unset';

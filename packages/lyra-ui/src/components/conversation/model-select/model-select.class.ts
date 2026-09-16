@@ -569,6 +569,11 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     return isBarredFromValidation(this, this.internals);
   }
 
+  /** The `!this.value` check here is deliberately NOT the `''`-as-missing-value truthiness defect
+   *  `<lr-select>`/`<lr-combobox>` were corrected for. There, `''` was a legitimate option value
+   *  being misread as "no value". `value` here is `catalogPicker.value`, and `normalizeCatalog()`
+   *  rejects a blank `id` outright, so `''` can never name a row -- it is this control's one
+   *  "nothing committed" sentinel, exactly as documented on `withSyntheticCatalogValue()`. */
   private updateValidity(): void {
     if (this.barredFromValidation) {
       this.validityController.setValidity({});

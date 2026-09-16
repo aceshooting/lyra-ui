@@ -304,7 +304,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
    *  when the queue is created in response to a user action — a retried ingestion run that mounts
    *  a fresh queue already holding `stage: 'failed'` rows would otherwise never speak them. Read
    *  once per element lifetime: a later reconnection or adoption stages the same rows again rather
-   *  than replaying the announcement, and later failures announce either way. */
+   *  than replaying the announcement, and later failures announce either way. Remove any host
+   *  `role="status"`/`role="alert"` hand-added before this property existed once it is set --
+   *  otherwise the initial failures are announced twice, through the native role and again
+   *  through the shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;
 
   @state() private failureLiveText = '';

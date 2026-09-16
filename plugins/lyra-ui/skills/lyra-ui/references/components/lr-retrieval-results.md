@@ -87,7 +87,9 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   to a retrieval the user just ran and nothing else reports the outcome; leave it unset for a panel
   that is part of the page a user is arriving on. Read once, when the panel first mounts: a later
   reconnection or adoption stages the existing state again rather than replaying it, and later
-  transitions are announced either way
+  transitions are announced either way. Remove any host `role="status"`/`role="alert"` hand-added
+  before this property existed once it is set — otherwise the initial state is announced twice,
+  through the native role and again through the shared sink
 - `label?: string` — fallback name for the populated result group; omission uses localized
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty

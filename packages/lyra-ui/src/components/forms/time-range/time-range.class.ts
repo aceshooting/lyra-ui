@@ -63,11 +63,22 @@ interface DragState {
  *  interactions (and native `<input type=range>`). */
 const PAGE_STEP_MULTIPLIER = 10;
 
-/** A single discrete-preset option for the `presets` property. */
+/** A single discrete-preset option for the `presets` property. Deliberately the same shape as
+ *  `<lr-date-picker>`'s `LyraDateRangePreset` (`label`/`start`/`end`/`id`) so the library has one
+ *  preset vocabulary rather than two; the only difference is the unit (numbers, not ISO dates). */
 export interface TimeRangePreset {
   readonly label: string;
   readonly start: number;
   readonly end: number;
+  /**
+   * Caller-owned stable identity, echoed verbatim on `appliedPreset` -- never read, compared, or
+   * otherwise interpreted by this component. Exists so a consumer can persist WHICH preset is
+   * active (`appliedPreset.id`) without a downcast or a side `WeakMap`. Optional: an untagged
+   * preset is unaffected. Unlike `label`/`start`/`end`, which are copied into a frozen defensive
+   * snapshot on assignment, `id` is copied through that same snapshot rather than the original
+   * object, so it round-trips by value, not by the caller's own object identity.
+   */
+  readonly id?: string;
 }
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
@@ -308,7 +319,15 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
             raw === null || typeof raw !== 'object' || typeof raw.label !== 'string' ||
             typeof raw.start !== 'number' || typeof raw.end !== 'number'
           ) continue;
-          snapshots.push(Object.freeze({ label: raw.label, start: raw.start, end: raw.end }));
+          // Omit the key entirely (rather than assigning `id: undefined`) when the caller supplied
+          // none, so an untagged snapshot has the exact same own-key shape it always has -- a
+          // consumer doing `'id' in preset` or a structural equality check sees no new key it
+          // didn't ask for.
+          snapshots.push(Object.freeze(
+            typeof raw.id === 'string'
+              ? { label: raw.label, start: raw.start, end: raw.end, id: raw.id }
+              : { label: raw.label, start: raw.start, end: raw.end },
+          ));
         } catch {
           // A hostile getter invalidates only its own preset; later valid rows remain reachable.
         }

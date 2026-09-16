@@ -142,6 +142,86 @@ export function splitSections(text) {
   return sections;
 }
 
+// A positional "see the X note above/below" (or "<lr-other-tag>'s own ... above/below") reference
+// only resolves while reading the whole authored `llms/<family>.md`. `buildComponentFile()` copies
+// nothing but a single section's own `text` into `llms/components/<tag>.md` -- never the family
+// preamble, and never a *different* section -- so a reference that reads fine in the family file
+// can still dangle once split. Three shapes are checked, all deliberately narrow (a missed unusual
+// phrasing is still fine prose; a false positive blocks every future `pnpm run llms`):
+//   1. "<lr-other>'s own note/section/... above/below" naming a tag outside this section's own
+//      `tags` -- that tag's content is never in this file, regardless of story order.
+//   2. "<word(s)> note/section above/below" whose most distinctive word does not recur anywhere
+//      else in this section's own text -- so there is nothing here for the reference to resolve to.
+//   3. "this file's `<lr-other>` ... section" naming a tag outside this section's own `tags` --
+//      unlike shapes 1-2, this phrasing carries no "above"/"below" at all (that is exactly how one
+//      slipped past shapes 1-2 once already: reworded from "see the lr-graph section above" to
+//      "this file's `lr-graph` section", which drops the literal word "above" while leaving the
+//      same dangling cross-section reference intact). "This file" is true of the authored
+//      `llms/<family>.md` but false of the generated per-tag file the reader actually lands on.
+const POSITIONAL_TAG_REFERENCE_RE =
+  /<(lr-[a-z0-9-]+)>`?'s own (?:notes?|sections?|explanations?|write-?ups?|documentation|docs|discussions?|treatments?)\b[^.]{0,40}?\b(above|below)\b/gi;
+const POSITIONAL_NOTE_REFERENCE_RE = /\b([\w-]+(?:[ \t]+[\w-]+)?)[ \t]+(notes?|sections?)[ \t]+(above|below)\b/gi;
+const POSITIONAL_SAME_FILE_SECTION_RE = /\bthis file'?s\s+`?(lr-[a-z0-9-]+)`?'?s?\s+section\b/gi;
+const POSITIONAL_REFERENCE_STOPWORDS = new Set([
+  'the', 'a', 'an', 'of', 'for', 'its', 'own', 'this', 'that', 'note', 'notes', 'section',
+  'sections', 'see', 'and', 'or', 'with', 'from', 'to', 'in', 'on', 'at', 'is', 'are', 'per',
+  'under', 'over',
+]);
+
+function positionalReferenceCandidateWords(phrase) {
+  return phrase
+    .split(/[^a-z0-9]+/i)
+    .filter((word) => word.length >= 3 && !POSITIONAL_REFERENCE_STOPWORDS.has(word.toLowerCase()));
+}
+
+/** @returns {string[]} human-readable problems, empty when every positional reference resolves. */
+export function findDanglingPositionalReferences(section) {
+  const problems = [];
+  const { text } = section;
+  const ownTags = new Set(section.tags);
+
+  for (const match of text.matchAll(POSITIONAL_TAG_REFERENCE_RE)) {
+    const [snippet, referencedTag, direction] = match;
+    if (ownTags.has(referencedTag)) continue;
+    problems.push(
+      `${section.title}: "${snippet.replace(/\s+/g, ' ')}" points ${direction} at \`${referencedTag}\`'s ` +
+        `own section, which is a different section and will not be present in this component's ` +
+        `generated llms/components/*.md file. Inline the referenced text or link to the published ` +
+        `llms/components/${referencedTag}.md instead of a positional "${direction}".`,
+    );
+  }
+
+  for (const match of text.matchAll(POSITIONAL_NOTE_REFERENCE_RE)) {
+    const [snippet, phraseRaw, , direction] = match;
+    const words = positionalReferenceCandidateWords(phraseRaw);
+    if (words.length === 0) continue;
+    const resolved = words.some((word) => {
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const occurrences = text.match(new RegExp(`\\b${escaped}\\b`, 'gi')) ?? [];
+      return occurrences.length >= 2;
+    });
+    if (!resolved) {
+      problems.push(
+        `${section.title}: "${snippet.replace(/\s+/g, ' ')}" refers ${direction} to a note/section ` +
+          `whose key word(s) [${words.join(', ')}] appear nowhere else in this section -- inline the ` +
+          `referenced text instead of a positional "${direction}".`,
+      );
+    }
+  }
+
+  for (const match of text.matchAll(POSITIONAL_SAME_FILE_SECTION_RE)) {
+    const [snippet, referencedTag] = match;
+    if (ownTags.has(referencedTag)) continue;
+    problems.push(
+      `${section.title}: "${snippet.replace(/\s+/g, ' ')}" points at \`${referencedTag}\`'s own ` +
+        `section via "this file's ... section", which is a different section and will not be ` +
+        `present in this component's generated llms/components/*.md file. Inline the referenced ` +
+        `text or link to the published llms/components/${referencedTag}.md instead.`,
+    );
+  }
+  return problems;
+}
+
 /** First sentence of a section's prose — used as the one-line purpose in the index. */
 function firstSentence(section) {
   const body = section.text.split('\n').slice(1).join('\n');
@@ -890,6 +970,7 @@ export function build({ write = true } = {}) {
     }
     const sections = splitSections(readFileSync(file, 'utf8'));
     sectionsByFamily.set(family, sections);
+    for (const section of sections) problems.push(...findDanglingPositionalReferences(section));
     for (const section of sections) {
       for (const tag of section.tags) {
         const facts = tagFacts.get(tag);

@@ -103,6 +103,12 @@
     --lr-theme-font-weight-medium: 500;
     --lr-theme-font-weight-normal: 400;
     --lr-theme-font-weight-semibold: 600;
+    --lr-theme-form-control-height-2xs: 1.25rem;
+    --lr-theme-form-control-height-l: 3rem;
+    --lr-theme-form-control-height-m: 2.5rem;
+    --lr-theme-form-control-height-s: 1.875rem;
+    --lr-theme-form-control-height-xl: 3.5rem;
+    --lr-theme-form-control-height-xs: 1.5rem;
     --lr-theme-graph-cat-1: #8250df;
     --lr-theme-graph-cat-2: #bf3989;
     --lr-theme-graph-cat-3: #0a7d91;
@@ -370,6 +376,12 @@
     --lr-theme-font-weight-medium: 500;
     --lr-theme-font-weight-normal: 400;
     --lr-theme-font-weight-semibold: 600;
+    --lr-theme-form-control-height-2xs: 1.25rem;
+    --lr-theme-form-control-height-l: 3rem;
+    --lr-theme-form-control-height-m: 2.5rem;
+    --lr-theme-form-control-height-s: 1.875rem;
+    --lr-theme-form-control-height-xl: 3.5rem;
+    --lr-theme-form-control-height-xs: 1.5rem;
     --lr-theme-graph-cat-1: #b58cff;
     --lr-theme-graph-cat-2: #ff7ab2;
     --lr-theme-graph-cat-3: #4fd1c5;

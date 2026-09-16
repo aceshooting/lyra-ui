@@ -3807,3 +3807,110 @@ describe("compact forwarding", () => {
       expect(slotted[1]!.compact).to.be.true;
   });
 });
+
+describe("error state", () => {
+  it("replaces the virtual list with the built-in failed-load state while keeping search mounted", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list searchable error .threads=${threads}></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="search"]')).to.exist;
+    expect(el.shadowRoot!.querySelector("lr-virtual-list") === null).to.equal(true);
+    const failed = el.shadowRoot!.querySelector('lr-empty[part="error"]');
+    expect(failed != null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
+  });
+
+  it("lets `error` take precedence over the built-in empty state", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list error .threads=${[]}></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('lr-empty[part="error"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="empty"]') === null).to.equal(true);
+  });
+
+  it("forwards errorHeading/errorDescription verbatim", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        error
+        error-heading="Could not load conversations"
+        error-description="Check your connection and retry."
+        .threads=${threads}
+      ></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+
+    const failed = el.shadowRoot!.querySelector('lr-empty[part="error"]')!;
+    expect(failed.getAttribute("heading")).to.equal("Could not load conversations");
+    expect(failed.getAttribute("description")).to.equal("Check your connection and retry.");
+  });
+
+  it("emits a cancelable lr-retry and only clears `error` when the default action runs", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list error .threads=${threads}></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+    const retryButton = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="retry-button"]'
+    )!;
+
+    let received: CustomEvent | undefined;
+    const vetoListener = (event: Event): void => {
+      received = event as CustomEvent;
+      event.preventDefault();
+    };
+    el.addEventListener("lr-retry", vetoListener);
+    retryButton.click();
+    expect(received?.cancelable).to.equal(true);
+    expect(received?.defaultPrevented).to.equal(true);
+    expect(el.error, "a vetoed retry must not clear error").to.equal(true);
+    el.removeEventListener("lr-retry", vetoListener);
+
+    retryButton.click();
+    expect(el.error, "the default action clears error").to.equal(false);
+  });
+
+  it("lets the error slot override the built-in failed-load content", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list error .threads=${threads}
+        ><div slot="error">Custom failure UI</div></lr-thread-list
+      >`
+    )) as LyraThreadList;
+    await el.updateComplete;
+
+    const slot = el.shadowRoot!.querySelector(
+      'slot[name="error"]'
+    ) as HTMLSlotElement;
+    expect(slot != null).to.equal(true);
+    expect(slot.assignedElements().map((n) => n.textContent)).to.deep.equal([
+      "Custom failure UI",
+    ]);
+    const builtIn = el.shadowRoot!.querySelector('[part~="error"]') as HTMLElement;
+    expect(builtIn.getClientRects().length).to.equal(0);
+  });
+
+  it("forwards the error lr-empty's inner parts through error-prefixed exportparts", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list error .threads=${threads}></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+
+    const exported = el.shadowRoot!.querySelector('[part~="error"]')!.getAttribute("exportparts") ?? "";
+    expect(exported).to.contain("base:error-base");
+    expect(exported).to.contain("icon:error-icon");
+    expect(exported).to.contain("heading:error-heading");
+    expect(exported).to.contain("description:error-description");
+    expect(exported).to.contain("actions:error-actions");
+  });
+
+  it("is accessible in the error state", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list error .threads=${threads}></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

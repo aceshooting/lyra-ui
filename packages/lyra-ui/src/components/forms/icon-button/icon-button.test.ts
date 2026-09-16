@@ -470,6 +470,22 @@ async function settledBackground(button: HTMLElement, from: string, message: str
   return current;
 }
 
+it('declares a non-zero transition on the button paint so hover/press ease rather than snap', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const button = el.shadowRoot!.querySelector('button')!;
+  const computed = getComputedStyle(button);
+  expect(computed.transitionDuration).to.not.equal('0s');
+  expect(computed.transitionProperty).to.include('background-color');
+  expect(computed.transitionProperty).to.include('border-color');
+  expect(computed.transitionProperty).to.include('color');
+});
+
+it('leaves the resting button background transparent (unset-regression)', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const button = el.shadowRoot!.querySelector('button')!;
+  expect(getComputedStyle(button).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+});
+
 it('hovers to a background that is visibly not the page surface it sits on', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   const button = el.shadowRoot!.querySelector('button')!;

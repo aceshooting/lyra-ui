@@ -5907,6 +5907,31 @@ describe('unknown committed value presentation', () => {
     expect(getComputedStyle(badge).backgroundColor).to.equal('rgb(1, 2, 3)');
   });
 
+  it('renders the shipped English default for the unknown-value badge with no locale registered', async () => {
+    const el = (await fixture(html`
+      <lr-select value="ghost">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    const badge = displayInput.querySelector('[part="unknown-value"]');
+    expect(badge?.textContent).to.equal('not in catalog');
+  });
+
+  it("localizes the unknown-value badge through a .strings override", async () => {
+    const el = (await fixture(html`
+      <lr-select value="ghost">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.strings = { notInCatalog: 'Hors catalogue' };
+    await el.updateComplete;
+    const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    const badge = displayInput.querySelector('[part="unknown-value"]');
+    expect(badge?.textContent).to.equal('Hors catalogue');
+  });
+
   it('does not flag a value that matches an option', async () => {
     const el = (await fixture(basic())) as LyraSelect;
     el.value = 'a';

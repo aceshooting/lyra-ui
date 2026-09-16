@@ -1633,6 +1633,38 @@ it('filters rows through the built-in filter field and emits the requested text'
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
 });
 
+it('renders a localized, keyboard-reachable clear button once the filter field has a value, and hides it again once empty', async () => {
+  const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="filter-clear"]') === null).to.equal(true);
+
+  const input = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+  input.value = 'beta';
+  input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  const clearButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="filter-clear"]');
+  expect(clearButton).to.not.equal(null);
+  expect(clearButton!.tagName).to.equal('BUTTON');
+  expect(clearButton!.getAttribute('type')).to.equal('button');
+  expect(clearButton!.getAttribute('aria-label')).to.equal('Clear');
+  expect(clearButton!.tabIndex).to.equal(0);
+
+  const eventPromise = oneEvent(el, 'lr-filter-change');
+  clearButton!.click();
+  const event = await eventPromise;
+  await el.updateComplete;
+
+  expect(event.detail).to.deep.equal({ text: '' });
+  expect(el.filterText).to.equal('');
+  expect(el.shadowRoot!.activeElement === input).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="filter-clear"]') === null).to.equal(true);
+});
+
 it('re-emits one focus and blur event for the internal filter instead of leaking duplicates', async () => {
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -1821,6 +1853,75 @@ it('normalizes a non-finite pageSize to the bounded default instead of NaN math'
   expect(el.pageSize).to.be.NaN;
   expect((el.shadowRoot!.querySelector('lr-pagination')) == null).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
+});
+
+it('forwards unknown-total server pagination into the nested pagination as its own indeterminate mode', async () => {
+  const el = (await fixture(
+    html`<lr-table pagination-mode="server" unknown-total page-size="1" total-items="-1"></lr-table>`
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = [rows[0]!];
+  el.rowKey = (r) => r.id;
+  el.page = 1;
+  await el.updateComplete;
+
+  const nested = el.shadowRoot!.querySelector('lr-pagination')!;
+  expect(nested, 'the footer stays mounted with no computable page count').to.exist;
+  expect(nested.total).to.equal(-1);
+  const previousButton = nested.shadowRoot!.querySelector(
+    '[part~="previous-button"]'
+  ) as HTMLButtonElement;
+  const nextButton = nested.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
+  expect(previousButton.disabled, 'previous is disabled at page 1').to.equal(true);
+  expect(nextButton.disabled, 'next stays enabled while has-next defaults true').to.equal(false);
+});
+
+it('disables next once has-next is false under unknown-total server pagination', async () => {
+  const el = (await fixture(
+    html`<lr-table pagination-mode="server" unknown-total .hasNext=${false} page-size="1" total-items="-1"></lr-table>`
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = [rows[0]!];
+  el.rowKey = (r) => r.id;
+  el.page = 2;
+  await el.updateComplete;
+
+  const nested = el.shadowRoot!.querySelector('lr-pagination')!;
+  const nextButton = nested.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
+  expect(nextButton.disabled).to.equal(true);
+});
+
+it('re-emits lr-page-change with the same { page } contract under unknown-total server pagination', async () => {
+  const el = (await fixture(
+    html`<lr-table pagination-mode="server" unknown-total page-size="1" total-items="-1"></lr-table>`
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = [rows[0]!];
+  el.rowKey = (r) => r.id;
+  el.page = 1;
+  await el.updateComplete;
+
+  const nested = el.shadowRoot!.querySelector('lr-pagination')!;
+  const nextButton = nested.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
+  const eventPromise = oneEvent(el, 'lr-page-change');
+  nextButton.click();
+  const event = await eventPromise;
+  expect(event.detail).to.deep.equal({ page: 2 });
+  // Server mode leaves `page` controlled -- the table never mutates it itself.
+  expect(el.page).to.equal(1);
+});
+
+it('ignores unknown-total outside server pagination mode', async () => {
+  const el = (await fixture(
+    html`<lr-table unknown-total page-size="1"></lr-table>`
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const nested = el.shadowRoot!.querySelector('lr-pagination')!;
+  expect(nested.total).to.equal(2); // client mode still derives a real total from the rows given
 });
 
 it('renders a localized busy state before rows while loading', async () => {

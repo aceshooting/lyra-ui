@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 15 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -97,7 +97,10 @@ transferring focus, so End and long row jumps never strand focus on a removed vi
 content, overrides the `errorText` attribute when provided).
 
 **CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
-`form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
+`form-control-label` (the visible label), `base`, `search-wrapper` (the row wrapper around
+`search` and `search-clear`), `search` (`role="combobox"`), `search-clear` (clears the search
+field, replacing the native search-cancel glyph the component resets; rendered only while it has a
+value), `grid`
 (`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
 button), `empty` (shown when the search matches nothing, or when a consumer deliberately opted out
 with `groups = []`), `load-error` (the failure surface shown in `empty`'s place when the optional
@@ -177,6 +180,8 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
 **Additional API surface:**
 
 - `--lr-emoji-picker-control-gap` — Gap between field sections. Default: `var(--lr-space-xs)`.
+- `--lr-emoji-picker-search-clear-gap` — Gap between the search field and the clear button inside
+  `search-wrapper`. Default: `var(--lr-space-xs)`.
 - `--lr-emoji-picker-radius` — Outer picker corner radius. Default: `var(--lr-radius)`.
 - `--lr-emoji-picker-item-radius` — Search and emoji corner radius. Default: `var(--lr-radius-xs)`.
 - `--lr-emoji-picker-search-border-color` — Resting search border color, independent of the hover

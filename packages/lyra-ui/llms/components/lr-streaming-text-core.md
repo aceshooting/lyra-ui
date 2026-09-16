@@ -29,14 +29,16 @@ fallback — there is no default/full-table highlighter here to fall back to, mi
 
 **Properties:** `content: string = ''` — the full current text so far, identical contract to
 `<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
-(attribute `coalesce-ms`) — same trailing-edge coalesce window described under `<lr-streaming-text>`
-above; `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
+(attribute `coalesce-ms`) — same trailing-edge coalesce window described in
+`llms/components/lr-streaming-text.md`; `contentMode: StreamingTextContentMode = 'auto'` (attribute
+`content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
 Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
 `<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
-`<lr-streaming-text>` exports and documents above; both tags share one implementation.
+`<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
+share one implementation.
 
 **Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — identical contract to
 `<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
@@ -50,11 +52,12 @@ Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verb
 **Themeable custom properties:** `--lr-inline-cursor-width` (default `var(--lr-size-0-125rem)`) and
 `--lr-inline-cursor-height` (default `var(--lr-size-1em)`) — the same shared inline-cursor tokens
 `<lr-streaming-text>`/`<lr-typing-indicator>` use, plus the same `--lr-space-xs`/
-`--lr-transition-ambient` fallbacks described above.
+`--lr-transition-ambient` fallbacks described in `llms/components/lr-streaming-text.md`.
 
 Every other capability — token coalescing mechanics, the first-assignment/`streaming`-transition
 immediate-flush rules, the reduced-motion cursor degradation, and the known gotchas — is identical
-to `<lr-streaming-text>`; see that section above for the full write-up of shared behavior.
+to `<lr-streaming-text>`; see `llms/components/lr-streaming-text.md` for the full write-up of
+shared behavior.
 
 ```html
 <lr-streaming-text-core id="out" streaming></lr-streaming-text-core>

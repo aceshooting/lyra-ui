@@ -7,6 +7,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbers.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
@@ -15,7 +16,7 @@ import {
   isPersistedPropertyExplicitlySet,
 } from '../../../internal/persisted-restore.js';
 import { styles } from './table.styles.js';
-import { chevronIcon, sortIcon } from '../../../internal/icons.js';
+import { chevronIcon, closeIcon, sortIcon } from '../../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
 import '../../overlays/empty/empty.class.js';
 import {
@@ -27,9 +28,10 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -621,7 +623,10 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * `pageSize` bounds pagination through the existing `<lr-pagination>` primitive (100 rows by
  * default, normalized to 1..500). Client mode owns the accepted page and slices `rows`; server mode
  * leaves `page` controlled, bounds the supplied page to `pageSize`, and uses `totalItems` for the
- * navigation summary. `loading` keeps the table shell busy; `loadingAppearance`
+ * navigation summary. `unknownTotal` (server mode only) forwards `<lr-pagination>`'s own
+ * indeterminate mode for a caller with no total -- previous/next only, no numbered list, no
+ * item-range summary -- with `hasNext` as the one extra signal that mode needs; see both
+ * properties' own docs. `loading` keeps the table shell busy; `loadingAppearance`
  * chooses how — the default `'spinner'` replaces the grid with an indeterminate
  * spinner, while `'skeleton'` keeps the real `<colgroup>`/`<thead>` (and the
  * filter/pagination chrome) and fills the body with `skeletonRows` placeholder
@@ -794,6 +799,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @csspart group-cell - The full-width group header cell.
  * @csspart filter - The optional row-filter input.
  * @csspart filter-label - The `<label>` wrapping the filter input.
+ * @csspart filter-clear - The button that clears the filter field, replacing the native
+ *   search-cancel glyph suppressed by this field's own reset; rendered only while it has a value.
  * @csspart loading - The loading-state wrapper. Under `loadingAppearance="spinner"` (the default)
  *   it is the visible block holding the spinner; under `"skeleton"` it is the visually-hidden
  *   aria-hidden announcement mirror, since the placeholder rows are the visible affordance. It is
@@ -890,11 +897,11 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @cssprop [--lr-table-sticky-offset=0] - Distance a `sticky` column pins from the inline edge.
  *   Measured and set inline per column by the component so multiple sticky columns stack instead
  *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.
- * @cssprop [--lr-scrollbar-width=auto] - Theme-level scrollbar width read by the `base` scroll
- *   container; unset, renders identically to before. Set `--lr-theme-scrollbar-width` on `:root` or
- *   any ancestor to retune every internal scroll container in the library at once.
- * @cssprop [--lr-scrollbar-gutter=auto] - Theme-level scrollbar gutter read by the `base` scroll
- *   container; see `--lr-scrollbar-width`.
+ * @cssprop [--lr-theme-scrollbar-width=auto] - Opt-in theme-level scrollbar width honored by the
+ *   `base` scroll container; unset, renders identically to before. Set on `:root` or any ancestor
+ *   to retune every internal scroll container in the library at once.
+ * @cssprop [--lr-theme-scrollbar-gutter=auto] - Opt-in theme-level scrollbar gutter honored by the
+ *   `base` scroll container; see `--lr-theme-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */
@@ -905,6 +912,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     expand: LYRA_DEFAULT_expand,
@@ -1168,6 +1176,22 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** Total item count for server pagination; `-1` derives it from filtered rows. */
   @property({ type: Number, attribute: 'total-items' }) totalItems = -1;
   @property({ reflect: true, attribute: 'pagination-mode' }) paginationMode: 'client' | 'server' = 'client';
+  /** Marks server pagination as indeterminate -- the caller has no total item count, only whether
+   *  one more page exists (`hasNext`). Forwarded to the nested `<lr-pagination>` as its own
+   *  indeterminate mode (a `total="-1"` sentinel; see that component's docs), which then renders
+   *  previous/next only, with no numbered page list and no item-range summary. A dedicated boolean
+   *  rather than a second magic `totalItems` value: `totalItems="-1"` already means "derive from
+   *  the currently matching rows", and stacking a different meaning onto another negative number
+   *  would be exactly the kind of easy-to-mistake sentinel this library avoids elsewhere. Ignored
+   *  outside `paginationMode: 'server'` -- client mode always knows the exact row count it slices,
+   *  so it never needs the indeterminate layout. */
+  @property({ type: Boolean, attribute: 'unknown-total', reflect: true }) unknownTotal = false;
+  /** Whether at least one more page exists past the current one. Consulted only alongside
+   *  `unknownTotal`; forwarded verbatim to the nested `<lr-pagination>`'s own `hasNext`. Defaults to
+   *  `true` so an indeterminate server pager stays navigable until the caller's API reports
+   *  otherwise. */
+  @property({ type: Boolean, attribute: 'has-next', reflect: true, converter: trueDefaultBooleanConverter })
+  hasNext = true;
   /** Renders a full-width panel beneath a row when that row's key is in
    *  `expandedRowKeys`. Table-level (not per-column) since the panel spans
    *  every column via `colspan`. Setting this makes every row render a
@@ -1269,7 +1293,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  spoken. Read once, on the first update: a later reconnection or adoption stages the same
    *  state again rather than replaying the announcement, and later `error` transitions announce
    *  either way. Deliberately not forwarded to the composed `[part='error']` `<lr-empty>`, whose
-   *  own `announce` stays unset so the failure is spoken once, not twice. */
+   *  own `announce` stays unset so the failure is spoken once, not twice. Remove any host
+   *  `role="status"`/`role="alert"` hand-added before this property existed once it is set --
+   *  otherwise the failure is announced a third time, through the native role as well. */
   @property({ type: Boolean, reflect: true }) announce = false;
   @property({ attribute: 'empty-heading' }) emptyHeading?: string;
   @property({ attribute: 'empty-description' }) emptyDescription = '';
@@ -2095,6 +2121,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return totalItems >= 0 ? totalItems : this.matchingEntries().length;
   }
 
+  /** `unknownTotal`, gated to the one mode it applies to -- client mode always knows the exact row
+   *  count it is slicing, so it never enters the nested `<lr-pagination>`'s indeterminate layout. */
+  private get serverUnknownTotal(): boolean {
+    return this.paginationMode === 'server' && this.unknownTotal;
+  }
+
   private get pageCount(): number {
     const pageSize = this.normalizedPageSize;
     return pageSize > 0 ? Math.ceil(this.matchingTotalItems / pageSize) : 0;
@@ -2271,6 +2303,16 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const input = event.currentTarget as HTMLInputElement;
     this.filterText = input.value;
     this.emit('lr-filter-change', Object.freeze({ text: this.filterText }));
+  };
+  // The native `::-webkit-search-cancel-button` reset in table.styles.ts removes the browser's
+  // own clear affordance with no replacement -- this button, firing the same `lr-filter-change`
+  // the field already fires while typing, and the refocus afterward, restore a real one-click way
+  // to reset the filter.
+  private onClearFilter = (): void => {
+    if (this.filterText === '') return;
+    this.filterText = '';
+    this.emit('lr-filter-change', Object.freeze({ text: '' }));
+    this.renderRoot.querySelector<HTMLInputElement>('[part="filter"]')?.focus();
   };
   private stopOwnedEvent = (event: Event): void => {
     event.stopPropagation();
@@ -3251,42 +3293,44 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     );
   }
 
-  /** `[part='retry-button']` activation. Optimistically clears `error` so the row body falls back
-   *  to whatever it would otherwise show (existing rows, or an empty state) -- exactly like
-   *  `resizeColumnTo()`'s own "propose, then react to the veto" shape for `lr-column-resize`, but
-   *  checked before committing since there is no drag-in-progress state to leave dangling. A
-   *  listener that wants to keep the error banner up until it has confirmed a fresh load actually
-   *  started (or failed again immediately) calls `preventDefault()`, which leaves `error` set. */
-  private onRetryClick = (): void => {
-    if (this.emit('lr-retry', null, { cancelable: true }).defaultPrevented) return;
-    this.error = false;
-  };
+  /** The failed-load content itself, shared by the in-grid error row and the standalone no-columns
+   *  error branch in `render()` so the two cannot drift in copy, parts, or slot name -- both go
+   *  through the shared {@link renderDataState} ladder renderer (`internal/data-state-renderer.ts`),
+   *  which owns the `error`-prefixed part naming, the `error` slot wrapping, and the cancelable
+   *  `lr-retry` request/commit pair. `compactDefault` differs between callers: the row sits inside
+   *  an existing grid and defaults to compact, while the standalone branch owns the whole component
+   *  box and matches the other full-area empty states. */
+  private renderErrorContent(compactDefault: boolean): unknown {
+    return renderDataState(
+      this,
+      {
+        loading: false,
+        error: true,
+        empty: false,
+        errorHeading: this.localizedOverride('tableLoadFailed', this.errorHeading),
+        errorDescription: this.errorDescription,
+        compact: this.emptyCompact ?? compactDefault,
+        // Optimistically clears `error` so the row body falls back to whatever it would otherwise
+        // show (existing rows, or an empty state) -- exactly like `resizeColumnTo()`'s own
+        // "propose, then react to the veto" shape for `lr-column-resize`, but checked before
+        // committing since there is no drag-in-progress state to leave dangling. A listener that
+        // wants to keep the error banner up until it has confirmed a fresh load actually started
+        // (or failed again immediately) calls `preventDefault()`, which leaves `error` set.
+        onRetry: () => {
+          this.error = false;
+        },
+        emitRetry: (detail, init: { cancelable: true }) => this.emit('lr-retry', detail, init),
+      },
+      'error',
+      'lr-retry'
+    );
+  }
 
   /** The single full-width row rendered in `<tbody>` while `error` is true. Mirrors the `empty`
    *  slot/`<lr-empty>` shape (same exported-part naming scheme, `error`-prefixed) so the two states
    *  stay visually and structurally consistent, plus the built-in retry affordance -- but unlike
    *  either data-empty branch in `render()`, the caller keeps `<thead>`, the filter field, and
    *  pagination mounted around this row instead of replacing them too. */
-  /** The failed-load content itself, shared by the in-grid error row and the standalone no-columns
-   *  error branch in `render()` so the two cannot drift in copy, parts, or slot name. `compactDefault`
-   *  differs between them: the row sits inside an existing grid and defaults to compact, while the
-   *  standalone branch owns the whole component box and matches the other full-area empty states. */
-  private renderErrorContent(compactDefault: boolean): TemplateResult {
-    return html`<slot name="error"
-      ><lr-empty
-        part="error"
-        exportparts="base:error-base, icon:error-icon, heading:error-heading, description:error-description, actions:error-actions"
-        ?compact=${this.emptyCompact ?? compactDefault}
-        heading=${this.localizedOverride('tableLoadFailed', this.errorHeading)}
-        description=${this.errorDescription}
-      >
-        <button type="button" slot="actions" part="retry-button" @click=${this.onRetryClick}>
-          ${this.localize('retry')}
-        </button>
-      </lr-empty
-    ></slot>`;
-  }
-
   private renderErrorRow(colspan: number): TemplateResult {
     return html`<tr part="error-row" role="row">
       <td part="error-cell" role="gridcell" colspan=${colspan}>${this.renderErrorContent(true)}</td>
@@ -3314,7 +3358,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       // it. Rendered standalone rather than as the in-grid error row because there is no schema to
       // keep mounted around it, mirroring how `loading` degrades to a bare spinner in this same
       // no-columns case.
-      return this.renderErrorContent(false);
+      return html`${this.renderErrorContent(false)}`;
     }
     if (this.columns.length === 0) {
       // Deliberately not wrapped in the `empty` slot: this branch reports a *configuration*
@@ -3391,7 +3435,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         else renderedGroupRows.set(groupKey, [entry.row]);
       });
     }
-    const hasPagination = skeletonLoading || this.pageCount > 1;
+    // Indeterminate server pagination has no computable page count to gate on -- previous/next stay
+    // relevant regardless, so the footer is always mounted for it, same as the loading skeleton.
+    const hasPagination = skeletonLoading || this.pageCount > 1 || this.serverUnknownTotal;
     const filterLabel = this.localizedOverride('tableFilterLabel', this.filterLabel);
     const filterPlaceholder = this.localizedOverride('tableFilterPlaceholder', this.filterPlaceholder);
     const tableContent =
@@ -3607,6 +3653,16 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                 @focus=${this.onNativeFocus}
                 @blur=${this.onNativeBlur}
               />
+              ${this.filterText !== ''
+                ? html`<button
+                    part="filter-clear"
+                    type="button"
+                    aria-label=${this.localize('clear')}
+                    @click=${this.onClearFilter}
+                  >
+                    <span aria-hidden="true" inert>${closeIcon()}</span>
+                  </button>`
+                : nothing}
             </label>`
           : nothing}
         ${tableContent}
@@ -3633,7 +3689,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
               format="compact"
               .page=${this.page}
               .pageSize=${this.normalizedPageSize}
-              .total=${this.matchingTotalItems}
+              .total=${this.serverUnknownTotal ? -1 : this.matchingTotalItems}
+              .hasNext=${this.hasNext}
               .strings=${this.strings}
               @lr-activate=${this.stopOwnedEvent}
               @lr-page-change=${this.onPaginationChange}

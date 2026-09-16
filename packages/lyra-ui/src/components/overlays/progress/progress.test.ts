@@ -1039,23 +1039,80 @@ describe('lr-progress-bar name inside a hidden container', () => {
   });
 });
 
-it('reads lr-progress-ring track/indicator stroke width from the documented --lr-theme-border-width-thick input, not a raw literal (regression: theming purpose)', async () => {
+it('reads lr-progress-ring track/indicator stroke width from its own --lr-theme-progress-ring-track-width input, not a raw literal (regression: theming purpose)', async () => {
   const defaultRing = (await fixture(
     html`<lr-progress-ring value="50"></lr-progress-ring>`
   )) as LyraProgressRing;
   const defaultTrack = defaultRing.shadowRoot!.querySelector<SVGCircleElement>('[part="track"]')!;
-  // Retuning the shared theme input must not change the default rendering when the consumer
+  // Retuning the dedicated theme input must not change the default rendering when the consumer
   // never opts in.
   expect(getComputedStyle(defaultTrack).strokeWidth).to.equal('4px');
 
   const retunedRing = (await fixture(
     html`<lr-progress-ring
       value="50"
-      style="--lr-theme-border-width-thick: 11px;"
+      style="--lr-theme-progress-ring-track-width: 11px;"
     ></lr-progress-ring>`
   )) as LyraProgressRing;
   const track = retunedRing.shadowRoot!.querySelector<SVGCircleElement>('[part="track"]')!;
   const indicator = retunedRing.shadowRoot!.querySelector<SVGCircleElement>('[part="indicator"]')!;
   expect(getComputedStyle(track).strokeWidth).to.equal('11px');
   expect(getComputedStyle(indicator).strokeWidth).to.equal('11px');
+});
+
+// --lr-theme-progress-ring-track-width is opt-in, matching the --lr-theme-scrollbar-width/-gutter
+// hooks (CI.scrollbar-theme-bridge): importing theme.css must not itself introduce a global default
+// that overrides the ring's own literal fallback. This is the exact regression this task fixes --
+// theme.css unconditionally declares --lr-theme-border-width-thick: 3px for the widely-shared
+// --lr-border-width-thick alias, and the ring used to bridge that same shared input directly, so a
+// consumer who imported theme.css and set no override at all got a 3px ring stroke instead of the
+// documented 4px.
+let progressRingThemeSheetPromise: Promise<CSSStyleSheet> | undefined;
+
+function loadProgressRingThemeSheet(): Promise<CSSStyleSheet> {
+  progressRingThemeSheetPromise ??= fetch(new URL('../../../theme.css', import.meta.url))
+    .then((response) => response.text())
+    .then((text) => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(text);
+      return sheet;
+    });
+  return progressRingThemeSheetPromise;
+}
+
+async function withProgressRingThemeCss<T>(run: () => Promise<T>): Promise<T> {
+  const sheet = await loadProgressRingThemeSheet();
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  try {
+    return await run();
+  } finally {
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
+  }
+}
+
+it('leaves the lr-progress-ring track/indicator stroke width at its own 4px default when theme.css is imported with no ancestor override', async () => {
+  await withProgressRingThemeCss(async () => {
+    const el = (await fixture(
+      html`<lr-progress-ring value="50"></lr-progress-ring>`
+    )) as LyraProgressRing;
+    const track = el.shadowRoot!.querySelector<SVGCircleElement>('[part="track"]')!;
+    const indicator = el.shadowRoot!.querySelector<SVGCircleElement>('[part="indicator"]')!;
+    expect(getComputedStyle(track).strokeWidth).to.equal('4px');
+    expect(getComputedStyle(indicator).strokeWidth).to.equal('4px');
+  });
+});
+
+it('still lets a --lr-theme-progress-ring-track-width ancestor override retune the ring with theme.css imported', async () => {
+  await withProgressRingThemeCss(async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-theme-progress-ring-track-width: 11px;">
+        <lr-progress-ring value="50"></lr-progress-ring>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-progress-ring') as LyraProgressRing;
+    const track = el.shadowRoot!.querySelector<SVGCircleElement>('[part="track"]')!;
+    const indicator = el.shadowRoot!.querySelector<SVGCircleElement>('[part="indicator"]')!;
+    expect(getComputedStyle(track).strokeWidth).to.equal('11px');
+    expect(getComputedStyle(indicator).strokeWidth).to.equal('11px');
+  });
 });

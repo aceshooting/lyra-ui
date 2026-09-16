@@ -756,6 +756,55 @@
       ]
     },
     {
+      "name": "--lr-form-control-height-2xs",
+      "description": "Canonical shared component token for form control height 2xs.",
+      "references": [
+        "--lr-theme-form-control-height-2xs"
+      ]
+    },
+    {
+      "name": "--lr-form-control-height-l",
+      "description": "Canonical shared component token for form control height l.",
+      "references": [
+        "--lr-theme-form-control-height-l"
+      ]
+    },
+    {
+      "name": "--lr-form-control-height-m",
+      "description": "Canonical shared component token for form control height m.",
+      "references": [
+        "--lr-theme-form-control-height-m"
+      ]
+    },
+    {
+      "name": "--lr-form-control-height-s",
+      "description": "Canonical shared component token for form control height s.",
+      "references": [
+        "--lr-theme-form-control-height-s"
+      ]
+    },
+    {
+      "name": "--lr-form-control-height-xl",
+      "description": "Canonical shared component token for form control height xl.",
+      "references": [
+        "--lr-theme-form-control-height-xl"
+      ]
+    },
+    {
+      "name": "--lr-form-control-height-xs",
+      "description": "Canonical shared component token for form control height xs.",
+      "references": [
+        "--lr-theme-form-control-height-xs"
+      ]
+    },
+    {
+      "name": "--lr-form-control-radius",
+      "description": "Canonical shared component token for form control radius; falls back to the shared corner radius when no per-control-family override is set.",
+      "references": [
+        "--lr-theme-form-control-radius"
+      ]
+    },
+    {
       "name": "--lr-graph-cat-1",
       "description": "Canonical shared component token for graph cat 1.",
       "references": [
@@ -1263,20 +1312,6 @@
       "description": "Canonical shared component token for scroll fade size.",
       "references": [
         "--lr-theme-scroll-fade-size"
-      ]
-    },
-    {
-      "name": "--lr-scrollbar-gutter",
-      "description": "Canonical shared component token for scrollbar gutter.",
-      "references": [
-        "--lr-theme-scrollbar-gutter"
-      ]
-    },
-    {
-      "name": "--lr-scrollbar-width",
-      "description": "Canonical shared component token for scrollbar width.",
-      "references": [
-        "--lr-theme-scrollbar-width"
       ]
     },
     {
@@ -2716,6 +2751,41 @@
       "references": []
     },
     {
+      "name": "--lr-theme-form-control-height-2xs",
+      "description": "Application theme input for --lr-form-control-height-2xs.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-form-control-height-l",
+      "description": "Application theme input for --lr-form-control-height-l.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-form-control-height-m",
+      "description": "Application theme input for --lr-form-control-height-m.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-form-control-height-s",
+      "description": "Application theme input for --lr-form-control-height-s.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-form-control-height-xl",
+      "description": "Application theme input for --lr-form-control-height-xl.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-form-control-height-xs",
+      "description": "Application theme input for --lr-form-control-height-xs.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-form-control-radius",
+      "description": "Application input for --lr-form-control-radius; falls back to the shared token default.",
+      "references": []
+    },
+    {
       "name": "--lr-theme-graph-cat-1",
       "description": "Canonical application theme input for graph cat 1.",
       "references": []
@@ -2818,16 +2888,6 @@
     {
       "name": "--lr-theme-scroll-fade-size",
       "description": "Application theme input for --lr-scroll-fade-size.",
-      "references": []
-    },
-    {
-      "name": "--lr-theme-scrollbar-gutter",
-      "description": "Application input for --lr-scrollbar-gutter; falls back to the shared token default.",
-      "references": []
-    },
-    {
-      "name": "--lr-theme-scrollbar-width",
-      "description": "Application input for --lr-scrollbar-width; falls back to the shared token default.",
       "references": []
     },
     {

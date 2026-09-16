@@ -223,6 +223,22 @@ it("applies --lr-rating-active-color only while the editable rating is pressed",
   expect(getComputedStyle(star).color, "released").to.equal("rgb(1, 2, 3)");
 });
 
+it("declares a non-zero transition on the star colour so press paint eases like lr-button", async () => {
+  const el = await fixture<LyraRating>(html`<lr-rating value="2"></lr-rating>`);
+  const star = starsOf(el)[0]!;
+  const computed = getComputedStyle(star);
+  expect(computed.transitionDuration).to.not.equal("0s");
+  expect(computed.transitionProperty).to.include("color");
+});
+
+it("leaves the resting star colour unchanged (unset-regression)", async () => {
+  const el = await fixture<LyraRating>(html`
+    <lr-rating value="2" style="--lr-rating-empty-color: rgb(9, 10, 11)"></lr-rating>
+  `);
+  const star = starsOf(el)[0]!;
+  expect(getComputedStyle(star).color).to.equal("rgb(9, 10, 11)");
+});
+
 it("applies --symbol-size while preserving --lr-rating-size precedence", async () => {
   const mapped = await fixture<LyraRating>(html`
     <lr-rating style="--symbol-size: 37px;"></lr-rating>

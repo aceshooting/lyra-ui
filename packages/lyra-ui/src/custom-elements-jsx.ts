@@ -2311,8 +2311,8 @@ export type LyraCodeBlockReactProps = LyraReactElementProps<
   | '--lr-code-block-language-color'
   | '--lr-code-block-max-height'
   | '--lr-code-block-tab-size'
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width',
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width',
   {
     'activatable-lines'?: LyraCodeBlock['activatableLines'];
     'active-highlight-id'?: LyraCodeBlock['activeHighlightId'];
@@ -2359,8 +2359,8 @@ export type LyraCodeBlockCoreReactProps = LyraReactElementProps<
   | '--lr-code-block-language-color'
   | '--lr-code-block-max-height'
   | '--lr-code-block-tab-size'
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width',
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width',
   {
     'activatable-lines'?: LyraCodeBlockCore['activatableLines'];
     'active-highlight-id'?: LyraCodeBlockCore['activeHighlightId'];
@@ -2435,8 +2435,8 @@ export type LyraCodeEditorReactProps = LyraReactElementProps<
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width',
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width',
   {
     'aria-label'?: LyraCodeEditor['accessibleLabel'];
     'custom-error'?: LyraCodeEditor['customError'];
@@ -3050,6 +3050,9 @@ export type LyraDataGridReactProps = LyraReactElementProps<
   | 'columns'
   | 'data'
   | 'dataSource'
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'expandedKeys'
   | 'expandedRowKeys'
   | 'filterDebounce'
@@ -3107,6 +3110,7 @@ export type LyraDataGridReactProps = LyraReactElementProps<
   | 'lr-group-collapse'
   | 'lr-group-expand'
   | 'lr-page-change'
+  | 'lr-retry'
   | 'lr-row-collapse'
   | 'lr-row-expand'
   | 'lr-row-select'
@@ -3142,6 +3146,8 @@ export type LyraDataGridReactProps = LyraReactElementProps<
   | '--transition-duration',
   {
     'child-rows'?: LyraDataGrid['childRows'];
+    'error-description'?: LyraDataGrid['errorDescription'];
+    'error-heading'?: LyraDataGrid['errorHeading'];
     'filter-debounce'?: LyraDataGrid['filterDebounce'];
     'filter-from-leaf-rows'?: LyraDataGrid['filterFromLeafRows'];
     'group-by'?: LyraDataGrid['groupBy'];
@@ -3610,6 +3616,9 @@ export type LyraDocumentCompareReactProps = LyraReactElementProps<
 export type LyraDocumentLibraryReactProps = LyraReactElementProps<
   LyraDocumentLibrary,
   | 'documents'
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'filter'
   | 'label'
   | 'loading'
@@ -3625,11 +3634,14 @@ export type LyraDocumentLibraryReactProps = LyraReactElementProps<
   LyraDocumentLibraryEventMap,
   | 'lr-filter-change'
   | 'lr-open'
+  | 'lr-retry'
   | 'lr-selection-change'
   | 'lr-sort'
   | 'lr-sort-request',
 never,
   {
+    'error-description'?: LyraDocumentLibrary['errorDescription'];
+    'error-heading'?: LyraDocumentLibrary['errorHeading'];
     'search-term'?: LyraDocumentLibrary['searchTerm'];
     'sort-dir'?: LyraDocumentLibrary['sortDir'];
     'sort-key'?: LyraDocumentLibrary['sortKey'];
@@ -4200,6 +4212,7 @@ export type LyraEmojiPickerReactProps = LyraReactElementProps<
   | '--lr-emoji-picker-radius'
   | '--lr-emoji-picker-row-height'
   | '--lr-emoji-picker-search-border-color'
+  | '--lr-emoji-picker-search-clear-gap'
   | '--lr-emoji-picker-search-fill'
   | '--lr-emoji-picker-search-font-size'
   | '--lr-emoji-picker-search-hover-border-color'
@@ -5833,6 +5846,9 @@ never,
 
 export type LyraKnowledgeBaseReactProps = LyraReactElementProps<
   LyraKnowledgeBase,
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'hideCreate'
   | 'hideSummary'
   | 'label'
@@ -5841,12 +5857,15 @@ export type LyraKnowledgeBaseReactProps = LyraReactElementProps<
   | 'strings',
   {},
   LyraKnowledgeBaseEventMap,
+  | 'lr-retry'
   | 'lr-source-create'
   | 'lr-source-delete'
   | 'lr-source-pause'
   | 'lr-source-sync',
 never,
   {
+    'error-description'?: LyraKnowledgeBase['errorDescription'];
+    'error-heading'?: LyraKnowledgeBase['errorHeading'];
     'hide-create'?: LyraKnowledgeBase['hideCreate'];
     'hide-summary'?: LyraKnowledgeBase['hideSummary'];
   }
@@ -7384,6 +7403,7 @@ export type LyraPaginationReactProps = LyraReactElementProps<
   | 'disabled'
   | 'firstLabel'
   | 'format'
+  | 'hasNext'
   | 'hideSinglePage'
   | 'hrefTemplate'
   | 'itemLabel'
@@ -7436,6 +7456,7 @@ export type LyraPaginationReactProps = LyraReactElementProps<
     'aria-label'?: LyraPagination['accessibleLabel'];
     'boundary-count'?: LyraPagination['boundaryCount'];
     'first-label'?: LyraPagination['firstLabel'];
+    'has-next'?: LyraPagination['hasNext'];
     'hide-single-page'?: LyraPagination['hideSinglePage'];
     'href-template'?: LyraPagination['hrefTemplate'];
     'item-label'?: LyraPagination['itemLabel'];
@@ -10083,6 +10104,7 @@ export type LyraTableReactProps = LyraReactElementProps<
   | 'groupLabel'
   | 'hasHiddenPriorityColumns'
   | 'hasMore'
+  | 'hasNext'
   | 'heatTintScale'
   | 'hideColumnsLabel'
   | 'layout'
@@ -10112,7 +10134,8 @@ export type LyraTableReactProps = LyraReactElementProps<
   | 'spellcheck'
   | 'storageKey'
   | 'strings'
-  | 'totalItems',
+  | 'totalItems'
+  | 'unknownTotal',
   {},
   LyraTableEventMap,
   | 'blur'
@@ -10130,8 +10153,6 @@ export type LyraTableReactProps = LyraReactElementProps<
   | 'lr-selection-change'
   | 'lr-sort'
   | 'lr-sort-request',
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width'
   | '--lr-table-cell-color'
   | '--lr-table-cell-link-color'
   | '--lr-table-cell-link-hover-color'
@@ -10152,7 +10173,9 @@ export type LyraTableReactProps = LyraReactElementProps<
   | '--lr-table-resize-min-width'
   | '--lr-table-row-selected-bg'
   | '--lr-table-row-stripe-bg'
-  | '--lr-table-sticky-offset',
+  | '--lr-table-sticky-offset'
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width',
   {
     'accessible-label'?: LyraTable['accessibleLabel'];
     'autocorrect'?: LyraTable['autoCorrect'];
@@ -10168,6 +10191,7 @@ export type LyraTableReactProps = LyraReactElementProps<
     'filter-text'?: LyraTable['filterText'];
     'has-hidden-priority-columns'?: LyraTable['hasHiddenPriorityColumns'];
     'has-more'?: LyraTable['hasMore'];
+    'has-next'?: LyraTable['hasNext'];
     'hide-columns-label'?: LyraTable['hideColumnsLabel'];
     'loading-appearance'?: LyraTable['loadingAppearance'];
     'loading-label'?: LyraTable['loadingLabel'];
@@ -10187,6 +10211,7 @@ export type LyraTableReactProps = LyraReactElementProps<
     'sort-mode'?: LyraTable['sortMode'];
     'storage-key'?: LyraTable['storageKey'];
     'total-items'?: LyraTable['totalItems'];
+    'unknown-total'?: LyraTable['unknownTotal'];
   }
 >;
 
@@ -10472,6 +10497,9 @@ export type LyraThreadListReactProps = LyraReactElementProps<
   | 'activeConversationId'
   | 'collapsedGroupIds'
   | 'compact'
+  | 'error'
+  | 'errorDescription'
+  | 'errorHeading'
   | 'filter'
   | 'formatDate'
   | 'getGroupLabel'
@@ -10503,6 +10531,7 @@ export type LyraThreadListReactProps = LyraReactElementProps<
   | 'lr-group-toggle'
   | 'lr-group-toggle-request'
   | 'lr-query-change'
+  | 'lr-retry'
   | 'lr-select'
   | 'lr-thread-archive'
   | 'lr-thread-delete'
@@ -10530,6 +10559,8 @@ export type LyraThreadListReactProps = LyraReactElementProps<
   | '--lr-thread-list-search-radius',
   {
     'active-conversation-id'?: LyraThreadList['activeConversationId'];
+    'error-description'?: LyraThreadList['errorDescription'];
+    'error-heading'?: LyraThreadList['errorHeading'];
     'show-archived'?: LyraThreadList['showArchived'];
     'sticky-groups'?: LyraThreadList['stickyGroups'];
   }
@@ -11447,8 +11478,8 @@ export type LyraVirtualListReactProps = LyraReactElementProps<
   | 'lr-load-more'
   | 'lr-virtual-scroll'
   | 'lr-visible-range-change',
-  | '--lr-scrollbar-gutter'
-  | '--lr-scrollbar-width'
+  | '--lr-theme-scrollbar-gutter'
+  | '--lr-theme-scrollbar-width'
   | '--lr-virtual-list-height'
   | '--lr-virtual-list-hover-outline-color'
   | '--lr-virtual-list-hover-outline-offset'

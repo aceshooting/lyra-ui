@@ -58,7 +58,11 @@ value updates and reconnection while the offset updates live.
 **Themeable custom properties:** `--lr-progress-ring-size` (default
 `var(--size, var(--_lr-progress-ring-size))`; `--size` is the upstream alias, and the private
 `--_lr-progress-ring-size` is the `size` property's own tier value, `2.5rem` at the `m` default,
-unchanged — the ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
+unchanged — the ring's inline and block size), `--lr-progress-ring-track-width` (default
+`var(--lr-theme-progress-ring-track-width, var(--lr-size-4px))` — a dedicated, opt-in theme hook, set
+on `:root` or any ancestor to retune this ring specifically; it stays unset, and `4px` applies, whether
+or not `theme.css` is imported, unlike the widely-shared `--lr-theme-border-width-thick` this used to
+bridge directly, which `theme.css` declares at `3px`),
 `--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
 `--lr-progress-ring-indicator-color` (default

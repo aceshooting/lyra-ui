@@ -192,12 +192,12 @@ export interface LyraCodeBlockEventMap {
  *   light and dark-theme (shiki) rendering paths. Retints just that background, leaving every
  *   other `--lr-color-warning-quiet` surface alone. Inherits, so it can also be set on an
  *   ancestor or at the theme level.
- * @cssprop [--lr-scrollbar-width=auto] - Theme-level scrollbar width read by `body`; unset, renders
- *   identically to before. Set `--lr-theme-scrollbar-width` on `:root` or any ancestor to retune
- *   every internal scroll container in the library at once. Shared with `lr-code-block-core` (which
+ * @cssprop [--lr-theme-scrollbar-width=auto] - Opt-in theme-level scrollbar width honored by
+ *   `body`; unset, renders identically to before. Set on `:root` or any ancestor to retune every
+ *   internal scroll container in the library at once. Shared with `lr-code-block-core` (which
  *   reuses this stylesheet).
- * @cssprop [--lr-scrollbar-gutter=auto] - Theme-level scrollbar gutter read by `body`; see
- *   `--lr-scrollbar-width`.
+ * @cssprop [--lr-theme-scrollbar-gutter=auto] - Opt-in theme-level scrollbar gutter honored by
+ *   `body`; see `--lr-theme-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

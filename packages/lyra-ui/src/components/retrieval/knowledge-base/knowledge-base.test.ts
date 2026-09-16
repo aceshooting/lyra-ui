@@ -748,3 +748,144 @@ it('forwards every documented table part and renders the actual nested action tr
     stateSheet.remove();
   }
 });
+
+describe('error state', () => {
+  it('forwards `error`/`error-heading`/`error-description` to the nested table, keeping the toolbar and summary mounted', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base
+        error
+        error-heading="Sync backend unavailable"
+        error-description="Retry the connection."
+        .sources=${sources}
+      ></lr-knowledge-base>`
+    )) as LyraKnowledgeBase;
+    await tableEl(el).updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="summary"]')).to.exist;
+    const table = tableEl(el);
+    expect(table.error).to.equal(true);
+    const failed = table.shadowRoot!.querySelector('lr-empty[part="error"]');
+    expect(failed != null).to.equal(true);
+    expect(failed!.getAttribute('heading')).to.equal('Sync backend unavailable');
+    expect(failed!.getAttribute('description')).to.equal('Retry the connection.');
+    expect(table.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
+  });
+
+  it('lets `error` take precedence over the nested table\'s empty state', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base error .sources=${[]}></lr-knowledge-base>`
+    )) as LyraKnowledgeBase;
+    await tableEl(el).updateComplete;
+
+    const table = tableEl(el);
+    expect(table.shadowRoot!.querySelector('[part="error-row"]')).to.exist;
+    expect(
+      table.shadowRoot!.querySelector('lr-empty[part="empty"]') === null
+    ).to.equal(true);
+  });
+
+  it('leaves the nested table unset while `error` is false, so its own built-in empty state renders', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base .sources=${[]}></lr-knowledge-base>`
+    )) as LyraKnowledgeBase;
+    await tableEl(el).updateComplete;
+
+    const table = tableEl(el);
+    expect(table.error).to.equal(false);
+    expect(table.shadowRoot!.querySelector('[part="error-row"]') === null).to.equal(
+      true
+    );
+  });
+
+  it('re-proposes its own cancelable `lr-retry`, clearing `error` only when the default action runs', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base error .sources=${sources}></lr-knowledge-base>`
+    )) as LyraKnowledgeBase;
+    await tableEl(el).updateComplete;
+    const retryButton = tableEl(el).shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="retry-button"]'
+    )!;
+
+    let received: CustomEvent | undefined;
+    const vetoListener = (event: Event): void => {
+      received = event as CustomEvent;
+      event.preventDefault();
+    };
+    el.addEventListener('lr-retry', vetoListener);
+    retryButton.click();
+    expect(received?.cancelable).to.equal(true);
+    expect(received?.defaultPrevented).to.equal(true);
+    expect(el.error, 'a vetoed retry must not clear error').to.equal(true);
+    expect(
+      tableEl(el).error,
+      'a vetoed retry must not clear the nested table error either'
+    ).to.equal(true);
+    el.removeEventListener('lr-retry', vetoListener);
+
+    retryButton.click();
+    await el.updateComplete;
+    expect(el.error, 'the default action clears the outer error').to.equal(false);
+    expect(
+      tableEl(el).error,
+      'the outer property re-syncs the nested table on the next render'
+    ).to.equal(false);
+  });
+
+  it('does not leak the nested table\'s own `lr-retry` past this component\'s boundary as a second event', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base error .sources=${sources}></lr-knowledge-base>`
+    )) as LyraKnowledgeBase;
+    await tableEl(el).updateComplete;
+    const retryButton = tableEl(el).shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="retry-button"]'
+    )!;
+
+    let count = 0;
+    el.addEventListener('lr-retry', () => count++);
+    retryButton.click();
+    expect(count).to.equal(1);
+  });
+
+  it('lets the `error` slot override the nested table\'s built-in failed-load content, without hiding it when unused', async () => {
+    const withoutSlot = (await fixture(
+      html`<lr-knowledge-base error .sources=${sources}></lr-knowledge-base>`
+    )) as LyraKnowledgeBase;
+    await tableEl(withoutSlot).updateComplete;
+    expect(
+      tableEl(withoutSlot).shadowRoot!.querySelector('lr-empty[part="error"]')
+    ).to.exist;
+
+    const withSlot = (await fixture(
+      html`<lr-knowledge-base error .sources=${sources}
+        ><div slot="error">Custom failure UI</div></lr-knowledge-base
+      >`
+    )) as LyraKnowledgeBase;
+    await tableEl(withSlot).updateComplete;
+
+    // The built-in failed-load state generates no boxes once slotted content replaces it -- the
+    // same assertion `<lr-table>`'s own equivalent test makes.
+    const builtIn = tableEl(withSlot).shadowRoot!.querySelector(
+      '[part~="error"]'
+    ) as HTMLElement;
+    expect(builtIn.getClientRects().length).to.equal(0);
+
+    // This component's OWN re-projecting slot (nested one level inside the composed table's own
+    // `error` slot) is where the light-DOM content actually lands.
+    const ownSlot = withSlot.shadowRoot!.querySelector(
+      'slot[name="error"]'
+    ) as HTMLSlotElement;
+    expect(ownSlot != null).to.equal(true);
+    expect(
+      ownSlot.assignedElements({ flatten: true }).map((n) => n.textContent)
+    ).to.deep.equal(['Custom failure UI']);
+  });
+
+  it('is accessible in the error state', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base error .sources=${sources}></lr-knowledge-base>`
+    )) as LyraKnowledgeBase;
+    await tableEl(el).updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

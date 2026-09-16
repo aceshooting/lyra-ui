@@ -59,6 +59,16 @@ describe('lr-callout: composed close lr-icon-button', () => {
     ).to.equal('rgb(4, 5, 6)');
   });
 
+  it('inherits the composed control\'s non-zero paint transition, since callout.styles.ts declares none of its own', async () => {
+    const el = (await fixture(
+      html`<lr-callout closable>Message</lr-callout>`
+    )) as LyraCallout;
+    await el.updateComplete;
+    const computed = getComputedStyle(nativeControl(el));
+    expect(computed.transitionDuration).to.not.equal('0s');
+    expect(computed.transitionProperty).to.include('background-color');
+  });
+
   it('closes on Enter from the actually focused control', async () => {
     const el = (await fixture(
       html`<lr-callout closable>Message</lr-callout>`

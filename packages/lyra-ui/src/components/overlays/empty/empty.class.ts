@@ -83,7 +83,10 @@ export class LyraEmpty extends LyraElement {
    *  document order and repeating it is noise. Set it where the empty state replaces a result set
    *  the user just asked for. This is read once, when the component first mounts -- a later
    *  reconnection or adoption stages the existing content again rather than replaying it, and
-   *  later heading/description changes are announced either way. */
+   *  later heading/description changes are announced either way. Remove any host
+   *  `role="status"`/`role="alert"` hand-added before this property existed once it is set --
+   *  otherwise the initial text is announced twice, through the native role and again through the
+   *  shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;
 
   // `[part='icon']:empty` never matches because the part always contains a

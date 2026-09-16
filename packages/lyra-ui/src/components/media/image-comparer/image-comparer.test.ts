@@ -627,6 +627,36 @@ it('tints the divider on hover and deepens it while the drag handle is pressed',
   }
 });
 
+it('declares a non-zero transition on the divider background so hover/press paint eases like lr-button', async () => {
+  const el = (await fixture(html`
+    <lr-image-comparer aria-label="Compare images">
+      <div slot="before">Before</div>
+      <div slot="after">After</div>
+    </lr-image-comparer>
+  `)) as LyraImageComparer;
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  const computed = getComputedStyle(divider);
+  expect(computed.transitionDuration).to.not.equal('0s');
+  expect(computed.transitionProperty).to.include('background-color');
+});
+
+it('leaves the resting divider background unchanged (unset-regression)', async () => {
+  const el = (await fixture(html`
+    <lr-image-comparer aria-label="Compare images">
+      <div slot="before">Before</div>
+      <div slot="after">After</div>
+    </lr-image-comparer>
+  `)) as LyraImageComparer;
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  const sharedSurface = getComputedStyle(el).getPropertyValue('--lr-color-surface').trim();
+  const probe = document.createElement('div');
+  probe.style.color = sharedSurface;
+  el.shadowRoot!.appendChild(probe);
+  const resolvedSurface = getComputedStyle(probe).color;
+  probe.remove();
+  expect(getComputedStyle(divider).backgroundColor).to.equal(resolvedSurface);
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`
     <lr-image-comparer aria-label="Compare images">

@@ -1317,6 +1317,83 @@
       "themeInput": "--lr-theme-font-weight-semibold"
     },
     {
+      "name": "--lr-form-control-height-2xs",
+      "type": "dimension",
+      "group": "control",
+      "scope": "shared",
+      "description": "Canonical shared component token for form control height 2xs.",
+      "values": {
+        "light": "var(--lr-theme-form-control-height-2xs, 1.25rem)"
+      },
+      "themeInput": "--lr-theme-form-control-height-2xs"
+    },
+    {
+      "name": "--lr-form-control-height-l",
+      "type": "dimension",
+      "group": "control",
+      "scope": "shared",
+      "description": "Canonical shared component token for form control height l.",
+      "values": {
+        "light": "var(--lr-theme-form-control-height-l, 3rem)"
+      },
+      "themeInput": "--lr-theme-form-control-height-l"
+    },
+    {
+      "name": "--lr-form-control-height-m",
+      "type": "dimension",
+      "group": "control",
+      "scope": "shared",
+      "description": "Canonical shared component token for form control height m.",
+      "values": {
+        "light": "var(--lr-theme-form-control-height-m, 2.5rem)"
+      },
+      "themeInput": "--lr-theme-form-control-height-m"
+    },
+    {
+      "name": "--lr-form-control-height-s",
+      "type": "dimension",
+      "group": "control",
+      "scope": "shared",
+      "description": "Canonical shared component token for form control height s.",
+      "values": {
+        "light": "var(--lr-theme-form-control-height-s, 1.875rem)"
+      },
+      "themeInput": "--lr-theme-form-control-height-s"
+    },
+    {
+      "name": "--lr-form-control-height-xl",
+      "type": "dimension",
+      "group": "control",
+      "scope": "shared",
+      "description": "Canonical shared component token for form control height xl.",
+      "values": {
+        "light": "var(--lr-theme-form-control-height-xl, 3.5rem)"
+      },
+      "themeInput": "--lr-theme-form-control-height-xl"
+    },
+    {
+      "name": "--lr-form-control-height-xs",
+      "type": "dimension",
+      "group": "control",
+      "scope": "shared",
+      "description": "Canonical shared component token for form control height xs.",
+      "values": {
+        "light": "var(--lr-theme-form-control-height-xs, 1.5rem)"
+      },
+      "themeInput": "--lr-theme-form-control-height-xs"
+    },
+    {
+      "name": "--lr-form-control-radius",
+      "type": "dimension",
+      "group": "control",
+      "scope": "shared",
+      "description": "Canonical shared component token for form control radius; falls back to the shared corner radius when no per-control-family override is set.",
+      "values": {
+        "light": "var(--lr-theme-form-control-radius, var(--lr-radius))"
+      },
+      "themeInput": "--lr-theme-form-control-radius"
+    },
+    {
       "name": "--lr-graph-cat-1",
       "type": "color",
       "group": "color",
@@ -2261,28 +2338,6 @@
         "light": "var(--lr-theme-scroll-fade-size, 2rem)"
       },
       "themeInput": "--lr-theme-scroll-fade-size"
-    },
-    {
-      "name": "--lr-scrollbar-gutter",
-      "type": "string",
-      "group": "layout",
-      "scope": "shared",
-      "description": "Canonical shared component token for scrollbar gutter.",
-      "values": {
-        "light": "var(--lr-theme-scrollbar-gutter, auto)"
-      },
-      "themeInput": "--lr-theme-scrollbar-gutter"
-    },
-    {
-      "name": "--lr-scrollbar-width",
-      "type": "string",
-      "group": "layout",
-      "scope": "shared",
-      "description": "Canonical shared component token for scrollbar width.",
-      "values": {
-        "light": "var(--lr-theme-scrollbar-width, auto)"
-      },
-      "themeInput": "--lr-theme-scrollbar-width"
     },
     {
       "name": "--lr-shadow",
@@ -6157,6 +6212,66 @@
       "description": "Application theme input for --lr-font-weight-semibold.",
       "values": {
         "light": "600"
+      }
+    },
+    {
+      "name": "--lr-theme-form-control-height-2xs",
+      "type": "dimension",
+      "group": "control",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-form-control-height-2xs.",
+      "values": {
+        "light": "1.25rem"
+      }
+    },
+    {
+      "name": "--lr-theme-form-control-height-l",
+      "type": "dimension",
+      "group": "control",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-form-control-height-l.",
+      "values": {
+        "light": "3rem"
+      }
+    },
+    {
+      "name": "--lr-theme-form-control-height-m",
+      "type": "dimension",
+      "group": "control",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-form-control-height-m.",
+      "values": {
+        "light": "2.5rem"
+      }
+    },
+    {
+      "name": "--lr-theme-form-control-height-s",
+      "type": "dimension",
+      "group": "control",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-form-control-height-s.",
+      "values": {
+        "light": "1.875rem"
+      }
+    },
+    {
+      "name": "--lr-theme-form-control-height-xl",
+      "type": "dimension",
+      "group": "control",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-form-control-height-xl.",
+      "values": {
+        "light": "3.5rem"
+      }
+    },
+    {
+      "name": "--lr-theme-form-control-height-xs",
+      "type": "dimension",
+      "group": "control",
+      "scope": "theme-input",
+      "description": "Application theme input for --lr-form-control-height-xs.",
+      "values": {
+        "light": "1.5rem"
       }
     },
     {

@@ -449,7 +449,9 @@ export const OptionIcons: Story = {
  *  dashboard use case finally combine. Which entry produced a commit rides that edit's own
  *  `lr-input` as `appliedPreset` — the log below shows it alongside `filterId`, which is what a
  *  bar serializing into a query string persists so "Last 7 days" still means the last 7 days after
- *  the next reload. Picking days by hand instead leaves it `undefined`. */
+ *  the next reload. Picking days by hand instead leaves it `undefined`. Each preset's `id` is a
+ *  caller-owned correlation key, never read by this component, that also rides `appliedPreset.id`
+ *  — the value a query string actually persists, rather than the label text. */
 export const DateRangePresets: Story = {
   render: () => {
     const filters: LyraFilterBarFilterDefinition[] = [
@@ -460,10 +462,10 @@ export const DateRangePresets: Story = {
         min: '2020-01-01',
         max: '2030-12-31',
         presets: [
-          { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
-          { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19' },
-          { label: 'This month', start: '2026-08-01', end: '2026-08-31' },
-          { label: 'All time' },
+          { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19', id: 'last-7-days' },
+          { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19', id: 'last-30-days' },
+          { label: 'This month', start: '2026-08-01', end: '2026-08-31', id: 'this-month' },
+          { label: 'All time', id: 'all-time' },
         ],
       },
       {
@@ -480,12 +482,12 @@ export const DateRangePresets: Story = {
     const onInput = (e: Event) => {
       const detail = (e as CustomEvent).detail as {
         filterId?: string;
-        appliedPreset?: { label: string };
+        appliedPreset?: { label: string; id?: string };
       };
       const log = (e.target as HTMLElement).closest('.demo')!.querySelector('.log') as HTMLElement;
       log.textContent = `filterId: ${detail.filterId} · appliedPreset: ${
         detail.appliedPreset?.label ?? '(none)'
-      }`;
+      } (id: ${detail.appliedPreset?.id ?? '—'})`;
     };
     return html`
       <div class="demo" style="max-width: 50rem; display: flex; flex-direction: column; gap: 1rem">

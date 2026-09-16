@@ -42,7 +42,7 @@ unchanged.
 > properties are the other safe lever, because no component re-declares another component's
 > namespace.
 
-## Direct theme-backed tokens (265)
+## Direct theme-backed tokens (270)
 
 | Internal token | `--lr-theme-*` input | Light/default fallback | Mode overrides |
 |---|---|---|---|
@@ -143,6 +143,13 @@ unchanged.
 | `--lr-font-weight-medium` | `--lr-theme-font-weight-medium` | `500` | — |
 | `--lr-font-weight-normal` | `--lr-theme-font-weight-normal` | `400` | — |
 | `--lr-font-weight-semibold` | `--lr-theme-font-weight-semibold` | `600` | — |
+| `--lr-form-control-height-2xs` | `--lr-theme-form-control-height-2xs` | `1.25rem` | — |
+| `--lr-form-control-height-l` | `--lr-theme-form-control-height-l` | `3rem` | — |
+| `--lr-form-control-height-m` | `--lr-theme-form-control-height-m` | `2.5rem` | — |
+| `--lr-form-control-height-s` | `--lr-theme-form-control-height-s` | `1.875rem` | — |
+| `--lr-form-control-height-xl` | `--lr-theme-form-control-height-xl` | `3.5rem` | — |
+| `--lr-form-control-height-xs` | `--lr-theme-form-control-height-xs` | `1.5rem` | — |
+| `--lr-form-control-radius` | `--lr-theme-form-control-radius` | `var(--lr-radius)` | — |
 | `--lr-graph-cat-1` | `--lr-theme-graph-cat-1` | `#8250df` | dark: `var(--lr-theme-graph-cat-1, #b58cff)`<br>forcedColors: `Highlight` |
 | `--lr-graph-cat-2` | `--lr-theme-graph-cat-2` | `#bf3989` | dark: `var(--lr-theme-graph-cat-2, #ff7ab2)`<br>forcedColors: `LinkText` |
 | `--lr-graph-cat-3` | `--lr-theme-graph-cat-3` | `#0a7d91` | dark: `var(--lr-theme-graph-cat-3, #4fd1c5)`<br>forcedColors: `CanvasText` |
@@ -173,8 +180,6 @@ unchanged.
 | `--lr-radius-pill` | `--lr-theme-border-radius-pill` | `999px` | — |
 | `--lr-radius-xs` | `--lr-theme-border-radius-xs` | `2px` | — |
 | `--lr-scroll-fade-size` | `--lr-theme-scroll-fade-size` | `2rem` | — |
-| `--lr-scrollbar-gutter` | `--lr-theme-scrollbar-gutter` | `auto` | — |
-| `--lr-scrollbar-width` | `--lr-theme-scrollbar-width` | `auto` | — |
 | `--lr-shadow-color` | `--lr-theme-shadow-color` | `0 0 0` | — |
 | `--lr-shadow-l` | `--lr-theme-shadow-l` | `0 6px 16px rgb(var(--lr-shadow-color) / 0.18)` | dark: `var(--lr-theme-shadow-l, 0 8px 20px rgb(var(--lr-shadow-color) / 0.56))` |
 | `--lr-shadow-m` | `--lr-theme-shadow-m` | `0 2px 8px rgb(var(--lr-shadow-color) / 0.15)` | dark: `var(--lr-theme-shadow-m, 0 2px 8px rgb(var(--lr-shadow-color) / 0.46))` |

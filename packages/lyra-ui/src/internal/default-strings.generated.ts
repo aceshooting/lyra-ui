@@ -851,6 +851,7 @@ export const LYRA_DEFAULT_pageRailPageHighlighted: LyraMessage = {
     other: 'Page {page}, {count} highlighted passages',
   };
 export const LYRA_DEFAULT_paginationApplied: LyraMessage = 'Page {page} of {totalPages}';
+export const LYRA_DEFAULT_paginationAppliedUnknownTotal: LyraMessage = 'Page {page}';
 export const LYRA_DEFAULT_paginationEmptySummary: LyraMessage = '{total} {itemLabel}';
 export const LYRA_DEFAULT_paginationFirstPage: LyraMessage = 'First page';
 export const LYRA_DEFAULT_paginationJumpToPage: LyraMessage = 'Jump to page {page}';

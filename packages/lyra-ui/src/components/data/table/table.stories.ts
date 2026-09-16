@@ -410,6 +410,33 @@ export const Paginated: Story = {
     ></lr-table>`,
 };
 
+/** `unknown-total` forwards `<lr-pagination>`'s own indeterminate mode for a server API that never
+ *  returns a total item count, only whether one more page exists (`has-next`). The nested pager
+ *  renders previous/next plus a page-number field, no numbered page list, no item-range summary. */
+export const ServerPaginationUnknownTotal: Story = {
+  name: 'Server pagination, unknown total',
+  render: () => {
+    const serverPages: readonly DemoRow[][] = [rows.slice(0, 2), rows.slice(2)];
+    return html`<lr-table
+      pagination-mode="server"
+      unknown-total
+      page-size="2"
+      page="1"
+      has-next
+      .columns=${columns}
+      .rows=${serverPages[0]!}
+      .rowKey=${(r: DemoRow) => r.id}
+      @lr-page-change=${(event: CustomEvent<{ page: number }>) => {
+        const table = event.currentTarget as HTMLElement & { page: number; rows: DemoRow[]; hasNext: boolean };
+        const page = event.detail.page;
+        table.page = page;
+        table.rows = serverPages[page - 1] ?? [];
+        table.hasNext = page < serverPages.length;
+      }}
+    ></lr-table>`;
+  },
+};
+
 export const Loading: Story = {
   render: () => html`<lr-table loading .columns=${columns} .rows=${rows}></lr-table>`,
 };

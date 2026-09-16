@@ -56,7 +56,10 @@ at the same size tier, so the toolbar row renders as one flush line.
   the user just ran and nothing else reports the outcome; leave it unset for a search that is part
   of the page a user is arriving on, whose visible error or empty state is already read in document
   order. Read once, when the search first mounts: a later reconnection or adoption stages the
-  existing state again rather than replaying it, and later transitions are announced either way
+  existing state again rather than replaying it, and later transitions are announced either way.
+  Remove any host `role="status"`/`role="alert"` hand-added before this property existed once it
+  is set — otherwise the initial state is announced twice, through the native role and again
+  through the shared sink
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
 - `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized

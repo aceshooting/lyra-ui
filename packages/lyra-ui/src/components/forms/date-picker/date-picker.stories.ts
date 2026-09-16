@@ -283,10 +283,12 @@ export const ScopedStateTheme: Story = {
 /**
  * A dashboard-wide time filter is one of the commonest analytics controls. `presets` renders a
  * quick-range row above the calendar in range mode, reusing `<lr-time-range>`'s already-shipped
- * `label`/`start`/`end` preset shape so the library has one preset vocabulary rather than two —
- * the only difference is the unit (ISO dates instead of numbers). Applying one commits exactly as a
- * two-click selection would, so existing change handling needs no special case. The selected
- * preset's background, border, and foreground hooks remain independently themeable.
+ * `label`/`start`/`end`/`id` preset shape so the library has one preset vocabulary rather than
+ * two — the only difference is the unit (ISO dates instead of numbers). Applying one commits
+ * exactly as a two-click selection would, so existing change handling needs no special case. The
+ * optional `id` is a caller-owned correlation key, echoed back on `appliedPreset.id`, that this
+ * component never reads. The selected preset's background, border, and foreground hooks remain
+ * independently themeable.
  */
 export const RangePresets: Story = {
   render: () => html`
@@ -299,9 +301,9 @@ export const RangePresets: Story = {
         --lr-date-picker-preset-selected-color: var(--lr-color-on-success);
       "
       .presets=${[
-        { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
-        { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19' },
-        { label: 'This month', start: '2026-08-01', end: '2026-08-31' },
+        { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19', id: 'last-7-days' },
+        { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19', id: 'last-30-days' },
+        { label: 'This month', start: '2026-08-01', end: '2026-08-31', id: 'this-month' },
       ]}
     ></lr-date-picker>
   `,

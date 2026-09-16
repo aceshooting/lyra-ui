@@ -574,6 +574,42 @@ it('"Clear selection" empties selectedDocumentIds and emits lr-selection-change 
   expect((el.shadowRoot!.querySelector('[part="selection-bar"]')) == null).to.be.true;
 });
 
+it("declares a non-zero transition on the clear-selection link colour so press paint eases like lr-button", async () => {
+  const el = (await fixture(
+    html`<lr-document-library
+      .documents=${docs}
+      .selectedDocumentIds=${["d1"]}
+    ></lr-document-library>`
+  )) as LyraDocumentLibrary;
+  await el.updateComplete;
+  const clearButton = el.shadowRoot!.querySelector(
+    '[part="clear-selection"]'
+  ) as HTMLElement;
+  const computed = getComputedStyle(clearButton);
+  expect(computed.transitionDuration).to.not.equal("0s");
+  expect(computed.transitionProperty).to.include("color");
+});
+
+it("leaves the resting clear-selection link colour unchanged (unset-regression)", async () => {
+  const el = (await fixture(
+    html`<lr-document-library
+      .documents=${docs}
+      .selectedDocumentIds=${["d1"]}
+    ></lr-document-library>`
+  )) as LyraDocumentLibrary;
+  await el.updateComplete;
+  const clearButton = el.shadowRoot!.querySelector(
+    '[part="clear-selection"]'
+  ) as HTMLElement;
+  const sharedBrand = getComputedStyle(el).getPropertyValue("--lr-color-brand").trim();
+  const probe = document.createElement("div");
+  probe.style.color = sharedBrand;
+  el.shadowRoot!.appendChild(probe);
+  const resolvedBrand = getComputedStyle(probe).color;
+  probe.remove();
+  expect(getComputedStyle(clearButton).color).to.equal(resolvedBrand);
+});
+
 it("prunes a selected id that no longer exists in documents, without firing lr-selection-change", async () => {
   const el = (await fixture(
     html`<lr-document-library
@@ -1032,5 +1068,133 @@ describe("lr-document-library contains the composed lr-combobox's lr-activate", 
       escaped,
       "this library's documented surface is lr-library-filter; the child's raw event never escapes"
     ).to.equal(0);
+  });
+});
+
+describe("error state", () => {
+  it("forwards error/error-heading/error-description to the nested table, keeping the toolbar mounted", async () => {
+    const el = (await fixture(
+      html`<lr-document-library
+        error
+        error-heading="Inventory service unavailable"
+        error-description="Retry the connection."
+        .documents=${docs}
+      ></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement & {
+      error: boolean;
+    };
+    await (table as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.exist;
+    expect(table.error).to.equal(true);
+    const failed = table.shadowRoot!.querySelector('lr-empty[part="error"]');
+    expect(failed != null).to.equal(true);
+    expect(failed!.getAttribute("heading")).to.equal("Inventory service unavailable");
+    expect(failed!.getAttribute("description")).to.equal("Retry the connection.");
+    expect(table.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
+  });
+
+  it("lets error take precedence over the nested table's empty state", async () => {
+    const el = (await fixture(
+      html`<lr-document-library error .documents=${[]}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    await (table as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+
+    expect(table.shadowRoot!.querySelector('[part="error-row"]')).to.exist;
+    expect(
+      table.shadowRoot!.querySelector('lr-empty[part="empty"]') === null
+    ).to.equal(true);
+  });
+
+  it("re-proposes its own cancelable lr-retry, clearing error only when the default action runs", async () => {
+    const el = (await fixture(
+      html`<lr-document-library error .documents=${docs}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement & {
+      error: boolean;
+    };
+    await (table as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const retryButton = table.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="retry-button"]'
+    )!;
+
+    let received: CustomEvent | undefined;
+    const vetoListener = (event: Event): void => {
+      received = event as CustomEvent;
+      event.preventDefault();
+    };
+    el.addEventListener("lr-retry", vetoListener);
+    retryButton.click();
+    expect(received?.cancelable).to.equal(true);
+    expect(received?.defaultPrevented).to.equal(true);
+    expect(el.error, "a vetoed retry must not clear error").to.equal(true);
+    expect(
+      table.error,
+      "a vetoed retry must not clear the nested table error either"
+    ).to.equal(true);
+    el.removeEventListener("lr-retry", vetoListener);
+
+    retryButton.click();
+    await el.updateComplete;
+    expect(el.error, "the default action clears the outer error").to.equal(false);
+    expect(
+      table.error,
+      "the outer property re-syncs the nested table on the next render"
+    ).to.equal(false);
+  });
+
+  it("does not leak the nested table's own lr-retry past this component's boundary as a second event", async () => {
+    const el = (await fixture(
+      html`<lr-document-library error .documents=${docs}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    await (table as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const retryButton = table.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="retry-button"]'
+    )!;
+
+    let count = 0;
+    el.addEventListener("lr-retry", () => count++);
+    retryButton.click();
+    expect(count).to.equal(1);
+  });
+
+  it("lets the error slot override the nested table's built-in failed-load content without hiding it when unused", async () => {
+    const withoutSlot = (await fixture(
+      html`<lr-document-library error .documents=${docs}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const withoutTable = withoutSlot.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    await (withoutTable as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    expect(withoutTable.shadowRoot!.querySelector('lr-empty[part="error"]')).to.exist;
+
+    const withSlot = (await fixture(
+      html`<lr-document-library error .documents=${docs}
+        ><div slot="error">Custom failure UI</div></lr-document-library
+      >`
+    )) as LyraDocumentLibrary;
+    const withTable = withSlot.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    await (withTable as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+
+    const builtIn = withTable.shadowRoot!.querySelector('[part~="error"]') as HTMLElement;
+    expect(builtIn.getClientRects().length).to.equal(0);
+
+    const ownSlot = withSlot.shadowRoot!.querySelector(
+      'slot[name="error"]'
+    ) as HTMLSlotElement;
+    expect(ownSlot != null).to.equal(true);
+    expect(
+      ownSlot.assignedElements({ flatten: true }).map((n) => n.textContent)
+    ).to.deep.equal(["Custom failure UI"]);
+  });
+
+  it("is accessible in the error state", async () => {
+    const el = (await fixture(
+      html`<lr-document-library error .documents=${docs}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    await (table as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    await expect(el).to.be.accessible();
   });
 });

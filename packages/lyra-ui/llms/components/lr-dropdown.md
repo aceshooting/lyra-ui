@@ -128,7 +128,8 @@ default; style it only to debug the travel region.
 `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
 `--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
-`--lr-positioning-strategy` override documented on `<lr-popover>` above.
+`--lr-positioning-strategy` override documented on `<lr-popover>`
+(`llms/components/lr-popover.md`).
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">

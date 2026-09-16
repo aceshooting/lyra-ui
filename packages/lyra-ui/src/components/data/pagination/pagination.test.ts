@@ -855,6 +855,116 @@ it("clamps an oversized or negative page to the last/first valid page instead of
   expect(input.value).to.equal("1"); // non-finite falls back to the first valid page
 });
 
+describe("indeterminate mode (total=\"-1\")", () => {
+  it("enables next by default with an unknown total and hides the numbered list and page-count", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="-1" page="3" with-summary with-edges></lr-pagination>`
+    );
+
+    expect(el.totalPages).to.equal(0);
+    const nextButton = el.shadowRoot!.querySelector(
+      '[part~="next-button"]'
+    ) as HTMLButtonElement;
+    expect(nextButton.disabled).to.equal(false);
+    // No total to lay a numbered list, an item-range summary, or a "last page" edge button
+    // against -- all three are suppressed even though `with-summary`/`with-edges` are set.
+    expect(el.shadowRoot!.querySelector('[part="pages"]') === null, 'no numbered list').to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="summary"]') === null, 'no item-range summary').to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part~="last-button"]') === null, 'no last-page edge button').to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="page-count"]') === null, 'no page count').to.equal(true);
+    const input = el.shadowRoot!.querySelector(
+      '[part="page-input"]'
+    ) as HTMLInputElement;
+    expect(input.value).to.equal("3");
+    expect(input.hasAttribute("max")).to.equal(false);
+  });
+
+  it("disables previous at page 1 while next stays enabled", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="-1" page="1"></lr-pagination>`
+    );
+
+    const previousButton = el.shadowRoot!.querySelector(
+      '[part~="previous-button"]'
+    ) as HTMLButtonElement;
+    const nextButton = el.shadowRoot!.querySelector(
+      '[part~="next-button"]'
+    ) as HTMLButtonElement;
+    expect(previousButton.disabled).to.equal(true);
+    expect(nextButton.disabled).to.equal(false);
+  });
+
+  it("disables next once the caller reports has-next false", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="-1" page="4" .hasNext=${false}></lr-pagination>`
+    );
+
+    const nextButton = el.shadowRoot!.querySelector(
+      '[part~="next-button"]'
+    ) as HTMLButtonElement;
+    expect(nextButton.disabled).to.equal(true);
+
+    let changed = false;
+    el.addEventListener("lr-page-change", () => {
+      changed = true;
+    });
+    nextButton.click();
+    await el.updateComplete;
+    expect(changed, "a disabled next must not accept a page request").to.equal(false);
+    expect(el.page).to.equal(4);
+  });
+
+  it("does not strand focus when a page request is accepted with an unknown total", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="-1" page="4"></lr-pagination>`
+    );
+    el.addEventListener("lr-page-change", (event) => {
+      el.page = (event as CustomEvent<{ page: number }>).detail.page;
+    });
+    const nextButton = el.shadowRoot!.querySelector(
+      '[part~="next-button"]'
+    ) as HTMLButtonElement;
+    nextButton.focus();
+    nextButton.click();
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector(
+      '[part="page-input"]'
+    ) as HTMLInputElement;
+    expect(input.value).to.equal("5");
+    expect(el.shadowRoot!.activeElement === input).to.equal(true);
+  });
+
+  it("announces the applied page through a localized, total-free message with no literal fallback", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="-1" page="1"></lr-pagination>`
+    );
+    el.page = 4;
+    await el.updateComplete;
+
+    const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]')!;
+    expect(liveRegion.textContent).to.equal("Page 4");
+    expect(sinkTexts("polite")).to.deep.equal(["Page 4"]);
+  });
+
+  it("still renders the ordinary empty state for any other negative total", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="-2" page="1" with-summary></lr-pagination>`
+    );
+
+    expect(el.totalPages).to.equal(0);
+    const controls = [
+      ...el.shadowRoot!.querySelectorAll<HTMLButtonElement | HTMLInputElement>(
+        "button, input"
+      ),
+    ];
+    expect(controls.every((control) => control.disabled)).to.equal(true);
+    expect(
+      el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()
+    ).to.equal("0 items");
+  });
+});
+
 describe("control padding knob (--lr-pagination-control-padding)", () => {
   const nextButton = (el: LyraPagination): HTMLElement =>
     el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLElement;
@@ -1126,6 +1236,27 @@ describe("nav button hover specificity", () => {
       style.remove();
     }
   });
+});
+
+it("declares a non-zero transition on the next-button paint so hover/press ease like lr-button", async () => {
+  const el = await pagination();
+  const next = el.shadowRoot!.querySelector<HTMLElement>('[part~="next-button"]')!;
+  const computed = getComputedStyle(next);
+  expect(computed.transitionDuration).to.not.equal("0s");
+  expect(computed.transitionProperty).to.include("background-color");
+  expect(computed.transitionProperty).to.include("border-color");
+});
+
+it("leaves the resting next-button background unchanged (unset-regression)", async () => {
+  const el = await pagination();
+  const next = el.shadowRoot!.querySelector<HTMLElement>('[part~="next-button"]')!;
+  const sharedSurface = getComputedStyle(el).getPropertyValue("--lr-color-surface").trim();
+  const probe = document.createElement("div");
+  probe.style.color = sharedSurface;
+  el.shadowRoot!.appendChild(probe);
+  const resolvedSurface = getComputedStyle(probe).color;
+  probe.remove();
+  expect(getComputedStyle(next).backgroundColor).to.equal(resolvedSurface);
 });
 
 describe("page-input invalid-state specificity (regression)", () => {

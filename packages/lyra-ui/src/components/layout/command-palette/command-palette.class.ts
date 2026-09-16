@@ -14,9 +14,10 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { styles } from './command-palette.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { closeIcon } from '../../../internal/icons.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Fallbacks only. The rendered heights come from `--lr-command-palette-row-height` /
@@ -256,6 +257,8 @@ export interface LyraCommandPaletteEventMap {
  * @csspart dialog - Palette dialog.
  * @csspart search - The search row wrapping the leading icon and the `input`.
  * @csspart input - Search input.
+ * @csspart clear-button - The button that clears the search field, replacing the native
+ *   search-cancel glyph suppressed by this field's own reset; rendered only while it has a value.
  * @csspart list - Command list.
  * @csspart list-spacer - Virtual result extent inside the scrolling list.
  * @csspart command-group - A labeled ARIA group containing visible command options.
@@ -297,6 +300,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
     commandPaletteEmpty: LYRA_DEFAULT_commandPaletteEmpty,
     commandPaletteLabel: LYRA_DEFAULT_commandPaletteLabel,
     commandPalettePlaceholder: LYRA_DEFAULT_commandPalettePlaceholder,
@@ -796,6 +800,20 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.setActiveIndex(rows, this.seekEnabled(rows, 0, 1));
   };
 
+  // The native `::-webkit-search-cancel-button` reset in command-palette.styles.ts removes the
+  // browser's own clear affordance with no replacement -- this button, and the search input's
+  // refocus afterward, restore a real one-click way to reset the filter.
+  private onClearSearch = (): void => {
+    if (this.queryText === '') return;
+    this.queryText = '';
+    this.listScrollTop = 0;
+    const list = this.renderRoot.querySelector<HTMLElement>('[part="list"]');
+    if (list) list.scrollTop = 0;
+    const rows = this.filtered;
+    this.setActiveIndex(rows, this.seekEnabled(rows, 0, 1));
+    this.renderRoot.querySelector<HTMLInputElement>('[part="input"]')?.focus();
+  };
+
   // Native focus/blur neither bubble nor cross the shadow boundary, so a host listener on
   // <lr-command-palette> itself never hears them without this -- mirrors
   // <lr-tool-param-form>'s identical native-input focus/blur bridge.
@@ -978,6 +996,16 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
             @focus=${this.onSearchFocus}
             @blur=${this.onSearchBlur}
           />
+          ${this.queryText !== ''
+            ? html`<button
+                type="button"
+                part="clear-button"
+                aria-label=${this.localize('clear')}
+                @click=${this.onClearSearch}
+              >
+                <span aria-hidden="true" inert>${closeIcon()}</span>
+              </button>`
+            : nothing}
         </div>
         <div
           part="list"

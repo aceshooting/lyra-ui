@@ -150,6 +150,24 @@ export const Compact: Story = {
   ></lr-pagination>`,
 };
 
+/** `total="-1"` enters indeterminate mode for a server API that never returns a total -- previous
+ *  and next only, with a page-number field and no `/ totalPages` readout. `hasNext` (defaulting to
+ *  `true`) is the one extra signal that mode needs; previous stays disabled at page 1 exactly as in
+ *  the known-total path. This example flips `hasNext` off past page 5 to simulate an API that has
+ *  reported no further page. */
+export const IndeterminateTotal: Story = {
+  name: 'Indeterminate total (total="-1")',
+  render: () => {
+    const apply = (event: Event): void => {
+      const el = event.currentTarget as LyraPagination;
+      const page = (event as CustomEvent<{ page: number }>).detail.page;
+      el.page = page;
+      el.hasNext = page < 5;
+    };
+    return html`<lr-pagination total="-1" page="1" has-next @lr-page-change=${apply}></lr-pagination>`;
+  },
+};
+
 export const CancelableRequest: Story = {
   parameters: {
     docs: {

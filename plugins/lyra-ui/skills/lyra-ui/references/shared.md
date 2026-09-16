@@ -645,6 +645,75 @@ Three things follow from `content` being a consumer-supplied string:
   `:state(required)`, and still fails `valueMissing`. If the marker is the only way a form
   communicates requiredness, replace it with visible copy rather than removing it.
 
+## Presenting hint text as a compact disclosure
+
+Every form control's `hint` chrome (props + matching named slot + `hint` CSS part, the same shape
+`<lr-select>` documents) renders as permanent text under the control. **There is no
+`hint-display`/`hint-placement` attribute anywhere in the library, on any control, and none is
+planned** — a compact icon-triggered presentation is a composition you build from existing pieces,
+not a built-in render mode. Permanent text is also the reason a hint reads reliably across a form in
+the first place: a control that silently switched between "text under the control" and "icon that
+opens a popup" from one attribute would desync sibling field heights at exactly the moment it
+removed the visual cue that anything had changed.
+
+The recipe: compose an icon-only `<lr-icon-button>` inside an `<lr-tooltip>` — or `<lr-details>` for
+an inline expand/collapse instead of a hover/focus popup — and slot the pair into the control's
+`label` slot, beside its regular label text. This works on every control shipping that label/hint
+slot pair (`lr-input`, `lr-textarea`, `lr-select`, `lr-combobox`, `lr-number-input`, `lr-date-input`,
+and siblings). Keep the same copy in the control's own `hint` slot as well, wrapped in the
+`lr-visually-hidden` utility class (opt into it with `@import "@aceshooting/lyra-ui/utilities.css";`
+— see "Optional native styles and CSS utilities" below): that keeps the text wired into the
+control's `aria-describedby`, which is the entire reason the built-in `hint` chrome exists, while
+removing its visible, height-affecting rendering. The compact trigger is additive to that
+description, not a replacement for it — `<lr-tooltip>` separately gives its own trigger (the icon
+button) an accessible description built from the tooltip's content while open, which is a second,
+narrower win: it reaches only the icon button's own focus, not the field's `aria-describedby` chain,
+which is exactly why the visually-hidden copy in `hint` still matters.
+
+```html
+<lr-input label="API key" name="apiKey">
+  <lr-tooltip
+    slot="label"
+    content="Used to authenticate requests server-side. Rotate it if it leaks."
+  >
+    <lr-icon-button
+      icon="info-circle"
+      label="More info about API key"
+    ></lr-icon-button>
+  </lr-tooltip>
+  <span slot="hint" class="lr-visually-hidden"
+    >Used to authenticate requests server-side. Rotate it if it leaks.</span
+  >
+</lr-input>
+```
+
+```js
+import '@aceshooting/lyra-ui/components/lr-input.js';
+import '@aceshooting/lyra-ui/components/lr-tooltip.js';
+import '@aceshooting/lyra-ui/components/lr-icon-button.js';
+```
+
+`icon="info-circle"` above illustrates the pattern; `<lr-icon>`'s own built-in glyph set has no info
+symbol (see `llms/components/lr-icon.md` for the exact list), so register a real icon library with
+`registerIconLibrary()`, set `library` alongside `icon`, or slot custom SVG geometry into the icon
+button's own default slot instead.
+
+`lr-checkbox` and `lr-switch` have no separate `label` slot — their default slot _is_ the clickable
+label — so there is nowhere inside either control to slot the trigger into. Render it as a DOM
+sibling instead, still paired with a visually-hidden copy inside the control's own `hint` slot:
+
+```html
+<span class="lr-cluster lr-items-center lr-gap-xs">
+  <lr-checkbox name="marketingOptIn">
+    Send me product updates
+    <span slot="hint" class="lr-visually-hidden">We email at most once a month.</span>
+  </lr-checkbox>
+  <lr-tooltip content="We email at most once a month.">
+    <lr-icon-button icon="info-circle" label="More info about product updates"></lr-icon-button>
+  </lr-tooltip>
+</span>
+```
+
 ## The shared styling vocabulary
 
 Four property names carry one meaning library-wide, so a value learned on one component transfers to
@@ -774,8 +843,7 @@ convenience: `--lr-ramp-*` (a step encodes a light-mode choice and has no theme 
 palettes (generated ramps that move with the palette tooling), `--lr-layer-*` (stacking order is
 your decision), `--lr-color-mix-*` and `--lr-hover-brightness` (inputs to the library's own
 interaction recipe), `--lr-line-height-*`, the per-control internals (`--lr-icon-button-size`,
-`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-scrollbar-width`,
-`--lr-scrollbar-gutter`, `--lr-popover-viewport-clamp`,
+`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-popover-viewport-clamp`,
 `--lr-safe-area-*`, `--lr-mask-opaque`, `--lr-color-no-data`), and the nine variant-following slots
 (`--lr-color-fill-loud` and friends), which mean "the variant _this_ element is set to" and are
 meaningless on `:root`. If you need one of these, ask for it to be added rather than reading it out
@@ -1370,11 +1438,17 @@ lr-chart:not(:defined) {
 
 Three things worth knowing:
 
-- It is a **light-DOM stylesheet**: load it the same way as the token sheet — a `<link>`/`@import`
-  reaching the document (or whatever light-DOM tree your `lr-*` markup actually lives in). It is
-  inert if adopted into a component's own shadow root (`shadowRoot.adoptedStyleSheets = [...]`):
-  none of its `lr-chart`/`lr-select`/etc. selectors can match anything there, because a component's
-  shadow root never contains the application's own `<lr-*>` usages — only the light DOM does.
+- **It reserves layout only for `lr-*` usages in the exact tree it is loaded into.** A `<link>`/
+  `@import` reaching the document reserves the document's own light-DOM `lr-*` usages; it does not
+  reach one that a *different* component renders inside *that component's own* shadow root, because
+  a document stylesheet never crosses a shadow boundary. If your own component's template composes
+  `lr-*` elements, load the reservations there too, in whichever form matches how your component is
+  built: adopt `@aceshooting/lyra-ui/reservations.styles.js`'s `reservationStyles` export (a Lit
+  `CSSResult` generated from the same `reservations.css`, so the two can never drift) —
+  `static styles = [reservationStyles, css\`…\`]`, or
+  `shadowRoot.adoptedStyleSheets = [reservationStyles.styleSheet!]` outside Lit — or `<link>`/
+  `@import` `reservations.css` again inside that shadow root if you are not using constructed
+  stylesheets at all.
 - A per-instance override needs the matching custom property to be set as well, not only the
   attribute, or the pre-upgrade frame and the upgraded frame will disagree. `<lr-chart height="500px">`
   should carry `style="--lr-chart-height: 500px"` too if it sits above the fold.

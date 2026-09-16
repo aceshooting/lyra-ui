@@ -1577,14 +1577,16 @@ fallback — there is no default/full-table highlighter here to fall back to, mi
 
 **Properties:** `content: string = ''` — the full current text so far, identical contract to
 `<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
-(attribute `coalesce-ms`) — same trailing-edge coalesce window described under `<lr-streaming-text>`
-above; `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
+(attribute `coalesce-ms`) — same trailing-edge coalesce window described in
+`llms/components/lr-streaming-text.md`; `contentMode: StreamingTextContentMode = 'auto'` (attribute
+`content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
 Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
 `<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
-`<lr-streaming-text>` exports and documents above; both tags share one implementation.
+`<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
+share one implementation.
 
 **Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — identical contract to
 `<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
@@ -1598,11 +1600,12 @@ Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verb
 **Themeable custom properties:** `--lr-inline-cursor-width` (default `var(--lr-size-0-125rem)`) and
 `--lr-inline-cursor-height` (default `var(--lr-size-1em)`) — the same shared inline-cursor tokens
 `<lr-streaming-text>`/`<lr-typing-indicator>` use, plus the same `--lr-space-xs`/
-`--lr-transition-ambient` fallbacks described above.
+`--lr-transition-ambient` fallbacks described in `llms/components/lr-streaming-text.md`.
 
 Every other capability — token coalescing mechanics, the first-assignment/`streaming`-transition
 immediate-flush rules, the reduced-motion cursor degradation, and the known gotchas — is identical
-to `<lr-streaming-text>`; see that section above for the full write-up of shared behavior.
+to `<lr-streaming-text>`; see `llms/components/lr-streaming-text.md` for the full write-up of
+shared behavior.
 
 ```html
 <lr-streaming-text-core id="out" streaming></lr-streaming-text-core>
@@ -1853,9 +1856,9 @@ background and text color, independent of the active-line outline above — plus
 `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
-`--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also reads the shared
-`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
-unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
+`--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in
+theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`,
+matching its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any
 ancestor for one declaration to retheme every internal scroll container in the library, including
 `lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 
@@ -2040,7 +2043,7 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`), and
 `--lr-code-block-language-color` (default `var(--lr-color-brand)`), plus the same shared
-tokens, including the `--lr-scrollbar-width`/`--lr-scrollbar-gutter` theme hooks `body` reads —
+tokens, including the `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks `body` honors —
 this component reuses `<lr-code-block>`'s stylesheet, so both share exactly the same scroll
 container. The last five are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
@@ -2811,7 +2814,12 @@ pinned copy is inert, pointer-transparent presentation content: its toggle and a
 receive interaction, and it adds no second tab stop. Default `false` renders exactly as before; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
 Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
-list unnamed. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
+list unnamed. `error: boolean = false` (reflected) — data mode only: reports a failed thread-list
+load. While set, the built-in `<lr-empty>` failed-load state (matching `<lr-table>`'s own `error`
+contract) replaces the virtual list/empty state; `error` beats the built-in empty state.
+`errorHeading?: string` (`error-heading`) — failed-load heading override; omitted localizes the
+same `tableLoadFailed` default `<lr-table>` uses. `errorDescription: string = ''`
+(`error-description`) — failed-load supporting copy. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
 TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
 `lr-conversation-item` with host-supplied content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
@@ -2857,7 +2865,8 @@ do. It reads the DOM as it stands, so `await threadList.updateComplete` first an
 `null` while it is scrolled outside the virtualized window.
 
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
-`empty` — replaces the built-in empty state.
+`empty` — replaces the built-in empty state. `error` — replaces the built-in failed-load state,
+including its retry button, while `error` is set.
 
 **Events:** data mode: `lr-select` (`detail: { conversationId }`), `lr-thread-pin`
 (`detail: { conversationId, pinned }` — the requested new state), `lr-thread-archive`
@@ -2876,12 +2885,16 @@ and reassigns `collapsedGroupIds` itself keeps working unchanged: this component
 it happens, always precedes that listener in the same synchronous dispatch, so the host's own
 assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
-which are neither.
+which are neither. `lr-retry` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
+was activated, only rendered while `error` is set; the default action clears `error`,
+`preventDefault()` leaves it set instead.
 
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
-`viewport` (the actual internal virtual-list
+`error` (the built-in `<lr-empty>` host rendered while `error` is set, with `error-base`/
+`error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
+`retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
 `group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current

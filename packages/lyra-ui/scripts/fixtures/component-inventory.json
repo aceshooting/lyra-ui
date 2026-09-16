@@ -24540,13 +24540,13 @@
             "default": 2
           },
           {
-            "name": "--lr-scrollbar-gutter",
+            "name": "--lr-theme-scrollbar-gutter",
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
           },
           {
-            "name": "--lr-scrollbar-width",
+            "name": "--lr-theme-scrollbar-width",
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
@@ -25101,13 +25101,13 @@
             "default": 2
           },
           {
-            "name": "--lr-scrollbar-gutter",
+            "name": "--lr-theme-scrollbar-gutter",
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
           },
           {
-            "name": "--lr-scrollbar-width",
+            "name": "--lr-theme-scrollbar-width",
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
@@ -26064,13 +26064,13 @@
             "default": 0
           },
           {
-            "name": "--lr-scrollbar-gutter",
+            "name": "--lr-theme-scrollbar-gutter",
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
           },
           {
-            "name": "--lr-scrollbar-width",
+            "name": "--lr-theme-scrollbar-width",
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
@@ -29530,6 +29530,10 @@
         "parts": [
           {
             "name": "backdrop",
+            "deprecated": null
+          },
+          {
+            "name": "clear-button",
             "deprecated": null
           },
           {
@@ -34058,7 +34062,8 @@
         "direct": [
           "lr-button",
           "lr-dropdown",
-          "lr-dropdown-item"
+          "lr-dropdown-item",
+          "lr-empty"
         ],
         "transitive": [
           "lr-menu",
@@ -34095,6 +34100,35 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "error",
+            "property": "error",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "error-description",
+            "property": "errorDescription",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "error-heading",
+            "property": "errorHeading",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "filter-debounce",
@@ -34405,6 +34439,35 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "error",
+            "attribute": "error",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "errorDescription",
+            "attribute": "error-description",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "errorHeading",
+            "attribute": "error-heading",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "expandedKeys",
@@ -34803,6 +34866,10 @@
             "deprecated": null
           },
           {
+            "name": "error",
+            "deprecated": null
+          },
+          {
             "name": "loading",
             "deprecated": null
           },
@@ -34909,6 +34976,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-retry",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-row-collapse",
             "type": "CustomEvent<DataGridRowDetail<Row>>",
             "cancelable": "never",
@@ -34983,6 +35056,38 @@
             "deprecated": null
           },
           {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "error-actions",
+            "deprecated": null
+          },
+          {
+            "name": "error-base",
+            "deprecated": null
+          },
+          {
+            "name": "error-cell",
+            "deprecated": null
+          },
+          {
+            "name": "error-description",
+            "deprecated": null
+          },
+          {
+            "name": "error-heading",
+            "deprecated": null
+          },
+          {
+            "name": "error-icon",
+            "deprecated": null
+          },
+          {
+            "name": "error-row",
+            "deprecated": null
+          },
+          {
             "name": "expand-button",
             "deprecated": null
           },
@@ -34992,6 +35097,10 @@
           },
           {
             "name": "filter-panel",
+            "deprecated": null
+          },
+          {
+            "name": "filter-panel-clear",
             "deprecated": null
           },
           {
@@ -35099,6 +35208,10 @@
             "deprecated": null
           },
           {
+            "name": "retry-button",
+            "deprecated": null
+          },
+          {
             "name": "row",
             "deprecated": null
           },
@@ -35108,6 +35221,14 @@
           },
           {
             "name": "search",
+            "deprecated": null
+          },
+          {
+            "name": "search-clear",
+            "deprecated": null
+          },
+          {
+            "name": "search-wrapper",
             "deprecated": null
           },
           {
@@ -41161,6 +41282,35 @@
       "surface": {
         "attributes": [
           {
+            "name": "error",
+            "property": "error",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "error-description",
+            "property": "errorDescription",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "error-heading",
+            "property": "errorHeading",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -41234,6 +41384,35 @@
             "name": "documents",
             "attribute": null,
             "type": "readonly LibraryDocument[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "error",
+            "attribute": "error",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "errorDescription",
+            "attribute": "error-description",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "errorHeading",
+            "attribute": "error-heading",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -41335,7 +41514,12 @@
             "hasDefault": false
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "error",
+            "deprecated": null
+          }
+        ],
         "events": [
           {
             "name": "lr-filter-change",
@@ -41347,6 +41531,12 @@
             "name": "lr-open",
             "type": "CustomEvent<DocumentLibraryOpenDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-retry",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -41387,7 +41577,43 @@
             "deprecated": null
           },
           {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "error-actions",
+            "deprecated": null
+          },
+          {
+            "name": "error-base",
+            "deprecated": null
+          },
+          {
+            "name": "error-cell",
+            "deprecated": null
+          },
+          {
+            "name": "error-description",
+            "deprecated": null
+          },
+          {
+            "name": "error-heading",
+            "deprecated": null
+          },
+          {
+            "name": "error-icon",
+            "deprecated": null
+          },
+          {
+            "name": "error-row",
+            "deprecated": null
+          },
+          {
             "name": "header-cell",
+            "deprecated": null
+          },
+          {
+            "name": "retry-button",
             "deprecated": null
           },
           {
@@ -44051,7 +44277,8 @@
             "name": "lr-close",
             "type": "CustomEvent<DialogCloseReason>",
             "cancelable": "conditional",
-            "constructor": "CustomEvent"
+            "constructor": "CustomEvent",
+            "composed": true
           },
           {
             "name": "lr-hide",
@@ -47777,6 +48004,14 @@
             "deprecated": null
           },
           {
+            "name": "search-clear",
+            "deprecated": null
+          },
+          {
+            "name": "search-wrapper",
+            "deprecated": null
+          },
+          {
             "name": "virtual-items",
             "deprecated": null
           },
@@ -47877,6 +48112,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-emoji-picker-search-clear-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
           },
           {
             "name": "--lr-emoji-picker-search-fill",
@@ -67390,6 +67631,35 @@
       "surface": {
         "attributes": [
           {
+            "name": "error",
+            "property": "error",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "error-description",
+            "property": "errorDescription",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "error-heading",
+            "property": "errorHeading",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "hide-create",
             "property": "hideCreate",
             "type": "boolean",
@@ -67430,6 +67700,35 @@
           }
         ],
         "properties": [
+          {
+            "name": "error",
+            "attribute": "error",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "errorDescription",
+            "attribute": "error-description",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "errorHeading",
+            "attribute": "error-heading",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "hideCreate",
             "attribute": "hide-create",
@@ -67480,8 +67779,19 @@
             "default": "[]"
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "error",
+            "deprecated": null
+          }
+        ],
         "events": [
+          {
+            "name": "lr-retry",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
           {
             "name": "lr-source-create",
             "type": "CustomEvent<null>",
@@ -67529,6 +67839,38 @@
             "deprecated": null
           },
           {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "error-actions",
+            "deprecated": null
+          },
+          {
+            "name": "error-base",
+            "deprecated": null
+          },
+          {
+            "name": "error-cell",
+            "deprecated": null
+          },
+          {
+            "name": "error-description",
+            "deprecated": null
+          },
+          {
+            "name": "error-heading",
+            "deprecated": null
+          },
+          {
+            "name": "error-icon",
+            "deprecated": null
+          },
+          {
+            "name": "error-row",
+            "deprecated": null
+          },
+          {
             "name": "heading",
             "deprecated": null
           },
@@ -67546,6 +67888,10 @@
           },
           {
             "name": "permission-badge",
+            "deprecated": null
+          },
+          {
+            "name": "retry-button",
             "deprecated": null
           },
           {
@@ -86788,6 +87134,16 @@
             "default": "standard"
           },
           {
+            "name": "has-next",
+            "property": "hasNext",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "hide-single-page",
             "property": "hideSinglePage",
             "type": "boolean",
@@ -87022,6 +87378,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "standard"
+          },
+          {
+            "name": "hasNext",
+            "attribute": "has-next",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "hideSinglePage",
@@ -94807,7 +95173,7 @@
             "name": "--lr-progress-ring-track-width",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-theme-border-width-thick,var(--lr-size-4px))"
+            "default": "var(--lr-theme-progress-ring-track-width,var(--lr-size-4px))"
           },
           {
             "name": "--size",
@@ -119503,6 +119869,16 @@
             "default": false
           },
           {
+            "name": "has-next",
+            "property": "hasNext",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "hide-columns-label",
             "property": "hideColumnsLabel",
             "type": "string | undefined",
@@ -119734,6 +120110,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": -1
+          },
+          {
+            "name": "unknown-total",
+            "property": "unknownTotal",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -119992,6 +120378,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "hasNext",
+            "attribute": "has-next",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "heatTintScale",
@@ -120290,6 +120686,16 @@
             "default": -1
           },
           {
+            "name": "unknownTotal",
+            "attribute": "unknown-total",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "viewRows",
             "attribute": null,
             "type": "readonly T[]",
@@ -120493,6 +120899,10 @@
             "deprecated": null
           },
           {
+            "name": "filter-clear",
+            "deprecated": null
+          },
+          {
             "name": "filter-label",
             "deprecated": null
           },
@@ -120586,18 +120996,6 @@
           }
         ],
         "cssProperties": [
-          {
-            "name": "--lr-scrollbar-gutter",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "auto"
-          },
-          {
-            "name": "--lr-scrollbar-width",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "auto"
-          },
           {
             "name": "--lr-table-cell-color",
             "deprecated": null,
@@ -120722,6 +121120,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-theme-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-theme-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           }
         ],
         "cssStates": [],
@@ -124331,6 +124741,7 @@
       "dependencies": {
         "direct": [
           "lr-conversation-item",
+          "lr-empty",
           "lr-live-region",
           "lr-virtual-list"
         ],
@@ -124359,6 +124770,35 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "error",
+            "property": "error",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "error-description",
+            "property": "errorDescription",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "error-heading",
+            "property": "errorHeading",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "grouping",
@@ -124469,6 +124909,35 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "error",
+            "attribute": "error",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "errorDescription",
+            "attribute": "error-description",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "errorHeading",
+            "attribute": "error-heading",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "filter",
@@ -124685,6 +125154,10 @@
           {
             "name": "empty",
             "deprecated": null
+          },
+          {
+            "name": "error",
+            "deprecated": null
           }
         ],
         "events": [
@@ -124724,6 +125197,12 @@
             "name": "lr-query-change",
             "type": "CustomEvent<{ text: string }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-retry",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -124771,6 +125250,30 @@
             "deprecated": null
           },
           {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "error-actions",
+            "deprecated": null
+          },
+          {
+            "name": "error-base",
+            "deprecated": null
+          },
+          {
+            "name": "error-description",
+            "deprecated": null
+          },
+          {
+            "name": "error-heading",
+            "deprecated": null
+          },
+          {
+            "name": "error-icon",
+            "deprecated": null
+          },
+          {
             "name": "group-adornment",
             "deprecated": null
           },
@@ -124800,6 +125303,10 @@
           },
           {
             "name": "pin-glyph",
+            "deprecated": null
+          },
+          {
+            "name": "retry-button",
             "deprecated": null
           },
           {
@@ -136712,13 +137219,13 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-scrollbar-gutter",
+            "name": "--lr-theme-scrollbar-gutter",
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
           },
           {
-            "name": "--lr-scrollbar-width",
+            "name": "--lr-theme-scrollbar-width",
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"

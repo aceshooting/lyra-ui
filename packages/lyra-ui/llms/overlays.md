@@ -462,6 +462,9 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
   observed without turning initial distribution into a live update;
   a host `aria-label` names the host but does not replace that visible update text;
   the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
+  Remove any host `role="status"`/`role="alert"` hand-added before `announce` existed once it is
+  set — otherwise the initial text is announced twice, through the native role and again through
+  the shared sink.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
   inside can never match `:empty`) by tracking real flattened slot content in JS, including a bare
   non-whitespace text node such as an emoji as default icon content —
@@ -562,11 +565,18 @@ the slide animation are its own.
   `without-header`, Web Awesome's spelling, reflected; neither is deprecated),
   `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
-  dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
-  wins-over-everything semantics documented under `lr-dialog` below.
+  dismissal options. A plain `aria-label` attribute on the host is honored too, inherited unchanged
+  from `lr-dialog`: it is the strongest naming override, by attribute presence including an
+  explicitly empty value, ahead of `accessible-label` and any slotted heading.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
   the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
   heading retains its own native level.
+- `size: LyraSize = 'm'` (reflected) — inherited unchanged from `lr-dialog`; caps the panel's
+  `max-inline-size` on the same six-step ladder for `start`/`end` placements (`top`/`bottom` are
+  unaffected, since those axes are already unconditionally `100%`). At the `m` default the 32rem
+  cap exceeds the panel's own 24rem default inline size, so it stays a no-op unless set. Distinct
+  from the drawer-specific `--size` CSS custom property below, which maps to this same panel's own
+  `inline-size`/`block-size` for the active axis.
 
 **Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
@@ -577,7 +587,12 @@ promise settles after the matching `lr-after-*` event.
 (`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
-animation compared with the state flip.
+animation compared with the state flip. **`lr-close` is not drawer-scoped, same as on `lr-dialog`:**
+several components nested inside a drawer (`lr-callout`, `lr-tab`/`lr-tab-group`, the tool dialogs,
+and so on) emit the same bubbling, composed `lr-close` name, so a listener bound on `<lr-drawer>`
+also receives a descendant's close. Guard with
+`if (event.target !== event.currentTarget) return;` before reading `event.detail`, which those
+descendants either omit or shape differently from `DialogCloseReason`.
 
 **Animation registry:** the panel uses placement-specific names:
 `drawer.showStart`/`drawer.hideStart`, `drawer.showEnd`/`drawer.hideEnd`,
@@ -596,7 +611,8 @@ composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` 
 
 **Themeable custom properties:** mapped `--size` controls the active axis. For start/end drawers,
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
-`--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap.
+`--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap,
+falling back to the `size` property's own tier value (see Properties above) when unset.
 The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
 `--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
 `--lr-drawer-width` (default `--lr-size-24rem`; used by
@@ -1797,7 +1813,7 @@ later text renders normally.
 - `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
   reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
-  same arrow trio `<lr-popover>` documents above, new in 8.0.0
+  same arrow trio `<lr-popover>` documents (`llms/components/lr-popover.md`), new in 8.0.0
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
@@ -1813,7 +1829,8 @@ origin-aware migration emits those tokens.
 - `hide(): Promise<void>` — close immediately, bypassing `hide-delay`, then resolve after
   `lr-after-hide`
 - `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?: HTMLElement })`
-  — same virtual-anchor contract as `lr-popover.showAt()` above (anchors to an arbitrary rectangle
+  — same virtual-anchor contract as `lr-popover.showAt()` (`llms/components/lr-popover.md`)
+  (anchors to an arbitrary rectangle
   instead of any DOM anchor, `width`/`height` default to `0`, `contextElement` gives
   `autoUpdate()` something to observe, Escape returns focus to `options.returnFocusTo` or skips
   focus-return, re-call with fresh coordinates to re-anchor a moving point). Opens immediately,
@@ -1822,7 +1839,8 @@ origin-aware migration emits those tokens.
   owner. Close it with `hide()` or `open = false`. Non-finite coordinates or dimensions are a no-op.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — the
-same four-event contract, timing and veto semantics `<lr-popover>` documents above, and all four are
+same four-event contract, timing and veto semantics `<lr-popover>` documents
+(`llms/components/lr-popover.md`), and all four are
 new to this component in 8.0.0. A vetoed `lr-show` leaves the tooltip closed whether the delay
 elapsed, `show()` was called, or `open` was assigned.
 
@@ -1852,7 +1870,8 @@ panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`,
 and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
 
 `--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
-`absolute`/`fixed` override `<lr-popover>` documents above, ahead of its own mirrored `absolute`
+`absolute`/`fixed` override `<lr-popover>` documents (`llms/components/lr-popover.md`), ahead of
+its own mirrored `absolute`
 default, when neither `positioning-strategy` nor `hoist` is authored on the instance.
 
 ```html
@@ -2055,7 +2074,8 @@ default; style it only to debug the travel region.
 `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
 `--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
-`--lr-positioning-strategy` override documented on `<lr-popover>` above.
+`--lr-positioning-strategy` override documented on `<lr-popover>`
+(`llms/components/lr-popover.md`).
 
 ```html
 <lr-dropdown aria-label="File actions" size="small">
@@ -2205,7 +2225,11 @@ value updates and reconnection while the offset updates live.
 **Themeable custom properties:** `--lr-progress-ring-size` (default
 `var(--size, var(--_lr-progress-ring-size))`; `--size` is the upstream alias, and the private
 `--_lr-progress-ring-size` is the `size` property's own tier value, `2.5rem` at the `m` default,
-unchanged — the ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
+unchanged — the ring's inline and block size), `--lr-progress-ring-track-width` (default
+`var(--lr-theme-progress-ring-track-width, var(--lr-size-4px))` — a dedicated, opt-in theme hook, set
+on `:root` or any ancestor to retune this ring specifically; it stays unset, and `4px` applies, whether
+or not `theme.css` is imported, unlike the widely-shared `--lr-theme-border-width-thick` this used to
+bridge directly, which `theme.css` declares at `3px`),
 `--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
 `--lr-progress-ring-indicator-color` (default
@@ -2642,7 +2666,10 @@ callout (`open="false"`) announces nothing. `announce` is read once, when the ca
 a later reconnection or adoption stages the existing content again rather than replaying the
 announcement, and later content updates are announced whether or not it is set. Leave it unset for
 a callout that is simply part of the page a user is arriving on — that text is already read in
-document order, and announcing it again is noise.
+document order, and announcing it again is noise. If a consumer previously hand-added a host
+`role="status"`/`role="alert"` to work around the missing initial announcement, remove it once
+`announce` is set: leaving both in place announces the same initial text twice, once through the
+native role and once through the shared sink.
 
 ## `lr-rating`
 

@@ -54,13 +54,15 @@ semantics.
   return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
   Leaving the property unset preserves the numeric-only contract
 - `presets: readonly TimeRangePreset[] = []` (attribute: false) — readonly `TimeRangePreset {
-label: string; start: number; end: number }`; a bounded frozen snapshot of optional discrete
-  presets (e.g. "Last 7 days") rendered as a
+label: string; start: number; end: number; id?: string }`; a bounded frozen snapshot of optional
+  discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
   native/prefixed input and change sequences a committed drag or keyboard step would. Preset
   endpoints are clamped and ordered once, and that same normalized pair drives both application
-  and `aria-pressed`/`data-active` projection
+  and `aria-pressed`/`data-active` projection. The optional `id` is a caller-owned
+  correlation key copied into the snapshot verbatim and never read by the control itself; an
+  untagged preset is unaffected
 - `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the frozen
   `presets` snapshot whose button produced the current range. Preset application updates this
   identity before its synchronous event sequence, so it can be read inside `input`/`change` or

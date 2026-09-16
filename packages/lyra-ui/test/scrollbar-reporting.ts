@@ -28,9 +28,10 @@
  *   IS the effective value -- return it as-is. This is what proves an unconditional override rule
  *   (e.g. `lr-scroller`'s `:host([without-scrollbar])` opt-out) is actually the rule in force,
  *   and a mutation of its literal is caught identically on every engine.
- * - If the declaration is `var(--custom-prop, fallback)` (or the indirected
- *   `var(--lr-scrollbar-width)`, whose own default is set once in `internal/tokens.styles.ts`),
- *   resolve `--custom-prop`'s cascaded value via `getComputedStyle` -- custom properties ARE
+ * - If the declaration is `var(--custom-prop, fallback)` (every wired component reads its own
+ *   `--lr-theme-scrollbar-width`/`-gutter` directly, with its own literal as the fallback -- there
+ *   is no shared indirection token), resolve `--custom-prop`'s cascaded value via
+ *   `getComputedStyle` -- custom properties ARE
  *   reported correctly on every engine here, including Firefox -- falling back to the CSS-declared
  *   fallback text only when the property is unset. Because the declaration text itself is the
  *   thing under test, disconnecting the `var()` (hardcoding a literal, or changing which property

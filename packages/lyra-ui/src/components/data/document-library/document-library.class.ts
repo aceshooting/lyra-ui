@@ -1,7 +1,8 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   getDateTimeFormat,
@@ -97,6 +98,12 @@ export interface LyraDocumentLibraryEventMap {
   'lr-sort': CustomEvent<DocumentLibrarySortCommitDetail>;
   'lr-selection-change': CustomEvent<LyraEventDetailSnapshot<DocumentLibrarySelectionChangeDetail>>;
   'lr-open': CustomEvent<DocumentLibraryOpenDetail>;
+  /** The nested table's built-in `[part='retry-button']` was activated, only rendered while
+   *  `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
+   *  set instead. Mirrors `<lr-table>`'s own `lr-retry` contract exactly (decision 40) -- this
+   *  component owns the property and re-proposes its own event rather than letting the nested
+   *  table's internal state drift out of sync with it. */
+  'lr-retry': CustomEvent<null>;
 }
 
 const FRESHNESS_RANK: Record<LibraryDocumentFreshness, number> = {
@@ -263,6 +270,14 @@ function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined
  * combobox's show/hide lifecycle, plus table selection/pagination events, are consumed at their
  * translation boundary; hosts receive only the documented library-level events.
  *
+ * A separate `error` state reports a failed load without discarding the toolbar/selection-bar
+ * context around it: while `error` is set, the nested `<lr-table>` shows its own built-in
+ * failed-load state (the same `error`-prefixed exported parts and `[part='retry-button']` as
+ * `<lr-table>` itself) in place of the document rows, behind this component's own `error` slot.
+ * `error` beats the empty state, matching `<lr-table>`'s own precedence. This component forwards
+ * `error`/`errorHeading`/`errorDescription` to the nested table but owns the retry commit itself,
+ * the same intercept-and-re-propose shape `onTableSortRequest` already uses for sort.
+ *
  * @customElement lr-document-library
  * @event lr-filter-change - The search term or tag facet changed. Frozen readonly
  *   `detail: { searchTerm, tags, matchCount }`.
@@ -277,6 +292,11 @@ function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined
  *   `lr-change` events do not escape the library.
  * @event lr-open - A document was activated (its name, or Enter/Space/click elsewhere on its
  *   row). Frozen readonly `detail: { documentId }`.
+ * @event lr-retry - The nested table's built-in `[part='retry-button']` was activated, only
+ *   rendered while `error` is set. Cancelable: the default action clears `error`;
+ *   `preventDefault()` leaves it set instead.
+ * @slot error - Replaces the nested table's built-in failed-load state, including its retry
+ *   button, while `error` is set.
  * @csspart base - The root region.
  * @csspart toolbar - Wraps the search field and tag filter.
  * @csspart search - The `<lr-input>` search field.
@@ -292,6 +312,16 @@ function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined
  * @csspart row - Exported from `<lr-table>`'s own `row` part.
  * @csspart cell - Exported from `<lr-table>`'s own `cell` part.
  * @csspart header-cell - Exported from `<lr-table>`'s own `header-cell` part.
+ * @csspart error-row - The nested table's single full-width row that replaces the document rows
+ *   while `error` is set.
+ * @csspart error-cell - The cell inside `error-row` that holds the failed-load content.
+ * @csspart error - The nested table's built-in `<lr-empty>` host rendered while `error` is set.
+ * @csspart error-base - Exported from the built-in error `<lr-empty>`'s own `base` part.
+ * @csspart error-icon - Exported from the built-in error `<lr-empty>`'s `icon` part.
+ * @csspart error-heading - Exported from the built-in error `<lr-empty>`'s `heading` part.
+ * @csspart error-description - Exported from the built-in error `<lr-empty>`'s `description` part.
+ * @csspart error-actions - Exported from the built-in error `<lr-empty>`'s `actions` part.
+ * @csspart retry-button - The built-in retry control rendered into the error state's `actions`.
  * @status stable
  * @since 4.1.0
  */
@@ -395,6 +425,52 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   @property({ type: Boolean, reflect: true }) loading = false;
 
+  /** Reports a failed document-list load. Forwarded to the nested `<lr-table>`, whose own
+   *  built-in failed-load state renders in place of the document rows; `<lr-table>`'s own
+   *  precedence applies (`error` beats the empty state). Reflected so `[error]` is selectable
+   *  from outside. */
+  @property({ type: Boolean, reflect: true }) error = false;
+
+  /** Failed-load heading override, forwarded to the nested table. Omitted localizes the table's
+   *  own `tableLoadFailed` default. */
+  @property({ attribute: 'error-heading' }) errorHeading?: string;
+
+  /** Failed-load supporting copy, forwarded to the nested table. */
+  @property({ attribute: 'error-description' }) errorDescription = '';
+
+  /** True once a real light-DOM child assigned `slot="error"` is observed -- see
+   *  `errorSlotObserver` below. Gates whether the `error` slot passthrough is mounted on the
+   *  nested `<lr-table>`: an always-mounted passthrough would count as "assigned content" for the
+   *  table's own `error` slot regardless of whether anything real is inside it, permanently
+   *  hiding the table's built-in failed-load state even when the consumer never used the slot. */
+  @state() private hasErrorSlot = false;
+
+  private errorSlotObserver?: MutationObserver;
+
+  private computeHasErrorSlot(): boolean {
+    return Array.from(this.children).some(
+      (el) => el.getAttribute('slot') === 'error'
+    );
+  }
+
+  /** The nested table's `lr-retry` intercepted at the boundary: this component owns `error`, so
+   *  it stops the table's own event from leaking out unmediated, re-proposes its own cancelable
+   *  `lr-retry`, and only then decides whether to clear `error` -- and whether to also veto the
+   *  nested table's own default clear, so the two never drift out of sync. Mirrors
+   *  `onTableSortRequest`'s identical intercept-and-re-propose shape. */
+  private onTableRetry = (event: CustomEvent<null>): void => {
+    event.stopPropagation();
+    const request = requestThenCommit<null, CustomEvent>({
+      requestDetail: null,
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-retry', detail, init),
+      commit: () => {
+        this.error = false;
+      },
+    });
+    if (request.defaultPrevented) event.preventDefault();
+  };
+
   private _size?: LyraSize;
 
   /** Density tier for the toolbar's own search field and tag filter, on the library's one size
@@ -430,11 +506,22 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncAnnouncementSink();
+    this.hasErrorSlot = this.computeHasErrorSlot();
+    this.errorSlotObserver = new MutationObserver(() => {
+      this.hasErrorSlot = this.computeHasErrorSlot();
+    });
+    this.errorSlotObserver.observe(this, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ['slot'],
+    });
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.releaseAnnouncementSink();
+    this.errorSlotObserver?.disconnect();
+    this.errorSlotObserver = undefined;
   }
 
   private releaseAnnouncementSink(): void {
@@ -945,7 +1032,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           : nothing}
         <lr-table
           part="table"
-          exportparts="row, cell, header-cell"
+          exportparts="row, cell, header-cell, error-row, error-cell, error, error-base, error-icon, error-heading, error-description, error-actions, retry-button"
           aria-label=${label}
           .columns=${this.buildColumns(visible)}
           .rows=${visible}
@@ -957,16 +1044,22 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           sort-mode="server"
           ?loading=${this.loading}
           empty-heading=${emptyHeading}
+          ?error=${this.error}
+          error-heading=${this.errorHeading ?? nothing}
+          error-description=${this.errorDescription}
           @lr-sort-request=${this.onTableSortRequest}
           @lr-sort=${this.onTableSortCommit}
           @lr-page-change=${this.stopOwnedEvent}
           @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-selection-change=${this.onTableSelectionChange}
+          @lr-retry=${this.onTableRetry}
           @lr-row-click=${(event: CustomEvent<{ row: LibraryDocument }>) => {
             event.stopPropagation();
             this.openDocument(event.detail.row);
           }}
-        ></lr-table>
+        >${this.hasErrorSlot
+          ? html`<div slot="error"><slot name="error"></slot></div>`
+          : nothing}</lr-table>
       </div>
     `;
   }

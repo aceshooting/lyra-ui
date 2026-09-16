@@ -180,6 +180,79 @@ it("resolves the toolbar search placeholder from the inherited quiet-text token"
   );
 });
 
+it("renders a localized, keyboard-reachable clear button once the toolbar search has a value, and hides it again once empty", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid with-search label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const search =
+    element.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+
+  expect(element.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
+
+  search.value = "ada";
+  search.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+  await element.updateComplete;
+
+  const clearButton =
+    element.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]');
+  expect(clearButton).to.not.equal(null);
+  expect(clearButton!.tagName).to.equal("BUTTON");
+  expect(clearButton!.getAttribute("type")).to.equal("button");
+  expect(clearButton!.getAttribute("aria-label")).to.equal("Clear");
+  expect(clearButton!.tabIndex).to.equal(0);
+
+  clearButton!.click();
+  await element.updateComplete;
+
+  expect(search.value).to.equal("");
+  expect(element.searchTerm).to.equal("");
+  expect(element.shadowRoot!.activeElement === search).to.be.true;
+  expect(element.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
+});
+
+it("renders a localized, keyboard-reachable clear button on the per-column filter panel once it has a value", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const filterButton =
+    element.shadowRoot!.querySelector<HTMLButtonElement>('[part~="filter-button"]')!;
+  filterButton.click();
+  await element.updateComplete;
+  const filter = element.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="filter-panel"] input[type="search"]'
+  )!;
+
+  expect(
+    element.shadowRoot!.querySelector('[part="filter-panel"] [part~="filter-panel-clear"]') ===
+      null
+  ).to.be.true;
+
+  filter.value = "compiler";
+  filter.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+  await element.updateComplete;
+
+  const clearButton = element.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part="filter-panel"] [part~="filter-panel-clear"]'
+  );
+  expect(clearButton).to.not.equal(null);
+  expect(clearButton!.tagName).to.equal("BUTTON");
+  expect(clearButton!.getAttribute("type")).to.equal("button");
+  expect(clearButton!.getAttribute("aria-label")).to.equal("Clear");
+
+  const eventPromise = oneEvent(element, "lr-filter-change");
+  clearButton!.click();
+  const event = await eventPromise;
+  await element.updateComplete;
+
+  expect(event.detail.filters).to.deep.equal([]);
+  expect(filter.value).to.equal("");
+  expect(element.shadowRoot!.activeElement === filter).to.be.true;
+  expect(
+    element.shadowRoot!.querySelector('[part="filter-panel"] [part~="filter-panel-clear"]') ===
+      null
+  ).to.be.true;
+});
+
 it("themes formatter and row-detail links inside the grid shadow root", async () => {
   const linkedColumns: DataGridColumn<Person>[] = [
     {
@@ -239,7 +312,7 @@ it("themes formatter and row-detail links inside the grid shadow root", async ()
   }
 });
 
-it("normalizes search and page-size native chrome against the grid palette", async () => {
+it("normalizes search and page-size native chrome against the grid palette, replacing the suppressed search-cancel glyph with the component's own clear buttons", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
       paginate
@@ -282,12 +355,18 @@ it("normalizes search and page-size native chrome against the grid palette", asy
 
     const assertNativeCancelReset = async (input: HTMLInputElement): Promise<void> => {
       input.focus();
-      const rect = input.getBoundingClientRect();
       let cancelPosition: [number, number] | undefined;
       for (let offset = 2; offset <= 48; offset += 2) {
         input.value = "clear me";
         input.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        // Captured fresh each iteration (not once, up front): the sibling `[part='search-clear']`/
+        // `[part='filter-panel-clear']` this component now renders once the field is non-empty
+        // shrinks the input's own box, so a rect taken before that button ever mounted would place
+        // candidates past the input's real right edge -- inside the *new* button's box instead of
+        // the native glyph's zone the input itself paints. Re-measuring keeps every candidate
+        // inside the input, which is the surface under test here.
+        const rect = input.getBoundingClientRect();
         const candidate: [number, number] = [
           Math.round(rect.right - offset),
           Math.round(rect.top + rect.height / 2),

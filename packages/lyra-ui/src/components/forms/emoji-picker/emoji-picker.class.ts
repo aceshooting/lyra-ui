@@ -19,6 +19,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import type { LyraSize } from '../../../internal/variants.js';
+import { closeIcon } from '../../../internal/icons.js';
 import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataCached } from './emoji-data-loader.js';
 // Data types live in ./emoji-types.js (extracted to break a type-only import cycle with
@@ -26,7 +27,7 @@ import { loadEmojiDataCached } from './emoji-data-loader.js';
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { EmojiPickerItem, EmojiPickerGroup };
@@ -232,6 +233,9 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart form-control-label - The visible label.
  * @csspart base - The wrapper around the search input and grid.
  * @csspart search - The search/filter `<input>` (`role="combobox"` over the grid).
+ * @csspart search-wrapper - The row wrapper around `search` and `search-clear`.
+ * @csspart search-clear - The button that clears the search field, replacing the native
+ *   search-cancel glyph suppressed by this field's own reset; rendered only while it has a value.
  * @csspart grid - The keyboard-navigable emoji grid. It scrolls only in the block axis and clips
  *   inline overflow, avoiding a second scrollbar when the allocation is narrower than one option.
  * @csspart group-label - Each group's heading, rendered above its emojis.
@@ -261,6 +265,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   scaled by the `size` property to keep the glyph proportional to the item box.
  * @cssprop [--lr-emoji-picker-gap=var(--lr-space-2xs)] - Gap between emoji within a windowed row.
  * @cssprop [--lr-emoji-picker-control-gap=var(--lr-space-xs)] - Gap between field sections.
+ * @cssprop [--lr-emoji-picker-search-clear-gap=var(--lr-space-xs)] - Gap between the search
+ *   field and the clear button inside `search-wrapper`.
  * @cssprop [--lr-emoji-picker-radius=var(--lr-radius)] - Outer picker corner radius.
  * @cssprop [--lr-emoji-picker-item-radius=var(--lr-radius-xs)] - Search and emoji corner radius.
  * @cssprop [--lr-emoji-picker-search-border-color=var(--lr-color-border)] - Resting search border
@@ -310,6 +316,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     emojiPickerEmpty: LYRA_DEFAULT_emojiPickerEmpty,
@@ -871,6 +878,17 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.activeIndex = 0;
   };
 
+  // The native `::-webkit-search-cancel-button` reset in emoji-picker.styles.ts removes the
+  // browser's own clear affordance with no replacement -- this button, and the search input's
+  // refocus afterward, restore a real one-click way to reset the filter.
+  private onClearSearch = (): void => {
+    if (this.liveDisabled || this.queryText === '') return;
+    this.pendingGridFocus = undefined;
+    this.queryText = '';
+    this.activeIndex = 0;
+    this.searchEl?.focus();
+  };
+
   // Native focus/blur neither bubble nor cross the shadow boundary, so a host-level @focus/@blur
   // listener on <lr-emoji-picker> would never fire without this bridge -- mirrors
   // <lr-input>'s/<lr-select>'s onFocus/onBlur pair (including the disabled-blur guard below).
@@ -1246,21 +1264,34 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </div>
         <div part="base">
-          <input
-            part="search"
-            type="search"
-            role="combobox"
-            aria-expanded="true"
-            aria-autocomplete="list"
-            .value=${this.queryText}
-            aria-label=${this.localize('emojiPickerSearchLabel')}
-            aria-controls=${this.gridId}
-            ?disabled=${this.effectiveDisabled}
-            @input=${this.onSearchInput}
-            @keydown=${this.onNavigationKeyDown}
-            @focus=${this.onSearchFocus}
-            @blur=${this.onSearchBlur}
-          />
+          <div part="search-wrapper">
+            <input
+              part="search"
+              type="search"
+              role="combobox"
+              aria-expanded="true"
+              aria-autocomplete="list"
+              .value=${this.queryText}
+              aria-label=${this.localize('emojiPickerSearchLabel')}
+              aria-controls=${this.gridId}
+              ?disabled=${this.effectiveDisabled}
+              @input=${this.onSearchInput}
+              @keydown=${this.onNavigationKeyDown}
+              @focus=${this.onSearchFocus}
+              @blur=${this.onSearchBlur}
+            />
+            ${this.queryText !== ''
+              ? html`<button
+                  part="search-clear"
+                  type="button"
+                  ?disabled=${this.effectiveDisabled}
+                  aria-label=${this.localize('clear')}
+                  @click=${this.onClearSearch}
+                >
+                  <span aria-hidden="true" inert>${closeIcon()}</span>
+                </button>`
+              : nothing}
+          </div>
           <div
             part="grid"
             id=${this.gridId}

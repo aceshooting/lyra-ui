@@ -76,10 +76,11 @@ export const styles = css`
       var(--_lr-code-editor-min-block-size)
     );
     overflow: auto;
-    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- unset, both resolve to
-       the same 'auto' this scrollport always rendered with. */
-    scrollbar-width: var(--lr-scrollbar-width);
-    scrollbar-gutter: var(--lr-scrollbar-gutter);
+    /* Opt-in theme-level scrollbar hooks -- each reads --lr-theme-scrollbar-* directly, with this
+       scrollport's own previous literal ('auto') as the fallback, so a consumer who never sets the
+       --lr-theme-* input on an ancestor sees no change. */
+    scrollbar-width: var(--lr-theme-scrollbar-width, auto);
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
     min-block-size: var(
       --lr-code-editor-min-block-size,
       var(--_lr-code-editor-min-block-size)

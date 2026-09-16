@@ -17,7 +17,8 @@
 ## `lr-format-date`
 
 `Intl.DateTimeFormat` output. Text-only host — no CSS parts, events, or own tokens; locale
-resolution and `Intl`-instance caching are as described under `lr-format-number` above.
+resolution and `Intl`-instance caching are as described in
+`llms/components/lr-format-number.md`.
 
 **Properties:**
 

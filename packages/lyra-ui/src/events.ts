@@ -2652,18 +2652,23 @@ export type LyraRestoreEvent =
 export type LyraRetrievalSelectEvent = LyraAgentWorkspaceEventMap['lr-retrieval-select'];
 
 /**
- * `lr-retry` — dispatched by 6 components: `<lr-attachment-chip>`, `<lr-combobox>`,
- * `<lr-ingestion-queue>`, `<lr-message-parts>`, `<lr-rag-answer>`, `<lr-table>`.
+ * `lr-retry` — dispatched by 10 components: `<lr-attachment-chip>`, `<lr-combobox>`,
+ * `<lr-data-grid>`, `<lr-document-library>`, `<lr-ingestion-queue>`, `<lr-knowledge-base>`,
+ * `<lr-message-parts>`, `<lr-rag-answer>`, `<lr-table>`, `<lr-thread-list>`.
  *
- * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 9 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAttachmentChipEventMap['lr-retry']`.
  */
 export type LyraRetryEvent =
   | LyraAttachmentChipEventMap['lr-retry']
   | LyraComboboxEventMap['lr-retry']
+  | LyraDataGridEventMap['lr-retry']
+  | LyraDocumentLibraryEventMap['lr-retry']
   | LyraIngestionQueueEventMap['lr-retry']
+  | LyraKnowledgeBaseEventMap['lr-retry']
   | LyraRagAnswerEventMap['lr-retry']
-  | LyraTableEventMap['lr-retry'];
+  | LyraTableEventMap['lr-retry']
+  | LyraThreadListEventMap['lr-retry'];
 
 /**
  * `lr-reveal-change` — dispatched by `<lr-env-list>`.

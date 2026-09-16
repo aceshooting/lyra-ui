@@ -183,6 +183,23 @@ export function readRuntimeTokenValues(packageDir = defaultPackageDir) {
   for (const [name, value] of declarations(theme, themeDark)) {
     if (name.startsWith('--lr-theme-')) add(name, 'dark', value, 'theme-input');
   }
+
+  // The form-control size ladder lives in its own shared stylesheet, not tokens.styles.ts, because
+  // it is adopted only by form controls rather than by every LyraElement. Read just the base tier
+  // (before the first `:host([size=...])` override block) and keep only the knobs that chain to a
+  // `--lr-theme-*` input -- height and radius -- matching llms/shared.md's "only height and radius
+  // chain to a theme input" contract; the rest of that block (unthemed height/font-size/padding/gap)
+  // stays internal and is deliberately not added to canonical-tokens.json.
+  const sizesPath = path.join(packageDir, 'src', 'internal', 'sizes.styles.ts');
+  const sizes = readFileSync(sizesPath, 'utf8');
+  const sizesTierMarker = sizes.indexOf("[size='2xs']");
+  if (sizesTierMarker < 0) {
+    throw new Error('sizes.styles.ts base-tier marker changed; update the parity reader explicitly');
+  }
+  for (const [name, value] of declarations(sizes, 0, sizesTierMarker)) {
+    if (/^var\(--lr-theme-/.test(value)) add(name, 'light', value, 'shared');
+  }
+
   return records;
 }
 

@@ -137,9 +137,9 @@ background and text color, independent of the active-line outline above — plus
 `--lr-color-border`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
-`--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also reads the shared
-`--lr-scrollbar-width`/`--lr-scrollbar-gutter` tokens (default `auto`/`auto`, matching its previous
-unset behavior) — set `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any
+`--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in
+theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`,
+matching its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any
 ancestor for one declaration to retheme every internal scroll container in the library, including
 `lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 

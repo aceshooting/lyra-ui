@@ -65,8 +65,10 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 
 - `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
 - `presets: LyraDateRangePreset[] = []` (JS only, new in 11.0.0) —
-  `LyraDateRangePreset { label: string; start?: string; end?: string }`, where `start`/`end` are ISO
-  `YYYY-MM-DD`. **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
+  `LyraDateRangePreset { label: string; start?: string; end?: string; id?: string }`, where
+  `start`/`end` are ISO `YYYY-MM-DD` and `id` is an optional caller-owned
+  correlation key, echoed verbatim on `appliedPreset` and never read by the picker itself.
+  **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
   the picker's `min` / `max` respectively — that is how an "All time" preset is expressed. When the
   corresponding `min`/`max` is unset there is nothing to resolve to (a `value` of
   `YYYY-MM-DD/YYYY-MM-DD` has no unbounded spelling), so that preset's button renders **disabled**
@@ -86,7 +88,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   Interior dates need not all be enabled. A same-day manual completion obeys those same inclusive
   length limits. Long preset labels wrap in narrow allocations, including unbroken text and RTL.
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
-  `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
+  `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
   button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.

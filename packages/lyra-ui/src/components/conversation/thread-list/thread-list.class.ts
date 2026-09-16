@@ -18,6 +18,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { styles } from './thread-list.styles.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { renderDataState } from '../../../internal/data-state-renderer.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
@@ -39,7 +40,7 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_clear, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_clear, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_retry, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraChatThread {
@@ -75,6 +76,9 @@ export interface LyraThreadListEventMap {
   'lr-query-change': CustomEvent<{ text: string }>;
   'lr-group-toggle-request': CustomEvent<ThreadGroupToggleDetail>;
   'lr-group-toggle': CustomEvent<ThreadGroupToggleDetail>;
+  /** The built-in `[part='retry-button']` was activated, only rendered while `error` is set.
+   *  Cancelable: the default action clears `error`; `preventDefault()` leaves it set instead. */
+  'lr-retry': CustomEvent<null>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
 }
@@ -287,12 +291,19 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * exact source thread identity. Create a new collection and reassign it after changes; mutating
  * the assigned array does not update the view.
  *
+ * A separate `error` state reports a failed load: while `error` is set, the built-in `<lr-empty>`
+ * failed-load state (the same `error`-prefixed exported parts and `[part='retry-button']` as
+ * `<lr-table>`) replaces the virtual list/empty state, behind its own `error` slot. `error` beats
+ * the built-in empty state, matching `<lr-table>`'s own precedence.
+ *
  * @customElement lr-thread-list
  * @slot - Slotted mode only: host-supplied `lr-conversation-item`s, rendered in order. Each
  *   top-level assigned element that doesn't already carry an explicit `role` is given
  *   `role="listitem"`, since `[part="list"]` is `role="list"` in this mode and `lr-conversation-item`
  *   deliberately doesn't self-apply that role (see its own class doc).
  * @slot empty - Replaces the built-in empty state.
+ * @slot error - Replaces the built-in failed-load state, including its retry button, while `error`
+ *   is set.
  * @event lr-select - `detail: { conversationId }` -- a row was activated (data mode only).
  * @event lr-thread-pin - `detail: { conversationId, pinned }` -- the requested new state.
  * @event lr-thread-archive - `detail: { conversationId, archived }` -- the requested new state.
@@ -317,12 +328,22 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  *   shadow boundary can observe it.
  * @event focus - `searchable`: re-dispatched from the internal search `<input>`'s own `focus`,
  *   for the same reason as `blur`.
+ * @event lr-retry - The built-in `[part='retry-button']` was activated, only rendered while
+ *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
+ *   set instead.
  * @csspart base - The root.
  * @csspart search - The search field wrapper.
  * @csspart search-input - The `<input type="search">`.
  * @csspart clear-button - Clears the search field. Rendered only while it has a value.
  * @csspart list - The list region.
  * @csspart empty - The empty/no-matches state.
+ * @csspart error - The built-in `<lr-empty>` host rendered while `error` is set.
+ * @csspart error-base - Exported from the built-in error `<lr-empty>`'s own `base` part.
+ * @csspart error-icon - Exported from the built-in error `<lr-empty>`'s `icon` part.
+ * @csspart error-heading - Exported from the built-in error `<lr-empty>`'s `heading` part.
+ * @csspart error-description - Exported from the built-in error `<lr-empty>`'s `description` part.
+ * @csspart error-actions - Exported from the built-in error `<lr-empty>`'s `actions` part.
+ * @csspart retry-button - The built-in retry control rendered into the error state's `actions`.
  * @csspart viewport - The real scroll container, exported from the internal `lr-virtual-list`. It
  *   fills this component's height with no consumer CSS (and falls back to `lr-virtual-list`'s own
  *   24rem `--lr-virtual-list-height` default when the container has no resolvable height).
@@ -410,9 +431,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     archiveConversation: LYRA_DEFAULT_archiveConversation,
     clear: LYRA_DEFAULT_clear,
     deleteConversation: LYRA_DEFAULT_deleteConversation,
+    loading: LYRA_DEFAULT_loading,
+    noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
     pinConversation: LYRA_DEFAULT_pinConversation,
+    retry: LYRA_DEFAULT_retry,
     searchThreads: LYRA_DEFAULT_searchThreads,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     threadGroupArchived: LYRA_DEFAULT_threadGroupArchived,
     threadGroupCollapse: LYRA_DEFAULT_threadGroupCollapse,
     threadGroupExpand: LYRA_DEFAULT_threadGroupExpand,
@@ -599,6 +624,18 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Accessible name for the list region. Optional. Omitting it localizes the default
    *  `threadListLabel` message; an explicit empty string renders no visible/accessible label. */
   @property() label?: string;
+
+  /** Reports a failed thread-list load. While set, the built-in failed-load state (matching
+   *  `<lr-table>`'s own `error` contract) replaces the virtual list/empty state; `error` beats the
+   *  built-in empty state. Reflected so `[error]` is selectable from outside. */
+  @property({ type: Boolean, reflect: true }) error = false;
+
+  /** Failed-load heading override. Omitted localizes `<lr-table>`'s own `tableLoadFailed`
+   *  default. */
+  @property({ attribute: 'error-heading' }) errorHeading?: string;
+
+  /** Failed-load supporting copy. */
+  @property({ attribute: 'error-description' }) errorDescription = '';
 
   /** Data mode only: wraps each row's built-in `<lr-conversation-item>` with host-supplied
    *  content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface — e.g. a
@@ -1537,13 +1574,36 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     </div>`;
   }
 
+  /** `renderDataState()`'s built-in `[part='retry-button']` activation. Mirrors `<lr-table>`'s own
+   *  "propose, then react to the veto" onRetryClick shape: the default action clears `error`;
+   *  `preventDefault()` leaves it set for a consumer that owns its own retry timing. */
+  private onErrorRetry = (): void => {
+    this.error = false;
+  };
+
   private renderDataList(): TemplateResult {
     const visible = this.visibleThreads;
     const items = this.buildItems(visible);
     const showEmpty = visible.length === 0 && !this.hasEmptySlot;
     return html`
       <div part="list" @keydown=${this.onListKeyDown}>
-        ${showEmpty
+        ${this.error
+          ? renderDataState(
+              this,
+              {
+                loading: false,
+                error: true,
+                empty: false,
+                errorHeading: this.errorHeading,
+                errorDescription: this.errorDescription,
+                onRetry: this.onErrorRetry,
+                emitRetry: (detail, init: { cancelable: true }) =>
+                  this.emit('lr-retry', detail, init),
+              },
+              'error',
+              'lr-retry'
+            )
+          : showEmpty
           ? html`<div part="empty">
               ${this.searchText.trim()
                 ? this.localize('noMatches')
@@ -1567,7 +1627,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
             ></lr-virtual-list>`}
         <slot
           name="empty"
-          ?hidden=${!(visible.length === 0 && this.hasEmptySlot)}
+          ?hidden=${this.error || !(visible.length === 0 && this.hasEmptySlot)}
           @slotchange=${this.onEmptySlotChange}
         ></slot>
       </div>

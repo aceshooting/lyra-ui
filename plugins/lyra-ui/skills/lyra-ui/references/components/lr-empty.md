@@ -91,6 +91,9 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
   observed without turning initial distribution into a live update;
   a host `aria-label` names the host but does not replace that visible update text;
   the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
+  Remove any host `role="status"`/`role="alert"` hand-added before `announce` existed once it is
+  set — otherwise the initial text is announced twice, through the native role and again through
+  the shared sink.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
   inside can never match `:empty`) by tracking real flattened slot content in JS, including a bare
   non-whitespace text node such as an emoji as default icon content —

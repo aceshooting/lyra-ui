@@ -5,6 +5,7 @@ import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -16,7 +17,7 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_popover, LYRA_DEFAULT_previous, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_popover, LYRA_DEFAULT_previous, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** `standard` renders the numbered page list; `compact` collapses it to the page-jump field. */
@@ -138,6 +139,23 @@ function paginationItems(
  * Public `focus()`, `blur()`, and `click()` resolve the primary control for the active format:
  * the applied page control in standard format, or the page-jump input in compact format.
  *
+ * `total="-1"` enters indeterminate mode for a server API that never returns a total (limit/offset
+ * and cursor/keyset APIs typically don't) -- it renders previous/next plus a page-number field, no
+ * numbered page list, no item-range summary, and no `page-count`. `format`, `with-summary`, and
+ * `with-edges` are ignored in this mode: there is no total to lay a page list or a "last page"
+ * button against. `hasNext` (default `true`) is the one extra signal the mode needs -- previous
+ * availability stays derivable from `page` alone, but forward availability generally is not for a
+ * caller with no total. Any OTHER negative `total` (e.g. a computed `-50`) still renders the
+ * ordinary empty state, exactly like today: only the exact `-1` sentinel opts in, so a garbage or
+ * miscalculated negative value never silently reclassifies into a different rendering mode. Picked
+ * over a pair of `has-next`/`has-previous` booleans as the sole entry point because `total` is the
+ * one property every consumer already sets, and it mirrors `<lr-table>`'s own established
+ * negative-sentinel `total-items` precedent (see that property's own doc for why the two sentinels
+ * are kept numerically distinct). Event, focus-management, and announcement contracts are
+ * unchanged: `lr-before-page-change`/`lr-page-change`/`lr-activate` fire the same way, and the
+ * applied-page announcement/focus-follow both still run, just against a page-only message with no
+ * total-pages figure.
+ *
  * @customElement lr-pagination
  * @event lr-before-page-change - Fired before a valid button or compact-field page request.
  *   `detail: { page, pageSize }`. Cancelable; vetoing it suppresses `lr-page-change`. Link-mode
@@ -237,6 +255,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     next: LYRA_DEFAULT_next,
     open: LYRA_DEFAULT_open,
     paginationApplied: LYRA_DEFAULT_paginationApplied,
+    paginationAppliedUnknownTotal: LYRA_DEFAULT_paginationAppliedUnknownTotal,
     paginationEmptySummary: LYRA_DEFAULT_paginationEmptySummary,
     paginationFirstPage: LYRA_DEFAULT_paginationFirstPage,
     paginationJumpToPage: LYRA_DEFAULT_paginationJumpToPage,
@@ -258,10 +277,18 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @property({ type: Number, reflect: true }) page = 1;
   /** Number of items represented by one page. Non-positive values produce no pages. */
   @property({ type: Number, attribute: 'page-size' }) pageSize = 10;
-  /** Total number of items across every page. Non-positive values render the empty state.
-   *  Named `total` to match `wa-pagination`; it used to be `total-items`, which a mechanical
+  /** Total number of items across every page. Non-positive values render the empty state, with one
+   *  exact exception: `-1` enters indeterminate mode instead (see the class doc) -- every other
+   *  negative value, including one arrived at by a miscalculation, still renders the ordinary empty
+   *  state. Named `total` to match `wa-pagination`; it used to be `total-items`, which a mechanical
    *  rename left unset — silently rendering the empty state. */
   @property({ type: Number }) total = 0;
+  /** Whether at least one more page exists past the current one. Consulted only in indeterminate
+   *  mode (`total="-1"`, see the class doc) -- previous availability is always derivable from
+   *  `page`, but forward availability generally is not for a caller with no total. Defaults to
+   *  `true` so an indeterminate pager stays navigable until told otherwise. */
+  @property({ type: Boolean, attribute: 'has-next', reflect: true, converter: trueDefaultBooleanConverter })
+  hasNext = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Disables navigation and exposes `aria-busy="true"` while a page is loading. */
   @property({ type: Boolean, reflect: true }) loading = false;
@@ -367,9 +394,10 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     super.disconnectedCallback();
   }
 
-  /** The primary page control for the active format. */
+  /** The primary page control for the active format. Indeterminate mode always renders the
+   *  page-jump field (see `render()`), regardless of `format`. */
   private get primaryControl(): HTMLElement | undefined {
-    return this.format === 'compact'
+    return this.format === 'compact' || this.indeterminate
       ? this.pageInput
       : this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]') ?? undefined;
   }
@@ -405,21 +433,44 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     return Math.ceil(this.normalizedTotalItems / this.normalizedPageSize);
   }
 
-  /** The total number of pages, derived from `total` and `pageSize`. */
+  /** The total number of pages, derived from `total` and `pageSize`. Always `0` in indeterminate
+   *  mode -- there is no total to derive a page count from. */
   get totalPages(): number {
     return this.calculatedTotalPages;
   }
 
+  /** `total === -1` exactly (see the class doc and `total`'s own doc) -- the one sentinel that
+   *  enters indeterminate mode. Any other negative `total` still renders the ordinary empty state. */
+  private get indeterminate(): boolean {
+    return finiteInteger(this.total, 0) === -1;
+  }
+
+  /** True whenever the control has a page to show at all -- either a real derived page count, or
+   *  indeterminate mode, which always has "a" current page even though it has no total. Replaces a
+   *  bare `calculatedTotalPages === 0` empty-state check everywhere indeterminate mode also counts
+   *  as non-empty. */
+  private get hasPages(): boolean {
+    return this.indeterminate || this.calculatedTotalPages > 0;
+  }
+
+  /** The highest page a request may target: unbounded (subject to `hasNext`, checked separately)
+   *  in indeterminate mode, the derived page count otherwise. */
+  private get maxRequestablePage(): number {
+    return this.indeterminate ? Number.MAX_SAFE_INTEGER : this.calculatedTotalPages;
+  }
+
   /** Read-time-safe view of the controlled `page` property, clamped to `[1, totalPages]` (the
    *  page count itself depending on the now-safe `total`/`pageSize` above) -- never mutates
-   *  `page` itself, matching this component's fully controlled contract. */
+   *  `page` itself, matching this component's fully controlled contract. Indeterminate mode has no
+   *  upper bound to clamp against, only a floor of `1`. */
   private get currentPage(): number {
+    if (this.indeterminate) return finiteInteger(this.page, 1, 1, Number.MAX_SAFE_INTEGER);
     if (this.calculatedTotalPages === 0) return 0;
     return finiteInteger(this.page, 1, 1, this.calculatedTotalPages);
   }
 
   private get controlsDisabled(): boolean {
-    return this.disabled || this.loading || this.calculatedTotalPages === 0;
+    return this.disabled || this.loading || !this.hasPages;
   }
 
   /** Read-time-safe view of `siblingCount`, clamped so the rendered list stays bounded. */
@@ -453,7 +504,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    * controls as anchors without invoking a consumer callback or exposing an `href`. */
   private pageLink(page: number, inactive: boolean): { href: string | null; renderAnchor: boolean } {
     if (!this.hasHrefTemplate) return { href: null, renderAnchor: false };
-    if (inactive || page < 1 || page > this.calculatedTotalPages) {
+    if (inactive || page < 1 || page > this.maxRequestablePage) {
       return { href: null, renderAnchor: true };
     }
     const href = this.pageHref(page);
@@ -491,17 +542,22 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     super.willUpdate(changed);
     setCustomState(this.internals, 'disabled', this.disabled);
     if (changed.has('page') || changed.has('pageSize') || changed.has('total')) {
-      this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
+      this.draftPage = this.hasPages ? String(this.currentPage) : '';
       this.invalidDraft = false;
     }
-    if (this.initialized && changed.has('page') && this.calculatedTotalPages > 0) {
-      this.liveText = this.localize('paginationApplied', undefined, {
+    if (this.initialized && changed.has('page') && this.indeterminate) {
+      this.liveText = this.localize('paginationAppliedUnknownTotal', undefined, {
         page: this.formatNumber(this.currentPage),
-        totalPages: this.formatNumber(this.calculatedTotalPages),
       });
       // Announced from the computation, not from a rendered text change: the shared region appends
       // each announcement as its own node, so returning to a page already announced is read again
       // instead of being a silent no-op.
+      this.sink?.announce(this.liveText);
+    } else if (this.initialized && changed.has('page') && this.calculatedTotalPages > 0) {
+      this.liveText = this.localize('paginationApplied', undefined, {
+        page: this.formatNumber(this.currentPage),
+        totalPages: this.formatNumber(this.calculatedTotalPages),
+      });
       this.sink?.announce(this.liveText);
     }
     this.initialized = true;
@@ -520,19 +576,26 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     this.clearPendingFocus();
     if (this.currentPage !== requestedPage || focusMovedOutside) return;
     const target =
-      this.format === 'compact' ? this.pageInput : this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]');
+      this.format === 'compact' || this.indeterminate
+        ? this.pageInput
+        : this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]');
     target?.focus();
   }
 
   private validRequestedPage(value: string): number | null {
     if (value.trim() === '') return null;
     const page = Number(value);
-    if (!Number.isInteger(page) || page < 1 || page > this.calculatedTotalPages) return null;
+    if (!Number.isInteger(page) || page < 1 || page > this.maxRequestablePage) return null;
     return page;
   }
 
   private requestPage(page: number): void {
-    if (this.controlsDisabled || page < 1 || page > this.calculatedTotalPages) {
+    if (this.controlsDisabled || page < 1 || page > this.maxRequestablePage) {
+      return;
+    }
+    // Indeterminate mode has no upper page bound, so `hasNext` is the only thing standing between
+    // an accepted request and a page past the caller's known last one.
+    if (this.indeterminate && page > this.currentPage && !this.hasNext) {
       return;
     }
     if (page !== this.currentPage) {
@@ -540,7 +603,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       const detail = (): LyraPaginationChangeDetail =>
         Object.freeze({ page, pageSize: this.normalizedPageSize });
       if (this.emit('lr-before-page-change', detail(), { cancelable: true }).defaultPrevented) {
-        this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
+        this.draftPage = this.hasPages ? String(this.currentPage) : '';
         this.invalidDraft = false;
         return;
       }
@@ -548,7 +611,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       this.pendingFocusOrigin = focusOrigin;
       this.emit('lr-page-change', detail());
       // A controlled input reflects the applied property again after a request.
-      this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
+      this.draftPage = this.hasPages ? String(this.currentPage) : '';
       this.invalidDraft = false;
     }
     // Every accepted request reports, including the re-request of the current page that
@@ -593,7 +656,11 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const label = isPrevious
       ? this.localizedProperty('previous', this.previousLabel)
       : this.localizedProperty('next', this.nextLabel);
-    const spent = isPrevious ? current <= 1 : current >= this.calculatedTotalPages;
+    const spent = isPrevious
+      ? current <= 1
+      : this.indeterminate
+        ? !this.hasNext
+        : current >= this.calculatedTotalPages;
     const target = isPrevious ? current - 1 : current + 1;
     const inactive = this.controlsDisabled || spent;
     const { href, renderAnchor } = this.pageLink(target, inactive);
@@ -765,7 +832,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
         type="number"
         inputmode="numeric"
         min="1"
-        max=${Math.max(1, this.calculatedTotalPages)}
+        max=${this.indeterminate ? nothing : Math.max(1, this.calculatedTotalPages)}
         step="1"
         required
         aria-label=${pageLabel}
@@ -778,24 +845,31 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
         @focus=${this.onControlFocus}
         @blur=${this.onControlBlur}
       />
-      <span part="page-count" aria-hidden="true"> / ${this.formatNumber(this.calculatedTotalPages)}</span>
+      ${this.indeterminate
+        ? nothing
+        : html`<span part="page-count" aria-hidden="true"> / ${this.formatNumber(this.calculatedTotalPages)}</span>`}
     </span>`;
   }
 
   override render(): TemplateResult | typeof nothing {
-    if (this.hideSinglePage && this.calculatedTotalPages <= 1) return nothing;
+    if (this.hideSinglePage && !this.indeterminate && this.calculatedTotalPages <= 1) return nothing;
     const navigationLabel =
       this.accessibleLabel ?? this.localizedProperty('paginationLabel', this.label);
+    // Indeterminate mode has no total to lay a numbered page list, an item-range summary, or a
+    // "last page" edge button against, so it always renders the page-jump field regardless of
+    // `format`, and ignores `withSummary`/`withEdges`.
+    const showSummary = this.withSummary && !this.indeterminate;
+    const showEdges = this.withEdges && !this.indeterminate;
 
     return html`
       <nav part="base pagination" aria-label=${navigationLabel} aria-busy=${this.loading ? 'true' : 'false'}>
-        ${!this.withSummary ? nothing : html`<span part="summary">${this.summaryText()}</span>`}
+        ${!showSummary ? nothing : html`<span part="summary">${this.summaryText()}</span>`}
         <div part="controls">
-          ${this.withEdges ? this.renderEdgeButton('first') : nothing}
+          ${showEdges ? this.renderEdgeButton('first') : nothing}
           ${this.withoutNav ? nothing : this.renderNavButton('previous')}
-          ${this.format === 'compact' ? this.renderPageField() : this.renderPageList()}
+          ${this.indeterminate || this.format === 'compact' ? this.renderPageField() : this.renderPageList()}
           ${this.withoutNav ? nothing : this.renderNavButton('next')}
-          ${this.withEdges ? this.renderEdgeButton('last') : nothing}
+          ${showEdges ? this.renderEdgeButton('last') : nothing}
         </div>
         <span part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</span>
       </nav>

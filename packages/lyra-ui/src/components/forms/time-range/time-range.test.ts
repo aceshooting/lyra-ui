@@ -2516,6 +2516,22 @@ it("owns a bounded readonly snapshot of assigned preset rows", async () => {
   ).to.have.lengthOf(1);
 });
 
+it('copies a caller-supplied id into the frozen preset snapshot, and omits the key entirely when absent', async () => {
+  const source: TimeRangePreset[] = [
+    { label: 'Tagged', start: 1, end: 2, id: 'tagged-preset' },
+    { label: 'Untagged', start: 3, end: 4 },
+  ];
+  const el = (await fixture(
+    html`<lr-time-range .presets=${source}></lr-time-range>`
+  )) as LyraTimeRange;
+
+  expect(el.presets).to.deep.equal([
+    { label: 'Tagged', start: 1, end: 2, id: 'tagged-preset' },
+    { label: 'Untagged', start: 3, end: 4 },
+  ]);
+  expect('id' in el.presets[1]!, 'no id key at all for an untagged preset').to.be.false;
+});
+
 it('drops malformed preset rows while keeping the well-formed ones, in their original relative order', async () => {
   const malformed: unknown[] = [
     { label: "Good one", start: 0, end: 10 },
@@ -2615,6 +2631,23 @@ it('clicking a preset exposes its identity before the synchronous input and chan
   expect(el.appliedPreset, 'identity remains readable after the event pair').to.equal(
     el.presets[1],
   );
+});
+
+it('reports the caller-supplied id of the preset that produced the value', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el.presets = [
+    { label: 'Last 7 days', start: 0, end: 7, id: 'last-7-days' },
+    { label: 'Last 30 days', start: 0, end: 30, id: 'last-30-days' },
+  ];
+  await el.updateComplete;
+  const buttons = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="preset-button"]');
+
+  buttons[1]!.click();
+  await el.updateComplete;
+
+  expect(el.appliedPreset?.id).to.equal('last-30-days');
 });
 
 it('preserves preset identity when the exposed preset snapshot is reassigned unchanged', async () => {

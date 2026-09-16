@@ -40,11 +40,18 @@ the slide animation are its own.
   `without-header`, Web Awesome's spelling, reflected; neither is deprecated),
   `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
-  dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
-  wins-over-everything semantics documented under `lr-dialog` below.
+  dismissal options. A plain `aria-label` attribute on the host is honored too, inherited unchanged
+  from `lr-dialog`: it is the strongest naming override, by attribute presence including an
+  explicitly empty value, ahead of `accessible-label` and any slotted heading.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
   the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
   heading retains its own native level.
+- `size: LyraSize = 'm'` (reflected) — inherited unchanged from `lr-dialog`; caps the panel's
+  `max-inline-size` on the same six-step ladder for `start`/`end` placements (`top`/`bottom` are
+  unaffected, since those axes are already unconditionally `100%`). At the `m` default the 32rem
+  cap exceeds the panel's own 24rem default inline size, so it stays a no-op unless set. Distinct
+  from the drawer-specific `--size` CSS custom property below, which maps to this same panel's own
+  `inline-size`/`block-size` for the active axis.
 
 **Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
@@ -55,7 +62,12 @@ promise settles after the matching `lr-after-*` event.
 (`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
-animation compared with the state flip.
+animation compared with the state flip. **`lr-close` is not drawer-scoped, same as on `lr-dialog`:**
+several components nested inside a drawer (`lr-callout`, `lr-tab`/`lr-tab-group`, the tool dialogs,
+and so on) emit the same bubbling, composed `lr-close` name, so a listener bound on `<lr-drawer>`
+also receives a descendant's close. Guard with
+`if (event.target !== event.currentTarget) return;` before reading `event.detail`, which those
+descendants either omit or shape differently from `DialogCloseReason`.
 
 **Animation registry:** the panel uses placement-specific names:
 `drawer.showStart`/`drawer.hideStart`, `drawer.showEnd`/`drawer.hideEnd`,
@@ -74,7 +86,8 @@ composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` 
 
 **Themeable custom properties:** mapped `--size` controls the active axis. For start/end drawers,
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
-`--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap.
+`--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap,
+falling back to the `size` property's own tier value (see Properties above) when unset.
 The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
 `--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
 `--lr-drawer-width` (default `--lr-size-24rem`; used by

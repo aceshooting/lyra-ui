@@ -195,11 +195,12 @@ export const styles = css`
     block-size: 100%;
     max-block-size: var(--lr-code-block-max-height, none);
     overflow: auto;
-    /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- unset, both resolve to
-       the same 'auto' this scrollport always rendered with. Shared with lr-code-block-core, which
+    /* Opt-in theme-level scrollbar hooks -- each reads --lr-theme-scrollbar-* directly, with this
+       scrollport's own previous literal ('auto') as the fallback, so a consumer who never sets the
+       --lr-theme-* input on an ancestor sees no change. Shared with lr-code-block-core, which
        reuses this stylesheet. */
-    scrollbar-width: var(--lr-scrollbar-width);
-    scrollbar-gutter: var(--lr-scrollbar-gutter);
+    scrollbar-width: var(--lr-theme-scrollbar-width, auto);
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
   }
   [part='body'][hidden] {
     display: none;

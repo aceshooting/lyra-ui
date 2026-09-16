@@ -104,7 +104,7 @@ calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge leng
   the gap beside it. The rendered gap is derived from it, so the advertised value and the real offset
   cannot drift; setting it on the element (or on `lr-radio` in your own stylesheet) moves the label.
   Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
-  see `lr-checkbox` above for the formula to align a sibling hint element.
+  see `llms/components/lr-checkbox.md` for the formula to align a sibling hint element.
 
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
 (default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background

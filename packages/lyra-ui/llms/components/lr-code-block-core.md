@@ -114,7 +114,7 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`), and
 `--lr-code-block-language-color` (default `var(--lr-color-brand)`), plus the same shared
-tokens, including the `--lr-scrollbar-width`/`--lr-scrollbar-gutter` theme hooks `body` reads —
+tokens, including the `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks `body` honors —
 this component reuses `<lr-code-block>`'s stylesheet, so both share exactly the same scroll
 container. The last five are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above

@@ -1029,6 +1029,45 @@ describe('lr-input', () => {
     );
   });
 
+  it('declares a non-zero transition on the password-toggle/clear-button paint so hover/press ease like lr-button', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-input type="password" password-toggle value="secret"></lr-input>
+        <lr-input clearable value="clear me"></lr-input>
+      </div>
+    `);
+    const password = wrapper.querySelector<LyraInput>('lr-input[type="password"]')!;
+    const clearable = wrapper.querySelector<LyraInput>('lr-input[clearable]')!;
+    for (const [el, part] of [
+      [password, 'password-toggle'],
+      [clearable, 'clear-button'],
+    ] as const) {
+      const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      const computed = getComputedStyle(target);
+      expect(computed.transitionDuration, part).to.not.equal('0s');
+      expect(computed.transitionProperty, part).to.include('background-color');
+      expect(computed.transitionProperty, part).to.include('color');
+    }
+  });
+
+  it('leaves the resting password-toggle/clear-button background unchanged (unset-regression)', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-input type="password" password-toggle value="secret"></lr-input>
+        <lr-input clearable value="clear me"></lr-input>
+      </div>
+    `);
+    const password = wrapper.querySelector<LyraInput>('lr-input[type="password"]')!;
+    const clearable = wrapper.querySelector<LyraInput>('lr-input[clearable]')!;
+    for (const [el, part] of [
+      [password, 'password-toggle'],
+      [clearable, 'clear-button'],
+    ] as const) {
+      const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      expect(getComputedStyle(target).backgroundColor, part).to.equal('rgba(0, 0, 0, 0)');
+    }
+  });
+
   it('resets native appearance unconditionally for search, and restyles (not suppresses) the time picker indicator', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     // Previously gated behind :host([clearable]) -- the common non-clearable case kept the glyph.

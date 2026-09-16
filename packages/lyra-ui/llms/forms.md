@@ -1253,8 +1253,10 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 
 - `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
 - `presets: LyraDateRangePreset[] = []` (JS only, new in 11.0.0) —
-  `LyraDateRangePreset { label: string; start?: string; end?: string }`, where `start`/`end` are ISO
-  `YYYY-MM-DD`. **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
+  `LyraDateRangePreset { label: string; start?: string; end?: string; id?: string }`, where
+  `start`/`end` are ISO `YYYY-MM-DD` and `id` is an optional caller-owned
+  correlation key, echoed verbatim on `appliedPreset` and never read by the picker itself.
+  **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
   the picker's `min` / `max` respectively — that is how an "All time" preset is expressed. When the
   corresponding `min`/`max` is unset there is nothing to resolve to (a `value` of
   `YYYY-MM-DD/YYYY-MM-DD` has no unbounded spelling), so that preset's button renders **disabled**
@@ -1274,7 +1276,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   Interior dates need not all be enabled. A same-day manual completion obeys those same inclusive
   length limits. Long preset labels wrap in narrow allocations, including unbroken text and RTL.
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
-  `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
+  `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
   button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.
@@ -3566,13 +3568,15 @@ semantics.
   return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
   Leaving the property unset preserves the numeric-only contract
 - `presets: readonly TimeRangePreset[] = []` (attribute: false) — readonly `TimeRangePreset {
-label: string; start: number; end: number }`; a bounded frozen snapshot of optional discrete
-  presets (e.g. "Last 7 days") rendered as a
+label: string; start: number; end: number; id?: string }`; a bounded frozen snapshot of optional
+  discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
   native/prefixed input and change sequences a committed drag or keyboard step would. Preset
   endpoints are clamped and ordered once, and that same normalized pair drives both application
-  and `aria-pressed`/`data-active` projection
+  and `aria-pressed`/`data-active` projection. The optional `id` is a caller-owned
+  correlation key copied into the snapshot verbatim and never read by the control itself; an
+  untagged preset is unaffected
 - `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the frozen
   `presets` snapshot whose button produced the current range. Preset application updates this
   identity before its synchronous event sequence, so it can be read inside `input`/`change` or
@@ -4706,7 +4710,7 @@ calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge leng
   the gap beside it. The rendered gap is derived from it, so the advertised value and the real offset
   cannot drift; setting it on the element (or on `lr-radio` in your own stylesheet) moves the label.
   Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
-  see `lr-checkbox` above for the formula to align a sibling hint element.
+  see `llms/components/lr-checkbox.md` for the formula to align a sibling hint element.
 
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
 (default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background
@@ -5482,9 +5486,9 @@ hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
-The `editor` scroll frame also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
-tokens (default `auto`/`auto`, matching its previous unset behavior) — set
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+The `editor` scroll frame also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
+its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library, including `lr-table`,
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
 
@@ -5891,7 +5895,10 @@ transferring focus, so End and long row jumps never strand focus on a removed vi
 content, overrides the `errorText` attribute when provided).
 
 **CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
-`form-control-label` (the visible label), `base`, `search` (`role="combobox"`), `grid`
+`form-control-label` (the visible label), `base`, `search-wrapper` (the row wrapper around
+`search` and `search-clear`), `search` (`role="combobox"`), `search-clear` (clears the search
+field, replacing the native search-cancel glyph the component resets; rendered only while it has a
+value), `grid`
 (`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
 button), `empty` (shown when the search matches nothing, or when a consumer deliberately opted out
 with `groups = []`), `load-error` (the failure surface shown in `empty`'s place when the optional
@@ -5971,6 +5978,8 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
 **Additional API surface:**
 
 - `--lr-emoji-picker-control-gap` — Gap between field sections. Default: `var(--lr-space-xs)`.
+- `--lr-emoji-picker-search-clear-gap` — Gap between the search field and the clear button inside
+  `search-wrapper`. Default: `var(--lr-space-xs)`.
 - `--lr-emoji-picker-radius` — Outer picker corner radius. Default: `var(--lr-radius)`.
 - `--lr-emoji-picker-item-radius` — Search and emoji corner radius. Default: `var(--lr-radius-xs)`.
 - `--lr-emoji-picker-search-border-color` — Resting search border color, independent of the hover
@@ -6381,6 +6390,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly start?: string;
     readonly end?: string;
+    readonly id?: string;
   }`
 
 - **`components-forms-emoji-picker-emoji-types-contracts`** — Supporting data types and helpers for this component family.
@@ -6531,4 +6541,5 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly start: number;
     readonly end: number;
+    readonly id?: string;
   }`

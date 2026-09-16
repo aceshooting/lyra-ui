@@ -24,6 +24,23 @@ export const UpstreamThemeHooks: StoryObj = {
   `,
 };
 
+export const ThemeTrackWidth: StoryObj = {
+  name: 'Theme track width',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `--lr-theme-progress-ring-track-width` on `:root` or any ancestor retunes the track/indicator stroke width for every `lr-progress-ring` beneath it. It is a dedicated, opt-in hook: it stays unset by default whether or not `theme.css` is imported, so importing the theme alone can never repaint this ring away from its own `4px` default the way bridging the widely-shared `--lr-theme-border-width-thick` (declared at `3px` in `theme.css`) would have.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="--lr-theme-progress-ring-track-width: 8px;">
+      <lr-progress-ring value="65" show-value label="Upload progress">65%</lr-progress-ring>
+    </div>
+  `,
+};
+
 export const ShowValue: StoryObj = {
   render: () => html`
     <div style="display:flex;gap:var(--lr-size-1rem);align-items:center">

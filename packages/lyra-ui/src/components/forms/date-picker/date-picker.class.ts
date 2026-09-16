@@ -124,7 +124,7 @@ export interface LyraDatePickerEventMap {
 /**
  * One quick-range option for `presets`.
  *
- * Deliberately the same shape as `<lr-time-range>`'s `TimeRangePreset` (`label`/`start`/`end`,
+ * Deliberately the same shape as `<lr-time-range>`'s `TimeRangePreset` (`label`/`start`/`end`/`id`,
  * rendered as an `aria-pressed` button row) so the library has one preset vocabulary rather than
  * two. The only difference is the unit: ISO `YYYY-MM-DD` dates instead of numbers, because this
  * control's domain is dates.
@@ -139,6 +139,14 @@ export interface LyraDateRangePreset {
   readonly start?: string;
   /** Inclusive range end, ISO `YYYY-MM-DD`. Omit for an OPEN end, resolving to `max`. */
   readonly end?: string;
+  /**
+   * Caller-owned stable identity, echoed verbatim on `appliedPreset` -- never read, compared, or
+   * otherwise interpreted by this component. Exists so a consumer can persist WHICH preset is
+   * active (`appliedPreset.id`) without a downcast or a side `WeakMap`, which is exactly the
+   * mapping table `presets` exists to delete. Optional: an untagged preset still round-trips by
+   * object identity alone, as it always has.
+   */
+  readonly id?: string;
 }
 
 interface CanonicalDateRangePreset {

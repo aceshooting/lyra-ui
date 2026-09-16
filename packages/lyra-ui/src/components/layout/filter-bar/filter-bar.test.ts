@@ -2983,6 +2983,21 @@ describe("date-range presets", () => {
     expect(ev.detail.appliedPreset).to.equal(definition.presets[1]);
   });
 
+  it("round-trips a caller-supplied preset id onto the lr-input detail", async () => {
+    const el = await bar(
+      withPresets([
+        { label: "Last 7 days", start: "2026-08-13", end: "2026-08-19", id: "last-7-days" },
+        { label: "This month", start: "2026-08-01", end: "2026-08-31", id: "this-month" },
+      ]),
+    );
+    const promise = oneEvent(el, "lr-input");
+
+    await clickPreset(el, 1);
+
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
+    expect(ev.detail.appliedPreset?.id).to.equal("this-month");
+  });
+
   it("omits the applied preset for a hand-committed date change", async () => {
     const el = await bar(withPresets());
     const input = dateInput(el);

@@ -35,7 +35,13 @@ export const styles = css`
       100%
     );
     block-size: 100%;
-    max-inline-size: min(var(--lr-dialog-max-width, 100%), 100%);
+    /* Falls back to the inherited size ladder's private tier value (set by the size property
+       lr-drawer inherits unchanged from lr-dialog -- see dialog.styles.ts) instead of an
+       unconditional 100%, so size caps the panel exactly as it does on lr-dialog. An explicit
+       --lr-dialog-max-width override still wins over the tier. At the 'm' default this cap
+       (32rem) already exceeds the panel's own inline-size formula above (24rem), so it stays a
+       no-op and unset rendering is unchanged. */
+    max-inline-size: min(var(--lr-dialog-max-width, var(--_lr-dialog-max-width)), 100%);
     max-block-size: 100%;
     border-radius: 0;
     /* Modal layer, one step below lr-dialog's --lr-overlay-shadow-modal default: an edge-anchored

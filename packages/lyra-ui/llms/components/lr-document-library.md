@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,15 +47,31 @@ each resolves its tier inside its own shadow root, so no custom property on this
 there. The two always stay on the same tier as each other, so the toolbar row never goes ragged.
 With no `size` both keep their own `m` default; an unsupported value normalizes to the omitted state
 and removes the attribute.
+`error: boolean = false` (reflected) — reports a failed document-list load. Forwarded to the nested
+`lr-table`, whose own built-in failed-load state (with retry button) replaces the document rows
+while it's set; `error` beats the empty state, matching `lr-table`'s own precedence.
+`errorHeading?: string` (`error-heading`) — failed-load heading override, forwarded to the nested
+table. Omitted localizes the table's own `tableLoadFailed` default.
+`errorDescription: string = ''` (`error-description`) — failed-load supporting copy, forwarded to
+the nested table.
 
 **Events:** `lr-filter-change` emits a fresh frozen readonly
 `{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly
 `{ phase: 'request', sortKey, sortDir }`; accepted `lr-sort` commits the same canonical vocabulary
-with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`; and
-`lr-open` emits frozen readonly `{ documentId }`.
+with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`;
+`lr-open` emits frozen readonly `{ documentId }`; and `lr-retry` (`detail: null`, cancelable) — the
+nested table's built-in retry button was activated, only rendered while `error` is set; the default
+action clears `error`, `preventDefault()` leaves it set. This component intercepts the nested
+table's own `lr-retry` and re-proposes its own, so the outer `error` property never drifts out of
+sync with the table's internal state.
+
+**Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
+button, while `error` is set.
 
 **CSS parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
-`clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
+`clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`, `error-row`, `error-cell`,
+`error` (the nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
+`error-description`, `error-actions`, `retry-button`.
 
 `selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
 selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count

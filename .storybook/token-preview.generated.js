@@ -2602,6 +2602,62 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
     "group": "control",
     "tokens": [
       {
+        "name": "--lr-form-control-height-2xs",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-form-control-height-2xs, 1.25rem)"
+        }
+      },
+      {
+        "name": "--lr-form-control-height-l",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-form-control-height-l, 3rem)"
+        }
+      },
+      {
+        "name": "--lr-form-control-height-m",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-form-control-height-m, 2.5rem)"
+        }
+      },
+      {
+        "name": "--lr-form-control-height-s",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-form-control-height-s, 1.875rem)"
+        }
+      },
+      {
+        "name": "--lr-form-control-height-xl",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-form-control-height-xl, 3.5rem)"
+        }
+      },
+      {
+        "name": "--lr-form-control-height-xs",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-form-control-height-xs, 1.5rem)"
+        }
+      },
+      {
+        "name": "--lr-form-control-radius",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-form-control-radius, var(--lr-radius))"
+        }
+      },
+      {
         "name": "--lr-icon-button-size",
         "type": "dimension",
         "scope": "shared",
@@ -2615,6 +2671,54 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-otp-input-segment-size, 2.5em)"
+        }
+      },
+      {
+        "name": "--lr-theme-form-control-height-2xs",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.25rem"
+        }
+      },
+      {
+        "name": "--lr-theme-form-control-height-l",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "3rem"
+        }
+      },
+      {
+        "name": "--lr-theme-form-control-height-m",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "2.5rem"
+        }
+      },
+      {
+        "name": "--lr-theme-form-control-height-s",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.875rem"
+        }
+      },
+      {
+        "name": "--lr-theme-form-control-height-xl",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "3.5rem"
+        }
+      },
+      {
+        "name": "--lr-theme-form-control-height-xs",
+        "type": "dimension",
+        "scope": "theme-input",
+        "values": {
+          "light": "1.5rem"
         }
       },
       {
@@ -2899,22 +3003,6 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-scroll-fade-size, 2rem)"
-        }
-      },
-      {
-        "name": "--lr-scrollbar-gutter",
-        "type": "string",
-        "scope": "shared",
-        "values": {
-          "light": "var(--lr-theme-scrollbar-gutter, auto)"
-        }
-      },
-      {
-        "name": "--lr-scrollbar-width",
-        "type": "string",
-        "scope": "shared",
-        "values": {
-          "light": "var(--lr-theme-scrollbar-width, auto)"
         }
       },
       {

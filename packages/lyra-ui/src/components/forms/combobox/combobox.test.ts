@@ -7697,6 +7697,27 @@ describe('unknown committed value presentation', () => {
     expect(badge, 'a distinguishing badge renders next to the input').to.exist;
   });
 
+  it('renders the shipped English default for the unknown-value badge with no locale registered', async () => {
+    const el = (await fixture(html`
+      <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    el.value = 'ghost';
+    await el.updateComplete;
+    const badge = el.shadowRoot!.querySelector('[part="unknown-value"]');
+    expect(badge?.textContent).to.equal('not in catalog');
+  });
+
+  it('localizes the unknown-value badge through a .strings override', async () => {
+    const el = (await fixture(html`
+      <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>
+    `)) as LyraCombobox;
+    el.strings = { notInCatalog: 'Hors catalogue' };
+    el.value = 'ghost';
+    await el.updateComplete;
+    const badge = el.shadowRoot!.querySelector('[part="unknown-value"]');
+    expect(badge?.textContent).to.equal('Hors catalogue');
+  });
+
   it('does not flag a value that matches an option', async () => {
     const el = (await fixture(basic())) as LyraCombobox;
     el.value = 'a';

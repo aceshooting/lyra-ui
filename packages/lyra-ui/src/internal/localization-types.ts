@@ -151,6 +151,7 @@ export type LyraMessageKey =
   | 'paginationSummary'
   | 'paginationEmptySummary'
   | 'paginationApplied'
+  | 'paginationAppliedUnknownTotal'
   | 'cancel'
   | 'confirm'
   | 'search'

@@ -1379,13 +1379,36 @@ disabled under forced-colors while the native scroll owner remains available. Ot
 **Known gotchas:**
 
 - `orientationBreakpointBasis='container'` (the default) observes **the stepper's own allocated
-  inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. In
-  a row where the stepper is a fixed-width sidebar beside another element, its own width never
-  changes with the viewport at all, so no container breakpoint can react to that row stacking via a
-  CSS `@media` rule. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper
-  and its sibling the same `orientation-breakpoint` and both flip in lockstep with the CSS rule. See
-  `<lr-multi-split>`'s own note above for the full explanation of why a shared row can't be inferred from
-  one element's measurement, and for a worked example.
+  inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. It
+  does **not** fit a stepper sitting beside a fixed-width sibling in a row that stacks via a CSS
+  `@media` rule: while the row is a row, the stepper's width shrinks with the viewport; the instant
+  the row stacks (a pure-CSS event no component can observe) it jumps to the _full_ row width —
+  wider than it was just before the transition. Because the measured width is not monotonic across
+  that transition, no single container threshold both stays wide while the row is a row and goes
+  narrow exactly when it stacks — and a fixed-width sibling is worse still, since its own width
+  never changes with the viewport at all, so no container breakpoint on it can ever react to the
+  stacking. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper and its
+  sibling the same `orientation-breakpoint` and `orientation-breakpoint-basis='viewport'` and they
+  flip together, in lockstep with the CSS rule that stacks the row:
+  ```html
+  <lr-stepper
+    orientation-breakpoint="56.25rem"
+    orientation-breakpoint-basis="viewport"
+  ></lr-stepper>
+  <lr-multi-split
+    orientation-breakpoint="56.25rem"
+    orientation-breakpoint-basis="viewport"
+  ></lr-multi-split>
+  <style>
+    @media (max-width: 56.25rem) {
+      .shell {
+        flex-direction: column;
+      }
+    }
+  </style>
+  ```
+  A consumer-side `matchMedia()` controller driving the `orientation` attribute directly is still
+  supported and still correct — it is simply no longer required for this case.
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
   `state` values.
@@ -2063,9 +2086,9 @@ themeable with `--lr-virtual-list-hover-outline-width` (default
 `--lr-virtual-list-hover-outline-offset` (default
 `calc(-1 * var(--lr-border-width-thin))`). All four hover-outline hooks are inline fallbacks and
 there is intentionally no pressed state: the list viewport is a scroll surface rather than an
-activation target. `[part="base"]` also reads the shared `--lr-scrollbar-width`/`--lr-scrollbar-gutter`
-tokens (default `auto`/`auto`, matching its previous unset behavior) — set
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` on `:root` or any ancestor for one
+activation target. `[part="base"]` also honors the opt-in theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
+its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library, including `lr-table`,
 `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
@@ -3518,7 +3541,9 @@ never fired at all.
 **Slots:** none.
 
 **CSS parts:** `backdrop`, `dialog` (the `role="dialog" aria-modal="true"` panel), `search` (the
-input row), `input` (the `type="search"` field), `list` (the `role="listbox"`), `group` (a group
+input row), `input` (the `type="search"` field), `clear-button` (clears the search field,
+replacing the native search-cancel glyph the component resets; rendered only while it has a
+value), `list` (the `role="listbox"`), `group` (a group
 heading), `command-group` (a labeled ARIA group of commands), `command` (a `role="option"` button),
 `icon` (a command's leading icon glyph; only rendered when the command has one), `label`,
 `description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`.
@@ -4310,11 +4335,13 @@ other transient state the bar owns.
 A `'date-range'` definition also accepts `presets?: readonly LyraDateRangePreset[]` (new in 12.0.0),
 forwarded to its composed `<lr-date-input>` exactly like `min`/`max`, so the quick-range row
 ("Today", "Last 7 days", "All time") renders inside that filter's own calendar popover. Entries are
-`LyraDateRangePreset { label, start?, end? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is open
-and resolves to the filter's `min`/`max`, and an open bound with no corresponding limit renders that
-button disabled. `presets` is deliberately **not** accepted on a single `'date'` filter: a preset
-names two dates, so `lr-date-picker` ignores the list outside range mode, and a list passed there is
-dropped rather than rendering a row that cannot do anything.
+`LyraDateRangePreset { label, start?, end?, id? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is
+open and resolves to the filter's `min`/`max`, and an open bound with no corresponding limit renders
+that button disabled. The optional `id` is a caller-owned correlation key, never read by the bar
+itself -- it exists purely so `appliedPreset.id` (below) is typed without a cast. `presets` is
+deliberately **not** accepted on a single `'date'` filter: a preset names two dates, so
+`lr-date-picker` ignores the list outside range mode, and a list passed there is dropped rather
+than rendering a row that cannot do anything.
 
 The `lr-input` emitted by such a commit carries `appliedPreset`, the definition entry whose button
 produced it — the bar's own frozen snapshot, so it compares identical to `filters[i].presets[j]`. It

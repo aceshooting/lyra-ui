@@ -284,4 +284,7 @@ export interface LyraDataGridEventMap<Row = Record<string, unknown>> {
   'lr-sort-request': CustomEvent<Readonly<{ sort: DataGridSortingState }>>;
   'lr-sort-change': CustomEvent<Readonly<{ sort: DataGridSortingState }>>;
   'lr-error': CustomEvent<null>;
+  /** The built-in `[part='retry-button']` was activated, only rendered while `error` is set.
+   *  Cancelable: the default action clears `error`; `preventDefault()` leaves it set instead. */
+  'lr-retry': CustomEvent<null>;
 }

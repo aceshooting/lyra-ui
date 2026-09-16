@@ -127,6 +127,29 @@ it("gives the textarea field hover feedback matching the keyboard focus-visible 
   expect(css).to.match(/\[part='textarea'\]:hover\s*\{[^}]*border-color:/);
 });
 
+it("declares a non-zero transition on the textarea border so hover/focus ease like lr-button", async () => {
+  const el = await fixture<LyraTextarea>(
+    html`<lr-textarea aria-label="Notes"></lr-textarea>`
+  );
+  const textarea =
+    el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  const computed = getComputedStyle(textarea);
+  expect(computed.transitionDuration).to.not.equal("0s");
+  expect(computed.transitionProperty).to.include("border-color");
+});
+
+it("leaves the resting textarea border colour unchanged (unset-regression)", async () => {
+  const el = await fixture<LyraTextarea>(
+    html`<lr-textarea
+      aria-label="Notes"
+      style="--lr-textarea-border-color: rgb(9, 10, 11)"
+    ></lr-textarea>`
+  );
+  const textarea =
+    el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  expect(getComputedStyle(textarea).borderTopColor).to.equal("rgb(9, 10, 11)");
+});
+
 it("themes the textarea hover border through a component hook", async () => {
   const el = await fixture<LyraTextarea>(html`
     <lr-textarea

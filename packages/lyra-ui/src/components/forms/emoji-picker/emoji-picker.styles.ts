@@ -84,11 +84,21 @@ export const styles = css`
   [part='emoji']:disabled {
     cursor: not-allowed;
   }
+  /* Row wrapper introduced alongside [part='search-clear'] -- [part='search'] previously relied
+     on [part='base']'s column-flex stretch for its full inline-size; nested one level deeper now,
+     it gets that back explicitly below instead. */
+  [part='search-wrapper'] {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-emoji-picker-search-clear-gap, var(--lr-space-xs));
+  }
   [part='search'] {
     /* Geometry knobs, each defaulting to the value the field shipped with, so an unset picker
        renders exactly as before. The size attribute deliberately does not drive them: on this
        component it scales the emoji glyph and item box, and pulling the filter field along would
        resize a surface that has never tracked that tier. */
+    flex: 1 1 auto;
+    min-inline-size: 0;
     min-block-size: var(--lr-emoji-picker-search-min-height, auto);
     padding-block: var(--lr-emoji-picker-search-padding-block, var(--lr-space-xs));
     padding-inline: var(--lr-emoji-picker-search-padding-inline, var(--lr-space-s));
@@ -119,6 +129,42 @@ export const styles = css`
   [part='search']::-webkit-search-cancel-button,
   [part='search']::-webkit-search-decoration {
     appearance: none;
+  }
+  /* Replaces the native ::-webkit-search-cancel-button suppressed above -- same "opt-out chrome
+     needs a rendered replacement" contract lr-input's own [part='clear-button'] documents. */
+  [part='search-clear'] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: 0;
+    border-radius: var(--lr-emoji-picker-item-radius, var(--_lr-emoji-picker-item-radius-default));
+    background: transparent;
+    cursor: pointer;
+    color: var(--lr-color-text-quiet);
+    padding: var(--lr-space-xs);
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+  [part='search-clear']:not(:disabled):hover {
+    color: var(--lr-color-text);
+  }
+  [part='search-clear']:not(:disabled):active {
+    color: var(--lr-color-text);
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part='search-clear']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+  [part='search-clear']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
   }
   [part='grid'] {
     display: flex;
