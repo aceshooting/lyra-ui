@@ -157,6 +157,11 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  *   the default size tier.
  * @cssprop [--lr-otp-input-segment-size=var(--lr-theme-otp-input-segment-size,2.5em)] - Internal
  *   role token supplying the standalone segment size when `--segment-size` is unset.
+ *   Element-scoped: every `lr-*` host re-declares this token from `--lr-theme-otp-input-segment-size`
+ *   in the shared token layer, so an ancestor rule that sets `--lr-otp-input-segment-size` directly
+ *   is reset at the first intervening `lr-*` component and never reaches this element. Set it
+ *   directly on this element, or set `--lr-theme-otp-input-segment-size` on an ancestor to resize
+ *   every OTP input in the subtree at once.
  * @cssprop [--lr-otp-input-segment-border-color=var(--lr-color-border)] - Border color of each
  *   segment.
  * @cssprop [--lr-otp-input-segment-fill=transparent] - Background fill of each segment.

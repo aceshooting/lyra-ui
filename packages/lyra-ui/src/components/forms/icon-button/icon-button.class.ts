@@ -110,7 +110,8 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *
  * Component-scoped theme inputs remain undeclared on the host, so values inherited from an
  * ancestor theme wrapper override the built-in fallback. A value set directly on the icon button
- * still wins through normal custom-property inheritance.
+ * still wins through normal custom-property inheritance. `--lr-icon-button-size` is the one
+ * exception among this component's own cssprops: see its own `@cssprop` entry below.
  *
  * **No `size` attribute, deliberately.** This control is the one component in the library that
  * does NOT key off the shared six-step size ladder, and the reason is that its dimension is an
@@ -157,8 +158,14 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @cssprop [--lr-icon-button-size=2.5rem] - Minimum tappable inline and block size of the native
  *   button — a **floor**, not a fixed size: content larger than it grows the button and keeps its
  *   own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on
- *   `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components
+ *   every `lr-*` host by `tokens.styles.ts`, and the shared minimum tappable size several other components
  *   size their icon controls against), so overriding it globally resizes all of them together.
+ *   **Element-scoped, unlike the `--lr-icon-button-*` cssprops below:** every `lr-*` host
+ *   re-declares `--lr-icon-button-size` from `--lr-theme-icon-button-size` in the shared token
+ *   layer, so an ancestor rule that sets `--lr-icon-button-size` directly is reset the moment it
+ *   crosses into any intervening `lr-*` component's shadow root and never reaches this element.
+ *   Set it directly on this element instead, or set `--lr-theme-icon-button-size` on an ancestor
+ *   to resize every icon button in the subtree at once.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Corner radius of the native button.
  * @cssprop [--lr-icon-button-background=transparent] - Background fill of the native button.
  * @cssprop [--lr-icon-button-background-hover=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -

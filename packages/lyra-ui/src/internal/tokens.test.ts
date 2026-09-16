@@ -213,6 +213,13 @@ it('defines a single popover viewport-clamp token, themeable via --lr-theme-popo
   );
 });
 
+it('defines an otp-input-segment-size token, themeable via --lr-theme-otp-input-segment-size', async () => {
+  expect(await probeVar('--lr-otp-input-segment-size')).to.equal('2.5em');
+  expect(await probeNestedVar('--lr-otp-input-segment-size', '--lr-theme-otp-input-segment-size: 3em')).to.equal(
+    '3em',
+  );
+});
+
 it('defines the focus-ring tokens, with color aliasing the existing brand token', async () => {
   expect(await probeVar('--lr-focus-ring-width')).to.equal('2px');
   expect(await probeVar('--lr-focus-ring-offset')).to.equal('2px');
@@ -236,14 +243,19 @@ it('defines an icon-button-size token', async () => {
   expect(await probeVar('--lr-icon-button-size')).to.equal('2.5rem');
 });
 
-it('keeps the focus-ring and icon-button defaults inside a nested shadow root with no override', async () => {
+it('keeps the focus-ring, icon-button, otp-input, and popover-clamp defaults inside a nested shadow root with no override', async () => {
   expect(await probeNestedVar('--lr-icon-button-size')).to.equal('2.5rem');
   expect(await probeNestedVar('--lr-focus-ring-width')).to.equal('2px');
   expect(await probeNestedVar('--lr-focus-ring-offset')).to.equal('2px');
+  expect(await probeNestedVar('--lr-otp-input-segment-size')).to.equal('2.5em');
+  expect(await probeNestedVar('--lr-popover-viewport-clamp')).to.equal('92vw');
 });
 
-it('lets --lr-theme-icon-button-size set on an ancestor reach a component nested below another host', async () => {
+it('lets --lr-theme-icon-button-size and --lr-theme-otp-input-segment-size set on an ancestor reach a component nested below another host', async () => {
   expect(await probeNestedVar('--lr-icon-button-size', '--lr-theme-icon-button-size: 3rem')).to.equal('3rem');
+  expect(await probeNestedVar('--lr-otp-input-segment-size', '--lr-theme-otp-input-segment-size: 3em')).to.equal(
+    '3em',
+  );
 });
 
 it('lets the --lr-theme-focus-ring-* inputs set on an ancestor reach a component nested below another host', async () => {
@@ -253,10 +265,31 @@ it('lets the --lr-theme-focus-ring-* inputs set on an ancestor reach a component
 
 it('cannot be rethemed through the --lr-* token itself, which is why the --lr-theme-* bridge exists', async () => {
   // Every LyraElement re-declares --lr-* on its own :host, so an ancestor value is shadowed
-  // at the first intervening host and never reaches anything nested below it.
+  // at the first intervening host and never reaches anything nested below it. These four tokens
+  // (icon-button-size, focus-ring-width/-offset, otp-input-segment-size, popover-viewport-clamp)
+  // are the only ones the shared base :host block declares under a component-looking name --
+  // see build-llms.mjs's "names that look per-component but are not" note.
   expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size: 3rem')).to.equal('2.5rem');
   expect(await probeNestedVar('--lr-focus-ring-width', '--lr-focus-ring-width: 4px')).to.equal('2px');
   expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-focus-ring-offset: 5px')).to.equal('2px');
+  expect(await probeNestedVar('--lr-otp-input-segment-size', '--lr-otp-input-segment-size: 4em')).to.equal('2.5em');
+  expect(await probeNestedVar('--lr-popover-viewport-clamp', '--lr-popover-viewport-clamp: 50vw')).to.equal('92vw');
+});
+
+// The request's concrete repro: an ancestor wrapper styling
+// `.end { --lr-icon-button-size: 2.75rem; --lr-icon-button-radius: 999px; }` around an
+// intervening <lr-popover> whose trigger slot holds a nested <lr-icon-button> gets the radius
+// applied but not the size. `NestedTokenProbe`/`TokenProbe` stand in for that intervening
+// <lr-popover> and nested <lr-icon-button>: neither composes icon-button.styles.ts, but that is
+// exactly the point -- --lr-icon-button-radius/-background/-color/-border are never declared on
+// any :host anywhere (icon-button.styles.ts reads them with a bare `var(--lr-icon-button-x,
+// fallback)`, with no assignment of its own), so they inherit through this fixture exactly as
+// they would through the real intervening component. --lr-icon-button-size behaves differently
+// only because the SHARED base layer (which every stand-in and every real component includes)
+// re-declares it on its own :host, as proven by the negative case above.
+it('lets an ancestor-set icon-button token that the shared base layer does not re-declare reach a component nested below another host', async () => {
+  expect(await probeNestedVar('--lr-icon-button-radius', '--lr-icon-button-radius: 999px')).to.equal('999px');
+  expect(await probeNestedVar('--lr-icon-button-background', '--lr-icon-button-background: red')).to.equal('red');
 });
 
 // `TokenProbe` composes only `[palette, tokens]`, so `forceCoarsePointer` (test/coarse-pointer-

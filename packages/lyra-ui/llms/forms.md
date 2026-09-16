@@ -2371,16 +2371,24 @@ DOM while at least one top-level slotted element needs the bare-geometry fallbac
 **Themeable custom properties:** `--lr-icon-button-size` (default `2.5rem`) is the **minimum**
 tappable inline and block size of the native button — a floor, not a fixed size. Content larger
 than it grows the button and keeps its own aspect ratio; a small glyph pads out to it. It is a
-library-wide token (declared on `:root` by the token layer, and the shared minimum tappable size
+library-wide token (declared on every `lr-*` host by the shared token layer, and the shared minimum tappable size
 that several other components size their icon-only controls against), so overriding
 `--lr-theme-icon-button-size` globally resizes all of them together. Keep the resolved value at or
-above 24px — see `llms/shared.md`. Lowering the floor for a dense action row (directly via
-`--lr-icon-button-size`, or via `--lr-theme-icon-button-size` on an ancestor to reach a
+above 24px — see `llms/shared.md`. **`--lr-icon-button-size` is element-scoped, unlike every other
+token in this section:** the shared token layer re-declares it on every `lr-*` host's own `:host`,
+so a rule that sets `--lr-icon-button-size` on an ancestor wrapper is reset the moment it crosses
+into any intervening `lr-*` component and never reaches a `<lr-icon-button>` composed inside it
+(e.g. one slotted through `<lr-popover>`). The only two levers that actually reach it are: setting
+`--lr-icon-button-size` directly on the icon button element itself, where no intervening component
+sits between the rule and the property; or setting `--lr-theme-icon-button-size` on an ancestor,
+which the shared layer reads through `var()` at every level and which therefore reaches a
 `<lr-icon-button>` composed inside another component, e.g. `<lr-copy-button>`/
-`<lr-message-actions>`) is safe even below 24px: a coarse-pointer/no-hover media rule floors the
-RENDERED hit area back at 2.75rem/44px regardless of how far the override lowered it, so the
-control stays comfortably tappable the moment the pointer reaching it is a finger rather than a
-mouse. `--lr-icon-button-radius` (default `--lr-radius`) is the
+`<lr-message-actions>`. Lowering the floor for a dense action row through either lever is safe even
+below 24px: a coarse-pointer/no-hover media rule floors the RENDERED hit area back at 2.75rem/44px
+regardless of how far the override lowered it, so the control stays comfortably tappable the moment
+the pointer reaching it is a finger rather than a mouse. `--lr-icon-button-radius` (default
+`--lr-radius`) is not re-declared anywhere in the shared layer, so — like every other token below —
+it inherits normally from an ancestor even through an intervening component; it is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
 counterpart to it. The internal control sets `font: inherit`, so an `em`-sized slotted glyph takes
@@ -4975,6 +4983,12 @@ The exact-320px RTL story covers an eight-cell row and an unbroken localized lab
 horizontal reachability for every cell.
 The internal role token `--lr-otp-input-segment-size` supplies that `2.5em` default and can be
 retuned through `--lr-theme-otp-input-segment-size` when the `--segment-size` override is absent.
+Like `--lr-icon-button-size`, `--lr-otp-input-segment-size` is element-scoped: the shared token
+layer re-declares it on every `lr-*` host, so a rule that sets it on an ancestor wrapper is reset at
+the first intervening `lr-*` component and never reaches a nested `<lr-otp-input>`. Set it directly
+on the element, or set `--lr-theme-otp-input-segment-size` on an ancestor to resize every OTP input
+in the subtree at once — the retained per-cell hooks below are not re-declared anywhere in the
+shared layer and inherit normally.
 
 The retained per-cell hooks are `--lr-otp-input-segment-fill` (default `transparent`),
 `--lr-otp-input-segment-border-color` (default `var(--lr-color-border)`), and
