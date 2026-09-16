@@ -2110,6 +2110,51 @@ happy-dom/jsdom environment, not only a real browser.
 Scope: one driver per interaction named above. Not a general "drive any component" toolkit —
 render the real component and interact with it directly for anything else.
 
+## happy-dom's custom-property resolver and host-to-part token forwarding
+
+Since 16.0.0, seven built-in controls each compose a real `<lr-icon-button>` for their icon-only
+action instead of hand-rolling one: `<lr-copy-button>`, `<lr-dialog>` (whose close button is
+inherited by `<lr-drawer>`), `<lr-reorder-item>`, `<lr-message-actions>`, `<lr-attachment-trigger>`,
+`<lr-code-block>` (shared by `<lr-code-block-core>`), and `<lr-callout>`. Each captures the composed
+control's public `--lr-icon-button-*` tokens on its own `:host` — deriving a private `--_lr-*`
+token with a `var(<public-token>, <component-default>)` fallback — then forwards that private token
+back onto the same public token name on the `[part]` (or, for `<lr-attachment-trigger>`, the
+class-selected element that also carries that part) rendering the composed control, so an ancestor
+theme override still reaches the composed child instead of being shadowed by the component's own
+default. `<lr-dialog>`'s close button is the smallest example, from its own stylesheet:
+
+```css
+:host {
+  --_lr-dialog-close-background: var(--lr-icon-button-background, transparent);
+}
+[part~='close-button'] {
+  --lr-icon-button-background: var(--_lr-dialog-close-background);
+}
+```
+
+This is legal under the CSS Custom Properties spec: `:host` and `[part]` resolve on different
+elements, so a real browser resolves the host declaration to a concrete value first and the part
+substitutes that — no cycle exists, so per-element cycle detection never fires. **happy-dom does
+not model that element boundary.** Its `CSSComputedStyle` merges ancestor and own-element custom
+properties into a single flat map, and (at least through 20.14.5, the newest release at time of
+writing) `CSSVariableFormatter.resolveVariables` substitutes into that map recursively with no
+visited set and no depth cap, so the two declarations resolve into each other forever.
+
+**Symptom:** a vitest + happy-dom suite that renders any of the seven components above starts
+throwing unhandled `RangeError: Maximum call stack size exceeded` from
+`CSSVariableFormatter.resolveVariables`. Every test still reports as passing — there is no failing
+assertion to point at — but the runner counts the unhandled errors and exits non-zero anyway, which
+reads as unrelated flakiness rather than a CSS issue.
+
+The pattern is deliberate and spec-correct — it is what lets an ancestor `--lr-icon-button-*`
+override reach a composed control instead of being shadowed by that component's own default — so
+it will not be removed to work around a DOM shim's limitation. A suite that hits this has two
+options: patch or upgrade the DOM implementation to one with cycle-aware (or depth-limited)
+custom-property resolution — one consumer resolved it with a small pnpm patch threading a visited
+set through `resolveVariables` so a re-entrant lookup resolves as unset and the `var()` fallback
+applies, the same value a real browser reaches anyway — or run the affected suites against a real
+browser engine instead, as this repository's own test suite does.
+
 ## Accessibility contract
 
 Semantic roles live on the shadow-DOM element that owns them, with explicit false states for
