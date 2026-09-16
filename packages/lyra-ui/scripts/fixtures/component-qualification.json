@@ -8986,21 +8986,21 @@
           "evidence": [
             {
               "file": "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts",
-              "line": 264,
+              "line": 273,
               "test": "is accessible with mixed-tier chunks",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts",
-              "line": 338,
+              "line": 347,
               "test": "is accessible in the current-chunk state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts",
-              "line": 466,
+              "line": 475,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -9025,7 +9025,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts",
-              "line": 554,
+              "line": 563,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15409,7 +15409,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/docx-viewer/docx-viewer.test.ts",
-              "line": 1955,
+              "line": 1978,
               "test": "is accessible with an active search match",
               "target": "el",
               "state": "populated"
@@ -15504,7 +15504,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/docx-viewer/docx-viewer.test.ts",
-              "line": 119,
+              "line": 135,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -16702,14 +16702,14 @@
           "evidence": [
             {
               "file": "src/components/viewers/ebook-viewer/ebook-viewer.test.ts",
-              "line": 1043,
+              "line": 1049,
               "test": "is accessible and supports component-specific localized navigation labels",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/ebook-viewer/ebook-viewer.test.ts",
-              "line": 1065,
+              "line": 1071,
               "test": "is accessible once a book is loaded (enabled toolbar buttons, populated mount)",
               "target": "el",
               "state": "populated"
@@ -16793,7 +16793,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/ebook-viewer/ebook-viewer.test.ts",
-              "line": 450,
+              "line": 456,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -19709,14 +19709,14 @@
           "evidence": [
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 1906,
+              "line": 1951,
               "test": "is accessible with nodes, edges, and a selection",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 2043,
+              "line": 2088,
               "test": "is accessible with a mix of enabled and disabled nodes",
               "target": "el",
               "state": "populated"
@@ -19752,7 +19752,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 3158,
+              "line": 3203,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -19763,7 +19763,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 807,
+              "line": 852,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25122,14 +25122,14 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 993,
+              "line": 998,
               "test": "is accessible with a populated, expanded tree",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 998,
+              "line": 1003,
               "test": "is accessible with copyable buttons and a collapsed root",
               "target": "el",
               "state": "populated"
@@ -25149,7 +25149,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 954,
+              "line": 959,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25160,7 +25160,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 43,
+              "line": 48,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -25171,7 +25171,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1592,
+              "line": 1610,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26163,14 +26163,14 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 153,
+              "line": 158,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 578,
+              "line": 583,
               "test": "caps a long caption instead of letting it starve the stage",
               "target": "el",
               "state": "open"
@@ -26184,7 +26184,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 191,
+              "line": 196,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26195,7 +26195,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 388,
+              "line": 393,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26212,7 +26212,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 583,
+              "line": 588,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27109,28 +27109,28 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1548,
+              "line": 1555,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2431,
+              "line": 2438,
               "test": "adds a maplibregl.Marker per entry in markers",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5689,
+              "line": 5696,
               "test": "styles and localizes peer-added controls inside the shadow root",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5784,
+              "line": 5791,
               "test": "clusters sized categories, restores filled and stroked icons after a style reload and exports them",
               "target": "el",
               "state": "populated"
@@ -27155,7 +27155,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3270,
+              "line": 3277,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27240,7 +27240,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 218,
+              "line": 225,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -27703,14 +27703,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
-              "line": 572,
+              "line": 577,
               "test": "is accessible with an app loaded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
-              "line": 580,
+              "line": 585,
               "test": "keeps a non-empty host name on the host without letting an explicit-empty host name unname the frame",
               "target": "el",
               "state": "populated"
@@ -31602,21 +31602,21 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "line": 1591,
+              "line": 1606,
               "test": "renders the mask glyph in empty segments when with-mask is set on its own",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "line": 1772,
+              "line": 1787,
               "test": "applies label/hint attribute precedence and error-slot precedence without concatenating sources",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "line": 1802,
+              "line": 1817,
               "test": "uses populated label, hint, and error slots as the accessible chrome when attributes are empty",
               "target": "el",
               "state": "populated"
@@ -34245,7 +34245,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 855,
+              "line": 860,
               "test": "is accessible with a mounted presentation and its slide-nav controls visible",
               "target": "el",
               "state": "populated"
@@ -34265,7 +34265,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 1712,
+              "line": 1717,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -34334,7 +34334,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 246,
+              "line": 251,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -36985,28 +36985,28 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 280,
+              "line": 285,
               "test": "exposes a keyboard-accessible rating slider",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 1543,
+              "line": 1548,
               "test": "renders dynamically supplied getSymbol output as inert presentation while retaining star pointer selection",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 1826,
+              "line": 1831,
               "test": "is accessible while required, whitespace-labelled, rated, and rendering a custom symbol",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 1826,
+              "line": 1831,
               "test": "is accessible while required, whitespace-labelled, rated, and rendering a custom symbol",
               "target": "el",
               "state": "populated"
@@ -37020,7 +37020,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 296,
+              "line": 301,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -37031,7 +37031,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/rating/rating.test.ts",
-              "line": 565,
+              "line": 570,
               "kind": "rendered RTL test signal"
             }
           ]
