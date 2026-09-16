@@ -858,3 +858,129 @@ describe('lyraThemeBootstrap', () => {
     }
   });
 });
+
+// This exercises the config-resolution prelude that lets the external, non-module
+// `theme-bootstrap.js` asset (byte-identical to `lyraThemeBootstrap`) read its own <script>
+// element's `data-lr-theme-storage-key`/`data-lr-theme-attributes` overrides at parse time -- see
+// `applyStoredThemeBeforePaint` in theme.ts. Every case here runs the serialized IIFE *string*
+// through `new Function(...)()`, exactly like the generated static asset is executed, rather than
+// calling the exported factory as an ordinary in-process function: a helper that only survives
+// direct invocation, and throws once serialized because it referenced something outside its own
+// closure, would pass the latter and fail the former.
+describe('lyraThemeBootstrap script-tag configuration', () => {
+  function withCurrentScript<T>(script: HTMLScriptElement | null, run: () => T): T {
+    Object.defineProperty(document, 'currentScript', { configurable: true, get: () => script });
+    try {
+      return run();
+    } finally {
+      delete (document as unknown as { currentScript?: unknown }).currentScript;
+    }
+  }
+
+  function scriptTag(attributes: Record<string, string> = {}): HTMLScriptElement {
+    const script = document.createElement('script');
+    for (const [name, value] of Object.entries(attributes)) script.setAttribute(name, value);
+    return script;
+  }
+
+  const customStorageKey = 'application-theme';
+
+  afterEach(() => {
+    resetRoot();
+    localStorage.removeItem(customStorageKey);
+  });
+
+  it('behaves identically to today when the hosting <script> carries no configuration attributes', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'dark', accent: null }));
+    withCurrentScript(scriptTag(), () => new Function(lyraThemeBootstrap)());
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+  });
+
+  it('falls back to the defaults, and never throws, when currentScript is null (module/async misuse)', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: null }));
+    expect(() => withCurrentScript(null, () => new Function(lyraThemeBootstrap)())).to.not.throw();
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('light');
+  });
+
+  it('reads a valid data-lr-theme-storage-key override from the hosting <script>', () => {
+    localStorage.setItem(customStorageKey, JSON.stringify({ mode: 'dark', accent: null }));
+    const script = scriptTag({ 'data-lr-theme-storage-key': customStorageKey });
+    withCurrentScript(script, () => new Function(lyraThemeBootstrap)());
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+  });
+
+  it('keeps createLyraThemeBootstrap({ storageKey }) inline output unaffected by an absent script-tag override', () => {
+    localStorage.setItem(customStorageKey, JSON.stringify({ mode: 'dark', accent: null }));
+    withCurrentScript(scriptTag(), () =>
+      new Function(createLyraThemeBootstrap({ storageKey: customStorageKey }))());
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
+  });
+
+  it('reads a valid data-lr-theme-attributes override, replacing (not merging with) the default attribute list', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'dark', accent: null }));
+    const script = scriptTag({ 'data-lr-theme-attributes': 'data-app-mode' });
+    try {
+      withCurrentScript(script, () => new Function(lyraThemeBootstrap)());
+      expect(document.documentElement.getAttribute('data-app-mode')).to.equal('dark');
+      expect(document.documentElement.getAttribute('data-theme')).to.equal(null);
+      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(null);
+    } finally {
+      document.documentElement.removeAttribute('data-app-mode');
+    }
+  });
+
+  it('accepts a space-separated multi-attribute override', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: null }));
+    const script = scriptTag({ 'data-lr-theme-attributes': 'data-app-a  data-app-b' });
+    try {
+      withCurrentScript(script, () => new Function(lyraThemeBootstrap)());
+      expect(document.documentElement.getAttribute('data-app-a')).to.equal('light');
+      expect(document.documentElement.getAttribute('data-app-b')).to.equal('light');
+    } finally {
+      document.documentElement.removeAttribute('data-app-a');
+      document.documentElement.removeAttribute('data-app-b');
+    }
+  });
+
+  it('falls back to the default storage key when the override exceeds the length bound', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'dark', accent: null }));
+    const oversizedKey = 'a'.repeat(201);
+    const script = scriptTag({ 'data-lr-theme-storage-key': oversizedKey });
+    withCurrentScript(script, () => new Function(lyraThemeBootstrap)());
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
+    expect(localStorage.getItem(oversizedKey)).to.equal(null);
+  });
+
+  it('falls back to the default storage key when the override is an empty string', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'dark', accent: null }));
+    const script = scriptTag({ 'data-lr-theme-storage-key': '' });
+    withCurrentScript(script, () => new Function(lyraThemeBootstrap)());
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
+  });
+
+  const rejectedAttributeLists: ReadonlyArray<readonly [string, string]> = [
+    ['an on* event handler name', 'onload'],
+    ['the style attribute', 'style'],
+    ['the class attribute', 'class'],
+    ['the id attribute', 'id'],
+    ['names with no data- prefix', 'x y'],
+    ['a name containing a quote', 'data-x"y'],
+    ['a name containing =', 'data-x=y'],
+    ['a name containing a control character', 'data-x y'],
+    ['a duplicated name', 'data-lr-theme data-lr-theme'],
+    ['an empty list', ''],
+  ];
+
+  for (const [description, rawValue] of rejectedAttributeLists) {
+    it(`rejects ${description} and falls back to the default attribute list`, () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'dark', accent: null }));
+      const script = scriptTag({ 'data-lr-theme-attributes': rawValue });
+      withCurrentScript(script, () => new Function(lyraThemeBootstrap)());
+      expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
+      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+    });
+  }
+});

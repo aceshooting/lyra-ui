@@ -1367,9 +1367,50 @@ per-response nonce — a static HTML entry, for example — where the documented
 nonce/hash guidance above does not apply. Serving it same-origin (copy it into your build output,
 or configure your bundler/static host to do so) needs no hash at all; hashing it for an even
 stricter policy uses the same CSP `script-src` hash mechanism browsers already apply to any
-external script resource. It only ever carries the default storage key (`'lyra-theme'`) — an
-application-owned key from `createLyraThemeBootstrap({ storageKey })` still has to be inlined,
-since a static file cannot take a call-time argument.
+external script resource.
+
+**Configuring the static asset from its own `<script>` tag.** `theme-bootstrap.js` must be loaded
+as a plain classic script — never `type="module"` and never `async` — because it reads its own
+configuration synchronously through `document.currentScript` while it runs, and that property is
+`null` for both of those loading modes (as well as for anything scheduled after the script has
+already finished executing). Two optional attributes on that same `<script>` tag override the
+defaults without regenerating the file:
+
+```html
+<head>
+  <script
+    src="/vendor/theme-bootstrap.js"
+    data-lr-theme-storage-key="my-app-theme"
+    data-lr-theme-attributes="data-lr-theme data-theme"
+  ></script>
+  <link rel="stylesheet" href="/theme.css" />
+</head>
+```
+
+- `data-lr-theme-storage-key` — the `localStorage` key to read, in place of the default
+  `'lyra-theme'`. Equivalent to `createLyraThemeBootstrap({ storageKey })`'s argument, but
+  resolved by the static file itself at parse time rather than baked in ahead of time. This is
+  what lets an application with its own pre-existing storage key use the static asset instead of
+  inlining a per-app copy.
+- `data-lr-theme-attributes` — a space-separated list of attribute names to set on
+  `<html>` in place of the default `data-lr-theme data-theme` pair, replacing that list entirely
+  rather than adding to it.
+
+Both attributes are optional and independently validated; an absent, empty, oversized, or
+malformed value falls back to the built-in default rather than throwing, so a `<script>` tag with
+neither attribute — every existing deployment — behaves exactly as before. `data-lr-theme-storage-key`
+must be a non-empty string of at most 200 characters (its content is otherwise unrestricted — it is
+only ever used as an opaque `localStorage` key, never written to the DOM). `data-lr-theme-attributes`
+must parse to one to eight tokens, each unique and each matching `data-[a-z0-9]+(-[a-z0-9]+)*` —
+which rejects an event-handler name (`onload`), a native attribute (`style`, `class`, `id`), any
+token containing whitespace, a quote, `=`, or a control character, an empty list, and a duplicated
+token — because these attribute names reach `setAttribute()`/`removeAttribute()` on the document
+root. A `document.currentScript` of `null` (module/async misuse, or a script tag re-read after it
+finished running) is treated the same as no configuration at all.
+
+An application-owned key from `createLyraThemeBootstrap({ storageKey })` can still be inlined as
+documented above; the static file's own script-tag attributes are the alternative for a strict-CSP
+deployment that cannot inline that call.
 
 **Migrating from 15.x.** `accent` used to be exactly an absolute CSS color or `null`; that shape
 still works unchanged (`setLyraTheme({ accent: '#7c3aed' })` keeps deriving only the brand ramp).
@@ -2523,6 +2564,11 @@ inlineSize: number; blockSize: number }> }`.
   element: interpolating into a message template, populating a text-only property on another
   component (a stat tile's value, a chart tick label, a badge's cost text), building a search
   predicate, or composing an accessibility announcement.
+  An omitted `locale` (or the explicit `'auto'` sentinel) on any of the four resolves to the page's
+  active `setLyraLocale()` locale, exactly like a rendered `<lr-*>` component with no closer
+  `locale`/`lang` override — not a hardcoded `'en'`. It falls back to `'en'` only once no active
+  locale has ever been set, so an app that never calls `setLyraLocale()` sees no change. An
+  explicit BCP-47 tag always stays authoritative over the active locale.
   `formatNumber()` and `formatBytes()` accept a `bigint` or a decimal/integer string, not just a
   `number`, for exact-precision input (large ids, monetary amounts, exact byte counts) — a plain
   `number` is a float64 and cannot exactly represent an integer beyond `Number.MAX_SAFE_INTEGER` or
@@ -2564,11 +2610,6 @@ LyraFormatDisplay; readonly unitStep?: number; readonly decimals?: number }`.
   is reserved before computed boxes, and a fixed layer's block extent advances every later layer,
   so fixed and computed boxes retain `gapX`/`gapY` separation without moving the anchors. Two
   conflicting caller-fixed boxes are deliberately kept verbatim. Node dimensions, gaps, and fixed
-  An omitted `locale` (or the explicit `'auto'` sentinel) on any of the four resolves to the page's
-  active `setLyraLocale()` locale, exactly like a rendered `<lr-*>` component with no closer
-  `locale`/`lang` override — not a hardcoded `'en'`. It falls back to `'en'` only once no active
-  locale has ever been set, so an app that never calls `setLyraLocale()` sees no change. An
-  explicit BCP-47 tag always stays authoritative over the active locale.
   coordinates must be finite, non-negative values no greater than `Number.MAX_SAFE_INTEGER`; bad
   geometry throws `RangeError` before graph traversal. Traversal is iterative, and
   `maxVirtualWaypoints` sets the nonnegative integer routing budget (default 10,000; invalid values

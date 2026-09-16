@@ -559,9 +559,75 @@ export function getLyraTheme(): LyraTheme {
   return readStoredTheme();
 }
 
-/** Kept self-contained because createLyraThemeBootstrap serializes this function verbatim. */
-function applyStoredThemeBeforePaint(storageKey: string, modeAttributes: readonly string[]): void {
+/**
+ * Kept self-contained because createLyraThemeBootstrap serializes this function verbatim -- every
+ * identifier it references must be either a parameter, a local declaration, or a browser global,
+ * never a module-scoped constant, or the serialized string throws a ReferenceError when it later
+ * runs standalone with no `theme.ts` module loaded.
+ *
+ * The config-resolution prelude lets an external `<script src="theme-bootstrap.js">` override the
+ * generation-time defaults via two attributes on its own tag --
+ * `data-lr-theme-storage-key`/`data-lr-theme-attributes` (space-separated) -- read via
+ * `document.currentScript` at parse time. Hostile or malformed values fail closed to the
+ * caller-supplied default rather than throwing.
+ */
+function applyStoredThemeBeforePaint(
+  defaultStorageKey: string,
+  defaultModeAttributes: readonly string[],
+): void {
   try {
+    // Config-resolution prelude: an external classic script (never a module or async script) can
+    // reach its own <script> element synchronously through `document.currentScript` before this
+    // IIFE runs, so a single static asset can be reconfigured per host page via two attributes on
+    // its own tag, with no per-app regeneration. Both are optional and fail closed -- a missing,
+    // empty, oversized, or malformed value keeps the generation-time default -- so a host page
+    // with neither attribute (including every inline use, where a `<script>` normally carries
+    // neither) behaves byte-for-byte like before this existed.
+    const attributeNamePattern = /^data-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    const maxStorageKeyLength = 200;
+    const maxModeAttributeCount = 8;
+    const maxModeAttributeNameLength = 64;
+
+    const isValidStorageKey = (value: string): boolean =>
+      value.length > 0 && value.length <= maxStorageKeyLength;
+
+    const isValidModeAttributeName = (value: string): boolean =>
+      value.length > 0
+      && value.length <= maxModeAttributeNameLength
+      && attributeNamePattern.test(value);
+
+    const isValidModeAttributeList = (value: string[]): boolean => {
+      if (value.length === 0 || value.length > maxModeAttributeCount) return false;
+      const seen = new Set<string>();
+      for (const name of value) {
+        if (!isValidModeAttributeName(name) || seen.has(name)) return false;
+        seen.add(name);
+      }
+      return true;
+    };
+
+    let storageKey = defaultStorageKey;
+    let modeAttributes = defaultModeAttributes;
+    // `currentScript` is `null` for a module or async script (documented as unsupported for this
+    // asset) -- guarded here, not just by the outer try/catch, so a null/absent script always
+    // resolves to the defaults above rather than skipping the rest of the bootstrap.
+    const configScript = document.currentScript as HTMLScriptElement | null;
+    if (configScript) {
+      const rawStorageKey = configScript.getAttribute('data-lr-theme-storage-key');
+      if (rawStorageKey !== null && isValidStorageKey(rawStorageKey)) {
+        storageKey = rawStorageKey;
+      }
+      const rawModeAttributes = configScript.getAttribute('data-lr-theme-attributes');
+      if (rawModeAttributes !== null) {
+        const parsedModeAttributes = rawModeAttributes.trim().length > 0
+          ? rawModeAttributes.trim().split(/\s+/)
+          : [];
+        if (isValidModeAttributeList(parsedModeAttributes)) {
+          modeAttributes = parsedModeAttributes;
+        }
+      }
+    }
+
     const raw = localStorage.getItem(storageKey);
     let theme: { mode?: unknown; accent?: unknown; surface?: unknown } = {};
     if (raw) {
@@ -762,7 +828,13 @@ function serializeInlineScriptData(value: string | readonly string[]): string {
  * module's `setLyraTheme()`/`getLyraTheme()` persistence key.
  *
  * The returned value is deliberately a plain string (not a function) so it can be inlined without
- * shipping or parsing this whole module in an unbundled `<script>` context.
+ * shipping or parsing this whole module in an unbundled `<script>` context. Whichever `<script>`
+ * element ends up running the string -- inline or, for the static `theme-bootstrap.js` asset,
+ * external -- may itself carry `data-lr-theme-storage-key`/`data-lr-theme-attributes` attributes
+ * to override `storageKey`/the mode attribute list at parse time without regenerating the string;
+ * see `applyStoredThemeBeforePaint`'s config-resolution prelude for the validation rules. Absent
+ * or invalid attributes keep this call's own `storageKey`/the default mode attributes, so ordinary
+ * inline use (no such attributes on the wrapping `<script>`) is unaffected.
  */
 export function createLyraThemeBootstrap(
   options: LyraThemeBootstrapOptions = {},
@@ -777,6 +849,9 @@ export function createLyraThemeBootstrap(
  *
  * Also published as the static, non-module script asset `@aceshooting/lyra-ui/theme-bootstrap.js`
  * -- byte-identical to this string -- for a Content-Security-Policy that forbids `unsafe-inline`
- * and cannot mint a per-response nonce.
+ * and cannot mint a per-response nonce. That external asset is a classic (non-module, non-async)
+ * script, so `document.currentScript` is reliably its own `<script>` element while it runs,
+ * letting a host page opt into an application-owned storage key or mode-attribute list by adding
+ * attributes to the tag instead of inlining a per-app copy.
  */
 export const lyraThemeBootstrap = createLyraThemeBootstrap();
