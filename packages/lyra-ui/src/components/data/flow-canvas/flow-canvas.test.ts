@@ -1983,7 +1983,10 @@ describe('disabled nodes', () => {
     outputHandle.dispatchEvent(
       new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true, composed: true }),
     );
-    expect(el.shadowRoot!.querySelector('[part="connection-line"]')).to.equal(null);
+    expect(
+      el.shadowRoot!.querySelector('[part="connection-line"]') === null,
+      'a disabled node starts no connection line',
+    ).to.equal(true);
   });
 
   it('marks a disabled hovered node data-connect-invalid and refuses to complete the connection there', async () => {
