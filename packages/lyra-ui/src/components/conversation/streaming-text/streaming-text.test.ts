@@ -1,4 +1,4 @@
-import { fixture, expect, html, aTimeout, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, aTimeout, oneEvent, waitUntil } from "@open-wc/testing";
 import "./streaming-text.js";
 import "../markdown/markdown.js";
 import { looksLikeMarkdown } from "./streaming-text.js";
@@ -481,6 +481,133 @@ describe("Markdown auto-detection and rendering mode", () => {
       languages?: typeof languages;
     };
     expect(markdown.languages).to.equal(languages);
+  });
+
+  it("forwards the composed lr-markdown's own defaults unchanged when the markdown configuration properties are left unset", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text content-mode="markdown"></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown") as unknown as {
+      tabSize: number;
+      htmlMode: string;
+      gfm: boolean;
+      linkTarget: string | null;
+      internalLinkPrefix: string;
+      headingOffset: number;
+      highlightCode: boolean;
+      headingAnchors: boolean;
+      math: boolean;
+      maxHeight: string;
+    };
+    expect(markdown.tabSize).to.equal(4);
+    expect(markdown.htmlMode).to.equal("sanitize");
+    expect(markdown.gfm).to.equal(true);
+    expect(markdown.linkTarget).to.equal("_blank");
+    expect(markdown.internalLinkPrefix).to.equal("");
+    expect(markdown.headingOffset).to.equal(0);
+    expect(markdown.highlightCode).to.equal(true);
+    expect(markdown.headingAnchors).to.equal(false);
+    expect(markdown.math).to.equal(false);
+    expect(markdown.maxHeight).to.equal("");
+  });
+
+  it("renders identically to before these markdown configuration properties existed, when left unset (unset-regression)", async () => {
+    // Regression test: proves that adding tabSize/htmlMode/gfm/linkTarget/internalLinkPrefix/
+    // headingOffset/highlightCode/headingAnchors/math/maxHeight did not change any rendered output
+    // for a consumer who sets none of them -- a raw inline event-handler attribute is still
+    // sanitized away (default htmlMode="sanitize"), a source "#" heading still renders <h1>
+    // (heading-offset default 0), and a link still gets the unchanged target="_blank"
+    // rel="noopener noreferrer" default.
+    (window as unknown as { __lyraStreamingTextXss?: boolean }).__lyraStreamingTextXss = undefined;
+    const el = (await fixture(
+      html`<lr-streaming-text
+        content-mode="markdown"
+        .content=${'# Heading\n\nSome **bold** text and a [link](https://example.com).\n\nhi <img alt="test" onerror="window.__lyraStreamingTextXss = true">'}
+      ></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown")!;
+    await waitUntil(() => markdown.shadowRoot!.querySelector("img") !== null);
+
+    expect(markdown.shadowRoot!.querySelector("h1"), 'a source "#" still renders <h1>').to.exist;
+    const img = markdown.shadowRoot!.querySelector("img")!;
+    expect(img.getAttribute("onerror"), "the inline event handler is still sanitized away").to.equal(null);
+    expect(
+      (window as unknown as { __lyraStreamingTextXss?: boolean }).__lyraStreamingTextXss
+    ).to.equal(undefined);
+    const link = markdown.shadowRoot!.querySelector("a")!;
+    expect(link.getAttribute("target")).to.equal("_blank");
+    expect(link.getAttribute("rel")).to.equal("noopener noreferrer");
+  });
+
+  it("forwards non-default markdown configuration properties verbatim to the composed lr-markdown", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text
+        content-mode="markdown"
+        link-target=""
+        html-mode="escape"
+        gfm="false"
+        internal-link-prefix="/docs/"
+        heading-offset="2"
+        tab-size="8"
+        highlight-code="false"
+        heading-anchors
+        math
+        max-height="10rem"
+      ></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown") as unknown as {
+      tabSize: number;
+      htmlMode: string;
+      gfm: boolean;
+      linkTarget: string | null;
+      internalLinkPrefix: string;
+      headingOffset: number;
+      highlightCode: boolean;
+      headingAnchors: boolean;
+      math: boolean;
+      maxHeight: string;
+    };
+    expect(markdown.tabSize).to.equal(8);
+    expect(markdown.htmlMode).to.equal("escape");
+    expect(markdown.gfm).to.equal(false);
+    expect(markdown.linkTarget).to.equal("");
+    expect(markdown.internalLinkPrefix).to.equal("/docs/");
+    expect(markdown.headingOffset).to.equal(2);
+    expect(markdown.highlightCode).to.equal(false);
+    expect(markdown.headingAnchors).to.equal(true);
+    expect(markdown.math).to.equal(true);
+    expect(markdown.maxHeight).to.equal("10rem");
+  });
+
+  it('a forwarded non-default linkTarget still gets the composed lr-markdown\'s rel="noopener noreferrer" guard, and never a bare "opener"', async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text
+        content-mode="markdown"
+        link-target="_self"
+        .content=${"[docs](https://example.com/docs)"}
+      ></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown")!;
+    await waitUntil(() => markdown.shadowRoot!.querySelector("a") !== null);
+    const a = markdown.shadowRoot!.querySelector("a")!;
+    expect(a.getAttribute("target")).to.equal("_self");
+    expect(a.getAttribute("rel")).to.equal("noopener noreferrer");
+    expect(a.getAttribute("rel")).to.not.match(/(?:^|\s)opener(?:\s|$)/);
+  });
+
+  it('omits target/rel entirely on a forwarded link-target="" (same-tab links), matching the composed lr-markdown\'s own contract', async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text
+        content-mode="markdown"
+        link-target=""
+        .content=${"[docs](https://example.com/docs)"}
+      ></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown")!;
+    await waitUntil(() => markdown.shadowRoot!.querySelector("a") !== null);
+    const a = markdown.shadowRoot!.querySelector("a")!;
+    expect(a.hasAttribute("target")).to.be.false;
+    expect(a.hasAttribute("rel")).to.be.false;
   });
 
   it('contentMode="markdown" forces Markdown rendering even for plain-looking content', async () => {

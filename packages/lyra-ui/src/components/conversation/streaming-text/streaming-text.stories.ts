@@ -187,6 +187,25 @@ export const CoalescingComparison: Story = {
   },
 };
 
+export const ForwardedMarkdownConfiguration: Story = {
+  name: 'Forwarded markdown configuration (link-target, heading-offset, ...)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The rest of `<lr-markdown>`\'s configuration surface -- `tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` -- forwards verbatim, so a consumer who has customized any of them (here `link-target=""` for same-tab links and `heading-offset="1"`) keeps that behavior after adopting `<lr-streaming-text>`. The composed `<lr-markdown>` still applies its own `rel="noopener noreferrer"` guard whenever a non-empty `link-target` is forwarded.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-streaming-text
+      content-mode="markdown"
+      link-target=""
+      heading-offset="1"
+      .content=${'# Release notes\n\nSee the [full changelog](https://example.com/changelog) for details.'}
+    ></lr-streaming-text>`,
+};
+
 export const ReducedMotion: Story = {
   name: 'Reduced motion (static cursor)',
   parameters: {

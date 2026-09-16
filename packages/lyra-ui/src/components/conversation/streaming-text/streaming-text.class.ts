@@ -47,12 +47,18 @@ export {
  * directly, forwarding this component's own `streaming` through as that
  * component's own forward-compatible `streaming` hint prop, and this
  * component's own `languages` through verbatim; plain-text mode
- * renders into a `white-space: pre-wrap` span instead. The plain-text path
+ * renders into a `white-space: pre-wrap` span instead. The rest of
+ * `<lr-markdown>`'s configuration surface is forwarded verbatim too --
+ * `tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`,
+ * `headingOffset`, `highlightCode`, `headingAnchors`, `math`, and
+ * `maxHeight` -- each defaulting to exactly `<lr-markdown>`'s own default, so
+ * leaving all of them unset renders identically to before this wrapper
+ * forwarded them. The plain-text path
  * does not load optional peers. Markdown mode uses `<lr-markdown>`'s lazy
  * `marked` parser and default `dompurify` sanitizer; fenced-code highlighting
  * can additionally use `shiki`. The transitive Markdown graph also contains
- * the opt-in `katex` loader, but this wrapper does not enable Markdown math,
- * so it never requests that peer itself.
+ * the opt-in `katex` loader, requested only if this wrapper's own `math` is
+ * set (forwarded to the composed element, unset by default).
  *
  * A consumer with a bounded, known fence-language set who wants to avoid `<lr-markdown>`'s
  * ~200-language dynamic-import table entirely -- either by setting `languages` here, or to skip
@@ -105,6 +111,16 @@ export class LyraStreamingText extends StreamingTextRuntimeBase {
       .content=${this.displayedContent}
       .streaming=${this.streaming}
       .languages=${this.languages}
+      .tabSize=${this.tabSize}
+      .htmlMode=${this.htmlMode}
+      .gfm=${this.gfm}
+      .linkTarget=${this.linkTarget}
+      .internalLinkPrefix=${this.internalLinkPrefix}
+      .headingOffset=${this.headingOffset}
+      .highlightCode=${this.highlightCode}
+      .headingAnchors=${this.headingAnchors}
+      .math=${this.math}
+      .maxHeight=${this.maxHeight}
       @lr-render-error=${this.stopOwnedEvent}
       @lr-link-click=${this.stopOwnedEvent}
       @lr-highlight-activate=${this.stopOwnedEvent}

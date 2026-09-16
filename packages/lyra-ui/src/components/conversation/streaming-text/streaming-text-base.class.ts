@@ -4,6 +4,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
+import type { MarkdownHtmlMode } from '../markdown/markdown-shared.js';
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styles } from './streaming-text.styles.js';
 
 const DEFAULT_COALESCE_MS = 50;
@@ -85,6 +87,55 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
    *  leaves the composed element's own default untouched: the full variant falls back to its
    *  ~200-language dynamic-import table, the core variant renders unmatched fences as plain text. */
   @property({ attribute: false }) languages?: Readonly<Record<string, ShikiLanguageInput>>;
+
+  /** Forwarded verbatim to the composed Markdown element's own `tabSize` -- the tab-stop width
+   *  used to expand tabs in leading indentation before parsing. `4` (the default) matches the
+   *  composed element's own default. */
+  @property({ type: Number, attribute: 'tab-size' }) tabSize = 4;
+
+  /** Forwarded verbatim to the composed Markdown element's own `htmlMode` -- how authored raw
+   *  HTML is handled (`'sanitize'`, `'escape'`, or `'trusted'`). `'sanitize'` (the default)
+   *  matches the composed element's own default. */
+  @property({ attribute: 'html-mode' }) htmlMode: MarkdownHtmlMode = 'sanitize';
+
+  /** Forwarded verbatim to the composed Markdown element's own `gfm` -- GitHub-flavored Markdown
+   *  (tables, strikethrough, autolinks, task lists). `true` (the default) matches the composed
+   *  element's own default. */
+  @property({ converter: trueDefaultBooleanConverter }) gfm = true;
+
+  /** Forwarded verbatim to the composed Markdown element's own `linkTarget` -- the `target`
+   *  applied to every rendered `<a>`, with `rel="noopener noreferrer"` always added by the
+   *  composed element alongside it whenever a `target` is emitted. `'_blank'` (the default)
+   *  matches the composed element's own default; set to `null` (or the empty string, e.g. via the
+   *  `link-target=""` attribute) to omit `target`/`rel` entirely so rendered links open in the
+   *  same tab. */
+  @property({ attribute: 'link-target' }) linkTarget: string | null = '_blank';
+
+  /** Forwarded verbatim to the composed Markdown element's own `internalLinkPrefix`. Empty (the
+   *  default) matches the composed element's own default -- every link is treated as external. */
+  @property({ attribute: 'internal-link-prefix' }) internalLinkPrefix = '';
+
+  /** Forwarded verbatim to the composed Markdown element's own `headingOffset`. `0` (the
+   *  default) matches the composed element's own default. */
+  @property({ type: Number, attribute: 'heading-offset' }) headingOffset = 0;
+
+  /** Forwarded verbatim to the composed Markdown element's own `highlightCode`. `true` (the
+   *  default) matches the composed element's own default. */
+  @property({ attribute: 'highlight-code', converter: trueDefaultBooleanConverter })
+  highlightCode = true;
+
+  /** Forwarded verbatim to the composed Markdown element's own `headingAnchors`. `false` (the
+   *  default) matches the composed element's own default. */
+  @property({ type: Boolean, attribute: 'heading-anchors' }) headingAnchors = false;
+
+  /** Forwarded verbatim to the composed Markdown element's own `math`. `false` (the default)
+   *  matches the composed element's own default. */
+  @property({ type: Boolean }) math = false;
+
+  /** Forwarded verbatim to the composed Markdown element's own `maxHeight`. Empty (the default)
+   *  matches the composed element's own default -- the rendered document never scrolls
+   *  internally. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
 
   // The coalesced value actually rendered -- lags `content` by up to
   // `coalesceMs` (or zero, for the immediate-flush cases documented above).

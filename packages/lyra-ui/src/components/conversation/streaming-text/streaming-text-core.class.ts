@@ -19,9 +19,11 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * `<lr-streaming-text-core>` — a build-lean `<lr-streaming-text>` variant for a consumer whose
  * `languages` map already covers every fenced-code language it will ever stream, or who never
  * renders fenced code at all. Every capability is identical to `<lr-streaming-text>` -- token
- * coalescing, `contentMode` auto-detection, the blinking cursor, the `lr-content-settled` event --
- * only which Markdown element Markdown mode composes differs: this variant renders
- * `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so this
+ * coalescing, `contentMode` auto-detection, the blinking cursor, the `lr-content-settled` event,
+ * and the full forwarded Markdown configuration surface (`tabSize`, `htmlMode`, `gfm`,
+ * `linkTarget`, `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`,
+ * `maxHeight`) -- only which Markdown element Markdown mode composes differs: this variant
+ * renders `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so this
  * component's own module never textually contains a reference to `<lr-markdown>`'s ~200-language
  * dynamic-import table. A fenced code block whose language isn't a key in `languages` always
  * renders the plain-text fallback here -- there is no default/full-table highlighter to fall back
@@ -46,6 +48,16 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
       .content=${this.displayedContent}
       .streaming=${this.streaming}
       .languages=${this.languages ?? {}}
+      .tabSize=${this.tabSize}
+      .htmlMode=${this.htmlMode}
+      .gfm=${this.gfm}
+      .linkTarget=${this.linkTarget}
+      .internalLinkPrefix=${this.internalLinkPrefix}
+      .headingOffset=${this.headingOffset}
+      .highlightCode=${this.highlightCode}
+      .headingAnchors=${this.headingAnchors}
+      .math=${this.math}
+      .maxHeight=${this.maxHeight}
       @lr-render-error=${this.stopOwnedEvent}
       @lr-link-click=${this.stopOwnedEvent}
       @lr-highlight-activate=${this.stopOwnedEvent}
