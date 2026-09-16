@@ -1,8 +1,10 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import { LitElement, type PropertyValues } from 'lit';
+import { LitElement, html as litHtml, type PropertyValues } from 'lit';
+import { state } from 'lit/decorators.js';
 import './confirm-bar.js';
 import type { LyraConfirmBar } from './confirm-bar.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
+import { nextHostUpdateOpportunity } from '../../../internal/focus-navigation.js';
 
 it('defaults to decision null, pending null, variant neutral, and shows Deny before Approve', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
@@ -1574,5 +1576,136 @@ describe('returnFocusTo', () => {
     await el.updateComplete;
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     expect(document.activeElement === back).to.equal(true);
+  });
+});
+
+describe('returnFocusTo against a real conditionally re-rendering Lit host', () => {
+  // The documented motivating case, reproduced with a genuine reactive host rather than a fixture
+  // that keeps a stable `back` button around for the bar's whole lifetime: a conditional render
+  // swaps its own trigger out for `<lr-confirm-bar>`, and swaps a BRAND NEW trigger back in once a
+  // decision lands. The host's own re-render runs on Lit's ordinary microtask-batched update
+  // cycle -- exactly the same relative ordering every other supported framework's commit has to
+  // this bar's own synchronous focus handoff, which is why a plain Lit host is sufficient to
+  // reproduce the bug the request described for React/Vue/Svelte hosts too.
+  class ConfirmBarSwapHost extends LitElement {
+    @state() confirming = false;
+
+    protected override createRenderRoot(): ShadowRoot {
+      return this.attachShadow({ mode: 'open' });
+    }
+
+    protected override render() {
+      if (!this.confirming) {
+        return litHtml`<button
+          type="button"
+          data-action="delete"
+          @click=${() => {
+            this.confirming = true;
+          }}
+        >Delete</button>`;
+      }
+      return litHtml`<lr-confirm-bar
+        tool-name="delete"
+        .returnFocusTo=${() => this.shadowRoot!.querySelector<HTMLElement>('[data-action="delete"]')}
+        @lr-deny=${() => {
+          this.confirming = false;
+        }}
+        @lr-approve=${(event: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
+          event.preventDefault();
+        }}
+      ></lr-confirm-bar>`;
+    }
+  }
+  customElements.define('confirm-bar-swap-host-test', ConfirmBarSwapHost);
+
+  async function swapHostFixture(): Promise<ConfirmBarSwapHost> {
+    const host = await fixture<ConfirmBarSwapHost>(
+      html`<confirm-bar-swap-host-test></confirm-bar-swap-host-test>`,
+    );
+    await host.updateComplete;
+    return host;
+  }
+
+  it('lands focus on the re-created trigger after an immediate Deny click', async () => {
+    const host = await swapHostFixture();
+    host.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="delete"]')!.click();
+    await host.updateComplete;
+    const bar = host.shadowRoot!.querySelector('lr-confirm-bar') as LyraConfirmBar;
+    await bar.updateComplete;
+
+    (bar.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
+    // The host's `lr-deny` listener clears `confirming` synchronously, inside the bar's own
+    // synchronous dispatch -- but the host's own re-render (the thing that removes the bar and
+    // re-creates the trigger) is scheduled asynchronously, same as every supported framework.
+    await nextHostUpdateOpportunity();
+    await nextHostUpdateOpportunity();
+    await host.updateComplete;
+
+    const recreatedTrigger = host.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="delete"]');
+    expect(recreatedTrigger === null, 'the host swapped the bar back out for a new trigger').to.equal(false);
+    expect(
+      host.shadowRoot!.querySelector('lr-confirm-bar') === null,
+      'the old bar is gone, not merely hidden',
+    ).to.equal(true);
+    expect(
+      host.shadowRoot!.activeElement === recreatedTrigger,
+      'focus landed on the re-created trigger, not <body> or [part="status"]',
+    ).to.equal(true);
+  });
+
+  it('lands focus on the re-created trigger after a deferred decision write', async () => {
+    const host = await swapHostFixture();
+    host.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="delete"]')!.click();
+    await host.updateComplete;
+    const bar = host.shadowRoot!.querySelector('lr-confirm-bar') as LyraConfirmBar;
+    await bar.updateComplete;
+
+    (bar.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    await bar.updateComplete;
+    expect(bar.pending).to.equal('approve');
+
+    // The documented deferred-path shape: the decision lands first, and only afterward does the
+    // host clear its own state, both from the same async continuation -- matching the reference's
+    // own worked example (`llms/agent-tools.md`'s async `lr-approve` handler).
+    bar.decision = 'approved';
+    host.confirming = false;
+    await nextHostUpdateOpportunity();
+    await nextHostUpdateOpportunity();
+    await host.updateComplete;
+
+    const recreatedTrigger = host.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="delete"]');
+    expect(recreatedTrigger === null, 'the host swapped the bar back out for a new trigger').to.equal(false);
+    expect(
+      host.shadowRoot!.activeElement === recreatedTrigger,
+      'focus landed on the re-created trigger, not <body> or [part="status"]',
+    ).to.equal(true);
+  });
+
+  it('never overrides a focus move the host or user made between park and resolution', async () => {
+    const host = await swapHostFixture();
+    host.shadowRoot!.querySelector<HTMLButtonElement>('[data-action="delete"]')!.click();
+    await host.updateComplete;
+    const bar = host.shadowRoot!.querySelector('lr-confirm-bar') as LyraConfirmBar;
+    await bar.updateComplete;
+
+    const elsewhere = document.createElement('button');
+    elsewhere.textContent = 'Somewhere else entirely';
+    document.body.appendChild(elsewhere);
+    try {
+      (bar.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
+      // Simulate a user tabbing away (or the host explicitly moving focus) before the deferred
+      // re-resolution has had its chance to run.
+      elsewhere.focus();
+      await nextHostUpdateOpportunity();
+      await nextHostUpdateOpportunity();
+      await host.updateComplete;
+
+      expect(
+        document.activeElement === elsewhere,
+        'the newer, genuinely different focus move was not overridden',
+      ).to.equal(true);
+    } finally {
+      elsewhere.remove();
+    }
   });
 });

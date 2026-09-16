@@ -599,6 +599,76 @@ export function repairComposedFocus(
   );
 }
 
+/**
+ * Resolves once a reactive host has had a realistic chance to commit an update it scheduled
+ * during the task that just ran -- the exact window `deferComposedFocusRepair()` waits out before
+ * re-resolving a return-focus thunk. One microtask, then one animation frame:
+ *
+ * - A microtask covers Lit (this library's own components included), Vue's `nextTick`, and
+ *   Svelte's `tick()` -- all three schedule their reactive flush as a microtask off the change
+ *   that just happened, so by the time a microtask callback of our own runs, one already queued
+ *   ahead of it (because the host's property write happened first, in the same synchronous turn
+ *   that led here) has already committed its DOM mutation.
+ * - A following animation frame covers React's default automatic batching, which commits a
+ *   click-driven state update synchronously before the browser's next paint rather than
+ *   guaranteed inside a single microtask tick. `requestAnimationFrame` runs after the browser has
+ *   finished any pending style/layout/paint work for the current frame, so a commit that landed
+ *   "before paint" has necessarily already happened by the time this callback fires.
+ *
+ * One evaluation, not a poll loop: a return-focus thunk is "ask again once you have had a
+ * chance", not "keep asking until you succeed" -- see `deferComposedFocusRepair()`'s own doc
+ * comment for the give-up contract that depends on this being a single, bounded wait.
+ */
+export function nextHostUpdateOpportunity(): Promise<void> {
+  return new Promise((resolve) => {
+    queueMicrotask(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
+/**
+ * Captures a repair on `bridge` right now (the synchronous parking spot a terminal focus handoff
+ * already moved focus to, so there is no focus gap), then -- after `nextHostUpdateOpportunity()`
+ * -- calls `resolveTarget()` again and moves focus to whatever it names if that has since become
+ * connected and focusable, without overriding a newer, genuinely different focus move.
+ *
+ * This exists for exactly one shape: a return-focus thunk whose whole documented reason to exist
+ * is naming a control the host is expected to *re-create* on the way back (an async re-render), so
+ * calling it once, synchronously, at handoff time necessarily finds nothing yet. Call this only
+ * after that first synchronous resolution has already failed and landed focus on `bridge` --
+ * an immediately-resolving thunk or a plain element value never reaches this function, so
+ * behavior for those already-working cases is unchanged.
+ *
+ * Declines exactly as `applyComposedFocusRepair()` already does: focus that moved to some other
+ * real element outside `owner` in the meantime is left alone. Focus that was lost along with
+ * `owner`'s own branch (the host removed the bridge's entire component, dropping focus to
+ * `<body>`) is NOT treated as "moved on" -- that disappearance is precisely the case a deferred
+ * thunk exists to recover from.
+ *
+ * Bounded and quiet: exactly one deferred re-resolution; a target that still does not exist, is
+ * not connected, or refuses focus (`inert`, removed, hidden) simply leaves focus wherever the
+ * synchronous parking step already put it.
+ */
+export function deferComposedFocusRepair(
+  owner: Element,
+  bridge: HTMLElement,
+  resolveTarget: () => HTMLElement | null,
+): void {
+  const snapshot = captureComposedFocusRepair(owner, bridge);
+  if (!snapshot) return;
+  void nextHostUpdateOpportunity().then(() => {
+    let target: HTMLElement | null;
+    try {
+      target = resolveTarget();
+    } catch {
+      // A consumer-supplied thunk must not throw out of a deferred focus-handoff microtask.
+      target = null;
+    }
+    applyComposedFocusRepair(snapshot, target ? [target] : []);
+  });
+}
+
 function traverseComposedElements(
   root: Element | ShadowRoot,
   options: ComposedFocusCollectionOptions,

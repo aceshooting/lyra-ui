@@ -4,10 +4,12 @@ import {
   captureComposedFocusRepair,
   collectComposedAutofocusElements,
   collectComposedFocusTargets,
+  deferComposedFocusRepair,
   focusFirstAvailable,
   isActionableElement,
   isComposedFocusAvailable,
   isSemanticActionElement,
+  nextHostUpdateOpportunity,
   repairComposedFocus,
 } from './focus-navigation.js';
 
@@ -69,6 +71,96 @@ it('accepts a replacement candidate that only exists when the repair is applied'
 
   expect(applyComposedFocusRepair(repair, replacement)).to.equal(true);
   expect(root.ownerDocument.activeElement?.id).to.equal('replacement');
+});
+
+it('defers a return-focus thunk until the host has had a chance to react, then applies it', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section id="owner"><button id="bridge">Bridge</button></section></div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const bridge = root.querySelector<HTMLButtonElement>('#bridge')!;
+  bridge.focus();
+
+  let target: HTMLButtonElement | null = null;
+  deferComposedFocusRepair(owner, bridge, () => target);
+  // No focus gap: the synchronous park (the caller's job, not this function's) already landed on
+  // the bridge, and nothing here moves focus again until the deferred window elapses.
+  expect(root.ownerDocument.activeElement?.id).to.equal('bridge');
+
+  // The host creates the real target only after the current task -- the documented motivating
+  // case, where a reactive host's own re-render lands asynchronously relative to this call.
+  target = document.createElement('button');
+  target.id = 'recreated';
+  root.appendChild(target);
+
+  await nextHostUpdateOpportunity();
+  await nextHostUpdateOpportunity();
+  expect(root.ownerDocument.activeElement?.id).to.equal('recreated');
+});
+
+it('a deferred return-focus thunk gives up quietly when the target never appears', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section id="owner"><button id="bridge">Bridge</button></section></div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const bridge = root.querySelector<HTMLButtonElement>('#bridge')!;
+  bridge.focus();
+
+  deferComposedFocusRepair(owner, bridge, () => null);
+  await nextHostUpdateOpportunity();
+  await nextHostUpdateOpportunity();
+  expect(root.ownerDocument.activeElement?.id, 'focus stays on the bridge, not lost to <body>').to.equal(
+    'bridge',
+  );
+});
+
+it('a deferred return-focus thunk never overrides a focus move made in the meantime', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <section id="owner"><button id="bridge">Bridge</button></section>
+      <button id="elsewhere">Elsewhere</button>
+    </div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const bridge = root.querySelector<HTMLButtonElement>('#bridge')!;
+  const elsewhere = root.querySelector<HTMLButtonElement>('#elsewhere')!;
+  bridge.focus();
+
+  const target = document.createElement('button');
+  target.id = 'recreated';
+  deferComposedFocusRepair(owner, bridge, () => target);
+  root.appendChild(target);
+  // A genuinely newer focus move -- the host's own autofocus, or the user tabbing away -- before
+  // the deferred window elapses.
+  elsewhere.focus();
+
+  await nextHostUpdateOpportunity();
+  await nextHostUpdateOpportunity();
+  expect(root.ownerDocument.activeElement?.id, 'the newer focus move was not overridden').to.equal(
+    'elsewhere',
+  );
+});
+
+it('a deferred return-focus thunk still rescues focus after the bridge\'s own branch is removed', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section id="owner"><button id="bridge">Bridge</button></section></div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const bridge = root.querySelector<HTMLButtonElement>('#bridge')!;
+  bridge.focus();
+
+  const target = document.createElement('button');
+  target.id = 'recreated';
+  deferComposedFocusRepair(owner, bridge, () => target);
+  // The host removes the bridge's entire branch (the confirm-bar's own unmount, an overlay's own
+  // panel teardown, ...), which drops focus to `<body>` synchronously -- not a genuinely newer
+  // focus move, so it must not block the rescue.
+  owner.remove();
+  root.appendChild(target);
+
+  await nextHostUpdateOpportunity();
+  await nextHostUpdateOpportunity();
+  expect(document.activeElement?.id).to.equal('recreated');
 });
 
 it('rediscovers every managed native stop after a roving owner assigns tabindex -1', async () => {

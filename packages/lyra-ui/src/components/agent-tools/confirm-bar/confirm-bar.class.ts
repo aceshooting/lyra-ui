@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
 import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import {
+  deferComposedFocusRepair,
   focusFirstAvailable,
   isComposedFocusAvailable,
   repairComposedFocus,
@@ -38,9 +39,13 @@ export type ConfirmBarVariant = Extract<LyraVariant, 'neutral' | 'danger'>;
 
 /**
  * Where the bar hands focus once a decision lands. An element, `null` for "no preference", or a
- * thunk resolved at that moment -- a host that swaps a focused control out for this bar often
- * re-creates that control on the way back, so the element it wants focus returned to does not
- * necessarily exist yet when the bar is mounted.
+ * thunk -- called at handoff time and, only if that first call does not yet name a live,
+ * focusable control, called again once the host has had a chance to react to the decision. A host
+ * that swaps a focused control out for this bar often re-creates that control on the way back,
+ * asynchronously, so the element it wants focus returned to does not necessarily exist yet at the
+ * moment the decision is made; the second call is what lets that motivating case actually work. A
+ * plain element value is resolved once, synchronously, and never retried -- it names something
+ * that either already exists or never will.
  */
 export type ConfirmBarReturnFocusTarget = HTMLElement | null | (() => HTMLElement | null);
 
@@ -101,7 +106,11 @@ function deniedIcon(): SVGTemplateResult {
  * it) and the same handoff returns focus there instead, falling back to `[part="status"]` whenever
  * the named element is missing, detached, `inert` or otherwise refuses focus -- an `inert` element
  * refuses `focus()` silently, so an unchecked handoff would strand the user on `<body>` at exactly
- * the moment a decision was announced.
+ * the moment a decision was announced. When `returnFocusTo` is a thunk and that immediate call
+ * fails, the same handoff quietly retries once more after the host has had a real chance to react
+ * (see `ConfirmBarReturnFocusTarget`'s doc comment) -- the case a thunk exists for in the first
+ * place is a host that has not re-created its control yet at the instant the decision lands, and
+ * every supported host framework re-renders asynchronously relative to this synchronous handoff.
  *
  * "Never steals focus" and "no Escape semantics" describe the bar's behavior when `autofocus` and
  * `escape-denies` are both left unset (the default). A host that swaps a focused control out for
@@ -342,12 +351,15 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   /** Where focus goes once a decision lands, instead of parking on `[part="status"]`. Property-only
    *  (an element reference has no attribute form), and a thunk is accepted so the lookup happens at
-   *  handoff time rather than at assignment time. The motivating case is the one the class doc
-   *  opens with: a host swaps a focused control out for this bar, and once the decision is made
-   *  focus belongs back on that control (or on whatever replaced it), not on a status line the host
-   *  is about to unmount. Unset (`null`) keeps the shipped behavior exactly. A named target that is
-   *  missing, detached, `inert` or otherwise refuses focus falls back to `[part="status"]` rather
-   *  than to `<body>`. */
+   *  handoff time rather than at assignment time -- and, if that first lookup does not yet name a
+   *  live control, is repeated once more after the host has had a chance to react (see
+   *  `ConfirmBarReturnFocusTarget`). The motivating case is the one the class doc opens with: a
+   *  host swaps a focused control out for this bar, and once the decision is made focus belongs
+   *  back on that control (or on whatever replaced it), not on a status line the host is about to
+   *  unmount -- and that replacement control is typically re-created asynchronously, after the
+   *  decision has already landed. Unset (`null`) keeps the shipped behavior exactly. A named
+   *  target that is missing, detached, `inert` or otherwise refuses focus falls back to
+   *  `[part="status"]` rather than to `<body>`. */
   @property({ attribute: false }) returnFocusTo: ConfirmBarReturnFocusTarget = null;
 
   @query('[part="status"]') private statusEl?: HTMLElement;
@@ -556,12 +568,30 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   /**
    * The terminal focus handoff: the host's named return target when it names one that can really
-   * take focus, else the always-present `[part="status"]`. Unconditional, exactly as the
-   * `[part="status"]` move it replaces always was -- the control the user just activated is about
-   * to unmount, so the handoff cannot wait to be sure that control held focus.
+   * take focus right now, else the always-present `[part="status"]` -- unconditional, exactly as
+   * the `[part="status"]` move it replaces always was, because the control the user just activated
+   * is about to unmount and the handoff cannot wait to be sure that control held focus.
+   *
+   * `returnFocusTo` accepts a thunk precisely so a host can name a control it has not re-created
+   * yet -- the class doc's motivating case: a host swaps this bar back out for the control it
+   * replaced, and every supported host framework does that asynchronously relative to this
+   * synchronous handoff. Resolving the thunk only here would therefore always find that control
+   * missing, which is the whole defect this guards against. When the immediate resolution fails
+   * (null, disconnected, `inert`, or otherwise not focusable) and `returnFocusTo` is itself a
+   * function, `deferComposedFocusRepair()` re-resolves it once the host has had a real chance to
+   * react, and moves focus there only if it has since appeared and nothing else has claimed focus
+   * in the meantime. A plain element value is never retried: it names something that either
+   * already exists or never will, so the single synchronous resolution above is already the final
+   * answer, and every previously-working synchronous case (an immediately-resolving thunk or a
+   * live element) returns before scheduling anything.
    */
   private handOffDecidedFocus(): void {
-    focusFirstAvailable([this.resolvedReturnFocusTarget(), this.statusEl]);
+    const target = this.resolvedReturnFocusTarget();
+    if (target && focusFirstAvailable([target])) return;
+    focusFirstAvailable([this.statusEl]);
+    if (typeof this.returnFocusTo === 'function' && this.statusEl) {
+      deferComposedFocusRepair(this, this.statusEl, () => this.resolvedReturnFocusTarget());
+    }
   }
 
   protected override updated(changed: PropertyValues): void {

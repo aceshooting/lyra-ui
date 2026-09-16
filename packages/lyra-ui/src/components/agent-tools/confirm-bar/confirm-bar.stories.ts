@@ -1,4 +1,5 @@
 import { html } from 'lit';
+import { ref } from 'lit/directives/ref.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import '../../forms/button/button.js';
 import './confirm-bar.js';
@@ -208,6 +209,51 @@ export const ReturnFocus: Story = {
       ></lr-confirm-bar>
     </div>
   `,
+};
+
+/** The motivating case as a genuine conditional swap rather than a `hidden` toggle: the trigger is
+ *  removed outright (not just hidden) when the bar mounts, and the host re-creates a brand-new
+ *  trigger element only after the decision has settled -- asynchronously, from `lr-decision-settled`.
+ *  `returnFocusTo` names that not-yet-existing replacement by id; because the handoff retries once
+ *  the host has had a chance to react, focus lands on the real, freshly-created button instead of
+ *  falling back to `<body>`. */
+export const ReturnFocusConditionalSwap: Story = {
+  name: 'returnFocusTo across a full conditional swap',
+  render: () => {
+    function mountTrigger(root: HTMLElement): void {
+      const trigger = document.createElement('lr-button');
+      trigger.setAttribute('variant', 'danger');
+      trigger.id = 'swap-trigger';
+      trigger.textContent = 'Delete project';
+      trigger.addEventListener('click', () => {
+        root.textContent = '';
+        const bar = document.createElement('lr-confirm-bar');
+        bar.setAttribute('variant', 'danger');
+        bar.setAttribute('heading', 'Delete this project?');
+        // The element this names does not exist yet -- the host only re-creates it below, from
+        // `lr-decision-settled`, which fires after the decision has already landed.
+        bar.returnFocusTo = () => root.querySelector<HTMLElement>('#swap-trigger');
+        bar.addEventListener('lr-decision-settled', () => {
+          // A stand-in for a reactive host's own async re-render (Lit/React/Vue/Svelte all commit
+          // this kind of state-driven swap on a later microtask/frame, never synchronously inside
+          // the event that decided it).
+          queueMicrotask(() => {
+            root.textContent = '';
+            mountTrigger(root);
+          });
+        });
+        root.appendChild(bar);
+      });
+      root.textContent = '';
+      root.appendChild(trigger);
+    }
+    return html`<div
+      style="display:flex;align-items:center;gap:0.75rem;"
+      ${ref((el) => {
+        if (el instanceof HTMLElement) mountTrigger(el);
+      })}
+    ></div>`;
+  },
 };
 
 export const RestingBackgroundToken: Story = {
