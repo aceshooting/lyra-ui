@@ -5,7 +5,8 @@ import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { fileIcon } from '../../../internal/icons.js';
 import {
@@ -36,6 +37,13 @@ export interface LyraDropZoneRejectedFile {
 export interface LyraDropZoneFilesDetail {
   readonly files: readonly File[];
   readonly rejected: readonly LyraDropZoneRejectedFile[];
+  /** Remaining allowance under `maxFiles` after this drop, at the control's running count
+   *  (`heldFileCount`, since this component retains nothing of its own between drops) -- `null`
+   *  while `maxFiles` is unset (no limit), never negative. */
+  readonly remainingFiles: number | null;
+  /** Remaining allowance under `maxTotalSize` after this drop, in bytes -- `null` while
+   *  `maxTotalSize` is unset (no limit), never negative. */
+  readonly remainingTotalSize: number | null;
 }
 
 /** `lr-files`' event type on `lr-drop-zone`, narrowing `target`/`currentTarget` to `LyraDropZone`
@@ -68,10 +76,12 @@ export interface LyraDropZoneEventMap {
  * @slot - The wrapped region. Rendered as ordinary light DOM content; this element adds only the
  * drag listeners and the overlay layered on top.
  * @slot overlay - Custom drag-over overlay content, overriding the localized accept/reject text.
- * @event lr-files - Frozen `detail: { files, rejected }` with detached readonly sequences and
- * rejected-file records, fired on drop. Immutable `File` items retain identity. Typed as
- * {@linkcode LyraDropZoneFilesEvent}, so `event.target`/`event.currentTarget` are `LyraDropZone`
- * without a cast.
+ * @event lr-files - Frozen `detail: { files, rejected, remainingFiles, remainingTotalSize }` with
+ * detached readonly sequences and rejected-file records, fired on drop.
+ * `remainingFiles`/`remainingTotalSize` report the allowance still left under `maxFiles`/
+ * `maxTotalSize` after this drop (`null` while that limit is unset). Immutable `File` items retain
+ * identity. Typed as {@linkcode LyraDropZoneFilesEvent}, so
+ * `event.target`/`event.currentTarget` are `LyraDropZone` without a cast.
  * @csspart base - The wrapping element wrapping the default slot and the overlay.
  * @csspart overlay - The drag-over overlay, layered above the slotted content. Hidden outside an
  * active drag session.
@@ -147,13 +157,25 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   /** Largest accepted file size in bytes. `0` (the default) disables the check -- identical
    *  contract to `lr-file-input`'s `maxFileSize`, including its invalid-override fallback. */
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
-  /** Largest number of files accepted per drop. `0` (the default) disables the check -- identical
-   *  contract to `lr-file-input`'s `maxFiles`. Since this component retains nothing between drops,
-   *  the count always covers only the current drop's files (there is no persisted count to add). */
+  /** Largest number of files accepted per drop, counting `heldFileCount` plus the current drop's
+   *  files. `0` (the default) disables the check -- identical contract to `lr-file-input`'s
+   *  `maxFiles`. Since this component retains nothing of its own between drops, the count would
+   *  otherwise always cover only the current drop -- `heldFileCount` is what lets a cumulative cap
+   *  span separate drops. */
   @property({ type: Number, attribute: 'max-files' }) maxFiles = 0;
-  /** Largest combined byte size accepted per drop. `0` (the default) disables the check --
-   *  identical contract to `lr-file-input`'s `maxTotalSize`, scoped to the current drop only. */
+  /** Largest combined byte size accepted per drop, summing `heldTotalSize` plus the current
+   *  drop's files. `0` (the default) disables the check -- identical contract to
+   *  `lr-file-input`'s `maxTotalSize`. */
   @property({ type: Number, attribute: 'max-total-size' }) maxTotalSize = 0;
+  /** Externally held file count added to the running count `maxFiles` evaluates against --
+   *  identical contract to `lr-file-input`'s `heldFileCount`, letting a cumulative, server-backed
+   *  cap span separate drops onto this region. `0` (the default) means "nothing held" and
+   *  reproduces prior behavior exactly. A negative, `NaN`, or `Infinity` value is normalized to
+   *  `0` via `finiteCount`. */
+  @property({ type: Number, attribute: 'held-file-count' }) heldFileCount = 0;
+  /** Externally held byte total added to the running size `maxTotalSize` evaluates against --
+   *  identical contract to `lr-file-input`'s `heldTotalSize`. */
+  @property({ type: Number, attribute: 'held-total-size' }) heldTotalSize = 0;
 
   @state() private dragState: DropSessionState = 'default';
   @state() private rejectedFiles: readonly LyraDropZoneRejectedFile[] = Object.freeze([]);
@@ -269,35 +291,42 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   private classify(
     fileList: File[],
     isPreview = false,
-  ): { files: File[]; rejected: LyraDropZoneRejectedFile[] } {
+  ): {
+    files: File[];
+    rejected: LyraDropZoneRejectedFile[];
+    remainingFiles: number | null;
+    remainingTotalSize: number | null;
+  } {
+    const limits = { maxFiles: this.effectiveMaxFiles, maxTotalSize: this.effectiveMaxTotalSize };
+    // This component retains nothing of its own between drops -- the running total always starts
+    // from `heldFileCount`/`heldTotalSize` alone, the externally held baseline the host reports.
+    const tracker = new AggregateFileLimitTracker(
+      finiteCount(this.heldFileCount, 0),
+      finiteCount(this.heldTotalSize, 0),
+    );
     if (!this.multiple && fileList.length > 1) {
-      return { files: [], rejected: fileList.map((file) => ({ file, reason: 'count' as const })) };
+      return {
+        files: [],
+        rejected: fileList.map((file) => ({ file, reason: 'count' as const })),
+        ...tracker.allowance(limits),
+      };
     }
     const files: File[] = [];
     const rejected: LyraDropZoneRejectedFile[] = [];
-    const maxFiles = this.effectiveMaxFiles;
-    const maxTotalSize = this.effectiveMaxTotalSize;
-    let runningCount = 0;
-    let runningSize = 0;
     for (const f of fileList) {
       const reason = this.isAllowed(f, isPreview);
       if (reason !== 'ok') {
         rejected.push({ file: f, reason });
         continue;
       }
-      if (maxFiles !== null && runningCount + 1 > maxFiles) {
-        rejected.push({ file: f, reason: 'maxFiles' });
-        continue;
-      }
-      if (maxTotalSize !== null && runningSize + f.size > maxTotalSize) {
-        rejected.push({ file: f, reason: 'maxTotalSize' });
+      const limitReason = tracker.evaluate(f, limits);
+      if (limitReason) {
+        rejected.push({ file: f, reason: limitReason });
         continue;
       }
       files.push(f);
-      runningCount += 1;
-      runningSize += Number.isFinite(f.size) ? f.size : 0;
     }
-    return { files, rejected };
+    return { files, rejected, ...tracker.allowance(limits) };
   }
 
   private rejectionMessage(rejected: LyraDropZoneRejectedFile): string {
@@ -323,7 +352,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   }
 
   private emitFiles(fileList: File[], additionalRejected: readonly LyraDropZoneRejectedFile[] = []): void {
-    const { files, rejected } = this.classify(fileList);
+    const { files, rejected, remainingFiles, remainingTotalSize } = this.classify(fileList);
     rejected.push(...additionalRejected);
     const rejectedSnapshot = Object.freeze(rejected.map((item) => Object.freeze({ ...item })));
     const filesSnapshot = Object.freeze([...files]);
@@ -349,7 +378,10 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
       );
     }
     this.resultStatus = messages.filter((message) => message.length > 0).join(' ');
-    this.emit('lr-files', Object.freeze({ files: filesSnapshot, rejected: rejectedSnapshot }));
+    this.emit(
+      'lr-files',
+      Object.freeze({ files: filesSnapshot, rejected: rejectedSnapshot, remainingFiles, remainingTotalSize }),
+    );
   }
 
   private folderFailure(

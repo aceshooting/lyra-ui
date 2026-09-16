@@ -6,7 +6,8 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 installFormControlLabelSupport();
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
@@ -146,6 +147,13 @@ export interface LyraFileInputRejectedFile {
 export interface LyraFileInputFilesDetail {
   readonly files: readonly File[];
   readonly rejected: readonly LyraFileInputRejectedFile[];
+  /** Remaining allowance under `maxFiles` after this batch, at the control's running count
+   *  (retained files, unless `nonRetaining`, plus `heldFileCount`) -- `null` while `maxFiles` is
+   *  unset (no limit), never negative. */
+  readonly remainingFiles: number | null;
+  /** Remaining allowance under `maxTotalSize` after this batch, in bytes -- `null` while
+   *  `maxTotalSize` is unset (no limit), never negative. */
+  readonly remainingTotalSize: number | null;
 }
 
 /** `lr-files`' event type, narrowing `target`/`currentTarget` to `LyraFileInput` so a listener
@@ -177,11 +185,13 @@ export interface LyraFileInputEventMap {
  * @slot hint - Custom form-control hint content.
  * @slot error - Custom validation error content. Use `with-error` when this slot is populated in
  * server-rendered declarative shadow DOM before light-DOM slot assignment is observable.
- * @event lr-files - Frozen `detail: { files, rejected }` with detached readonly sequences and
- * rejected-file records, fired on drop and manual selection. Immutable `File` items retain
- * identity. Typed as {@linkcode LyraFileInputFilesEvent}, so `event.target`/`event.currentTarget` are
- * `LyraFileInput` without a cast. Still fires while `nonRetaining` is set, even though `files`
- * itself is never written in that mode.
+ * @event lr-files - Frozen `detail: { files, rejected, remainingFiles, remainingTotalSize }` with
+ * detached readonly sequences and rejected-file records, fired on drop and manual selection.
+ * `remainingFiles`/`remainingTotalSize` report the allowance still left under `maxFiles`/
+ * `maxTotalSize` after this batch (`null` while that limit is unset). Immutable `File` items
+ * retain identity. Typed as {@linkcode LyraFileInputFilesEvent}, so
+ * `event.target`/`event.currentTarget` are `LyraFileInput` without a cast. Still fires while
+ * `nonRetaining` is set, even though `files` itself is never written in that mode.
  * @event {Event} input - Native event fired before `change` when user interaction changes `files`;
  * bubbling, composed, and non-cancelable.
  * @event {Event} change - Native event fired after `input` when user interaction changes `files`;
@@ -378,19 +388,30 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Largest accepted file size in bytes. `0` (the default) disables the size check entirely --
    *  see `effectiveMaxFileSize` for how an invalid override is handled. */
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
-  /** Largest total number of files accepted, counting retained files plus the current batch. `0`
-   *  (the default) disables the check. Same rejection-UI shape as `maxFileSize`: an excess file in
-   *  the batch is rejected with reason `'maxFiles'` and appears in `[part="rejection"]` alongside
-   *  any other rejection, rather than failing the whole selection. An invalid override (negative,
-   *  `NaN`) falls back to a sane cap rather than silently accepting an unlimited count -- see
-   *  `effectiveMaxFiles`. While `nonRetaining` is set, the count only covers the current batch,
-   *  since the control does not track an externally-held count. */
+  /** Largest total number of files accepted, counting retained files (unless `nonRetaining`) plus
+   *  `heldFileCount` plus the current batch. `0` (the default) disables the check. Same
+   *  rejection-UI shape as `maxFileSize`: an excess file in the batch is rejected with reason
+   *  `'maxFiles'` and appears in `[part="rejection"]` alongside any other rejection, rather than
+   *  failing the whole selection. An invalid override (negative, `NaN`) falls back to a sane cap
+   *  rather than silently accepting an unlimited count -- see `effectiveMaxFiles`. */
   @property({ type: Number, attribute: 'max-files' }) maxFiles = 0;
-  /** Largest combined byte size accepted, summing retained files plus the current batch. `0` (the
-   *  default) disables the check. Same rejection-UI shape and invalid-override fallback as
-   *  `maxFileSize` -- see `effectiveMaxTotalSize`. While `nonRetaining` is set, the total only
-   *  covers the current batch. */
+  /** Largest combined byte size accepted, summing retained files (unless `nonRetaining`) plus
+   *  `heldTotalSize` plus the current batch. `0` (the default) disables the check. Same
+   *  rejection-UI shape and invalid-override fallback as `maxFileSize` -- see
+   *  `effectiveMaxTotalSize`. */
   @property({ type: Number, attribute: 'max-total-size' }) maxTotalSize = 0;
+  /** Externally held file count added to the running count `maxFiles` evaluates against, in both
+   *  retaining and `nonRetaining` modes -- the numeric counterpart of `valuePresent`, for a
+   *  cumulative cap that spans separate picker sessions (e.g. a server-backed upload limit) rather
+   *  than resetting to what this control alone can see. `0` (the default) means "nothing held" and
+   *  reproduces prior behavior exactly. A negative, `NaN`, or `Infinity` value is normalized to `0`
+   *  via `finiteCount` -- an invalid baseline degrades to "nothing held" rather than corrupting
+   *  every later comparison or permanently blocking every future file. */
+  @property({ type: Number, attribute: 'held-file-count' }) heldFileCount = 0;
+  /** Externally held byte total added to the running size `maxTotalSize` evaluates against, in
+   *  both retaining and `nonRetaining` modes. Same contract, default, and invalid-input
+   *  normalization as `heldFileCount`. */
+  @property({ type: Number, attribute: 'held-total-size' }) heldTotalSize = 0;
   /** Opt-in mode where an accepted selection still fires `lr-files`/`input`/`change` but is never
    *  written to `files` or rendered as a built-in `[part="file"]` row -- for a host that persists
    *  files elsewhere and renders its own list, so assigning `files` (even to reset it) never fights
@@ -1091,41 +1112,44 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private classify(
     fileList: File[],
     isPreview = false,
-  ): { files: File[]; rejected: LyraFileInputRejectedFile[] } {
+  ): {
+    files: File[];
+    rejected: LyraFileInputRejectedFile[];
+    remainingFiles: number | null;
+    remainingTotalSize: number | null;
+  } {
+    const limits = { maxFiles: this.effectiveMaxFiles, maxTotalSize: this.effectiveMaxTotalSize };
+    // `maxFiles`/`maxTotalSize` count against retained files too, except while `nonRetaining` is
+    // set, in which case the control's own retained count/total is 0 -- but `heldFileCount`/
+    // `heldTotalSize` (an externally held baseline) still apply in both modes, since that's their
+    // entire purpose: a cumulative cap spanning separate picker sessions.
+    const tracker = new AggregateFileLimitTracker(
+      (this.nonRetaining ? 0 : this._files.length) + finiteCount(this.heldFileCount, 0),
+      (this.nonRetaining ? 0 : this.totalFileSize(this._files)) + finiteCount(this.heldTotalSize, 0),
+    );
     if (!this.effectiveMultiple && fileList.length > 1) {
-      return { files: [], rejected: fileList.map((file) => ({ file, reason: 'count' as const })) };
+      return {
+        files: [],
+        rejected: fileList.map((file) => ({ file, reason: 'count' as const })),
+        ...tracker.allowance(limits),
+      };
     }
     const files: File[] = [];
     const rejected: LyraFileInputRejectedFile[] = [];
-    const maxFiles = this.effectiveMaxFiles;
-    const maxTotalSize = this.effectiveMaxTotalSize;
-    // `maxFiles`/`maxTotalSize` count against retained files too, except while `nonRetaining` is
-    // set: the control has no externally-held count/total to add, so the aggregate only covers
-    // this batch (documented on both properties).
-    let runningCount = this.nonRetaining ? 0 : this._files.length;
-    let runningSize = this.nonRetaining ? 0 : this.totalFileSize(this._files);
     for (const f of fileList) {
       const reason = this.isAllowed(f, isPreview);
       if (reason !== 'ok') {
         rejected.push({ file: f, reason });
         continue;
       }
-      if (maxFiles !== null && runningCount + 1 > maxFiles) {
-        rejected.push({ file: f, reason: 'maxFiles' });
-        continue;
-      }
-      // Same rationale as the `maxFileSize` check above: `f.size` is `undefined` during dragenter
-      // preview, so `runningSize + undefined` is `NaN` and this comparison is always `false` --
-      // preview never flags a total-size rejection ahead of the real sizes being available.
-      if (maxTotalSize !== null && runningSize + f.size > maxTotalSize) {
-        rejected.push({ file: f, reason: 'maxTotalSize' });
+      const limitReason = tracker.evaluate(f, limits);
+      if (limitReason) {
+        rejected.push({ file: f, reason: limitReason });
         continue;
       }
       files.push(f);
-      runningCount += 1;
-      runningSize += Number.isFinite(f.size) ? f.size : 0;
     }
-    return { files, rejected };
+    return { files, rejected, ...tracker.allowance(limits) };
   }
 
   /** Per-reason, per-file message for the visible `[part="rejection"]` alert. The filename is
@@ -1166,7 +1190,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   private emitFiles(fileList: File[], additionalRejected: readonly LyraFileInputRejectedFile[] = []): void {
-    const { files, rejected } = this.classify(fileList);
+    const { files, rejected, remainingFiles, remainingTotalSize } = this.classify(fileList);
     rejected.push(...additionalRejected);
     const rejectedSnapshot = Object.freeze(rejected.map((item) => Object.freeze({ ...item })));
     const filesSnapshot = Object.freeze([...files]);
@@ -1205,7 +1229,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       dispatchNativeEvent(this, 'input');
       dispatchNativeEvent(this, 'change');
     }
-    this.emit('lr-files', Object.freeze({ files: filesSnapshot, rejected: rejectedSnapshot }));
+    this.emit(
+      'lr-files',
+      Object.freeze({ files: filesSnapshot, rejected: rejectedSnapshot, remainingFiles, remainingTotalSize }),
+    );
   }
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */

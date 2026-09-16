@@ -956,16 +956,25 @@ reimplemented.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check), `maxFiles:
   number = 0` (attribute `max-files`), `maxTotalSize: number = 0` (attribute `max-total-size`) —
   identical contract and invalid-override fail-safe fallback to `lr-file-input`'s own three limits.
-  Since this component retains nothing between drops, `maxFiles`/`maxTotalSize` always cover only
-  the current drop (there is no persisted count/total to add).
+  Since this component retains nothing of its own between drops, `maxFiles`/`maxTotalSize` would
+  otherwise always cover only the current drop — `heldFileCount`/`heldTotalSize` below are what let
+  a cumulative cap span separate drops.
+- `heldFileCount: number = 0` (attribute `held-file-count`) and `heldTotalSize: number = 0`
+  (attribute `held-total-size`) — externally held baseline added to the running count/byte-total
+  `maxFiles`/`maxTotalSize` evaluate against, identical contract to `lr-file-input`'s own
+  `heldFileCount`/`heldTotalSize`: `0` (the default) means "nothing held" and reproduces prior
+  behavior exactly, and a negative, `NaN`, or `Infinity` override is normalized to `0` via
+  `finiteCount` rather than corrupting every later comparison.
 - `readonly dragging: boolean` — `true` during an active drag session
 
 **Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
-`rejected` arrays and frozen rejected-file records, fired on drop; immutable `File` objects retain
-identity) — typed as `LyraDropZoneFilesEvent`, so `event.target`/`event.currentTarget` are
-`LyraDropZone` without a cast. `LyraDropZoneRejectedFile = { readonly file: File; readonly reason:
-'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`, the
-same reason vocabulary as `lr-file-input`'s `LyraFileInputRejectedFile`.
+`rejected` arrays and frozen rejected-file records, plus `remainingFiles`/`remainingTotalSize`
+reporting the allowance still left under `maxFiles`/`maxTotalSize` after this drop (`null` while
+that limit is unset), fired on drop; immutable `File` objects retain identity) — typed as
+`LyraDropZoneFilesEvent`, so `event.target`/`event.currentTarget` are `LyraDropZone` without a
+cast. `LyraDropZoneRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size'
+| 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`, the same reason vocabulary as
+`lr-file-input`'s `LyraFileInputRejectedFile`.
 
 **Slots:** the default slot is the wrapped region, rendered as ordinary light DOM; `overlay`
 overrides the localized accept/reject overlay text.
@@ -1066,14 +1075,23 @@ enabled buttons retain pointer feedback.
   update them by assigning a new collection.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
 - `maxFiles: number = 0` (attribute `max-files`) — largest total file count accepted, counting
-  retained files plus the current batch; `0` disables the check. An excess file in the batch is
-  rejected with reason `'maxFiles'`, in the same `[part="rejection"]` shape as `maxFileSize`. While
-  `nonRetaining` is set, the count covers only the current batch (there is no externally-held count
-  to add).
+  retained files (unless `nonRetaining`) plus `heldFileCount` plus the current batch; `0` disables
+  the check. An excess file in the batch is rejected with reason `'maxFiles'`, in the same
+  `[part="rejection"]` shape as `maxFileSize`.
 - `maxTotalSize: number = 0` (attribute `max-total-size`) — largest combined byte size accepted,
-  summing retained files plus the current batch; `0` disables the check. Same rejection-UI shape and
-  fail-safe invalid-override behavior as `maxFileSize` (see gotchas). Same `nonRetaining` batch-only
-  scoping as `maxFiles`.
+  summing retained files (unless `nonRetaining`) plus `heldTotalSize` plus the current batch; `0`
+  disables the check. Same rejection-UI shape and fail-safe invalid-override behavior as
+  `maxFileSize` (see gotchas).
+- `heldFileCount: number = 0` (attribute `held-file-count`) — externally held file count added to
+  the running count `maxFiles` evaluates against, in both retaining and `nonRetaining` modes — the
+  numeric counterpart of `valuePresent`, for a cumulative cap (e.g. a server-backed upload limit)
+  that spans separate picker sessions rather than resetting to what this control alone can see. `0`
+  (the default) means "nothing held" and reproduces prior behavior exactly. A negative, `NaN`, or
+  `Infinity` override is normalized to `0` via `finiteCount` rather than corrupting every later
+  comparison or permanently blocking every future file.
+- `heldTotalSize: number = 0` (attribute `held-total-size`) — externally held byte total added to
+  the running size `maxTotalSize` evaluates against, in both retaining and `nonRetaining` modes.
+  Same contract, default, and invalid-input normalization as `heldFileCount`.
 - `nonRetaining: boolean = false` (reflected, attribute `non-retaining`) — opt-in mode where an
   accepted selection still fires `lr-files`/`input`/`change` but is never written to `files` or
   rendered as a built-in `[part="file"]` row. For a host that persists files elsewhere and renders
@@ -1152,9 +1170,11 @@ enabled buttons retain pointer feedback.
 host `change`; programmatic `files` writes are silent (both still fire while `nonRetaining` is set,
 even though `files` itself is not written in that mode). `lr-files` (`detail:
 LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
-rejected-file records, fired on both drop and manual file-picker selection; immutable `File` objects
-retain identity) — typed as `LyraFileInputFilesEvent`, so `event.target`/`event.currentTarget` are
-`LyraFileInput` without a cast. `LyraFileInputRejectedFile = { readonly file: File; readonly reason:
+rejected-file records, plus `remainingFiles`/`remainingTotalSize` reporting the allowance still left
+under `maxFiles`/`maxTotalSize` after this batch (`null` while that limit is unset), fired on both
+drop and manual file-picker selection; immutable `File` objects retain identity) — typed as
+`LyraFileInputFilesEvent`, so `event.target`/`event.currentTarget` are `LyraFileInput` without a
+cast. `LyraFileInputRejectedFile = { readonly file: File; readonly reason:
 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize' }`: `'type'`
 from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file input
 (`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
@@ -3159,6 +3179,8 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraDropZoneFilesDetail {
     readonly files: readonly File[];
     readonly rejected: readonly LyraDropZoneRejectedFile[];
+    readonly remainingFiles: number | null;
+    readonly remainingTotalSize: number | null;
   }`
   Import: `@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js`.
   `LyraDropZoneFilesEvent extends CustomEvent<LyraDropZoneFilesDetail> {
@@ -3207,6 +3229,8 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFileInputFilesDetail {
     readonly files: readonly File[];
     readonly rejected: readonly LyraFileInputRejectedFile[];
+    readonly remainingFiles: number | null;
+    readonly remainingTotalSize: number | null;
   }`
   Import: `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`.
   `LyraFileInputObjectValidator {

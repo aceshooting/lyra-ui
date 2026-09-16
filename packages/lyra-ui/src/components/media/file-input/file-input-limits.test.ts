@@ -111,3 +111,94 @@ it('lr-files carries a typed target reachable without a cast', async () => {
   expect(event.target === el).to.equal(true);
   expect(event.target.files.map((f) => f.name)).to.deep.equal(['typed.txt']);
 });
+
+it('heldFileCount/heldTotalSize default to 0, leaving max-files rejection and remaining-allowance byte-identical to before they existed', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input multiple max-files="3"></lr-file-input>`);
+  expect(el.heldFileCount).to.equal(0);
+  expect(el.heldTotalSize).to.equal(0);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeFile('a.txt'), makeFile('b.txt'), makeFile('c.txt'), makeFile('d.txt')]);
+  const event = await result;
+  const detail = event.detail as LyraFileInputFilesDetail;
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.txt', 'b.txt', 'c.txt']);
+  expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxFiles']);
+  expect(detail.remainingFiles, 'no held baseline: the batch alone fills the cap to exactly 0 remaining').to.equal(0);
+  expect(detail.remainingTotalSize, 'max-total-size is unset').to.equal(null);
+});
+
+it('held-file-count adds an externally-held baseline to max-files, in the default retaining mode', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input multiple max-files="5" held-file-count="3"></lr-file-input>`);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeFile('a.txt'), makeFile('b.txt'), makeFile('c.txt')]);
+  const event = await result;
+  const detail = event.detail as LyraFileInputFilesDetail;
+  // baseline 3 + 2 accepted reaches the cap of 5; the third file is rejected.
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.txt', 'b.txt']);
+  expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxFiles']);
+  expect(detail.remainingFiles).to.equal(0);
+  expect(el.files.map((f) => f.name)).to.deep.equal(['a.txt', 'b.txt']);
+});
+
+it('held-total-size adds an externally-held byte baseline to max-total-size', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input multiple max-total-size="100" held-total-size="60"></lr-file-input>`);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeSizedFile('small.bin', 30), makeSizedFile('big.bin', 30)]);
+  const event = await result;
+  const detail = event.detail as LyraFileInputFilesDetail;
+  // baseline 60 + 30 accepted = 90; the second file (another 30) would reach 120 > 100.
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['small.bin']);
+  expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxTotalSize']);
+  expect(detail.remainingTotalSize).to.equal(10);
+});
+
+it('held-file-count/held-total-size apply while non-retaining, unlike the always-reset internal count', async () => {
+  const el = await fixture<LyraFileInput>(
+    html`<lr-file-input multiple non-retaining max-files="5" held-file-count="4"></lr-file-input>`,
+  );
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeFile('a.txt'), makeFile('b.txt')]);
+  const event = await result;
+  const detail = event.detail as LyraFileInputFilesDetail;
+  // held baseline 4 + 1 accepted reaches the cap of 5; the second file is rejected. The control's
+  // own (always-0-while-non-retaining) internal count could never have produced this rejection on
+  // its own -- proving the held baseline, not the internal list, drove it.
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.txt']);
+  expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxFiles']);
+  expect(el.files, 'non-retaining: still never writes to files').to.deep.equal([]);
+});
+
+it('remainingFiles/remainingTotalSize report the post-batch allowance even when nothing is rejected', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input multiple max-files="5" held-file-count="2"></lr-file-input>`);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeFile('a.txt')]);
+  const event = await result;
+  const detail = event.detail as LyraFileInputFilesDetail;
+  expect(detail.rejected).to.deep.equal([]);
+  // held 2 + accepted 1 = 3 against a cap of 5 leaves 2.
+  expect(detail.remainingFiles).to.equal(2);
+});
+
+it('normalizes a negative or NaN held-file-count/held-total-size to 0 rather than corrupting the check', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input multiple max-files="2" max-total-size="100"></lr-file-input>`);
+  el.heldFileCount = -5;
+  el.heldTotalSize = Number.NaN;
+  await el.updateComplete;
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeSizedFile('a.bin', 40), makeSizedFile('b.bin', 40)]);
+  const event = await result;
+  const detail = event.detail as LyraFileInputFilesDetail;
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.bin', 'b.bin']);
+  expect(detail.rejected).to.deep.equal([]);
+});
+
+it('an Infinity held-file-count normalizes to 0 instead of permanently blocking every future file', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input multiple max-files="1"></lr-file-input>`);
+  el.heldFileCount = Number.POSITIVE_INFINITY;
+  await el.updateComplete;
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeFile('a.txt')]);
+  const event = await result;
+  const detail = event.detail as LyraFileInputFilesDetail;
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.txt']);
+  expect(detail.rejected).to.deep.equal([]);
+});

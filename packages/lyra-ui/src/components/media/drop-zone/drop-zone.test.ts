@@ -146,6 +146,58 @@ it('rejects a file beyond max-total-size', async () => {
   expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxTotalSize']);
 });
 
+it('heldFileCount/heldTotalSize default to 0, leaving max-files rejection and remaining-allowance byte-identical to before they existed', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-files="2"><div>region</div></lr-drop-zone>`);
+  expect(el.heldFileCount).to.equal(0);
+  expect(el.heldTotalSize).to.equal(0);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeFile('a.txt'), makeFile('b.txt'), makeFile('c.txt')]);
+  const event = await result;
+  const detail = event.detail as LyraDropZoneFilesDetail;
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.txt', 'b.txt']);
+  expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxFiles']);
+  expect(detail.remainingFiles).to.equal(0);
+  expect(detail.remainingTotalSize).to.equal(null);
+});
+
+it('held-file-count adds an externally-held baseline to max-files, spanning separate drops', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-files="3" held-file-count="2"><div>region</div></lr-drop-zone>`);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeFile('a.txt'), makeFile('b.txt')]);
+  const event = await result;
+  const detail = event.detail as LyraDropZoneFilesDetail;
+  // held baseline 2 + 1 accepted reaches the cap of 3; the second file is rejected -- this
+  // component retains nothing of its own between drops, so only the held baseline could do this.
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.txt']);
+  expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxFiles']);
+  expect(detail.remainingFiles).to.equal(0);
+});
+
+it('held-total-size adds an externally-held byte baseline to max-total-size', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-total-size="100" held-total-size="60"><div>region</div></lr-drop-zone>`);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeSizedFile('small.bin', 30), makeSizedFile('big.bin', 30)]);
+  const event = await result;
+  const detail = event.detail as LyraDropZoneFilesDetail;
+  // baseline 60 + 30 accepted = 90; the second file (another 30) would reach 120 > 100.
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['small.bin']);
+  expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxTotalSize']);
+  expect(detail.remainingTotalSize).to.equal(10);
+});
+
+it('normalizes a negative, NaN, or Infinity held-file-count/held-total-size to 0 rather than corrupting the check', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-files="2" max-total-size="100"><div>region</div></lr-drop-zone>`);
+  el.heldFileCount = Number.NaN;
+  el.heldTotalSize = Number.NEGATIVE_INFINITY;
+  await el.updateComplete;
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeSizedFile('a.bin', 40), makeSizedFile('b.bin', 40)]);
+  const event = await result;
+  const detail = event.detail as LyraDropZoneFilesDetail;
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.bin', 'b.bin']);
+  expect(detail.rejected).to.deep.equal([]);
+});
+
 it('recursively adds files from a dropped folder when multiple', async () => {
   const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple><div>region</div></lr-drop-zone>`);
   const nested = makeFile('nested.csv', 'text/csv');
