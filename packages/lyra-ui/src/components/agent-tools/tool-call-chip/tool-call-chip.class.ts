@@ -11,6 +11,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -210,6 +211,10 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  * anchored detail tooltip.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the detail
+ *   tooltip's `fixed` default, read from computed style when it is (re)positioned. Set it once on
+ *   `:root`, a theme, or one clipping ancestor to change every unset tool call chip beneath it; an
+ *   unrecognized value falls back to `fixed`.
  * @status stable
  * @since 4.0.0
  */
@@ -317,6 +322,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         if (anchor && tooltip)
           this.cleanupPositioner = place(anchor, tooltip, {
             placement: 'top-start',
+            strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
           });
       }
     }

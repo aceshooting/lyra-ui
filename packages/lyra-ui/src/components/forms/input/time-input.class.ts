@@ -26,6 +26,7 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import {
   activateNonmodalOverlay,
@@ -317,6 +318,10 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  * anchored picker panel.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the column
+ *   picker's `fixed` default, read from computed style when it is (re)positioned. Set it once on
+ *   `:root`, a theme, or one clipping ancestor to change every unset time input beneath it; an
+ *   unrecognized value falls back to `fixed`.
  * @status stable
  * @since 4.0.0
  */
@@ -1032,6 +1037,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       placement: rtlAwarePlacement(this.placement as Placement, this),
       offset: finiteNumber(this.distance, 0),
       sync: 'width',
+      strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
     });
   }
 

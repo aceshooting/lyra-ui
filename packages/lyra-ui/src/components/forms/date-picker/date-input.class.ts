@@ -21,6 +21,7 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
@@ -382,6 +383,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssstate disabled - Matches while disabled directly or through an ancestor fieldset.
  * @cssstate open - Matches while the calendar popover is open.
  * @cssstate range - Matches while `mode="range"` is active.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the calendar
+ *   popup's `fixed` default, read from computed style when it is (re)positioned. Set it once on
+ *   `:root`, a theme, or one clipping ancestor to change every unset date input beneath it; an
+ *   unrecognized value falls back to `fixed`.
  * @status experimental
  * @since 4.0.0
  */
@@ -1316,6 +1321,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.cleanupFn = place(anchor, popup, {
       placement: normalizeDateInputPlacement(this.placement),
       offset: finiteNumber(this.distance, 0),
+      strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
     });
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = activateNonmodalOverlay({
@@ -1590,6 +1596,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
           this.cleanupFn = place(anchor, popup, {
             placement: normalizeDateInputPlacement(this.placement),
             offset: finiteNumber(this.distance, 0),
+            strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
           });
         }
       }

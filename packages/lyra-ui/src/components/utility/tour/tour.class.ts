@@ -17,6 +17,7 @@ import {
   deferredTrackRect as trackRect,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
@@ -360,6 +361,10 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  * @cssprop [--lr-tour-progress-dot-current-bg=var(--lr-color-brand)] - Background of
  *   `progress-dot` for the current step, without repainting every other component that reuses the
  *   shared brand token.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the step
+ *   popover's `fixed` default, read from computed style when a step is (re)positioned. Set it
+ *   once on `:root`, a theme, or one clipping ancestor to change every unset tour beneath it; an
+ *   unrecognized value falls back to `fixed`.
  * @status stable
  * @since 4.0.0
  */
@@ -716,6 +721,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.placeCleanup = place(target, popover, {
       placement,
       offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
+      strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
     });
 
     const padding = finiteRange(step.spotlightPadding ?? this.spotlightPadding, DEFAULT_SPOTLIGHT_PADDING, 0);

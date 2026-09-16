@@ -16,6 +16,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { styles } from './mention-popover.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -302,6 +303,10 @@ export interface LyraMentionPopoverEventMap {
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on
  * the listbox.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the listbox's
+ *   `fixed` default, read from computed style when it is (re)positioned. Set it once on `:root`,
+ *   a theme, or one clipping ancestor to change every unset mention popover beneath it; an
+ *   unrecognized value falls back to `fixed`.
  * @status stable
  * @since 4.0.0
  */
@@ -1081,7 +1086,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     const anchorEl = this.resolveAnchorElement();
     const popup = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
     if (anchorEl && popup) {
-      const placement = place(anchorEl, popup, { placement: 'bottom-start' });
+      const placement = place(anchorEl, popup, {
+        placement: 'bottom-start',
+        strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+      });
       this.cleanup = placement;
       void placement.ready.then((positioned) => {
         if (positioned || this.cleanup !== placement || !this.open) return;

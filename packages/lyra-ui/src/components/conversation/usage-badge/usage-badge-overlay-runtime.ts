@@ -2,6 +2,7 @@ import type { LyraElement } from '../../../internal/lyra-element.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import type { OverlayOrderReservation } from '../../../internal/overlay-order.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { RenderedStateController } from '../../../internal/rendered-state.js';
 
 export type UsageBadgeOverlayHandle = Pick<OverlayHandle, 'deactivate' | 'isTopmost'>;
@@ -16,7 +17,10 @@ export function activateUsageBadgeOverlay(
   const panel = () => host.renderRoot.querySelector<HTMLElement>('[part="tooltip"]');
   const popup = panel();
   if (!anchor || !popup) return;
-  const cleanupPositioner = place(anchor, popup, { placement: 'top-start' });
+  const cleanupPositioner = place(anchor, popup, {
+    placement: 'top-start',
+    strategy: resolveEffectivePositioningStrategy(host, undefined, 'fixed'),
+  });
   const handle = activateNonmodalOverlay({
     host, panel, onEscape, orderReservation,
     beforeInitialFocus: () => false,

@@ -7,6 +7,7 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { nextId } from '../../../internal/a11y.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { buildCsv, downloadBlob, type LyraCsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -156,6 +157,10 @@ export interface LyraExportButtonEventMap {
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on
  * the menu popup.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the format
+ *   menu's `fixed` default, read from computed style when it is (re)positioned. Set it once on
+ *   `:root`, a theme, or one clipping ancestor to change every unset export button beneath it; an
+ *   unrecognized value falls back to `fixed`.
  * @status stable
  * @since 4.0.0
  */
@@ -443,7 +448,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     const menu = this.menuEl;
     const ownerDocument = this.ownerDocument;
     if (!anchor || !menu) return;
-    const placement = place(anchor, menu);
+    const placement = place(anchor, menu, {
+      strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+    });
     this.cleanup = placement;
     void placement.ready.then((positioned) => {
       if (

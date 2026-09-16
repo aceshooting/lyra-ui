@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -269,6 +270,10 @@ export interface LyraLocalePickerEventMap {
  *   been through a `reportValidity()`/submit attempt).
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a required picker
  *   nobody has touched yet is invalid without being styled as an error.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the listbox's
+ *   `fixed` default, read from computed style when it is (re)positioned. Set it once on `:root`,
+ *   a theme, or one clipping ancestor to change every unset locale picker beneath it; an
+ *   unrecognized value falls back to `fixed`.
  * @status stable
  * @since 6.0.0
  */
@@ -892,7 +897,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.bindDocumentPointer();
     const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
     const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-    if (anchor && listbox) this.cleanup = place(anchor, listbox);
+    if (anchor && listbox)
+      this.cleanup = place(anchor, listbox, {
+        strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+      });
   }
 
   protected override updated(changed: PropertyValues): void {

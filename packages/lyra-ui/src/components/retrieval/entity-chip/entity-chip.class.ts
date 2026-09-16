@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './entity-chip.styles.js';
@@ -48,6 +49,10 @@ const HIDE_DELAY_MS = 200;
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  * anchored detail popover.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the preview
+ *   popover's `fixed` default, read from computed style when it is (re)positioned. Set it once on
+ *   `:root`, a theme, or one clipping ancestor to change every unset entity chip beneath it; an
+ *   unrecognized value falls back to `fixed`.
  * @status stable
  * @since 4.0.0
  */
@@ -112,6 +117,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
       if (this.popoverOpen && this.buttonEl && this.popoverEl) {
         this.cleanupPositioner = place(this.buttonEl, this.popoverEl, {
           placement: 'top-start',
+          strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
         });
       }
     }

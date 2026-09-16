@@ -11,6 +11,7 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
+import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -231,6 +232,10 @@ function registerMenuWidthScale(): void {
  *   same two surfaces.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored submenu
  *   surface.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the private
+ *   submenu surface's `fixed` default, read from computed style when a submenu is (re)positioned.
+ *   Set it once on `:root`, a theme, or one clipping ancestor to change every unset submenu
+ *   beneath it; an unrecognized value falls back to `fixed`.
  * @status stable
  * @since 4.0.0
  */
@@ -511,7 +516,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     ) as HTMLElement | null;
     if (this.submenuAnchor && popup) {
       const placement = rtlAwarePlacement(SUBMENU_PLACEMENT, this);
-      this.cleanup = place(this.submenuAnchor, popup, { placement });
+      this.cleanup = place(this.submenuAnchor, popup, {
+        placement,
+        strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+      });
     }
   }
 
