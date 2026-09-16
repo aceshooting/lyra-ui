@@ -13,6 +13,7 @@
  */
 
 import { getDateTimeFormat, getNumberFormat, getRelativeTimeFormat } from '../internal/intl-cache.js';
+import { resolveActiveOrExplicitLocale } from '../internal/localization-runtime.js';
 import { finiteInteger } from '../internal/numbers.js';
 import {
   byteFormat,
@@ -48,13 +49,18 @@ interface NumericStringFormat {
  * may be a `bigint` or a decimal string for exact-precision input (large ids, monetary amounts) --
  * see {@link LyraFormattableNumber}. Invalid `options` (for example an unsupported currency code)
  * throw the same `RangeError`/`TypeError` `Intl.NumberFormat`'s own constructor would.
+ *
+ * An omitted `locale` (or `'auto'`) resolves to the page's active `setLyraLocale()` locale,
+ * matching every rendered `<lr-*>` component -- see {@link resolveActiveOrExplicitLocale}. Falls
+ * back to `'en'` only once no active locale has ever been set, so a caller that never calls
+ * `setLyraLocale()` sees no change. An explicit tag always stays authoritative.
  */
 export function formatNumber(
   value: LyraFormattableNumber,
   locale?: string,
   options?: Intl.NumberFormatOptions,
 ): string {
-  const formatter = getNumberFormat(locale, options) as unknown as NumericStringFormat;
+  const formatter = getNumberFormat(resolveActiveOrExplicitLocale(locale), options) as unknown as NumericStringFormat;
   return formatter.format(value);
 }
 
@@ -65,6 +71,10 @@ export function formatNumber(
  * non-finite epoch, or a non-`Date` object) instead of throwing -- mirroring `resolveCssLength()`'s
  * "unsupported input returns `undefined`" convention for a pure helper. Invalid `options` still
  * throw, matching `Intl.DateTimeFormat`'s own constructor.
+ *
+ * An omitted `locale` (or `'auto'`) resolves the same way {@link formatNumber} does: to the page's
+ * active `setLyraLocale()` locale, falling back to `'en'` only once none has been set; an explicit
+ * tag always stays authoritative. See {@link resolveActiveOrExplicitLocale}.
  */
 export function formatDate(
   value: string | number | Date,
@@ -72,7 +82,7 @@ export function formatDate(
   options?: Intl.DateTimeFormatOptions,
 ): string | undefined {
   const resolved = resolveDateSource(value);
-  return resolved ? getDateTimeFormat(locale, options).format(resolved) : undefined;
+  return resolved ? getDateTimeFormat(resolveActiveOrExplicitLocale(locale), options).format(resolved) : undefined;
 }
 
 export interface LyraFormatRelativeTimeOptions {
@@ -93,6 +103,10 @@ export interface LyraFormatRelativeTimeOptions {
  * `undefined` for an unresolvable source. This is a one-shot computation against `options.now` (or
  * the current instant); it does not schedule a refresh -- pair it with your own timer, or use
  * `<lr-relative-time sync>`, for text that must stay current while displayed.
+ *
+ * An omitted `locale` (or `'auto'`) resolves the same way {@link formatNumber} does: to the page's
+ * active `setLyraLocale()` locale, falling back to `'en'` only once none has been set; an explicit
+ * tag always stays authoritative. See {@link resolveActiveOrExplicitLocale}.
  */
 export function formatRelativeTime(
   value: string | number | Date,
@@ -104,7 +118,10 @@ export function formatRelativeTime(
   const now = options.now ?? Date.now();
   const state = resolveRelativeTimeState((target - now) / 1000, options.unit ?? 'auto');
   const formatOptions = relativeTimeFormatOptions(options.format ?? 'long', options.numeric ?? 'auto');
-  return getRelativeTimeFormat(locale, formatOptions).format(state.value, state.selected);
+  return getRelativeTimeFormat(resolveActiveOrExplicitLocale(locale), formatOptions).format(
+    state.value,
+    state.selected,
+  );
 }
 
 export interface LyraFormatBytesOptions {
@@ -175,6 +192,10 @@ function divideExact(numerator: bigint, scale: number, divisor: bigint, decimals
  * unparseable `value`, matching `formatDate()`/`formatRelativeTime()`'s "unresolvable input"
  * convention -- `Intl.NumberFormat` throws for `style: 'unit'` paired with the undefined unit a
  * `NaN` magnitude would otherwise select.
+ *
+ * An omitted `locale` (or `'auto'`) resolves the same way {@link formatNumber} does (this function
+ * delegates the actual number formatting to it): to the page's active `setLyraLocale()` locale,
+ * falling back to `'en'` only once none has been set; an explicit tag always stays authoritative.
  */
 export function formatBytes(
   value: LyraFormattableNumber,

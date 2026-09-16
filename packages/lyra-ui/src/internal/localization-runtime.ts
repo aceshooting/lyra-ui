@@ -725,6 +725,35 @@ export function getLyraLocale(): string {
 }
 
 /**
+ * Resolves a `locale` argument for a standalone, host-less locale-aware utility function --
+ * `formatNumber()`/`formatDate()`/`formatRelativeTime()`/`formatBytes()` (`utilities/format.ts`)
+ * and `binValues()` (`components/charts/chart/histogram-bin.ts`) are the current callers. These
+ * have no component host to inherit a locale from the way {@link inheritedLocale} does, so an
+ * omitted, empty/whitespace, or `'auto'` value means {@link setLyraLocale}'s active locale instead
+ * -- the one piece of that inheritance chain a plain function call can still observe. A
+ * non-empty, non-`'auto'` value is returned unchanged and stays authoritative over the active
+ * locale, exactly like an explicit argument always has.
+ *
+ * This deliberately stops at the active locale and does NOT fall through to `<html lang>` (let
+ * alone `navigator.language`, which no part of this library's resolution chain reads) the way
+ * {@link inheritedLocale} does for a component host with no closer signal: a document's `lang`
+ * attribute is metadata a *host element* inherits by walking the DOM, and a bare function call
+ * has no host to walk from. Silently reading the document here would also break the one
+ * compatibility guarantee this function exists to preserve -- see the next paragraph.
+ *
+ * `activeLocale` is `''` before any `setLyraLocale()` call, and `''` is returned as-is (never
+ * coerced to `'en'` here): every `Intl` cache getter's own `resolveIntlLocale()` step
+ * (`internal/intl-cache.ts`) already normalizes an empty/undefined locale to `'en'`, so an app
+ * that never calls `setLyraLocale()` gets exactly the deterministic English output it always has
+ * -- this function changes nothing for that app.
+ */
+export function resolveActiveOrExplicitLocale(locale: string | undefined): string | undefined {
+  const trimmed = locale?.trim();
+  if (trimmed && trimmed.toLowerCase() !== 'auto') return locale;
+  return activeLocale || undefined;
+}
+
+/**
  * Subscribe to active-locale selection changes and registrations that can alter the active
  * locale's messages or direction. Unrelated catalog registrations are registry-only and do not
  * fire this channel. The returned function is safe to call repeatedly.

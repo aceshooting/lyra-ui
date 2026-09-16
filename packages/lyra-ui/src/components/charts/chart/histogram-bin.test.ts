@@ -1,5 +1,16 @@
 import { expect } from '@open-wc/testing';
 import { binValues } from './histogram-bin.js';
+import { getLyraLocale, setLyraLocale } from '../../../internal/localization.js';
+
+/** Restores the module-global active locale after each case -- shared by the whole file. */
+function withActiveLocale(body: () => void): void {
+  const previous = getLyraLocale();
+  try {
+    body();
+  } finally {
+    setLyraLocale(previous);
+  }
+}
 
 it('splits values into equal-width buckets and counts membership', () => {
   const buckets = binValues([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 5);
@@ -85,6 +96,42 @@ it('formats bucket ranges with the requested locale', () => {
   const buckets = binValues([1000, 2000], 2, 'de-DE');
   expect(buckets[0]!.label).to.contain('1.000');
   expect(buckets[0]!.label).to.not.contain('1000.0');
+});
+
+describe('an omitted locale resolves to the active setLyraLocale() locale, not a hardcoded English default', () => {
+  it('an app that never calls setLyraLocale() keeps exactly today\'s English default', () => {
+    withActiveLocale(() => {
+      setLyraLocale('');
+      const buckets = binValues([1000, 2000], 2);
+      expect(buckets[0]!.label).to.contain('1,000.0');
+    });
+  });
+
+  it('an omitted locale follows setLyraLocale() once one is set', () => {
+    withActiveLocale(() => {
+      setLyraLocale('de-DE');
+      const buckets = binValues([1000, 2000], 2);
+      expect(buckets[0]!.label).to.contain('1.000');
+      expect(buckets[0]!.label).to.not.contain('1,000.0');
+    });
+  });
+
+  it('an explicit locale argument stays authoritative over the active locale', () => {
+    withActiveLocale(() => {
+      setLyraLocale('de-DE');
+      const buckets = binValues([1000, 2000], 2, 'en-US');
+      expect(buckets[0]!.label).to.contain('1,000.0');
+    });
+  });
+
+  it("an explicit 'auto' opts into the active locale, same as an omitted argument", () => {
+    withActiveLocale(() => {
+      setLyraLocale('de-DE');
+      const buckets = binValues([1000, 2000], 2, 'auto');
+      expect(buckets[0]!.label).to.contain('1.000');
+      expect(buckets[0]!.label).to.not.contain('1,000.0');
+    });
+  });
 });
 
 it('bins full-range and subnormal finite endpoints without overflowing derived boundaries', () => {

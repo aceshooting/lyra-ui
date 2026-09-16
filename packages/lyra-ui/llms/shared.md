@@ -2564,6 +2564,11 @@ LyraFormatDisplay; readonly unitStep?: number; readonly decimals?: number }`.
   is reserved before computed boxes, and a fixed layer's block extent advances every later layer,
   so fixed and computed boxes retain `gapX`/`gapY` separation without moving the anchors. Two
   conflicting caller-fixed boxes are deliberately kept verbatim. Node dimensions, gaps, and fixed
+  An omitted `locale` (or the explicit `'auto'` sentinel) on any of the four resolves to the page's
+  active `setLyraLocale()` locale, exactly like a rendered `<lr-*>` component with no closer
+  `locale`/`lang` override — not a hardcoded `'en'`. It falls back to `'en'` only once no active
+  locale has ever been set, so an app that never calls `setLyraLocale()` sees no change. An
+  explicit BCP-47 tag always stays authoritative over the active locale.
   coordinates must be finite, non-negative values no greater than `Number.MAX_SAFE_INTEGER`; bad
   geometry throws `RangeError` before graph traversal. Traversal is iterative, and
   `maxVirtualWaypoints` sets the nonnegative integer routing budget (default 10,000; invalid values

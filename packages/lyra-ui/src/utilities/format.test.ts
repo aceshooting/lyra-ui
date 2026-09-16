@@ -1,6 +1,17 @@
 import { expect } from '@open-wc/testing';
 import { formatBytes, formatDate, formatNumber, formatRelativeTime } from './format.js';
 import { getNumberFormat } from '../internal/intl-cache.js';
+import { getLyraLocale, setLyraLocale } from '../internal/localization.js';
+
+/** Restores the module-global active locale after each case -- shared by the whole file. */
+function withActiveLocale(body: () => void): void {
+  const previous = getLyraLocale();
+  try {
+    body();
+  } finally {
+    setLyraLocale(previous);
+  }
+}
 
 it('formats plain numbers exactly like a direct Intl.NumberFormat call', () => {
   expect(formatNumber(1234.5, 'en-US')).to.equal('1,234.5');
@@ -110,4 +121,86 @@ it('formats relative time using the same auto-unit selection as <lr-relative-tim
 
 it('formatRelativeTime returns undefined for an unresolvable source instead of throwing', () => {
   expect(formatRelativeTime('not a real date', 'en-US')).to.equal(undefined);
+});
+
+describe('omitted locale resolves to the active setLyraLocale() locale, not a hardcoded English default', () => {
+  it('formatNumber: an app that never calls setLyraLocale() keeps exactly today\'s English default', () => {
+    withActiveLocale(() => {
+      setLyraLocale('');
+      expect(getLyraLocale(), 'precondition: no active locale set').to.equal('');
+      // Pinned against the still-unmodified `resolveIntlLocale(undefined)` path in
+      // `internal/intl-cache.ts`, which this change does not touch -- proves byte-identical output.
+      expect(formatNumber(1234.5)).to.equal(getNumberFormat(undefined).format(1234.5));
+      expect(formatNumber(1234.5)).to.equal('1,234.5');
+    });
+  });
+
+  it('formatNumber: an omitted locale follows setLyraLocale() once one is set', () => {
+    withActiveLocale(() => {
+      setLyraLocale('fr');
+      const expected = new Intl.NumberFormat('fr').format(1234.5);
+      expect(formatNumber(1234.5)).to.equal(expected);
+      expect(formatNumber(1234.5)).to.not.equal('1,234.5');
+    });
+  });
+
+  it('formatNumber: an explicit locale argument stays authoritative over the active locale', () => {
+    withActiveLocale(() => {
+      setLyraLocale('fr');
+      expect(formatNumber(1234.5, 'en-US')).to.equal('1,234.5');
+    });
+  });
+
+  it("formatNumber: an explicit 'auto' opts into the active locale, same as an omitted argument", () => {
+    withActiveLocale(() => {
+      setLyraLocale('fr');
+      const expected = new Intl.NumberFormat('fr').format(1234.5);
+      expect(formatNumber(1234.5, 'auto')).to.equal(expected);
+    });
+  });
+
+  it('formatDate: unset stays English; an omitted locale follows setLyraLocale(); an explicit locale wins', () => {
+    withActiveLocale(() => {
+      const date = new Date(2020, 0, 15);
+      const options = { year: 'numeric', month: 'long', day: 'numeric' } as const;
+
+      setLyraLocale('');
+      expect(formatDate(date, undefined, options)).to.equal('January 15, 2020');
+
+      setLyraLocale('fr');
+      expect(formatDate(date, undefined, options)).to.equal(new Intl.DateTimeFormat('fr', options).format(date));
+      expect(formatDate(date, 'en-US', options)).to.equal('January 15, 2020');
+    });
+  });
+
+  it('formatRelativeTime: unset stays English; an omitted locale follows setLyraLocale(); an explicit locale wins', () => {
+    withActiveLocale(() => {
+      const now = Date.UTC(2024, 0, 15, 12, 0, 0);
+      const threeDaysAgo = now - 3 * 86_400_000;
+
+      setLyraLocale('');
+      expect(formatRelativeTime(threeDaysAgo, undefined, { now, numeric: 'always' })).to.equal('3 days ago');
+
+      setLyraLocale('fr');
+      const expected = new Intl.RelativeTimeFormat('fr', { numeric: 'always' }).format(-3, 'day');
+      expect(formatRelativeTime(threeDaysAgo, undefined, { now, numeric: 'always' })).to.equal(expected);
+      expect(formatRelativeTime(threeDaysAgo, 'en-US', { now, numeric: 'always' })).to.equal('3 days ago');
+    });
+  });
+
+  it('formatBytes: an omitted locale follows setLyraLocale() (it delegates through formatNumber)', () => {
+    withActiveLocale(() => {
+      setLyraLocale('');
+      const englishUnset = formatBytes(1234.5);
+
+      setLyraLocale('fr');
+      const french = formatBytes(1234.5);
+      const englishExplicit = formatBytes(1234.5, 'en-US');
+
+      expect(englishUnset, 'unset app keeps the deterministic English default').to.equal(englishExplicit);
+      expect(french, 'French uses a comma decimal separator, unlike the English period').to.contain(',');
+      expect(french).to.not.contain('.');
+      expect(french).to.not.equal(englishExplicit);
+    });
+  });
 });

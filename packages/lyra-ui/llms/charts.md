@@ -1099,6 +1099,10 @@ their semantics, defaults, and gotchas.
 - `values`/`bins`/`seriesLabel` changes join the inherited connected-and-visible redraw path. There is no
   second post-update refresh, so a same-tick disconnect cannot recreate Chart.js on a detached
   canvas and off-screen sample updates do not repaint it.
+- calling `binValues()` directly (not through `<lr-histogram>`, which always passes its own
+  resolved `effectiveLocale`) with an omitted `locale` (or `'auto'`) now resolves to the page's
+  active `setLyraLocale()` locale instead of a hardcoded `'en'`, matching `utilities/format.ts`'s
+  helpers; an app that never calls `setLyraLocale()` sees no change, and an explicit tag still wins.
 
 ---
 

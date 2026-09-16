@@ -1,4 +1,5 @@
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { resolveActiveOrExplicitLocale } from '../../../internal/localization-runtime.js';
 import { finiteInterpolate, finiteRatio } from '../../../internal/numbers.js';
 
 export interface HistogramBucket {
@@ -21,7 +22,11 @@ export function normalizeHistogramBinCount(binCount: unknown): number {
  *  Non-finite `binCount` (or <= 0) yields no buckets; a fractional `binCount`
  *  is floored and an excessive count is capped; non-finite samples in
  *  `values` are dropped rather than corrupting bucket-index math. Pass a BCP 47
- *  `locale` to localize the generated range labels. */
+ *  `locale` to localize the generated range labels -- an omitted value (or `'auto'`) resolves to
+ *  the page's active `setLyraLocale()` locale the same way `utilities/format.ts`'s helpers do
+ *  (see `resolveActiveOrExplicitLocale()`), falling back to `'en'` only once none has been set;
+ *  an explicit tag always stays authoritative. `<lr-histogram>` itself is unaffected -- it always
+ *  passes its own resolved `effectiveLocale` here. */
 export function binValues(
   values: readonly number[],
   binCount: number,
@@ -45,7 +50,7 @@ export function binValues(
   // dataset reads as "N items, one bucket populated" starting from the data's
   // own value, not its synthetic +1 upper edge.
   const constant = hi === lo;
-  const numberFormat = getNumberFormat(locale, {
+  const numberFormat = getNumberFormat(resolveActiveOrExplicitLocale(locale), {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
