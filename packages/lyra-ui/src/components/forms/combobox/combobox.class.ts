@@ -49,6 +49,7 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { tag } from '../../../internal/prefix.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 import type {
   LyraPickerDetailValue,
@@ -966,6 +967,9 @@ export class LyraCombobox<
   private _sourceTruncated = false;
   private sourceErrorAnnouncementSink?: AnnouncementSink;
   @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
+  // The default (unnamed) slot carrying `<lr-option>` children -- read once from `firstUpdated()`
+  // in addition to its own `@slotchange` listener; see `collectInitialSlotAssignment`'s doc.
+  @query('slot:not([name])') private optionsSlot?: HTMLSlotElement;
   /** The debounced `source()` call. Scheduled on -- and cancelled through -- the realm this
    *  combobox lives in at the time, so a combobox adopted into another document neither leaves a
    *  task behind on the old realm nor loses the ability to cancel the new one. */
@@ -1358,6 +1362,37 @@ export class LyraCombobox<
       this._sourceWarmed = true;
       this.runSource('');
     }
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed); // no-op in LyraElement/ReactiveElement today, but a future
+    // mixin's firstUpdated() layered under this class must still run.
+    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
+    // see `collectInitialSlotAssignment`'s own doc -- so an <lr-combobox> whose <lr-option>
+    // children already exist at connect (the ordinary "render once data is ready" Lit pattern)
+    // would otherwise render zero options under it. Collect once here too, from the slot's current
+    // assignment; `collectOptionsFromSlot()` is idempotent (identity-diffed against the previous
+    // option set), so a real browser firing the initial event as well contributes no duplicate
+    // selection-seeding side effect. Skipped when nothing is assigned yet: an empty result has no
+    // default to seed, and capturing now would flip `_defaultCaptured` before options appended
+    // later through a genuine `slotchange` get their normal first-pass handling.
+    // Deferred a microtask: `options` is reactive, so writing it (and any selection it seeds)
+    // synchronously inside `firstUpdated()` -- after this same update has already been marked
+    // complete -- trips Lit's "scheduled an update after an update completed" dev warning. A real
+    // `slotchange` event runs this same collection from a task/microtask entirely outside the
+    // update cycle, which never trips it; queuing a microtask here reproduces that same
+    // "outside the cycle" timing instead of writing `options` from inside it. Still guaranteed to
+    // land before any caller's own `await el.updateComplete` continuation: that continuation is
+    // queued only once this update's promise resolves, later in this same synchronous turn, so it
+    // always joins the microtask queue behind the one queued here.
+    const slot = this.optionsSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, (s) => {
+        if (s.assignedElements({ flatten: true }).some(isLyraOptionElement)) {
+          this.collectOptionsFromSlot(s);
+        }
+      });
+    });
   }
 
   /** Submitted field name.
@@ -1922,7 +1957,19 @@ export class LyraCombobox<
   }
 
   private collectOptions = (e: Event): void => {
-    const slot = e.target as HTMLSlotElement;
+    this.collectOptionsFromSlot(e.target as HTMLSlotElement);
+  };
+
+  /**
+   * Reads the default slot's currently assigned `<lr-option>` elements and applies them --
+   * wired as the `slotchange` handler (via `collectOptions`) for every later mutation, and called
+   * once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an environment,
+   * or a real-browser timing race, where the slot's initial assignment never fires `slotchange`.
+   * Idempotent over an unchanged assigned-element set: `previous` below is an identity set of the
+   * options already applied, so a second call that reads back the same elements finds nothing new
+   * to seed and falls through to the harmless `reflectSelected()` re-sync at the end.
+   */
+  private collectOptionsFromSlot(slot: HTMLSlotElement): void {
     const previous = new Set(this.options);
     this.options = slot
       .assignedElements({ flatten: true })
@@ -2014,7 +2061,7 @@ export class LyraCombobox<
       }
     }
     this.reflectSelected();
-  };
+  }
 
   private refreshOptionDefaults(): void {
     const declared = this.options

@@ -26,6 +26,7 @@ import { styles } from "./combobox.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { chooseOption } from "../../../testing/interaction-drivers.js";
 import {
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
@@ -1086,6 +1087,98 @@ it("preserves an initial property-only selected write until reset reapplies a la
 
   form.reset();
   expect(el.value).to.deep.equal(["b"]);
+});
+
+describe('collecting already-slotted options without relying on the initial slotchange', () => {
+  it('populates options and lets chooseOption() succeed when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow that one event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to the <slot> itself,
+    // before the slot's own bubble-phase `@slotchange` binding (`collectOptions`) ever sees it.
+    const a = document.createElement('lr-option') as LyraOption;
+    a.value = 'a';
+    a.textContent = 'Apple';
+    const b = document.createElement('lr-option') as LyraOption;
+    b.value = 'b';
+    b.textContent = 'Banana';
+    const el = document.createElement('lr-combobox') as LyraCombobox;
+    el.append(a, b);
+    document.body.append(el);
+    // Synchronously after connect: `renderRoot` already exists (created in the constructor,
+    // before the first render), well before the browser can dispatch the initial event.
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true, once: true }
+    );
+    try {
+      await el.updateComplete;
+      // Give a real initial slotchange (queued around slot assignment) time to arrive and be
+      // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
+      ).to.equal(1);
+      const values = Array.from(
+        el.renderRoot!.querySelectorAll<HTMLElement>('[part="option"]')
+      ).map((row) => row.dataset['value']);
+      expect(
+        values,
+        "firstUpdated() collected the already-slotted options and rendered a row per option, with no slotchange ever reaching the component's own listener"
+      ).to.deep.equal(['a', 'b']);
+      await chooseOption(el, 'b');
+      expect(el.value).to.equal('b');
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not double-apply declarative selection', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed
+    // initial `slotchange` fire for the same batch. The diagnostic listener below proves the
+    // second (real) firing actually happened, so this test exercises the double-invocation path
+    // it claims to, rather than accidentally passing because the browser only fired the event
+    // once (or fixture timing let `firstUpdated()` win a race that never actually repeats).
+    const a = document.createElement('lr-option') as LyraOption;
+    a.value = 'a';
+    a.textContent = 'Apple';
+    const b = document.createElement('lr-option') as LyraOption;
+    b.value = 'b';
+    b.textContent = 'Banana';
+    b.selected = true;
+    const el = document.createElement('lr-combobox') as LyraCombobox;
+    el.append(a, b);
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      () => realSlotchangeCount++,
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      // Same outcome as the suppressed-event test above: one seeded selection, no duplicated
+      // rows, no thrown error from a second pass over an already-known element set.
+      expect(el.value, 'the declaratively-selected option wins, exactly once').to.equal('b');
+      const values = Array.from(
+        el.renderRoot!.querySelectorAll<HTMLElement>('[part="option"]')
+      ).map((row) => row.dataset['value']);
+      expect(values).to.deep.equal(['a', 'b']);
+    } finally {
+      el.remove();
+    }
+  });
 });
 
 it('uses a dirty property-only selected write to seed the initial single-select value', async () => {
