@@ -289,18 +289,27 @@ export const styles = css`
      background. Reversed, --lr-voice-picker-option-selected-bg (transparent by default) swallowed
      hover, press and the [data-active] aria-activedescendant highlight. The selected rule still
      paints border-color, color and font-weight, untouched here. */
-  [part='option']:hover,
+  [part='option']:where(:not([aria-disabled='true'])):hover,
   [part='option'][data-active] {
     background: var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet));
   }
   /* Mixes the SAME --lr-voice-picker-option-active-bg as the hover/active-descendant rule above,
      so retinting the highlight gets a matching pressed step. */
-  [part='option']:active {
+  [part='option']:where(:not([aria-disabled='true'])):active {
     background: color-mix(
       in oklab,
       var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
+  }
+  /* A row whose catalog entry declares disabled is non-actionable: it keeps its own label and meta
+     text (still the datum it always was) but loses the pointer cursor and every hover/press
+     affordance that promises activation, gated above rather than overridden here -- the
+     option-preview control beside it is unaffected, since previewing a voice is a separate
+     affordance from selecting it. */
+  [part='option'][aria-disabled='true'] {
+    cursor: default;
+    opacity: var(--lr-voice-picker-option-disabled-opacity, 0.5);
   }
   [part='option-label'] {
     flex: 1 1 auto;
@@ -321,7 +330,7 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part='option']:hover [part='option-meta'],
+  [part='option']:where(:not([aria-disabled='true'])):hover [part='option-meta'],
   [part='option'][data-active] [part='option-meta'] {
     color: var(--lr-color-text);
   }

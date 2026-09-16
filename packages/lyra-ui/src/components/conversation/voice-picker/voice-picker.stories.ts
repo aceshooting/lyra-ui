@@ -52,6 +52,20 @@ export const Default: Story = {
   render: () => html`<lr-voice-picker provider="elevenlabs" label="Voice" .catalog=${catalog}></lr-voice-picker>`,
 };
 
+/** A catalog row can be marked `disabled`, rendering it non-actionable: no selection by click or
+ *  keyboard, and arrow-key/Home/End navigation steps past it instead of landing on it. Its own
+ *  preview icon stays independently clickable, since previewing a voice is a separate affordance
+ *  from selecting it. */
+export const DisabledOption: Story = {
+  render: () => html`
+    <lr-voice-picker
+      provider="elevenlabs"
+      label="Voice"
+      .catalog=${[...catalog.slice(0, 2), { id: 'legacy', label: 'Legacy voice (retired)', disabled: true }]}
+    ></lr-voice-picker>
+  `,
+};
+
 /** `allow-custom` keeps the catalog's suggestions but switches to the free-text combobox shape so a
  *  voice id outside the list can still be typed and committed. */
 export const AllowCustom: Story = {

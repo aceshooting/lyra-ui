@@ -677,6 +677,121 @@ it("shows a synthetic, distinctly-marked row for a stale value not present in th
   expect(trigger(el).textContent).to.contain("ancient-model");
 });
 
+describe("disabled catalog entries", () => {
+  const CATALOG_WITH_DISABLED = [
+    { id: "a", label: "Alpha" },
+    { id: "b", label: "Beta", disabled: true },
+    { id: "c", label: "Gamma" },
+  ];
+
+  it("renders aria-disabled on a disabled row and leaves an ordinary row unset (unset-regression)", async () => {
+    const el = (await fixture(
+      html`<lr-model-select .catalog=${CATALOG_WITH_DISABLED}></lr-model-select>`
+    )) as LyraModelSelect;
+    el.open = true;
+    await el.updateComplete;
+    const all = rows(el);
+    expect(all[0]!.getAttribute("aria-disabled")).to.equal(null);
+    expect(all[1]!.getAttribute("aria-disabled")).to.equal("true");
+    expect(all[2]!.getAttribute("aria-disabled")).to.equal(null);
+  });
+
+  it("refuses a click on a disabled row: no lr-change, no value change", async () => {
+    const el = (await fixture(
+      html`<lr-model-select .catalog=${CATALOG_WITH_DISABLED}></lr-model-select>`
+    )) as LyraModelSelect;
+    el.open = true;
+    await el.updateComplete;
+    let changeFired = false;
+    el.addEventListener("lr-change", () => (changeFired = true));
+    rows(el)[1]!.click();
+    await el.updateComplete;
+    expect(changeFired, "a disabled row cannot be activated by pointer").to.be.false;
+    expect(el.value).to.equal("");
+    expect(el.open, "the popup stays open -- nothing was committed").to.be.true;
+  });
+
+  it("steps ArrowDown past a disabled row instead of landing on it", async () => {
+    const el = (await fixture(
+      html`<lr-model-select .catalog=${CATALOG_WITH_DISABLED}></lr-model-select>`
+    )) as LyraModelSelect;
+    const btn = trigger(el);
+    el.open = true;
+    await el.updateComplete;
+    btn.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect((el as unknown as { activeIndex: number }).activeIndex, "lands on Alpha (index 0)").to.equal(0);
+
+    btn.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(
+      (el as unknown as { activeIndex: number }).activeIndex,
+      "skips disabled Beta straight to Gamma (index 2)"
+    ).to.equal(2);
+  });
+
+  it("steps ArrowUp past a disabled row instead of landing on it", async () => {
+    const el = (await fixture(
+      html`<lr-model-select .catalog=${CATALOG_WITH_DISABLED}></lr-model-select>`
+    )) as LyraModelSelect;
+    const btn = trigger(el);
+    el.open = true;
+    await el.updateComplete;
+    btn.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(2);
+
+    btn.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(
+      (el as unknown as { activeIndex: number }).activeIndex,
+      "skips disabled Beta straight to Alpha (index 0)"
+    ).to.equal(0);
+  });
+
+  it("commits the row actually stepped to with Enter, never the skipped-over disabled row", async () => {
+    const el = (await fixture(
+      html`<lr-model-select .catalog=${CATALOG_WITH_DISABLED}></lr-model-select>`
+    )) as LyraModelSelect;
+    const btn = trigger(el);
+    el.open = true;
+    await el.updateComplete;
+    btn.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    btn.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    setTimeout(() =>
+      btn.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }))
+    );
+    await oneEvent(el, "lr-change");
+    expect(el.value).to.equal("c");
+  });
+
+  it("never invokes an accessor-backed catalog entry disabled, and never treats it as disabled", async () => {
+    const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
+    let reads = 0;
+    const hostile: Record<string, unknown> = { id: "b", label: "Beta" };
+    Object.defineProperty(hostile, "disabled", {
+      get() {
+        reads += 1;
+        return true;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    el.catalog = [{ id: "a", label: "Alpha" }, hostile] as unknown as LyraModelSelect["catalog"];
+    el.open = true;
+    await el.updateComplete;
+
+    expect(reads, "the getter is never invoked").to.equal(0);
+    const all = [...rows(el)];
+    expect(
+      all.map((row) => row.getAttribute("aria-disabled")),
+      "the entry survives as an ordinary, non-disabled row"
+    ).to.deep.equal([null, null]);
+  });
+});
+
 it("keeps a long provider badge inside a 320px allocation in both modes and text directions", async () => {
   for (const direction of ["ltr", "rtl"] as const) {
     for (const allowCustom of [false, true]) {

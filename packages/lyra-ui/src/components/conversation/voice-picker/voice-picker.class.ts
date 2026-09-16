@@ -74,6 +74,21 @@ function ownString(value: object, key: keyof LyraVoiceCatalogEntry): string | un
   }
 }
 
+/** Reads a boolean own DATA property without ever invoking an accessor -- an accessor-backed
+ *  `disabled` (`{ get() {...} }`) has no `value` in its own descriptor, so it is silently dropped
+ *  here rather than read, matching every other hardened public-collection projection in this
+ *  library. */
+function ownBoolean(value: object, key: keyof LyraVoiceCatalogEntry): boolean | undefined {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return descriptor && 'value' in descriptor && typeof descriptor.value === 'boolean'
+      ? descriptor.value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function snapshotVoiceCatalog(
   value: LyraCatalog<LyraVoiceCatalogEntry> | undefined,
 ): LyraCatalog<LyraVoiceCatalogEntry> | undefined {
@@ -114,12 +129,14 @@ function snapshotVoiceCatalog(
     const language = ownString(candidate, 'language');
     const description = ownString(candidate, 'description');
     const previewUrl = ownString(candidate, 'previewUrl');
+    const disabled = ownBoolean(candidate, 'disabled');
     entrySnapshot.push(Object.freeze({
       id,
       label,
       ...(language === undefined ? {} : { language }),
       ...(description === undefined ? {} : { description }),
       ...(previewUrl === undefined ? {} : { previewUrl }),
+      ...(disabled === undefined ? {} : { disabled }),
     }));
   }
   return objectCatalog ? Object.freeze(entrySnapshot) : Object.freeze(stringSnapshot);
@@ -166,6 +183,14 @@ export interface LyraVoicePickerEventMap {
  * remain available.
  * Catalog assignments become bounded, clone-owned, frozen snapshots. Create and reassign a new
  * catalog array after changing its rows; mutating an assigned source does not update the picker.
+ *
+ * A catalog row may also set `disabled`, marking it non-actionable exactly like `lr-model-select`'s
+ * own catalog rows: `aria-disabled="true"` replaces its selected/active affordances, activating it
+ * (click or keyboard) commits nothing and changes no state, and arrow-key/Home/End
+ * active-descendant navigation steps past it instead of landing on it. It does not affect that
+ * row's own `[part="option-preview"]`, a separate affordance -- a disabled voice remains
+ * previewable so a listener can hear why it is excluded. Omitted or `false` renders the row exactly
+ * as before this field existed.
  *
  * @customElement lr-voice-picker
  * @slot label - Custom visible label content.
@@ -252,6 +277,8 @@ export interface LyraVoicePickerEventMap {
  *   of a synthetic stale-value option row.
  * @cssprop [--lr-voice-picker-option-synthetic-font-style=italic] - Font style of a synthetic
  *   stale-value option label.
+ * @cssprop [--lr-voice-picker-option-disabled-opacity=0.5] - Opacity of an option row whose catalog
+ *   entry sets `disabled`.
  * @cssprop [--lr-voice-picker-preview-hover-bg=var(--lr-color-brand-quiet)] - Shared hover/press
  *   fill for the standalone and row preview actions.
  * @cssprop [--lr-voice-picker-preview-hover-color=var(--lr-color-brand)] - Shared hover/press
@@ -1045,6 +1072,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
         data-value=${entry.id}
         ?data-synthetic=${entry.synthetic}
         aria-selected=${selected ? 'true' : 'false'}
+        aria-disabled=${entry.disabled === true ? 'true' : nothing}
         ?data-active=${id === activeId}
       >
         <span part="option-label">

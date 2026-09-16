@@ -86,6 +86,12 @@ export interface LyraModelSelectEventMap {
  * `option-icon` part in either listbox mode. It is presentation only: the row's accessible name
  * remains its `label`.
  *
+ * A catalog row may also set `disabled`, marking it non-actionable: `aria-disabled="true"`
+ * replaces its selected/active affordances, activating it (click or keyboard) commits nothing and
+ * changes no state, and arrow-key/Home/End active-descendant navigation steps past it instead of
+ * landing on it. Omitted or `false` renders the row exactly as before this field existed.
+ *
+
  * Ships the standard label/hint/error form-control chrome: properties, matching named slots, and
  * the complete `form-control` frame. Each surface is opt-in; left unset, it renders no chrome.
  * A focused trigger/input follows a rendering-mode replacement. If that new owner is disabled or
@@ -160,6 +166,7 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight of the selected option row.
  * @cssprop [--lr-model-select-option-synthetic-border-style=dashed] - Border style of a synthetic stale-value option row.
  * @cssprop [--lr-model-select-option-synthetic-border-color=var(--lr-color-border)] - Border color of a synthetic stale-value option row.
+ * @cssprop [--lr-model-select-option-disabled-opacity=0.5] - Opacity of an option row whose catalog entry sets `disabled`.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  *   other quoted string (`' (required)'`, a localized word) to replace it.
@@ -822,6 +829,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     return rows.map((entry, i) => {
       const id = `${this.listId}-opt-${i}`;
       const selected = entry.id === this.value;
+      const disabled = entry.disabled === true;
       return html`<div
         part="option"
         id=${id}
@@ -829,6 +837,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         data-value=${entry.id}
         ?data-synthetic=${entry.synthetic}
         aria-selected=${selected ? 'true' : 'false'}
+        aria-disabled=${disabled ? 'true' : nothing}
         ?data-active=${id === activeId}
       >
         ${entry.icon ? html`<span part="option-icon" aria-hidden="true" inert>${entry.icon}</span>` : nothing}

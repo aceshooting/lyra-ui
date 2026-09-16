@@ -7,6 +7,15 @@ import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-
 export interface LyraCatalogEntry {
   id: string;
   label: string;
+  /**
+   * Marks this row non-actionable: it cannot be selected by pointer or keyboard, `aria-disabled`
+   * replaces the row's stateful selected/active affordances, and active-descendant navigation
+   * (arrow keys, Home/End) steps over it instead of landing on it. Omitted or `false` renders the
+   * row exactly as before this field existed. Does not affect any other affordance a specific
+   * catalog-backed control renders on the same row (for example `<lr-voice-picker>`'s independent
+   * preview control), only the row's own selection.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -75,6 +84,46 @@ export function filterCatalogEntries<T>(
   return entries.filter((entry) =>
     fields(entry).some((value) => value.toLocaleLowerCase(intlLocale).includes(normalized)),
   );
+}
+
+/** The first index whose row is not disabled, or `-1` when every row is (including an empty
+ *  list) — the active-descendant analogue of a roving-tabindex "first focusable stop". */
+function firstEnabledIndex(rows: readonly LyraCatalogEntry[]): number {
+  return rows.findIndex((entry) => entry.disabled !== true);
+}
+
+/** The last index whose row is not disabled, or `-1` when every row is. */
+function lastEnabledIndex(rows: readonly LyraCatalogEntry[]): number {
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    if (rows[index]?.disabled !== true) return index;
+  }
+  return -1;
+}
+
+/**
+ * Steps `from` by one row in `direction`, skipping past disabled rows without wrapping — the
+ * active-descendant analogue of a roving-tabindex step function that consults the disabled
+ * predicate before committing to the next position (see `docs/agents/a11y-responsive-motion.md`).
+ * Stays at `from` when it is already a valid, enabled stop and every row ahead in that direction is
+ * disabled; resolves to the boundary stop when starting from no selection (`-1`) at all.
+ */
+function stepEnabledIndex(
+  rows: readonly LyraCatalogEntry[],
+  from: number,
+  direction: 1 | -1,
+): number {
+  if (rows.length === 0) return -1;
+  // The same clamp the un-disabled-aware arithmetic always used (`clamp(from + direction, 0, rows.length
+  // - 1)`), which is also what makes `from === -1` step to index 0 in EITHER direction rather than to
+  // the far boundary -- an existing quirk of this control's own keyboard contract, preserved here
+  // rather than only added for the disabled-skipping case.
+  let index = Math.min(Math.max(from + direction, 0), rows.length - 1);
+  for (let steps = 0; steps < rows.length; steps += 1) {
+    if (rows[index]?.disabled !== true) return index;
+    index += direction;
+    if (index < 0 || index >= rows.length) break;
+  }
+  return from >= 0 && from < rows.length && rows[from]?.disabled !== true ? from : -1;
 }
 
 interface CatalogPickerChangeDetail {
@@ -301,10 +350,15 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
 
   commitFreeText(): void {
     const active = this.filteredEntries[this._activeIndex];
-    this.commitValue(this._activeIndex >= 0 && active ? active.id : this._query.trim());
+    const useActive = this._activeIndex >= 0 && Boolean(active) && active?.disabled !== true;
+    this.commitValue(useActive ? active!.id : this._query.trim());
   }
 
+  /** A `disabled` row can never be committed -- by pointer or by keyboard -- and activating one
+   *  emits nothing and changes no state, matching every other declared-non-actionable entry in
+   *  this library. */
   selectEntry(entry: DisplayCatalogEntry<T>): void {
+    if (entry.disabled === true) return;
     this.commitValue(entry.id);
   }
 
@@ -327,12 +381,12 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       case 'ArrowDown':
         event.preventDefault();
         if (!this._open) return this.show();
-        this.setActiveIndex(rows.length ? Math.min(rows.length - 1, this._activeIndex + 1) : -1);
+        this.setActiveIndex(stepEnabledIndex(rows, this._activeIndex, 1));
         break;
       case 'ArrowUp':
         event.preventDefault();
         if (!this._open) return this.show();
-        this.setActiveIndex(rows.length ? Math.max(0, this._activeIndex - 1) : -1);
+        this.setActiveIndex(stepEnabledIndex(rows, this._activeIndex, -1));
         break;
       case 'Enter':
       case ' ':
@@ -346,13 +400,13 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       case 'Home':
         if (this._open) {
           event.preventDefault();
-          this.setActiveIndex(rows.length ? 0 : -1);
+          this.setActiveIndex(firstEnabledIndex(rows));
         }
         break;
       case 'End':
         if (this._open) {
           event.preventDefault();
-          this.setActiveIndex(rows.length - 1);
+          this.setActiveIndex(lastEnabledIndex(rows));
         }
         break;
     }
@@ -365,12 +419,12 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       case 'ArrowDown':
         event.preventDefault();
         if (!this._open) return this.show();
-        this.setActiveIndex(rows.length ? Math.min(rows.length - 1, this._activeIndex + 1) : -1);
+        this.setActiveIndex(stepEnabledIndex(rows, this._activeIndex, 1));
         break;
       case 'ArrowUp':
         event.preventDefault();
         if (!this._open) return this.show();
-        this.setActiveIndex(rows.length ? Math.max(0, this._activeIndex - 1) : -1);
+        this.setActiveIndex(stepEnabledIndex(rows, this._activeIndex, -1));
         break;
       case 'Enter':
         if (this._open) {
@@ -381,13 +435,13 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       case 'Home':
         if (this._open) {
           event.preventDefault();
-          this.setActiveIndex(rows.length ? 0 : -1);
+          this.setActiveIndex(firstEnabledIndex(rows));
         }
         break;
       case 'End':
         if (this._open) {
           event.preventDefault();
-          this.setActiveIndex(rows.length - 1);
+          this.setActiveIndex(lastEnabledIndex(rows));
         }
         break;
     }

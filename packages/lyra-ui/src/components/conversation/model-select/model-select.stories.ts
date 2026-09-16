@@ -67,6 +67,24 @@ export const ObjectCatalogIcons: Story = {
   `,
 };
 
+/** A catalog row can be marked `disabled`, rendering it as a genuinely non-actionable option: no
+ *  selection by click or keyboard, and arrow-key/Home/End navigation steps past it instead of
+ *  landing on it. */
+export const DisabledOption: Story = {
+  render: () => html`
+    <lr-model-select
+      provider="openai"
+      placeholder="Pick a model…"
+      .catalog=${[
+        { id: 'gpt-4.1', label: 'GPT-4.1' },
+        { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
+        { id: 'gpt-3.5-legacy', label: 'GPT-3.5 (retired)', disabled: true },
+      ]}
+      .open=${true}
+    ></lr-model-select>
+  `,
+};
+
 /** No `catalog` at all falls back to plain free-text entry — any typed value commits on Enter. */
 export const FreeTextNoCatalog: Story = {
   render: () => html`<lr-model-select provider="custom" placeholder="Type any model id…"></lr-model-select>`,

@@ -286,7 +286,7 @@ export const styles = css`
      hover, press and [data-active] -- the aria-activedescendant highlight -- so arrow-keying onto
      the selected model showed nothing. The selected row keeps its affordance either way: it paints
      border-color/color/font-weight, untouched here. */
-  [part="option"]:hover,
+  [part="option"]:where(:not([aria-disabled='true'])):hover,
   [part="option"][data-active] {
     background: var(
       --lr-model-select-option-active-bg,
@@ -295,12 +295,21 @@ export const styles = css`
   }
   /* Mixes the SAME --lr-model-select-option-active-bg the hover/active-descendant rule above
      uses, so retinting the highlight retints the pressed step too. */
-  [part="option"]:active {
+  [part="option"]:where(:not([aria-disabled='true'])):active {
     background: color-mix(
       in oklab,
       var(--lr-model-select-option-active-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
+  }
+  /* A row whose catalog entry declares disabled is non-actionable: it keeps its own label and
+     icon (still the datum it always was) but loses the pointer cursor and every hover/press
+     affordance that promises activation -- gated above rather than overridden here, the same shape
+     a native disabled button needs, even though this row is a plain div with no native disabled
+     state of its own. */
+  [part="option"][aria-disabled='true'] {
+    cursor: default;
+    opacity: var(--lr-model-select-option-disabled-opacity, 0.5);
   }
   [part="option-icon"] {
     flex: 0 0 auto;
