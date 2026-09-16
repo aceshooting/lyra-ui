@@ -865,7 +865,7 @@ export default {
               (mixin) => mixin.name === 'FormAssociated'
             )
           ) {
-            formAssociated.set(declaration, null);
+            formAssociated.set(declaration, true);
           }
         }
         let discoveredSubclass = true;
@@ -878,18 +878,41 @@ export default {
             );
             if (!parentEntry || !formAssociated.has(parentEntry.declaration))
               continue;
-            formAssociated.set(declaration, {
-              name: parentEntry.declaration.name,
-              module: parentEntry.module.path,
-            });
+            // Membership is all that matters below (the back-filled members/attributes are never
+            // tagged `inheritedFrom` -- see the comment before the projection loop), so the value
+            // only needs to mark this declaration as discovered, not record where from.
+            formAssociated.set(declaration, true);
             discoveredSubclass = true;
           }
         }
 
         for (const { declaration } of declarationEntries) {
           if (!formAssociated.has(declaration)) continue;
-          const inheritedFrom = formAssociated.get(declaration);
-
+          // `scripts/manifest-compact.mjs`'s `compactManifest()` runs as a separate pass AFTER
+          // every `packageLinkPhase` here (see `scripts/generate-manifest.mjs`), and it prunes any
+          // member/attribute carrying `inheritedFrom` that is identical (per its
+          // `hasSubclassAnnotationOverride`) to the entry it resolves on the named superclass.
+          // Two different things land an `inheritedFrom` on these fields for a chain-walked
+          // subclass such as `LyraNumberInput`/`LyraNativeTimeInput` (both extend `LyraInput`,
+          // which is the direct `FormAssociated` mixin owner):
+          //   1. `value` is a REAL accessor CEM finds on `LyraInput` itself (it overrides the
+          //      mixin-provided contract with its own JSDoc), so CEM's own built-in inheritance
+          //      flattening already copies it onto the subclass's `members`, `inheritedFrom` and
+          //      all, before this plugin ever runs -- the `member.find(...)` below finds that
+          //      pre-existing entry rather than creating a new one.
+          //   2. `name`/`required`/`disabled` (and the rest of MIXIN_FIELDS/MIXIN_METHODS) have no
+          //      real TS declaration anywhere for CEM to find; they exist only because the block
+          //      below creates them. Tagging that synthesized entry with the chain-walk's resolved
+          //      superclass name looked like reasonable provenance, but since a chain-walked
+          //      subclass and its superclass always receive byte-identical MIXIN_FIELDS/
+          //      MIXIN_METHODS metadata, `compactManifest` cannot tell that copy apart from
+          //      genuinely-redundant inherited data.
+          // Either way the member/attribute/method ends up erased by compaction. This plugin's
+          // whole purpose is to publish these as real, present-on-every-consumer manifest entries
+          // (mirroring how they already read on the direct mixin owner, which never has
+          // `inheritedFrom` on them at all), so unconditionally strip `inheritedFrom` from each one
+          // below -- whether CEM found it first or this loop just created it -- instead of relying
+          // on it being absent.
           declaration.members ??= [];
           declaration.attributes ??= [];
           declaration.cssParts ??= [];
@@ -904,10 +927,10 @@ export default {
                 kind: 'field',
                 name,
                 privacy: 'public',
-                ...(inheritedFrom ? { inheritedFrom } : {}),
               };
               declaration.members.push(member);
             }
+            delete member.inheritedFrom;
             if (metadata.readType) {
               const current = member.type?.text;
               if (
@@ -949,10 +972,10 @@ export default {
                   name: metadata.attribute,
                   type: { text: metadata.type },
                   fieldName: name,
-                  ...(inheritedFrom ? { inheritedFrom } : {}),
                 };
                 declaration.attributes.push(attribute);
               }
+              delete attribute.inheritedFrom;
               if (metadata.readType) {
                 attribute.type = { ...attribute.type, text: metadata.type };
               } else {
@@ -979,10 +1002,10 @@ export default {
               member = {
                 kind: 'method',
                 name,
-                ...(inheritedFrom ? { inheritedFrom } : {}),
               };
               declaration.members.push(member);
             }
+            delete member.inheritedFrom;
             member.return ??= { type: { text: metadata.returnType } };
             if (metadata.parameters && member.parameters === undefined) {
               member.parameters = metadata.parameters;

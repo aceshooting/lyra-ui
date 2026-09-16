@@ -446,3 +446,30 @@ test('fresh no-write CEM retains reviewed runtime and public-document subclass c
   );
   assert.equal(attribute('lr-video', 'currentTime')?.fieldName, 'currentTime');
 });
+
+test('FormAssociated members back-fill through a superclass chain to a different-module subclass', async () => {
+  // lr-number-input and lr-native-time-input do not themselves declare the FormAssociated mixin --
+  // they extend LyraInput (a different module), which does. The `lr-form-associated-mixin-members`
+  // plugin's superclass-chain walk discovers this and adds value/name/required/disabled onto their
+  // manifest declarations, but compactManifest independently prunes any member/attribute carrying
+  // an `inheritedFrom` that resolves to an identical entry on the superclass -- which is exactly
+  // what an unmodified chain-walked back-fill produces, since it is byte-identical to LyraInput's
+  // own copy. The two effects combine to silently erase the back-filled surface from the published
+  // custom-elements.json for any multi-level (different-module) FormAssociated subclass.
+  const { manifest } = await generateManifestFromIsolatedCaller();
+  const declarations = manifest.modules.flatMap((module) => module.declarations ?? []);
+  const declaration = (tagName) => declarations.find((candidate) => candidate.tagName === tagName);
+
+  for (const tagName of ['lr-number-input', 'lr-native-time-input']) {
+    const target = declaration(tagName);
+    assert.ok(target, `${tagName} declaration exists`);
+    for (const name of ['value', 'name', 'required', 'disabled']) {
+      const member = target.members?.find(
+        (candidate) => candidate.kind === 'field' && candidate.name === name,
+      );
+      assert.ok(member, `${tagName}.${name} is a declared member`);
+      const attribute = target.attributes?.find((candidate) => candidate.name === name);
+      assert.ok(attribute, `${tagName}[${name}] is a declared attribute`);
+    }
+  }
+});
