@@ -32,19 +32,19 @@ const urlIs = (expected) => (value) => value === expected;
  */
 const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
   {
-    pageId: 'animatedimage--docs',
+    pageId: 'media-animatedimage--docs',
     kind: 'console',
     url: pathnameIs('/does-not-exist-lr-animated-image.gif'),
     message: resourceFailure,
   },
   {
-    pageId: 'animatedimage--docs',
+    pageId: 'media-animatedimage--docs',
     kind: 'response',
     url: pathnameIs('/does-not-exist-lr-animated-image.gif'),
     status: 404,
   },
   ...[
-    ['components-avatar--docs', 'https://example.invalid/nonexistent.png'],
+    ['media-components-avatar--docs', 'https://example.invalid/nonexistent.png'],
     ['viewers-docxviewer--docs', 'https://example.invalid/missing.docx'],
     ['viewers-documentviewer-spreadsheetviewer--docs', 'https://example.invalid/missing.xlsx'],
   ].flatMap(([pageId, url]) => [
@@ -68,29 +68,29 @@ const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
     },
   ]),
   {
-    pageId: 'map--docs',
+    pageId: 'media-map--docs',
     kind: 'console',
     message:
       /^\[\.WebGL-[^\]]+\]GL Driver Message \(OpenGL, Performance, GL_CLOSE_PATH_NV, High\): GPU stall due to ReadPixels(?: \(this message will no longer repeat\))?$/,
   },
   {
-    pageId: 'map--docs',
+    pageId: 'media-map--docs',
     kind: 'console',
     message: /^WARNING: Too many active WebGL contexts\. Oldest context will be lost\.$/,
   },
   {
-    pageId: 'map--docs',
+    pageId: 'media-map--docs',
     kind: 'console',
     url: hostnameIs('tile.openstreetmap.org'),
     message: resourceFailure,
   },
   {
-    pageId: 'map--docs',
+    pageId: 'media-map--docs',
     kind: 'console',
     message: /^(?:TypeError: )?Failed to fetch$/,
   },
   {
-    pageId: 'map--docs',
+    pageId: 'media-map--docs',
     kind: 'pageError',
     message: /^(?:TypeError: )?Failed to fetch$/,
   },
@@ -99,7 +99,7 @@ const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
   // loading; maplibre-gl logs this as a console warning and falls back to a full style rebuild
   // (harmless -- the map still renders correctly), not an error a consumer would ever see outside
   // this specific automated-doc-interaction timing.
-  ...['documentviewer-geojsonview-legacy-tag--docs', 'documentviewer-geojsonviewer--docs'].map(
+  ...['viewers-documentviewer-geojsonview-legacy-tag--docs', 'viewers-documentviewer-geojsonviewer--docs'].map(
     (pageId) => ({
       pageId,
       kind: 'console',
@@ -112,31 +112,31 @@ const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
   // internal error; every story canvas in isolation (viewMode=story) and every widget-renderer
   // unit test render correctly. Root cause is still open -- narrow this back down once it's found.
   {
-    pageId: 'widget--docs',
+    pageId: 'layout-widget--docs',
     kind: 'pageError',
     message: /^Error: (?:invalid template strings array|Internal Error: expected template strings)/,
   },
   {
-    pageId: 'map--docs',
+    pageId: 'media-map--docs',
     kind: 'request',
     url: hostnameIs('tile.openstreetmap.org'),
     message: /^net::ERR_[A-Z_]+$/,
   },
   {
-    pageId: 'map--docs',
+    pageId: 'media-map--docs',
     kind: 'response',
     url: hostnameIs('tile.openstreetmap.org'),
     status: (value) => Number.isInteger(value) && value >= 400,
   },
   {
-    pageId: 'toolresultview--docs',
+    pageId: 'agent-tools-toolresultview--docs',
     kind: 'console',
     url: pathnameMatches(/^\/assets\/tool-result-view\.stories-[A-Za-z0-9_-]+\.js$/),
     message:
       /^lr-render-error \{toolName: broken_renderer, error: Error: this renderer always throws, to demonstrate the fallback path\n[\s\S]+\}$/,
   },
   {
-    pageId: 'widget-renderer--docs',
+    pageId: 'conversation-widget-renderer--docs',
     kind: 'console',
     url: pathnameMatches(/^\/assets\/lyra-components-[A-Za-z0-9_-]+\.js$/),
     message:

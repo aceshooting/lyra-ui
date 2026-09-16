@@ -16,7 +16,7 @@ export function transformStoryTitle(source, fileName) {
   const groupedTitle = groupedStoryTitle(fileName, originalTitle);
   if (groupedTitle === originalTitle) return source;
 
-  const indentation = property.match(/^\s*/)?.[0] ?? '';
+  const indentation = property.match(/(?:^|\n)([^\S\r\n]*)title/)?.[1] ?? '';
   const replacement = `${prefix}${property}${quote}${groupedTitle}${quote}${comma}\n${indentation}id: '${toId(originalTitle)}',`;
   return source.replace(match[0], replacement);
 }

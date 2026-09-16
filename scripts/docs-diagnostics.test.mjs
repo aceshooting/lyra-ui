@@ -16,18 +16,18 @@ const resultWith = (pageId, kind, diagnostic) => ({
 
 test('allows only the documented page-scoped intentional diagnostics', () => {
   const fixtures = [
-    resultWith('animatedimage--docs', 'console', {
+    resultWith('media-animatedimage--docs', 'console', {
       type: 'error',
       text: 'Failed to load resource: the server responded with a status of 404 (Not Found)',
       url: 'http://127.0.0.1:6006/does-not-exist-lr-animated-image.gif',
     }),
-    resultWith('map--docs', 'pageError', 'TypeError: Failed to fetch'),
-    resultWith('map--docs', 'console', {
+    resultWith('media-map--docs', 'pageError', 'TypeError: Failed to fetch'),
+    resultWith('media-map--docs', 'console', {
       type: 'warning',
       text: '[.WebGL-0x123]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels',
-      url: 'http://127.0.0.1:6006/iframe.html?id=map--docs&viewMode=docs',
+      url: 'http://127.0.0.1:6006/iframe.html?id=media-map--docs&viewMode=docs',
     }),
-    resultWith('components-avatar--docs', 'request', {
+    resultWith('media-components-avatar--docs', 'request', {
       url: 'https://example.invalid/nonexistent.png',
       error: 'net::ERR_NAME_NOT_RESOLVED',
     }),
@@ -39,16 +39,16 @@ test('allows only the documented page-scoped intentional diagnostics', () => {
       url: 'https://example.invalid/missing.xlsx',
       status: 404,
     }),
-    resultWith('animatedimage--docs', 'response', {
+    resultWith('media-animatedimage--docs', 'response', {
       url: 'http://127.0.0.1:6006/does-not-exist-lr-animated-image.gif',
       status: 404,
     }),
-    resultWith('toolresultview--docs', 'console', {
+    resultWith('agent-tools-toolresultview--docs', 'console', {
       type: 'warning',
       text: 'lr-render-error {toolName: broken_renderer, error: Error: this renderer always throws, to demonstrate the fallback path\n    at Object.render (http://127.0.0.1:6006/assets/tool-result-view.stories-AbC123.js:1:1)}',
       url: 'http://127.0.0.1:6006/assets/tool-result-view.stories-AbC123.js',
     }),
-    resultWith('widget-renderer--docs', 'console', {
+    resultWith('conversation-widget-renderer--docs', 'console', {
       type: 'warning',
       text: '[lr-widget-renderer] skipped unknown widget type "evil-widget" (and its subtree)',
       url: 'http://127.0.0.1:6006/assets/lyra-components-AbC123.js',
@@ -91,7 +91,7 @@ test('does not allow an intentional diagnostic on the wrong docs page', () => {
 });
 
 test('does not allow an intentional warning from the wrong built module', () => {
-  const fixture = resultWith('widget-renderer--docs', 'console', {
+  const fixture = resultWith('conversation-widget-renderer--docs', 'console', {
     type: 'warning',
     text: '[lr-widget-renderer] skipped unknown widget type "evil-widget" (and its subtree)',
     url: 'http://127.0.0.1:6006/assets/unrelated-AbC123.js',

@@ -318,7 +318,12 @@ async function auditComponentDocs(context, baseUrl, entries) {
         } catch (error) {
           throw new Error(`${entry.id} docs iframe did not mount: ${error instanceof Error ? error.message : String(error)}`);
         }
-        await auditPage.waitForTimeout(120);
+        // The docs wrapper mounts before its lazy primary story.
+        await auditPage.waitForFunction(
+          (tag) => Boolean(document.querySelector('.docs-story')?.querySelector(tag)),
+          expectedTag,
+          { timeout: 15_000 },
+        );
 
         for (const matrix of matrices) {
           await auditPage.setViewportSize({ width: matrix.width, height: matrix.height });
