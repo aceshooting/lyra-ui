@@ -626,7 +626,8 @@ unchanged.
 headerCell?, width?, minWidth?, maxWidth?,
 resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
 priority?: 'medium'|'low',
-sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editType?: 'text'|'number'|'select',
+sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editLabel?: (row) => string,
+editType?: 'text'|'number'|'select',
 editOptions?: { value: string; label: string }[], footer?, cellStyle?, heatValue?,
 cell: (row) => unknown }` — `cell` is required for every `editTrigger` except `'always'`, whose
   persistent editor renders unconditionally so the table's render path never falls back to it —
@@ -675,7 +676,9 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   value and `editType` selects `'text'`, `'number'`, or `'select'` (a native `<select>` populated
   from `editOptions: { value: string; label: string }[]`, one `<option>` per entry in order; a
   `'select'` column with no `editOptions` renders an empty, valueless `<select>` instead of
-  throwing)
+  throwing); `editLabel(row) => string`, read once per row exactly like `editValue`/`cellTitle`,
+  overrides that editor's accessible name — omit it and every editor in the column shares the same
+  interpolated `tableEditCell` name instead (see the accessibility note under `editTrigger` below)
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -730,8 +733,14 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
     `<input>` (the typed value rides along) and the table restores focus to the same logical cell
     afterwards. If the focused row leaves the rendered page entirely (pagination, filtering), focus
     is simply lost rather than yanked to whichever unrelated row now sits in that position.
-  - Each editor keeps its own interpolated `tableEditCell` accessible name (`Edit {column}`), so a
-    column of otherwise-identical inputs is still individually named to a screen reader.
+  - **Accessible name.** Each editor's name is `columns[].editLabel(row)` when the column defines
+    it, or otherwise the interpolated `tableEditCell` string (`Edit {column}`) — identical for every
+    row in that column, since the default has no row context. That default is adequate for
+    `'double-click'`, where at most one editor is ever open, but not for `'always'`: every row's
+    editor there is a permanent, individually focusable Tab stop, so leaving `editLabel` unset on an
+    `'always'` column exposes as many identically named controls as there are rows (e.g. fifty "Edit
+    Status" comboboxes), failing WCAG 2.4.6 and 1.3.1. Define `editLabel` for any `'always'` column
+    to give each row's editor its own name.
 - `hasHiddenPriorityColumns: boolean = false` (attribute `has-hidden-priority-columns`, reflected) —
   computed/read-only and true only while a priority column is actually hidden. It becomes false
   when `priorityColumnsVisible` reveals the columns. Measured via a `ResizeObserver` on
@@ -4781,6 +4790,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly phase: 'request';
     readonly sortKey: string;
     readonly sortDir: TableSortDirection;
+    editLabel?: (row: T) => string;
   }`
 
 - **`components-data-tree-tree-types-contracts`** — Supporting data types and helpers for this component family.

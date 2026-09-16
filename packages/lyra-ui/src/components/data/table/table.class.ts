@@ -334,6 +334,16 @@ interface TableColumnCommon<T> {
    *  used for record-like rows. For `editType: 'select'`, this is the selected option's
    *  `value` -- match one entry of `editOptions`, or none of them renders selected. */
   editValue?: (row: T) => string | number;
+  /** Accessible name (`aria-label`) for this row's inline editor, read once per row exactly like
+   *  `editValue`/`cellTitle`. When omitted, every editor in the column shares the same interpolated
+   *  `tableEditCell` name (`Edit {column}`) -- indistinguishable from its column siblings, which is
+   *  harmless for `editTrigger: 'double-click'` (only one editor is ever open at a time) but not for
+   *  `editTrigger: 'always'`, where each row's editor is a permanent, individually focusable Tab
+   *  stop: an unset `editLabel` there leaves a keyboard or screen-reader user with no way to tell
+   *  which row a given editor belongs to (WCAG 2.4.6, 1.3.1). Return the row's own full name (e.g.
+   *  combining the column label with a row identifier) -- this is consumer-owned text like
+   *  `cellTitle`/`editValue`, not passed through the table's own localization. */
+  editLabel?: (row: T) => string;
   /** Native editor type used when `editTrigger` is set. `'select'` renders a native `<select>`
    *  populated from `editOptions`, one `<option>` per entry in order; a `'select'` column with no
    *  `editOptions` renders an empty, valueless `<select>` rather than throwing. */
@@ -694,6 +704,12 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * `editType: 'select'` editor has no such native protection -- `<select>`/`<option>` carry no
  * dirty-value flag, so an out-of-band `rows` update to that cell re-applies the selection even
  * after the user has picked a different option.
+ * Each editor's accessible name is `columns[].editLabel(row)` when the column defines it, or
+ * otherwise the interpolated `tableEditCell` string (`Edit {column}`) -- the same name for every
+ * row in that column, since the default carries no row context. Define `editLabel` for any
+ * `editTrigger: 'always'` column: its editors are permanent, individually focusable Tab stops, so
+ * leaving every one of them identically named (e.g. fifty "Edit Status" controls) fails WCAG 2.4.6
+ * and 1.3.1 for keyboard and screen-reader users.
  * Focus is restored across a re-sort that moves the editor's node, and dropped
  * (never re-aimed at an unrelated row) when its row leaves the rendered page.
  * `spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`
@@ -3357,7 +3373,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private renderCellEditor(row: T, col: TableColumn<T>, rowKey: string, alwaysOn: boolean): TemplateResult {
     const type = col.editType ?? 'text';
     const value = this.editorValue(row, col);
-    const label = this.localize('tableEditCell', undefined, { column: col.label });
+    const label = col.editLabel?.(row) ?? this.localize('tableEditCell', undefined, { column: col.label });
     const onChange = (event: Event): void => this.commitEdit(event, rowKey, col.key);
     const onKeyDown = (event: KeyboardEvent): void => this.onEditorKeyDown(event, rowKey, col.key);
     if (type === 'select') {

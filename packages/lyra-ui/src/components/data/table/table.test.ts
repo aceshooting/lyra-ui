@@ -4724,6 +4724,39 @@ describe('localization', () => {
     expect(input.getAttribute('aria-label')).to.equal('Modifier Name');
   });
 
+  it('gives a double-click cell editor a per-row accessible name when the column defines editLabel', async () => {
+    const perRowLabelColumns: TableColumn<Row>[] = [
+      {
+        key: 'name',
+        label: 'Name',
+        editTrigger: 'double-click',
+        editValue: (r) => r.name,
+        editLabel: (r) => `Edit name for ${r.name}`,
+        cell: (r) => r.name,
+      },
+    ];
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = perRowLabelColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    // One editor is open at a time for editTrigger: 'double-click' -- open each row's in turn and
+    // confirm the name tracks the row, not just the column.
+    const cells = [...el.shadowRoot!.querySelectorAll('[part="row"] [part="cell"]')] as HTMLElement[];
+    cells[0]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((cells[0]!.querySelector('[part="cell-editor"]') as HTMLElement).getAttribute('aria-label')).to.equal(
+      'Edit name for Alpha'
+    );
+
+    cells[1]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect((cells[1]!.querySelector('[part="cell-editor"]') as HTMLElement).getAttribute('aria-label')).to.equal(
+      'Edit name for Beta'
+    );
+  });
+
   it('localizes the reveal/hide-columns button label', async () => {
     const el = (await fixture(
       html`<lr-table
@@ -6128,12 +6161,60 @@ describe("editTrigger: 'always'", () => {
     expect(values).to.deep.equal(['3', '1']);
   });
 
-  it('names every persistent editor individually through the tableEditCell key', async () => {
+  it('falls back to the same tableEditCell name for every row in the column when editLabel is unset', async () => {
     const el = await alwaysTable();
     const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
       input.getAttribute('aria-label')
     );
+    // Column-only naming: both rows' editors read identically -- this is the gap `editLabel` exists
+    // to close (see the next test), not a claim that these controls are distinguishable.
     expect(labels).to.deep.equal(['Edit Score', 'Edit Score']);
+  });
+
+  it('names each persistent editor individually per row when the column defines editLabel', async () => {
+    const el = await alwaysTable([
+      { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+      {
+        key: 'score',
+        label: 'Score',
+        editTrigger: 'always',
+        editType: 'number',
+        editValue: (r) => r.score,
+        editLabel: (r) => `Edit score for ${r.name}`,
+        cell: (r) => r.score,
+      },
+    ]);
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
+      input.getAttribute('aria-label')
+    );
+    expect(labels).to.deep.equal(['Edit score for Alpha', 'Edit score for Beta']);
+  });
+
+  it('lets editLabel override a localized tableEditCell default for persistent editors', async () => {
+    const el = (await fixture(
+      html`<lr-table aria-label="Scores" .strings=${{ tableEditCell: 'Modifier {column}' }}></lr-table>`
+    )) as LyraTable<Row>;
+    el.columns = [
+      { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+      {
+        key: 'score',
+        label: 'Score',
+        editTrigger: 'always',
+        editType: 'number',
+        editValue: (r) => r.score,
+        editLabel: (r) => `Score for ${r.name}`,
+        cell: (r) => r.score,
+      },
+    ];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
+      input.getAttribute('aria-label')
+    );
+    // Neither the localized `tableEditCell` template nor its `{column}` interpolation appears --
+    // editLabel replaces the whole name, it doesn't feed into it.
+    expect(labels).to.deep.equal(['Score for Alpha', 'Score for Beta']);
   });
 
   it('honors editType on a persistent editor', async () => {
@@ -6656,6 +6737,39 @@ describe("editType: 'select'", () => {
     await el.updateComplete;
     const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
     expect(select.getAttribute('aria-label')).to.equal('Edit Name');
+  });
+
+  it('names a select editor per row when the column defines editLabel', async () => {
+    const perRowLabelColumns: TableColumn<Row>[] = [
+      {
+        key: 'name',
+        label: 'Name',
+        editTrigger: 'double-click',
+        editType: 'select',
+        editOptions: [
+          { value: 'Alpha', label: 'Alpha' },
+          { value: 'Beta', label: 'Beta' },
+          { value: 'Gamma', label: 'Gamma' },
+        ],
+        editValue: (r) => r.name,
+        editLabel: (r) => `Choose a name for ${r.id}`,
+        cell: (r) => r.name,
+      },
+    ];
+    const el = await selectTable(perRowLabelColumns);
+    const cells = [...el.shadowRoot!.querySelectorAll('[part="row"] [part="cell"]')] as HTMLElement[];
+
+    cells[0]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(
+      (cells[0]!.querySelector('select[part="cell-editor"]') as HTMLSelectElement).getAttribute('aria-label')
+    ).to.equal('Choose a name for a');
+
+    cells[1]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(
+      (cells[1]!.querySelector('select[part="cell-editor"]') as HTMLSelectElement).getAttribute('aria-label')
+    ).to.equal('Choose a name for b');
   });
 
   it('degrades to an empty, valueless select instead of throwing when editOptions is omitted', async () => {
