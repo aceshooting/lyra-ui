@@ -286,11 +286,14 @@ assert.throws(
 const reviewedCeilingKeys = Object.keys(budgets)
   .filter((key) => key.startsWith('dist/') || key === '$componentP95GzipKb' || key === '$componentMaxGzipKb')
   .sort();
-// 30 KiB held until the base class gained its cross-document render-root fallback, which every
-// bundle shares; the canary moves one whole KiB and stays the tightest standalone ceiling.
+// The tightest standalone ceiling in the file, and the one that notices when the SHARED base class
+// grows: nothing about lr-button itself changed for 16.0.0, so the move from 31 to 31.92 KiB is
+// base-class cost every other bundle pays too. 30 KiB held until the cross-document render-root
+// fallback landed; 31 held until this release. Keep this guard tight -- it is the canary, not a
+// budget, so raise it only with a measurement and a reason, never to make a run pass.
 assert.ok(
-  budgets['dist/components/forms/button/button.js'] <= 31,
-  'the standalone button registration must remain at or below 31 KiB gzip',
+  budgets['dist/components/forms/button/button.js'] <= 32,
+  'the standalone button registration must remain at or below 32 KiB gzip',
 );
 assert.deepEqual(reviewedCeilingKeys, [
   '$componentMaxGzipKb',
