@@ -146,11 +146,11 @@ export const styles = css`
   /* The band's outline is drawn INSIDE it: the track clips its overflow (that is what rounds the
      bar's ends), so a positive outline-offset would put the focus ring where nothing can paint it.
      Outline rather than a fill change keeps the band's own colour -- which is the datum -- intact. */
-  button[part~='segment']:where(:hover) {
+  button[part~='segment']:where(:not(:disabled)):where(:hover) {
     outline: var(--lr-border-width-thin) solid var(--lr-color-text-quiet);
     outline-offset: calc(var(--lr-border-width-thin) * -1);
   }
-  button[part~='segment']:where(:active) {
+  button[part~='segment']:where(:not(:disabled)):where(:active) {
     outline-color: var(--lr-color-text);
   }
   button[part~='segment']:where(:focus-visible) {
@@ -160,10 +160,10 @@ export const styles = css`
   /* An arc has no box to outline per segment -- every arc shares the ring's bounding box -- so the
      ring reports which arc is involved by dimming it, and keeps the shared outline for the "focus
      is in here" half of the signal. */
-  :host([shape='ring']) [part~='segment']:where(:hover) {
+  :host([shape='ring']) [part~='segment']:where(:not([aria-disabled='true'])):where(:hover) {
     opacity: 0.8;
   }
-  :host([shape='ring']) [part~='segment']:where(:active) {
+  :host([shape='ring']) [part~='segment']:where(:not([aria-disabled='true'])):where(:active) {
     opacity: 0.6;
   }
   :host([shape='ring']) [part~='segment']:where(:focus-visible) {
@@ -183,10 +183,10 @@ export const styles = css`
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
-  button[part~='legend-item']:where(:hover) {
+  button[part~='legend-item']:where(:not(:disabled)):where(:hover) {
     background: var(--lr-color-brand-quiet);
   }
-  button[part~='legend-item']:where(:active) {
+  button[part~='legend-item']:where(:not(:disabled)):where(:active) {
     background: var(--lr-color-border);
   }
   button[part~='legend-item']:where(:focus-visible) {
@@ -217,6 +217,26 @@ export const styles = css`
   :host([shape='ring']) [part~='segment-selected'] {
     stroke-width: var(--lr-context-meter-selected-arc-stroke, 16);
   }
+
+  /* A segment entry marked disabled is non-actionable: it keeps its colour (the band is still
+     the datum it always was) but loses every affordance that promises activation. The hover,
+     active and focus-visible rules above are gated on :not(:disabled) rather than overridden
+     here, because CSS :hover DOES still match a natively disabled button -- only :active and
+     :focus-visible stop on their own -- so without that gate a disabled band would keep painting
+     a hover outline it can never honour. */
+  button[part~='segment']:where(:disabled),
+  button[part~='legend-item']:where(:disabled) {
+    cursor: default;
+    opacity: var(--lr-context-meter-disabled-opacity, 0.5);
+  }
+  :host([shape='ring']) [part~='segment']:where([aria-disabled='true']) {
+    cursor: default;
+    opacity: var(--lr-context-meter-disabled-opacity, 0.5);
+  }
+  /* The segment-empty and legend-item-empty part tokens carry NO default treatment on purpose.
+     The state is derived from a zero value rather than declared, so styling it here would restyle
+     every existing meter that happens to hold a zero band. It exists so a consumer can express
+     its own "nothing in this bucket" treatment through ::part(). */
 
   /* The ring is a fixed 8em square, so a legend under it would be clipped by the host's own block
      size. Only under show-legend does the host stop being square: the ring keeps its declared size

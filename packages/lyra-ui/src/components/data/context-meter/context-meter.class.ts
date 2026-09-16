@@ -13,6 +13,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { statePart } from '../../../internal/state-part.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -71,6 +72,16 @@ export interface ContextMeterSegment {
   tone?: ContextMeterTone;
   /** Optional arbitrary CSS color. When set, it takes precedence over `tone`. */
   color?: string;
+  /**
+   * Marks this band non-actionable while `interactive` is set: its control renders genuinely
+   * disabled (no tab stop, no hover/press affordance) and activating it emits no
+   * `lr-segment-activate`.
+   *
+   * Deliberately NOT inferred from `value === 0`. A zero band is legitimately clickable in a
+   * budget meter -- the original use for this component -- so inertness is declared, never
+   * guessed. For the derived signal, style the `segment-empty`/`legend-item-empty` part instead.
+   */
+  disabled?: boolean;
 }
 
 interface RatioSegment {
@@ -122,6 +133,7 @@ function projectContextMeterSegments(value: unknown): readonly Readonly<ContextM
       const segmentValue = getOwnDataDescriptor(entry.value, 'value');
       const tone = getOwnDataDescriptor(entry.value, 'tone');
       const color = getOwnDataDescriptor(entry.value, 'color');
+      const disabled = getOwnDataDescriptor(entry.value, 'disabled');
       if (
         label === MISSING_OWN_DATA_DESCRIPTOR ||
         label === UNSAFE_OWN_DATA_DESCRIPTOR ||
@@ -129,19 +141,23 @@ function projectContextMeterSegments(value: unknown): readonly Readonly<ContextM
         segmentValue === UNSAFE_OWN_DATA_DESCRIPTOR ||
         tone === UNSAFE_OWN_DATA_DESCRIPTOR ||
         color === UNSAFE_OWN_DATA_DESCRIPTOR ||
+        disabled === UNSAFE_OWN_DATA_DESCRIPTOR ||
         typeof label.value !== 'string' ||
         typeof segmentValue.value !== 'number' ||
         (tone !== MISSING_OWN_DATA_DESCRIPTOR && typeof tone.value !== 'string') ||
-        (color !== MISSING_OWN_DATA_DESCRIPTOR && typeof color.value !== 'string')
+        (color !== MISSING_OWN_DATA_DESCRIPTOR && typeof color.value !== 'string') ||
+        (disabled !== MISSING_OWN_DATA_DESCRIPTOR && typeof disabled.value !== 'boolean')
       )
         continue;
       const toneValue = tone === MISSING_OWN_DATA_DESCRIPTOR ? undefined : tone.value;
       const colorValue = color === MISSING_OWN_DATA_DESCRIPTOR ? undefined : color.value;
+      const disabledValue = disabled === MISSING_OWN_DATA_DESCRIPTOR ? undefined : disabled.value;
       segments.push(Object.freeze({
         label: label.value,
         value: segmentValue.value,
         ...(toneValue === undefined ? {} : { tone: toneValue as ContextMeterTone }),
         ...(colorValue === undefined ? {} : { color: colorValue as string }),
+        ...(disabledValue === undefined ? {} : { disabled: disabledValue as boolean }),
       }));
     }
     return Object.freeze(segments);
@@ -175,6 +191,11 @@ function formatCount(n: number, locale: string): string {
  *   `--lr-context-meter-segment-color` when `color` is set. While `interactive` is set it is a
  *   `<button>` (bar) or a `role="button"` arc (ring) carrying `aria-pressed`, and a second
  *   `segment-selected` part token while its index is in `selectedIndices`.
+ * @csspart segment-empty - A band whose `value` is 0. Derived, not declared, and carries no
+ *   built-in treatment: it is the hook for a consumer's own "nothing in this bucket" styling. A
+ *   zero band stays actionable unless its entry also sets `disabled`.
+ * @csspart segment-disabled - A band whose `segments` entry sets `disabled`. The control is
+ *   genuinely disabled: no tab stop, no hover/press affordance, and activating it emits nothing.
  * @csspart label - The visible caption, when `label` is set.
  * @csspart semantic - The visually-hidden meter/group carrying aggregate range semantics.
  * @csspart segment-list - The visually-hidden list exposing the segment breakdown.
@@ -183,6 +204,9 @@ function formatCount(n: number, locale: string): string {
  *   `aria-hidden` in the default presentational mode, because `segment-list` already exposes the
  *   same names to assistive technology; reachable while `interactive` is set, where its rows are
  *   the filter controls themselves.
+ * @csspart legend-item-empty - The legend row of a band whose `value` is 0. Derived; no built-in
+ *   treatment, exactly like `segment-empty`.
+ * @csspart legend-item-disabled - The legend row of a band whose entry sets `disabled`.
  * @csspart legend-item - One swatch + label pair in the legend, one per `segments` entry. A
  *   `<button>` carrying `aria-pressed` while `interactive` is set, a plain `<span>` otherwise.
  * @csspart legend-value - One legend row's absolute count, rendered by `legendDisplay`'s
@@ -200,6 +224,7 @@ function formatCount(n: number, locale: string): string {
  * @cssprop [--lr-context-meter-segment-seam-color=var(--lr-color-surface)] - Color of the hairline seam painted between adjacent `bar`-shape segments.
  * @cssprop [--lr-context-meter-selected-ring-color=var(--lr-color-text)] - Colour of the inset ring marking a `bar`-shape band or a legend row whose index is in `selectedIndices`. Painted inside the shadow root because the state lives in the part name, and as a ring rather than an outline so it composes with the hover/press/focus outlines instead of being replaced by them.
  * @cssprop [--lr-context-meter-selected-ring-width=var(--lr-border-width-thick)] - Width of that selected ring.
+ * @cssprop [--lr-context-meter-disabled-opacity=0.5] - Opacity of a band or legend row whose `segments` entry sets `disabled`. The band keeps its own colour -- it is still the datum it always was -- and loses only the affordances that promise activation.
  * @cssprop [--lr-context-meter-selected-arc-stroke=16] - Stroke width, in this component's `0 0 100 100` viewBox units, of a selected `ring`-shape arc. Arcs share one bounding box, so a selected arc reports itself by thickening in place rather than by an outline that would trace the whole ring.
  * @event lr-segment-activate - A band or its legend row was activated while `interactive` is set.
  *   `detail: { index, label, value }`. Cancelable: the default action is this component toggling
@@ -446,7 +471,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   private activateSegment(index: number): void {
     if (!this.interactive) return;
     const segment = this.effectiveSegments[index];
-    if (!segment) return;
+    if (!segment || segment.disabled) return;
     requestThenCommit({
       requestDetail: {
         index,
@@ -471,10 +496,14 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     this.activateSegment(index);
   }
 
-  /** The part token list for a band or legend row, carrying its selected state in the name --
-   *  `::part(segment)[data-selected]` is invalid CSS, so the state has to live in the part name. */
-  private statePart(base: string, selected: boolean): string {
-    return selected ? `${base} ${base}-selected` : base;
+  /** The part token list for a band or legend row. `::part(segment)[data-selected]` is invalid
+   *  CSS, so every state a consumer may need to style has to live in the part name itself. */
+  private segmentPart(base: string, index: number, segment: Readonly<ContextMeterSegment>): string {
+    return statePart(base, {
+      selected: this.isSelected(index),
+      empty: this.normalizedSegmentValue(segment) === 0,
+      disabled: segment.disabled === true,
+    });
   }
 
   private renderSemantics(): TemplateResult {
@@ -523,9 +552,10 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
             // `showLegend`.
             return this.interactive
               ? html`<button
-                  part=${this.statePart('segment', selected)}
+                  part=${this.segmentPart('segment', index, segment)}
                   type="button"
                   data-tone=${segment.tone ?? 'neutral'}
+                  ?disabled=${segment.disabled === true}
                   aria-pressed=${selected ? 'true' : 'false'}
                   aria-label=${title}
                   title=${title}
@@ -557,14 +587,17 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
       // tab stop and its own Enter/Space handling -- the same shape `<lr-lite-chart>`'s marks use.
       return svg`
         <circle
-          part=${this.interactive ? this.statePart('segment', selected) : 'segment'}
+          part=${this.interactive ? this.segmentPart('segment', index, segment) : 'segment'}
           data-tone=${segment.tone ?? 'neutral'}
           role=${this.interactive ? 'button' : nothing}
-          tabindex=${this.interactive ? '0' : nothing}
+          tabindex=${this.interactive && !segment.disabled ? '0' : nothing}
+          aria-disabled=${this.interactive && segment.disabled ? 'true' : nothing}
           aria-pressed=${this.interactive ? (selected ? 'true' : 'false') : nothing}
           aria-label=${this.interactive ? title : nothing}
-          @click=${this.interactive ? () => this.activateSegment(index) : nothing}
-          @keydown=${this.interactive
+          @click=${this.interactive && !segment.disabled
+            ? () => this.activateSegment(index)
+            : nothing}
+          @keydown=${this.interactive && !segment.disabled
             ? (event: KeyboardEvent) => this.onArcKeyDown(event, index)
             : nothing}
           style=${styleMap(
@@ -634,8 +667,9 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
               : nothing}`;
           return this.interactive
             ? html`<button
-                part=${this.statePart('legend-item', selected)}
+                part=${this.segmentPart('legend-item', index, segment)}
                 type="button"
+                ?disabled=${segment.disabled === true}
                 aria-pressed=${selected ? 'true' : 'false'}
                 @click=${() => this.activateSegment(index)}
               >

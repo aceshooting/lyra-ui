@@ -622,6 +622,44 @@ describe('track and seam cssprops', () => {
 });
 
 describe('projectContextMeterSegments hardening', () => {
+  it('never invokes an accessor-backed disabled, and never treats it as disabled', async () => {
+    // The shared public-collection snapshot boundary detaches plain records WITHOUT invoking
+    // accessors, so an accessor-backed key is dropped before this component ever projects the
+    // entry: the band survives as an ordinary one rather than being read through a getter.
+    const el = (await fixture(
+      html`<lr-context-meter interactive total="100"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    let reads = 0;
+    const hostile: Record<string, unknown> = { label: 'a', value: 1 };
+    Object.defineProperty(hostile, 'disabled', {
+      get() {
+        reads += 1;
+        return true;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    (el as unknown as { segments: unknown }).segments = [hostile, { label: 'b', value: 2 }];
+    await el.updateComplete;
+
+    expect(reads, 'the getter is never invoked').to.equal(0);
+    const bands = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="segment"]')];
+    expect(bands.map((band) => band.disabled), 'no band is disabled through the getter').to.deep.equal([
+      false,
+      false,
+    ]);
+  });
+
+  it('drops an entry whose disabled is not a boolean', async () => {
+    const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
+    (el as unknown as { segments: unknown }).segments = [
+      { label: 'a', value: 1, disabled: 'yes' },
+      { label: 'b', value: 2 },
+    ];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part~="segment"]').length).to.equal(1);
+  });
+
   it('rejects an array-like plain object without Array.isArray, even though its shape matches', async () => {
     const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
     const arrayLike = { length: 2, 0: { label: 'a', value: 1 }, 1: { label: 'b', value: 2 } };
@@ -682,4 +720,132 @@ it('activates a focused band from the keyboard while interactive, and never othe
   span.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   await el.updateComplete;
   expect(indexes, 'a presentational band answers no key').to.deep.equal([0]);
+});
+
+describe('non-actionable and empty segments', () => {
+  const MIXED: ContextMeterSegment[] = [
+    { label: 'Open', value: 4000, tone: 'brand' },
+    { label: 'Blocked', value: 0, tone: 'warning' },
+    { label: 'Archived', value: 1000, tone: 'neutral', disabled: true },
+  ];
+
+  it('marks a zero-value band empty and a disabled entry disabled, in the part name', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = MIXED;
+    await el.updateComplete;
+
+    const bands = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="segment"]')];
+    expect(bands.map((band) => band.getAttribute('part'))).to.deep.equal([
+      'segment',
+      'segment segment-empty',
+      'segment segment-disabled',
+    ]);
+
+    const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="legend-item"]')];
+    expect(rows.map((row) => row.getAttribute('part'))).to.deep.equal([
+      'legend-item',
+      'legend-item legend-item-empty',
+      'legend-item legend-item-disabled',
+    ]);
+  });
+
+  it('composes the selected state with the derived empty state', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter interactive total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = MIXED;
+    el.selectedIndices = [1];
+    await el.updateComplete;
+
+    const band = el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="segment"]')[1]!;
+    expect(band.getAttribute('part')).to.equal('segment segment-selected segment-empty');
+  });
+
+  it('renders a disabled band and legend row as real disabled controls', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = MIXED;
+    await el.updateComplete;
+
+    const bands = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="segment"]')];
+    expect(bands.map((band) => band.disabled)).to.deep.equal([false, false, true]);
+    const rows = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="legend-item"]')];
+    expect(rows.map((row) => row.disabled)).to.deep.equal([false, false, true]);
+  });
+
+  it('emits nothing when a disabled band or its legend row is activated', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = MIXED;
+    await el.updateComplete;
+    const seen: number[] = [];
+    el.addEventListener('lr-segment-activate', (event) => {
+      seen.push((event as CustomEvent<{ index: number }>).detail.index);
+    });
+
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="segment"]')[2]!.click();
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="legend-item"]')[2]!.click();
+    await el.updateComplete;
+
+    expect(seen, 'a disabled entry is not activatable').to.deep.equal([]);
+    expect(el.selectedIndices, 'and selection is untouched').to.deep.equal([]);
+  });
+
+  it('keeps a zero-value band actionable, because empty is derived and disabled is declared', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter interactive total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = MIXED;
+    await el.updateComplete;
+    const seen: number[] = [];
+    el.addEventListener('lr-segment-activate', (event) => {
+      seen.push((event as CustomEvent<{ index: number }>).detail.index);
+    });
+
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="segment"]')[1]!.click();
+    await el.updateComplete;
+    expect(seen).to.deep.equal([1]);
+  });
+
+  it('drops a disabled arc from the ring tab order and answers no key on it', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter interactive shape="ring" total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = MIXED;
+    await el.updateComplete;
+    const seen: number[] = [];
+    el.addEventListener('lr-segment-activate', (event) => {
+      seen.push((event as CustomEvent<{ index: number }>).detail.index);
+    });
+
+    const arcs = [...el.shadowRoot!.querySelectorAll<SVGCircleElement>('[part~="segment"]')];
+    expect(arcs.map((arc) => arc.getAttribute('tabindex'))).to.deep.equal(['0', '0', null]);
+    expect(arcs[2]!.getAttribute('aria-disabled')).to.equal('true');
+
+    arcs[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    arcs[2]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await el.updateComplete;
+    expect(seen, 'a disabled arc answers neither key nor click').to.deep.equal([]);
+  });
+
+  it('renders unchanged when no entry sets disabled and none is zero (unset regression)', async () => {
+    const el = (await fixture(
+      html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,
+    )) as LyraContextMeter;
+    el.segments = SEGMENTS;
+    await el.updateComplete;
+
+    const parts = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="segment"], [part~="legend-item"]')].map(
+      (node) => node.getAttribute('part'),
+    );
+    expect(parts.every((part) => part === 'segment' || part === 'legend-item')).to.equal(true);
+    expect(
+      el.shadowRoot!.querySelectorAll('button[disabled], [aria-disabled="true"]').length,
+      'no control is disabled when no entry asks for it',
+    ).to.equal(0);
+  });
 });

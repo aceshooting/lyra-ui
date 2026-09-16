@@ -218,3 +218,43 @@ export const InteractiveFilter: Story = {
   },
 };
 
+
+export const FilterWithEmptyAndDisabledBands: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A filter strip over a grid. A band whose `value` is 0 carries the derived ' +
+          '`segment-empty`/`legend-item-empty` part tokens and stays actionable, so the consumer ' +
+          'decides what an empty bucket means. A `segments` entry that sets `disabled` renders as a ' +
+          'genuinely disabled control: no tab stop, no hover affordance, and no ' +
+          '`lr-segment-activate`. Here the empty bucket is also marked disabled, which is the ' +
+          'usual choice when filtering to it would only show an empty table.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      .context-meter-empty-demo::part(legend-item-empty) {
+        font-style: italic;
+      }
+    </style>
+    <lr-context-meter
+      class="context-meter-empty-demo"
+      interactive
+      show-legend
+      legend-display="label-value"
+      total="12"
+      label="Issues by status"
+      style="max-inline-size: 28rem;"
+    ></lr-context-meter>
+  `,
+  play: async ({ canvasElement }) => {
+    const meter = canvasElement.querySelector('lr-context-meter')!;
+    withSegments(meter, [
+      { label: 'Open', value: 7, tone: 'brand' },
+      { label: 'In review', value: 5, tone: 'warning' },
+      { label: 'Blocked', value: 0, tone: 'danger', disabled: true },
+    ]);
+  },
+};
