@@ -1,4 +1,4 @@
-import { expect, fixture, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import './popover.js';
@@ -402,5 +402,120 @@ describe('lr-popover trigger modes', () => {
     await waitUntil(() => el.open, 'hovering opens it');
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+// The render tree carries two independent slots (the named `trigger` slot and the default
+// content slot), each firing its OWN initial `slotchange` in a real browser, in no order this
+// suite should rely on. A capture-phase listener scoped only to "the first slotchange of any
+// kind" could swallow the content slot's event and let the trigger slot's real one through
+// unsuppressed, which would still pass without proving the fix. Filtering on `e.target`'s slot
+// name targets exactly the slot this test is about.
+const isTriggerSlot = (event: Event): boolean =>
+  (event.target as HTMLSlotElement | null)?.getAttribute('name') === 'trigger';
+
+describe('collecting an already-slotted trigger without relying on the initial slotchange', () => {
+  // `click` is deliberately NOT the probe here: `[part="trigger"]` carries its own
+  // `@click=${this.onTriggerClick}` binding (see `render()` above), which a slotted trigger's
+  // click reaches through ordinary event bubbling regardless of whether `slottedTrigger` was ever
+  // resolved -- so a click-based assertion cannot tell this fix apart from doing nothing.
+  // `mouseenter`/`mouseleave` do NOT bubble (see `bindTriggerInteractions()`'s own comment), so a
+  // "hover" trigger opening is proof that the listener was bound directly to the real slotted
+  // element, which only happens once `syncInteractionTrigger()` has resolved `slottedTrigger`.
+  it('binds hover interactions to the slotted trigger when its initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow that one event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to the <slot> itself,
+    // before the slot's own bubble-phase `@slotchange` binding (`onTriggerSlotChange`) ever sees
+    // it.
+    const button = document.createElement('button');
+    button.slot = 'trigger';
+    button.textContent = 'Trigger';
+    const body = document.createElement('span');
+    body.textContent = 'Body';
+    const el = document.createElement('lr-popover') as LyraPopover;
+    el.setAttribute('trigger', 'hover');
+    el.setAttribute('style', '--lr-duration-base: 0ms');
+    el.append(button, body);
+    document.body.append(el);
+    // Synchronously after connect: `renderRoot` already exists (created in the constructor,
+    // before the first render), well before the browser can dispatch the initial event.
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        if (!isTriggerSlot(e)) return;
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      // Give a real initial slotchange (queued around slot assignment) time to arrive and be
+      // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire the trigger slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
+      ).to.equal(1);
+      enter(button);
+      await waitUntil(
+        () => el.open,
+        "firstUpdated() bound the slotted trigger's hover interaction, with no slotchange ever reaching the component's own listener"
+      );
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not double-bind the trigger', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed
+    // initial `slotchange` fire for the same assignment. The diagnostic listener below proves the
+    // second (real) firing actually happened, so this test exercises the double-invocation path
+    // it claims to, rather than accidentally passing because the browser only fired the event
+    // once.
+    const button = document.createElement('button');
+    button.slot = 'trigger';
+    button.textContent = 'Trigger';
+    const body = document.createElement('span');
+    body.textContent = 'Body';
+    const el = document.createElement('lr-popover') as LyraPopover;
+    el.setAttribute('trigger', 'hover');
+    el.setAttribute('style', '--lr-duration-base: 0ms');
+    el.append(button, body);
+    document.body.append(el);
+    let realTriggerSlotchangeCount = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        if (isTriggerSlot(e)) realTriggerSlotchangeCount++;
+      },
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realTriggerSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      // A double-bound `mouseenter`/`mouseleave` pair would still open and close correctly (both
+      // handlers run the same idempotent transition request), so what a double-bind would
+      // actually break is `unbindTriggerInteractions()` on close leaving one copy still attached
+      // -- proven by a clean second open/close cycle finding the trigger in the same working
+      // state as the first.
+      enter(button);
+      await waitUntil(() => el.open, 'hovering opens it');
+      leave(button);
+      await waitUntil(() => !el.open, 'leaving closes it');
+      enter(button);
+      await waitUntil(() => el.open, 'hovering opens it again identically on a second cycle');
+      leave(button);
+      await waitUntil(() => !el.open, 'leaving closes it again');
+    } finally {
+      el.remove();
+    }
   });
 });

@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import {
@@ -9,6 +9,7 @@ import {
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { tag } from '../../../internal/prefix.js';
@@ -247,6 +248,10 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
    *  `header-actions` wrapper. */
   @state() private hasEndSlot = false;
   @state() private hasMetaSlot = false;
+  // happy-dom never fires a slot's INITIAL `slotchange` (only a later mutation), so these two
+  // are also collected once from `firstUpdated()` -- see `collectInitialSlotAssignment`'s doc.
+  @query('slot[name="meta"]') private metaSlot?: HTMLSlotElement;
+  @query('slot[name="end"]') private endSlot?: HTMLSlotElement;
   private stopPositioning?: () => void;
   private labelObserver?: MutationObserver;
   private childrenObserver?: MutationObserver;
@@ -376,16 +381,24 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   };
 
   private onEndSlotChange = (event: Event): void => {
-    this.hasEndSlot = (event.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(
-      (node) => node.nodeType !== 3 || (node.textContent ?? '').trim() !== ''
-    );
+    this.applyEndSlotPresence(event.target as HTMLSlotElement);
   };
 
-  private onMetaSlotChange = (event: Event): void => {
-    this.hasMetaSlot = (event.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(
+  private applyEndSlotPresence(slot: HTMLSlotElement): void {
+    this.hasEndSlot = slot.assignedNodes({ flatten: true }).some(
       (node) => node.nodeType !== 3 || (node.textContent ?? '').trim() !== ''
     );
+  }
+
+  private onMetaSlotChange = (event: Event): void => {
+    this.applyMetaSlotPresence(event.target as HTMLSlotElement);
   };
+
+  private applyMetaSlotPresence(slot: HTMLSlotElement): void {
+    this.hasMetaSlot = slot.assignedNodes({ flatten: true }).some(
+      (node) => node.nodeType !== 3 || (node.textContent ?? '').trim() !== ''
+    );
+  }
 
   override attributeChangedCallback(
     name: string,
@@ -397,6 +410,26 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     if (newValue === null) this.showTooltip = false;
     this.syncOwnedChildren();
     this.requestUpdate();
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- only a
+    // later mutation to an already-connected slot -- so `hasEndSlot`/`hasMetaSlot` would otherwise
+    // stay `false` forever for an item whose `meta`/`end` children already exist at connect (the
+    // ordinary "render once data is ready" Lit pattern). Collect once here too, from each slot's
+    // current assignment; `applyEndSlotPresence()`/`applyMetaSlotPresence()` recompute the same
+    // boolean from scratch every time, so a real browser also firing the initial event contributes
+    // no duplicate side effect. Deferred a microtask for the same reason `select.class.ts`'s own
+    // `firstUpdated()` defers: `hasEndSlot`/`hasMetaSlot` are reactive `@state()`, and writing one
+    // synchronously here -- after this same update has already been marked complete -- would trip
+    // Lit's "scheduled an update after an update completed" dev warning.
+    const metaSlot = this.metaSlot;
+    const endSlot = this.endSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(metaSlot, (s) => this.applyMetaSlotPresence(s));
+      collectInitialSlotAssignment(endSlot, (s) => this.applyEndSlotPresence(s));
+    });
   }
 
   protected override willUpdate(changed: PropertyValues): void {

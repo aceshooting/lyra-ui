@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './compare-panel.styles.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_compareResponseA, LYRA_DEFAULT_compareResponseB, LYRA_DEFAULT_compareVoteBetter, LYRA_DEFAULT_compareVoteBothBad, LYRA_DEFAULT_compareVoteLabel, LYRA_DEFAULT_compareVoteRecorded, LYRA_DEFAULT_compareVoteTie } from '../../../internal/default-strings.generated.js';
@@ -83,6 +84,10 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   };
 
   @state() private hasPromptSlot = false;
+
+  // The named "prompt" slot -- read once from `firstUpdated()` in addition to its own
+  // `@slotchange` listener; see `collectInitialSlotAssignment`'s own doc.
+  @query('slot[name="prompt"]') private promptSlot?: HTMLSlotElement;
 
   @query('[part="pane-a"]') private paneAEl?: HTMLElement;
   @query('[part="pane-b"]') private paneBEl?: HTMLElement;
@@ -169,8 +174,17 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   }
 
   private onPromptSlotChange = (e: Event): void => {
-    this.hasPromptSlot = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
+    this.collectPromptSlotContent(e.target as HTMLSlotElement);
   };
+
+  // Wired as the `slotchange` handler (via `onPromptSlotChange`) for every later mutation, and
+  // called once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
+  // environment, or a real-browser timing race, where the slot's initial assignment never fires
+  // `slotchange`. Idempotent: recomputing the same boolean from the same assigned nodes a second
+  // time changes nothing observable.
+  private collectPromptSlotContent(slot: HTMLSlotElement): void {
+    this.hasPromptSlot = slot.assignedNodes({ flatten: true }).length > 0;
+  }
 
   override disconnectedCallback(): void {
     this.resetScrollSyncFrame();
@@ -283,6 +297,26 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
       if (this.paneAEl) this.paneAEl.scrollTop = 0;
       if (this.paneBEl) this.paneBEl.scrollTop = 0;
     }
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires the "prompt" slot's INITIAL `slotchange` --
+    // see `collectInitialSlotAssignment`'s own doc -- so an `<lr-compare-panel>` whose prompt
+    // content already exists at connect (the ordinary "render once data is ready" Lit pattern)
+    // would otherwise report no prompt content and keep `[part="prompt"]` wrongly hidden. Collect
+    // once here too, from the slot's current assignment; `collectPromptSlotContent()` is
+    // idempotent (it recomputes the same boolean from the same assigned nodes), so a real browser
+    // firing the initial event as well is a harmless no-op re-application. Deferred a microtask:
+    // `hasPromptSlot` is reactive, so writing it synchronously inside `firstUpdated()` -- after
+    // this same update has already been marked complete -- trips Lit's "scheduled an update after
+    // an update completed" dev warning. A real `slotchange` event runs this same collection from a
+    // task/microtask entirely outside the update cycle, which never trips it; queuing a microtask
+    // here reproduces that same "outside the cycle" timing instead of writing from inside it.
+    const slot = this.promptSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, (s) => this.collectPromptSlotContent(s));
+    });
   }
 
   override render(): TemplateResult {

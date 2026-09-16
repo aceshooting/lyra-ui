@@ -1,8 +1,9 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './timeline-item.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import {
   OBSERVE_TIMELINE_ITEM_TIMESTAMP,
@@ -176,6 +177,14 @@ export class LyraTimelineItem extends LyraElement {
   @state() private hasTimestampSlot = false;
   @state() private hasDescriptionSlot = false;
   @state() private clusterPresentation?: TimelineClusterPresentation;
+  // Read once more from `firstUpdated()` in addition to each slot's own `@slotchange` listener --
+  // see `collectInitialSlotAssignment`'s doc: happy-dom never fires a slot's INITIAL `slotchange`,
+  // so an item whose marker-icon/timestamp/description children already exist at connect (the
+  // ordinary "render once data is ready" Lit pattern) would otherwise never flip these booleans and
+  // stay on the internal fallback markup forever, even though the slot truly has content.
+  @query('slot[name="marker-icon"]') private markerIconSlot?: HTMLSlotElement;
+  @query('slot[name="timestamp"]') private timestampSlotEl?: HTMLSlotElement;
+  @query('slot[name="description"]') private descriptionSlotEl?: HTMLSlotElement;
   private readonly timestampObservers = new Set<TimelineTimestampObserver>();
   private timestampObserversReady = false;
 
@@ -247,26 +256,60 @@ export class LyraTimelineItem extends LyraElement {
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
+  /**
+   * Also called once from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
+   * environment, or a real-browser timing race, where a slot's initial assignment never fires
+   * `slotchange`. Idempotent: re-reading the same still-assigned elements just re-derives the same
+   * boolean, so running once from `firstUpdated()` and again from a real initial `slotchange` (every
+   * real-browser connect) produces no duplicate side effect.
+   */
   private onIconSlotChange = (): void => {
-    const markerIconSlot = this.renderRoot.querySelector<HTMLSlotElement>(
-      'slot[name="marker-icon"]'
-    );
-    this.hasIconSlot = Boolean(
-      markerIconSlot?.assignedElements({ flatten: true }).length
-    );
+    this.collectIconSlotAssignment(this.markerIconSlot);
   };
+
+  private collectIconSlotAssignment(slot: HTMLSlotElement | null | undefined): void {
+    this.hasIconSlot = Boolean(slot?.assignedElements({ flatten: true }).length);
+  }
 
   private onTimestampSlotChange = (e: Event): void => {
-    this.hasTimestampSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
+    this.collectTimestampSlotAssignment(e.target as HTMLSlotElement);
   };
 
+  private collectTimestampSlotAssignment(slot: HTMLSlotElement): void {
+    this.hasTimestampSlot = slot.assignedElements({ flatten: true }).length > 0;
+  }
+
   private onDescriptionSlotChange = (e: Event): void => {
-    this.hasDescriptionSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
+    this.collectDescriptionSlotAssignment(e.target as HTMLSlotElement);
   };
+
+  private collectDescriptionSlotAssignment(slot: HTMLSlotElement): void {
+    this.hasDescriptionSlot = slot.assignedElements({ flatten: true }).length > 0;
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
+    // `collectInitialSlotAssignment`'s own doc -- so an item whose marker-icon/timestamp/description
+    // children already exist at connect (the ordinary "render once data is ready" Lit pattern) would
+    // otherwise leave these three booleans false forever. Collect once here too, from each slot's
+    // current assignment. Deferred a microtask, mirroring `select.class.ts`'s identical fix: these
+    // three are reactive `@state` fields, so writing them synchronously inside `firstUpdated()`
+    // -- after this same update has already been marked complete -- trips Lit's "scheduled an
+    // update after an update completed" dev warning. A real `slotchange` event runs this same
+    // collection from a task/microtask entirely outside the update cycle, which never trips it;
+    // queuing a microtask here reproduces that same "outside the cycle" timing instead. Still
+    // guaranteed to land before any caller's own `await el.updateComplete` continuation, which joins
+    // the microtask queue behind this one.
+    const markerIconSlot = this.markerIconSlot;
+    const timestampSlot = this.timestampSlotEl;
+    const descriptionSlot = this.descriptionSlotEl;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(markerIconSlot, (s) => this.collectIconSlotAssignment(s));
+      collectInitialSlotAssignment(timestampSlot, (s) => this.collectTimestampSlotAssignment(s));
+      collectInitialSlotAssignment(descriptionSlot, (s) => this.collectDescriptionSlotAssignment(s));
+    });
+  }
 
   override render(): TemplateResult {
     if (this.clusterPresentation) {

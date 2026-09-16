@@ -10,6 +10,7 @@ import { styles } from './icon-button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute } from '../../../internal/safe-svg.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -262,6 +263,8 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   /** Native anchor download filename; also selects the stricter download URL allowlist. */
   @property() download?: string;
   @query('[part~="button"]') private baseEl?: HTMLButtonElement | HTMLAnchorElement;
+  // The default slot carrying icon/geometry content -- read once from `firstUpdated()` in
+  // addition to its own `@slotchange` listener; see `collectInitialSlotAssignment`'s doc.
   @query('slot') private slotEl?: HTMLSlotElement;
   @query('[part="fallback"]') private fallbackSvgEl?: SVGSVGElement;
   /** Only ever true when `icon` is unset and at least one top-level slotted element is bare SVG
@@ -314,14 +317,52 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     relayNativeEvent(this, event);
   };
 
-  private onSlotChange = (): void => {
-    const assigned = this.slotEl?.assignedElements({ flatten: true }) ?? [];
-    this.hasBareGeometry = assigned.some((el) => needsSvgNamespaceFallback(el));
+  private onSlotChange = (e: Event): void => {
+    this.onSlotChangeFromSlot(e.target as HTMLSlotElement);
   };
+
+  /**
+   * Reads the default slot's currently assigned elements and recomputes whether the SVG-namespace
+   * fallback is needed -- wired as the `slotchange` handler (via `onSlotChange`) for every later
+   * mutation, and called once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to
+   * cover an environment, or a real-browser timing race, where the slot's initial assignment never
+   * fires `slotchange`. A pure recomputation over the slot's current assignment (no incremental or
+   * seeding side effect), so calling it a second time with the same assigned elements is naturally
+   * idempotent.
+   */
+  private onSlotChangeFromSlot(slot: HTMLSlotElement): void {
+    const assigned = slot.assignedElements({ flatten: true });
+    this.hasBareGeometry = assigned.some((el) => needsSvgNamespaceFallback(el));
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.syncDescribedByElements();
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed); // no-op in LyraElement/ReactiveElement today, but a future
+    // mixin's firstUpdated() layered under this class must still run.
+    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
+    // see `collectInitialSlotAssignment`'s own doc -- so an <lr-icon-button> whose slotted bare SVG
+    // geometry already exists at connect (the ordinary "render once data is ready" Lit pattern)
+    // would otherwise never mount the `[part="fallback"]` SVG. Collect once here too, from the
+    // slot's current assignment; `onSlotChangeFromSlot()` is a pure recomputation with no seeding
+    // side effect, so a real browser firing the initial event as well is naturally idempotent.
+    // Deferred a microtask, mirroring `lr-select`/`lr-combobox`'s identical fix: `hasBareGeometry`
+    // is reactive, so writing it synchronously inside `firstUpdated()` -- after this same update
+    // has already been marked complete -- trips Lit's "scheduled an update after an update
+    // completed" dev warning. A real `slotchange` event runs this same collection from a
+    // task/microtask entirely outside the update cycle, which never trips it; queuing a microtask
+    // here reproduces that same "outside the cycle" timing instead of writing `hasBareGeometry`
+    // from inside it. Still guaranteed to land before any caller's own `await el.updateComplete`
+    // continuation: that continuation is queued only once this update's promise resolves, later in
+    // this same synchronous turn, so it always joins the microtask queue behind the one queued
+    // here.
+    const slot = this.slotEl;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, (s) => this.onSlotChangeFromSlot(s));
+    });
   }
 
   override disconnectedCallback(): void {

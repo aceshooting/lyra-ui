@@ -1,7 +1,8 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
@@ -159,6 +160,10 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
 
   @state() private hasHeadingSlot = false;
   @state() private hasHeaderActionsSlot = false;
+  // happy-dom never fires a slot's INITIAL `slotchange` (only a later mutation), so these two are
+  // also collected once from `firstUpdated()` -- see `collectInitialSlotAssignment`'s doc.
+  @query('slot[name="heading"]') private headingSlot?: HTMLSlotElement;
+  @query('slot[name="header-actions"]') private headerActionsSlot?: HTMLSlotElement;
 
   private readonly headingId = nextId('app-rail-group-heading');
   private readonly contentId = nextId('app-rail-group-content');
@@ -186,6 +191,26 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncOwnedItems();
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- only a
+    // later mutation to an already-connected slot -- so `hasHeadingSlot`/`hasHeaderActionsSlot`
+    // would otherwise stay `false` forever for a group whose `heading`/`header-actions` children
+    // already exist at connect. Collect once here too, from each slot's current assignment;
+    // `applyHeadingSlotPresence()`/`applyHeaderActionsSlotPresence()` recompute the same boolean
+    // from scratch every time, so a real browser also firing the initial event contributes no
+    // duplicate side effect. Deferred a microtask for the same reason `select.class.ts`'s own
+    // `firstUpdated()` defers: `hasHeadingSlot`/`hasHeaderActionsSlot` are reactive `@state()`, and
+    // writing one synchronously here -- after this same update has already been marked complete --
+    // would trip Lit's "scheduled an update after an update completed" dev warning.
+    const headingSlot = this.headingSlot;
+    const headerActionsSlot = this.headerActionsSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(headingSlot, (s) => this.applyHeadingSlotPresence(s));
+      collectInitialSlotAssignment(headerActionsSlot, (s) => this.applyHeaderActionsSlotPresence(s));
+    });
   }
 
   /** Mirrors this group's `icon-only` state onto every `<lr-app-rail-item>` and nested
@@ -226,16 +251,23 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
    *  only once something really is assigned, which still resolves a consumer's forwarding
    *  `<slot>` down to its own (possibly empty) content. */
   private onHeadingSlotChange = (event: Event): void => {
-    const slot = event.target as HTMLSlotElement;
-    this.hasHeadingSlot =
-      slot.assignedNodes().length > 0 && slot.assignedNodes({ flatten: true }).length > 0;
+    this.applyHeadingSlotPresence(event.target as HTMLSlotElement);
   };
 
+  private applyHeadingSlotPresence(slot: HTMLSlotElement): void {
+    this.hasHeadingSlot =
+      slot.assignedNodes().length > 0 && slot.assignedNodes({ flatten: true }).length > 0;
+  }
+
   private onHeaderActionsSlotChange = (event: Event): void => {
-    this.hasHeaderActionsSlot = (event.target as HTMLSlotElement)
+    this.applyHeaderActionsSlotPresence(event.target as HTMLSlotElement);
+  };
+
+  private applyHeaderActionsSlotPresence(slot: HTMLSlotElement): void {
+    this.hasHeaderActionsSlot = slot
       .assignedNodes({ flatten: true })
       .some((node) => node.nodeType !== 3 || (node.textContent ?? '').trim() !== '');
-  };
+  }
 
   private onContentSlotChange = (): void => {
     this.syncOwnedItems();

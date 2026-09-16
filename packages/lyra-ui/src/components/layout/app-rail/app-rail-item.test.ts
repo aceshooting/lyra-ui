@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from "@open-wc/testing";
 import "./app-rail-item.js";
 import "./app-rail.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
@@ -1588,5 +1588,82 @@ describe('nested children (treeitem-with-link)', () => {
     expect(
       (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
     ).to.equal('Replier Projects');
+  });
+});
+
+describe('collecting already-slotted meta/end content without relying on the initial slotchange', () => {
+  function slotted(): { el: LyraAppRailItem; meta: HTMLSpanElement; end: HTMLSpanElement } {
+    const meta = document.createElement('span');
+    meta.slot = 'meta';
+    meta.textContent = 'meta text';
+    const end = document.createElement('span');
+    end.slot = 'end';
+    end.textContent = 'end text';
+    const el = document.createElement('lr-app-rail-item') as LyraAppRailItem;
+    el.append(meta, end);
+    return { el, meta, end };
+  }
+
+  it('populates hasMetaSlot/hasEndSlot when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow every such event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to each `<slot>` itself,
+    // before that slot's own bubble-phase `@slotchange` binding ever sees it.
+    const { el } = slotted();
+    document.body.append(el);
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire each named slot's own initial slotchange -- this test suppresses them to reproduce happy-dom, which never fires either at all"
+      ).to.equal(2);
+      expect(
+        el.shadowRoot!.querySelector('[part="meta"]')!.hasAttribute('hidden'),
+        "firstUpdated() collected the already-slotted meta content, with no slotchange ever reaching the component's own listener"
+      ).to.equal(false);
+      expect(
+        el.shadowRoot!.querySelector('[part="end"]')!.hasAttribute('hidden'),
+        "firstUpdated() collected the already-slotted end content, with no slotchange ever reaching the component's own listener"
+      ).to.equal(false);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not change the result', async () => {
+    // No interception here -- both firstUpdated()'s own call and the real, un-suppressed initial
+    // slotchange events fire for the same batch. The diagnostic listener below proves the real
+    // firing actually happened, so this test exercises the double-invocation path it claims to.
+    const { el } = slotted();
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      () => realSlotchangeCount++,
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange events must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      expect(el.shadowRoot!.querySelector('[part="meta"]')!.hasAttribute('hidden')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="end"]')!.hasAttribute('hidden')).to.equal(false);
+    } finally {
+      el.remove();
+    }
   });
 });

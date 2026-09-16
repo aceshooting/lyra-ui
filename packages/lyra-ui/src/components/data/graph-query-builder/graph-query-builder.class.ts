@@ -1,10 +1,11 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { closeIcon } from '../../../internal/icons.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -475,6 +476,12 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   @state() private saveName = '';
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
+  // Read once more from `firstUpdated()` in addition to each slot's own `@slotchange` listener --
+  // see `collectInitialSlotAssignment`'s doc: happy-dom never fires a slot's INITIAL `slotchange`,
+  // so a builder whose hint/error children already exist at connect (the ordinary "render once data
+  // is ready" Lit pattern) would otherwise leave these two booleans false forever.
+  @query('slot[name="hint"]') private hintSlotEl?: HTMLSlotElement;
+  @query('slot[name="error"]') private errorSlotEl?: HTMLSlotElement;
 
   private readonly labelId = nextId('graph-query-builder-label');
   private readonly hintId = nextId('graph-query-builder-hint');
@@ -997,15 +1004,47 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return [...options].sort((a, b) => a - b);
   }
 
+  /**
+   * Also called once from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
+   * environment, or a real-browser timing race, where a slot's initial assignment never fires
+   * `slotchange`. Idempotent: re-reading the same still-assigned nodes just re-derives the same
+   * boolean, so running once from `firstUpdated()` and again from a real initial `slotchange` (every
+   * real-browser connect) produces no duplicate side effect.
+   */
   private onChromeSlotChange = (event: Event): void => {
-    const slot = event.currentTarget as HTMLSlotElement;
+    this.collectChromeSlotAssignment(event.currentTarget as HTMLSlotElement);
+  };
+
+  private collectChromeSlotAssignment(slot: HTMLSlotElement): void {
     const hasContent = slot
       .assignedNodes({ flatten: true })
       .some((node) =>
         node.nodeType === Node.TEXT_NODE ? Boolean(node.textContent?.trim()) : true);
     if (slot.name === 'hint') this.hasHintSlot = hasContent;
     else if (slot.name === 'error') this.hasErrorSlot = hasContent;
-  };
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
+    // `collectInitialSlotAssignment`'s own doc -- so a builder whose hint/error children already
+    // exist at connect (the ordinary "render once data is ready" Lit pattern) would otherwise leave
+    // `hasHintSlot`/`hasErrorSlot` false forever, even though the slot truly has content. Collect
+    // once here too, from each slot's current assignment. Deferred a microtask, mirroring
+    // `select.class.ts`'s identical fix: these are reactive `@state` fields, so writing them
+    // synchronously inside `firstUpdated()` -- after this same update has already been marked
+    // complete -- trips Lit's "scheduled an update after an update completed" dev warning. A real
+    // `slotchange` event runs this same collection from a task/microtask entirely outside the update
+    // cycle, which never trips it; queuing a microtask here reproduces that same "outside the cycle"
+    // timing instead. Still guaranteed to land before any caller's own `await el.updateComplete`
+    // continuation, which joins the microtask queue behind this one.
+    const hintSlot = this.hintSlotEl;
+    const errorSlot = this.errorSlotEl;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(hintSlot, (s) => this.collectChromeSlotAssignment(s));
+      collectInitialSlotAssignment(errorSlot, (s) => this.collectChromeSlotAssignment(s));
+    });
+  }
 
   private labelForType(options: readonly GraphQueryTypeOption[], value: string): string {
     return options.find((o) => o.value === value)?.label ?? value;

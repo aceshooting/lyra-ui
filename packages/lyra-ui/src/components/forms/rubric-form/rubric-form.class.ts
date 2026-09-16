@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -9,6 +9,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { styles } from './rubric-form.styles.js';
 import type { LyraSegmentedItem } from '../../layout/segmented/segmented.class.js';
 import type { LyraSelect } from '../select/select.class.js';
@@ -506,6 +507,11 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
+  // The aggregate label/hint/error slots -- read once from `firstUpdated()` in addition to their
+  // own `@slotchange` listener; see `collectInitialSlotAssignment`'s own doc.
+  @query('slot[name="label"]') private aggregateLabelSlotEl?: HTMLSlotElement;
+  @query('slot[name="hint"]') private aggregateHintSlotEl?: HTMLSlotElement;
+  @query('slot[name="error"]') private aggregateErrorSlotEl?: HTMLSlotElement;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -964,14 +970,24 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   };
 
   private onAggregateSlotChange = (event: Event): void => {
-    const slot = event.target as HTMLSlotElement;
+    this.applyAggregateSlotAssignment(event.target as HTMLSlotElement);
+  };
+  /**
+   * Reads one aggregate label/hint/error slot's currently assigned content and applies it --
+   * wired as the `slotchange` handler (via `onAggregateSlotChange`) for every later mutation, and
+   * called once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
+   * environment, or a real-browser timing race, where the slot's initial assignment never fires
+   * `slotchange`. Idempotent: re-deriving the same boolean from the same assigned-node set
+   * produces the same result on a second call.
+   */
+  private applyAggregateSlotAssignment(slot: HTMLSlotElement): void {
     const populated = slot.assignedNodes({ flatten: true }).some(
       (node) => node.nodeType === Node.ELEMENT_NODE || Boolean(node.textContent?.trim()),
     );
     if (slot.name === 'label') this.hasLabelSlot = populated;
     else if (slot.name === 'hint') this.hasHintSlot = populated;
     else if (slot.name === 'error') this.hasErrorSlot = populated;
-  };
+  }
 
   private markTouched(key: string): void {
     if (this.effectiveDisabled || this.touchedFields.has(key)) return;
@@ -1050,6 +1066,30 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     super.adoptedCallback();
     this.releaseExternalDescription();
     if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
+    // `collectInitialSlotAssignment`'s own doc -- so an aggregate label/hint/error child already
+    // slotted at connect (the ordinary "render once data is ready" Lit pattern) would otherwise
+    // leave `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` at their `false` default, hiding real
+    // slotted content behind `?hidden` and omitting it from `aria-describedby`. Collect once here
+    // too; re-deriving the same boolean from the same assigned-node set is trivially idempotent
+    // against a real browser also firing the initial event.
+    // Deferred a microtask, mirroring `<lr-select>`'s identical `firstUpdated()` collection:
+    // these are reactive `@state` fields, so writing them synchronously here -- after this same
+    // update has already been marked complete -- trips Lit's dev "scheduled an update after an
+    // update completed" warning. A real slotchange fires from outside the update cycle entirely;
+    // queuing a microtask reproduces that same timing instead of writing from inside the cycle.
+    const labelSlot = this.aggregateLabelSlotEl;
+    const hintSlot = this.aggregateHintSlotEl;
+    const errorSlot = this.aggregateErrorSlotEl;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(labelSlot, (slot) => this.applyAggregateSlotAssignment(slot));
+      collectInitialSlotAssignment(hintSlot, (slot) => this.applyAggregateSlotAssignment(slot));
+      collectInitialSlotAssignment(errorSlot, (slot) => this.applyAggregateSlotAssignment(slot));
+    });
   }
 
   protected override updated(changed: PropertyValues): void {

@@ -534,6 +534,106 @@ describe('lr-copy-button', () => {
     expect(writes).to.deep.equal(['custom trigger']);
   });
 
+  describe('collecting an already-slotted custom trigger without relying on the initial slotchange', () => {
+    it('hides the built-in button and forwards activation to the custom trigger when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+      // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+      // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+      // happy-dom condition deterministically here, swallow that one event with a capture-phase
+      // listener on the render root: capture-phase fires on the way down to the <slot> itself,
+      // before the slot's own bubble-phase `@slotchange` binding (`onDefaultSlotChange`) ever sees it.
+      const trigger = document.createElement('button');
+      trigger.id = 'custom-copy-trigger';
+      trigger.type = 'button';
+      trigger.textContent = 'Copy custom value';
+      const el = document.createElement('lr-copy-button') as LyraCopyButton;
+      el.value = 'custom trigger value';
+      el.append(trigger);
+      document.body.append(el);
+      // Synchronously after connect: `renderRoot` already exists (created in the constructor,
+      // before the first render), well before the browser can dispatch the initial event.
+      let intercepted = 0;
+      el.renderRoot!.addEventListener(
+        'slotchange',
+        (e) => {
+          intercepted++;
+          e.stopImmediatePropagation();
+        },
+        { capture: true, once: true }
+      );
+      try {
+        await el.updateComplete;
+        // Give a real initial slotchange (queued around slot assignment) time to arrive and be
+        // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
+        await aTimeout(50);
+        expect(
+          intercepted,
+          "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
+        ).to.equal(1);
+        expect(
+          el.shadowRoot!.querySelectorAll('[part~="button"]').length,
+          "firstUpdated() collected the already-slotted custom trigger, so the built-in icon-button never rendered, with no slotchange ever reaching the component's own listener"
+        ).to.equal(0);
+        const copied = oneEvent(el, 'lr-copy');
+        el.click();
+        await copied;
+        expect(writes).to.deep.equal(['custom trigger value']);
+      } finally {
+        el.remove();
+      }
+    });
+
+    it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not double-apply or re-notify', async () => {
+      // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed
+      // initial `slotchange` fire for the same batch. The diagnostic listener below proves the
+      // second (real) firing actually happened, so this test exercises the double-invocation path
+      // it claims to, rather than accidentally passing because the browser only fired the event
+      // once (or fixture timing let `firstUpdated()` win a race that never actually repeats).
+      const trigger = document.createElement('button');
+      trigger.id = 'custom-copy-trigger';
+      trigger.type = 'button';
+      trigger.textContent = 'Copy custom value';
+      const el = document.createElement('lr-copy-button') as LyraCopyButton;
+      el.value = 'custom trigger value';
+      el.append(trigger);
+      let toolbarActionsChanges = 0;
+      el.addEventListener('lr-toolbar-actions-change', () => toolbarActionsChanges++);
+      document.body.append(el);
+      let realSlotchangeCount = 0;
+      el.renderRoot!.addEventListener(
+        'slotchange',
+        () => realSlotchangeCount++,
+        { capture: true }
+      );
+      try {
+        await el.updateComplete;
+        await aTimeout(50);
+        expect(
+          realSlotchangeCount,
+          'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
+        ).to.be.greaterThan(0);
+        // Same outcome as the suppressed-event test above: exactly one custom trigger recognized,
+        // no duplicated built-in button. Two -- not three -- `lr-toolbar-actions-change` events are
+        // expected: `updated()` always emits once on the very first render (every declared
+        // property, including `disabled`, counts as "changed" on that first update, independent of
+        // any custom trigger), plus once more when `hasCustomTrigger` actually flips false -> true.
+        // A THIRD would mean the duplicate collection call over the same unchanged assignment
+        // landed its own manual emit on top of those two -- exactly the double-invocation defect
+        // `lastObservedTrigger`'s identity check exists to prevent.
+        expect(el.shadowRoot!.querySelectorAll('[part~="button"]').length).to.equal(0);
+        expect(
+          toolbarActionsChanges,
+          'no third lr-toolbar-actions-change from the duplicate collection call over an unchanged assignment'
+        ).to.equal(2);
+        const copied = oneEvent(el, 'lr-copy');
+        el.click();
+        await copied;
+        expect(writes).to.deep.equal(['custom trigger value']);
+      } finally {
+        el.remove();
+      }
+    });
+  });
+
   it('exposes one stable logical copy action backed by the active trigger', async () => {
     const el = (await fixture(html`<lr-copy-button value="toolbar"></lr-copy-button>`)) as LyraCopyButton;
     const button = baseButton(el);

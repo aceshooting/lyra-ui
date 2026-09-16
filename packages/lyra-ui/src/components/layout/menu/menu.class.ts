@@ -1,5 +1,5 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import {
   LyraElement,
@@ -11,6 +11,7 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
@@ -317,6 +318,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   // both only drive imperative side effects (applyRovingTabIndex()/.focus()).
   private items: LyraMenuItem[] = [];
   private activeIndex = -1;
+  // happy-dom never fires the default slot's INITIAL `slotchange` (only a later mutation), so the
+  // slot's current assignment is also collected once from `firstUpdated()` -- see
+  // `collectInitialSlotAssignment`'s doc.
+  @query('slot:not([name])') private itemsSlot?: HTMLSlotElement;
 
   private cleanup?: DeferredOperationHandle;
   private presentationPositioned = false;
@@ -407,6 +412,24 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // attributes, so seed them once from the real slots after the first render.
     this.syncRegionState();
     this.syncPresentationState();
+    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange`
+    // either -- see `collectInitialSlotAssignment`'s own doc -- so `this.items` (the menu's own
+    // item registry, driving keyboard navigation, roving tabindex, and the default active item)
+    // would otherwise stay empty forever for a menu whose `<lr-menu-item>` children already exist
+    // at connect: `syncItemsFromSlot()` runs exclusively from `onItemsSlotChange` today, and
+    // `connectedCallback()`'s own reconnect refresh only re-runs it once `hasUpdated` is already
+    // true. Collect once here too, from the slot's current assignment. `items`/`activeIndex` are
+    // plain fields, not reactive (see their own doc), so writing them here carries none of
+    // `select.class.ts`'s "scheduled an update after an update completed" risk -- but the
+    // collection is still deferred a microtask, matching every sibling fix in this sweep, so a
+    // real browser's own initial `slotchange` (which fires asynchronously, outside this update)
+    // always lands through the exact same code path rather than a special synchronous one.
+    // `syncItemsFromSlot()`'s own leading identity/order check makes the second call, when a real
+    // `slotchange` also fires for this same batch, a no-op.
+    const slot = this.itemsSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, (s) => this.syncItemsFromSlot(s));
+    });
   }
 
   /** A root mapped menu is inline; only an owning menu item installs the private submenu shell. */
@@ -633,6 +656,27 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   };
 
   private syncItemsFromSlot(slot: HTMLSlotElement): void {
+    const assigned = slot
+      .assignedElements({ flatten: true })
+      .filter(isLyraMenuItemElement);
+    // Idempotent against being invoked twice for the very same slot assignment -- once from
+    // `firstUpdated()`'s initial-slot-collection catch-up, and again from a real browser's own
+    // initial `slotchange` for that same batch (see `collectInitialSlotAssignment`'s doc). Without
+    // this guard the second call's `activeItemLostFocus` bookkeeping below would misread an
+    // already-settled active item as one that "lost focus" during a reorder it never actually
+    // underwent -- on the first call `previouslyActive` is `undefined` (nothing was active yet),
+    // but by the second call it is already the item `syncPresentationState()` picked as the
+    // default active item, so the identical heuristic that correctly recovers focus after a real
+    // reorder would instead steal focus onto that item the moment ANYTHING else queries the
+    // document's active element, even though nothing was ever focused and this pass changes
+    // nothing. An ordinary later mutation (an item genuinely added/removed/reordered) always
+    // changes this comparison and is unaffected.
+    if (
+      assigned.length === this.items.length &&
+      assigned.every((item, index) => item === this.items[index])
+    ) {
+      return;
+    }
     this.itemStateObserver?.disconnect();
     const previousItems = this.items;
     // A bounds check can't survive membership changes: adding, removing or
@@ -648,9 +692,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         focusedBefore === this.ownerDocument.body ||
         focusedBefore === previouslyActive ||
         composedContains(previouslyActive!, focusedBefore));
-    this.items = slot
-      .assignedElements({ flatten: true })
-      .filter(isLyraMenuItemElement);
+    this.items = assigned;
     for (const item of previousItems) {
       if (!this.items.includes(item)) this.releaseItemOwner(item);
     }

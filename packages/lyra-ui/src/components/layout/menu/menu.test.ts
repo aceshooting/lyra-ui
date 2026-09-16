@@ -1,4 +1,5 @@
 import {
+  aTimeout,
   expect,
   fixture,
   html,
@@ -1283,4 +1284,91 @@ it('applies the same two names to a submenu surface', async () => {
     resolvedInShadow(menu, '6rem'),
     'a narrowed menu whose submenus stayed 20rem would be half a hook'
   );
+});
+
+describe('collecting already-slotted items without relying on the initial slotchange', () => {
+  function slotted(): { el: LyraMenu; items: LyraMenuItem[] } {
+    const el = document.createElement('lr-menu') as LyraMenu;
+    el.label = 'Row actions';
+    const items = ['rename', 'duplicate', 'delete'].map((value) => {
+      const item = document.createElement('lr-menu-item') as LyraMenuItem;
+      item.value = value;
+      item.textContent = value;
+      return item;
+    });
+    el.append(...items);
+    return { el, items };
+  }
+
+  it('populates the roving tabindex when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow that one event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to the <slot> itself,
+    // before the slot's own bubble-phase `@slotchange` binding ever sees it.
+    const { el, items } = slotted();
+    document.body.append(el);
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true, once: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
+      ).to.equal(1);
+      expect(
+        items[0]!.tabIndex,
+        "firstUpdated() collected the already-slotted items and applied the default roving tab stop, with no slotchange ever reaching the component's own listener"
+      ).to.equal(0);
+      expect(items[1]!.tabIndex).to.equal(-1);
+      expect(items[2]!.tabIndex).to.equal(-1);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not steal focus onto the default active item', async () => {
+    // No interception here -- both firstUpdated()'s own call and the real, un-suppressed initial
+    // slotchange fire for the same batch. The diagnostic listener below proves the second (real)
+    // firing actually happened, so this test exercises the double-invocation path it claims to.
+    // Without `syncItemsFromSlot()`'s own leading identity/order guard, the second call's
+    // `activeItemLostFocus` bookkeeping misreads the already-settled default active item as one
+    // that "lost focus" during a reorder it never underwent, and calls `.focus()` on it even
+    // though nothing in this test ever focused anything.
+    const { el, items } = slotted();
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      () => realSlotchangeCount++,
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      expect(items[0]!.tabIndex, 'the same default active item as the single-call case').to.equal(0);
+      expect(items[1]!.tabIndex).to.equal(-1);
+      const stoleFocus = items.some(
+        (item) => document.activeElement === item || item.shadowRoot?.contains(document.activeElement)
+      );
+      expect(
+        stoleFocus,
+        'the redundant second pass over an unchanged item set must not call .focus() on anything'
+      ).to.equal(false);
+    } finally {
+      el.remove();
+    }
+  });
 });

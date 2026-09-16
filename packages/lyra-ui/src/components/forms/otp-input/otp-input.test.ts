@@ -2089,3 +2089,93 @@ describe('value/length assignment order (regression)', () => {
     expect(el.value).to.equal('12345678');
   });
 });
+
+describe('collecting an already-slotted label/hint/error without relying on the initial slotchange', () => {
+  it('shows the already-slotted label when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow that one event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to the <slot> itself,
+    // before the slot's own bubble-phase `@slotchange` binding (`onLabelSlotChange`) ever sees it.
+    const labelSpan = document.createElement('span');
+    labelSpan.slot = 'label';
+    labelSpan.textContent = 'Verification code';
+    const el = document.createElement('lr-otp-input') as LyraOtpInput;
+    el.append(labelSpan);
+    document.body.append(el);
+    // Synchronously after connect: `renderRoot` already exists (created in the constructor,
+    // before the first render), well before the browser can dispatch the initial event.
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true, once: true },
+    );
+    try {
+      await el.updateComplete;
+      // Give a real initial slotchange (queued around slot assignment) time to arrive and be
+      // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all",
+      ).to.equal(1);
+      const label = partOf(el, 'label');
+      expect(
+        label.hidden,
+        "firstUpdated() collected the already-slotted label content, so the label wrapper is not hidden, with no slotchange ever reaching the component's own listener",
+      ).to.equal(false);
+      expect(controlOf(el).getAttribute('aria-labelledby')).to.equal(label.id);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection leaves the label/hint/error state unchanged', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed
+    // initial `slotchange` fire for the same batch. The diagnostic listener below proves the
+    // second (real) firing actually happened, so this test exercises the double-invocation path
+    // it claims to, rather than accidentally passing because the browser only fired the event
+    // once.
+    const labelSpan = document.createElement('span');
+    labelSpan.slot = 'label';
+    labelSpan.textContent = 'Verification code';
+    const hintSpan = document.createElement('span');
+    hintSpan.slot = 'hint';
+    hintSpan.textContent = 'Sent by SMS';
+    const el = document.createElement('lr-otp-input') as LyraOtpInput;
+    el.append(labelSpan, hintSpan);
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation',
+      ).to.be.greaterThan(0);
+      const label = partOf(el, 'label');
+      const hint = partOf(el, 'hint');
+      // `.textContent` on the wrapper would not see the slotted content either way -- a `<slot>`
+      // does not reparent its assigned nodes into its own DOM children, only projects them for
+      // rendering -- so the meaningful, fix-specific assertion is the `hidden` state (and the
+      // aria wiring it drives), not the wrapper's own text.
+      expect(label.hidden, 'label stays shown, not flipped back off by the second (real) collection').to.equal(false);
+      expect(hint.hidden, 'hint stays shown, not flipped back off by the second (real) collection').to.equal(false);
+      expect(controlOf(el).getAttribute('aria-labelledby')).to.equal(label.id);
+      expect(controlOf(el).getAttribute('aria-describedby')!.split(/\s+/)).to.include(hint.id);
+      expect(
+        requiredItem(label.querySelector('slot')!.assignedElements(), 0, 'assigned label element').textContent,
+      ).to.equal('Verification code');
+      expect(
+        requiredItem(hint.querySelector('slot')!.assignedElements(), 0, 'assigned hint element').textContent,
+      ).to.equal('Sent by SMS');
+    } finally {
+      el.remove();
+    }
+  });
+});

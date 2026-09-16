@@ -19,6 +19,7 @@ import {
 } from '../../../internal/native-event-relay.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel } from '../../../internal/default-strings.generated.js';
@@ -258,6 +259,11 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @state() private touched = false;
 
   @query('[part="control"]') private control?: HTMLInputElement;
+  // The label/hint/error slots -- read once from `firstUpdated()` in addition to their own
+  // `@slotchange` listeners; see `collectInitialSlotAssignment`'s own doc.
+  @query('slot[name="label"]') private labelSlotEl?: HTMLSlotElement;
+  @query('slot[name="hint"]') private hintSlotEl?: HTMLSlotElement;
+  @query('slot[name="error"]') private errorSlotEl?: HTMLSlotElement;
 
   private readonly labelId = nextId('otp-input-label');
   private readonly hintId = nextId('otp-input-hint');
@@ -641,6 +647,26 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     // native focus event and changes `focused`, which Lit correctly diagnoses as an update that
     // was scheduled from inside the update it just completed.
     if (this.autofocus) this.scheduleAfterUpdate(() => this.focus(), 'otp-autofocus');
+    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
+    // `collectInitialSlotAssignment`'s own doc -- so a label/hint/error child already slotted at
+    // connect (the ordinary "render once data is ready" Lit pattern) would otherwise leave
+    // `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` at their `false` default, hiding real slotted
+    // content behind `?hidden` and omitting it from `aria-describedby`. Collect once here too;
+    // re-deriving the same boolean from the same assigned-node count is trivially idempotent
+    // against a real browser also firing the initial event.
+    // Deferred a microtask, mirroring `<lr-select>`'s identical `firstUpdated()` collection:
+    // these are reactive `@state` fields, so writing them synchronously here -- after this same
+    // update has already been marked complete -- trips Lit's dev "scheduled an update after an
+    // update completed" warning. A real slotchange fires from outside the update cycle entirely;
+    // queuing a microtask reproduces that same timing instead of writing from inside the cycle.
+    const labelSlot = this.labelSlotEl;
+    const hintSlot = this.hintSlotEl;
+    const errorSlot = this.errorSlotEl;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(labelSlot, (slot) => this.applyLabelSlotAssignment(slot));
+      collectInitialSlotAssignment(hintSlot, (slot) => this.applyHintSlotAssignment(slot));
+      collectInitialSlotAssignment(errorSlot, (slot) => this.applyErrorSlotAssignment(slot));
+    });
   }
 
   override adoptedCallback(): void {
@@ -844,14 +870,23 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   };
 
   private onLabelSlotChange = (event: Event): void => {
-    this.hasLabelSlot = (event.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
+    this.applyLabelSlotAssignment(event.target as HTMLSlotElement);
   };
   private onHintSlotChange = (event: Event): void => {
-    this.hasHintSlot = (event.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
+    this.applyHintSlotAssignment(event.target as HTMLSlotElement);
   };
   private onErrorSlotChange = (event: Event): void => {
-    this.hasErrorSlot = (event.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
+    this.applyErrorSlotAssignment(event.target as HTMLSlotElement);
   };
+  private applyLabelSlotAssignment(slot: HTMLSlotElement): void {
+    this.hasLabelSlot = slot.assignedNodes({ flatten: true }).length > 0;
+  }
+  private applyHintSlotAssignment(slot: HTMLSlotElement): void {
+    this.hasHintSlot = slot.assignedNodes({ flatten: true }).length > 0;
+  }
+  private applyErrorSlotAssignment(slot: HTMLSlotElement): void {
+    this.hasErrorSlot = slot.assignedNodes({ flatten: true }).length > 0;
+  }
 
   private renderSegment(index: number, invalid: boolean): TemplateResult {
     const char = this.segmentValues[index] ?? '';

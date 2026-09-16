@@ -7,12 +7,13 @@ import {
   type TemplateResult,
 } from 'lit';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import {
   composedParentElement,
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/a11y.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
@@ -352,6 +353,12 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   @state() private hasDetailsSlot = false;
   @state() private hasSuffixSlot = false;
 
+  // The details slot's own rendered element -- read once from `firstUpdated()` in addition to its
+  // `@slotchange` listener; see `collectInitialSlotAssignment`'s doc. `hasIconSlot`/`hasSuffixSlot`
+  // read light-DOM children directly (no dependency on the rendered slot), so they need no
+  // `@query` field of their own.
+  @query('slot[name="details"]') private detailsSlot?: HTMLSlotElement;
+
   // Reactive because the host's aria-haspopup/aria-expanded and the chevron all key off them.
   @state() private submenuAssigned = false;
   @state() private submenuExpanded = false;
@@ -669,12 +676,17 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   // `hasDetailsSlot` is a content check (does the assigned node have real text), not a plain
   // presence flag, so it stays on the live assigned-nodes snapshot rather than the light-DOM
   // attribute -- a light-DOM check cannot see text forwarded through a nested `<slot>` inside the
-  // assigned element.
+  // assigned element. Split into a thin event wrapper plus a slot-taking method so `firstUpdated()`
+  // can call the latter directly against the `@query`-bound slot -- see `collectInitialSlotAssignment`.
   private onDetailsSlotChange = (e: Event): void => {
-    this.hasDetailsSlot = (e.target as HTMLSlotElement)
+    this.syncDetailsSlot(e.target as HTMLSlotElement);
+  };
+
+  private syncDetailsSlot(slot: HTMLSlotElement): void {
+    this.hasDetailsSlot = slot
       .assignedNodes({ flatten: true })
       .some((node) => (node.textContent ?? '').trim() !== '');
-  };
+  }
 
   private onSuffixSlotChange = (): void => {
     this.hasSuffixSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'suffix');
@@ -902,6 +914,31 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       ) as SubmenuPanel | null;
       this.connectSubmenuPanel(generated);
     }
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
+    // `collectInitialSlotAssignment`'s own doc -- so an item whose icon/prefix, details, or suffix
+    // children already exist at connect (the ordinary "render once data is ready" Lit pattern)
+    // would otherwise keep those parts hidden forever under it. Collect once here too.
+    // `hasIconSlot`/`hasSuffixSlot` read light-DOM children directly, independent of the rendered
+    // slot, so they run unconditionally; `hasDetailsSlot` needs the details slot's own assigned
+    // nodes (see `syncDetailsSlot`'s doc), via `collectInitialSlotAssignment`. A real browser firing
+    // the initial event as well contributes no duplicate side effect: each of the three simply
+    // recomputes the same boolean.
+    // Deferred a microtask, mirroring `select.class.ts`'s identical `firstUpdated()`: these are
+    // reactive `@state` fields, and writing them synchronously here -- after this same update has
+    // already been marked complete -- trips Lit's dev "scheduled an update after an update
+    // completed" warning. A real `slotchange` event runs this same collection from a task/microtask
+    // entirely outside the update cycle, which never trips it; queuing a microtask here reproduces
+    // that same "outside the cycle" timing instead of writing state from inside it.
+    const detailsSlot = this.detailsSlot;
+    queueMicrotask(() => {
+      this.onIconSlotChange();
+      this.onSuffixSlotChange();
+      collectInitialSlotAssignment(detailsSlot, (s) => this.syncDetailsSlot(s));
+    });
   }
 
   /** The private submenu controller reports every state transition, including Escape, outside

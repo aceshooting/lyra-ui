@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
 import './graph-query-builder.js';
 import type {
   LyraGraphQueryBuilder,
@@ -1864,5 +1864,94 @@ describe("lr-graph-query-builder contains the composed controls' lr-activate", (
       document.removeEventListener('lr-activate', listener);
     }
     expect(escaped, "this component owns its own event surface; the child's raw event never escapes").to.equal(0);
+  });
+});
+
+describe('collecting already-slotted hint/error content without relying on the initial slotchange', () => {
+  function buildSlottedBuilder(): { el: LyraGraphQueryBuilder; hint: HTMLElement; error: HTMLElement } {
+    const hint = document.createElement('span');
+    hint.slot = 'hint';
+    hint.textContent = 'Pick a starting node';
+    const error = document.createElement('span');
+    error.slot = 'error';
+    error.textContent = 'Required';
+    const el = document.createElement('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    el.append(hint, error);
+    return { el, hint, error };
+  }
+
+  it('populates hasHintSlot/hasErrorSlot when every named slot\'s initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow every initial event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to each `<slot>` itself,
+    // before that slot's own bubble-phase `@slotchange` binding ever sees it. Three named slots
+    // share this handler (label, hint, error), but this fixture only assigns content to hint/error
+    // -- the label slot renders its own fallback text with nothing assigned to it, and (empirically
+    // verified against Chromium) an empty slot with nothing assigned fires no initial `slotchange`
+    // at all, in either environment, because its assigned-node list never actually changes. So only
+    // two initial events are expected here; this listener is NOT `{ once: true }` regardless, so it
+    // swallows both.
+    const { el } = buildSlottedBuilder();
+    document.body.append(el);
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      // Give the real initial slotchange events (queued around slot assignment) time to arrive and
+      // be swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        'a real browser does fire each populated named slot\'s own initial slotchange -- this test suppresses both of them to reproduce happy-dom, which never fires either'
+      ).to.equal(2);
+      const hintPart = el.shadowRoot!.querySelector('[part="hint"]')!;
+      expect(
+        hintPart.hasAttribute('hidden'),
+        "firstUpdated() collected the hint slot's already-assigned content with no slotchange ever reaching the component's own listener"
+      ).to.equal(false);
+      const errorPart = el.shadowRoot!.querySelector('[part="error"]')!;
+      expect(
+        errorPart.hasAttribute('hidden'),
+        "firstUpdated() collected the error slot's already-assigned content with no slotchange ever reaching the component's own listener"
+      ).to.equal(false);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: real slotchange events landing on top of the firstUpdated() collection do not change or corrupt the result', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed initial
+    // slotchange fire for the same slots. The diagnostic listener below proves the real firings
+    // actually happened, so this test exercises the double-invocation path it claims to, rather than
+    // accidentally passing because the browser only fired each event once (or fixture timing let
+    // `firstUpdated()` win a race that never actually repeats).
+    const { el } = buildSlottedBuilder();
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange events must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      // Same outcome as the suppressed-event test above: re-deriving each boolean from the same
+      // still-assigned nodes a second time changes nothing and throws nothing.
+      const hintPart = el.shadowRoot!.querySelector('[part="hint"]')!;
+      expect(hintPart.hasAttribute('hidden')).to.equal(false);
+      const errorPart = el.shadowRoot!.querySelector('[part="error"]')!;
+      expect(errorPart.hasAttribute('hidden')).to.equal(false);
+    } finally {
+      el.remove();
+    }
   });
 });

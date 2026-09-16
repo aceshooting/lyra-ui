@@ -1,7 +1,8 @@
 import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -144,6 +145,10 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   @state() private overflowHiddenAvatars: readonly LyraAvatar[] = Object.freeze(
     []
   );
+  // The default (unnamed) slot carrying `<lr-avatar>` children -- read once more from
+  // `firstUpdated()` in addition to its own `@slotchange` listener; see
+  // `collectInitialSlotAssignment`'s own doc.
+  @query('slot:not([name])') private avatarsSlot?: HTMLSlotElement;
   private assignedAvatars: readonly LyraAvatar[] = Object.freeze([]);
   private observedAvatars: readonly LyraAvatar[] = Object.freeze([]);
   private avatarObserver?: MutationObserver;
@@ -202,6 +207,31 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     } else if (changed.has('max')) {
       this.recomputeWindow();
     }
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // The seed above reads `this.children` directly, which is right for direct light-DOM avatars
+    // but UNDER-COUNTS when this element sits behind another component's forwarding `<slot>`: its
+    // own light children are then just that one forwarding `<slot>`, not the real projected
+    // `<lr-avatar>`s the group's own default slot flattens to. happy-dom (through at least
+    // 20.14.5) never fires the default slot's INITIAL `slotchange` either -- see
+    // `collectInitialSlotAssignment`'s own doc -- so an environment that never fires it would
+    // otherwise never correct the under-count. Collect once here too, from the slot's current
+    // (flattened) assignment; `onSlotChangeFromSlot()`/`reconcileAvatars()` are idempotent, so a
+    // real browser firing the initial event as well (the ordinary, already-covered case) or a
+    // forwarding host's own initial event contributes no duplicate side effect.
+    // Deferred a microtask, mirroring `lr-select`'s own `firstUpdated()`: `reconcileAvatars()`
+    // writes reactive `@state` (`eligibleAvatarCount`/`overflowHiddenAvatars`), and writing it
+    // synchronously here -- after this same update has already been marked complete -- trips
+    // Lit's "scheduled an update after an update completed" dev warning. A real `slotchange`
+    // event runs this same collection from a task/microtask entirely outside the update cycle,
+    // which never trips it; queuing a microtask here reproduces that same "outside the cycle"
+    // timing instead of writing state from inside it.
+    const slot = this.avatarsSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, (s) => this.onSlotChangeFromSlot(s));
+    });
   }
 
   override connectedCallback(): void {
@@ -452,12 +482,25 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   }
 
   private onSlotChange = (e: Event): void => {
-    const slot = e.target as HTMLSlotElement;
+    this.onSlotChangeFromSlot(e.target as HTMLSlotElement);
+  };
+
+  /**
+   * Reads the default slot's currently assigned children (flattened through any forwarding
+   * `<slot>`) and reconciles the avatar list -- wired as the `slotchange` handler (via
+   * `onSlotChange`) for every later mutation, and called once more from `firstUpdated()` (see
+   * `collectInitialSlotAssignment`) to cover a slot-forwarding host, or an environment, where the
+   * default slot's initial assignment never fires `slotchange`. `reconcileAvatars()` is already
+   * idempotent over an unchanged assigned-element set (it diffs by identity and guards every
+   * `@state` write with an equality check), so a real browser firing both this and the following
+   * genuine `slotchange` contributes no duplicate side effect.
+   */
+  private onSlotChangeFromSlot(slot: HTMLSlotElement): void {
     this.updateBrowserDerivedState(() => {
       if (!this.isConnected) return;
       this.reconcileAvatars(slot.assignedElements({ flatten: true }));
     });
-  };
+  }
 
   private onOverflowClick = (): void => {
     const hiddenAvatars = Object.freeze([...this.overflowHiddenAvatars]);

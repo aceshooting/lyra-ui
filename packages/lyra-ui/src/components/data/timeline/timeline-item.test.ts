@@ -1,4 +1,4 @@
-import { fixture, fixtureSync, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, fixtureSync, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './timeline-item.js';
 import type { LyraTimelineItem } from './timeline-item.js';
 import type { LyraRelativeTime } from '../../utility/format/relative-time.js';
@@ -299,4 +299,94 @@ it('renders correctly with no .strings/locale registered (this component introdu
   const el = (await fixture(html`<lr-timeline-item>Plain English render</lr-timeline-item>`)) as LyraTimelineItem;
   const slot = el.shadowRoot!.querySelector('[part="title"] slot') as HTMLSlotElement;
   expect(slot.assignedNodes({ flatten: true })[0]!.textContent).to.equal('Plain English render');
+});
+
+describe('collecting already-slotted marker-icon/timestamp/description content without relying on the initial slotchange', () => {
+  function buildSlottedItem(): { el: LyraTimelineItem; icon: HTMLElement; timestamp: HTMLElement; description: HTMLElement } {
+    const icon = document.createElement('span');
+    icon.slot = 'marker-icon';
+    icon.textContent = '★';
+    const timestamp = document.createElement('span');
+    timestamp.slot = 'timestamp';
+    timestamp.textContent = 'yesterday';
+    const description = document.createElement('span');
+    description.slot = 'description';
+    description.textContent = 'Details';
+    const el = document.createElement('lr-timeline-item') as LyraTimelineItem;
+    el.append(icon, timestamp, description);
+    return { el, icon, timestamp, description };
+  }
+
+  it('populates hasIconSlot/hasTimestampSlot/hasDescriptionSlot when every named slot\'s initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow every initial event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to each `<slot>` itself,
+    // before that slot's own bubble-phase `@slotchange` binding ever sees it. There are three named
+    // slots here (marker-icon, timestamp, description), each firing its own initial event in a real
+    // browser, so this listener is NOT `{ once: true }` -- it must swallow all three.
+    const { el } = buildSlottedItem();
+    document.body.append(el);
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      // Give the three real initial slotchange events (queued around slot assignment) time to
+      // arrive and be swallowed, so the assertions below only see whatever `firstUpdated()` alone
+      // collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        'a real browser does fire each named slot\'s own initial slotchange -- this test suppresses all of them to reproduce happy-dom, which never fires any of them'
+      ).to.equal(3);
+      const marker = el.shadowRoot!.querySelector('[part="marker"]')!;
+      expect(
+        marker.hasAttribute('data-has-icon'),
+        "firstUpdated() collected the marker-icon slot's already-assigned content with no slotchange ever reaching the component's own listener"
+      ).to.equal(true);
+      const timestampPart = el.shadowRoot!.querySelector('[part="timestamp"]')!;
+      expect(timestampPart.hasAttribute('hidden'), 'the timestamp slot is treated as populated').to.equal(false);
+      const descriptionPart = el.shadowRoot!.querySelector('[part="description"]')!;
+      expect(descriptionPart.hasAttribute('hidden'), 'the description slot is treated as populated').to.equal(false);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: real slotchange events landing on top of the firstUpdated() collection do not change or corrupt the result', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed initial
+    // slotchange fire for the same three slots. The diagnostic listener below proves the real
+    // firings actually happened, so this test exercises the double-invocation path it claims to,
+    // rather than accidentally passing because the browser only fired each event once (or fixture
+    // timing let `firstUpdated()` win a race that never actually repeats).
+    const { el } = buildSlottedItem();
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange events must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      // Same outcome as the suppressed-event test above: re-deriving each boolean from the same
+      // still-assigned elements a second time changes nothing and throws nothing.
+      const marker = el.shadowRoot!.querySelector('[part="marker"]')!;
+      expect(marker.hasAttribute('data-has-icon')).to.equal(true);
+      const timestampPart = el.shadowRoot!.querySelector('[part="timestamp"]')!;
+      expect(timestampPart.hasAttribute('hidden')).to.equal(false);
+      const descriptionPart = el.shadowRoot!.querySelector('[part="description"]')!;
+      expect(descriptionPart.hasAttribute('hidden')).to.equal(false);
+    } finally {
+      el.remove();
+    }
+  });
 });

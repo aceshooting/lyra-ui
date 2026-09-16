@@ -5133,6 +5133,89 @@ describe('coverage: config-slot JSON passthrough (onConfigSlotChange)', () => {
   });
 });
 
+describe('collecting an already-slotted config script without relying on the initial slotchange', () => {
+  it('reads the slotted config and lets effectiveConfig() see it when every real slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow every such event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to the <slot> itself,
+    // before the slot's own bubble-phase `@slotchange` binding (`onConfigSlotChange`) ever sees it.
+    // Unlike a static single-slot component, `<lr-chart>` starts `loading` and its `render()`
+    // swaps in a structurally distinct `slot.config-slot` element once the peer library resolves
+    // -- and a real browser fires its own "initial" slotchange for THAT new slot's assignment too.
+    // A `{ once: true }` listener would only swallow the first of those, leaving the second one
+    // free to reach `onConfigSlotChange` and mask whether `firstUpdated()`'s own collection is
+    // doing any work at all -- so this suppresses every occurrence for the whole test instead.
+    const script = document.createElement('script');
+    script.type = 'application/json';
+    script.textContent = JSON.stringify({ type: 'radar' });
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.append(script);
+    document.body.append(el);
+    // Synchronously after connect: `renderRoot` already exists (created in the constructor,
+    // before the first render), well before the browser can dispatch the initial event.
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      // Give every real slotchange (queued around slot assignment, including one from the
+      // loading -> loaded slot swap) time to arrive and be swallowed, so the assertions below
+      // only see whatever `firstUpdated()` alone collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire a slot's initial slotchange -- this test suppresses every occurrence to reproduce happy-dom, which never fires any of them"
+      ).to.be.greaterThan(0);
+      expect(
+        (el as any).slottedConfig,
+        "firstUpdated() collected the already-slotted config, with no slotchange ever reaching the component's own listener"
+      ).to.deep.equal({ type: 'radar' });
+      expect((el as any).effectiveConfig()).to.deep.equal({ type: 'radar' });
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection produces the same effectiveConfig()', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed
+    // initial `slotchange` fire for the same batch. The diagnostic listener below proves the
+    // second (real) firing actually happened, so this test exercises the double-invocation path
+    // it claims to, rather than accidentally passing because the browser only fired the event
+    // once (or timing let `firstUpdated()` win a race that never actually repeats).
+    const script = document.createElement('script');
+    script.type = 'application/json';
+    script.textContent = JSON.stringify({ type: 'radar' });
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.append(script);
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      () => realSlotchangeCount++,
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      expect((el as any).slottedConfig).to.deep.equal({ type: 'radar' });
+      expect((el as any).effectiveConfig()).to.deep.equal({ type: 'radar' });
+    } finally {
+      el.remove();
+    }
+  });
+});
+
 describe('coverage: resize/animation-frame and lifecycle defensive branches', () => {
   it('resolves resize width defensively (no entries) and gates its animation-frame draw on owner-window/connection state', async () => {
     const OriginalResizeObserver = window.ResizeObserver;

@@ -1,10 +1,11 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 import {
   composedParentElement,
   deepActiveElementIn,
 } from '../../../internal/active-element.js';
 import { isAccessibilitySubtreeExcluded } from '../../../internal/accessibility-visibility.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import {
   LyraElement,
   type LyraEventDetailSnapshot,
@@ -149,6 +150,10 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   #lastFocusedItem?: LyraAccordionItem;
   #availabilityObserver?: MutationObserver;
   #panelsInitialized = false;
+  // happy-dom never fires the default slot's INITIAL `slotchange` (only a later mutation), so the
+  // slot's current assignment is also collected once from `firstUpdated()` -- see
+  // `collectInitialSlotAssignment`'s doc.
+  @query('slot:not([name])') private itemsSlot?: HTMLSlotElement;
 
   /**
    * Controls whether one or multiple items can be expanded.
@@ -207,6 +212,29 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     this.#rovingItem = undefined;
     this.#lastFocusedItem = undefined;
     super.disconnectedCallback();
+  }
+
+  protected override firstUpdated(changed: PropertyValues<this>): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
+    // see `collectInitialSlotAssignment`'s own doc -- so an accordion whose `<lr-accordion-item>`
+    // children already exist at connect (the ordinary "render once data is ready" Lit pattern)
+    // would otherwise never populate `panels` at all: `#bindPanels()` runs exclusively from
+    // `#handleSlotChange` at first connect, and `connectedCallback()`'s own reconnect refresh only
+    // re-runs it once `hasUpdated` is already true. Collect once here too, from the slot's current
+    // assignment. `#bindPanels()` is already written to be called repeatedly -- the same reconnect
+    // path above calls it directly -- diffing the previous panel set by identity for ownership
+    // release, and its `#reconcileExpandedPanels()` single-panel-mode enforcement is a converge-to-
+    // invariant pass that finds nothing left to do on a second call over an unchanged panel set. So
+    // a real browser also firing the initial event contributes no duplicate side effect. Deferred a
+    // microtask for the same reason `select.class.ts`'s own `firstUpdated()` defers: `#bindPanels()`
+    // can expand/collapse a panel (a reactive `expanded` property), and doing so synchronously here
+    // -- after this same update has already been marked complete -- would trip Lit's "scheduled an
+    // update after an update completed" dev warning.
+    const slot = this.itemsSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, (s) => this.#bindPanelsFromSlot(s));
+    });
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -441,10 +469,12 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   }
 
   #handleSlotChange = (event: Event): void => {
-    this.#bindPanels(
-      (event.target as HTMLSlotElement).assignedElements({ flatten: true })
-    );
+    this.#bindPanelsFromSlot(event.target as HTMLSlotElement);
   };
+
+  #bindPanelsFromSlot(slot: HTMLSlotElement): void {
+    this.#bindPanels(slot.assignedElements({ flatten: true }));
+  }
 
   #handleOwnedItemStateChange = (item: LyraAccordionItem): void => {
     if (!this.panels.has(item)) return;

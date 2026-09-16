@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./carousel.js";
 import "./carousel-item.js";
 import type { LyraCarousel } from "./carousel.js";
@@ -3694,4 +3694,78 @@ it("fits a padded slide inside its own flex basis", async () => {
     track.clientWidth,
     0.5
   );
+});
+
+describe('collecting already-slotted slides without relying on the initial slotchange', () => {
+  function slotted(): { el: LyraCarousel; items: LyraCarouselItem[] } {
+    const el = document.createElement('lr-carousel') as LyraCarousel;
+    const items = [0, 1, 2].map((index) => {
+      const item = document.createElement('lr-carousel-item') as LyraCarouselItem;
+      item.textContent = `Slide ${index}`;
+      return item;
+    });
+    el.append(...items);
+    return { el, items };
+  }
+
+  it('populates slides and applies visibility state when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow that one event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to the <slot> itself,
+    // before the slot's own bubble-phase `@slotchange` binding ever sees it.
+    const { el, items } = slotted();
+    document.body.append(el);
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true, once: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
+      ).to.equal(1);
+      expect(
+        el.slides,
+        "firstUpdated() collected the already-slotted <lr-carousel-item> children, with no slotchange ever reaching the component's own listener"
+      ).to.equal(3);
+      expect(items[0]!.inert, 'the first slide is visible').to.equal(false);
+      expect(items[0]!.hasAttribute('aria-hidden')).to.equal(false);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not double-count slides', async () => {
+    // No interception here -- both firstUpdated()'s own call and the real, un-suppressed initial
+    // slotchange fire for the same batch. The diagnostic listener below proves the second (real)
+    // firing actually happened, so this test exercises the double-invocation path it claims to.
+    const { el, items } = slotted();
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      () => realSlotchangeCount++,
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      expect(el.slides, 'the slide count is not doubled by a second, redundant sync').to.equal(3);
+      expect(items[0]!.inert).to.equal(false);
+    } finally {
+      el.remove();
+    }
+  });
 });

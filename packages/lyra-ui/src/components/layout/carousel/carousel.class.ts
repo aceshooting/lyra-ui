@@ -11,6 +11,7 @@ import {
 } from '../../../internal/accessibility-visibility.js';
 import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
@@ -452,6 +453,29 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       const normalized = this.normalizedIndex();
       if (this.currentSlide !== normalized) this.currentSlide = normalized;
     }
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
+    // see `collectInitialSlotAssignment`'s own doc -- so `slides` (the public "live count of
+    // assigned slides") would otherwise stay 0 forever for a carousel whose `<lr-carousel-item>`
+    // children already exist at connect: `handleSlidesChanged()` -- the only place `_slides` is
+    // ever written -- runs exclusively from `onSlotChange` today, and `connectedCallback()`'s own
+    // reconnect refresh only re-runs it once `hasUpdated` is already true. Collect once here too;
+    // `handleSlidesChanged()` re-derives the count from the slot's live assignment and is already
+    // written to be idempotent (it compares `_slides` before writing, and every side effect it
+    // triggers -- `syncSlides()`, `syncLoopClones()`, `restartAutoplay()` -- is itself idempotent
+    // against an unchanged slide set), so a real browser also firing the initial event contributes
+    // no duplicate side effect. Deferred a microtask, through this file's own realm-safe
+    // `queueOwnerMicrotask()`, for the same reason `select.class.ts`'s own `firstUpdated()` defers:
+    // `handleSlidesChanged()` calls `requestUpdate()`, and doing so synchronously here -- after
+    // this same update has already been marked complete -- would trip Lit's "scheduled an update
+    // after an update completed" dev warning.
+    const slot = this.slideSlot;
+    this.queueOwnerMicrotask(() => {
+      collectInitialSlotAssignment(slot, () => this.handleSlidesChanged());
+    });
   }
 
   protected override updated(changed: PropertyValues): void {

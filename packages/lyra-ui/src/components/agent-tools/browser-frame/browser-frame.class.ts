@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -11,6 +11,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -181,6 +182,9 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) controls = true;
 
   private hasDefaultSlotContent = false;
+  // The unnamed default slot carrying fallback/live content -- read once from `firstUpdated()` in
+  // addition to its own `@slotchange` listener; see `collectInitialSlotAssignment`'s own doc.
+  @query('slot:not([name])') private defaultSlot?: HTMLSlotElement;
   /** The measured `object-fit: contain` content box of the `frame-src` `<img>`, in pixels relative
    *  to `[part='viewport']` -- `null` until the image has loaded and the viewport has a real size
    *  (e.g. no `frameSrc`, or the default slot is in use instead). Pings fall back to plain
@@ -255,6 +259,27 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.suppressNextStatusAnnouncement = false;
   }
 
+  protected override firstUpdated(changed: PropertyValues<this>): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
+    // see `collectInitialSlotAssignment`'s own doc -- so a `<lr-browser-frame>` whose fallback/live
+    // content already exists at connect (the ordinary "render once data is ready" Lit pattern)
+    // would otherwise report no default-slot content and wrongly render the `frame-src` `<img>`
+    // fallback on top of it. Collect once here too, from the slot's current assignment;
+    // `collectDefaultSlotContent()` is idempotent (it recomputes the same boolean from the same
+    // light-DOM children), so a real browser firing the initial event as well is a harmless
+    // no-op re-application. Deferred a microtask: `contentRect` is reactive, so writing it (via
+    // `collectDefaultSlotContent()`) synchronously inside `firstUpdated()` -- after this same
+    // update has already been marked complete -- trips Lit's "scheduled an update after an update
+    // completed" dev warning. A real `slotchange` event runs this same collection from a
+    // task/microtask entirely outside the update cycle, which never trips it; queuing a microtask
+    // here reproduces that same "outside the cycle" timing instead of writing from inside it.
+    const slot = this.defaultSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, () => this.collectDefaultSlotContent());
+    });
+  }
+
   private observeViewport(): void {
     const viewport = this.renderRoot.querySelector('[part="viewport"]');
     const ownerDocument = this.ownerDocument;
@@ -324,16 +349,25 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     });
   }
 
+  private onSlotChange = (): void => {
+    this.collectDefaultSlotContent();
+  };
+
   // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
   // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
   // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent fix),
   // even though the assigned child's own `slot` attribute never changed. An element with no
-  // `slot` attribute (or an empty one) is assigned to this unnamed default slot.
-  private onSlotChange = (): void => {
+  // `slot` attribute (or an empty one) is assigned to this unnamed default slot. Wired as the
+  // `slotchange` handler (via `onSlotChange`) for every later mutation, and called once more from
+  // `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an environment, or a
+  // real-browser timing race, where the slot's initial assignment never fires `slotchange`.
+  // Idempotent: recomputing the same boolean (and re-clearing the already-`null` `contentRect`)
+  // from the same light-DOM children a second time changes nothing observable.
+  private collectDefaultSlotContent(): void {
     this.hasDefaultSlotContent = Array.from(this.children).some((el) => !el.getAttribute('slot'));
     this.contentRect = null;
     this.requestUpdate();
-  };
+  }
 
   private onFrameLoad = (): void => {
     this.observeViewport();

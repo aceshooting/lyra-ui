@@ -9,6 +9,7 @@ import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import {
   loadChartJsWithZoom,
   loadChartJsWithZoomResult,
@@ -2219,6 +2220,26 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private onConfigSlotChange(event: Event): void {
     const slot = event.currentTarget as HTMLSlotElement;
+    // `render()` swaps in a structurally distinct `slot.config-slot` element when `loading`/
+    // `loadFailed` changes, discarding the previous one. A browser fires a *second*, spurious
+    // "slotchange" directly at that now-detached old slot once its assignment collapses to empty
+    // -- an "at target" firing that reaches this bound listener regardless of the node's removal,
+    // since it needs no live ancestor path. Left unguarded, that phantom empty event would
+    // overwrite an already-correct `slottedConfig` right back to `undefined`. Comparing against
+    // the CURRENT slot (`configSlotEl` is a live `@query`, re-read on every access) discards any
+    // event whose target is no longer the slot actually in the render root.
+    if (slot !== this.configSlotEl) return;
+    this.collectConfigFromSlot(slot);
+  }
+
+  /**
+   * Reads the `config-slot`'s currently assigned `<script type="application/json">` and applies
+   * it -- wired as the `slotchange` handler (via `onConfigSlotChange`) for every later mutation,
+   * and called once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
+   * environment, or a real-browser timing race, where the slot's initial assignment never fires
+   * `slotchange`.
+   */
+  private collectConfigFromSlot(slot: HTMLSlotElement): void {
     const script = slot
       .assignedElements({ flatten: true })
       .find(
@@ -2635,6 +2656,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private reducedMotionWindow?: BrowserWindow;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
+  // The unnamed `config-slot` carrying an optional `<script type="application/json">` raw
+  // configuration -- read once from `firstUpdated()` in addition to its own `@slotchange`
+  // listener; see `collectInitialSlotAssignment`'s own doc. `render()` swaps in one of three
+  // structurally distinct `slot.config-slot` elements depending on `loading`/`loadFailed`, so
+  // (unlike that helper's other callers) this field is deliberately read fresh at microtask time
+  // in `firstUpdated()` below, rather than captured into a local before scheduling, in case the
+  // peer loader has already flipped `loading` and swapped the slot element by then.
+  @query('slot.config-slot') private configSlotEl?: HTMLSlotElement;
   /** The current Chart.js instance. Read it only while the element is connected and loaded. */
   chart?: LyraChartInstance;
   private scaledSliceDatasets = new Set<number>();
@@ -3051,6 +3080,32 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.zoomed = false;
       this.emit('lr-zoom', { zoomed: false });
     }
+  }
+
+  /**
+   * happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
+   * see `collectInitialSlotAssignment`'s own doc -- so an `<lr-chart>` whose
+   * `<script type="application/json">` raw config already exists at connect (the ordinary
+   * "render once data is ready" Lit pattern) would otherwise never pick it up. Collect once here
+   * too, from the slot's current assignment; `collectConfigFromSlot()` simply recomputes and
+   * overwrites `slottedConfig` from scratch each call, so a real browser firing the initial event
+   * as well is naturally idempotent -- the second call reads back the same assigned elements and
+   * writes the same value.
+   * Deferred a microtask: `slottedConfig` is a reactive `@state`, so writing it synchronously
+   * inside `firstUpdated()` -- after this same update has already been marked complete -- trips
+   * Lit's "scheduled an update after an update completed" dev warning. A real `slotchange` event
+   * runs this same collection from a task/microtask entirely outside the update cycle, which never
+   * trips it; queuing a microtask here reproduces that same "outside the cycle" timing instead of
+   * writing `slottedConfig` from inside it. Still guaranteed to land before any caller's own
+   * `await el.updateComplete` continuation: that continuation is queued only once this update's
+   * promise resolves, later in this same synchronous turn, so it always joins the microtask queue
+   * behind the one queued here.
+   */
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(this.configSlotEl, (s) => this.collectConfigFromSlot(s));
+    });
   }
 
   protected override updated(changed: PropertyValues): void {

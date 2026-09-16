@@ -1,8 +1,9 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import type { Placement } from '@floating-ui/dom';
 import type { PlaceStrategy, PlaceSync } from '../../../internal/positioner.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { MenuFocusTarget } from '../../layout/menu/menu-shared.js';
@@ -131,6 +132,11 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   @state() private consumerMenu?: LyraMenu;
   private consumerMenuSnapshot?: ConsumerMenuSnapshot;
+  // The default (unnamed) slot carrying `<lr-dropdown-item>`/`<lr-menu-item>` rows or a
+  // consumer-supplied `<lr-menu>` -- read once from `firstUpdated()` in addition to its own
+  // `@slotchange` listener; see `collectInitialSlotAssignment`'s doc. Present in both
+  // `renderPopupContent()` branches, so this resolves regardless of which one last rendered.
+  @query('slot:not([name])') private contentSlot?: HTMLSlotElement;
 
   constructor() {
     super();
@@ -280,7 +286,20 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   }
 
   private onContentSlotChange = (event: Event): void => {
-    const next = (event.target as HTMLSlotElement)
+    this.collectConsumerMenuFromSlot(event.target as HTMLSlotElement);
+  };
+
+  /**
+   * Reads the default slot's currently assigned elements and adopts a consumer-supplied
+   * `<lr-menu>` among them (rather than wrapping mapped rows in a second, generated one) --
+   * wired as the `slotchange` handler (via `onContentSlotChange`) for every later mutation, and
+   * called once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
+   * environment, or a real-browser timing race, where the slot's initial assignment never fires
+   * `slotchange`. Idempotent: a second call finding the same (or still-absent) menu falls through
+   * the `next !== this.consumerMenu` guard and only re-runs the harmless `configureMenu()` resync.
+   */
+  private collectConsumerMenuFromSlot(slot: HTMLSlotElement): void {
+    const next = slot
       .assignedElements({ flatten: true })
       .find((element) => element.localName === tag('menu')) as LyraMenu | undefined;
     if (next !== this.consumerMenu) {
@@ -288,7 +307,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
       this.consumerMenu = next;
     }
     this.configureMenu(next ?? this.menuEngine);
-  };
+  }
 
   protected override onTriggerKeyDown(event: KeyboardEvent): void {
     if (this.disabled || this.open) return;
@@ -327,6 +346,27 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     // consumer-supplied menu even when no dropdown-owned property changed in that cycle.
     this.configureMenu(this.menuEngine);
     if (this.open && changed.has('sync')) this.reposition();
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
+    // see `collectInitialSlotAssignment`'s own doc -- so a `<lr-dropdown>` whose consumer-supplied
+    // `<lr-menu>` child already exists at connect (the ordinary "render once data is ready" Lit
+    // pattern) would otherwise never be adopted as `consumerMenu`, and `renderPopupContent()`
+    // would keep wrapping it in a second, generated `<lr-menu>` instead of using it directly.
+    // Collect once here too, from the slot's current assignment; `collectConsumerMenuFromSlot()`
+    // is idempotent, so a real browser firing the initial event as well is a no-op past its own
+    // `next !== this.consumerMenu` guard.
+    // Deferred a microtask: `consumerMenu` is a reactive `@state`, so writing it synchronously
+    // inside `firstUpdated()` -- after this same update has already been marked complete -- trips
+    // Lit's "scheduled an update after an update completed" dev warning. A real `slotchange` event
+    // runs this same collection from a task/microtask entirely outside the update cycle, which
+    // never trips it; queuing a microtask here reproduces that same "outside the cycle" timing.
+    const slot = this.contentSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, (s) => this.collectConsumerMenuFromSlot(s));
+    });
   }
 
   override disconnectedCallback(): void {

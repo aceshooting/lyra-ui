@@ -1,4 +1,12 @@
-import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
+import {
+  aTimeout,
+  fixture,
+  expect,
+  html,
+  nextFrame,
+  oneEvent,
+  waitUntil,
+} from '@open-wc/testing';
 import './menu-item.js';
 import './dropdown-item.js';
 import type { LyraMenuItem } from './menu-item.js';
@@ -2283,5 +2291,97 @@ describe('lr-menu-item link support (href/target/rel/download)', () => {
     expect(el.tagName).to.equal('A');
     expect(el.getAttribute('href')).to.equal('https://example.com/docs');
     expect(el.getAttribute('rel')).to.equal('noopener noreferrer');
+  });
+});
+
+describe('collecting already-slotted icon/details/suffix content without relying on the initial slotchange', () => {
+  function buildItem(): LyraMenuItem {
+    const el = document.createElement('lr-menu-item') as LyraMenuItem;
+    const icon = document.createElement('span');
+    icon.slot = 'icon';
+    icon.textContent = '★';
+    const details = document.createElement('span');
+    details.slot = 'details';
+    details.textContent = '⌘K';
+    const suffix = document.createElement('span');
+    suffix.slot = 'suffix';
+    suffix.textContent = '›';
+    el.append(icon, document.createTextNode('Duplicate'), details, suffix);
+    return el;
+  }
+
+  it('shows the icon/details/suffix parts when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow every such event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to each `<slot>` itself,
+    // before that slot's own bubble-phase `@slotchange` binding ever sees it. Unlike the
+    // single-slot select/combobox case this component renders several named slots (icon, prefix,
+    // details, suffix, ...), each firing its own initial event, so this listener stays armed for
+    // the whole window rather than using `{ once: true }`.
+    const el = buildItem();
+    document.body.append(el);
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      // Give every real initial slotchange (queued around slot assignment) time to arrive and be
+      // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire each rendered slot's initial slotchange -- this test suppresses all of them to reproduce happy-dom, which fires none"
+      ).to.be.greaterThan(0);
+      const iconPart = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+      const detailsPart = el.shadowRoot!.querySelector('[part="details"]') as HTMLElement;
+      const suffixPart = el.shadowRoot!.querySelector('[part="suffix"]') as HTMLElement;
+      expect(
+        iconPart.hasAttribute('hidden'),
+        "firstUpdated() collected the already-slotted icon with no slotchange ever reaching the component's own listener"
+      ).to.equal(false);
+      expect(detailsPart.hasAttribute('hidden'), 'details part shown from firstUpdated() collection').to.equal(
+        false
+      );
+      expect(suffixPart.hasAttribute('hidden'), 'suffix part shown from firstUpdated() collection').to.equal(
+        false
+      );
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: real initial slotchanges landing on top of the firstUpdated() collection do not flip any part back to hidden', async () => {
+    // No interception here -- both `firstUpdated()`'s own collection and the real, un-suppressed
+    // initial `slotchange` events fire for the same batch. The diagnostic listener below proves
+    // the real firing actually happened, so this test exercises the double-invocation path it
+    // claims to, rather than accidentally passing because the browser never fired the events (or
+    // fixture timing let `firstUpdated()` win a race that never actually repeats).
+    const el = buildItem();
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange(s) must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      const iconPart = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+      const detailsPart = el.shadowRoot!.querySelector('[part="details"]') as HTMLElement;
+      const suffixPart = el.shadowRoot!.querySelector('[part="suffix"]') as HTMLElement;
+      expect(iconPart.hasAttribute('hidden')).to.equal(false);
+      expect(detailsPart.hasAttribute('hidden')).to.equal(false);
+      expect(suffixPart.hasAttribute('hidden')).to.equal(false);
+    } finally {
+      el.remove();
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -582,4 +582,85 @@ it('fits a padded slotted viewport surface inside the frame', async () => {
     viewport.getBoundingClientRect().height,
     0.5
   );
+});
+
+describe('collecting already-slotted default content without relying on the initial slotchange', () => {
+  it('suppresses the frame-src <img> when the default slot is already populated at connect, even with the initial slotchange swallowed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
+    // happy-dom condition deterministically here, swallow that one event with a capture-phase
+    // listener on the render root: capture-phase fires on the way down to the <slot> itself,
+    // before the slot's own bubble-phase `@slotchange` binding (`onSlotChange`) ever sees it.
+    const surface = document.createElement('div');
+    surface.id = 'surface';
+    surface.textContent = 'Live surface';
+    const el = document.createElement('lr-browser-frame') as LyraBrowserFrame;
+    el.frameSrc = 'https://example.com/shot.png';
+    el.append(surface);
+    document.body.append(el);
+    // Synchronously after connect: `renderRoot` already exists (created in the constructor,
+    // before the first render), well before the browser can dispatch the initial event.
+    let intercepted = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true, once: true },
+    );
+    try {
+      await el.updateComplete;
+      // Give a real initial slotchange (queued around slot assignment) time to arrive and be
+      // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all",
+      ).to.equal(1);
+      expect(
+        el.shadowRoot!.querySelector('[part="frame"]') === null,
+        "firstUpdated() collected the already-slotted default content and suppressed the frame-src fallback, with no slotchange ever reaching the component's own listener",
+      ).to.equal(true);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not double-apply or flicker the fallback', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed
+    // initial `slotchange` fire for the same batch. The diagnostic listener below proves the
+    // second (real) firing actually happened, so this test exercises the double-invocation path
+    // it claims to, rather than accidentally passing because the browser only fired the event
+    // once.
+    const surface = document.createElement('div');
+    surface.id = 'surface';
+    surface.textContent = 'Live surface';
+    const el = document.createElement('lr-browser-frame') as LyraBrowserFrame;
+    el.frameSrc = 'https://example.com/shot.png';
+    el.append(surface);
+    document.body.append(el);
+    let realSlotchangeCount = 0;
+    el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation',
+      ).to.be.greaterThan(0);
+      // Same outcome as the suppressed-event test above: the fallback image never appears, no
+      // duplicated live-region announcement or stray re-render breaks the final state.
+      expect(
+        el.shadowRoot!.querySelector('[part="frame"]') === null,
+        'the fallback frame image never appears',
+      ).to.equal(true);
+      expect(
+        el.querySelector('#surface') === surface,
+        'the live surface element is preserved, not replaced',
+      ).to.equal(true);
+    } finally {
+      el.remove();
+    }
+  });
 });

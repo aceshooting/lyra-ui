@@ -1024,3 +1024,117 @@ it('settles closing in a single render, scheduling no follow-up update', async (
   el.open = false;
   expect(await el.updateComplete, 'closing scheduled a second render').to.be.true;
 });
+
+// The render tree carries two independent slots (the named `trigger` slot inherited from
+// `<lr-popover>`, and the default content slot this describe block is about), each firing its OWN
+// initial `slotchange` in a real browser, in no order this suite should rely on. Filtering on
+// `e.target`'s slot name targets exactly the content slot -- the trigger's own initial event is
+// left alone and unrelated to this defect.
+const isContentSlot = (event: Event): boolean =>
+  (event.target as HTMLSlotElement | null)?.getAttribute('name') === null;
+
+describe('collecting an already-slotted consumer menu without relying on the initial slotchange', () => {
+  it('adopts an already-slotted <lr-menu> as the contained engine when the content slot initial slotchange is suppressed (simulating happy-dom)', async () => {
+    // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
+    // assignment, but fires normally for every later mutation to an already-connected slot. This
+    // suite runs in a real browser, which DOES fire the initial event too -- so to reproduce the
+    // happy-dom condition deterministically here, swallow only THAT first content-slot event with
+    // a capture-phase listener on the render root (capture-phase fires on the way down to the
+    // <slot> itself, before the slot's own bubble-phase `@slotchange` binding
+    // (`onContentSlotChange`) ever sees it), then remove the interceptor so every later event --
+    // including the ordinary reassignment `<lr-dropdown>` itself triggers when it swaps
+    // `renderPopupContent()` from the generated-wrapper branch to the bare-slot branch once the
+    // menu is adopted -- is delivered exactly as it would be for a real, un-suppressed slotchange.
+    // A persistent (never-removed) interceptor over-suppresses that later, unrelated reassignment
+    // traffic too, which defeats the component's own self-healing and produces a false failure
+    // unrelated to this defect.
+    const button = document.createElement('button');
+    button.slot = 'trigger';
+    button.textContent = 'Actions';
+    const menu = document.createElement('lr-menu') as LyraMenu;
+    menu.label = 'Actions';
+    const item = document.createElement('lr-dropdown-item') as LyraDropdownItem;
+    item.value = 'rename';
+    item.textContent = 'Rename';
+    menu.append(item);
+    const el = document.createElement('lr-dropdown') as LyraDropdown;
+    el.append(button, menu);
+    document.body.append(el);
+    // Synchronously after connect: `renderRoot` already exists (created in the constructor,
+    // before the first render), well before the browser can dispatch the initial event.
+    let intercepted = 0;
+    const interceptor = (e: Event): void => {
+      if (!isContentSlot(e)) return;
+      intercepted++;
+      e.stopImmediatePropagation();
+      el.renderRoot!.removeEventListener('slotchange', interceptor, { capture: true });
+    };
+    el.renderRoot!.addEventListener('slotchange', interceptor, { capture: true });
+    try {
+      await el.updateComplete;
+      // Give a real initial slotchange (queued around slot assignment) time to arrive and be
+      // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire the content slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
+      ).to.equal(1);
+      await waitUntil(
+        () => el.getMenu() === menu,
+        "firstUpdated() collected the already-slotted consumer menu, with no slotchange ever reaching the component's own listener"
+      );
+      expect(
+        el.shadowRoot!.querySelector('[part~="menu"]') === null,
+        'no second, generated <lr-menu> wraps the consumer-supplied one'
+      ).to.equal(true);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection still adopts the consumer menu exactly once', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed
+    // initial `slotchange` fire for the same assignment. The diagnostic listener below proves the
+    // second (real) firing actually happened, so this test exercises the double-invocation path
+    // it claims to, rather than accidentally passing because the browser only fired the event
+    // once.
+    const button = document.createElement('button');
+    button.slot = 'trigger';
+    button.textContent = 'Actions';
+    const menu = document.createElement('lr-menu') as LyraMenu;
+    menu.label = 'Actions';
+    const item = document.createElement('lr-dropdown-item') as LyraDropdownItem;
+    item.value = 'rename';
+    item.textContent = 'Rename';
+    menu.append(item);
+    const el = document.createElement('lr-dropdown') as LyraDropdown;
+    el.append(button, menu);
+    document.body.append(el);
+    let realContentSlotchangeCount = 0;
+    el.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        if (isContentSlot(e)) realContentSlotchangeCount++;
+      },
+      { capture: true }
+    );
+    try {
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(
+        realContentSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      expect(el.getMenu() === menu, 'the declaratively-slotted menu is adopted exactly once').to.equal(true);
+      expect(
+        el.shadowRoot!.querySelector('[part~="menu"]') === null,
+        'no second, generated <lr-menu> wraps the consumer-supplied one'
+      ).to.equal(true);
+      // A double-managed containment handoff would leave the menu re-released/re-adopted with a
+      // stale owner instead of this stable, single-owner outcome.
+      expect(menu.dropdownOwner === el, 'the consumer menu is owned by the dropdown exactly once').to.equal(true);
+    } finally {
+      el.remove();
+    }
+  });
+});

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
 import './avatar-group.js';
 import '../avatar/avatar.js';
@@ -869,4 +869,100 @@ it('preserves an explicit empty host aria-label', async () => {
     <lr-avatar-group aria-label="" label="fallback"><lr-avatar></lr-avatar></lr-avatar-group>
   `)) as LyraAvatarGroup;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
+describe('collecting already-slotted avatars without relying on the initial slotchange', () => {
+  // Direct light-DOM children are already covered by `willUpdate()`'s own `!hasUpdated` seed
+  // (reads `this.children` synchronously, before any render) -- that path never depends on
+  // `slotchange` at all, so it needs no additional coverage here. The gap is a slot-forwarding
+  // host: `<lr-avatar-group>`'s own light children are then just the forwarding `<slot>` itself
+  // (`this.children` under-counts to zero avatars), and only the group's own default slot,
+  // flattened, resolves to the real projected `<lr-avatar>`s -- previously reachable only through
+  // a genuine `slotchange` on that slot, which happy-dom never fires initially.
+  function buildForwardingGroup(): {
+    wrapper: HTMLDivElement;
+    group: LyraAvatarGroup;
+    avatars: HTMLElement[];
+  } {
+    const wrapper = document.createElement('div');
+    const shadow = wrapper.attachShadow({ mode: 'open' });
+    const group = document.createElement('lr-avatar-group') as LyraAvatarGroup;
+    group.max = 2;
+    const forwardingSlot = document.createElement('slot');
+    group.append(forwardingSlot);
+    shadow.append(group);
+    const a = document.createElement('lr-avatar');
+    a.setAttribute('initials', 'AB');
+    const b = document.createElement('lr-avatar');
+    b.setAttribute('initials', 'CD');
+    const c = document.createElement('lr-avatar');
+    c.setAttribute('initials', 'EF');
+    wrapper.append(a, b, c);
+    return { wrapper, group, avatars: [a, b, c] };
+  }
+
+  it('populates the overflow window through a slot-forwarding host when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+    const { wrapper, group, avatars } = buildForwardingGroup();
+    document.body.append(wrapper);
+    // Synchronously after connect: `group`'s `renderRoot` already exists (created during its own
+    // `connectedCallback`, which the line above already ran), well before Lit's async first
+    // render creates its internal `<slot>`.
+    let intercepted = 0;
+    group.renderRoot!.addEventListener(
+      'slotchange',
+      (e) => {
+        intercepted++;
+        e.stopImmediatePropagation();
+      },
+      { capture: true, once: true }
+    );
+    try {
+      await group.updateComplete;
+      await aTimeout(50);
+      expect(
+        intercepted,
+        "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
+      ).to.equal(1);
+      const badge = group.shadowRoot!.querySelector('[part="overflow-badge"]');
+      expect(
+        badge != null,
+        'three avatars over max=2 must overflow even though the initial slotchange never reached the component'
+      ).to.equal(true);
+      expect(badge!.textContent!.trim()).to.equal('+1');
+      expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, true]);
+    } finally {
+      wrapper.remove();
+    }
+  });
+
+  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not duplicate observers or misdetect visibility', async () => {
+    // No interception here -- both `firstUpdated()`'s own call and the real, un-suppressed
+    // initial `slotchange` fire for the same batch. The diagnostic listener below proves the
+    // second (real) firing actually happened, so this test exercises the double-invocation path
+    // it claims to, rather than accidentally passing because the browser only fired once.
+    const { wrapper, group, avatars } = buildForwardingGroup();
+    document.body.append(wrapper);
+    // `slotchange` is non-composed, so it never crosses `group`'s own shadow boundary --
+    // listen on `renderRoot` (mirrors the interception test above), not on the host.
+    let realSlotchangeCount = 0;
+    group.renderRoot!.addEventListener(
+      'slotchange',
+      () => realSlotchangeCount++,
+      { capture: true }
+    );
+    try {
+      await group.updateComplete;
+      await aTimeout(50);
+      expect(
+        realSlotchangeCount,
+        'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
+      ).to.be.greaterThan(0);
+      const badge = group.shadowRoot!.querySelector('[part="overflow-badge"]');
+      expect(badge != null).to.equal(true);
+      expect(badge!.textContent!.trim(), 'exactly one overflow count, not doubled').to.equal('+1');
+      expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, true]);
+    } finally {
+      wrapper.remove();
+    }
+  });
 });

@@ -2,6 +2,7 @@ import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGT
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
@@ -266,6 +267,15 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   @state() private hasCustomTrigger = false;
 
+  /** Whether the default slot's assignment has been read at least once, and (when it has) the
+   *  custom-trigger element that read found -- `undefined` for "no custom trigger", distinct from
+   *  "never collected". Lets `onDefaultSlotChangeFromSlot()` identity-diff a later call against
+   *  the previous one, so a real browser's initial `slotchange` landing on top of `firstUpdated()`'s
+   *  own collection (see below) for the exact same assignment is a silent no-op rather than a
+   *  duplicate `lr-toolbar-actions-change`. */
+  private triggerCollected = false;
+  private lastObservedTrigger: HTMLElement | undefined;
+
   @query('[part~="base"]') private buttonEl?: LyraIconButton;
 
   @query('slot:not([name])') private defaultSlot?: HTMLSlotElement;
@@ -300,6 +310,32 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     if (changed.has('disabled') || changed.has('hasCustomTrigger')) {
       this.emit('lr-toolbar-actions-change');
     }
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
+    // see `collectInitialSlotAssignment`'s own doc -- so a copy button whose custom trigger child
+    // already exists at connect (the ordinary "render once data is ready" Lit pattern) would
+    // otherwise never learn about it: the built-in `<lr-icon-button>` keeps rendering alongside
+    // the slotted trigger instead of yielding to it. Collect once here too, from the slot's
+    // current assignment; `onDefaultSlotChangeFromSlot()` is idempotent (identity-diffed against
+    // the previously observed trigger via `triggerCollected`/`lastObservedTrigger`), so a real
+    // browser firing the initial event as well contributes no duplicate
+    // `lr-toolbar-actions-change`.
+    // Deferred a microtask, mirroring `select.class.ts`'s own `firstUpdated()`: `hasCustomTrigger`
+    // is reactive, so writing it synchronously inside `firstUpdated()` -- after this same update
+    // has already been marked complete -- trips Lit's "scheduled an update after an update
+    // completed" dev warning. A real `slotchange` event runs this same collection from a
+    // task/microtask entirely outside the update cycle, which never trips it; queuing a microtask
+    // here reproduces that same "outside the cycle" timing instead of writing `hasCustomTrigger`
+    // from inside it. Still guaranteed to land before any caller's own `await el.updateComplete`
+    // continuation: that continuation is queued only once this update's promise resolves, later in
+    // this same synchronous turn, so it always joins the microtask queue behind the one queued here.
+    const slot = this.defaultSlot;
+    queueMicrotask(() => {
+      collectInitialSlotAssignment(slot, (s) => this.onDefaultSlotChangeFromSlot(s));
+    });
   }
 
   override connectedCallback(): void {
@@ -586,8 +622,24 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   };
 
   private onDefaultSlotChange = (event: Event): void => {
-    const slot = event.currentTarget as HTMLSlotElement;
-    const hasCustomTrigger = slot.assignedElements({ flatten: true }).some(isHtmlElementValue);
+    this.onDefaultSlotChangeFromSlot(event.currentTarget as HTMLSlotElement);
+  };
+
+  /**
+   * Reads the default slot's currently assigned elements and updates `hasCustomTrigger` --
+   * wired as the `slotchange` handler (via `onDefaultSlotChange`) for every later mutation, and
+   * called once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
+   * environment, or a real-browser timing race, where the slot's initial assignment never fires
+   * `slotchange`. Idempotent over an unchanged assignment: `lastObservedTrigger` is the identity
+   * of the trigger element the previous call resolved (or `undefined` for "no custom trigger"), so
+   * a second call that resolves the exact same element finds nothing new and is a silent no-op.
+   */
+  private onDefaultSlotChangeFromSlot(slot: HTMLSlotElement): void {
+    const trigger = slot.assignedElements({ flatten: true }).find(isHtmlElementValue);
+    if (this.triggerCollected && trigger === this.lastObservedTrigger) return;
+    this.triggerCollected = true;
+    this.lastObservedTrigger = trigger;
+    const hasCustomTrigger = trigger !== undefined;
     if (hasCustomTrigger !== this.hasCustomTrigger) {
       this.hasCustomTrigger = hasCustomTrigger;
       return;
@@ -595,7 +647,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     // Replacing one custom trigger with another leaves the boolean state unchanged but still
     // requires the parent toolbar to transfer its roving tab stop to the new backing node.
     this.emit('lr-toolbar-actions-change');
-  };
+  }
 
   private onCustomTriggerClick = (): void => {
     if (this.hasCustomTrigger) void this.copy();
