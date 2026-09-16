@@ -140,10 +140,28 @@ export function validatePackageBudgets(budgets) {
     packedBudget.reviewedMeasurementBytes + packedBudget.headroomBytes,
     'package budget maximum.packedBytes must equal the reviewed measurement plus tight headroom',
   );
-  assert.ok(
-    budgets.maximum.packedBytes < budgets.baseline.packedBytes,
-    'package budget maximum.packedBytes must remain below the pre-8 baseline',
-  );
+  // The packed ceiling stayed under the pre-8.0.0 baseline for eight majors. 16.0.0 is the first
+  // release whose required public artifacts push past it, so the rule is no longer "always below"
+  // -- it is "below, unless a named maintainer reviewed this exact ceiling and said otherwise".
+  // Accidental growth still fails closed: an exception has to carry an approver, a date, a reason
+  // and its own byte ceiling, and the budget may not drift above the number that was approved.
+  if (budgets.maximum.packedBytes >= budgets.baseline.packedBytes) {
+    const review = packedBudget.baselineExceptionReview;
+    assert.ok(
+      typeof review?.approvedBy === 'string' &&
+        review.approvedBy.length > 0 &&
+        typeof review?.approvedOn === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(review.approvedOn) &&
+        typeof review?.reason === 'string' &&
+        review.reason.length >= 40 &&
+        Number.isInteger(review?.approvedMaximumPackedBytes),
+      'package budget maximum.packedBytes at or above the pre-8 baseline requires packedBudgetPolicy.baselineExceptionReview with approvedBy, approvedOn, a substantive reason and an approvedMaximumPackedBytes ceiling',
+    );
+    assert.ok(
+      budgets.maximum.packedBytes <= review.approvedMaximumPackedBytes,
+      'package budget maximum.packedBytes must stay at or below the approved baseline-exception ceiling',
+    );
+  }
   const fileBudget = budgets.fileCountBudget;
   for (const field of [
     'baseArtifactCeiling',

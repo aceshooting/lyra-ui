@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets against the fixed pre-8.0.0 baseline. Required public docs, editor/CEM data, declarations and runtime remain shipped; both byte ceilings retain the measured required-public-artifact exception and do not claim the mathematical 25% targets were met. The favorable incomplete-package probe still packed to 6,088,928 bytes, above its 5,872,345-byte target even before restoring declarations, CSS and other runtime artifacts. The integrated category-legend, native-button-state, table-sort and attribution changes measure 7,161,539 packed bytes and 29,561,077 unpacked bytes under Node 22.23.2/npm 10.9.8. Against the same-tool repack of published 14.2.0, required docs/editor/CEM/package metadata add 65,639 unpacked bytes, declarations add 12,441, and runtime/CSS add 10,382. All 3,164 public paths are retained. Byte ceilings equal those exact reviewed measurements plus the existing 34,000 packed and 140,000 unpacked headroom bytes, each below 0.5%. The file ceiling remains 2,500 base artifacts + 285 stable aliases times 2 + 94 measured non-alias remainder + 7 next-component files = 3,171. Fixed targets/baselines, exception reason, exact ceiling equality, the 0.5% headroom bound, and source/map/test/fixture/story rejection remain independently enforced. This release re-reviews both measurements against the final tarball: packed 7,213,158 bytes (+17,619) and unpacked 29,755,637 bytes (+54,560), each keeping its existing 34,000- and 140,000-byte headroom rather than widening it. The growth is the new public surface and the authored reference prose that documents it -- per-slice chart legends, the box-plot palette, the menu-item link surface with its noopener noreferrer guard, aria-pressed/aria-current forwarding, and the composed number-input stepper -- together with the regenerated manifest, editor data and llms artifacts those members appear in. File count is unchanged at 3,164, below its 3,171 ceiling, so no new artifact families were introduced.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations and runtime remain shipped. Re-measured for 16.0.0: 7,993,893 packed, 32,667,399 unpacked, 3,513 files. Packed size is now 2.1% ABOVE the fixed pre-8.0.0 packed baseline rather than below it -- the first release for which that is true, reviewed and accepted rather than hidden behind the existing required-artifact exception wording (see packedBudgetPolicy.baselineExceptionReview, which the validator requires before any ceiling at or above the baseline is allowed, and which caps the ceiling at the approved number). Unpacked still lands 15.2% below the baseline. The growth is this release's added surface: every generated artifact grew with it (CEM +0.35 MB, web-types +0.44 MB, editor data +0.23 MB, the authored and generated reference +0.64 MB), plus an eleventh built-in locale (26 shipped files). The file ceiling stays derived, not guessed: 2,500 base artifacts + 288 stable tag aliases x 2 emitted files + the measured entrypoint remainder, plus 7 files of slack so the next scaffolded component does not immediately breach it. Byte ceilings keep their existing 34,000 / 140,000-byte drift headroom, both within the validator's 0.5% cap.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,29 +10,35 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 7213158,
+    "reviewedMeasurementBytes": 7993893,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
-    "favorableIncompletePackageProbeBytes": 6088928
+    "favorableIncompletePackageProbeBytes": 6088928,
+    "baselineExceptionReview": {
+      "approvedBy": "maintainer (Ace Shooting)",
+      "approvedOn": "2026-09-16",
+      "reason": "16.0.0 is the first release whose required public artifacts exceed the pre-8.0.0 packed baseline. The alternatives were measured and declined: dropping llms-full.txt would have saved 899 KB packed but breaks the llms.txt convention's own link target, and dropping web-types.json would have saved 834 KB by removing JetBrains completions from the installed package. Shipping the full reference and editor data was judged worth 2.1% over the historical baseline.",
+      "approvedMaximumPackedBytes": 8027893
+    }
   },
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 29755637,
+    "reviewedMeasurementBytes": 32667399,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
-    "stableTagAliasCount": 285,
+    "stableTagAliasCount": 288,
     "emittedFilesPerAlias": 2,
-    "measuredEntrypointRemainder": 94,
+    "measuredEntrypointRemainder": 437,
     "nextComponentArtifactHeadroom": 7,
-    "entrypointHeadroom": 101
+    "entrypointHeadroom": 444
   },
   "maximum": {
-    "packedBytes": 7247158,
-    "unpackedBytes": 29895637,
-    "fileCount": 3171
+    "packedBytes": 8027893,
+    "unpackedBytes": 32807399,
+    "fileCount": 3520
   }
 }
