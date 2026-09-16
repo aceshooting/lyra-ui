@@ -54,7 +54,7 @@
   "dist/components/retrieval/index.js": 289.849609375,
   "dist/components/utility/index.js": 118.7236328125,
   "dist/components/viewers/index.js": 229.970703125,
-  "dist/components/forms/button/button.js": 31.91015625,
+  "dist/components/forms/button/button.js": 32,
   "dist/components/forms/combobox/combobox.js": 68.826171875,
   "dist/components/forms/select/select.js": 62.173828125,
   "dist/components/overlays/overlay/popover.js": 49.642578125,
