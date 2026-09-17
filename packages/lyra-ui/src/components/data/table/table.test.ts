@@ -6845,13 +6845,13 @@ describe("editType: 'select'", () => {
     await expect(el).to.be.accessible();
   });
 
-  // fr_47sJd_g3WK_fHgOUWyChXg: `appearance: none` on the select cell-editor removed the native
-  // disclosure arrow with no replacement, so an open select editor looked like a plain text
-  // field. A bare <select> is a replaced form control -- it renders neither ::before/::after, nor
-  // could a `mask` apply directly to it without clipping its own text -- so the glyph is painted
-  // on the enclosing [part='cell'] instead, scoped with :has() to exactly the cell currently
-  // rendering a select editor. Same mask + `background: currentColor` technique already shipped
-  // (and forced-colors-verified) for the map attribution-toggle glyph in map.styles.ts.
+  // `appearance: none` on the select cell-editor removed the native disclosure arrow with no
+  // replacement, so an open select editor looked like a plain text field. A bare <select> is a
+  // replaced form control -- it renders neither ::before/::after, nor could a `mask` apply
+  // directly to it without clipping its own text -- so the glyph is painted on the enclosing
+  // [part='cell'] instead, scoped with :has() to exactly the cell currently rendering a select
+  // editor. Same mask + `background: currentColor` technique already shipped (and
+  // forced-colors-verified) for the map attribution-toggle glyph in map.styles.ts.
   const withScoreColumn = (): TableColumn<Row>[] => [
     selectEditableColumns[0]!,
     {
