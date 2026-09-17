@@ -15,6 +15,8 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   noData: 'Fără date',
+  legendTypeShown: '{label} afișat',
+  legendTypeHidden: '{label} ascuns',
   jumpToLatest: 'Salt la cel mai recent',
   loadMore: 'Încarcă mai multe',
   viewerSearchMatchCount: {

@@ -19390,6 +19390,20 @@
               "test": "is accessible with the menu open and a selection applied",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/layout/filter-bar/filter-bar.test.ts",
+              "line": 5636,
+              "test": "is accessible as an all-chip bar with active chips",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/filter-bar/filter-bar.test.ts",
+              "line": 5652,
+              "test": "is accessible as a mixed control/chip bar with active chips and a revealed required error",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -19491,7 +19505,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1315,
+              "line": 1404,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27111,28 +27125,42 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1555,
+              "line": 1602,
+              "test": "keeps the interactive legend accessible in both visible and hidden states",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 1602,
+              "test": "keeps the interactive legend accessible in both visible and hidden states",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 2023,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2438,
+              "line": 2906,
               "test": "adds a maplibregl.Marker per entry in markers",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5696,
+              "line": 6372,
               "test": "styles and localizes peer-added controls inside the shadow root",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 5791,
+              "line": 6467,
               "test": "clusters sized categories, restores filled and stroked icons after a style reload and exports them",
               "target": "el",
               "state": "populated"
@@ -27157,7 +27185,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3277,
+              "line": 1660,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27242,7 +27270,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 225,
+              "line": 232,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -27254,7 +27282,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 2898,
+              "line": 3074,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51195,21 +51223,21 @@
           "evidence": [
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "line": 161,
+              "line": 167,
               "test": "is accessible with a populated, windowed item list",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "line": 3497,
+              "line": 3503,
               "test": "is accessible with the overlay present",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "line": 3828,
+              "line": 3834,
               "test": "virtualizes against an external scrollElement instead of its own viewport",
               "target": "el",
               "state": "populated"
@@ -51223,7 +51251,7 @@
           "evidence": [
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "line": 1295,
+              "line": 1301,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -51234,7 +51262,7 @@
           "evidence": [
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "line": 876,
+              "line": 882,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -51251,7 +51279,7 @@
           "evidence": [
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "line": 873,
+              "line": 879,
               "kind": "320px allocation test signal"
             }
           ]

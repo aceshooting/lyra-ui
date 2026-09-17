@@ -73506,6 +73506,16 @@
             "default": null
           },
           {
+            "name": "legend-interactive",
+            "property": "legendInteractive",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -73557,6 +73567,15 @@
             "default": "[]"
           },
           {
+            "name": "hiddenCategories",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "label",
             "attribute": "label",
             "type": "string",
@@ -73603,6 +73622,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "legendInteractive",
+            "attribute": "legend-interactive",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "legendProjection",
@@ -73695,6 +73724,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-map-legend-toggle",
+            "type": "CustomEvent<LyraMapLegendToggleDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-map-load",
             "type": "CustomEvent<null>",
             "cancelable": "never",
@@ -73757,6 +73792,14 @@
             "deprecated": null
           },
           {
+            "name": "legend-toggle",
+            "deprecated": null
+          },
+          {
+            "name": "legend-toggle-hidden",
+            "deprecated": null
+          },
+          {
             "name": "marker",
             "deprecated": null
           },
@@ -73801,6 +73844,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-24rem)"
+          },
+          {
+            "name": "--lr-map-hidden-category-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.15
+          },
+          {
+            "name": "--lr-map-legend-hidden-swatch-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.5
           },
           {
             "name": "--lr-map-popup-close-button-active-bg",
@@ -137973,6 +138028,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "row-projection",
+            "property": "rowProjection",
+            "type": "LyraVirtualListRowProjection",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -138065,6 +138129,15 @@
             "default": 6
           },
           {
+            "name": "projectedRows",
+            "attribute": null,
+            "type": "HTMLElement[]",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "renderedRows",
             "attribute": null,
             "type": "HTMLElement[]",
@@ -138110,6 +138183,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "rowProjection",
+            "attribute": "row-projection",
+            "type": "LyraVirtualListRowProjection",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "scrollContainer",
@@ -138291,6 +138373,22 @@
             "name": "MAX_OVERSCAN_ROWS",
             "kind": "variable",
             "type": "number",
+            "readonly": false,
+            "deprecated": null
+          },
+          {
+            "module": "src/components/layout/virtual-list/virtual-list.class.ts",
+            "name": "VIRTUAL_LIST_ROW_ATTRIBUTE",
+            "kind": "variable",
+            "type": "unknown",
+            "readonly": false,
+            "deprecated": null
+          },
+          {
+            "module": "src/components/layout/virtual-list/virtual-list.class.ts",
+            "name": "VIRTUAL_LIST_STICKY_ATTRIBUTE",
+            "kind": "variable",
+            "type": "unknown",
             "readonly": false,
             "deprecated": null
           }

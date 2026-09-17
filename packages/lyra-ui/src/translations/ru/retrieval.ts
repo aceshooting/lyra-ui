@@ -15,8 +15,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Легенда графа',
-  legendTypeShown: '{label}: показано',
-  legendTypeHidden: '{label}: скрыто',
   entityChipWithType: '{label}, {type}',
   showMore: 'Показать ещё',
   untitledSource: 'Источник без названия',

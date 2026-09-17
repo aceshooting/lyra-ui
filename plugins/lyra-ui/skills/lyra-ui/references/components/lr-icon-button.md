@@ -69,7 +69,8 @@ button whose purpose isn't generic.
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
 mute, favorite, or pin, and reaches the `<button>` rendering only — a link icon-button (`href` set)
-never receives it, since `role="link"` has no pressed state; `aria-current` (`page`, `step`,
+never receives it, since `role="link"` has no pressed state (that carve-out arrived in **16.0.0**;
+earlier versions forwarded it onto the anchor too); `aria-current` (`page`, `step`,
 `location`, `date`, `time`, `true`, `false`) is global and supports current-item icon buttons such
 as an active nav/pagination target in both renderings. Both follow attribute
 changes, removal, and button/link replacement without changing the native role of an enabled

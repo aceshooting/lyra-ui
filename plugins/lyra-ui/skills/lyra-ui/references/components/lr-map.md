@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 20 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -72,10 +72,18 @@ LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' |
 'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
   rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
   bounded before validation. The overlay scrolls within the map allocation.
+  A row may also carry its own `value`: the category key that row stands for — the same string a
+  `point.colors`/`point.icons` entry matches against `point.field`/`point.iconField`. It is
+  trimmed, bounded to 256 characters (sliced, never ellipsized, so a bounded key still matches) and
+  **retained** in the canonical readback; a non-string, empty or whitespace-only key leaves no
+  `value` property on the frozen row at all. It is what makes a row operable under
+  `legendInteractive`, and it does not count toward the label budget.
   A row may also carry `icon`, deliberately the same record a `point.icons` entry uses — hand the
   legend the very icon object its point layer renders and the key shows the symbol drawn on the
-  map instead of describing it in colour alone. The point layer's category key (`value`) is
-  accepted so a pass-through needs no reshaping, and is left out of the canonical readback;
+  map instead of describing it in colour alone. The **icon record's own** `value` is a separate
+  field from the row-level one above: it is accepted so a pass-through needs no reshaping, and it
+  is still left out of the canonical readback. A row's key is never derived from its glyph's, which
+  would silently make a row interactive that the author never marked;
   `path`, `viewBox`, `mode`, `strokeWidth`, `lineCap` and `lineJoin` keep their point-icon meaning
   and their point-icon defaults, and the same validation applies (path data only, at most 8,192
   characters, positive `viewBox` dimensions). An unusable record is dropped and that row keeps
@@ -84,6 +92,22 @@ LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' |
 omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
   projection renders a localized visible `1–N of M items` summary rather than silently claiming
   the bounded rows are complete.
+- `legendInteractive: boolean = false` (attribute `legend-interactive`, reflected) — opt-in: turns
+  every legend row that carries a `value` into a keyboard-operable visibility toggle, and leaves a
+  row without one inert. Unset, the legend renders exactly the read-only key it rendered before —
+  no `button`, no extra attribute, and no extra MapLibre paint key. Each toggle is an independently
+  tabbable native `button`, so Enter and Space are the platform's own activation and there is no
+  roving tabindex: a 100-row interactive legend contributes 100 tab stops, exactly as a 100-series
+  `lr-chart` legend does. Each interactive row also grows to the shared `--lr-icon-button-size`
+  hit-area floor (WCAG 2.5.8), which the panel's existing `max-block-size` and scrolling contain.
+- `hiddenCategories: readonly string[] = []` (attribute: false) — the complete controlled set of
+  muted category keys, mirroring `lr-chart`'s `hiddenDatasets`. Clone-owned and frozen; non-string,
+  empty, whitespace-only and duplicate entries are dropped (first occurrence wins, matching
+  `point.colors`), and at most 100 keys are retained. Honoured on the **first** render and the
+  first MapLibre paint, not only after a user toggle, so a host can restore a saved selection. An
+  empty array deliberately means every category is visible. It is controlled public state and
+  survives a disconnect/reconnect. A hidden key that matches no category is harmless. Assigning it
+  programmatically emits nothing.
 - `choropleth?: LyraMapChoroplethLayer` (attribute: false) — `LyraMapChoroplethLayer { sourceId:
 string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][]; interpolation?:
 'linear' | 'logarithmic' | 'step'; stepBaseColor?: string }` (interpolated
@@ -364,7 +388,8 @@ payload beside the map.
 `LyraMapHeatmapZoomValue`, `LyraMapLineOptions`, `LyraMapPointOptions`, `LyraMapPointRadiusOptions`,
 `LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
-`LyraMapMarkerActivationSource`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
+`LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapStyleSpecification`, and
+`LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
 
@@ -380,7 +405,17 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 an element.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
-`lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
+`lr-map-legend-toggle` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
+hiddenCategories }` — the activated row's category key, its proposed visibility, and the complete
+proposed hidden set in the order it would be committed, with the array detached and frozen so a
+listener cannot mutate the component's state through it). `preventDefault()` is a genuine veto, not
+a notification: `hiddenCategories` is not written, the row's `aria-pressed` does not change, the
+MapLibre paint is untouched, and nothing is announced — which is exactly what a host needs to own
+the set and assign its own value instead. There is deliberately no second, confirmation event: the
+committed state is `hiddenCategories`, which the host already observes, so a paired before/after
+vocabulary would be permanent public surface nobody asked for. The event is a DOM-interaction
+proposal only, so a programmatic `hiddenCategories` assignment reconciles without emitting it.
+Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
 (frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
@@ -404,7 +439,8 @@ markup as described above.
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
 when `legend` and `legendGradient` are both empty.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-gradient`, `legend-lo`,
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-toggle`,
+`legend-toggle-hidden`, `legend-gradient`, `legend-lo`,
 `legend-hi`, `legend-limit`, `marker`, `popup`,
 `popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `navigation`,
 `zoom-in`, `zoom-out`, `compass`, `scale`, `error`.
@@ -429,6 +465,18 @@ visible label carries its meaning. That association is advertised only while it 
 the optional `maplibre-gl` peer is still loading, and after any failure, there is no map
 container in the tree, so `legend` withholds `aria-controls` rather than leaving a dangling
 idref.
+Under `legendInteractive`, a row carrying a `value` wraps its swatch and label in a
+`legend-toggle` `button` with `aria-pressed` rendered as the literal `"true"`/`"false"` — never
+omitted, because a missing attribute reports "not a toggle button" rather than "unpressed". The
+button's accessible name is its own visible label (caller-supplied data, so deliberately not
+localized), scoped by the legend's own localized group name; no `aria-label` restates the state,
+which would make assistive tech announce it twice. A hidden row's button additionally carries the
+`legend-toggle-hidden` token — state lives in the part name, so `::part(legend-toggle-hidden)` is a
+reachable hook — and dims only its `aria-hidden` swatch while re-colouring the label through the
+quiet text token, so the label keeps AA contrast rather than fading with the whole button. In
+forced colors the hidden row falls back to `line-through`, which survives a system-color collapse.
+Each activation is announced through the shared light-DOM polite live region, using the same
+`legendTypeShown`/`legendTypeHidden` strings `lr-graph-legend` announces with.
 `legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
 stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
 `marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic
@@ -460,6 +508,15 @@ integration; there is no declarative controls property.
 - `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
   `choropleth` layer and polygon fills in every `dataLayers` entry. It intentionally inherits from
   an ancestor, so one scoped declaration rethemes every nested map without setting each host.
+- `--lr-map-hidden-category-opacity` (default `0.15`) — opacity a category listed in
+  `hiddenCategories` is muted to in the rendered MapLibre paint: `circle-opacity` and
+  `circle-stroke-opacity` on the points layer and `icon-opacity` on the point-icon symbol layer.
+  Like the fill-opacity token it is read from the resolved cascade on every paint, because MapLibre
+  draws to a WebGL canvas the CSS cascade never reaches, and it inherits from an ancestor. A
+  `kind: 'heatmap'` entry is out of scope: a density surface has no per-category field to mute.
+- `--lr-map-legend-hidden-swatch-opacity` (default `0.5`) — opacity of a hidden interactive legend
+  row's decorative swatch. Only the `aria-hidden` swatch dims; the label re-colours through
+  `--lr-color-text-quiet` instead, so it never drops below 4.5:1.
 - `--lr-map-popup-close-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
   `--lr-map-popup-close-button-hover-color` (default `var(--lr-color-brand)`) — hover background
   and foreground of `popup-close-button`.

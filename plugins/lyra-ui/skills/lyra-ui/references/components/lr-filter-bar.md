@@ -21,7 +21,10 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 Choice option entries must expose string `value` and `label` data fields; malformed entries are
 omitted independently, while supplied empty strings remain valid. A custom definition requires its
 adapter and a callable `render`; a rejected definition does not reserve its filter ID. Valid
-siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate.
+siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate. A
+chip-only definition requires neither options nor an adapter — a stable filter ID and a label are
+the whole schema, since a malformed `formatValue`/`isEmpty` still has a correct fallback and so is
+guarded where it is used rather than rejected outright.
 
 **Lean registration entry.** `components/layout/filter-bar/filter-bar.js` (the default entry)
 eagerly imports every composed control this bar could possibly render — `<lr-select>`,
@@ -42,6 +45,7 @@ the filter `type`s actually declared:
 | `'checkbox-menu'` | `components/overlays/overlay/dropdown.js` **and** `components/layout/menu/dropdown-item.js` |
 | `'date'` / `'date-range'` | `components/forms/date-picker/date-input.js` |
 | `'text'` | `components/forms/input/input.js` |
+| `'chip'` | none — renders no control |
 
 Two more are unconditional regardless of which filter `type`s are declared: `<lr-button>` renders
 the reset action on every bar, and `<lr-chip>`/`<lr-chip-group>` render the active-filter row
@@ -222,7 +226,9 @@ same-named counterparts (with `combobox`'s `multiple` opting into a multi-value 
 `'date'`/`'date-range'` both map to `<lr-date-input>` (single vs. `mode="range"`), and `'text'` maps
 to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
-text the user typed, not a truncated or normalized form.
+text the user typed, not a truncated or normalized form. `'chip'` is the one type that renders no
+control at all (see **Chip-only filters** below): its value belongs to a widget elsewhere on the
+page, so the bar renders only its active-filter chip and gives it no toolbar cell.
 
 Every built-in (non-`'custom'`) filter definition additionally accepts optional `size: LyraSize`,
 `icon: unknown` and `labelVisibility: 'visible' | 'hidden'` fields, and every one whose composed
@@ -438,12 +444,89 @@ const filters: LyraFilterBarFilterDefinition[] = [
 The custom renderer returns a Lit `TemplateResult`; the filter bar places it in its
 `filter-control` part and re-renders it whenever the controlled value or validation state changes.
 
+### Chip-only filters
+
+Use `type: 'chip'` when the value is already owned by a widget elsewhere on the page — a calendar
+heatmap cell, a map selection, a chart brush — and the bar's job is only to *show* that the filter
+is applied and to let the user take it off. Unlike `type: 'custom'`, which still renders a control
+inside the toolbar, a chip-only filter renders **no control and no toolbar cell at all**: no `field`
+wrapper is emitted for it, so `lr-filter-bar::part(field)` and `::part(field-<filterId>)` never
+match one and a bar whose filters are *all* chip-only shows no empty column — its `controls` row
+still holds the reset button (the "clear all" action such a bar needs), the `end` slot, and the
+loading spinner, exactly like a bar with no filters at all.
+
+Everything else is unchanged from any other filter type. The value lives in `value` under its own
+filter ID, rides every `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` (so it enables
+the reset button) and toward `invalidFilterIds` when the definition is `required`, renders a
+removable active-filter chip subject to `activeFiltersDisplay`, and is cleared both by removing that
+chip and by `reset()`. A `required` chip-only filter is honoured in **bookkeeping only**: it joins
+`invalidFilterIds`, fails `checkValidity()` and moves `lr-validity-change`, but renders no inline
+error, because the bar renders no element of its own for it — the owning widget is responsible for
+its own error affordance. The inherited `placeholder` is inert here for the same reason it is for
+`type: 'custom'`: there is no field to place it in.
+
+A chip-only definition adds three optional fields of its own:
+
+```ts
+type: 'chip';
+formatValue?: (value: LyraFilterBarFieldValue, locale: string) => string;
+clearValue?: LyraFilterBarFieldValue;
+isEmpty?: (value: LyraFilterBarFieldValue) => boolean;
+```
+
+`formatValue` produces the chip's text, and its `locale` argument is the bar's `effectiveLocale` —
+the same locale every built-in type's own chip formatting and a custom adapter's `formatValue`
+already receive, and the reason a chip-only value (normally an already-formatted string such as a
+localized date) can be localized by the caller. That output is caller data, so — like a filter's
+own label — the bar never routes it through its own localization. Omitted, the fallback ladder is
+the one a custom adapter's omitted `formatValue` uses: a string array renders as a localized
+conjunction list, anything else renders verbatim through `String(value)`, and an unset value renders
+as the empty string. Verbatim is exact: a chip-only value is never run through the date branch that
+localizes a `'date'`/`'date-range'` chip, so an ISO day is not silently reformatted and a value
+containing a slash is not mangled.
+
+`clearValue` is what a chip removal (and `clearFilter()`) writes, defaulting to the empty string —
+what every non-multi built-in type writes. Declare an empty array for an array-valued chip-only
+filter. `isEmpty` overrides the built-in emptiness rule (absent, `false`, the empty string and the
+empty array are empty; everything else is set). **A domain sentinel must pair the two**: declaring
+a sentinel clear value without a matching `isEmpty` leaves the bar reading the "cleared" value as
+still set, so it keeps rendering a chip for it — the identical pairing a custom adapter's own
+`clearValue`/`isEmpty` documents. With the pair declared, the sentinel is never stored in `value`
+(cleared keys are omitted) and an absent key reads back as the sentinel for the owning widget.
+
+```ts
+const filters: LyraFilterBarFilterDefinition[] = [
+  { filterId: "query", label: "Query", type: "text" },
+  {
+    filterId: "day",
+    label: "Day",
+    type: "chip",
+    formatValue: (value, locale) =>
+      new Intl.DateTimeFormat(locale, {
+        dateStyle: "medium",
+        timeZone: "UTC",
+      }).format(new Date(`${String(value)}T00:00:00Z`)),
+  },
+];
+
+// The calendar heatmap beside the bar owns the value; the bar only shows and removes it.
+heatmap.addEventListener("app-select-day", (event) => {
+  const { isoDate } = (event as CustomEvent<{ isoDate: string }>).detail;
+  bar.value = { ...bar.value, day: isoDate };
+});
+bar.addEventListener("lr-input", (event) => {
+  const { value } = (event as LyraFilterBarInputEvent).detail;
+  heatmap.selectedDay = (value["day"] as string | undefined) ?? "";
+});
+```
+
 **TypeScript:** `LyraFilterBar<Defs extends readonly LyraFilterBarFilterDefinition[] =
 readonly LyraFilterBarFilterDefinition[]>` — `value` and the `lr-input`/`lr-reset` detail `value`
 narrow to a record keyed per `filterId`, whose value type follows that filter's own definition (a
 `'select'`, a non-`multiple` `'combobox'`, `'text'`, `'date'`, and `'date-range'` narrow to
 `string`; a `'checkbox-menu'` and a `multiple: true` `'combobox'` narrow to `readonly string[]`; a
-`'custom'` filter keeps the full unconstrained field value). Declare the schema with `as const
+`'custom'` filter keeps the full unconstrained field value, and so does a `'chip'` filter, whose
+value is owned by a widget this component never renders). Declare the schema with `as const
 satisfies readonly LyraFilterBarFilterDefinition[]` and type the element as
 `LyraFilterBar<typeof FILTERS>` to pick it up. Types only; the runtime is unchanged, and an untyped
 `<lr-filter-bar>` keeps today's `LyraFilterBarValue` (`Readonly<Record<string, string | readonly

@@ -73,7 +73,8 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
 - `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto the native
   control the card actually renders, the same mechanism `<lr-button>` and `<lr-icon-button>` use.
   `aria-pressed` accepts `'true' | 'false' | 'mixed'` and reaches the `activation-button` only —
-  `link` has no pressed state, so a linked card never receives it. The global `aria-current`
+  `link` has no pressed state, so a linked card never receives it — the same **16.0.0** carve-out
+  `<lr-button>` and `<lr-icon-button>` took. The global `aria-current`
   accepts `'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'` and reaches both the
   activation button and the stretched link. Anything outside those sets is dropped rather than
   passed through, so a typo never reaches the accessibility tree. This is what lets a single-select

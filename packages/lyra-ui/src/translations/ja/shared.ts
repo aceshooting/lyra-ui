@@ -15,6 +15,8 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   noData: 'データなし',
+  legendTypeShown: '{label} 表示中',
+  legendTypeHidden: '{label} 非表示',
   jumpToLatest: '最新へ移動',
   loadMore: 'さらに読み込む',
   viewerSearchMatchCount: {

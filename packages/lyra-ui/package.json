@@ -2947,7 +2947,7 @@
     "shiki": "^4.4.3",
     "svelte": "^5.57.0",
     "typescript": "^7.0.2",
-    "vue": "^3.5.42",
+    "vue": "^3.5.43",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "packageManager": "pnpm@12.4.2",

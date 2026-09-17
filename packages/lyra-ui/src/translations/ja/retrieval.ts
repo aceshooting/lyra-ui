@@ -15,8 +15,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   graphLegendLabel: 'グラフの凡例',
-  legendTypeShown: '{label} 表示中',
-  legendTypeHidden: '{label} 非表示',
   entityChipWithType: '{label}、{type}',
   showMore: 'もっと見る',
   untitledSource: '無題の出典',

@@ -15,8 +15,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda grafului',
-  legendTypeShown: '{label} afișat',
-  legendTypeHidden: '{label} ascuns',
   entityChipWithType: '{label}, {type}',
   showMore: 'Afișează mai multe',
   untitledSource: 'Sursă fără titlu',

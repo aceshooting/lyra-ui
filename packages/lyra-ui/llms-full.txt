@@ -6936,10 +6936,11 @@ box no matter what tier or override is in play.
   For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
   BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support
   `aria-pressed`; remove `href` and the same host attribute starts reaching the `<button>` that
-  replaces the anchor. Navigation can use the global
-  `aria-current="page|step|location|date|time|true|false"`, which does reach the anchor. Both states
-  update reactively, including native `ariaPressed`/`ariaCurrent` property assignments, attribute
-  removal and `href` changes. Empty or unsupported tokens are omitted. The native button/link role
+  replaces the anchor. That link carve-out arrived in **16.0.0** — before it, `aria-pressed` was
+  forwarded onto the anchor as well, asserting a state `role="link"` does not have. Navigation can
+  use the global `aria-current="page|step|location|date|time|true|false"`, which does reach the
+  anchor. Both states update reactively, including native `ariaPressed`/`ariaCurrent` property
+  assignments, attribute removal and `href` changes. Empty or unsupported tokens are omitted. The native button/link role
   remains unchanged for an enabled control: use pressed state for button toggles and current state
   for navigation links. A DISABLED link button drops `href` (so it genuinely cannot navigate) and
   therefore also drops the anchor's implicit role, so it renders an explicit `role="link"` — without
@@ -7019,7 +7020,8 @@ button whose purpose isn't generic.
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
 mute, favorite, or pin, and reaches the `<button>` rendering only — a link icon-button (`href` set)
-never receives it, since `role="link"` has no pressed state; `aria-current` (`page`, `step`,
+never receives it, since `role="link"` has no pressed state (that carve-out arrived in **16.0.0**;
+earlier versions forwarded it onto the anchor too); `aria-current` (`page`, `step`,
 `location`, `date`, `time`, `true`, `false`) is global and supports current-item icon buttons such
 as an active nav/pagination target in both renderings. Both follow attribute
 changes, removal, and button/link replacement without changing the native role of an enabled
@@ -18136,6 +18138,17 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   number `56` and fixes every row to that many pixels. Property callers assign a number, not a
   numeric string. Anything else (non-numeric, zero, negative, non-finite) safely canonicalizes to
   `'auto'` rather than throwing.
+- `rowProjection: 'shadow' | 'light' = 'shadow'` (attribute `row-projection`) — where
+  `renderItem`'s output is instantiated. `'shadow'` (default) stamps it inside this component's own
+  shadow root, so only inherited custom properties and the public row parts reach it. `'light'`
+  renders the windowed rows into the host's own light DOM instead, assigned into the shadow viewport
+  through internal named slots, so ordinary document CSS styles a virtualized row exactly as it
+  styles the same row unvirtualized. The component keeps owning windowing, measurement, spacer
+  sizing, `scrollToIndex()`, the external-scroller mode and the ARIA contract either way, and
+  positioning stays on the shadow-side `[part="row"]` wrapper that document CSS cannot select — so
+  consumer styles can never break windowing. Any other value canonicalizes to `'shadow'`. Left
+  unset, the rendered output is byte-identical to before and the host's light DOM stays empty.
+  See **Light-DOM row projection** below for the trade-offs it carries.
 - `itemRole: 'listitem' | 'row' = 'listitem'` (attribute `item-role`) — `'listitem'` (default)
   preserves the plain `role="list"`/`role="listitem"` mapping with `aria-setsize`/`aria-posinset`.
   `'row'` additionally maps `[part="base"]` to `role="rowgroup"`, `[part="spacer"]` to
@@ -18389,6 +18402,48 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
   decides: groups render before the rows, so an active row wins while (and only while) it needs to,
   which is right — a group header is a non-interactive `pointer-events: none` label.
+
+### Light-DOM row projection
+
+`rowProjection="light"` exists for one shape: an application whose list rows are already styled by
+its own global stylesheet, and which therefore could not adopt virtualization without rehoming a
+dozen descendant rules per row into a new custom element or a growing set of custom properties. In
+projection mode the windowed rows render into the host's own light DOM, so ordinary document CSS
+reaches row content directly.
+
+Positioning, measurement and semantics stay where they were. The `[part="row"]` wrapper remains in
+the shadow root and keeps `position: absolute`, the per-frame `transform`, `role`, `aria-setsize`/
+`aria-posinset` (or `aria-rowindex`) and the `ResizeObserver` box — document CSS cannot select it,
+so consumer styles can never break windowing. The whole part vocabulary (`base`, `spacer`, `row`,
+`group`, `sticky-group`) keeps matching in both modes, and `row-height="auto"` still measures
+projected content because the light row is an ordinary in-flow child of that wrapper.
+
+`projectedRows: HTMLElement[]` returns the projected light-DOM row wrappers in item order, and is
+empty outside projection mode. The exported type is `LyraVirtualListRowProjection`; the reserved
+attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_ROW_ATTRIBUTE`
+(`data-lr-virtual-list-row`) and `VIRTUAL_LIST_STICKY_ATTRIBUTE` (`data-lr-virtual-list-sticky`).
+
+**Known gotchas, all inherent to handing the cascade back to the consumer:**
+
+- **One component-owned wrapper sits between the host and your markup.** A slot cannot assign a text
+  node or a multi-root fragment by attribute, so each row's content lives inside a wrapper carrying
+  `data-lr-virtual-list-row`. Descendant selectors (`lr-virtual-list .row-title`) port unchanged;
+  child combinators (`lr-virtual-list > .row`), `:nth-child`, `:first-child` and sibling combinators
+  written against the unvirtualized markup do not. `:nth-child` on the wrappers reflects the current
+  *window*, not the item index.
+- **`closest('[part="row"]')` stops resolving.** A delegated listener on the host now sees an
+  un-retargeted `event.target` inside the light DOM. Use `closest('[data-lr-virtual-list-row]')`.
+- **The document cascade now reaches row content**, including resets and element-level rules that
+  previously could not, so a projected row can look different from the same row in shadow mode.
+- **Per-row light-DOM state does not survive a disconnect/reconnect.** Disconnect removes the
+  projected rows completely (no rows, no markers, no anchor left behind), so a reparenting move
+  rebuilds them. Scroll position, measurements and the window are unaffected — they live in
+  component state, not in the rows.
+- **Projection activates one task after hydration.** A server render has no DOM to project into, so
+  the first window is shadow-rendered, hydration matches the server markup, and the rows then swap
+  into the light DOM on the next task.
+- **A row taken out of flow collapses its wrapper.** `position: fixed`/`absolute` or
+  `display: none` on your own row leaves nothing for the wrapper to measure.
 
 ---
 
@@ -19627,7 +19682,8 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
 - `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto the native
   control the card actually renders, the same mechanism `<lr-button>` and `<lr-icon-button>` use.
   `aria-pressed` accepts `'true' | 'false' | 'mixed'` and reaches the `activation-button` only —
-  `link` has no pressed state, so a linked card never receives it. The global `aria-current`
+  `link` has no pressed state, so a linked card never receives it — the same **16.0.0** carve-out
+  `<lr-button>` and `<lr-icon-button>` took. The global `aria-current`
   accepts `'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'` and reaches both the
   activation button and the stretched link. Anything outside those sets is dropped rather than
   passed through, so a typo never reaches the accessibility tree. This is what lets a single-select
@@ -20401,7 +20457,10 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 Choice option entries must expose string `value` and `label` data fields; malformed entries are
 omitted independently, while supplied empty strings remain valid. A custom definition requires its
 adapter and a callable `render`; a rejected definition does not reserve its filter ID. Valid
-siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate.
+siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate. A
+chip-only definition requires neither options nor an adapter — a stable filter ID and a label are
+the whole schema, since a malformed `formatValue`/`isEmpty` still has a correct fallback and so is
+guarded where it is used rather than rejected outright.
 
 **Lean registration entry.** `components/layout/filter-bar/filter-bar.js` (the default entry)
 eagerly imports every composed control this bar could possibly render — `<lr-select>`,
@@ -20422,6 +20481,7 @@ the filter `type`s actually declared:
 | `'checkbox-menu'` | `components/overlays/overlay/dropdown.js` **and** `components/layout/menu/dropdown-item.js` |
 | `'date'` / `'date-range'` | `components/forms/date-picker/date-input.js` |
 | `'text'` | `components/forms/input/input.js` |
+| `'chip'` | none — renders no control |
 
 Two more are unconditional regardless of which filter `type`s are declared: `<lr-button>` renders
 the reset action on every bar, and `<lr-chip>`/`<lr-chip-group>` render the active-filter row
@@ -20602,7 +20662,9 @@ same-named counterparts (with `combobox`'s `multiple` opting into a multi-value 
 `'date'`/`'date-range'` both map to `<lr-date-input>` (single vs. `mode="range"`), and `'text'` maps
 to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
-text the user typed, not a truncated or normalized form.
+text the user typed, not a truncated or normalized form. `'chip'` is the one type that renders no
+control at all (see **Chip-only filters** below): its value belongs to a widget elsewhere on the
+page, so the bar renders only its active-filter chip and gives it no toolbar cell.
 
 Every built-in (non-`'custom'`) filter definition additionally accepts optional `size: LyraSize`,
 `icon: unknown` and `labelVisibility: 'visible' | 'hidden'` fields, and every one whose composed
@@ -20818,12 +20880,89 @@ const filters: LyraFilterBarFilterDefinition[] = [
 The custom renderer returns a Lit `TemplateResult`; the filter bar places it in its
 `filter-control` part and re-renders it whenever the controlled value or validation state changes.
 
+### Chip-only filters
+
+Use `type: 'chip'` when the value is already owned by a widget elsewhere on the page — a calendar
+heatmap cell, a map selection, a chart brush — and the bar's job is only to *show* that the filter
+is applied and to let the user take it off. Unlike `type: 'custom'`, which still renders a control
+inside the toolbar, a chip-only filter renders **no control and no toolbar cell at all**: no `field`
+wrapper is emitted for it, so `lr-filter-bar::part(field)` and `::part(field-<filterId>)` never
+match one and a bar whose filters are *all* chip-only shows no empty column — its `controls` row
+still holds the reset button (the "clear all" action such a bar needs), the `end` slot, and the
+loading spinner, exactly like a bar with no filters at all.
+
+Everything else is unchanged from any other filter type. The value lives in `value` under its own
+filter ID, rides every `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` (so it enables
+the reset button) and toward `invalidFilterIds` when the definition is `required`, renders a
+removable active-filter chip subject to `activeFiltersDisplay`, and is cleared both by removing that
+chip and by `reset()`. A `required` chip-only filter is honoured in **bookkeeping only**: it joins
+`invalidFilterIds`, fails `checkValidity()` and moves `lr-validity-change`, but renders no inline
+error, because the bar renders no element of its own for it — the owning widget is responsible for
+its own error affordance. The inherited `placeholder` is inert here for the same reason it is for
+`type: 'custom'`: there is no field to place it in.
+
+A chip-only definition adds three optional fields of its own:
+
+```ts
+type: 'chip';
+formatValue?: (value: LyraFilterBarFieldValue, locale: string) => string;
+clearValue?: LyraFilterBarFieldValue;
+isEmpty?: (value: LyraFilterBarFieldValue) => boolean;
+```
+
+`formatValue` produces the chip's text, and its `locale` argument is the bar's `effectiveLocale` —
+the same locale every built-in type's own chip formatting and a custom adapter's `formatValue`
+already receive, and the reason a chip-only value (normally an already-formatted string such as a
+localized date) can be localized by the caller. That output is caller data, so — like a filter's
+own label — the bar never routes it through its own localization. Omitted, the fallback ladder is
+the one a custom adapter's omitted `formatValue` uses: a string array renders as a localized
+conjunction list, anything else renders verbatim through `String(value)`, and an unset value renders
+as the empty string. Verbatim is exact: a chip-only value is never run through the date branch that
+localizes a `'date'`/`'date-range'` chip, so an ISO day is not silently reformatted and a value
+containing a slash is not mangled.
+
+`clearValue` is what a chip removal (and `clearFilter()`) writes, defaulting to the empty string —
+what every non-multi built-in type writes. Declare an empty array for an array-valued chip-only
+filter. `isEmpty` overrides the built-in emptiness rule (absent, `false`, the empty string and the
+empty array are empty; everything else is set). **A domain sentinel must pair the two**: declaring
+a sentinel clear value without a matching `isEmpty` leaves the bar reading the "cleared" value as
+still set, so it keeps rendering a chip for it — the identical pairing a custom adapter's own
+`clearValue`/`isEmpty` documents. With the pair declared, the sentinel is never stored in `value`
+(cleared keys are omitted) and an absent key reads back as the sentinel for the owning widget.
+
+```ts
+const filters: LyraFilterBarFilterDefinition[] = [
+  { filterId: "query", label: "Query", type: "text" },
+  {
+    filterId: "day",
+    label: "Day",
+    type: "chip",
+    formatValue: (value, locale) =>
+      new Intl.DateTimeFormat(locale, {
+        dateStyle: "medium",
+        timeZone: "UTC",
+      }).format(new Date(`${String(value)}T00:00:00Z`)),
+  },
+];
+
+// The calendar heatmap beside the bar owns the value; the bar only shows and removes it.
+heatmap.addEventListener("app-select-day", (event) => {
+  const { isoDate } = (event as CustomEvent<{ isoDate: string }>).detail;
+  bar.value = { ...bar.value, day: isoDate };
+});
+bar.addEventListener("lr-input", (event) => {
+  const { value } = (event as LyraFilterBarInputEvent).detail;
+  heatmap.selectedDay = (value["day"] as string | undefined) ?? "";
+});
+```
+
 **TypeScript:** `LyraFilterBar<Defs extends readonly LyraFilterBarFilterDefinition[] =
 readonly LyraFilterBarFilterDefinition[]>` — `value` and the `lr-input`/`lr-reset` detail `value`
 narrow to a record keyed per `filterId`, whose value type follows that filter's own definition (a
 `'select'`, a non-`multiple` `'combobox'`, `'text'`, `'date'`, and `'date-range'` narrow to
 `string`; a `'checkbox-menu'` and a `multiple: true` `'combobox'` narrow to `readonly string[]`; a
-`'custom'` filter keeps the full unconstrained field value). Declare the schema with `as const
+`'custom'` filter keeps the full unconstrained field value, and so does a `'chip'` filter, whose
+value is owned by a widget this component never renders). Declare the schema with `as const
 satisfies readonly LyraFilterBarFilterDefinition[]` and type the element as
 `LyraFilterBar<typeof FILTERS>` to pick it up. Types only; the runtime is unchanged, and an untyped
 `<lr-filter-bar>` keeps today's `LyraFilterBarValue` (`Readonly<Record<string, string | readonly
@@ -21237,6 +21376,19 @@ These named interfaces and helper signatures are available to typed integrations
     readonly size?: LyraSize;
     readonly icon?: unknown;
     readonly labelVisibility?: LyraFilterBarLabelVisibility;
+    // Inherited from LyraFilterBarDefinitionBase.
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarChipDefinition extends LyraFilterBarDefinitionBase {
+    readonly type: 'chip';
+    readonly formatValue?: (value: LyraFilterBarFieldValue, locale: string) => string;
+    readonly clearValue?: LyraFilterBarFieldValue;
+    readonly isEmpty?: (value: LyraFilterBarFieldValue) => boolean;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;
@@ -27054,10 +27206,18 @@ LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' |
 'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
   rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
   bounded before validation. The overlay scrolls within the map allocation.
+  A row may also carry its own `value`: the category key that row stands for — the same string a
+  `point.colors`/`point.icons` entry matches against `point.field`/`point.iconField`. It is
+  trimmed, bounded to 256 characters (sliced, never ellipsized, so a bounded key still matches) and
+  **retained** in the canonical readback; a non-string, empty or whitespace-only key leaves no
+  `value` property on the frozen row at all. It is what makes a row operable under
+  `legendInteractive`, and it does not count toward the label budget.
   A row may also carry `icon`, deliberately the same record a `point.icons` entry uses — hand the
   legend the very icon object its point layer renders and the key shows the symbol drawn on the
-  map instead of describing it in colour alone. The point layer's category key (`value`) is
-  accepted so a pass-through needs no reshaping, and is left out of the canonical readback;
+  map instead of describing it in colour alone. The **icon record's own** `value` is a separate
+  field from the row-level one above: it is accepted so a pass-through needs no reshaping, and it
+  is still left out of the canonical readback. A row's key is never derived from its glyph's, which
+  would silently make a row interactive that the author never marked;
   `path`, `viewBox`, `mode`, `strokeWidth`, `lineCap` and `lineJoin` keep their point-icon meaning
   and their point-icon defaults, and the same validation applies (path data only, at most 8,192
   characters, positive `viewBox` dimensions). An unusable record is dropped and that row keeps
@@ -27066,6 +27226,22 @@ LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' |
 omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
   projection renders a localized visible `1–N of M items` summary rather than silently claiming
   the bounded rows are complete.
+- `legendInteractive: boolean = false` (attribute `legend-interactive`, reflected) — opt-in: turns
+  every legend row that carries a `value` into a keyboard-operable visibility toggle, and leaves a
+  row without one inert. Unset, the legend renders exactly the read-only key it rendered before —
+  no `button`, no extra attribute, and no extra MapLibre paint key. Each toggle is an independently
+  tabbable native `button`, so Enter and Space are the platform's own activation and there is no
+  roving tabindex: a 100-row interactive legend contributes 100 tab stops, exactly as a 100-series
+  `lr-chart` legend does. Each interactive row also grows to the shared `--lr-icon-button-size`
+  hit-area floor (WCAG 2.5.8), which the panel's existing `max-block-size` and scrolling contain.
+- `hiddenCategories: readonly string[] = []` (attribute: false) — the complete controlled set of
+  muted category keys, mirroring `lr-chart`'s `hiddenDatasets`. Clone-owned and frozen; non-string,
+  empty, whitespace-only and duplicate entries are dropped (first occurrence wins, matching
+  `point.colors`), and at most 100 keys are retained. Honoured on the **first** render and the
+  first MapLibre paint, not only after a user toggle, so a host can restore a saved selection. An
+  empty array deliberately means every category is visible. It is controlled public state and
+  survives a disconnect/reconnect. A hidden key that matches no category is harmless. Assigning it
+  programmatically emits nothing.
 - `choropleth?: LyraMapChoroplethLayer` (attribute: false) — `LyraMapChoroplethLayer { sourceId:
 string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][]; interpolation?:
 'linear' | 'logarithmic' | 'step'; stepBaseColor?: string }` (interpolated
@@ -27346,7 +27522,8 @@ payload beside the map.
 `LyraMapHeatmapZoomValue`, `LyraMapLineOptions`, `LyraMapPointOptions`, `LyraMapPointRadiusOptions`,
 `LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
-`LyraMapMarkerActivationSource`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
+`LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapStyleSpecification`, and
+`LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
 
@@ -27362,7 +27539,17 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 an element.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
-`lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
+`lr-map-legend-toggle` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
+hiddenCategories }` — the activated row's category key, its proposed visibility, and the complete
+proposed hidden set in the order it would be committed, with the array detached and frozen so a
+listener cannot mutate the component's state through it). `preventDefault()` is a genuine veto, not
+a notification: `hiddenCategories` is not written, the row's `aria-pressed` does not change, the
+MapLibre paint is untouched, and nothing is announced — which is exactly what a host needs to own
+the set and assign its own value instead. There is deliberately no second, confirmation event: the
+committed state is `hiddenCategories`, which the host already observes, so a paired before/after
+vocabulary would be permanent public surface nobody asked for. The event is a DOM-interaction
+proposal only, so a programmatic `hiddenCategories` assignment reconciles without emitting it.
+Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
 (frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
@@ -27386,7 +27573,8 @@ markup as described above.
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
 when `legend` and `legendGradient` are both empty.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-gradient`, `legend-lo`,
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-toggle`,
+`legend-toggle-hidden`, `legend-gradient`, `legend-lo`,
 `legend-hi`, `legend-limit`, `marker`, `popup`,
 `popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `navigation`,
 `zoom-in`, `zoom-out`, `compass`, `scale`, `error`.
@@ -27411,6 +27599,18 @@ visible label carries its meaning. That association is advertised only while it 
 the optional `maplibre-gl` peer is still loading, and after any failure, there is no map
 container in the tree, so `legend` withholds `aria-controls` rather than leaving a dangling
 idref.
+Under `legendInteractive`, a row carrying a `value` wraps its swatch and label in a
+`legend-toggle` `button` with `aria-pressed` rendered as the literal `"true"`/`"false"` — never
+omitted, because a missing attribute reports "not a toggle button" rather than "unpressed". The
+button's accessible name is its own visible label (caller-supplied data, so deliberately not
+localized), scoped by the legend's own localized group name; no `aria-label` restates the state,
+which would make assistive tech announce it twice. A hidden row's button additionally carries the
+`legend-toggle-hidden` token — state lives in the part name, so `::part(legend-toggle-hidden)` is a
+reachable hook — and dims only its `aria-hidden` swatch while re-colouring the label through the
+quiet text token, so the label keeps AA contrast rather than fading with the whole button. In
+forced colors the hidden row falls back to `line-through`, which survives a system-color collapse.
+Each activation is announced through the shared light-DOM polite live region, using the same
+`legendTypeShown`/`legendTypeHidden` strings `lr-graph-legend` announces with.
 `legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
 stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
 `marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic
@@ -27442,6 +27642,15 @@ integration; there is no declarative controls property.
 - `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
   `choropleth` layer and polygon fills in every `dataLayers` entry. It intentionally inherits from
   an ancestor, so one scoped declaration rethemes every nested map without setting each host.
+- `--lr-map-hidden-category-opacity` (default `0.15`) — opacity a category listed in
+  `hiddenCategories` is muted to in the rendered MapLibre paint: `circle-opacity` and
+  `circle-stroke-opacity` on the points layer and `icon-opacity` on the point-icon symbol layer.
+  Like the fill-opacity token it is read from the resolved cascade on every paint, because MapLibre
+  draws to a WebGL canvas the CSS cascade never reaches, and it inherits from an ancestor. A
+  `kind: 'heatmap'` entry is out of scope: a density surface has no per-category field to mute.
+- `--lr-map-legend-hidden-swatch-opacity` (default `0.5`) — opacity of a hidden interactive legend
+  row's decorative swatch. Only the `aria-hidden` swatch dims; the label re-colours through
+  `--lr-color-text-quiet` instead, so it never drops below 4.5:1.
 - `--lr-map-popup-close-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
   `--lr-map-popup-close-button-hover-color` (default `var(--lr-color-brand)`) — hover background
   and foreground of `popup-close-button`.
@@ -30166,6 +30375,12 @@ These named interfaces and helper signatures are available to typed integrations
     readonly lngLat: readonly [number, number];
     readonly marker: LyraMapMarker;
     readonly source: LyraMapMarkerActivationSource;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapLegendToggleDetail {
+    readonly value: string;
+    readonly visible: boolean;
+    readonly hiddenCategories: readonly string[];
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapStyleSpecification {

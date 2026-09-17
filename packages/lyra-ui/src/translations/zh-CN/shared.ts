@@ -15,6 +15,8 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   noData: '无数据',
+  legendTypeShown: '{label}已显示',
+  legendTypeHidden: '{label}已隐藏',
   jumpToLatest: '跳到最新',
   loadMore: '加载更多',
   viewerSearchMatchCount: {

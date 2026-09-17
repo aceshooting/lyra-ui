@@ -101,6 +101,17 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   number `56` and fixes every row to that many pixels. Property callers assign a number, not a
   numeric string. Anything else (non-numeric, zero, negative, non-finite) safely canonicalizes to
   `'auto'` rather than throwing.
+- `rowProjection: 'shadow' | 'light' = 'shadow'` (attribute `row-projection`) — where
+  `renderItem`'s output is instantiated. `'shadow'` (default) stamps it inside this component's own
+  shadow root, so only inherited custom properties and the public row parts reach it. `'light'`
+  renders the windowed rows into the host's own light DOM instead, assigned into the shadow viewport
+  through internal named slots, so ordinary document CSS styles a virtualized row exactly as it
+  styles the same row unvirtualized. The component keeps owning windowing, measurement, spacer
+  sizing, `scrollToIndex()`, the external-scroller mode and the ARIA contract either way, and
+  positioning stays on the shadow-side `[part="row"]` wrapper that document CSS cannot select — so
+  consumer styles can never break windowing. Any other value canonicalizes to `'shadow'`. Left
+  unset, the rendered output is byte-identical to before and the host's light DOM stays empty.
+  See **Light-DOM row projection** below for the trade-offs it carries.
 - `itemRole: 'listitem' | 'row' = 'listitem'` (attribute `item-role`) — `'listitem'` (default)
   preserves the plain `role="list"`/`role="listitem"` mapping with `aria-setsize`/`aria-posinset`.
   `'row'` additionally maps `[part="base"]` to `role="rowgroup"`, `[part="spacer"]` to
@@ -354,5 +365,47 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
   decides: groups render before the rows, so an active row wins while (and only while) it needs to,
   which is right — a group header is a non-interactive `pointer-events: none` label.
+
+### Light-DOM row projection
+
+`rowProjection="light"` exists for one shape: an application whose list rows are already styled by
+its own global stylesheet, and which therefore could not adopt virtualization without rehoming a
+dozen descendant rules per row into a new custom element or a growing set of custom properties. In
+projection mode the windowed rows render into the host's own light DOM, so ordinary document CSS
+reaches row content directly.
+
+Positioning, measurement and semantics stay where they were. The `[part="row"]` wrapper remains in
+the shadow root and keeps `position: absolute`, the per-frame `transform`, `role`, `aria-setsize`/
+`aria-posinset` (or `aria-rowindex`) and the `ResizeObserver` box — document CSS cannot select it,
+so consumer styles can never break windowing. The whole part vocabulary (`base`, `spacer`, `row`,
+`group`, `sticky-group`) keeps matching in both modes, and `row-height="auto"` still measures
+projected content because the light row is an ordinary in-flow child of that wrapper.
+
+`projectedRows: HTMLElement[]` returns the projected light-DOM row wrappers in item order, and is
+empty outside projection mode. The exported type is `LyraVirtualListRowProjection`; the reserved
+attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_ROW_ATTRIBUTE`
+(`data-lr-virtual-list-row`) and `VIRTUAL_LIST_STICKY_ATTRIBUTE` (`data-lr-virtual-list-sticky`).
+
+**Known gotchas, all inherent to handing the cascade back to the consumer:**
+
+- **One component-owned wrapper sits between the host and your markup.** A slot cannot assign a text
+  node or a multi-root fragment by attribute, so each row's content lives inside a wrapper carrying
+  `data-lr-virtual-list-row`. Descendant selectors (`lr-virtual-list .row-title`) port unchanged;
+  child combinators (`lr-virtual-list > .row`), `:nth-child`, `:first-child` and sibling combinators
+  written against the unvirtualized markup do not. `:nth-child` on the wrappers reflects the current
+  *window*, not the item index.
+- **`closest('[part="row"]')` stops resolving.** A delegated listener on the host now sees an
+  un-retargeted `event.target` inside the light DOM. Use `closest('[data-lr-virtual-list-row]')`.
+- **The document cascade now reaches row content**, including resets and element-level rules that
+  previously could not, so a projected row can look different from the same row in shadow mode.
+- **Per-row light-DOM state does not survive a disconnect/reconnect.** Disconnect removes the
+  projected rows completely (no rows, no markers, no anchor left behind), so a reparenting move
+  rebuilds them. Scroll position, measurements and the window are unaffected — they live in
+  component state, not in the rows.
+- **Projection activates one task after hydration.** A server render has no DOM to project into, so
+  the first window is shadow-rendered, hydration matches the server markup, and the rows then swap
+  into the light DOM on the next task.
+- **A row taken out of flow collapses its wrapper.** `position: fixed`/`absolute` or
+  `display: none` on your own row leaves nothing for the wrapper to measure.
 
 ---

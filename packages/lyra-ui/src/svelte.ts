@@ -6375,11 +6375,13 @@ export type LyraMapSvelteProps = LyraSvelteElementProps<
   | 'center'
   | 'choropleth'
   | 'dataLayers'
+  | 'hiddenCategories'
   | 'label'
   | 'legend'
   | 'legendGradient'
   | 'legendGradientHiLabel'
   | 'legendGradientLoLabel'
+  | 'legendInteractive'
   | 'locale'
   | 'mapStyle'
   | 'markers'
@@ -6390,10 +6392,13 @@ export type LyraMapSvelteProps = LyraSvelteElementProps<
   {},
   LyraMapEventMap,
   | 'lr-map-click'
+  | 'lr-map-legend-toggle'
   | 'lr-map-load'
   | 'lr-map-marker-activate',
   | '--lr-map-choropleth-fill-opacity'
   | '--lr-map-height'
+  | '--lr-map-hidden-category-opacity'
+  | '--lr-map-legend-hidden-swatch-opacity'
   | '--lr-map-popup-close-button-active-bg'
   | '--lr-map-popup-close-button-active-color'
   | '--lr-map-popup-close-button-hover-bg'
@@ -6401,6 +6406,7 @@ export type LyraMapSvelteProps = LyraSvelteElementProps<
   {
     'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];
     'legend-gradient-lo-label'?: LyraMap['legendGradientLoLabel'];
+    'legend-interactive'?: LyraMap['legendInteractive'];
   }
 >;
 
@@ -11588,6 +11594,7 @@ export type LyraVirtualListSvelteProps = LyraSvelteElementProps<
   | 'renderStickyGroup'
   | 'rowHeight'
   | 'rowIndexOffset'
+  | 'rowProjection'
   | 'scrollElement'
   | 'source'
   | 'strings',
@@ -11609,6 +11616,7 @@ export type LyraVirtualListSvelteProps = LyraSvelteElementProps<
     'item-role'?: LyraVirtualList['itemRole'];
     'row-height'?: LyraVirtualList['rowHeight'];
     'row-index-offset'?: LyraVirtualList['rowIndexOffset'];
+    'row-projection'?: LyraVirtualList['rowProjection'];
   }
 >;
 

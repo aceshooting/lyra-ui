@@ -15,6 +15,8 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   noData: 'Sin datos',
+  legendTypeShown: '{label} se muestra',
+  legendTypeHidden: '{label} se oculta',
   jumpToLatest: 'Ir a lo más reciente',
   loadMore: 'Cargar más',
   viewerSearchMatchCount: {

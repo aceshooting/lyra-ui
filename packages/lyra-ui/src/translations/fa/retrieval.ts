@@ -15,8 +15,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   graphLegendLabel: 'راهنمای نمودار',
-  legendTypeShown: '{label} نشان داده شده است',
-  legendTypeHidden: '{label} پنهان است',
   entityChipWithType: '{label}، {type}',
   showMore: 'نمایش بیشتر',
   untitledSource: 'منبع بدون عنوان',

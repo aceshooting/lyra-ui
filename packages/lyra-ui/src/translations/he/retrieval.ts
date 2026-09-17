@@ -15,8 +15,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   graphLegendLabel: 'מקרא הגרף',
-  legendTypeShown: '{label} מוצג',
-  legendTypeHidden: '{label} מוסתר',
   entityChipWithType: '{label}, {type}',
   showMore: 'הצג עוד',
   untitledSource: 'מקור ללא כותרת',
