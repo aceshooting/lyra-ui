@@ -251,3 +251,30 @@ it('keeps a forced-colors glyph off its own fill and inside its pattern border',
     await setForcedColors('none');
   }
 });
+
+// A glyph row nested inside an interactive legend toggle keeps every decorative guarantee the
+// inert row gives it: the swatch must not become part of the button's accessible name, and the
+// SVG must not become a second focus target inside an already-focusable control.
+it('keeps a glyph decorative and unfocusable inside an interactive legend toggle', async () => {
+  const el = (await fixture(html`<lr-map legend-interactive></lr-map>`)) as LyraMap;
+  el.legend = [
+    { color: 'rgb(255, 0, 0)', label: 'Depot', pattern: 'solid', value: 'depot',
+      icon: { path: TRIANGLE_PATH } },
+  ];
+  await el.updateComplete;
+
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('button[part~="legend-toggle"]')!;
+  const swatch = button.querySelector<HTMLElement>('[part="legend-swatch"]')!;
+  expect(swatch.dataset['icon']).to.equal('true');
+  expect(swatch.getAttribute('aria-hidden')).to.equal('true');
+  expect(swatch.inert).to.be.true;
+  expect(swatch.style.color, 'the glyph still paints in the entry color through currentColor').to.equal(
+    'rgb(255, 0, 0)',
+  );
+  expect(glyphPath(swatch)).to.equal(TRIANGLE_PATH);
+
+  const svg = swatch.querySelector('svg')!;
+  expect(svg.getAttribute('focusable'), 'the glyph is never its own focus target').to.equal('false');
+  expect(button.querySelectorAll('[tabindex]').length).to.equal(0);
+  expect(button.textContent).to.contain('Depot');
+});

@@ -277,6 +277,54 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
+  /* The opt-in interactive legend row. A native button, so Enter/Space are the platform's own
+     activation and no roving tabindex is involved. Every declaration is logical, so the row keeps
+     its swatch at the inline start under RTL. */
+  button[part~='legend-toggle'] {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    box-sizing: border-box;
+    /* WCAG 2.5.8: a legend row is ~18px tall on its own, so the toggle carries the shared
+       icon-button floor in both axes. The panel's own max-block-size + overflow:auto above
+       contains the taller list. */
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    min-width: 0;
+    max-inline-size: 100%;
+    border: none;
+    border-radius: var(--lr-radius-xs);
+    padding: var(--lr-size-2px) var(--lr-space-xs);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: var(--lr-transition-interactive);
+  }
+  button[part~='legend-toggle'] > span:last-child {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  button[part~='legend-toggle']:where(:hover) {
+    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+  }
+  button[part~='legend-toggle']:where(:active) {
+    background: color-mix(in oklab, var(--lr-color-text-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  button[part~='legend-toggle']:where(:focus-visible) {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* Opacity dims only the decorative, aria-hidden swatch; the label re-colors through the quiet
+     text token instead. Opacity on the whole button would drop the label below 4.5:1. */
+  button[part~='legend-toggle-hidden'] [part='legend-swatch'] {
+    opacity: var(--lr-map-legend-hidden-swatch-opacity, 0.5);
+  }
+  button[part~='legend-toggle-hidden'] > span:last-child {
+    color: var(--lr-color-text-quiet);
+  }
   [part='legend-swatch'] {
     position: relative;
     overflow: hidden;
@@ -585,6 +633,13 @@ export const styles = css`
        and stays this row's non-color cue. */
     [part='legend-swatch'][data-pattern][data-icon='true'] {
       background: Canvas !important;
+    }
+    /* Forced colors collapse the quiet-text recolor and the swatch opacity above into the same
+       system colors as a visible row, so the hidden toggle needs a cue that survives that
+       collapse. Line-through is the one lr-chart's hidden legend item already uses. */
+    button[part~='legend-toggle-hidden'] {
+      text-decoration-line: line-through;
+      text-decoration-thickness: var(--lr-border-width-medium);
     }
   }
 `;

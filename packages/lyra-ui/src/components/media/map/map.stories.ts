@@ -562,3 +562,73 @@ export const ClassifiedPoints: Story = {
       ]}></lr-map>`;
   },
 };
+
+/** Shared with both interactive-legend stories so the key and the layer can never describe
+ *  different categories: one record drives `point.colors`, `point.icons` and every legend row. */
+const INTERACTIVE_CATEGORIES = [
+  { value: 'home', label: 'Home', tone: 'brand', pattern: 'solid',
+    path: 'M2 12L12 2L22 12V22H2Z' },
+  { value: 'work', label: 'Work', tone: 'success', pattern: 'diagonal',
+    path: 'M8 6V3H16V6M3 6H21V21H3ZM3 11H21' },
+  { value: 'shop', label: 'Shop', tone: 'warning', pattern: 'dots',
+    path: 'M4 2H20L23 9H21V22H3V9H1ZM6 12V20H10V12Z' },
+] as const;
+
+function interactiveLayer(): LyraMapGeoJsonDataLayer {
+  const icons = INTERACTIVE_CATEGORIES.map(
+    ({ value, path }) => ({ value, path }) satisfies LyraMapPointIcon,
+  );
+  return {
+    sourceId: 'places',
+    geojson: { type: 'FeatureCollection', features: Array.from({ length: 900 }, (_, index) => ({
+      type: 'Feature', id: index,
+      properties: { category: INTERACTIVE_CATEGORIES[index % 3]!.value },
+      geometry: { type: 'Point', coordinates: [((index % 30) - 15) * 0.0015, (Math.floor(index / 30) - 15) * 0.0015] },
+    })) },
+    point: {
+      field: 'category',
+      colors: INTERACTIVE_CATEGORIES.map(({ value, tone }) => [value, storyColor(tone)] as const),
+      radius: 8, strokeWidth: 1, iconSize: 12, icons,
+    },
+  };
+}
+
+function interactiveLegend(): LyraMapLegendEntry[] {
+  return INTERACTIVE_CATEGORIES.map(({ value, label, tone, pattern, path }) => ({
+    value, label, color: storyColor(tone), pattern, icon: { value, path },
+  }));
+}
+
+export const InteractiveLegend: Story = {
+  parameters: { docs: { description: { story: 'Opt-in with `legend-interactive`. Every legend row that carries its own `value` becomes a native toggle button: Tab reaches each one, Enter and Space activate it, and its `aria-pressed` renders the literal "true"/"false" rather than being dropped when unpressed. Hiding a category mutes its points, point strokes and point icons through `--lr-map-hidden-category-opacity` (default 0.15) instead of removing them, so the geography stays legible; the row itself dims only its decorative swatch and re-colours its label through the quiet text token, keeping AA contrast. Interactive rows carry the shared `--lr-icon-button-size` hit-area floor, so they are ~40px tall instead of ~18px; the panel scrolls within the map allocation. Each activation emits the cancelable `lr-map-legend-toggle` and announces through the shared polite live region.' } } },
+  render: () => html`<lr-map
+    label="Interactive category legend"
+    legend-interactive
+    .mapStyle=${OFFLINE_RASTER_STYLE}
+    .zoom=${13}
+    .dataLayers=${[interactiveLayer()]}
+    .legend=${interactiveLegend()}
+  ></lr-map>`,
+};
+
+export const InteractiveLegendControlledHost: Story = {
+  parameters: { docs: { description: { story: 'A controlled host: the listener calls `preventDefault()` on `lr-map-legend-toggle`, so the component writes nothing at all — no `hiddenCategories`, no `aria-pressed` change, no paint change and no announcement — and the host assigns its own set from the proposal in `event.detail.hiddenCategories`. Here it refuses to hide the last visible category, which is a policy the component deliberately does not encode. A programmatic `hiddenCategories` assignment reconciles without emitting the event, so this loop cannot recur.' } } },
+  render: () => {
+    const onToggle = (event: Event): void => {
+      const toggle = event as CustomEvent<{ readonly hiddenCategories: readonly string[] }>;
+      toggle.preventDefault();
+      const proposed = toggle.detail.hiddenCategories;
+      if (proposed.length >= INTERACTIVE_CATEGORIES.length) return;
+      (event.currentTarget as HTMLElement & { hiddenCategories: readonly string[] }).hiddenCategories = proposed;
+    };
+    return html`<lr-map
+      label="Host-controlled category legend"
+      legend-interactive
+      @lr-map-legend-toggle=${onToggle}
+      .mapStyle=${OFFLINE_RASTER_STYLE}
+      .zoom=${13}
+      .dataLayers=${[interactiveLayer()]}
+      .legend=${interactiveLegend()}
+    ></lr-map>`;
+  },
+};

@@ -96,6 +96,13 @@ function assertiveAnnouncements(): string[] {
   return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
 
+function politeAnnouncements(): string[] {
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
+
 const LOCAL_STYLE = {
   version: 8,
   sources: {
@@ -1285,6 +1292,467 @@ it('bounds labels and contains malformed or hostile legend records', async () =>
   expect(el.legendProjection.omittedCount).to.equal(2);
   expect(el.legendProjection.truncatedLabelCount).to.equal(1);
   expect(el.legendProjection.truncated).to.be.true;
+});
+
+// ---------------------------------------------------------------------------
+// The row-level category key. Distinct from the point-icon record's own `value`, which
+// `projectIconPaint()` still drops -- a row's key is never derived from its glyph's.
+// ---------------------------------------------------------------------------
+
+it('retains a legend row category key on the frozen readback', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.legend = [{ color: 'red', label: 'Home', pattern: 'solid', value: 'home' }];
+  await el.updateComplete;
+
+  expect(el.legend[0]!.value).to.equal('home');
+  expect(Object.isFrozen(el.legend[0])).to.be.true;
+});
+
+it('leaves no value key at all for a non-string, empty, or whitespace-only legend category key', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.legend = [
+    { color: '#f00', label: 'Plain', pattern: 'solid' },
+    { color: '#0f0', label: 'Numeric', pattern: 'solid', value: 7 },
+    { color: '#00f', label: 'Empty', pattern: 'solid', value: '' },
+    { color: '#ff0', label: 'Blank', pattern: 'solid', value: '   ' },
+  ] as never;
+  await el.updateComplete;
+
+  expect(el.legend.length).to.equal(4);
+  expect(el.legend.map((row) => 'value' in row)).to.deep.equal([false, false, false, false]);
+  expect(el.legend.every((row) => row.value === undefined)).to.be.true;
+});
+
+it('bounds a legend category key without counting it as a truncated label', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.legend = [{ color: '#f00', label: 'Long key', pattern: 'solid', value: 'k'.repeat(1000) }];
+  await el.updateComplete;
+
+  expect(el.legend.length).to.equal(1);
+  expect(el.legend[0]!.value).to.equal('k'.repeat(256));
+  expect(el.legend[0]!.value!.length).to.equal(256);
+  expect(el.legendProjection.truncatedLabelCount).to.equal(0);
+  expect(el.legendProjection.truncated).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[role="listitem"]').length).to.equal(1);
+});
+
+it('never derives a legend row category key from its icon record', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.legend = [
+    { color: '#f00', label: 'Home', pattern: 'solid', icon: { value: 'home', path: 'M0 0H24V24H0Z' } },
+  ];
+  await el.updateComplete;
+
+  expect(el.legend[0]!.icon).to.not.equal(undefined);
+  expect('value' in (el.legend[0]!.icon as object)).to.be.false;
+  expect(el.legend[0]!.value).to.equal(undefined);
+  expect('value' in el.legend[0]!).to.be.false;
+});
+
+it('contains a legend record whose own value getter throws', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const hostileValue = { color: '#f00', label: 'Hostile', pattern: 'solid' as const };
+  Object.defineProperty(hostileValue, 'value', {
+    enumerable: true,
+    get(): never {
+      throw new Error('hostile legend value getter');
+    },
+  });
+  el.legend = [
+    hostileValue,
+    { color: '#00f', label: 'Valid', pattern: 'dots', value: 'valid' },
+  ];
+  await el.updateComplete;
+
+  expect(el.legend.length).to.equal(1);
+  expect(el.legend[0]!.label).to.equal('Valid');
+  expect(el.legend[0]!.value).to.equal('valid');
+  expect(el.legendProjection.inputCount).to.equal(2);
+  expect(el.legendProjection.omittedCount).to.equal(1);
+});
+
+// ---------------------------------------------------------------------------
+// The opt-in interactive legend's two controlled properties. Both are inert until
+// `legendInteractive` is set, and the unset-regression test below is what pins that.
+// ---------------------------------------------------------------------------
+
+it('defaults legendInteractive off and reflects it as a dash-cased attribute', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  expect(el.legendInteractive).to.equal(false);
+  expect(el.hasAttribute('legend-interactive')).to.be.false;
+
+  el.legendInteractive = true;
+  await el.updateComplete;
+  expect(el.hasAttribute('legend-interactive')).to.be.true;
+  expect(el.hasAttribute('legendinteractive')).to.be.false;
+
+  el.legendInteractive = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('legend-interactive')).to.be.false;
+});
+
+it('owns a frozen, deduplicated, first-wins hiddenCategories snapshot', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  expect(el.hiddenCategories).to.deep.equal([]);
+  expect(Object.isFrozen(el.hiddenCategories)).to.be.true;
+
+  const input = ['b', 'a', 'a', '', '  ', 1 as never, 'b'];
+  el.hiddenCategories = input;
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal(['b', 'a']);
+  expect(Object.isFrozen(el.hiddenCategories)).to.be.true;
+
+  input.push('c');
+  input[0] = 'mutated';
+  expect(el.hiddenCategories).to.deep.equal(['b', 'a']);
+});
+
+it('bounds hiddenCategories to the legend item limit', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.hiddenCategories = Array.from({ length: 150 }, (_, index) => `category-${index}`);
+  await el.updateComplete;
+  expect(el.hiddenCategories.length).to.equal(100);
+  expect(el.hiddenCategories[0]).to.equal('category-0');
+  expect(el.hiddenCategories.at(-1)).to.equal('category-99');
+});
+
+it('normalizes a hostile hiddenCategories assignment to empty instead of throwing', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const { proxy, revoke } = Proxy.revocable([], {});
+  revoke();
+  el.hiddenCategories = proxy as never;
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal([]);
+
+  const hostileLength = new Proxy(['work'], {
+    get(target, prop, receiver) {
+      if (prop === 'length') throw new Error('hostile length getter');
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+  el.hiddenCategories = hostileLength as never;
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal([]);
+});
+
+it('renders a byte-identical read-only legend while legendInteractive is unset', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.legend = [
+    { color: '#f00', label: 'Home', pattern: 'solid', value: 'home' },
+    { color: '#00f', label: 'Work', pattern: 'dots', value: 'work' },
+  ];
+  await el.updateComplete;
+  const legend = el.shadowRoot!.querySelector('[part="legend"]')!;
+  const readOnlyMarkup = legend.innerHTML;
+
+  expect(legend.querySelectorAll('button').length).to.equal(0);
+  expect(legend.querySelectorAll('[part~="legend-toggle"]').length).to.equal(0);
+  const rows = [...legend.querySelectorAll('.legend-row')];
+  expect(rows.length).to.equal(2);
+  expect(rows.every((row) => row.matches('[role="listitem"]'))).to.be.true;
+  expect(rows.map((row) => row.getAttribute('aria-posinset'))).to.deep.equal(['1', '2']);
+  expect(rows.map((row) => row.getAttribute('aria-setsize'))).to.deep.equal(['2', '2']);
+
+  // A hidden set alone never changes the DOM: only `legendInteractive` does.
+  el.hiddenCategories = ['home'];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="legend"]')!.innerHTML).to.equal(readOnlyMarkup);
+});
+
+const CATEGORY_LEGEND = [
+  { color: '#f00', label: 'Home', pattern: 'solid' as const, value: 'home' },
+  { color: '#00f', label: 'Work', pattern: 'dots' as const, value: 'work' },
+];
+
+function legendToggles(el: LyraMap): HTMLButtonElement[] {
+  return [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="legend-toggle"]')];
+}
+
+async function interactiveLegendMap(
+  legend: LyraMap['legend'] = CATEGORY_LEGEND,
+  hidden?: readonly string[],
+): Promise<LyraMap> {
+  const el = (await fixture(html`<lr-map legend-interactive></lr-map>`)) as LyraMap;
+  el.legend = legend;
+  if (hidden) el.hiddenCategories = hidden;
+  await el.updateComplete;
+  return el;
+}
+
+it('renders one toggle button per keyed legend row when legendInteractive is set', async () => {
+  const el = await interactiveLegendMap();
+  const buttons = legendToggles(el);
+
+  expect(buttons.length).to.equal(2);
+  expect(buttons.map((button) => button.type)).to.deep.equal(['button', 'button']);
+  expect(buttons.map((button) => button.getAttribute('aria-pressed'))).to.deep.equal(['true', 'true']);
+  expect(buttons.map((button) => button.getAttribute('part'))).to.deep.equal([
+    'legend-toggle',
+    'legend-toggle',
+  ]);
+  expect(buttons[0]!.textContent).to.contain('Home');
+  expect(buttons[1]!.textContent).to.contain('Work');
+  // The decorative swatch stays inside the button and contributes nothing to its accessible name.
+  expect(buttons[0]!.querySelector('[part="legend-swatch"]')!.getAttribute('aria-hidden')).to.equal('true');
+  expect(buttons[0]!.hasAttribute('aria-label')).to.be.false;
+});
+
+it('honours hiddenCategories on the first interactive legend render', async () => {
+  const el = await interactiveLegendMap(CATEGORY_LEGEND, ['work']);
+  const buttons = legendToggles(el);
+
+  expect(buttons.map((button) => button.getAttribute('aria-pressed'))).to.deep.equal(['true', 'false']);
+  expect(buttons[1]!.getAttribute('part')).to.equal('legend-toggle legend-toggle-hidden');
+  expect(buttons[0]!.getAttribute('part')).to.equal('legend-toggle');
+});
+
+it('leaves a legend row with no category key inert under legendInteractive', async () => {
+  const el = await interactiveLegendMap([
+    { color: '#f00', label: 'Home', pattern: 'solid', value: 'home' },
+    { color: '#0f0', label: 'Unkeyed', pattern: 'diagonal' },
+  ]);
+  const rows = [...el.shadowRoot!.querySelectorAll('.legend-row')];
+
+  expect(rows.length).to.equal(2);
+  expect(rows[0]!.querySelectorAll('button').length).to.equal(1);
+  expect(rows[1]!.querySelectorAll('button').length).to.equal(0);
+  expect(rows[1]!.querySelector('[part~="legend-toggle"]') === null).to.be.true;
+
+  const readOnly = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  readOnly.legend = [{ color: '#0f0', label: 'Unkeyed', pattern: 'diagonal' }];
+  await readOnly.updateComplete;
+  expect(rows[1]!.innerHTML).to.equal(
+    readOnly.shadowRoot!.querySelector('.legend-row')!.innerHTML,
+  );
+});
+
+it('treats hiddenCategories as a key set shared by every row carrying that key', async () => {
+  const el = await interactiveLegendMap([
+    { color: '#f00', label: 'Home A', pattern: 'solid', value: 'home' },
+    { color: '#0f0', label: 'Home B', pattern: 'dots', value: 'home' },
+  ]);
+  const buttons = legendToggles(el);
+  expect(buttons.map((button) => button.getAttribute('aria-pressed'))).to.deep.equal(['true', 'true']);
+
+  buttons[0]!.click();
+  await el.updateComplete;
+  expect(legendToggles(el).map((button) => button.getAttribute('aria-pressed'))).to.deep.equal([
+    'false',
+    'false',
+  ]);
+
+  legendToggles(el)[1]!.click();
+  await el.updateComplete;
+  expect(legendToggles(el).map((button) => button.getAttribute('aria-pressed'))).to.deep.equal([
+    'true',
+    'true',
+  ]);
+  expect(el.hiddenCategories).to.deep.equal([]);
+});
+
+it('toggles a legend category from a native pointer press', async () => {
+  const el = await interactiveLegendMap();
+  const button = legendToggles(el)[1]!;
+  expect(button.getBoundingClientRect().width, 'the toggle has real geometry to point at').to.be.greaterThan(0);
+  try {
+    await hoverUntilMatched(button, 'the legend toggle never reported :hover');
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'up' });
+    await waitUntil(
+      () => legendToggles(el)[1]!.getAttribute('aria-pressed') === 'false',
+      'the pressed legend toggle never reported aria-pressed="false"',
+    );
+    expect(el.hiddenCategories).to.deep.equal(['work']);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('toggles a focused legend category with Enter and Space', async () => {
+  const el = await interactiveLegendMap();
+  legendToggles(el)[0]!.focus();
+  expect(el.shadowRoot!.activeElement === legendToggles(el)[0]).to.be.true;
+
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal(['home']);
+  expect(legendToggles(el)[0]!.getAttribute('aria-pressed')).to.equal('false');
+
+  await sendKeys({ press: ' ' });
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal([]);
+  expect(legendToggles(el)[0]!.getAttribute('aria-pressed')).to.equal('true');
+});
+
+it('gives every keyed legend row its own tab stop in DOM order and skips inert rows', async () => {
+  const el = await interactiveLegendMap([
+    { color: '#f00', label: 'Home', pattern: 'solid', value: 'home' },
+    { color: '#0f0', label: 'Unkeyed', pattern: 'diagonal' },
+    { color: '#00f', label: 'Work', pattern: 'dots', value: 'work' },
+  ]);
+  const buttons = legendToggles(el);
+  expect(buttons.length).to.equal(2);
+
+  buttons[0]!.focus();
+  await sendKeys({ press: 'Tab' });
+  expect(el.shadowRoot!.activeElement === buttons[1]).to.be.true;
+  expect(buttons.some((button) => button.hasAttribute('tabindex'))).to.be.false;
+});
+
+it('keeps the interactive legend accessible in both visible and hidden states', async () => {
+  const el = await interactiveLegendMap();
+  await expect(el).to.be.accessible();
+  el.hiddenCategories = ['work'];
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('announces a legend visibility change through the shared polite light-DOM sink', async () => {
+  const el = await interactiveLegendMap();
+  legendToggles(el)[0]!.click();
+  await el.updateComplete;
+  await waitUntil(
+    () => politeAnnouncements().includes('Home hidden'),
+    'the hide announcement never reached the shared polite sink',
+  );
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  expect(
+    sink.parentElement === document.body,
+    'the live region lives in the light DOM, not a shadow root',
+  ).to.be.true;
+  expect(el.shadowRoot!.querySelector('[aria-live]') === null).to.be.true;
+
+  legendToggles(el)[0]!.click();
+  await el.updateComplete;
+  await waitUntil(
+    () => politeAnnouncements().includes('Home shown'),
+    'the show announcement never reached the shared polite sink',
+  );
+});
+
+it('honours a .strings override of legendTypeHidden in the legend toggle announcement', async () => {
+  const el = (await fixture(html`<lr-map legend-interactive></lr-map>`)) as LyraMap;
+  el.strings = { legendTypeHidden: '{label} masqué' };
+  el.legend = CATEGORY_LEGEND;
+  await el.updateComplete;
+
+  legendToggles(el)[0]!.click();
+  await el.updateComplete;
+  await waitUntil(
+    () => politeAnnouncements().includes('Home masqué'),
+    'the overridden hide announcement never reached the shared polite sink',
+  );
+});
+
+it('keeps a hidden legend toggle distinguishable without color in forced colors', async () => {
+  await setForcedColors('active');
+  try {
+    const el = await interactiveLegendMap(CATEGORY_LEGEND, ['work']);
+    const buttons = legendToggles(el);
+    expect(getComputedStyle(buttons[1]!).textDecorationLine).to.equal('line-through');
+    expect(getComputedStyle(buttons[0]!).textDecorationLine).to.equal('none');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+it('lays a legend toggle out from the inline start under RTL', async () => {
+  const el = (await fixture(html`<lr-map dir="rtl" legend-interactive></lr-map>`)) as LyraMap;
+  el.legend = CATEGORY_LEGEND;
+  await el.updateComplete;
+  const button = legendToggles(el)[0]!;
+
+  // Engines report the logical keyword verbatim rather than resolving it, so this asserts that no
+  // physical `left`/`right` was hardcoded; the rendered geometry below is the RTL proof.
+  expect(getComputedStyle(button).textAlign).to.equal('start');
+  const swatch = button.querySelector<HTMLElement>('[part="legend-swatch"]')!;
+  const label = button.querySelector<HTMLElement>('span:last-child')!;
+  expect(
+    swatch.getBoundingClientRect().left,
+    'the swatch stays at the inline start, which is the right edge under RTL',
+  ).to.be.greaterThan(label.getBoundingClientRect().left);
+});
+
+it('floors an interactive legend toggle at the shared icon-button hit area', async () => {
+  const el = await interactiveLegendMap();
+  const rect = legendToggles(el)[0]!.getBoundingClientRect();
+  const probe = document.createElement('span');
+  probe.setAttribute('style', 'display:block;inline-size:var(--lr-icon-button-size)');
+  el.shadowRoot!.append(probe);
+  const floor = Number.parseFloat(getComputedStyle(probe).inlineSize);
+  probe.remove();
+
+  expect(floor).to.be.greaterThan(0);
+  expect(rect.height).to.be.at.least(floor - 0.5);
+  expect(rect.width).to.be.at.least(floor - 0.5);
+});
+
+it('emits one cancelable lr-map-legend-toggle proposal per legend activation', async () => {
+  const el = await interactiveLegendMap();
+  const button = legendToggles(el)[1]!;
+
+  const hidePromise = oneEvent(el, 'lr-map-legend-toggle');
+  button.click();
+  const hide = await hidePromise;
+  expect(hide.bubbles).to.be.true;
+  expect(hide.composed).to.be.true;
+  expect(hide.cancelable).to.be.true;
+  expect(hide.detail).to.deep.equal({ value: 'work', visible: false, hiddenCategories: ['work'] });
+  await el.updateComplete;
+
+  const showPromise = oneEvent(el, 'lr-map-legend-toggle');
+  legendToggles(el)[1]!.click();
+  const show = await showPromise;
+  expect(show.detail).to.deep.equal({ value: 'work', visible: true, hiddenCategories: [] });
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal([]);
+});
+
+it('lets a lr-map-legend-toggle listener veto the visibility change outright', async () => {
+  const el = await interactiveLegendMap();
+  const announcementsBefore = politeAnnouncements().length;
+  el.addEventListener('lr-map-legend-toggle', (event) => {
+    event.preventDefault();
+  });
+
+  legendToggles(el)[0]!.click();
+  await el.updateComplete;
+
+  expect(el.hiddenCategories).to.deep.equal([]);
+  expect(legendToggles(el)[0]!.getAttribute('aria-pressed')).to.equal('true');
+  expect(legendToggles(el)[0]!.getAttribute('part')).to.equal('legend-toggle');
+  expect(politeAnnouncements().length).to.equal(announcementsBefore);
+});
+
+it('freezes the lr-map-legend-toggle detail and its proposed hidden set', async () => {
+  const el = await interactiveLegendMap();
+  const received = oneEvent(el, 'lr-map-legend-toggle');
+  legendToggles(el)[0]!.click();
+  const event = await received;
+  await el.updateComplete;
+
+  expect(Object.isFrozen(event.detail)).to.be.true;
+  expect(Object.isFrozen(event.detail.hiddenCategories)).to.be.true;
+  expect(() => {
+    (event.detail.hiddenCategories as string[]).push('work');
+  }).to.throw();
+  expect(el.hiddenCategories).to.deep.equal(['home']);
+});
+
+it('emits nothing for a programmatic hiddenCategories assignment', async () => {
+  const el = await interactiveLegendMap();
+  let emitted = 0;
+  el.addEventListener('lr-map-legend-toggle', () => {
+    emitted += 1;
+  });
+
+  el.hiddenCategories = ['home'];
+  await el.updateComplete;
+  el.hiddenCategories = [];
+  await el.updateComplete;
+
+  expect(emitted).to.equal(0);
+  expect(legendToggles(el)[0]!.getAttribute('aria-pressed')).to.equal('true');
 });
 
 it('normalizes a legend assignment that fails Array.isArray (a revoked Proxy) to empty instead of throwing', async () => {
@@ -5194,6 +5662,214 @@ describe('dataLayers clustering and heatmap', () => {
     expect(ramp[3], 'the token ramp still starts at density zero').to.equal(0);
     expect(ramp[4]).to.equal('rgba(0, 0, 0, 0)');
     expect(ramp.length, 'a real multi-stop ramp').to.be.greaterThan(6);
+  });
+
+  // -------------------------------------------------------------------------
+  // Muting a hidden legend category in the rendered MapLibre paint. `hiddenCategories` never
+  // assigned must leave the paint object byte-identical -- no opacity key is written at all.
+  // -------------------------------------------------------------------------
+
+  const CATEGORY_POINT = {
+    field: 'category',
+    colors: [['home', 'red'], ['work', 'blue']],
+  };
+
+  it('mutes a hidden category through a circle-opacity match expression', async () => {
+    const el = await interactiveLegendMap([]);
+    const { layers } = stubMaplibreMap(el);
+    el.hiddenCategories = ['work'];
+    el.dataLayers = entry({ strokeColor: 'green', point: CATEGORY_POINT });
+    await el.updateComplete;
+
+    const paint = layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!.paint!;
+    expect(paint['circle-opacity']).to.deep.equal(['match', ['get', 'category'], 'work', 0.15, 1]);
+    expect(paint['circle-stroke-opacity']).to.deep.equal(paint['circle-opacity']);
+    // Muting never touches color: the category expression is byte-identical to the unmuted one.
+    expect(paint['circle-color']).to.deep.equal([
+      'match', ['get', 'category'], 'home', 'red', 'work', 'blue', 'green',
+    ]);
+  });
+
+  it('writes no opacity paint key at all while hiddenCategories is never assigned', async () => {
+    const shapes = [
+      { strokeColor: 'green', point: CATEGORY_POINT },
+      { cluster: {}, strokeColor: 'green', point: CATEGORY_POINT },
+      {
+        point: {
+          ...CATEGORY_POINT,
+          icons: [{ value: 'home', path: 'M2 12L12 2L22 12V22H2Z' }],
+        },
+      },
+    ];
+    for (const shape of shapes) {
+      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      const { layers } = stubMaplibreMap(el);
+      el.dataLayers = entry(shape);
+      await el.updateComplete;
+      const sourceId = dataLayerResourceId(el, 'pins');
+      const paint = layers.get(`${sourceId}-circle`)!.paint!;
+      expect(Object.hasOwn(paint, 'circle-opacity'), JSON.stringify(shape)).to.be.false;
+      expect(Object.hasOwn(paint, 'circle-stroke-opacity'), JSON.stringify(shape)).to.be.false;
+      const icons = layers.get(`${sourceId}-point-icon`);
+      if (icons) expect(Object.hasOwn(icons.paint ?? {}, 'icon-opacity')).to.be.false;
+    }
+  });
+
+  it('restores opacity once on un-hide and writes nothing further afterwards', async () => {
+    const el = await interactiveLegendMap([]);
+    const { layers } = stubMaplibreMap(el);
+    el.hiddenCategories = ['work'];
+    el.dataLayers = entry({ point: CATEGORY_POINT });
+    await el.updateComplete;
+    const circleId = `${dataLayerResourceId(el, 'pins')}-circle`;
+
+    const map = (el as unknown as { _map: { setPaintProperty: (a: string, b: string, c: unknown) => void } })._map;
+    const original = map.setPaintProperty.bind(map);
+    const written: string[] = [];
+    map.setPaintProperty = (layerId: string, name: string, value: unknown): void => {
+      if (layerId === circleId) written.push(name);
+      original(layerId, name, value);
+    };
+
+    el.hiddenCategories = [];
+    await el.updateComplete;
+    expect(layers.get(circleId)!.paint!['circle-opacity']).to.equal(1);
+    expect(written).to.include('circle-opacity');
+    expect(written).to.include('circle-stroke-opacity');
+
+    written.length = 0;
+    el.hiddenCategories = [];
+    el.requestUpdate('hiddenCategories', ['stale']);
+    await el.updateComplete;
+    expect(written, 'an already-unmuted source is not rewritten').to.not.include('circle-opacity');
+  });
+
+  it('mutes a clustered entry unclustered points without touching its aggregate layers', async () => {
+    const el = await interactiveLegendMap([]);
+    const { layers } = stubMaplibreMap(el);
+    el.hiddenCategories = ['work'];
+    el.dataLayers = entry({ cluster: {}, point: CATEGORY_POINT });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(layers.get(`${sourceId}-circle`)!.paint!['circle-opacity']).to.deep.equal([
+      'match', ['get', 'category'], 'work', 0.15, 1,
+    ]);
+    expect(Object.hasOwn(layers.get(`${sourceId}-cluster`)!.paint!, 'circle-opacity')).to.be.false;
+    const count = layers.get(`${sourceId}-cluster-count`);
+    if (count) expect(Object.hasOwn(count.paint ?? {}, 'icon-opacity')).to.be.false;
+  });
+
+  it('mutes point icons on their own iconField and rewrites them at an unchanged icon color', async () => {
+    const el = await interactiveLegendMap([]);
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ point: { ...CATEGORY_POINT, iconField: 'symbol',
+      icons: [{ value: 'home', path: 'M2 12L12 2L22 12V22H2Z' }] } });
+    await el.updateComplete;
+    const iconLayerId = `${dataLayerResourceId(el, 'pins')}-point-icon`;
+    expect(Object.hasOwn(layers.get(iconLayerId)!.paint ?? {}, 'icon-opacity')).to.be.false;
+
+    el.hiddenCategories = ['work'];
+    await el.updateComplete;
+    expect(layers.get(iconLayerId)!.paint!['icon-opacity']).to.deep.equal([
+      'match', ['get', 'symbol'], 'work', 0.15, 1,
+    ]);
+
+    // The icon color is unchanged across this second toggle, which is exactly the state
+    // paintPointIcons() early-returns on before it ever reaches the color comparison.
+    el.hiddenCategories = ['home'];
+    await el.updateComplete;
+    expect(layers.get(iconLayerId)!.paint!['icon-opacity']).to.deep.equal([
+      'match', ['get', 'symbol'], 'home', 0.15, 1,
+    ]);
+  });
+
+  it('reads the muted opacity from the cascade and falls back when it is unparseable', async () => {
+    const { el } = await connectedMapWithoutMaplibre('--lr-map-hidden-category-opacity: 0.4');
+    const { layers } = stubMaplibreMap(el);
+    el.hiddenCategories = ['work'];
+    el.dataLayers = entry({ point: CATEGORY_POINT });
+    await el.updateComplete;
+    const circleId = `${dataLayerResourceId(el, 'pins')}-circle`;
+    expect(layers.get(circleId)!.paint!['circle-opacity']).to.deep.equal([
+      'match', ['get', 'category'], 'work', 0.4, 1,
+    ]);
+
+    el.style.setProperty('--lr-map-hidden-category-opacity', 'not-a-number');
+    el.hiddenCategories = ['home'];
+    await el.updateComplete;
+    expect(layers.get(circleId)!.paint!['circle-opacity']).to.deep.equal([
+      'match', ['get', 'category'], 'home', 0.15, 1,
+    ]);
+  });
+
+  it('preserves category muting across a live theme repaint', async () => {
+    const { el } = await connectedMapWithoutMaplibre('--lr-theme-color-success-fill-loud: rgb(1, 2, 3)');
+    const { layers } = stubMaplibreMap(el);
+    el.hiddenCategories = ['work'];
+    el.dataLayers = entry({ point: { field: 'category',
+      colors: [['home', 'var(--lr-color-success)'], ['work', 'blue']] } });
+    await el.updateComplete;
+    const circle = layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!;
+
+    el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
+    await waitUntil(() => JSON.stringify(circle.paint!['circle-color']).includes('rgb(4, 5, 6)'));
+    expect(circle.paint!['circle-opacity']).to.deep.equal([
+      'match', ['get', 'category'], 'work', 0.15, 1,
+    ]);
+  });
+
+  it('keeps a hidden key that matches no category harmless', async () => {
+    const el = await interactiveLegendMap([]);
+    const { layers } = stubMaplibreMap(el);
+    el.hiddenCategories = ['nowhere'];
+    el.dataLayers = entry({ point: CATEGORY_POINT });
+    await el.updateComplete;
+
+    const paint = layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!.paint!;
+    expect(paint['circle-opacity']).to.deep.equal(['match', ['get', 'category'], 'nowhere', 0.15, 1]);
+    expect((paint['circle-opacity'] as unknown[]).at(-1), 'every real feature keeps opacity 1').to.equal(1);
+  });
+
+  it('clears and re-establishes muting across a removeDataLayer and re-add', async () => {
+    const el = await interactiveLegendMap([]);
+    const { layers } = stubMaplibreMap(el);
+    el.hiddenCategories = ['work'];
+    el.dataLayers = entry({ point: CATEGORY_POINT });
+    await el.updateComplete;
+    expect(layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!.paint!['circle-opacity']).to.not.equal(undefined);
+
+    el.dataLayers = [];
+    await el.updateComplete;
+    el.hiddenCategories = [];
+    await el.updateComplete;
+    el.dataLayers = entry({ point: CATEGORY_POINT });
+    await el.updateComplete;
+
+    const paint = layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!.paint!;
+    expect(
+      Object.hasOwn(paint, 'circle-opacity'),
+      'no stale muting entry keeps a re-added source writing an opacity it does not need',
+    ).to.be.false;
+  });
+
+  it('leaves the MapLibre paint untouched when a legend toggle is vetoed', async () => {
+    const el = await interactiveLegendMap([
+      { color: '#00f', label: 'Work', pattern: 'dots', value: 'work' },
+    ]);
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ point: CATEGORY_POINT });
+    await el.updateComplete;
+    el.addEventListener('lr-map-legend-toggle', (event) => {
+      event.preventDefault();
+    });
+
+    legendToggles(el)[0]!.click();
+    await el.updateComplete;
+
+    const paint = layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!.paint!;
+    expect(Object.hasOwn(paint, 'circle-opacity')).to.be.false;
+    expect(el.hiddenCategories).to.deep.equal([]);
   });
 });
 

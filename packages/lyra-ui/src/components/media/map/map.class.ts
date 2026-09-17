@@ -29,7 +29,7 @@ import { styles } from './map.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapWebglUnavailable, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapWebglUnavailable, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -69,15 +69,27 @@ export interface LyraMapLegendEntry {
   readonly label: string;
   readonly pattern: LyraMapLegendPattern;
   /**
+   * Category key this row stands for -- the same string a `point.colors` / `point.icons` entry
+   * matches against `point.field` / `point.iconField`. Trimmed, bounded to 256 characters and
+   * retained in the canonical readback, unlike the `value` on the `icon` record below, which is
+   * still dropped. A row that carries one becomes a keyboard-operable visibility toggle under
+   * `legendInteractive`; a row without one stays inert. An absent, non-string, empty or
+   * whitespace-only key leaves no `value` key at all, so a legend that never used categories
+   * reads back exactly as it did before this field existed.
+   */
+  readonly value?: string;
+  /**
    * Optional glyph painted inside `[part="legend-swatch"]`, in the entry's own color, instead of
    * the solid color block that would otherwise cover it. Deliberately the record `point.icons`
    * already carries, so a key can reproduce the symbol its point layer draws rather than
    * describing it in color alone — hand the legend the very icon object the layer renders.
    *
-   * The point layer's `value` category key means nothing to a legend row: it is accepted so a
-   * pass-through needs no reshaping, and left out of the canonical readback. Validation is the
-   * point icon's own (path data only, at most 8192 characters, positive `viewBox` dimensions);
-   * an unusable record is dropped and the row keeps rendering its color swatch.
+   * The **icon record's own** `value` is accepted so a pass-through needs no reshaping, and is
+   * left out of the canonical readback: a row's category key is the row-level `value` above, and
+   * is never derived from the glyph's. Deriving it would silently make a row interactive that the
+   * author never marked. Validation is the point icon's own (path data only, at most 8192
+   * characters, positive `viewBox` dimensions); an unusable record is dropped and the row keeps
+   * rendering its color swatch.
    *
    * That per-record 8192-character cap is deliberately the whole bound on path data, with no
    * aggregate budget of the kind `label` carries across the legend. Two reasons. The admission
@@ -228,6 +240,9 @@ const MAP_LEGEND_SCAN_LIMIT = 1_000;
 const MAP_LEGEND_LABEL_LIMIT = 256;
 const MAP_LEGEND_TOTAL_LABEL_LIMIT = 8_192;
 const MAP_LEGEND_COLOR_LIMIT = 256;
+/** Bounds a row's category key. Sliced, never ellipsized like a label: a key is matched against
+ *  `point.field` values, so an appended character would silently stop it matching anything. */
+const MAP_LEGEND_VALUE_LIMIT = 256;
 const MAP_LEGEND_PATTERNS = new Set<LyraMapLegendPattern>([
   'solid',
   'diagonal',
@@ -271,6 +286,7 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
         color?: unknown;
         label?: unknown;
         pattern?: unknown;
+        value?: unknown;
         icon?: unknown;
       } | null;
       if (!candidate || typeof candidate !== 'object') continue;
@@ -291,12 +307,18 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
       if (!label.trim()) continue;
       if (rawLabel.length > labelLimit) truncatedLabelCount++;
       labelCharacters += label.length;
+      const rawValue = candidate.value;
+      const trimmedValue = typeof rawValue === 'string' ? rawValue.trim() : '';
+      const value = trimmedValue ? trimmedValue.slice(0, MAP_LEGEND_VALUE_LIMIT) : undefined;
       const rawIcon = candidate.icon;
       const icon = isRuntimeRecord(rawIcon) ? projectIconPaint(rawIcon) : undefined;
       entries.push(Object.freeze({
         color: rawColor.slice(0, MAP_LEGEND_COLOR_LIMIT),
         label,
         pattern: rawPattern as LyraMapLegendPattern,
+        // An absent or unusable category key leaves no `value` key at all, on the same reasoning as
+        // `icon` below: a legend that never used categories reads back byte-identically.
+        ...(value ? { value } : {}),
         // An absent or rejected glyph leaves no `icon` key at all, so a color-only row keeps
         // reading back exactly as it did before glyphs existed.
         ...(icon ? { icon } : {}),
@@ -316,6 +338,42 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
     truncated: omittedCount > 0 || truncatedLabelCount > 0,
   });
   return { entries: frozenEntries, projection };
+}
+
+const EMPTY_HIDDEN_CATEGORIES = Object.freeze([]) as readonly string[];
+
+/**
+ * Bounded, deduplicated, frozen hidden-key snapshot. Mirrors `normalizeMapLegend()`'s
+ * descriptor-safe discipline and `chart-legend-visibility.ts`'s `normalizeHiddenDatasets()`: a
+ * caller-owned value can revoke between two reads, so every boundary read is contained and later
+ * code only sees the canonical result rather than the caller's object.
+ *
+ * Keys are trimmed and bounded exactly as a legend row's own `value` is, so a key that would
+ * match a bounded row still matches it. Duplicates keep their first occurrence, the same
+ * first-wins rule `point.colors` applies to the very same category strings.
+ */
+function normalizeMapHiddenCategories(value: unknown): readonly string[] {
+  let input: readonly unknown[];
+  let length = 0;
+  try {
+    input = Array.isArray(value) ? value : [];
+    length = Math.max(0, Math.min(MAP_LEGEND_SCAN_LIMIT, input.length));
+  } catch {
+    return EMPTY_HIDDEN_CATEGORIES;
+  }
+  const keys: string[] = [];
+  for (let index = 0; index < length && keys.length < MAP_LEGEND_ITEM_LIMIT; index++) {
+    try {
+      const candidate = input[index];
+      if (typeof candidate !== 'string') continue;
+      const key = candidate.trim().slice(0, MAP_LEGEND_VALUE_LIMIT);
+      if (!key || keys.includes(key)) continue;
+      keys.push(key);
+    } catch {
+      // A hostile element is skipped without preventing later valid keys from being admitted.
+    }
+  }
+  return keys.length ? (Object.freeze(keys) as readonly string[]) : EMPTY_HIDDEN_CATEGORIES;
 }
 
 /**
@@ -1688,6 +1746,27 @@ function choroplethFillOpacity(host: Element): number {
   return Number.isFinite(parsed) ? parsed : FALLBACK_FILL_OPACITY;
 }
 
+/** Defensive JS-side fallback for `hiddenCategoryOpacity()` below, on exactly the reasoning
+ *  `FALLBACK_FILL_OPACITY` carries: the custom property stays undeclared on `:host` so any
+ *  ancestor's value inherits, and this preserves the documented paint when it is unset, the host
+ *  is detached, or the authored value is unparseable. */
+const FALLBACK_HIDDEN_CATEGORY_OPACITY = 0.15;
+
+/**
+ * Reads the current `--lr-map-hidden-category-opacity` custom property so a muted category is
+ * retheme-able instead of a literal baked into the paint expression -- the same shape, and the
+ * same reason, as `choroplethFillOpacity()` above: MapLibre paints to a WebGL canvas that never
+ * sees the CSS cascade, so the token has to be resolved here. Bounded to [0, 1], which is the
+ * only range MapLibre's opacity paint properties accept.
+ */
+function hiddenCategoryOpacity(host: Element): number {
+  const raw = ownerWindow(host)
+    ?.getComputedStyle(host)
+    .getPropertyValue('--lr-map-hidden-category-opacity')
+    .trim() ?? '';
+  return finiteRange(Number.parseFloat(raw), FALLBACK_HIDDEN_CATEGORY_OPACITY, 0, 1);
+}
+
 const TONE_TOKEN: Record<NonNullable<LyraMapGeoJsonDataLayer['tone']>, string> = {
   accent: '--lr-color-brand',
   success: '--lr-color-success',
@@ -2279,9 +2358,24 @@ export function buildGeoJsonPropertyDiff(
   return buildProjectedGeoJsonPropertyDiff(projectGeoJson(previous), projectGeoJson(next));
 }
 
+/**
+ * Complete proposed visibility snapshot for one map legend category, mirroring
+ * `LyraChartLegendVisibilityChangeDetail`'s shape so a host that already reconciles a chart legend
+ * reconciles this one the same way. Frozen, and detached from the component's own state.
+ */
+export interface LyraMapLegendToggleDetail {
+  /** The activated row's `value` category key, exactly as it was admitted. */
+  readonly value: string;
+  /** Proposed visibility of `value` after this toggle. */
+  readonly visible: boolean;
+  /** Complete canonical proposed hidden-category set, in the order it would be committed. */
+  readonly hiddenCategories: readonly string[];
+}
+
 export interface LyraMapEventMap {
   'lr-map-load': CustomEvent<null>;
   'lr-map-marker-activate': CustomEvent<LyraMapMarkerActivationDetail>;
+  'lr-map-legend-toggle': CustomEvent<LyraMapLegendToggleDetail>;
   'lr-map-click': CustomEvent<{
     readonly lngLat: readonly [number, number];
     readonly feature: Feature | undefined;
@@ -2331,6 +2425,17 @@ export interface LyraMapEventMap {
  *
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
+ * @event lr-map-legend-toggle - **Cancelable.** Fired once when an interactive legend row is
+ *   activated by pointer or by Enter/Space, carrying the immutable
+ *   `detail: { value, visible, hiddenCategories }` -- the activated category key, its proposed
+ *   visibility, and the complete proposed hidden set in the order it would be committed.
+ *   `preventDefault()` is a real veto: `hiddenCategories` is not written, the row's `aria-pressed`
+ *   does not change, the MapLibre paint is untouched, and nothing is announced, which is what lets
+ *   a host own the set and write it itself. There is deliberately no second confirmation event:
+ *   the committed state is `hiddenCategories`, which the host already observes, so a paired
+ *   before/after vocabulary would be permanent public surface nobody asked for. A programmatic
+ *   `hiddenCategories` assignment reconciles without emitting anything -- this event is a
+ *   DOM-interaction proposal only.
  * @event lr-map-marker-activate - Fired once when an accepted declarative marker is activated by
  *   pointer/click or by Enter/Space. The immutable detail carries its normalized `id`, validated
  *   `lngLat`, accepted marker snapshot, and activation `source`.
@@ -2345,12 +2450,20 @@ export interface LyraMapEventMap {
  * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
  *   region and receives the host-first accessible name and effective locale.
  * @slot legend - Custom legend content, rendered inside the legend panel's own layout so it stays
- *  positioned with the map instead of floating beside it.
+ *  positioned with the map instead of floating beside it. Slotted content is never made
+ *  interactive by `legendInteractive`, which only reaches rows projected from `legend`.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch, or the entry's glyph when it carries an `icon`
  *   — in which case the swatch drops its color block and pattern overlay, keeps the `pattern`
  *   border framing the glyph as its non-color cue, carries `data-icon="true"`, and paints the
- *   glyph itself in the entry color.
+ *   glyph itself in the entry color. It nests inside `legend-toggle` on an interactive row and
+ *   stays `aria-hidden`/`inert` there, so it never contributes to the button's accessible name.
+ * @csspart legend-toggle - The `button` an interactive legend row renders around its swatch and
+ *   label when `legendInteractive` is set and the row carries a `value`. Absent entirely when
+ *   either is missing, so an unset map's legend markup is unchanged.
+ * @csspart legend-toggle-hidden - Second token carried alongside `legend-toggle` while that row's
+ *   category is in `hiddenCategories`. State lives in the part name rather than a separate
+ *   attribute, so `::part(legend-toggle-hidden)` is a reachable styling hook.
  * @csspart legend-gradient - The continuous ramp bar rendered from `legendGradient`.
  * @csspart legend-lo - The low endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
  * @csspart legend-hi - The high endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
@@ -2375,6 +2488,12 @@ export interface LyraMapEventMap {
  * @cssprop [--lr-map-choropleth-fill-opacity=0.75] - Fill opacity for choropleth and polygon
  *   `dataLayers` fills. Read from the resolved cascade whenever those layers are applied or painted
  *   after a theme change.
+ * @cssprop [--lr-map-hidden-category-opacity=0.15] - Opacity a hidden category's points, point
+ *   strokes and point icons are muted to in the rendered MapLibre paint. Read from the resolved
+ *   cascade on every paint, because MapLibre draws to a WebGL canvas the CSS cascade never reaches.
+ * @cssprop [--lr-map-legend-hidden-swatch-opacity=0.5] - Opacity of a hidden interactive legend
+ *   row's decorative swatch. Only the `aria-hidden` swatch dims; the label re-colors through the
+ *   quiet text token instead, so it keeps AA contrast.
  * @cssprop [--lr-map-popup-close-button-hover-bg=var(--lr-color-brand-quiet)] - Hover background
  *   of `popup-close-button`.
  * @cssprop [--lr-map-popup-close-button-hover-color=var(--lr-color-brand)] - Hover foreground of
@@ -2382,6 +2501,18 @@ export interface LyraMapEventMap {
  * @cssprop [--lr-map-popup-close-button-active-bg=color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of `popup-close-button`.
  * @cssprop [--lr-map-popup-close-button-active-color=var(--lr-color-brand)] - Pressed foreground
  *   of `popup-close-button`.
+ *
+ * The legend is read-only unless `legendInteractive` is set, which is opt-in for a reason: an
+ * unset map renders exactly the key it rendered before, with no button, no extra attribute and no
+ * extra MapLibre paint key. Only a row that carries its own `value` becomes a toggle -- the key is
+ * never derived from an `icon` record's `value`, which would silently make a row operable the
+ * author never marked. Each toggle is a native `button`, so it is one independent tab stop per row
+ * (a 100-row legend contributes 100, exactly as a 100-series `lr-chart` legend does) and it grows
+ * to the shared `--lr-icon-button-size` hit-area floor. Activation emits the cancelable
+ * `lr-map-legend-toggle`; there is deliberately no confirmation event, because the committed state
+ * is `hiddenCategories` and the host already observes it. A hidden category mutes its points,
+ * point strokes and point icons through `--lr-map-hidden-category-opacity`; a `kind: 'heatmap'`
+ * entry is deliberately out of scope, having no per-category field to mute.
  *
  * No style or tile provider is selected implicitly. Set `mapStyle` explicitly before connection;
  * this prevents a bare component from making an undeclared third-party request.
@@ -2395,6 +2526,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
     items: LYRA_DEFAULT_items,
+    legendTypeHidden: LYRA_DEFAULT_legendTypeHidden,
+    legendTypeShown: LYRA_DEFAULT_legendTypeShown,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     mapInitializationFailed: LYRA_DEFAULT_mapInitializationFailed,
@@ -2411,6 +2544,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-map-click',
+    'lr-map-legend-toggle',
     'lr-map-marker-activate',
   ]);
   /** MapLibre features and admitted marker snapshots carry opaque peer values that the generic
@@ -2580,6 +2714,42 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   get legendProjection(): LyraMapLegendProjection {
     return this._legendProjection;
   }
+
+  /**
+   * Turns every legend row that carries a `value` into a keyboard-operable visibility toggle;
+   * rows without one stay inert. Default `false`, and an unset map renders exactly the read-only
+   * key it rendered before this property existed -- no button, no extra attribute, and no extra
+   * MapLibre paint key.
+   *
+   * Each toggle is an independently tabbable native `button`, so Enter and Space are the
+   * platform's own activation and no roving tabindex is involved. The consequence is stated
+   * rather than hidden: a 100-row interactive legend contributes 100 tab stops, exactly as a
+   * 100-series `lr-chart` legend does. Each row also grows to the `--lr-icon-button-size` hit-area
+   * floor; the legend panel's own `max-block-size`/`overflow: auto` contains the taller list.
+   */
+  @property({ type: Boolean, attribute: 'legend-interactive', reflect: true })
+  legendInteractive = false;
+
+  private _hiddenCategories: readonly string[] = EMPTY_HIDDEN_CATEGORIES;
+  /**
+   * Complete controlled set of muted category keys, mirroring `lr-chart`'s `hiddenDatasets`.
+   * Clone-owned and frozen; non-string, empty, whitespace-only and duplicate entries are dropped,
+   * and at most 100 keys are retained. Honoured on the first render and the first MapLibre paint,
+   * not only after a user toggle. An empty array deliberately means every category is visible.
+   *
+   * Controlled public state, so it deliberately survives a disconnect and reconnect: the
+   * "reset transient open-state in `disconnectedCallback()`" rule covers dropdown/preview/tooltip
+   * `@state`, not a documented property a host owns and re-reads.
+   */
+  @property({ attribute: false })
+  get hiddenCategories(): readonly string[] {
+    return this._hiddenCategories;
+  }
+  set hiddenCategories(value: readonly string[]) {
+    const previous = this._hiddenCategories;
+    this._hiddenCategories = normalizeMapHiddenCategories(value);
+    this.requestUpdate('hiddenCategories', previous);
+  }
   /** Optional GeoJSON choropleth layer and value-to-color configuration. */
   @property({ attribute: false }) choropleth?: Readonly<LyraMapChoroplethLayer>;
   /** Point markers rendered over the map. Explicit IDs are unique-nonempty first-wins. An idless
@@ -2645,6 +2815,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * document's assertive sink. */
   @state() private failure?: MapFailureReason;
   private errorAnnouncementSink?: AnnouncementSink;
+  private legendAnnouncementSink?: AnnouncementSink;
 
   // Overridable instance field (not a direct `loadMaplibre()` call site) purely so tests can
   // inject a stubbed loader before the element ever connects -- matches docx-viewer's own
@@ -2697,6 +2868,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _nextDataLayerId = 0;
   private nextPointIconId = 0;
   private appliedPointPaint = new Set<string>();
+  /** Layer ids whose paint currently carries a muting opacity, so the first paint after the last
+   *  category is un-hidden can restore it -- and a layer that was never muted keeps its paint
+   *  object free of the key entirely. Keyed by layer id, not source id, because one source's
+   *  circle and point-icon layers mute independently on different fields. */
+  private appliedPointMuting = new Set<string>();
   private appliedPointIcons = new Map<string, {
     signature: string;
     color: string;
@@ -2937,6 +3113,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override disconnectedCallback(): void {
     this.releaseErrorAnnouncementSink();
+    this.releaseLegendAnnouncementSink();
     super.disconnectedCallback();
     this.disposeMap();
     this.intersectionObserver?.disconnect();
@@ -2989,6 +3166,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._appliedDataLayerShapes.clear();
     this.appliedPointIcons.clear();
     this.appliedPointPaint.clear();
+    this.appliedPointMuting.clear();
     this._appliedGeoJson.clear();
   }
 
@@ -2998,6 +3176,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.stopObservingPeerChrome();
     this.releaseErrorAnnouncementSink();
     this.syncErrorAnnouncementSink();
+    // Not re-acquired here: the legend sink is lazy, so the next toggle mounts it against the new
+    // document rather than a map with no interactive legend holding a region it never writes to.
+    this.releaseLegendAnnouncementSink();
     if (this._map && this.containerEl && this.isConnected) {
       this.observeMapAllocation(this._map, this.containerEl);
     }
@@ -3193,6 +3374,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
             this._appliedDataLayerShapes.clear();
             this.appliedPointPaint.clear();
+            this.appliedPointMuting.clear();
             this._appliedGeoJson.clear();
             this.applyChoropleth();
             this.applyDataLayers();
@@ -3227,6 +3409,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (changed.has('dataLayers')) this.applyDataLayers();
       this.applyChoropleth();
     }
+    if (changed.has('hiddenCategories') && this._map && this._styleLoaded) this.refreshThemePaint();
     if (changed.has('center') && this._map) this._map.setCenter(this.safeCenter);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.safeZoom);
     if (changed.has('maxBounds') && this._map) this.applyMaxBounds();
@@ -3251,7 +3434,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
-  /** Repaints token-derived MapLibre values without touching sources, layers, or map geometry. */
+  /** Repaints token-derived and visibility-derived MapLibre values without touching sources,
+   *  layers, or map geometry -- which is exactly what a theme change and a `hiddenCategories`
+   *  change each need. */
   private refreshThemePaint(): void {
     if (!this._map || !this._styleLoaded) return;
     const fillOpacity = choroplethFillOpacity(this);
@@ -3551,6 +3736,27 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     ];
   }
 
+  /**
+   * A `match` expression over `['get', field]` while any admitted category is hidden; a literal
+   * `1` on the first paint after the last category is un-hidden; and `undefined` whenever nothing
+   * is or was muted on `layerId` -- which is what leaves a `legendInteractive`-unset map
+   * byte-identical: the paint key is never written, so MapLibre keeps its own default and the
+   * layer's paint object gains no extra property.
+   *
+   * The flat `label, output` pair form is deliberately the shape `point.colors` already emits two
+   * lines above its own `match`, so this file speaks one expression idiom rather than two.
+   */
+  private mutedPointOpacity(layerId: string, field: string | undefined): number | unknown[] | undefined {
+    const muted = field ? this.hiddenCategories : EMPTY_HIDDEN_CATEGORIES;
+    if (!muted.length) {
+      if (!this.appliedPointMuting.delete(layerId)) return undefined;
+      return 1;
+    }
+    this.appliedPointMuting.add(layerId);
+    const dim = hiddenCategoryOpacity(this);
+    return ['match', ['get', field], ...muted.flatMap((value) => [value, dim]), 1];
+  }
+
   private paintPoints(sourceId: string, layer: CanonicalMapDataLayer): void {
     if (!this._map) return;
     const point = layer.point;
@@ -3560,6 +3766,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         [value, resolvedLayerColor(this, paint, layer.tone)]), fallback] : fallback;
     const id = `${sourceId}-circle`;
     this._map.setPaintProperty(id, 'circle-color', color);
+    // Before the early return below: an un-mute must still land on a layer whose `point` options
+    // were removed in the same update, which is the one case that return would otherwise skip.
+    const opacity = this.mutedPointOpacity(id, point?.field);
+    if (opacity !== undefined) {
+      this._map.setPaintProperty(id, 'circle-opacity', opacity);
+      this._map.setPaintProperty(id, 'circle-stroke-opacity', opacity);
+    }
     if (!point && !this.appliedPointPaint.has(sourceId)) return;
     this._map.setPaintProperty(id, 'circle-radius', pointRadiusExpression(point?.radius ?? 5));
     this._map.setPaintProperty(id, 'circle-stroke-width', point?.strokeWidth ?? 0);
@@ -3582,6 +3795,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (this._map.hasImage?.(imageId)) this._map.removeImage?.(imageId);
     }
     this.appliedPointIcons.delete(sourceId);
+    this.appliedPointMuting.delete(id);
   }
 
   private applyPointIcons(sourceId: string, layer: CanonicalMapDataLayer): void {
@@ -3624,6 +3838,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private paintPointIcons(sourceId: string, layer: CanonicalMapDataLayer): void {
     const applied = this.appliedPointIcons.get(sourceId);
     if (!applied) return;
+    // Before the unchanged-color early return below, or a re-toggle at an unchanged theme would
+    // silently never reach the muting write.
+    const iconLayerId = `${sourceId}-point-icon`;
+    const opacity = this.mutedPointOpacity(iconLayerId, layer.point?.iconField);
+    if (opacity !== undefined) this._map?.setPaintProperty(iconLayerId, 'icon-opacity', opacity);
     const color = this.pointIconColor(layer);
     if (color === applied.color) return;
     for (const { id, icon } of applied.icons) {
@@ -3881,6 +4100,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.appliedPointPaint.delete(sourceId);
     for (const suffix of DATA_LAYER_SUFFIXES) {
       const layerId = `${sourceId}${suffix}`;
+      this.appliedPointMuting.delete(layerId);
       if (this._map.getLayer(layerId)) this._map.removeLayer(layerId);
     }
     if (this._map.getSource(sourceId)) this._map.removeSource(sourceId);
@@ -4297,6 +4517,90 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * holds fewer than two usable stops. Part names mirror `lr-heatmap`'s
    * `legend-lo`/`legend-hi` so a consumer styling both components learns one vocabulary.
    */
+  /**
+   * The swatch-plus-label pair every legend row renders: directly inside the row when the row is
+   * inert, and inside the row's toggle button when `legendInteractive` has made it operable. One
+   * source of truth, so the two branches can never drift, and an unset map keeps rendering exactly
+   * the markup it rendered before the toggle existed.
+   */
+  private renderLegendRowContent(entry: LyraMapLegendEntry): TemplateResult {
+    const paint = sanitizeCssColor(entry.color);
+    return html`${entry.icon
+                      ? html`<span
+                          part="legend-swatch"
+                          data-pattern=${entry.pattern}
+                          data-icon="true"
+                          aria-hidden="true"
+                          inert
+                          style=${styleMap(paint ? { color: paint } : {})}
+                          >${renderLegendIcon(entry.icon)}</span
+                        >`
+                      : html`<span
+                          part="legend-swatch"
+                          data-pattern=${entry.pattern}
+                          aria-hidden="true"
+                          inert
+                          style=${styleMap(paint ? { backgroundColor: paint } : {})}
+                        ></span>`}
+                    <span>${entry.label}</span>`;
+  }
+
+  /**
+   * Flips one category's visibility from a legend toggle activation.
+   *
+   * `hiddenCategories` is a key set, so every row carrying the activated key flips together --
+   * self-consistent by construction rather than by a per-row visibility flag that two rows
+   * describing one category could disagree about.
+   */
+  private toggleLegendCategory(entry: LyraMapLegendEntry): void {
+    const value = entry.value;
+    if (!this.legendInteractive || value === undefined) return;
+    const hidden = this.hiddenCategories;
+    const wasHidden = hidden.includes(value);
+    const next = wasHidden ? hidden.filter((key) => key !== value) : [...hidden, value];
+    const proposal = this.emit(
+      'lr-map-legend-toggle',
+      { value, visible: wasHidden, hiddenCategories: next },
+      { cancelable: true },
+    );
+    // The veto is the absence of a write, not a write that is undone afterwards: a listener that
+    // owns the set can assign its own `hiddenCategories` without this handler clobbering it.
+    if (proposal.defaultPrevented) return;
+    this.hiddenCategories = next;
+    this.announceLegendVisibility(entry, wasHidden);
+  }
+
+  /**
+   * The state change belongs in a live region because the thing that changed -- the map, and the
+   * legend row's own styling -- is not the focused element, and `aria-pressed` alone only reports
+   * the button's new state once focus is already on it.
+   */
+  private announceLegendVisibility(entry: LyraMapLegendEntry, nowVisible: boolean): void {
+    this.syncLegendAnnouncementSink();
+    this.legendAnnouncementSink?.announce(
+      this.localize(nowVisible ? 'legendTypeShown' : 'legendTypeHidden', undefined, {
+        label: entry.label,
+      }),
+    );
+  }
+
+  /** Acquired lazily on the first toggle, and re-acquired against a new owner document, so a map
+   *  that never renders an interactive legend never mounts a live region at all. */
+  private syncLegendAnnouncementSink(): void {
+    if (!this.isConnected) return;
+    if (this.legendAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.releaseLegendAnnouncementSink();
+    this.legendAnnouncementSink = acquireAnnouncementSink('polite', {
+      document: this.ownerDocument,
+      source: this,
+    });
+  }
+
+  private releaseLegendAnnouncementSink(): void {
+    this.legendAnnouncementSink?.release();
+    this.legendAnnouncementSink = undefined;
+  }
+
   private renderLegendGradient(): TemplateResult | typeof nothing {
     const stops = this.legendGradient;
     if (stops.length < 2) return nothing;
@@ -4357,31 +4661,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               ${this.renderLegendGradient()}
               <div class="legend-list" role="list">
                 ${this.legend.map((entry, index) => {
-                  const paint = sanitizeCssColor(entry.color);
+                  const key = entry.value;
+                  const interactive = this.legendInteractive && key !== undefined;
+                  const visible = key === undefined || !this.hiddenCategories.includes(key);
                   return html`<div
                     class="legend-row"
                     role="listitem"
                     aria-posinset=${String(index + 1)}
                     aria-setsize=${String(this.legendProjection.inputCount)}
                   >
-                    ${entry.icon
-                      ? html`<span
-                          part="legend-swatch"
-                          data-pattern=${entry.pattern}
-                          data-icon="true"
-                          aria-hidden="true"
-                          inert
-                          style=${styleMap(paint ? { color: paint } : {})}
-                          >${renderLegendIcon(entry.icon)}</span
-                        >`
-                      : html`<span
-                          part="legend-swatch"
-                          data-pattern=${entry.pattern}
-                          aria-hidden="true"
-                          inert
-                          style=${styleMap(paint ? { backgroundColor: paint } : {})}
-                        ></span>`}
-                    <span>${entry.label}</span>
+                    ${interactive
+                      ? html`<button
+                          part=${visible ? 'legend-toggle' : 'legend-toggle legend-toggle-hidden'}
+                          type="button"
+                          aria-pressed=${visible ? 'true' : 'false'}
+                          @click=${(): void => this.toggleLegendCategory(entry)}
+                        >${this.renderLegendRowContent(entry)}</button>`
+                      : this.renderLegendRowContent(entry)}
                   </div>`;
                 })}
               </div>
