@@ -161,9 +161,11 @@ export interface LyraFilterBarCustomControl {
 }
 
 /** Whether a filter's `label` renders as the composed control's own visible label -- `'visible'`,
- *  the default and the behaviour every definition had before this option existed -- or is routed
- *  to that control's accessible name instead (`'hidden'`), for a compact toolbar row. */
-export type LyraFilterBarLabelVisibility = 'visible' | 'hidden';
+ *  the default and the behaviour every definition had before this option existed -- is routed to
+ *  that control's accessible name instead (`'hidden'`), for a compact toolbar row, or is
+ *  `'auto'`: rendered as the visible label while the bar's own allocation is wide enough for it,
+ *  and visually clipped (never removed, so the name is unchanged) once it is not. */
+export type LyraFilterBarLabelVisibility = 'visible' | 'hidden' | 'auto';
 
 /** Which currently-active filters `render()`'s chip row shows -- see `LyraFilterBar.activeFiltersDisplay`. */
 export type LyraFilterBarActiveFiltersDisplay = 'all' | 'changed' | 'hidden';
@@ -198,7 +200,17 @@ interface LyraFilterBarComposedDefinitionBase extends LyraFilterBarDefinitionBas
    *  default) or is routed to its accessible name instead (`'hidden'`) -- which also supplies the
    *  label as the control's `placeholder` when the definition declares none, so the field still
    *  reads as itself with no stacked label above it. The label never simply disappears: routing it
-   *  is the point, and a filter whose label were dropped would leave the control unnamed. */
+   *  is the point, and a filter whose label were dropped would leave the control unnamed.
+   *
+   *  `'auto'` is the width-dependent middle: the label renders exactly as `'visible'` does --
+   *  same stacked label element, same accessible name computed from it, no `aria-label` and no
+   *  placeholder fallback -- and is *visually clipped* by this component's own stylesheet once the
+   *  bar's own allocation drops below `30rem` (a container query on the host, so it reads the bar's
+   *  allocated width and not the viewport's). Clipped, never removed: the name comes from the same
+   *  node at every width, which is exactly what visually hiding `::part(filter-control-label)` from
+   *  a consumer stylesheet could not achieve. The threshold is fixed rather than themeable -- a
+   *  container query's prelude cannot read a custom property, so a `--lr-*` hook for it would parse
+   *  and silently never apply. */
   readonly labelVisibility?: LyraFilterBarLabelVisibility;
 }
 
@@ -1009,6 +1021,10 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  *   is visually hidden (never removed) under `labelVisibility: 'hidden'` -- except in the one case
  *   where the trigger's selection summary already IS the label (hidden routing, no declared
  *   `placeholder`, nothing selected), where it is omitted rather than naming the button twice.
+ *   Under `labelVisibility: 'auto'` this component clips the same element itself once the bar's own
+ *   allocation drops below `30rem`, and leaves it untouched above that -- so a consumer rule
+ *   targeting this part sees a visible element at a wide allocation and a hairline, still-named one
+ *   at a narrow one.
  * @csspart filter-control-label-group - A `'checkbox-menu'` trigger's composed `<lr-button>`'s own
  *   label wrapper: the flex row laying out `filter-control-label` and `filter-control-input`
  *   beside each other and, with `with-caret`, growing to fill the stretched trigger so its content
@@ -1109,7 +1125,12 @@ export class LyraFilterBar<
    *  than `'changed'`/`'hidden'` (including a foreign attribute value) behaves like `'all'`,
    *  matching `labelVisibility`'s own foreign-value handling. Removing a chip always clears that
    *  filter, exactly as it always has -- this property only changes which already-active filters
-   *  get a chip in the row, never what removing one does. */
+   *  get a chip in the row, never what removing one does.
+   *
+   *  `'changed'` additionally gates the reset button on `hasChangedFilters` rather than
+   *  `hasActiveFilters`, so an untouched defaults-only bar -- which renders no chip in this mode --
+   *  no longer offers an enabled reset that would change nothing. `hasActiveFilters` itself is
+   *  unaffected by this property in every mode, and so is reset enablement under `'all'`/`'hidden'`. */
   @property({ reflect: true, attribute: 'active-filters-display' })
   activeFiltersDisplay: LyraFilterBarActiveFiltersDisplay = 'all';
 
@@ -1305,10 +1326,62 @@ export class LyraFilterBar<
     return Object.freeze(normalized);
   }
 
-  /** Whether any filter currently has a value. Also what gates the reset button's own disabled
-   *  state and whether the `active-filters` chip row renders at all. */
+  /** Whether any filter currently has a value -- including one sitting at its own declared
+   *  `defaultValue`, which is a value the filter holds like any other. Also what gates whether the
+   *  `active-filters` chip row renders at all, and the reset button's own disabled state in every
+   *  `activeFiltersDisplay` mode except `'changed'`, where `hasChangedFilters` gates it instead.
+   *  This getter itself is unaffected by `activeFiltersDisplay`. */
   get hasActiveFilters(): boolean {
     return this._filters.some((def) => !this.isEmpty(def, this.valueFor(def)));
+  }
+
+  /** Whether one filter's current value differs from its own declared `defaultValue`, using
+   *  `filterValueEqualsDefault` -- the exact equality `activeFiltersDisplay: 'changed'` already
+   *  filters its chip row on, not a second comparison.
+   *
+   *  The `defaultIsSet` guard is what keeps a *pristine* filter out of the changed set: a filter
+   *  declaring no meaningful default has nothing to still equal, so "changed" can only mean "holds
+   *  a value". Reading that case through the raw equality instead would report a pristine bar as
+   *  changed whenever a filter's cleared reading is a non-`undefined` sentinel -- a `'chip'`
+   *  definition's own `clearValue` (`''` by default), or a `'custom'` adapter's. */
+  private filterIsChanged(def: LyraFilterBarFilterDefinition): boolean {
+    const value = this.valueFor(def);
+    const defaultValue = def.defaultValue;
+    const defaultIsSet =
+      defaultValue !== undefined && !this.isEmpty(def, defaultValue);
+    return defaultIsSet
+      ? !filterValueEqualsDefault(value, defaultValue)
+      : !this.isEmpty(def, value);
+  }
+
+  /** Whether any filter's value differs from its own declared `defaultValue`. Always live, never
+   *  cached, exactly like `invalidFilterIds`.
+   *
+   *  This is the counterpart to `hasActiveFilters`, not a synonym: a bar whose every filter sits
+   *  at a non-empty declared default reads `hasActiveFilters === true` (those defaults are real
+   *  values, and each one still renders its own chip under `activeFiltersDisplay: 'all'`) and
+   *  `hasChangedFilters === false` -- a bar whose defaults narrow the view on load does not claim
+   *  the user narrowed it. A filter with no declared `defaultValue` counts as changed the moment it
+   *  holds any value at all, since there is nothing for it to still equal; conversely, clearing a
+   *  filter that *does* declare one counts as changed too, because `reset()` would restore it.
+   *
+   *  It differs from the `'changed'` chip row in exactly that last case: the row only ever
+   *  considers filters that currently hold a value, so a cleared-but-defaulted filter shows no
+   *  chip while still reading as changed here. */
+  get hasChangedFilters(): boolean {
+    return this._filters.some((def) => this.filterIsChanged(def));
+  }
+
+  /** What the reset button's own enablement keys on: whether pressing it would change anything.
+   *  Under `activeFiltersDisplay: 'changed'` -- the mode whose whole premise is that a value
+   *  sitting at its own declared default is not something the user applied -- that is
+   *  `hasChangedFilters`, so an untouched defaults-only bar offers no reset to press (and shows no
+   *  chip to remove either, which is the state the enabled button used to contradict). Every other
+   *  mode keeps `hasActiveFilters`, byte for byte what this component has always gated on. */
+  private get hasResettableFilters(): boolean {
+    return this.activeFiltersDisplay === 'changed'
+      ? this.hasChangedFilters
+      : this.hasActiveFilters;
   }
 
   /** Filter ids currently failing their own `required` check -- a filter is invalid only when
@@ -1835,7 +1908,15 @@ export class LyraFilterBar<
    *  `labelVisibility`. Hiding the label routes it to the control's own `aria-label` (which every
    *  composed control here honours over its computed internal name) and, when the definition
    *  declares no `placeholder` of its own, also uses it as the placeholder -- so the field still
-   *  reads as itself once the stacked label is gone. */
+   *  reads as itself once the stacked label is gone.
+   *
+   *  `'auto'` deliberately resolves to the SAME triple as `'visible'`, not to the hidden branch.
+   *  Under `'auto'` the visible label element still exists at every width -- the narrow state only
+   *  clips it visually (see `labelAutoAttribute()`) -- so routing the name onto the control as well
+   *  would name a wide-allocation field twice, and a *narrow* one twice over too, since the clipped
+   *  label is still in the accessibility tree. Anything other than `'hidden'` (including a foreign
+   *  value) therefore keeps the visible routing, matching `activeFiltersDisplay`'s own
+   *  foreign-value handling. */
   private labelRouting(def: LyraFilterBarComposedDefinitionBase): {
     readonly label: string;
     readonly placeholder: string;
@@ -1847,6 +1928,17 @@ export class LyraFilterBar<
       placeholder: def.placeholder || (hidden ? def.label : ''),
       accessibleLabel: hidden ? def.label : nothing,
     };
+  }
+
+  /** Marks a filter's rendered control as label-auto for `filter-bar.styles.ts`'s container query,
+   *  which is what actually clips the label below the threshold. An attribute rather than a class
+   *  because the same hook has to be readable from a rule reaching into the composed control's own
+   *  shadow root -- `[data-label-auto]::part(form-control-label)` -- where a class on the host
+   *  would work equally well but an attribute matches this component's existing `data-filter-id`
+   *  marker. Absent for every other `labelVisibility`, so an unset filter renders byte-identical
+   *  markup to before this option existed. */
+  private labelAutoAttribute(def: LyraFilterBarComposedDefinitionBase): boolean {
+    return def.labelVisibility === 'auto';
   }
 
   /** A `'checkbox-menu'` row was activated. The composed `<lr-dropdown-item>` fires this
@@ -1949,7 +2041,11 @@ export class LyraFilterBar<
     // placeholder fallback), and emitting the screen-reader-only label run as well would name the
     // trigger twice. Emit it only when it adds a name the summary does not already carry.
     const showLabel = def.labelVisibility !== 'hidden' || summary !== def.label;
-    return html`<div part="filter-control" class="checkbox-menu">
+    return html`<div
+      part="filter-control"
+      class="checkbox-menu"
+      ?data-label-auto=${this.labelAutoAttribute(def)}
+    >
       <lr-dropdown
         exportparts=${CHECKBOX_MENU_EXPORT_PARTS}
         data-filter-id=${def.filterId}
@@ -2077,6 +2173,7 @@ export class LyraFilterBar<
         part="filter-control"
         exportparts=${COMBOBOX_EXPORT_PARTS}
         data-filter-id=${def.filterId}
+        ?data-label-auto=${this.labelAutoAttribute(def)}
         .label=${routing.label}
         aria-label=${routing.accessibleLabel}
         placeholder=${routing.placeholder}
@@ -2115,6 +2212,7 @@ export class LyraFilterBar<
         part="filter-control"
         exportparts=${INPUT_EXPORT_PARTS}
         data-filter-id=${def.filterId}
+        ?data-label-auto=${this.labelAutoAttribute(def)}
         type=${def.inputType ?? 'text'}
         .label=${routing.label}
         aria-label=${routing.accessibleLabel}
@@ -2142,6 +2240,7 @@ export class LyraFilterBar<
         part="filter-control"
         exportparts=${DATE_INPUT_EXPORT_PARTS}
         data-filter-id=${def.filterId}
+        ?data-label-auto=${this.labelAutoAttribute(def)}
         .label=${routing.label}
         aria-label=${routing.accessibleLabel}
         placeholder=${routing.placeholder}
@@ -2177,6 +2276,7 @@ export class LyraFilterBar<
       part="filter-control"
       exportparts=${SELECT_EXPORT_PARTS}
       data-filter-id=${def.filterId}
+      ?data-label-auto=${this.labelAutoAttribute(def)}
       .label=${routing.label}
       aria-label=${routing.accessibleLabel}
       placeholder=${routing.placeholder}
@@ -2233,7 +2333,7 @@ export class LyraFilterBar<
             <lr-button
               part="reset-button"
               appearance="quiet"
-              ?disabled=${this.disabled || this.loading || !this.hasActiveFilters}
+              ?disabled=${this.disabled || this.loading || !this.hasResettableFilters}
               @click=${() => this.reset()}
             >
               ${this.localize('filterBarReset')}

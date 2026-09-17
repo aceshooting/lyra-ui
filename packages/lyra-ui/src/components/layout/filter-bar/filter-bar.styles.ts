@@ -5,6 +5,15 @@ export const styles = css`
   ${srOnly}
   :host {
     display: block;
+    /* Query container, so the label-auto rule at the end of this sheet reacts to the bar's own
+       allocated width rather than the viewport's -- a filter bar is as likely to sit in a narrow
+       side panel or a dialog as across a full page. Deliberately unnamed: see that rule's own note
+       on why a container-name cannot be used here. */
+    container-type: inline-size;
+    /* inline-size containment removes content-based intrinsic sizing, so without this fallback the
+       bar collapses to a sliver in any shrink-to-fit context (display: grid; place-items: center) --
+       the same pairing lr-confirm-bar, lr-mcp-app and lr-prompt-studio declare. */
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     min-inline-size: 0;
     max-inline-size: 100%;
   }
@@ -138,5 +147,51 @@ export const styles = css`
      lr-checkbox/lr-select/lr-menu-item. */
   :host([disabled]) [part='chip'] {
     opacity: var(--lr-opacity-disabled);
+  }
+  /* labelVisibility: 'auto'. Below this allocation a filter marked data-label-auto keeps its label
+     in the DOM -- and therefore keeps naming its control -- while the text itself is clipped away,
+     reclaiming the stacked label row for a narrow panel, dialog or split pane.
+
+     Three structural notes:
+
+     - The query is UNNAMED, and must stay that way. Every element it targets sits behind at least
+       one shadow boundary relative to this stylesheet: the ::part arm reaches into the composed
+       control's own shadow root, and the checkbox-menu arm's label span is slotted into the
+       composed lr-button, so its flat-tree parent is a slot inside THAT shadow root. Safari/WebKit
+       resolves an unnamed query container across those boundaries correctly but fails to find a
+       NAMED one, so a container-name here silently no-ops the whole feature on one engine while
+       Chromium and Firefox stay green (measured on all three: named clips a same-root target
+       everywhere, and a cross-boundary target only in Chromium and Firefox). The cost of dropping
+       the name is that the query binds to the nearest ancestor query container, so no composed
+       control between the bar and its label may become one; the wide-allocation test is the guard,
+       since each field is far narrower than the threshold and would clip immediately.
+
+     - The geometry below is the same hairline-box + inset(50%) clip the shared .sr-only class uses
+       (internal/a11y.ts's srOnly, already composed into this component's own styles). It is
+       re-typed here rather than reused because neither reuse path exists: a container query cannot
+       toggle a class, and for every filter type except 'checkbox-menu' the label element lives in
+       the COMPOSED control's shadow root, where an unscoped .sr-only rule of this component's
+       never applies. The ::part arm is what reaches it, and an outer ::part rule beats the inner
+       tree's own normal declarations regardless of specificity.
+
+     - The threshold is a literal, uniquely among this component's themeable values. A container
+       query's prelude is an at-rule prelude, where var() is never substituted -- a
+       @container (max-inline-size: var(--token)) rule parses and then silently never matches, which
+       is precisely the class of inert CSS that is invisible to every gate. So the value stays where
+       it can be read, in rem, matching every other container query in this library. */
+  @container (max-inline-size: 30rem) {
+    [data-label-auto]::part(form-control-label),
+    [data-label-auto] [part='filter-control-label'] {
+      position: absolute;
+      inline-size: var(--lr-size-1px);
+      block-size: var(--lr-size-1px);
+      padding: 0;
+      margin-inline: calc(-1 * var(--lr-size-1px));
+      margin-block: calc(-1 * var(--lr-size-1px));
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
   }
 `;

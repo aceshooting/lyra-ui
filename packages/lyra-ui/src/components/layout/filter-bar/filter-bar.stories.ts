@@ -208,6 +208,33 @@ export const ResetWithDefaults: Story = {
   },
 };
 
+/** `activeFiltersDisplay="changed"` gates the reset button on `hasChangedFilters` instead of
+ *  `hasActiveFilters`. Both bars below hold exactly the same values -- every filter sitting on its
+ *  own declared `defaultValue`. The first renders no chip AND a disabled reset, because pressing it
+ *  would change nothing; the second, on the default `'all'`, shows a chip per filter and an enabled
+ *  reset, exactly as it always has. Move either filter off its default to see the first bar's chip
+ *  row and reset wake up together. */
+export const ChangedOnlyResetGating: Story = {
+  render: () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { ...dashboardFilters[0]!, defaultValue: 'open' },
+      { ...dashboardFilters[1]!, defaultValue: ['ada', 'grace'] },
+    ];
+    const value = { status: 'open', owners: ['ada', 'grace'] };
+    return html`
+      <div style="display: grid; gap: var(--lr-space-l); max-width: 48rem">
+        <lr-filter-bar
+          active-filters-display="changed"
+          label="Changed only"
+          .filters=${filters}
+          .value=${value}
+        ></lr-filter-bar>
+        <lr-filter-bar label="All active" .filters=${filters} .value=${value}></lr-filter-bar>
+      </div>
+    `;
+  },
+};
+
 /** Live `lr-input`/`lr-validity-change`/`lr-reset` events, mirroring what a host would listen for
  *  to serialize `value` into a URL querystring on every change. Each edit produces one bar-owned
  *  `lr-input`; child-control `lr-input`/`lr-change` aliases stay inside the wrapper. */
@@ -677,6 +704,57 @@ export const CompactLabels: Story = {
       },
     ];
     return html`<lr-filter-bar style="max-width: 44rem" .filters=${filters}></lr-filter-bar>`;
+  },
+};
+
+/** `labelVisibility: 'auto'` is the width-dependent middle between `'visible'` and `'hidden'`: the
+ *  same bar renders stacked labels while its own allocation has room for them, and clips them away
+ *  once it drops below `30rem` — reclaiming the label row in a side panel, dialog or split pane.
+ *  The label element is never removed, so both bars below name every field identically for
+ *  assistive technology; only the painted text differs. Nothing is routed onto the control, so no
+ *  field gets an `aria-label` or a placeholder it did not declare. */
+export const AutoLabels: Story = {
+  render: () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'q',
+        label: 'Search incidents',
+        type: 'text',
+        inputType: 'search',
+        clearable: true,
+        labelVisibility: 'auto',
+      },
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        labelVisibility: 'auto',
+        options: [
+          { value: 'open', label: 'Open' },
+          { value: 'closed', label: 'Closed' },
+        ],
+      },
+      {
+        filterId: 'teams',
+        label: 'Teams',
+        type: 'checkbox-menu',
+        labelVisibility: 'auto',
+        options: [
+          { value: 'core', label: 'Core' },
+          { value: 'infra', label: 'Infrastructure' },
+        ],
+      },
+    ];
+    return html`
+      <div style="display: grid; gap: var(--lr-space-l)">
+        <div style="inline-size: 44rem; max-inline-size: 100%">
+          <lr-filter-bar label="Wide allocation" .filters=${filters}></lr-filter-bar>
+        </div>
+        <div style="inline-size: 320px; max-inline-size: 100%">
+          <lr-filter-bar label="Narrow allocation" .filters=${filters}></lr-filter-bar>
+        </div>
+      </div>
+    `;
   },
 };
 

@@ -2064,6 +2064,250 @@ describe('activeFiltersDisplay', () => {
   });
 });
 
+describe('hasChangedFilters', () => {
+  /** One filter per shape `filterValueEqualsDefault` handles: a plain string, a `readonly
+   *  string[]`, and a boolean (only a control-less `'chip'` filter carries one). */
+  const defaultedFilters = (): LyraFilterBarFilterDefinition[] =>
+    [
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        defaultValue: 'open',
+        options: [
+          { value: 'open', label: 'Open' },
+          { value: 'closed', label: 'Closed' },
+        ],
+      },
+      {
+        filterId: 'tags',
+        label: 'Tags',
+        type: 'combobox',
+        multiple: true,
+        defaultValue: ['urgent', 'billing'],
+        options: [
+          { value: 'urgent', label: 'Urgent' },
+          { value: 'billing', label: 'Billing' },
+        ],
+      },
+      {
+        filterId: 'mine',
+        label: 'Only mine',
+        type: 'chip',
+        defaultValue: true,
+        clearValue: false,
+      },
+    ] as LyraFilterBarFilterDefinition[];
+
+  const atDefaults = (): Record<string, unknown> => ({
+    status: 'open',
+    tags: ['urgent', 'billing'],
+    mine: true,
+  });
+
+  it('reads false while every filter sits at its own declared defaultValue, even though hasActiveFilters reads true', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${defaultedFilters()}
+      .value=${atDefaults()}
+    ></lr-filter-bar>`);
+
+    expect(el.hasActiveFilters, 'the bar genuinely holds values').to.equal(true);
+    expect(
+      el.hasChangedFilters,
+      'but a bar whose defaults narrow the view on load has not been narrowed by the user'
+    ).to.equal(false);
+  });
+
+  it('flips to true once a string filter moves off its default, and reset() returns it to false', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${defaultedFilters()}
+      .value=${atDefaults()}
+    ></lr-filter-bar>`);
+
+    el.value = { ...atDefaults(), status: 'closed' };
+    await el.updateComplete;
+    expect(el.hasChangedFilters).to.equal(true);
+
+    el.reset();
+    await el.updateComplete;
+    expect(el.hasChangedFilters, 'reset() restores every declared default').to.equal(false);
+    expect(el.hasActiveFilters, 'and those defaults are still real values').to.equal(true);
+  });
+
+  it('compares a readonly string[] default positionally, exactly like the chip row does', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${defaultedFilters()}
+      .value=${atDefaults()}
+    ></lr-filter-bar>`);
+
+    el.value = { ...atDefaults(), tags: ['billing', 'urgent'] };
+    await el.updateComplete;
+    expect(
+      el.hasChangedFilters,
+      'the same set in a different order is a different value'
+    ).to.equal(true);
+
+    el.value = { ...atDefaults(), tags: ['urgent', 'billing'] };
+    await el.updateComplete;
+    expect(el.hasChangedFilters, 'the exact default array, same order').to.equal(false);
+  });
+
+  it('compares a boolean default, and counts clearing a defaulted filter as a change', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${defaultedFilters()}
+      .value=${atDefaults()}
+    ></lr-filter-bar>`);
+
+    // `false` is canonical-empty, so the key is dropped and `mine` reads back as its clearValue.
+    el.value = { ...atDefaults(), mine: false };
+    await el.updateComplete;
+    expect(
+      el.hasChangedFilters,
+      'a defaulted filter the user turned off differs from its own default'
+    ).to.equal(true);
+    expect(
+      Object.hasOwn(el.value, 'mine'),
+      'and it is genuinely empty rather than holding false'
+    ).to.equal(false);
+  });
+
+  it('counts a filter with no declared defaultValue as changed the moment it holds any value', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        { filterId: 'q', label: 'Query', type: 'text' },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    expect(el.hasChangedFilters, 'pristine, with no default to differ from').to.equal(false);
+
+    el.value = { q: 'urgent' };
+    await el.updateComplete;
+    expect(el.hasChangedFilters, 'there is nothing for it to still equal').to.equal(true);
+
+    el.value = {};
+    await el.updateComplete;
+    expect(el.hasChangedFilters, 'cleared again').to.equal(false);
+  });
+
+  it('stays false for a pristine filter whose cleared reading is a non-undefined sentinel', async () => {
+    // A 'chip' filter's absent key reads back as its declared clearValue, not `undefined`, so a
+    // bare `Object.is(value, def.defaultValue)` over every filter would report a pristine bar as
+    // changed. Empty is empty regardless of which sentinel spells it.
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${[
+        { filterId: 'day', label: 'Day', type: 'chip', clearValue: '' },
+        { filterId: 'ids', label: 'Ids', type: 'chip', clearValue: [] },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>`);
+
+    expect(el.hasChangedFilters).to.equal(false);
+    expect(el.hasActiveFilters).to.equal(false);
+  });
+});
+
+describe('reset button enablement under activeFiltersDisplay', () => {
+  const defaultedFilters = (): LyraFilterBarFilterDefinition[] =>
+    [
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        defaultValue: 'open',
+        options: [
+          { value: 'open', label: 'Open' },
+          { value: 'closed', label: 'Closed' },
+        ],
+      },
+      { filterId: 'q', label: 'Query', type: 'text', defaultValue: 'urgent' },
+    ] as LyraFilterBarFilterDefinition[];
+
+  const atDefaults = () => ({ status: 'open', q: 'urgent' });
+
+  const resetButton = (el: LyraFilterBar): HTMLElement & { disabled: boolean } =>
+    el.shadowRoot!.querySelector('[part="reset-button"]') as HTMLElement & {
+      disabled: boolean;
+    };
+
+  it('disables reset under "changed" while every filter still sits at its own default, and enables it once one moves', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="changed"
+      .filters=${defaultedFilters()}
+      .value=${atDefaults()}
+    ></lr-filter-bar>`);
+
+    expect(el.hasActiveFilters, 'the bar does hold values').to.equal(true);
+    expect(
+      resetButton(el).disabled,
+      'nothing to reset TO -- the bar is already at its own defaults'
+    ).to.equal(true);
+
+    el.value = { ...atDefaults(), status: 'closed' };
+    await el.updateComplete;
+    expect(resetButton(el).disabled, 'one filter moved off its default').to.equal(false);
+  });
+
+  it('keeps reset enabled for the identical all-defaults bar under "all" and "hidden" (non-regression)', async () => {
+    for (const display of ['all', 'hidden'] as const) {
+      const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+        active-filters-display=${display}
+        .filters=${defaultedFilters()}
+        .value=${atDefaults()}
+      ></lr-filter-bar>`);
+
+      expect(
+        resetButton(el).disabled,
+        `${display} gates reset on hasActiveFilters, exactly as it always has`
+      ).to.equal(false);
+    }
+  });
+
+  it('keeps reset enabled for an all-defaults bar with activeFiltersDisplay left unset (unset-regression)', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      .filters=${defaultedFilters()}
+      .value=${atDefaults()}
+    ></lr-filter-bar>`);
+
+    expect(el.activeFiltersDisplay).to.equal('all');
+    expect(resetButton(el).disabled).to.equal(false);
+  });
+
+  it('still lets disabled/loading disable reset under "changed"', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="changed"
+      .filters=${defaultedFilters()}
+      .value=${{ status: 'closed', q: 'urgent' }}
+    ></lr-filter-bar>`);
+
+    expect(resetButton(el).disabled).to.equal(false);
+
+    el.loading = true;
+    await el.updateComplete;
+    expect(resetButton(el).disabled, 'loading still wins').to.equal(true);
+
+    el.loading = false;
+    el.disabled = true;
+    await el.updateComplete;
+    expect(resetButton(el).disabled, 'disabled still wins').to.equal(true);
+  });
+
+  it('still restores every declared defaultValue from the reset button under "changed"', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
+      active-filters-display="changed"
+      .filters=${defaultedFilters()}
+      .value=${{ status: 'closed', q: 'billing' }}
+    ></lr-filter-bar>`);
+
+    const listener = oneEvent(el, 'lr-reset');
+    resetButton(el).click();
+    await listener;
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(atDefaults());
+    expect(el.hasChangedFilters, 'and the button disables itself again').to.equal(false);
+    expect(resetButton(el).disabled).to.equal(true);
+  });
+});
+
 describe("reset()", () => {
   it("keeps the reset action on the same default size tier and rendered height as adjacent fields", async () => {
     const el = (await fixture(html`
@@ -4440,6 +4684,219 @@ describe('labelVisibility', () => {
     expect(computed.position).to.equal('absolute');
     expect(computed.clipPath).to.not.equal('none');
     expect(errorSpan.getBoundingClientRect().width).to.be.at.most(1);
+  });
+});
+
+describe("labelVisibility: 'auto'", () => {
+  /** Above this the bar is wide enough for stacked labels; below it an `'auto'` label clips. */
+  const WIDE = '720px';
+  const NARROW = '320px';
+
+  const autoFilters = (
+    labelVisibility: 'visible' | 'hidden' | 'auto' | undefined,
+    label = 'Search issues'
+  ): LyraFilterBarFilterDefinition[] =>
+    [
+      {
+        filterId: 'q',
+        label,
+        type: 'text',
+        ...(labelVisibility ? { labelVisibility } : {}),
+      },
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        options: [{ value: 'open', label: 'Open' }],
+        ...(labelVisibility ? { labelVisibility } : {}),
+      },
+    ] as LyraFilterBarFilterDefinition[];
+
+  /** Mounts the bar inside a fixed-width wrapper, so the container query reads a deterministic
+   *  allocation instead of whatever the test page happens to be. */
+  const mountAt = async (
+    inlineSize: string,
+    filters: LyraFilterBarFilterDefinition[],
+    direction: 'ltr' | 'rtl' = 'ltr'
+  ): Promise<LyraFilterBar> => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: ${inlineSize};">
+        <lr-filter-bar style="inline-size: 100%;" .filters=${filters}></lr-filter-bar>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+    return el;
+  };
+
+  /** One composed control's own `<label>` element, inside ITS shadow root -- the node that both
+   *  paints the visible label and supplies the control's accessible name. */
+  const composedLabel = async (el: LyraFilterBar, filterId: string): Promise<HTMLElement> => {
+    const composed = control(el, filterId) as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await composed.updateComplete;
+    return composed.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  };
+
+  it('renders the label as ordinary visible text at a wide allocation', async () => {
+    const el = await mountAt(WIDE, autoFilters('auto'));
+
+    for (const [filterId, text] of [
+      ['q', 'Search issues'],
+      ['status', 'Status'],
+    ] as const) {
+      const label = await composedLabel(el, filterId);
+      expect(label.textContent!.trim(), `${filterId} label text`).to.equal(text);
+      expect(
+        label.getBoundingClientRect().width,
+        `${filterId} paints a real label run`
+      ).to.be.greaterThan(1);
+      expect(
+        getComputedStyle(label).clipPath,
+        `${filterId} is not clipped while the bar is wide`
+      ).to.equal('none');
+    }
+  });
+
+  it('visually hides -- never removes -- the label at a narrow allocation', async () => {
+    const el = await mountAt(NARROW, autoFilters('auto'));
+
+    for (const [filterId, text] of [
+      ['q', 'Search issues'],
+      ['status', 'Status'],
+    ] as const) {
+      const label = await composedLabel(el, filterId);
+      const computed = getComputedStyle(label);
+      expect(label.textContent!.trim(), `${filterId} keeps its text in the DOM`).to.equal(text);
+      expect(
+        Math.round(label.getBoundingClientRect().width),
+        `${filterId} collapses to the hairline box`
+      ).to.be.at.most(1);
+      expect(computed.display, `${filterId} is clipped, not display: none`).to.not.equal('none');
+      expect(
+        computed.visibility,
+        `${filterId} is clipped, not visibility: hidden`
+      ).to.equal('visible');
+      expect(computed.position, `${filterId} is taken out of flow`).to.equal('absolute');
+      expect(computed.clipPath, `${filterId} is clipped`).to.not.equal('none');
+      expect(
+        control(el, filterId).hasAttribute('aria-label'),
+        `${filterId} keeps its name on the label element, never duplicated onto the control`
+      ).to.equal(false);
+    }
+  });
+
+  it('keeps the accessible name identical at both allocations', async () => {
+    const names: string[] = [];
+    for (const size of [WIDE, NARROW]) {
+      const el = await mountAt(size, autoFilters('auto'));
+      const input = await nativeInput(el, 'q');
+      expect(input.labels!.length, `the label still names the control at ${size}`).to.equal(1);
+      names.push(input.labels![0]!.textContent!.trim());
+    }
+    expect(names[0]).to.equal('Search issues');
+    expect(names[1], 'the narrow allocation changes nothing about the name').to.equal(names[0]);
+  });
+
+  it("leaves 'visible' and 'hidden' unaffected at both allocations", async () => {
+    for (const size of [WIDE, NARROW]) {
+      const visible = await mountAt(size, autoFilters('visible'));
+      expect(
+        (await composedLabel(visible, 'q')).getBoundingClientRect().width,
+        `'visible' still paints its label at ${size}`
+      ).to.be.greaterThan(1);
+
+      const hidden = await mountAt(size, autoFilters('hidden'));
+      const composed = control(hidden, 'q');
+      expect(
+        composed.getAttribute('aria-label'),
+        `'hidden' still routes the label to aria-label at ${size}`
+      ).to.equal('Search issues');
+      expect(
+        composed.getAttribute('placeholder'),
+        `'hidden' still falls back to the label as placeholder at ${size}`
+      ).to.equal('Search issues');
+    }
+  });
+
+  it('leaves an unset labelVisibility behaving exactly like "visible" at both allocations (unset-regression)', async () => {
+    for (const size of [WIDE, NARROW]) {
+      const el = await mountAt(size, autoFilters(undefined));
+      const label = await composedLabel(el, 'q');
+      expect(
+        label.getBoundingClientRect().width,
+        `an unset filter still paints its label at ${size}`
+      ).to.be.greaterThan(1);
+      expect(control(el, 'q').hasAttribute('aria-label')).to.equal(false);
+      expect(
+        control(el, 'q').hasAttribute('data-label-auto'),
+        `an unset filter renders no label-auto hook at ${size}`
+      ).to.equal(false);
+    }
+  });
+
+  it("clips a 'checkbox-menu' trigger's own label run at a narrow allocation only", async () => {
+    const teams = [
+      {
+        filterId: 'teams',
+        label: 'Teams',
+        type: 'checkbox-menu',
+        labelVisibility: 'auto',
+        options: [{ value: 'core', label: 'Core' }],
+      },
+    ] as LyraFilterBarFilterDefinition[];
+
+    const wide = await mountAt(WIDE, teams);
+    const wideLabel = wide.shadowRoot!.querySelector(
+      '[part="filter-control-label"]'
+    ) as HTMLElement;
+    expect(wideLabel.textContent!.trim()).to.equal('Teams');
+    expect(wideLabel.getBoundingClientRect().width).to.be.greaterThan(1);
+
+    const narrow = await mountAt(NARROW, teams);
+    const narrowLabel = narrow.shadowRoot!.querySelector(
+      '[part="filter-control-label"]'
+    ) as HTMLElement;
+    expect(narrowLabel.textContent!.trim(), 'the trigger keeps its name').to.equal('Teams');
+    expect(Math.round(narrowLabel.getBoundingClientRect().width)).to.be.at.most(1);
+    expect(getComputedStyle(narrowLabel).clipPath).to.not.equal('none');
+  });
+
+  it('contains a long auto-hidden label inside a 320px allocation', async () => {
+    const longLabel = 'FilterLabelWithNoBreakOpportunityAnywhere'.repeat(6);
+    const el = await mountAt(NARROW, autoFilters('auto', longLabel));
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+
+    expect(Math.round((await composedLabel(el, 'q')).getBoundingClientRect().width)).to.be.at.most(
+      1
+    );
+    expect(el.scrollWidth).to.be.at.most(el.clientWidth);
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+  });
+
+  it('clips an auto label the same way under dir="rtl"', async () => {
+    const el = await mountAt(NARROW, autoFilters('auto'), 'rtl');
+    const label = await composedLabel(el, 'q');
+
+    expect(getComputedStyle(label).direction).to.equal('rtl');
+    expect(label.textContent!.trim()).to.equal('Search issues');
+    expect(Math.round(label.getBoundingClientRect().width)).to.be.at.most(1);
+    expect(el.scrollWidth).to.be.at.most(el.clientWidth);
+  });
+
+  it('is accessible with an auto-labelled filter at both a wide and a narrow allocation', async () => {
+    for (const size of [WIDE, NARROW]) {
+      const el = await mountAt(size, autoFilters('auto'));
+      el.value = { q: 'timeout', status: 'open' };
+      await el.updateComplete;
+      const label = await composedLabel(el, 'q');
+      expect(label.textContent!.trim(), `the auto label rendered at ${size}`).to.equal(
+        'Search issues'
+      );
+      expect(el.shadowRoot!.querySelectorAll('[part="chip"]').length).to.equal(2);
+      await expect(el).to.be.accessible();
+    }
   });
 });
 

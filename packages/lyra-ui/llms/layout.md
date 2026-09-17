@@ -4336,8 +4336,21 @@ until something else registers it, the same trade `icon-button-register.js` docu
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
-- `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
-  Drives the reset button's own disabled state; unaffected by `activeFiltersDisplay`.
+- `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value,
+  including one sitting at its own declared `defaultValue`. Drives the reset button's own disabled
+  state in every `activeFiltersDisplay` mode except `'changed'`; the getter itself is unaffected by
+  `activeFiltersDisplay`.
+- `hasChangedFilters: boolean` (read-only) — whether any filter's value differs from its own
+  declared `defaultValue`, using the same equality `activeFiltersDisplay: 'changed'` filters its
+  chip row on: a `readonly string[]` default compares positionally, everything else compares with
+  `Object.is`. This is the counterpart to `hasActiveFilters`, not a synonym — a bar whose filters
+  were all declared with non-empty defaults and never touched reads `hasActiveFilters === true` and
+  `hasChangedFilters === false`, because a bar whose defaults narrow the view on load has not been
+  narrowed by the user. A filter with no declared `defaultValue` counts as changed the moment it
+  holds any value at all (there is nothing for it to still equal), and clearing a filter that *does*
+  declare one counts as changed too, since `reset()` would restore it — which is the one case where
+  this getter and the `'changed'` chip row differ, the row's entries being non-empty by
+  construction. Always live, never cached.
 - `invalidFilterIds: readonly string[]` (read-only) — immutable ids of required filters whose
   values are unset.
 - `activeFiltersDisplay: 'all' | 'changed' | 'hidden' = 'all'` (reflected, attribute
@@ -4351,6 +4364,10 @@ until something else registers it, the same trade `icon-button-register.js` docu
   at each index), matching this component's only other array-equality precedent (a custom adapter's
   own `clearValue` comparison); a `'date-range'` value is a single composed string, so it compares
   like any other string. Removing a chip always clears that filter, unaffected by this property.
+  `'changed'` additionally gates the reset button on `hasChangedFilters` instead of
+  `hasActiveFilters`, so an untouched defaults-only bar — which renders no chip in this mode — no
+  longer offers an enabled reset that would change nothing. Enablement under `'all'` and `'hidden'`
+  is unchanged, `disabled`/`loading` still win in every mode, and `reset()` itself is untouched.
 
 The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
 height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
@@ -4485,8 +4502,8 @@ control at all (see **Chip-only filters** below): its value belongs to a widget 
 page, so the bar renders only its active-filter chip and gives it no toolbar cell.
 
 Every built-in (non-`'custom'`) filter definition additionally accepts optional `size: LyraSize`,
-`icon: unknown` and `labelVisibility: 'visible' | 'hidden'` fields, and every one whose composed
-control ships a clear action also accepts `clearable: boolean`. They are forwarded verbatim to that
+`icon: unknown` and `labelVisibility: 'visible' | 'hidden' | 'auto'` fields, and every one whose
+composed control ships a clear action also accepts `clearable: boolean`. They are forwarded verbatim to that
 control's own same-named property — `icon` into its `start` slot exactly like a choice option's own
 `icon`, rendered inert and `aria-hidden`; `clearable` reaching `<lr-date-input>` under its own
 `with-clear` spelling, since that control has no `clearable`. `'text'` also accepts
@@ -4504,6 +4521,20 @@ instead of rendering it as a stacked visible label, and — when the definition 
 so a compact toolbar row still names every field for assistive technology; visually hiding
 `::part(filter-control-label)` in CSS, the only previous option, removed the accessible name along
 with the text.
+
+`labelVisibility: 'auto'` is the width-dependent middle between the two. It renders exactly what
+`'visible'` renders — the same stacked label element, the same accessible name computed from it, no
+`aria-label` and no placeholder fallback — and the bar's own stylesheet visually clips that label
+once the bar's allocation drops below `30rem`. The threshold is a container query on the host, so it
+reads the bar's own allocated width, not the viewport's: the same definitions render labelled across
+a dashboard and unlabelled in a 320px side panel, dialog or split pane, with no host-side breakpoint
+logic. The label element is never removed at any width, so the field's accessible name is identical
+in both states, and `'auto'` deliberately does not route the name onto the control the way
+`'hidden'` does — doing so would name a wide-allocation field twice. A `'checkbox-menu'` filter
+participates through its own trigger label run, the same one `'hidden'` already clips there. The
+threshold is fixed rather than themeable: a CSS container query's prelude cannot read a custom
+property (`var()` is not substituted in an at-rule prelude), so a `--lr-*` hook for it would parse
+and silently never apply.
 
 `'combobox'` also accepts the same `debounce?: number` (ms) `'text'` already had: it coalesces a
 burst of rapid selection changes (picks, a multi-select toggle, an
@@ -4534,6 +4565,8 @@ makes that text visually hidden — never removed — so the button keeps its ac
 one case where the hidden label would be the *only* thing the button says (hidden routing, no
 declared `placeholder`, nothing selected) the label routes to the visible summary instead of being
 emitted twice, so the trigger's accessible name stays "Teams", never "Teams Teams".
+`labelVisibility: 'auto'` clips that same trigger label run, and only below the `30rem` threshold —
+the label run is always emitted under `'auto'`, since nothing is routed to the summary there.
 
 Because its trigger is a button rather than a field, a `required` `'checkbox-menu'` deliberately
 renders **no** required asterisk and sets **no** `aria-invalid`: the shared required marker has no
