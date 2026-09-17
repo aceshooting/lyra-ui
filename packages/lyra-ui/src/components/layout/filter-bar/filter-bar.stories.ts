@@ -679,3 +679,81 @@ export const CompactLabels: Story = {
     return html`<lr-filter-bar style="max-width: 44rem" .filters=${filters}></lr-filter-bar>`;
   },
 };
+
+/** A `'chip'` filter renders NO control and claims NO toolbar cell. Its value belongs to a widget
+ *  elsewhere on the page -- here the day buttons below the bar stand in for a calendar heatmap --
+ *  and the bar's only rendered surface for it is the removable active-filter chip. The chip text
+ *  comes from the definition's own `formatValue(value, locale)`, whose `locale` is the bar's
+ *  effective locale, so the caller localizes its own data. Everything else behaves like any other
+ *  filter: the value rides `lr-input`, it enables the reset button, and removing the chip (or
+ *  resetting) clears it. */
+export const ChipOnlyFilter: Story = {
+  render: () => {
+    const days = ['2026-09-15', '2026-09-16', '2026-09-17'];
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'q', label: 'Search', type: 'text', placeholder: 'Search events' },
+      {
+        filterId: 'day',
+        label: 'Day',
+        type: 'chip',
+        formatValue: (value, locale) =>
+          new Intl.DateTimeFormat(locale, {
+            dateStyle: 'medium',
+            timeZone: 'UTC',
+          }).format(new Date(`${String(value)}T00:00:00Z`)),
+      },
+    ];
+    const demoOf = (event: Event): Element =>
+      (event.currentTarget as HTMLElement).closest('.demo')!;
+    const pick = (event: Event, day: string) => {
+      const bar = demoOf(event).querySelector('lr-filter-bar') as LyraFilterBar;
+      bar.value = { ...bar.value, day };
+    };
+    const log = (event: Event) => {
+      const line = demoOf(event).querySelector('.log') as HTMLElement;
+      line.textContent = `${event.type}: ${JSON.stringify((event as CustomEvent).detail.value)}`;
+    };
+    return html`
+      <div class="demo" style="max-width: 50rem; display: flex; flex-direction: column; gap: 1rem">
+        <lr-filter-bar .filters=${filters} @lr-input=${log} @lr-reset=${log}></lr-filter-bar>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
+          ${days.map(
+            (day) => html`<lr-button
+              appearance="outlined"
+              @click=${(event: Event) => pick(event, day)}
+              >${day}</lr-button
+            >`
+          )}
+        </div>
+        <pre class="log" style="font-size: 0.75rem; white-space: pre-wrap; word-break: break-all"></pre>
+      </div>
+    `;
+  },
+};
+
+/** Every filter here is a `'chip'`, so the toolbar row holds no field at all -- and paints no empty
+ *  column where one would have been. The row still renders the reset button, which is exactly the
+ *  "clear all" affordance a bar like this needs. `Regions` declares no `formatValue`, so its array
+ *  value falls back to a localized conjunction list; `Day` declares one. */
+export const AllChipToolbar: Story = {
+  render: () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'day',
+        label: 'Day',
+        type: 'chip',
+        formatValue: (value, locale) =>
+          new Intl.DateTimeFormat(locale, {
+            dateStyle: 'medium',
+            timeZone: 'UTC',
+          }).format(new Date(`${String(value)}T00:00:00Z`)),
+      },
+      { filterId: 'regions', label: 'Regions', type: 'chip', clearValue: [] },
+    ];
+    return html`<lr-filter-bar
+      style="max-width: 44rem"
+      .filters=${filters}
+      .value=${{ day: '2026-09-17', regions: ['North', 'South'] }}
+    ></lr-filter-bar>`;
+  },
+};

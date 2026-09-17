@@ -13,6 +13,7 @@ const FILTERS = [
   { filterId: 'tags', label: 'Tags', type: 'combobox', multiple: true, options: [] },
   { filterId: 'owner', label: 'Owner', type: 'combobox', options: [] },
   { filterId: 'query', label: 'Query', type: 'text' },
+  { filterId: 'day', label: 'Day', type: 'chip' },
   {
     filterId: 'archived',
     label: 'Archived',
@@ -45,6 +46,13 @@ void queryValue;
 // 'custom' keeps the full unconstrained field value -- its adapter may use either boolean meaning.
 const archivedValue: string | readonly string[] | boolean | undefined = narrowed.value.archived;
 void archivedValue;
+
+// A 'chip' filter keeps the full unconstrained field value -- its value is owned elsewhere.
+const dayValue: string | readonly string[] | boolean | undefined = narrowed.value.day;
+void dayValue;
+type ChipNarrowed = LyraFilterBarValueFor<typeof FILTERS>;
+const chipAcceptsBoolean: ChipNarrowed = { day: true };
+void chipAcceptsBoolean;
 
 // @ts-expect-error a single-value ('select'/non-multiple 'combobox') filter's value is never an array
 const statusAsArray: readonly string[] = narrowed.value.status;

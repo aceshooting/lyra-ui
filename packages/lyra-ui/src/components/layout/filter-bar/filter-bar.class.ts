@@ -48,7 +48,9 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_D
  *  toolbar-button shape for a small fixed set of independently togglable categories, with the
  *  same `string[]` value a `'combobox'` with `multiple` carries. `'custom'` delegates rendering
  *  and event-to-value conversion to the definition's `custom` adapter, so an existing Lyra
- *  control can participate without this component growing a branch for every control family. */
+ *  control can participate without this component growing a branch for every control family.
+ *  `'chip'` is the one type that maps to no control at all: its value is owned by a widget
+ *  elsewhere on the page, and this component renders only its active-filter chip. */
 export type LyraFilterBarControlType =
   | 'select'
   | 'combobox'
@@ -56,6 +58,7 @@ export type LyraFilterBarControlType =
   | 'date'
   | 'date-range'
   | 'text'
+  | 'chip'
   | 'custom';
 
 /** One closed-set choice for a `'select'`/`'combobox'` filter. */
@@ -317,6 +320,46 @@ export interface LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBa
   readonly debounce?: number;
 }
 
+/** A control-less filter whose value is owned by a widget elsewhere on the page -- a calendar
+ *  heatmap cell, a map selection, a chart brush. `<lr-filter-bar>` renders NO control for it and it
+ *  occupies NO toolbar cell, but it is a filter in every other sense this component knows: it lives
+ *  in `value` under its own `filterId`, rides every `lr-input`/`lr-reset` detail, counts toward
+ *  `hasActiveFilters` (so it enables the reset button) and `invalidFilterIds`, renders a removable
+ *  active-filter chip subject to `activeFiltersDisplay`, and is cleared by a chip removal and by
+ *  `reset()` alongside every other filter.
+ *
+ *  It extends the shared definition base rather than the composed one for the same reason
+ *  `'custom'` does: `size`/`icon`/`labelVisibility`/`clearable` have no control to be forwarded to,
+ *  so declaring them would be inert public API. The inherited `placeholder` is likewise inert here
+ *  (there is no field to place it in), exactly as it already is for `'custom'`. The inherited
+ *  `required` IS honoured, but only in bookkeeping: a required-but-empty chip filter appears in
+ *  `invalidFilterIds` and fails `checkValidity()`, while rendering no inline error -- this component
+ *  renders no element for that filter on which one could appear, so the widget that owns the value
+ *  owns its error affordance too. The inherited `defaultValue` is
+ *  restored by `reset()` and compared by `activeFiltersDisplay: 'changed'` like any other type's. */
+export interface LyraFilterBarChipDefinition extends LyraFilterBarDefinitionBase {
+  readonly type: 'chip';
+  /** The chip's text for the current value. `locale` is `effectiveLocale` -- the same value every
+   *  built-in type's own chip formatting (`getListFormat`/`getDateTimeFormat`) and a custom
+   *  adapter's `formatValue` already receive -- because such a value is normally a formatted string
+   *  (a localized date) rather than a label looked up in an options list. Caller-supplied copy, so
+   *  (like `label`) this component does not route the result through `this.localize()`; passing the
+   *  locale is what lets the caller do it. Omitted falls back to the same ladder a custom adapter's
+   *  omitted `formatValue` uses: a string array formats as a localized conjunction list, any other
+   *  value renders `String(value)`, and `undefined` renders `''`. */
+  readonly formatValue?: (value: LyraFilterBarFieldValue, locale: string) => string;
+  /** The value written when this filter's chip is removed (or `clearFilter()` runs). Defaults to
+   *  `''`, matching what every non-multi built-in type writes. Declare `[]` for a `string[]`-valued
+   *  chip filter. A domain sentinel (`'all'`) must be paired with `isEmpty`, or the bar will treat
+   *  the "cleared" value as still set and keep rendering a chip for it -- the identical pairing
+   *  `LyraFilterBarCustomControlAdapter.clearValue`/`isEmpty` documents. */
+  readonly clearValue?: LyraFilterBarFieldValue;
+  /** Optional domain-specific empty predicate. Omitted, this filter uses the same built-in rule
+   *  every non-`'custom'` type uses: absent, `false`, `''` and `[]` are empty, everything else is
+   *  set. */
+  readonly isEmpty?: (value: LyraFilterBarFieldValue) => boolean;
+}
+
 /** A host-declared filter. The discriminant makes choice options and custom adapters mandatory
  * exactly where runtime needs them, while excluding irrelevant fields from every other mode. */
 export type LyraFilterBarFilterDefinition =
@@ -326,6 +369,7 @@ export type LyraFilterBarFilterDefinition =
   | LyraFilterBarTextDefinition
   | LyraFilterBarDateDefinition
   | LyraFilterBarDateRangeDefinition
+  | LyraFilterBarChipDefinition
   | LyraFilterBarCustomDefinition;
 
 /**
@@ -345,7 +389,8 @@ export type LyraFilterBarValue = Readonly<Record<string, LyraFilterBarFieldValue
  * a `multiple` `'combobox'`) and a `'combobox'` with `multiple: true` narrow to `readonly
  * string[]`; every other `'combobox'` and every `'select'`/`'text'`/`'date'`/`'date-range'` narrow
  * to `string`; a `'custom'` definition keeps the full unconstrained `LyraFilterBarFieldValue`,
- * since its adapter is free to use either boolean meaning (see `LyraFilterBarCustomControlAdapter`).
+ * since its adapter is free to use either boolean meaning (see `LyraFilterBarCustomControlAdapter`),
+ * and so does a `'chip'` definition, whose value is owned by a widget this component never renders.
  */
 export type LyraFilterBarDefinitionValue<D extends LyraFilterBarFilterDefinition> =
   D extends LyraFilterBarCheckboxMenuDefinition
@@ -356,7 +401,9 @@ export type LyraFilterBarDefinitionValue<D extends LyraFilterBarFilterDefinition
         : string
       : D extends LyraFilterBarCustomDefinition
         ? LyraFilterBarFieldValue
-        : string;
+        : D extends LyraFilterBarChipDefinition
+          ? LyraFilterBarFieldValue
+          : string;
 
 /**
  * `LyraFilterBarValue` narrowed to a keyed record whose per-`filterId` value type follows the
@@ -735,6 +782,15 @@ type LyraFilterBarChoiceDefinition =
   | LyraFilterBarComboboxDefinition
   | LyraFilterBarCheckboxMenuDefinition;
 
+/** Every filter type that actually renders a control. `'chip'` is the one type that renders none,
+ *  so excluding it here is what makes `renderControl()` structurally unreachable for a chip
+ *  definition instead of relying on a runtime guard -- the `'select'` fallback at the end of that
+ *  method would otherwise render an empty `<lr-select>` for it. */
+type LyraFilterBarControlDefinition = Exclude<
+  LyraFilterBarFilterDefinition,
+  LyraFilterBarChipDefinition
+>;
+
 function isChoiceDefinition(
   definition: LyraFilterBarFilterDefinition
 ): definition is LyraFilterBarChoiceDefinition {
@@ -864,6 +920,26 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * button role, so writing one would be silently inert. A revealed `required` error still reaches
  * assistive technology, as a screen-reader-only run inside the trigger's accessible name.
  *
+ * A `'chip'` filter is the one type that composes no control at all. Its value is owned by a widget
+ * elsewhere on the page -- a calendar heatmap cell, a map selection, a chart brush -- so the bar
+ * renders no field for it and it claims no toolbar cell (no `field` wrapper, and therefore no blank
+ * column where an empty one's validation spacer would otherwise reserve a row of height). It is a
+ * filter in every other sense: it lives in `value` under its own `filterId`, rides every
+ * `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` (so it enables the reset button,
+ * which is exactly the "clear all" action an all-chip bar needs) and `invalidFilterIds`, renders a
+ * removable active-filter chip subject to `activeFiltersDisplay`, and is cleared by a chip removal
+ * and by `reset()` alongside every other filter. Its chip text comes from an optional
+ * `formatValue(value, locale)` receiving `effectiveLocale` -- the same locale every built-in type's
+ * own chip formatting and a custom adapter's `formatValue` already receive; omitted, a string array
+ * formats as a localized conjunction list and anything else renders `String(value)` verbatim, never
+ * through the date branch that would reformat an ISO day or mangle a value containing a slash.
+ * `clearValue` (default `''`) is what a chip removal writes; a domain sentinel must be paired with
+ * `isEmpty`, exactly as a custom adapter's own `clearValue`/`isEmpty` are. Its inherited
+ * `placeholder` is inert (there is no field to place it in), as it already is for `'custom'`, and
+ * its inherited `required` is honoured in bookkeeping only: a required-but-empty chip filter joins
+ * `invalidFilterIds`/`checkValidity()`/`lr-validity-change` but renders no inline error, since this
+ * component renders no element of its own on which one could appear.
+ *
  * Controlled, like every other Lyra data component: `value` is a plain, JSON-serializable object
  * (`LyraFilterBarValue`) the host reads/writes directly -- this component never touches
  * `location`/`history`/storage itself, so turning `value` into (and back out of) a URL
@@ -922,7 +998,9 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  *   alone) when `filterId` is not a plain CSS ident (ASCII letters/digits/`-`/`_`, starting with a
  *   letter) -- `part` is a space-separated token list like `class`, so an id containing whitespace
  *   would otherwise silently fabricate an unrelated second token (including, in the worst case,
- *   one colliding with a real part name like `active-filters`).
+ *   one colliding with a real part name like `active-filters`). A `'chip'` filter renders no
+ *   `field` wrapper at all, so neither `::part(field)` nor `::part(field-<filterId>)` ever matches
+ *   one -- its only rendered surface is its active-filter `chip`.
  * @csspart end - Wrapper around the `end` slot; hidden while nothing is slotted.
  * @csspart filter-control - One filter's composed built-in control, or the wrapper around a
  *   custom renderer's control (and around a `'checkbox-menu'`'s dropdown plus its error line).
@@ -1181,6 +1259,12 @@ export class LyraFilterBar<
   }
 
   private isEmpty(def: LyraFilterBarFilterDefinition, value: LyraFilterBarFieldValue): boolean {
+    if (def.type === 'chip') {
+      // Use-site guard rather than an admission rule in the `filters` setter: unlike a `'custom'`
+      // definition's `render`, a malformed callback here still has a correct fallback, so a chip
+      // filter with foreign data stays usable instead of vanishing.
+      return typeof def.isEmpty === 'function' ? def.isEmpty(value) : !isBuiltInSet(value);
+    }
     if (def.type !== 'custom') return !isBuiltInSet(value);
     const { adapter } = def.custom;
     if (adapter.isEmpty) return adapter.isEmpty(value);
@@ -1196,7 +1280,12 @@ export class LyraFilterBar<
       ? this._value[def.filterId]
       : def.type === 'custom'
         ? def.custom.adapter.clearValue
-        : undefined;
+        : def.type === 'chip'
+          // Mirrors the `'custom'` arm above: a declared `clearValue` is the canonical "cleared"
+          // reading of an absent key, so a domain sentinel paired with `isEmpty` (which is the
+          // only coherent way to declare one) never reaches that predicate as `undefined`.
+          ? def.clearValue
+          : undefined;
   }
 
   private normalizeValue(value: LyraFilterBarValue | null | undefined): LyraFilterBarValue {
@@ -1499,9 +1588,14 @@ export class LyraFilterBar<
     const clearValue: LyraFilterBarFieldValue =
       def.type === 'custom'
         ? def.custom.adapter.clearValue
-        : def.type === 'checkbox-menu' || (def.type === 'combobox' && def.multiple)
-          ? []
-          : '';
+        : def.type === 'chip'
+          // Undeclared falls through to `''`, what every non-multi built-in type writes; an
+          // array-valued or sentinel chip filter declares its own (paired with `isEmpty` for a
+          // sentinel, or the bar keeps reading the "cleared" value as still set).
+          ? def.clearValue ?? ''
+          : def.type === 'checkbox-menu' || (def.type === 'combobox' && def.multiple)
+            ? []
+            : '';
     this.setFilterValue(id, clearValue);
     this.repairFocusAfterChipRemoval(
       Math.max(0, index),
@@ -1516,6 +1610,26 @@ export class LyraFilterBar<
   ): string {
     if (def.type === 'custom') {
       const formatted = def.custom?.adapter.formatValue?.(value, this.effectiveLocale);
+      if (formatted !== undefined) return formatted;
+      if (Array.isArray(value)) {
+        return getListFormat(this.effectiveLocale, {
+          style: 'long',
+          type: 'conjunction',
+        }).format(value);
+      }
+      return value === undefined ? '' : String(value);
+    }
+    if (def.type === 'chip') {
+      // Deliberately *before* the date tail below, and unconditionally so: a chip filter's value is
+      // owned by a widget this component never renders, so it is arbitrary caller data with no
+      // range separator to prettify -- running it through that branch's `'/'` split would silently
+      // reformat an ISO day and mangle any value containing a slash, the same trap the `'text'`
+      // branch already records. The ladder below matches a custom adapter's own omitted
+      // `formatValue` exactly, so there is one formatting contract for both control-less types.
+      const formatted =
+        typeof def.formatValue === 'function'
+          ? def.formatValue(value, this.effectiveLocale)
+          : undefined;
       if (formatted !== undefined) return formatted;
       if (Array.isArray(value)) {
         return getListFormat(this.effectiveLocale, {
@@ -1883,7 +1997,7 @@ export class LyraFilterBar<
     </div>`;
   }
 
-  private renderControl(def: LyraFilterBarFilterDefinition): TemplateResult {
+  private renderControl(def: LyraFilterBarControlDefinition): TemplateResult {
     const value = this.valueFor(def);
     const missing = Boolean(def.required) && this.isEmpty(def, value);
     const errorText =
@@ -2097,7 +2211,17 @@ export class LyraFilterBar<
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>
         <div part="controls">
-          ${this._filters.map((def) => html`<div part=${fieldPartNames(def.filterId)}>
+          ${this._filters
+            // A `'chip'` filter renders no control and claims no toolbar cell: its value is owned
+            // by a widget elsewhere on the page and it participates only through the value record,
+            // the active-filter chip row and `reset()`. Filtering here (rather than returning
+            // `nothing` from `renderControl`) is what keeps an empty `field` wrapper -- whose
+            // validation spacer reserves a full row of height -- from painting a blank column, and
+            // the type guard is what makes a chip definition structurally unreachable in
+            // `renderControl`'s own `'select'` fallback. Keyed on `'chip'` exactly, never on
+            // "not a known type": an unrecognized `type` must still fall back to `<lr-select>`.
+            .filter((def): def is LyraFilterBarControlDefinition => def.type !== 'chip')
+            .map((def) => html`<div part=${fieldPartNames(def.filterId)}>
             ${this.renderControl(def)}
             <span
               class="validation-spacer"

@@ -5058,3 +5058,720 @@ describe('combobox tag remove-button part forwarding', () => {
     ).to.equal(false);
   });
 });
+
+describe("'chip' (control-less) filters", () => {
+  /** A mixed schema: one ordinary control filter plus one control-less chip filter. */
+  const chipFilters: LyraFilterBarFilterDefinition[] = [
+    { filterId: 'query', label: 'Query', type: 'text' },
+    { filterId: 'day', label: 'Day', type: 'chip' },
+  ];
+
+  /** The D7 pairing: a domain sentinel `clearValue` is only coherent alongside its own `isEmpty`. */
+  const sentinelChipFilters: LyraFilterBarFilterDefinition[] = [
+    {
+      filterId: 'day',
+      label: 'Day',
+      type: 'chip',
+      clearValue: 'all',
+      isEmpty: (value) => value === 'all',
+    },
+  ];
+
+  const resetButton = (el: LyraFilterBar): HTMLElement & { disabled: boolean } =>
+    el.shadowRoot!.querySelector('[part="reset-button"]') as HTMLElement & {
+      disabled: boolean;
+    };
+
+  it('admits a chip definition that declares no options and no custom adapter', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${chipFilters}></lr-filter-bar>
+    `);
+    expect(el.filters.map((f) => f.filterId)).to.deep.equal(['query', 'day']);
+  });
+
+  it('round-trips a chip value through the controlled record and counts it as active', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${chipFilters}></lr-filter-bar>
+    `);
+    el.value = { day: '2026-09-17' };
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ day: '2026-09-17' });
+    expect(el.hasActiveFilters).to.be.true;
+  });
+
+  it('enables the reset button when only a chip filter is set', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${chipFilters}></lr-filter-bar>
+    `);
+    expect(resetButton(el).disabled).to.be.true;
+    el.value = { day: '2026-09-17' };
+    await el.updateComplete;
+    expect(resetButton(el).disabled).to.be.false;
+  });
+
+  it('applies the built-in emptiness rule when the definition declares no isEmpty', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${chipFilters}></lr-filter-bar>
+    `);
+    el.value = { day: '' };
+    await el.updateComplete;
+    expect('day' in el.value).to.be.false;
+    expect(el.hasActiveFilters).to.be.false;
+  });
+
+  it("honors a declared isEmpty so a domain sentinel never counts as set", async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${sentinelChipFilters}></lr-filter-bar>
+    `);
+    el.value = { day: 'all' };
+    await el.updateComplete;
+    expect('day' in el.value).to.be.false;
+    expect(el.hasActiveFilters).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="chip"]') === null).to.be.true;
+  });
+
+  it('resolves an absent chip key to its declared clearValue before the emptiness predicate', async () => {
+    const seen: unknown[] = [];
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'day',
+        label: 'Day',
+        type: 'chip',
+        clearValue: 'all',
+        isEmpty: (value) => {
+          seen.push(value);
+          // Deliberately only understands the sentinel: an `undefined` leaking in here would be
+          // reported as SET, which is exactly the D8 regression this guards.
+          return value === 'all';
+        },
+      },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(el.hasActiveFilters).to.be.false;
+    expect(seen.includes(undefined), 'never asked about an absent key as `undefined`').to.be.false;
+    expect(seen.includes('all'), 'asked about the declared clearValue instead').to.be.true;
+  });
+
+  it('lets a required chip filter participate in validity bookkeeping', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip', required: true },
+    ];
+    const el = document.createElement('lr-filter-bar') as LyraFilterBar;
+    el.filters = filters;
+    const mountPromise = oneEvent(el, 'lr-validity-change');
+    document.body.appendChild(el);
+    const mountEvent = await mountPromise;
+    expect(mountEvent.detail.valid).to.be.false;
+    expect(mountEvent.detail.invalidFilterIds).to.deep.equal(['day']);
+    expect(el.invalidFilterIds).to.deep.equal(['day']);
+    expect(el.checkValidity()).to.be.false;
+
+    const validPromise = oneEvent(el, 'lr-validity-change');
+    el.value = { day: '2026-09-17' };
+    const validEvent = await validPromise;
+    expect(validEvent.detail.valid).to.be.true;
+    expect(validEvent.detail.invalidFilterIds).to.deep.equal([]);
+    el.remove();
+  });
+
+  it('restores a chip filter to its own defaultValue on reset(), emitting lr-input then lr-reset', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip', defaultValue: '2026-01-01' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters}></lr-filter-bar>
+    `);
+    el.value = { day: '2026-09-17' };
+    await el.updateComplete;
+
+    const order: string[] = [];
+    let inputDetail: LyraFilterBarInputDetail | undefined;
+    el.addEventListener('lr-input', (e) => {
+      order.push('lr-input');
+      inputDetail = (e as CustomEvent<LyraFilterBarInputDetail>).detail;
+    });
+    el.addEventListener('lr-reset', () => order.push('lr-reset'));
+    const resetPromise = oneEvent(el, 'lr-reset');
+    el.reset();
+    const resetEvent = await resetPromise;
+
+    expect(order).to.deep.equal(['lr-input', 'lr-reset']);
+    expect(inputDetail!.filterId).to.equal(undefined);
+    expect(inputDetail!.value).to.deep.equal({ day: '2026-01-01' });
+    expect(resetEvent.detail.value).to.deep.equal({ day: '2026-01-01' });
+    expect(el.value).to.deep.equal({ day: '2026-01-01' });
+  });
+
+  it('renders no control of its own', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${chipFilters}></lr-filter-bar>
+    `);
+    expect(el.shadowRoot!.querySelector('[data-filter-id="day"]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[data-filter-id="query"]') === null).to.be.false;
+  });
+
+  it('claims no toolbar cell, so no field wrapper (and no field-<filterId> token) is emitted for it', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'query', label: 'Query', type: 'text' },
+      { filterId: 'day', label: 'Day', type: 'chip' },
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        options: [{ value: 'open', label: 'Open' }],
+      },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters}></lr-filter-bar>
+    `);
+    const fieldParts = [...el.shadowRoot!.querySelectorAll('[part~="field"]')].map((node) =>
+      node.getAttribute('part'),
+    );
+    expect(fieldParts).to.deep.equal(['field field-query', 'field field-status']);
+  });
+
+  it('keeps an unrecognized filter type on the lr-select fallback (never "not a known type")', async () => {
+    const filters = [
+      { filterId: 'day', label: 'Day', type: 'chip' },
+      { filterId: 'weird', label: 'Weird', type: 'not-a-real-type' },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters}></lr-filter-bar>
+    `);
+    expect(el.shadowRoot!.querySelector('[data-filter-id="day"]') === null).to.be.true;
+    expect(control(el, 'weird').localName).to.equal('lr-select');
+  });
+
+  it('renders an all-chip toolbar with no empty field column, keeping the reset action', async () => {
+    const allChipFilters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip' },
+      { filterId: 'region', label: 'Region', type: 'chip' },
+    ];
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 640px">
+        <lr-filter-bar id="all-chip" .filters=${allChipFilters}></lr-filter-bar>
+        <lr-filter-bar id="no-filters" .filters=${[]}></lr-filter-bar>
+      </div>
+    `);
+    const allChip = wrapper.querySelector('#all-chip') as LyraFilterBar;
+    const noFilters = wrapper.querySelector('#no-filters') as LyraFilterBar;
+    await Promise.all([allChip.updateComplete, noFilters.updateComplete]);
+    const rows = await Promise.all(
+      [allChip, noFilters].map(async (bar) => {
+        const button = bar.shadowRoot!.querySelector('[part="reset-button"]') as HTMLElement & {
+          updateComplete: Promise<unknown>;
+        };
+        await button.updateComplete;
+        return bar.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
+      }),
+    );
+
+    expect(allChip.shadowRoot!.querySelectorAll('[part~="field"]').length).to.equal(0);
+    expect(
+      allChip.shadowRoot!.querySelector('[part="reset-button"]') === null,
+      'the reset action is an all-chip bar’s "clear all"',
+    ).to.be.false;
+    expect(
+      (allChip.shadowRoot!.querySelector('[part="end"]') as HTMLElement).hasAttribute('hidden'),
+    ).to.be.true;
+    expect(rows[0]!.getBoundingClientRect().height).to.be.closeTo(
+      rows[1]!.getBoundingClientRect().height,
+      1,
+    );
+  });
+
+  it('never enters the text-sync path, so an all-chip bar renders no lr-input at all', async () => {
+    const allChipFilters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${allChipFilters}></lr-filter-bar>
+    `);
+    el.value = { day: '2026-09-17' };
+    await el.updateComplete;
+    el.value = {};
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-input[data-filter-id]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[data-filter-id]') === null).to.be.true;
+  });
+
+  const chipTexts = (el: LyraFilterBar): string[] =>
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="chip"]')].map((chip) =>
+      chip.textContent!.trim(),
+    );
+
+  it('renders "<label>: <formatValue(value, effectiveLocale)>" in the active-filter row', async () => {
+    const calls: readonly unknown[][] = [];
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'day',
+        label: 'Day',
+        type: 'chip',
+        formatValue: (value, locale) => {
+          (calls as unknown[][]).push([value, locale]);
+          return new Intl.DateTimeFormat(locale, {
+            dateStyle: 'medium',
+            timeZone: 'UTC',
+          }).format(new Date(`${String(value)}T00:00:00Z`));
+        },
+      },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+
+    const expected = new Intl.DateTimeFormat(effectiveLocaleOf(el), {
+      dateStyle: 'medium',
+      timeZone: 'UTC',
+    }).format(new Date('2026-09-17T00:00:00Z'));
+    expect(chipTexts(el)).to.deep.equal([`Day: ${expected}`]);
+    expect(calls.length).to.be.greaterThan(0);
+    expect(calls[0]![0]).to.equal('2026-09-17');
+    expect(calls[0]![1]).to.equal(effectiveLocaleOf(el));
+  });
+
+  it('re-invokes formatValue with the new effectiveLocale when the inherited language changes', async () => {
+    const seen: string[] = [];
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'day',
+        label: 'Day',
+        type: 'chip',
+        formatValue: (value, locale) => {
+          seen.push(locale);
+          return `${String(value)}@${locale}`;
+        },
+      },
+    ];
+    const wrapper = await fixture<HTMLElement>(html`
+      <div lang="fr">
+        <lr-filter-bar .filters=${filters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+    expect(effectiveLocaleOf(el)).to.equal('fr');
+    expect(chipTexts(el)).to.deep.equal(['Day: 2026-09-17@fr']);
+
+    wrapper.setAttribute('lang', 'de');
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(effectiveLocaleOf(el)).to.equal('de');
+    expect(seen[seen.length - 1]).to.equal('de');
+    expect(chipTexts(el)).to.deep.equal(['Day: 2026-09-17@de']);
+  });
+
+  it('falls back to String(value) verbatim with no formatValue, never through the date tail', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip' },
+      { filterId: 'route', label: 'Route', type: 'chip' },
+      { filterId: 'span', label: 'Span', type: 'chip' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        .filters=${filters}
+        .value=${{
+          day: '2026-09-17',
+          route: 'a/b',
+          span: '2026-01-01/2026-01-31',
+        }}
+      ></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(chipTexts(el)).to.deep.equal([
+      'Day: 2026-09-17',
+      'Route: a/b',
+      'Span: 2026-01-01/2026-01-31',
+    ]);
+  });
+
+  it('formats an array value as a localized conjunction list with no formatValue', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'regions', label: 'Regions', type: 'chip', clearValue: [] },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ regions: ['North', 'South'] }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(chipTexts(el)).to.deep.equal([
+      `Regions: ${new Intl.ListFormat(effectiveLocaleOf(el), {
+        style: 'long',
+        type: 'conjunction',
+      }).format(['North', 'South'])}`,
+    ]);
+  });
+
+  it('falls back instead of throwing for a non-callable formatValue from an untyped boundary', async () => {
+    const filters = [
+      { filterId: 'day', label: 'Day', type: 'chip', formatValue: 'not-a-function' },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(chipTexts(el)).to.deep.equal(['Day: 2026-09-17']);
+  });
+
+  it('honors activeFiltersDisplay for a chip filter exactly like every other type', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip', defaultValue: '2026-01-01' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ day: '2026-01-01' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(chipTexts(el), "'all' is the default and shows a filter sitting at its default").to.deep.equal([
+      'Day: 2026-01-01',
+    ]);
+
+    el.activeFiltersDisplay = 'changed';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="active-filters"]') === null).to.be.true;
+
+    el.value = { day: '2026-09-17' };
+    await el.updateComplete;
+    expect(chipTexts(el)).to.deep.equal(['Day: 2026-09-17']);
+
+    el.activeFiltersDisplay = 'hidden';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="active-filters"]') === null).to.be.true;
+    expect(el.hasActiveFilters, 'hidden only hides the row, it never unsets the filter').to.be.true;
+  });
+
+  const removeChip = async (el: LyraFilterBar, filterId: string): Promise<void> => {
+    const chip = el.shadowRoot!.querySelector(
+      `[part="chip"][value="${filterId}"]`,
+    ) as HTMLElement & { updateComplete: Promise<unknown> };
+    await chip.updateComplete;
+    (chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+  };
+
+  it('clears a chip filter from its own chip removal, emitting exactly one lr-input', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        .filters=${chipFilters}
+        .value=${{ query: 'errors', day: '2026-09-17' }}
+      ></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    let inputCount = 0;
+    el.addEventListener('lr-input', () => (inputCount += 1));
+    const inputPromise = oneEvent(el, 'lr-input');
+    await removeChip(el, 'day');
+    const event = await inputPromise;
+
+    expect(inputCount).to.equal(1);
+    expect(event.detail.filterId).to.equal('day');
+    expect(event.detail.appliedPreset).to.equal(undefined);
+    expect(event.detail.value).to.deep.equal({ query: 'errors' });
+    expect(el.value).to.deep.equal({ query: 'errors' });
+  });
+
+  it("writes '' on removal when the definition declares no clearValue", async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${chipFilters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    await removeChip(el, 'day');
+    expect('day' in el.value).to.be.false;
+    expect(el.hasActiveFilters).to.be.false;
+  });
+
+  it('writes a declared array clearValue on removal for an array-valued chip filter', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'regions',
+        label: 'Regions',
+        type: 'chip',
+        clearValue: [],
+        // Only an empty array counts as cleared here, so a `''` written instead would stay SET.
+        isEmpty: (value) => Array.isArray(value) && value.length === 0,
+      },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ regions: ['North'] }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    await removeChip(el, 'regions');
+    expect('regions' in el.value).to.be.false;
+    expect(el.hasActiveFilters).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="chip"]') === null).to.be.true;
+  });
+
+  it('writes a declared sentinel clearValue on removal when paired with isEmpty', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${sentinelChipFilters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(chipTexts(el)).to.deep.equal(['Day: 2026-09-17']);
+    await removeChip(el, 'day');
+    expect('day' in el.value).to.be.false;
+    expect(el.hasActiveFilters).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="active-filters"]') === null).to.be.true;
+  });
+
+  it('is cleared by reset() alongside every other filter', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        .filters=${chipFilters}
+        .value=${{ query: 'errors', day: '2026-09-17' }}
+      ></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    const resetPromise = oneEvent(el, 'lr-reset');
+    el.reset();
+    const resetEvent = await resetPromise;
+    expect(resetEvent.detail.value).to.deep.equal({});
+    expect(el.value).to.deep.equal({});
+    expect(el.hasActiveFilters).to.be.false;
+  });
+
+  it('renders a non-removable chip while disabled, and reset() stays a no-op', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar disabled .filters=${chipFilters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    expect(chip.hasAttribute('removable')).to.be.false;
+
+    let fired = false;
+    el.addEventListener('lr-reset', () => (fired = true));
+    el.reset();
+    expect(fired).to.be.false;
+    expect(el.value).to.deep.equal({ day: '2026-09-17' });
+  });
+
+  it('survives focus repair on an all-chip bar, where there is no control to fall back to', async () => {
+    const deepActive = (): Element | null => {
+      let node: Element | null = document.activeElement;
+      while (node?.shadowRoot?.activeElement) node = node.shadowRoot.activeElement;
+      return node;
+    };
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await chip.updateComplete;
+    chip.focus();
+    const remove = chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
+    expect(chip.shadowRoot!.activeElement === remove).to.be.true;
+
+    remove.click();
+    await el.updateComplete;
+    await aTimeout(0);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="chip"]') === null);
+
+    expect('day' in el.value).to.be.false;
+    expect(el.shadowRoot!.querySelector('[data-filter-id]') === null).to.be.true;
+    expect(deepActive()!.localName).to.equal('body');
+  });
+
+  it('leaves a schema declaring no chip filter byte-identical (unset regression)', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        options: [{ value: 'open', label: 'Open' }],
+      },
+      {
+        filterId: 'tags',
+        label: 'Tags',
+        type: 'combobox',
+        multiple: true,
+        options: [{ value: 'urgent', label: 'Urgent' }],
+      },
+      {
+        filterId: 'kinds',
+        label: 'Kinds',
+        type: 'checkbox-menu',
+        options: [{ value: 'bug', label: 'Bug' }],
+      },
+      { filterId: 'query', label: 'Query', type: 'text' },
+      { filterId: 'created', label: 'Created', type: 'date' },
+      { filterId: 'range', label: 'Active period', type: 'date-range' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+
+    const fieldParts = [...el.shadowRoot!.querySelectorAll('[part~="field"]')].map((node) =>
+      node.getAttribute('part'),
+    );
+    expect(fieldParts).to.deep.equal([
+      'field field-status',
+      'field field-tags',
+      'field field-kinds',
+      'field field-query',
+      'field field-created',
+      'field field-range',
+    ]);
+    expect(
+      [...el.shadowRoot!.querySelectorAll('[data-filter-id]')].map((node) => [
+        node.getAttribute('data-filter-id'),
+        node.localName,
+      ]),
+    ).to.deep.equal([
+      ['status', 'lr-select'],
+      ['tags', 'lr-combobox'],
+      ['kinds', 'lr-dropdown'],
+      ['query', 'lr-input'],
+      ['created', 'lr-date-input'],
+      ['range', 'lr-date-input'],
+    ]);
+  });
+
+  it('is accessible as an all-chip bar with active chips', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip' },
+      { filterId: 'region', label: 'Region', type: 'chip' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        .filters=${filters}
+        .value=${{ day: '2026-09-17', region: 'North' }}
+      ></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="chip"]').length).to.equal(2);
+    await expect(el).to.be.accessible();
+  });
+
+  it('is accessible as a mixed control/chip bar with active chips and a revealed required error', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        options: [{ value: 'open', label: 'Open' }],
+        required: true,
+      },
+      { filterId: 'query', label: 'Query', type: 'text' },
+      { filterId: 'day', label: 'Day', type: 'chip' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        .filters=${filters}
+        .value=${{ query: 'errors', day: '2026-09-17' }}
+      ></lr-filter-bar>
+    `);
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="chip"]').length).to.equal(2);
+    await expect(el).to.be.accessible();
+  });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`contains an unbroken chip value inside a 320px ${direction.toUpperCase()} all-chip allocation`, async () => {
+      const longValue = 'ValeurDeFiltreLocaliseeSansPointDeCoupure'.repeat(100);
+      const filters: LyraFilterBarFilterDefinition[] = [
+        { filterId: 'day', label: 'Day', type: 'chip' },
+      ];
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-filter-bar
+            style="inline-size: 100%;"
+            .filters=${filters}
+            .value=${{ day: longValue }}
+          ></lr-filter-bar>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const activeFilters = el.shadowRoot!.querySelector<HTMLElement>('[part="active-filters"]')!;
+      const chips = el.shadowRoot!.querySelector<HTMLElement>('[part="chips"]')!;
+      const chip = el.shadowRoot!.querySelector<HTMLElement>('[part="chip"]')!;
+      await Promise.all([
+        (chips as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete,
+        (chip as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete,
+      ]);
+
+      expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+      expect(el.scrollWidth).to.be.at.most(el.clientWidth);
+      expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+      expect(activeFilters.scrollWidth).to.be.at.most(activeFilters.clientWidth);
+      expect(chips.scrollWidth).to.be.at.most(chips.clientWidth);
+      expect(chip.getBoundingClientRect().width).to.be.at.most(320);
+      expect(getComputedStyle(activeFilters).direction).to.equal(direction);
+    });
+  }
+
+  it('drops a duplicate chip filterId, keeping the first declaration', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip' },
+      { filterId: 'day', label: 'Second day', type: 'chip' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(el.filters.map((f) => f.label)).to.deep.equal(['Day']);
+    expect(chipTexts(el)).to.deep.equal(['Day: 2026-09-17']);
+  });
+
+  it('drops a chip filter value once its definition leaves the schema', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        .filters=${chipFilters}
+        .value=${{ query: 'errors', day: '2026-09-17' }}
+      ></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ query: 'errors', day: '2026-09-17' });
+
+    el.filters = [{ filterId: 'query', label: 'Query', type: 'text' }];
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ query: 'errors' });
+    expect(chipTexts(el)).to.deep.equal(['Query: errors']);
+  });
+
+  it('survives a disconnect/reconnect cycle as an all-chip bar', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'day', label: 'Day', type: 'chip' },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ day: '2026-09-17' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    const parent = el.parentElement!;
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal({ day: '2026-09-17' });
+    expect(chipTexts(el)).to.deep.equal(['Day: 2026-09-17']);
+    expect(el.shadowRoot!.querySelectorAll('[part~="field"]').length).to.equal(0);
+    await removeChip(el, 'day');
+    expect('day' in el.value).to.be.false;
+  });
+
+  it('falls back to the built-in emptiness rule for a non-callable isEmpty from an untyped boundary', async () => {
+    const filters = [
+      { filterId: 'day', label: 'Day', type: 'chip', isEmpty: 'not-a-function' },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters}></lr-filter-bar>
+    `);
+    el.value = { day: '2026-09-17' };
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ day: '2026-09-17' });
+    expect(el.hasActiveFilters).to.be.true;
+
+    el.value = { day: '' };
+    await el.updateComplete;
+    expect('day' in el.value).to.be.false;
+  });
+});

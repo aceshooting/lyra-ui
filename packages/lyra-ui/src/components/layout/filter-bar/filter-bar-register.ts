@@ -20,6 +20,10 @@
 //   import '@aceshooting/lyra-ui/components/forms/date-picker/date-input.js';  // type: 'date' | 'date-range'
 //   import '@aceshooting/lyra-ui/components/forms/input/input.js';             // type: 'text'
 //
+// `type: 'chip'` needs no registration entry at all -- it renders no control, only its own
+// active-filter chip, which the unconditional `<lr-chip>`/`<lr-chip-group>` imports below already
+// cover.
+//
 // Two more are unconditional regardless of which filter `type`s are declared, so a lean consumer
 // still needs both: `<lr-button>` renders the reset action on every bar, and
 // `<lr-chip>`/`<lr-chip-group>` render the active-filter row whenever any filter has a value
