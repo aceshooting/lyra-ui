@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-16 after the post-release 16.0.0 source set and this review's cleanup: 8,242,048 packed bytes, 33,538,061 unpacked bytes, and 3,523 files. The additional public registration metadata and shared runtime helpers are required by the current source contract; the measurements retain the existing 34,000 packed and 140,000 unpacked byte drift headroom, and the file ceiling retains seven files of scaffold headroom. The approved exception still fails closed above this exact reviewed ceiling.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-17 after the 17.0.0 post-release batch (lr-select loading, lr-combobox sync, lr-streaming-text(-core) exportparts, lr-reorder-list/lr-thread-list/lr-table fixes, and a new Romanian locale): 8,279,694 packed bytes, 3,549 files, unpacked bytes still within the prior ceiling. The Romanian locale alone adds 13 source slice files, shipped as 26 packed dist .js+.d.ts files; the other changes add a small amount of packed bytes. The measurements keep the existing 34,000-byte packed drift headroom and seven files of scaffold headroom. The approved exception still fails closed above this exact reviewed ceiling.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,15 +10,15 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 8242048,
+    "reviewedMeasurementBytes": 8279694,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928,
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
-      "approvedOn": "2026-09-16",
-      "reason": "The current 16.0.0 source set adds required public registration metadata and shared runtime helper artifacts after the release measurement. Dropping llms-full.txt or web-types.json would remove documented consumer and JetBrains completion contracts; removing the helper or registration files would break supported entrypoints. The current tree was measured after the review cleanup with the required artifacts intact, and the existing 34,000-byte drift headroom remains unchanged.",
-      "approvedMaximumPackedBytes": 8276048
+      "approvedOn": "2026-09-17",
+      "reason": "The 17.0.0 post-release batch adds a full Romanian (ro) translation catalog -- 13 new source slice files, shipped as 26 packed dist .js+.d.ts files -- plus a small amount of packed growth from lr-select's loading property, lr-combobox's sync property, and lr-streaming-text(-core)'s exportparts. A new locale is a required public artifact under this package's own locale-parity contract, not optional weight to trim. The tree was measured after this batch's own generated-artifact regeneration, and the existing 34,000-byte drift headroom remains unchanged.",
+      "approvedMaximumPackedBytes": 8313694
     }
   },
   "unpackedBudgetPolicy": {
@@ -32,13 +32,13 @@
     "baseArtifactCeiling": 2500,
     "stableTagAliasCount": 288,
     "emittedFilesPerAlias": 2,
-    "measuredEntrypointRemainder": 447,
+    "measuredEntrypointRemainder": 473,
     "nextComponentArtifactHeadroom": 7,
-    "entrypointHeadroom": 454
+    "entrypointHeadroom": 480
   },
   "maximum": {
-    "packedBytes": 8276048,
+    "packedBytes": 8313694,
     "unpackedBytes": 33678061,
-    "fileCount": 3530
+    "fileCount": 3556
   }
 }
