@@ -53235,6 +53235,15 @@
             "hasDefault": false
           },
           {
+            "name": "hasChangedFilters",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "invalidFilterIds",
             "attribute": null,
             "type": "readonly string[]",
@@ -73486,6 +73495,16 @@
             "default": ""
           },
           {
+            "name": "legend-collapsible",
+            "property": "legendCollapsible",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "legend-gradient-hi-label",
             "property": "legendGradientHiLabel",
             "type": "string | null",
@@ -73514,6 +73533,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "legend-open",
+            "property": "legendOpen",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "locale",
@@ -73595,6 +73624,16 @@
             "hasDefault": false
           },
           {
+            "name": "legendCollapsible",
+            "attribute": "legend-collapsible",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "legendGradient",
             "attribute": null,
             "type": "readonly (readonly [number, string])[]",
@@ -73632,6 +73671,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "legendOpen",
+            "attribute": "legend-open",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "legendProjection",
@@ -73714,6 +73763,10 @@
           {
             "name": "legend",
             "deprecated": null
+          },
+          {
+            "name": "legend-start",
+            "deprecated": null
           }
         ],
         "events": [
@@ -73721,6 +73774,12 @@
             "name": "lr-map-click",
             "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: 'choropleth' | 'data-layer' | 'cluster' | undefined; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-legend-panel-toggle",
+            "type": "CustomEvent<LyraMapLegendPanelToggleDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -73772,7 +73831,23 @@
             "deprecated": null
           },
           {
+            "name": "legend-disclosure",
+            "deprecated": null
+          },
+          {
+            "name": "legend-disclosure-icon",
+            "deprecated": null
+          },
+          {
             "name": "legend-gradient",
+            "deprecated": null
+          },
+          {
+            "name": "legend-group",
+            "deprecated": null
+          },
+          {
+            "name": "legend-group-heading",
             "deprecated": null
           },
           {
@@ -109402,6 +109477,16 @@
             "default": "m"
           },
           {
+            "name": "sync",
+            "property": "sync",
+            "type": "PlaceSync | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "undefined"
+          },
+          {
             "name": "title",
             "property": "title",
             "type": "string",
@@ -109778,6 +109863,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "sync",
+            "attribute": "sync",
+            "type": "PlaceSync | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "undefined"
           },
           {
             "name": "title",

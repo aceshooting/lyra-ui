@@ -85,7 +85,11 @@ exactly like the multi-option case, until the trigger is actually activated.
 
 **Properties:**
 
-- `placeholder: string = ''`
+- `placeholder: string = ''` — text shown on the trigger while nothing is selected, and the
+  trigger's accessible name when neither a host `aria-label` nor a `label` supplies one. One
+  exception to "an empty selection always shows this": while `loading` is `true` the trigger shows
+  the localized `loading` text instead — see `loading` below. The accessible name is unaffected
+  either way
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
@@ -124,6 +128,17 @@ exactly like the multi-option case, until the trigger is actually activated.
   authored, the listbox is actually placed with the cascading `--lr-positioning-strategy` custom
   property honored ahead of that default — see the listbox's own **Themeable custom properties**
   below
+- `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
+  spelled and typed the same as on `lr-popup`/`lr-popover`/`lr-dropdown`/`lr-combobox`
+  (`'width' | 'height' | 'both'`). Unset (the default), the listbox sizes to its own content,
+  clamped between `--lr-size-12rem` and `min(--lr-popover-viewport-clamp, --lr-size-28rem)`,
+  exactly as before. `sync="width"` drops that content-based clamp so a full-width trigger with
+  short option labels gets a listbox that aligns to its own edges instead of floating narrower in
+  the middle. A synced listbox is capped on `--lr-positioner-available-inline-size` **alone** — the
+  space the positioner actually measured beside the trigger, which still keeps an over-wide trigger
+  from pushing it off-screen; `--lr-popover-viewport-clamp` does **not** apply to a synced listbox,
+  and still does with `sync` unset. Assignment while open repositions in place without closing;
+  unsetting it releases the inline width the positioner wrote
 - `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
   keyboard-reachable, re-selectable row. Off by default
@@ -138,9 +153,16 @@ exactly like the multi-option case, until the trigger is actually activated.
   `loading` placeholder in the trigger label or the relevant `multiple` tag instead of the raw
   value, with no `notInCatalog`/`[part='unknown-value']` badge and no synthetic
   `showUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
-  missing". A value already matching a live option is unaffected. Never mutates
-  `value`/`selectedOptions` itself, and does not itself disable the trigger — pair it with
-  `disabled` when the control should also be non-interactive while pending
+  missing". It covers an **empty** selection too: with nothing selected — a create form whose
+  catalogue is still being fetched, or an edit form whose saved selection is legitimately empty —
+  the trigger renders that same localized text in place of `placeholder`, from the same `loading`
+  message key, so both halves of a pending state read the same words and one
+  `registerLyraLocale()` translation reaches both. Nothing to re-localize in the consuming app.
+  With `loading` false an empty selection renders `placeholder` exactly as before. The trigger's
+  accessible name never changes for this: a host `aria-label` wins, then `label`, then
+  `placeholder`, then the localized `select` fallback. A value already matching a live option is
+  unaffected. Never mutates `value`/`selectedOptions` itself, and does not itself disable the
+  trigger — pair it with `disabled` when the control should also be non-interactive while pending
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -199,7 +221,10 @@ a still-unmatched value then renders the localized `loading` placeholder instead
 with no `unknown-value` badge and no synthetic `showUnknownOption` row, since it is not yet known
 to be missing. Once the matching option mounts, the real label renders on the next render with no
 `value`/`selectedOptions` re-assignment needed, whether or not `loading` is also flipped back to
-`false`.
+`false`. The same flag covers the other half of that state: with **nothing** selected the trigger
+renders the same localized `loading` text in place of `placeholder`, so a consumer never has to
+hand-write a conditional placeholder bound to the same flag and re-localize, in its own catalogue,
+the string this control already owns.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once

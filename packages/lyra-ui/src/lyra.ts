@@ -641,6 +641,7 @@ export type {
   LyraMapPointIconLineCap,
   LyraMapPointIconLineJoin,
   LyraMapLegendToggleDetail,
+  LyraMapLegendPanelToggleDetail,
   LyraMapMarkerActivationDetail,
   LyraMapMarkerActivationSource,
   LyraMapStyleSpecification,

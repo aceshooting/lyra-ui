@@ -712,7 +712,13 @@ it('rejects a malformed libphonenumber-js peer with a clear Error instead of thr
   expect((rejected as TypeError).message).to.contain('libphonenumber-js');
 });
 
-it('adapts the real libphonenumber-js package, not just a hand-written fake shape', async () => {
+it('adapts the real libphonenumber-js package, not just a hand-written fake shape', async function () {
+  // The only test in this file that pulls the REAL optional peer over the dev server rather than a
+  // fake: `libphonenumber-js/min` is a large module, and under the full 710-file suite the server
+  // is serving many of them at once. It passes in isolation in well under a second and timed out
+  // at mocha's suite-wide 6000ms default (web-test-runner.config.js) only in a full-suite run --
+  // a load-sensitive threshold, not a hang, so it gets a margined one rather than a retry.
+  this.timeout(30000);
   const loaded = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));
   if (!loaded.countries) throw new Error('The adapter did not expose its country catalog.');
 

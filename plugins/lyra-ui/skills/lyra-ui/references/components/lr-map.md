@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 22 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -88,6 +88,21 @@ LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' |
   and their point-icon defaults, and the same validation applies (path data only, at most 8,192
   characters, positive `viewBox` dimensions). An unusable record is dropped and that row keeps
   rendering its colour swatch, exactly as a row that supplies no `icon` does.
+  A row may finally carry a `group`: the section it belongs to, for a key that describes two
+  layers at once and otherwise could not say which rows belong to which. The rule is pinned
+  rather than inferred: **consecutive** entries sharing an identical `group` render as one section
+  — a visible heading plus a `role="group"` that heading names — an entry with **no** `group`
+  keeps its **declared** position rather than being hoisted above or sunk below a section, and a
+  `group` that reappears after an interruption opens a *second* section rather than reordering
+  rows to merge them. Declaration order is the one thing the legend never rewrites, because the
+  order is itself information about the map. `group` is caller-supplied **data**: it renders
+  verbatim and is never resolved through the locale catalogue. It is trimmed and bounded to 256
+  characters (ellipsized, since it is rendered prose rather than a key matched against
+  `point.field`); a non-string, empty or whitespace-only value leaves no `group` property on the
+  frozen row at all, so an empty string means "ungrouped" instead of an empty heading. Like the
+  row-level `value`, it does not count toward the aggregate label budget — the rendered total is
+  already finite and stated: at most one heading per rendered row, so at most 100 of them. A
+  section is not a row: the 100-row cap and the `legend-limit` summary count rows, never sections.
 - readonly `legendProjection: LyraMapLegendProjection` — frozen `{ inputCount, renderedCount,
 omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
   projection renders a localized visible `1–N of M items` summary rather than silently claiming
@@ -100,6 +115,21 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   roving tabindex: a 100-row interactive legend contributes 100 tab stops, exactly as a 100-series
   `lr-chart` legend does. Each interactive row also grows to the shared `--lr-icon-button-size`
   hit-area floor (WCAG 2.5.8), which the panel's existing `max-block-size` and scrolling contain.
+- `legendCollapsible: boolean = false` (attribute `legend-collapsible`, reflected) — opt-in: renders
+  a `legend-disclosure` `button` inside the panel that collapses the key down to its header, so a
+  large legend stops permanently covering part of the map. Unset, the panel renders exactly what it
+  rendered before — no button, no `id` minted on the row list, and no `hidden` attribute anywhere.
+  Collapsing hides the gradient bar, the rows, the `legend-limit` summary and the trailing `legend`
+  slot; the `legend-start` slot and the disclosure itself stay visible, so a slotted header survives
+  the collapse and the control that restores the key is never what the collapse hides.
+- `legendOpen: boolean = true` (attribute `legend-open`, reflected) — whether a `legendCollapsible`
+  panel is expanded. It defaults **open**, so adding only `legendCollapsible` never hides an existing
+  key, and it does nothing at all while `legendCollapsible` is unset. Because it is a
+  `true`-defaulting boolean it uses a custom attribute converter, so `legend-open="false"` parses —
+  the bare presence-based boolean form cannot express `false` at all — and the reflection follows the
+  same converter: open (the default) reflects as an **absent** attribute and collapsed reflects as
+  `legend-open="false"`. It is controlled public state and survives a disconnect/reconnect. Assigning
+  it programmatically reconciles the rendered panel and emits nothing.
 - `hiddenCategories: readonly string[] = []` (attribute: false) — the complete controlled set of
   muted category keys, mirroring `lr-chart`'s `hiddenDatasets`. Clone-owned and frozen; non-string,
   empty, whitespace-only and duplicate entries are dropped (first occurrence wins, matching
@@ -388,8 +418,8 @@ payload beside the map.
 `LyraMapHeatmapZoomValue`, `LyraMapLineOptions`, `LyraMapPointOptions`, `LyraMapPointRadiusOptions`,
 `LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
-`LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapStyleSpecification`, and
-`LyraMapInstance`.
+`LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapLegendPanelToggleDetail`,
+`LyraMapStyleSpecification`, and `LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
 
@@ -415,6 +445,13 @@ the set and assign its own value instead. There is deliberately no second, confi
 committed state is `hiddenCategories`, which the host already observes, so a paired before/after
 vocabulary would be permanent public surface nobody asked for. The event is a DOM-interaction
 proposal only, so a programmatic `hiddenCategories` assignment reconciles without emitting it.
+Also `lr-map-legend-panel-toggle` (**cancelable**; frozen `LyraMapLegendPanelToggleDetail { open }` —
+the proposed `legendOpen` value), fired once when the `legendCollapsible` disclosure is activated by
+pointer or by Enter/Space. It is the *panel's* disclosure, not a *category's* visibility, so it
+deliberately does not reuse `lr-map-legend-toggle`. `preventDefault()` is the same genuine veto:
+`legendOpen` is not written, the rendered rows and the disclosure's `aria-expanded` do not change,
+so a host can own the open state and assign its own value from `event.detail.open`. A programmatic
+`legendOpen` assignment reconciles without emitting it, so a controlled host cannot loop.
 Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
@@ -437,9 +474,14 @@ markup as described above.
 
 **Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
-when `legend` and `legendGradient` are both empty.
+when `legend` and `legendGradient` are both empty. `legend-start` — the same extension point at the
+**top** of the panel: it renders ahead of the gradient bar and every projected row, where `legend`
+renders after them, so a host-authored panel header is no longer forced to be a footer. Content in
+it alone opens the panel too, and neither slot is ever made interactive by `legendInteractive`,
+which only reaches rows projected from `legend`.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-toggle`,
+**CSS parts:** `base`, `container`, `legend`, `legend-disclosure`, `legend-disclosure-icon`,
+`legend-group`, `legend-group-heading`, `legend-swatch`, `legend-toggle`,
 `legend-toggle-hidden`, `legend-gradient`, `legend-lo`,
 `legend-hi`, `legend-limit`, `marker`, `popup`,
 `popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `navigation`,
@@ -477,6 +519,26 @@ quiet text token, so the label keeps AA contrast rather than fading with the who
 forced colors the hidden row falls back to `line-through`, which survives a system-color collapse.
 Each activation is announced through the shared light-DOM polite live region, using the same
 `legendTypeShown`/`legendTypeHidden` strings `lr-graph-legend` announces with.
+Under `legendCollapsible`, `legend-disclosure` is a native `button` whose **visible localized text
+is its accessible name** and whose `aria-expanded` renders the literal `"true"`/`"false"` — never
+omitted — with `aria-controls` naming the row list in the same shadow root (idrefs do not cross
+shadow boundaries, so this is deliberately not an idref into the light DOM). It carries the shared
+`--lr-icon-button-size` hit-area floor, and `legend-disclosure-icon` is the decorative chevron it
+rotates: the shared icon set ships one right-pointing glyph and asks callers to rotate the wrapping
+part, so collapsed points along the reading direction and expanded points down in both directions.
+The rotation runs on `--lr-transition-fast`, which the token layer already flattens under
+`prefers-reduced-motion`. A collapsed panel hides its gradient, rows, `legend-limit` summary and
+trailing `legend` slot with the plain `hidden` attribute, so they leave layout, the accessibility
+tree and the tab order together.
+When at least one entry carries a `group`, each consecutive run renders inside `legend-group`
+(`role="group"`, named by its own `legend-group-heading` through `aria-labelledby`) and **each run
+gets its own `role="list"`**, because a `list` may only own `listitem`s — a `group` sitting directly
+inside the outer list is an `aria-required-children`/`aria-required-parent` violation. The outer
+container therefore drops its own `role` in that case; a legend with no groups keeps the single
+`role="list"` it has always had. Row `aria-posinset`/`aria-setsize` stay whole-key values inside a
+section: `aria-setsize` already reports the *input* count so a bounded key stays honest, and a
+dropped row carries no attributable group, so a section adds a labelled sub-region without
+renumbering the key.
 `legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
 stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
 `marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic

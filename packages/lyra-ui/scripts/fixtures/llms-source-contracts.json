@@ -8243,7 +8243,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarCheckboxMenuDefinition",
       "kind": "interface",
-      "fingerprint": "1f6365c2096727b8d8e7",
+      "fingerprint": "85672fad29242e8adcbc",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8291,7 +8291,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarComboboxDefinition",
       "kind": "interface",
-      "fingerprint": "f559aede0545d65b5d10",
+      "fingerprint": "7a3ef7e6aeede78b2942",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8411,7 +8411,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarDateDefinition",
       "kind": "interface",
-      "fingerprint": "c6e6fa2b6e6a7fda1d8f",
+      "fingerprint": "aedc1f8f03dd10b9ea5a",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8435,7 +8435,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarDateRangeDefinition",
       "kind": "interface",
-      "fingerprint": "4a368b255c6598569286",
+      "fingerprint": "7b14e2747352a16c73c2",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8459,7 +8459,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarInputDetail",
       "kind": "interface",
-      "fingerprint": "12177dca1ffe4fce0671",
+      "fingerprint": "d63266aa301fa78571a2",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8507,7 +8507,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarResetDetail",
       "kind": "interface",
-      "fingerprint": "0a4654a02d36bd232347",
+      "fingerprint": "2dfc3d94ef20d94fbb89",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8531,7 +8531,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarSelectDefinition",
       "kind": "interface",
-      "fingerprint": "bf81e468a8748c0711bc",
+      "fingerprint": "083bada804d9bdd6b2a8",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8555,7 +8555,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarTextDefinition",
       "kind": "interface",
-      "fingerprint": "7be703e57887cda22bd1",
+      "fingerprint": "7119c49f589c733621d2",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -10182,7 +10182,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapLegendEntry",
       "kind": "interface",
-      "fingerprint": "b32891116f01f6559446",
+      "fingerprint": "4ff7012408a2c38795ed",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -10245,6 +10245,29 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapLegendToggleDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapLegendPanelToggleDetail",
+      "kind": "interface",
+      "fingerprint": "36816a7d6faa095748b5",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapLegendPanelToggleDetail"
       }
     },
     {
@@ -14294,7 +14317,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "be8236bd8cfc82a2d6ef",
+      "fingerprint": "1429d17c3944556653c0",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15987,7 +16010,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "7b72296c4bf55ba1b392",
+      "fingerprint": "78e2ea7e311d5f7f985e",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16003,7 +16026,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "846080647c7c61a79383",
+      "fingerprint": "cfeca7d7016ea1ccc8ca",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16669,7 +16692,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "702ac582b8b5aaad95d4",
+      "fingerprint": "730934c474189d1ed2df",
       "routes": [
         "src/vue.ts"
       ],

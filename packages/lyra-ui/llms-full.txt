@@ -1218,6 +1218,47 @@ code. See each control's own reference page for its exact pair.
   `lr-select`. It is a _floor_, not a fixed size. Keep the resolved value **at or above 24px**
   (WCAG 2.2 SC 2.5.8 target size); the default leaves headroom. Lowering it below that shrinks
   every affordance in the library at once.
+- **`--lr-icon-button-size-scope`** resizes icon buttons for **one subtree** instead of the whole
+  application. Set it on any wrapper; it inherits past intervening components and reaches every
+  icon-only control below it. Three names, three scopes — pick by how far you want the change to
+  reach:
+
+  | Property | Scope | Set it on |
+  | --- | --- | --- |
+  | `--lr-theme-icon-button-size` | application-wide | `:root`, or any ancestor |
+  | `--lr-icon-button-size-scope` | one subtree | the wrapper you want affected |
+  | `--lr-icon-button-size` | one element | the icon-only control itself |
+
+  `--lr-theme-icon-button-size` wins wherever both ancestor inputs are set. `--lr-icon-button-size`
+  is **element-scoped on purpose** and is not a wrapper knob: every component re-declares it on its
+  own host so the touch-target floor can apply per element, so a value set on a wrapper is replaced
+  at the first component in between and never reaches anything nested inside one. That behaviour is
+  unchanged — use `--lr-icon-button-size-scope` for the wrapper case.
+
+  ```css
+  /* A dense toolbar, without touching the rest of the app. */
+  .message-toolbar {
+    --lr-icon-button-size-scope: 1.75rem;
+  }
+  ```
+
+  The coarse-pointer floor still applies to both ancestor inputs: on a touch device (`hover: none`
+  or `pointer: coarse`) a resolved value below `2.75rem` is raised back to it, so the new subtree
+  knob is not a way around WCAG 2.2 SC 2.5.8 — a deliberately dense desktop toolbar still becomes
+  tappable on a phone.
+- **`--lr-color-surface-overlay` follows `--lr-theme-color-surface-default` in both modes.** It is
+  the panel colour behind every floating surface — dropdowns, listboxes, menus, toasts, popovers,
+  dialogs, and the `lr-app-rail` mobile drawer. In light mode it resolves straight to
+  `--lr-color-surface`, so a re-skinned page surface carries them all with it. Dark mode cannot
+  resolve to the page surface — panel and page would be the same near-black, and an open dialog
+  would read as a scrim with text floating on it and no panel at all — so it is **derived** from
+  the page surface instead: `color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2)`, which lifts
+  the panel a fixed amount above whatever the base happens to be. One
+  `--lr-theme-color-surface-default` override therefore re-skins every floating surface in dark
+  mode too, and the elevation delta survives the re-skin. At the built-in dark base the pair still
+  resolves to the same panel colour it always has, so no existing dark theme moves.
+  `--lr-theme-color-surface-overlay` still wins outright when you set it — reach for it only when
+  you want a panel colour unrelated to the page surface.
 - **Aligning your own content next to a checkbox or radio.** `--lr-checkbox-label-indent` /
   `--lr-radio-label-indent` publish the label offset, but custom properties inherit _down_, not
   sideways, so a sibling node in your tree cannot read them off the control. Compute the same
@@ -4934,10 +4975,14 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
   spelled the same as on `lr-dropdown`/`lr-popup`/`lr-popover`. Unset (the default), the listbox
   sizes to its own content, clamped between `--lr-size-12rem` and `--lr-size-28rem`, exactly as
-  before. `sync="width"` drops that content-based clamp (keeping only the outer viewport/
-  available-space ceiling) so a full-width trigger with short option labels gets a listbox that
-  aligns to its own edges instead of floating narrower in the middle. Like `placement`, a change
-  takes effect the next time the listbox opens
+  before. `sync="width"` drops that content-based clamp so a full-width trigger with short option
+  labels gets a listbox that aligns to its own edges instead of floating narrower in the middle.
+  A synced listbox is capped on `--lr-positioner-available-inline-size` **alone** — the space the
+  positioner actually measured beside the anchor, which still keeps an over-wide trigger from
+  pushing it off-screen. `--lr-popover-viewport-clamp` does **not** apply to a synced listbox — its
+  92vw default used to shorten the listbox against its own trigger in exactly the full-width case
+  `sync` exists for, and `lr-popup` never applied it either. It still applies with `sync` unset.
+  Like `placement`, a change takes effect the next time the listbox opens
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or _visible_ filter text. See
   "the clear button covers two axes" below
@@ -5522,7 +5567,11 @@ exactly like the multi-option case, until the trigger is actually activated.
 
 **Properties:**
 
-- `placeholder: string = ''`
+- `placeholder: string = ''` — text shown on the trigger while nothing is selected, and the
+  trigger's accessible name when neither a host `aria-label` nor a `label` supplies one. One
+  exception to "an empty selection always shows this": while `loading` is `true` the trigger shows
+  the localized `loading` text instead — see `loading` below. The accessible name is unaffected
+  either way
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
@@ -5561,6 +5610,17 @@ exactly like the multi-option case, until the trigger is actually activated.
   authored, the listbox is actually placed with the cascading `--lr-positioning-strategy` custom
   property honored ahead of that default — see the listbox's own **Themeable custom properties**
   below
+- `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
+  spelled and typed the same as on `lr-popup`/`lr-popover`/`lr-dropdown`/`lr-combobox`
+  (`'width' | 'height' | 'both'`). Unset (the default), the listbox sizes to its own content,
+  clamped between `--lr-size-12rem` and `min(--lr-popover-viewport-clamp, --lr-size-28rem)`,
+  exactly as before. `sync="width"` drops that content-based clamp so a full-width trigger with
+  short option labels gets a listbox that aligns to its own edges instead of floating narrower in
+  the middle. A synced listbox is capped on `--lr-positioner-available-inline-size` **alone** — the
+  space the positioner actually measured beside the trigger, which still keeps an over-wide trigger
+  from pushing it off-screen; `--lr-popover-viewport-clamp` does **not** apply to a synced listbox,
+  and still does with `sync` unset. Assignment while open repositions in place without closing;
+  unsetting it releases the inline width the positioner wrote
 - `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
   keyboard-reachable, re-selectable row. Off by default
@@ -5575,9 +5635,16 @@ exactly like the multi-option case, until the trigger is actually activated.
   `loading` placeholder in the trigger label or the relevant `multiple` tag instead of the raw
   value, with no `notInCatalog`/`[part='unknown-value']` badge and no synthetic
   `showUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
-  missing". A value already matching a live option is unaffected. Never mutates
-  `value`/`selectedOptions` itself, and does not itself disable the trigger — pair it with
-  `disabled` when the control should also be non-interactive while pending
+  missing". It covers an **empty** selection too: with nothing selected — a create form whose
+  catalogue is still being fetched, or an edit form whose saved selection is legitimately empty —
+  the trigger renders that same localized text in place of `placeholder`, from the same `loading`
+  message key, so both halves of a pending state read the same words and one
+  `registerLyraLocale()` translation reaches both. Nothing to re-localize in the consuming app.
+  With `loading` false an empty selection renders `placeholder` exactly as before. The trigger's
+  accessible name never changes for this: a host `aria-label` wins, then `label`, then
+  `placeholder`, then the localized `select` fallback. A value already matching a live option is
+  unaffected. Never mutates `value`/`selectedOptions` itself, and does not itself disable the
+  trigger — pair it with `disabled` when the control should also be non-interactive while pending
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -5636,7 +5703,10 @@ a still-unmatched value then renders the localized `loading` placeholder instead
 with no `unknown-value` badge and no synthetic `showUnknownOption` row, since it is not yet known
 to be missing. Once the matching option mounts, the real label renders on the next render with no
 `value`/`selectedOptions` re-assignment needed, whether or not `loading` is also flipped back to
-`false`.
+`false`. The same flag covers the other half of that state: with **nothing** selected the trigger
+renders the same localized `loading` text in place of `placeholder`, so a consumer never has to
+hand-write a conditional placeholder bound to the same flag and re-localize, in its own catalogue,
+the string this control already owns.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
@@ -7082,15 +7152,23 @@ above 24px — see `llms/shared.md`. **`--lr-icon-button-size` is element-scoped
 token in this section:** the shared token layer re-declares it on every `lr-*` host's own `:host`,
 so a rule that sets `--lr-icon-button-size` on an ancestor wrapper is reset the moment it crosses
 into any intervening `lr-*` component and never reaches a `<lr-icon-button>` composed inside it
-(e.g. one slotted through `<lr-popover>`). The only two levers that actually reach it are: setting
+(e.g. one slotted through `<lr-popover>`). The three levers that actually reach it are: setting
 `--lr-icon-button-size` directly on the icon button element itself, where no intervening component
-sits between the rule and the property; or setting `--lr-theme-icon-button-size` on an ancestor,
-which the shared layer reads through `var()` at every level and which therefore reaches a
+sits between the rule and the property; setting `--lr-icon-button-size-scope` on any ancestor to
+resize one subtree; or setting `--lr-theme-icon-button-size` on an ancestor to resize the whole
+application. The shared layer reads the latter two through `var()` at every level, so both reach a
 `<lr-icon-button>` composed inside another component, e.g. `<lr-copy-button>`/
-`<lr-message-actions>`. Lowering the floor for a dense action row through either lever is safe even
-below 24px: a coarse-pointer/no-hover media rule floors the RENDERED hit area back at 2.75rem/44px
-regardless of how far the override lowered it, so the control stays comfortably tappable the moment
-the pointer reaching it is a finger rather than a mouse. `--lr-icon-button-radius` (default
+`<lr-message-actions>` -- see `llms/shared.md` for the full scope table.
+
+Lowering the floor for a dense action row below 24px is safe **only through the two ancestor
+levers**. The coarse-pointer/no-hover media rule reads those, and floors the RENDERED hit area back
+at 2.75rem/44px however far the override lowered it, so the control stays comfortably tappable the
+moment the pointer reaching it is a finger rather than a mouse. It does **not** rescue
+`--lr-icon-button-size` set directly on the element: that declaration comes from the outer tree and
+outranks the shadow tree's own `:host` rule, so the media rule never wins and the rendered hit area
+is exactly the value set -- `--lr-icon-button-size: 1rem` really does render a 16px target under a
+coarse pointer, which fails WCAG 2.2 SC 2.5.8. Prefer `--lr-icon-button-size-scope` when the intent
+is a denser row; reach for the element-scoped name only as a deliberate, localized trade-off. `--lr-icon-button-radius` (default
 `--lr-radius`) is not re-declared anywhere in the shared layer, so — like every other token below —
 it inherits normally from an ancestor even through an intervening component; it is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
@@ -20518,8 +20596,21 @@ until something else registers it, the same trade `icon-button-register.js` docu
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
-- `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
-  Drives the reset button's own disabled state; unaffected by `activeFiltersDisplay`.
+- `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value,
+  including one sitting at its own declared `defaultValue`. Drives the reset button's own disabled
+  state in every `activeFiltersDisplay` mode except `'changed'`; the getter itself is unaffected by
+  `activeFiltersDisplay`.
+- `hasChangedFilters: boolean` (read-only) — whether any filter's value differs from its own
+  declared `defaultValue`, using the same equality `activeFiltersDisplay: 'changed'` filters its
+  chip row on: a `readonly string[]` default compares positionally, everything else compares with
+  `Object.is`. This is the counterpart to `hasActiveFilters`, not a synonym — a bar whose filters
+  were all declared with non-empty defaults and never touched reads `hasActiveFilters === true` and
+  `hasChangedFilters === false`, because a bar whose defaults narrow the view on load has not been
+  narrowed by the user. A filter with no declared `defaultValue` counts as changed the moment it
+  holds any value at all (there is nothing for it to still equal), and clearing a filter that *does*
+  declare one counts as changed too, since `reset()` would restore it — which is the one case where
+  this getter and the `'changed'` chip row differ, the row's entries being non-empty by
+  construction. Always live, never cached.
 - `invalidFilterIds: readonly string[]` (read-only) — immutable ids of required filters whose
   values are unset.
 - `activeFiltersDisplay: 'all' | 'changed' | 'hidden' = 'all'` (reflected, attribute
@@ -20533,6 +20624,10 @@ until something else registers it, the same trade `icon-button-register.js` docu
   at each index), matching this component's only other array-equality precedent (a custom adapter's
   own `clearValue` comparison); a `'date-range'` value is a single composed string, so it compares
   like any other string. Removing a chip always clears that filter, unaffected by this property.
+  `'changed'` additionally gates the reset button on `hasChangedFilters` instead of
+  `hasActiveFilters`, so an untouched defaults-only bar — which renders no chip in this mode — no
+  longer offers an enabled reset that would change nothing. Enablement under `'all'` and `'hidden'`
+  is unchanged, `disabled`/`loading` still win in every mode, and `reset()` itself is untouched.
 
 The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
 height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
@@ -20667,8 +20762,8 @@ control at all (see **Chip-only filters** below): its value belongs to a widget 
 page, so the bar renders only its active-filter chip and gives it no toolbar cell.
 
 Every built-in (non-`'custom'`) filter definition additionally accepts optional `size: LyraSize`,
-`icon: unknown` and `labelVisibility: 'visible' | 'hidden'` fields, and every one whose composed
-control ships a clear action also accepts `clearable: boolean`. They are forwarded verbatim to that
+`icon: unknown` and `labelVisibility: 'visible' | 'hidden' | 'auto'` fields, and every one whose
+composed control ships a clear action also accepts `clearable: boolean`. They are forwarded verbatim to that
 control's own same-named property — `icon` into its `start` slot exactly like a choice option's own
 `icon`, rendered inert and `aria-hidden`; `clearable` reaching `<lr-date-input>` under its own
 `with-clear` spelling, since that control has no `clearable`. `'text'` also accepts
@@ -20686,6 +20781,20 @@ instead of rendering it as a stacked visible label, and — when the definition 
 so a compact toolbar row still names every field for assistive technology; visually hiding
 `::part(filter-control-label)` in CSS, the only previous option, removed the accessible name along
 with the text.
+
+`labelVisibility: 'auto'` is the width-dependent middle between the two. It renders exactly what
+`'visible'` renders — the same stacked label element, the same accessible name computed from it, no
+`aria-label` and no placeholder fallback — and the bar's own stylesheet visually clips that label
+once the bar's allocation drops below `30rem`. The threshold is a container query on the host, so it
+reads the bar's own allocated width, not the viewport's: the same definitions render labelled across
+a dashboard and unlabelled in a 320px side panel, dialog or split pane, with no host-side breakpoint
+logic. The label element is never removed at any width, so the field's accessible name is identical
+in both states, and `'auto'` deliberately does not route the name onto the control the way
+`'hidden'` does — doing so would name a wide-allocation field twice. A `'checkbox-menu'` filter
+participates through its own trigger label run, the same one `'hidden'` already clips there. The
+threshold is fixed rather than themeable: a CSS container query's prelude cannot read a custom
+property (`var()` is not substituted in an at-rule prelude), so a `--lr-*` hook for it would parse
+and silently never apply.
 
 `'combobox'` also accepts the same `debounce?: number` (ms) `'text'` already had: it coalesces a
 burst of rapid selection changes (picks, a multi-select toggle, an
@@ -20716,6 +20825,8 @@ makes that text visually hidden — never removed — so the button keeps its ac
 one case where the hidden label would be the *only* thing the button says (hidden routing, no
 declared `placeholder`, nothing selected) the label routes to the visible summary instead of being
 emitted twice, so the trigger's accessible name stays "Teams", never "Teams Teams".
+`labelVisibility: 'auto'` clips that same trigger label run, and only below the `30rem` threshold —
+the label run is always emitted under `'auto'`, since nothing is routed to the summary there.
 
 Because its trigger is a button rather than a field, a `required` `'checkbox-menu'` deliberately
 renders **no** required asterisk and sets **no** `aria-invalid`: the shared required marker has no
@@ -27222,6 +27333,21 @@ LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' |
   and their point-icon defaults, and the same validation applies (path data only, at most 8,192
   characters, positive `viewBox` dimensions). An unusable record is dropped and that row keeps
   rendering its colour swatch, exactly as a row that supplies no `icon` does.
+  A row may finally carry a `group`: the section it belongs to, for a key that describes two
+  layers at once and otherwise could not say which rows belong to which. The rule is pinned
+  rather than inferred: **consecutive** entries sharing an identical `group` render as one section
+  — a visible heading plus a `role="group"` that heading names — an entry with **no** `group`
+  keeps its **declared** position rather than being hoisted above or sunk below a section, and a
+  `group` that reappears after an interruption opens a *second* section rather than reordering
+  rows to merge them. Declaration order is the one thing the legend never rewrites, because the
+  order is itself information about the map. `group` is caller-supplied **data**: it renders
+  verbatim and is never resolved through the locale catalogue. It is trimmed and bounded to 256
+  characters (ellipsized, since it is rendered prose rather than a key matched against
+  `point.field`); a non-string, empty or whitespace-only value leaves no `group` property on the
+  frozen row at all, so an empty string means "ungrouped" instead of an empty heading. Like the
+  row-level `value`, it does not count toward the aggregate label budget — the rendered total is
+  already finite and stated: at most one heading per rendered row, so at most 100 of them. A
+  section is not a row: the 100-row cap and the `legend-limit` summary count rows, never sections.
 - readonly `legendProjection: LyraMapLegendProjection` — frozen `{ inputCount, renderedCount,
 omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
   projection renders a localized visible `1–N of M items` summary rather than silently claiming
@@ -27234,6 +27360,21 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   roving tabindex: a 100-row interactive legend contributes 100 tab stops, exactly as a 100-series
   `lr-chart` legend does. Each interactive row also grows to the shared `--lr-icon-button-size`
   hit-area floor (WCAG 2.5.8), which the panel's existing `max-block-size` and scrolling contain.
+- `legendCollapsible: boolean = false` (attribute `legend-collapsible`, reflected) — opt-in: renders
+  a `legend-disclosure` `button` inside the panel that collapses the key down to its header, so a
+  large legend stops permanently covering part of the map. Unset, the panel renders exactly what it
+  rendered before — no button, no `id` minted on the row list, and no `hidden` attribute anywhere.
+  Collapsing hides the gradient bar, the rows, the `legend-limit` summary and the trailing `legend`
+  slot; the `legend-start` slot and the disclosure itself stay visible, so a slotted header survives
+  the collapse and the control that restores the key is never what the collapse hides.
+- `legendOpen: boolean = true` (attribute `legend-open`, reflected) — whether a `legendCollapsible`
+  panel is expanded. It defaults **open**, so adding only `legendCollapsible` never hides an existing
+  key, and it does nothing at all while `legendCollapsible` is unset. Because it is a
+  `true`-defaulting boolean it uses a custom attribute converter, so `legend-open="false"` parses —
+  the bare presence-based boolean form cannot express `false` at all — and the reflection follows the
+  same converter: open (the default) reflects as an **absent** attribute and collapsed reflects as
+  `legend-open="false"`. It is controlled public state and survives a disconnect/reconnect. Assigning
+  it programmatically reconciles the rendered panel and emits nothing.
 - `hiddenCategories: readonly string[] = []` (attribute: false) — the complete controlled set of
   muted category keys, mirroring `lr-chart`'s `hiddenDatasets`. Clone-owned and frozen; non-string,
   empty, whitespace-only and duplicate entries are dropped (first occurrence wins, matching
@@ -27522,8 +27663,8 @@ payload beside the map.
 `LyraMapHeatmapZoomValue`, `LyraMapLineOptions`, `LyraMapPointOptions`, `LyraMapPointRadiusOptions`,
 `LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
-`LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapStyleSpecification`, and
-`LyraMapInstance`.
+`LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapLegendPanelToggleDetail`,
+`LyraMapStyleSpecification`, and `LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
 
@@ -27549,6 +27690,13 @@ the set and assign its own value instead. There is deliberately no second, confi
 committed state is `hiddenCategories`, which the host already observes, so a paired before/after
 vocabulary would be permanent public surface nobody asked for. The event is a DOM-interaction
 proposal only, so a programmatic `hiddenCategories` assignment reconciles without emitting it.
+Also `lr-map-legend-panel-toggle` (**cancelable**; frozen `LyraMapLegendPanelToggleDetail { open }` —
+the proposed `legendOpen` value), fired once when the `legendCollapsible` disclosure is activated by
+pointer or by Enter/Space. It is the *panel's* disclosure, not a *category's* visibility, so it
+deliberately does not reuse `lr-map-legend-toggle`. `preventDefault()` is the same genuine veto:
+`legendOpen` is not written, the rendered rows and the disclosure's `aria-expanded` do not change,
+so a host can own the open state and assign its own value from `event.detail.open`. A programmatic
+`legendOpen` assignment reconciles without emitting it, so a controlled host cannot loop.
 Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
@@ -27571,9 +27719,14 @@ markup as described above.
 
 **Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
-when `legend` and `legendGradient` are both empty.
+when `legend` and `legendGradient` are both empty. `legend-start` — the same extension point at the
+**top** of the panel: it renders ahead of the gradient bar and every projected row, where `legend`
+renders after them, so a host-authored panel header is no longer forced to be a footer. Content in
+it alone opens the panel too, and neither slot is ever made interactive by `legendInteractive`,
+which only reaches rows projected from `legend`.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-toggle`,
+**CSS parts:** `base`, `container`, `legend`, `legend-disclosure`, `legend-disclosure-icon`,
+`legend-group`, `legend-group-heading`, `legend-swatch`, `legend-toggle`,
 `legend-toggle-hidden`, `legend-gradient`, `legend-lo`,
 `legend-hi`, `legend-limit`, `marker`, `popup`,
 `popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `navigation`,
@@ -27611,6 +27764,26 @@ quiet text token, so the label keeps AA contrast rather than fading with the who
 forced colors the hidden row falls back to `line-through`, which survives a system-color collapse.
 Each activation is announced through the shared light-DOM polite live region, using the same
 `legendTypeShown`/`legendTypeHidden` strings `lr-graph-legend` announces with.
+Under `legendCollapsible`, `legend-disclosure` is a native `button` whose **visible localized text
+is its accessible name** and whose `aria-expanded` renders the literal `"true"`/`"false"` — never
+omitted — with `aria-controls` naming the row list in the same shadow root (idrefs do not cross
+shadow boundaries, so this is deliberately not an idref into the light DOM). It carries the shared
+`--lr-icon-button-size` hit-area floor, and `legend-disclosure-icon` is the decorative chevron it
+rotates: the shared icon set ships one right-pointing glyph and asks callers to rotate the wrapping
+part, so collapsed points along the reading direction and expanded points down in both directions.
+The rotation runs on `--lr-transition-fast`, which the token layer already flattens under
+`prefers-reduced-motion`. A collapsed panel hides its gradient, rows, `legend-limit` summary and
+trailing `legend` slot with the plain `hidden` attribute, so they leave layout, the accessibility
+tree and the tab order together.
+When at least one entry carries a `group`, each consecutive run renders inside `legend-group`
+(`role="group"`, named by its own `legend-group-heading` through `aria-labelledby`) and **each run
+gets its own `role="list"`**, because a `list` may only own `listitem`s — a `group` sitting directly
+inside the outer list is an `aria-required-children`/`aria-required-parent` violation. The outer
+container therefore drops its own `role` in that case; a legend with no groups keeps the single
+`role="list"` it has always had. Row `aria-posinset`/`aria-setsize` stay whole-key values inside a
+section: `aria-setsize` already reports the *input* count so a bounded key stays honest, and a
+dropped row carries no attributable group, so a section adds a labelled sub-region without
+renumbering the key.
 `legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
 stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
 `marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic
@@ -30352,6 +30525,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly pattern: LyraMapLegendPattern;
     readonly icon?: LyraMapPointIcon | Omit<LyraMapPointIcon, 'value'>;
+    readonly group?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapLegendProjection {
@@ -30381,6 +30555,10 @@ These named interfaces and helper signatures are available to typed integrations
     readonly value: string;
     readonly visible: boolean;
     readonly hiddenCategories: readonly string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapLegendPanelToggleDetail {
+    readonly open: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapStyleSpecification {

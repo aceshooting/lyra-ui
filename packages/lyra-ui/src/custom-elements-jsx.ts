@@ -6376,10 +6376,12 @@ export type LyraMapReactProps = LyraReactElementProps<
   | 'hiddenCategories'
   | 'label'
   | 'legend'
+  | 'legendCollapsible'
   | 'legendGradient'
   | 'legendGradientHiLabel'
   | 'legendGradientLoLabel'
   | 'legendInteractive'
+  | 'legendOpen'
   | 'locale'
   | 'mapStyle'
   | 'markers'
@@ -6390,6 +6392,7 @@ export type LyraMapReactProps = LyraReactElementProps<
   {},
   LyraMapEventMap,
   | 'lr-map-click'
+  | 'lr-map-legend-panel-toggle'
   | 'lr-map-legend-toggle'
   | 'lr-map-load'
   | 'lr-map-marker-activate',
@@ -6402,9 +6405,11 @@ export type LyraMapReactProps = LyraReactElementProps<
   | '--lr-map-popup-close-button-hover-bg'
   | '--lr-map-popup-close-button-hover-color',
   {
+    'legend-collapsible'?: LyraMap['legendCollapsible'];
     'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];
     'legend-gradient-lo-label'?: LyraMap['legendGradientLoLabel'];
     'legend-interactive'?: LyraMap['legendInteractive'];
+    'legend-open'?: LyraMap['legendOpen'];
   }
 >;
 
@@ -9271,6 +9276,7 @@ export type LyraSelectReactProps = LyraReactElementProps<
   | 'showUnknownOption'
   | 'size'
   | 'strings'
+  | 'sync'
   | 'title'
   | 'value'
   | 'withClear'

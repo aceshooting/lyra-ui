@@ -131,15 +131,23 @@ above 24px — see `llms/shared.md`. **`--lr-icon-button-size` is element-scoped
 token in this section:** the shared token layer re-declares it on every `lr-*` host's own `:host`,
 so a rule that sets `--lr-icon-button-size` on an ancestor wrapper is reset the moment it crosses
 into any intervening `lr-*` component and never reaches a `<lr-icon-button>` composed inside it
-(e.g. one slotted through `<lr-popover>`). The only two levers that actually reach it are: setting
+(e.g. one slotted through `<lr-popover>`). The three levers that actually reach it are: setting
 `--lr-icon-button-size` directly on the icon button element itself, where no intervening component
-sits between the rule and the property; or setting `--lr-theme-icon-button-size` on an ancestor,
-which the shared layer reads through `var()` at every level and which therefore reaches a
+sits between the rule and the property; setting `--lr-icon-button-size-scope` on any ancestor to
+resize one subtree; or setting `--lr-theme-icon-button-size` on an ancestor to resize the whole
+application. The shared layer reads the latter two through `var()` at every level, so both reach a
 `<lr-icon-button>` composed inside another component, e.g. `<lr-copy-button>`/
-`<lr-message-actions>`. Lowering the floor for a dense action row through either lever is safe even
-below 24px: a coarse-pointer/no-hover media rule floors the RENDERED hit area back at 2.75rem/44px
-regardless of how far the override lowered it, so the control stays comfortably tappable the moment
-the pointer reaching it is a finger rather than a mouse. `--lr-icon-button-radius` (default
+`<lr-message-actions>` -- see `llms/shared.md` for the full scope table.
+
+Lowering the floor for a dense action row below 24px is safe **only through the two ancestor
+levers**. The coarse-pointer/no-hover media rule reads those, and floors the RENDERED hit area back
+at 2.75rem/44px however far the override lowered it, so the control stays comfortably tappable the
+moment the pointer reaching it is a finger rather than a mouse. It does **not** rescue
+`--lr-icon-button-size` set directly on the element: that declaration comes from the outer tree and
+outranks the shadow tree's own `:host` rule, so the media rule never wins and the rendered hit area
+is exactly the value set -- `--lr-icon-button-size: 1rem` really does render a 16px target under a
+coarse pointer, which fails WCAG 2.2 SC 2.5.8. Prefer `--lr-icon-button-size-scope` when the intent
+is a denser row; reach for the element-scoped name only as a deliberate, localized trade-off. `--lr-icon-button-radius` (default
 `--lr-radius`) is not re-declared anywhere in the shared layer, so — like every other token below —
 it inherits normally from an ancestor even through an intervening component; it is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same

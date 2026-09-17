@@ -170,10 +170,14 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
   spelled the same as on `lr-dropdown`/`lr-popup`/`lr-popover`. Unset (the default), the listbox
   sizes to its own content, clamped between `--lr-size-12rem` and `--lr-size-28rem`, exactly as
-  before. `sync="width"` drops that content-based clamp (keeping only the outer viewport/
-  available-space ceiling) so a full-width trigger with short option labels gets a listbox that
-  aligns to its own edges instead of floating narrower in the middle. Like `placement`, a change
-  takes effect the next time the listbox opens
+  before. `sync="width"` drops that content-based clamp so a full-width trigger with short option
+  labels gets a listbox that aligns to its own edges instead of floating narrower in the middle.
+  A synced listbox is capped on `--lr-positioner-available-inline-size` **alone** — the space the
+  positioner actually measured beside the anchor, which still keeps an over-wide trigger from
+  pushing it off-screen. `--lr-popover-viewport-clamp` does **not** apply to a synced listbox — its
+  92vw default used to shorten the listbox against its own trigger in exactly the full-width case
+  `sync` exists for, and `lr-popup` never applied it either. It still applies with `sync` unset.
+  Like `placement`, a change takes effect the next time the listbox opens
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or _visible_ filter text. See
   "the clear button covers two axes" below

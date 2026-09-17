@@ -52,8 +52,11 @@ ordinary per-component property: a rule that sets one of them directly on an anc
 at the first intervening `lr-*` component and never reaches a nested target — even though
 setting it directly on the target element itself still works, which is what makes the failure
 look arbitrary rather than systematic. Reach through a subtree with `--lr-theme-focus-ring-*`,
-`--lr-theme-icon-button-size`, `--lr-theme-otp-input-segment-size`, or
-`--lr-theme-popover-viewport-clamp` instead. Every other `--lr-<component>-*` token — including
+`--lr-theme-otp-input-segment-size`, or `--lr-theme-popover-viewport-clamp` instead.
+`--lr-icon-button-size` additionally has a dedicated subtree-scoped input,
+`--lr-icon-button-size-scope`, which an ancestor rule can set without reaching for the
+application-wide `--lr-theme-icon-button-size`; the theme input still wins over it when both
+are set. Every other `--lr-<component>-*` token — including
 the rest of `lr-icon-button`'s own (`-radius`, `-background`, `-color`, `-border`, and their
 `-hover`/`-active` variants) — is not re-declared anywhere in the shared layer and inherits
 normally from an ancestor.
@@ -120,7 +123,7 @@ normally from an ancestor.
 | `--lr-color-success-on-normal` | `--lr-theme-color-success-on-normal` | `var(--lr-ramp-neutral-05)` | dark: `var(--lr-theme-color-success-on-normal, var(--lr-ramp-neutral-95))` |
 | `--lr-color-success-on-quiet` | `--lr-theme-color-success-on-quiet` | `var(--lr-ramp-neutral-05)` | dark: `var(--lr-theme-color-success-on-quiet, var(--lr-ramp-neutral-95))` |
 | `--lr-color-surface` | `--lr-theme-color-surface-default` | `#fff` | dark: `var(--lr-theme-color-surface-default, #1a1a1a)`<br>forcedColors: `Canvas` |
-| `--lr-color-surface-overlay` | `--lr-theme-color-surface-overlay` | `var(--lr-color-surface)` | dark: `var(--lr-theme-color-surface-overlay, #2b3038)` |
+| `--lr-color-surface-overlay` | `--lr-theme-color-surface-overlay` | `var(--lr-color-surface)` | dark: `var(--lr-theme-color-surface-overlay, color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2))` |
 | `--lr-color-surface-raised` | `--lr-theme-color-surface-raised` | `#f6f8fa` | dark: `var(--lr-theme-color-surface-raised, #22272e)`<br>forcedColors: `Canvas` |
 | `--lr-color-text` | `--lr-theme-color-text-normal` | `#1a1a1a` | dark: `var(--lr-theme-color-text-normal, #f2f2f2)`<br>forcedColors: `CanvasText` |
 | `--lr-color-text-quiet` | `--lr-theme-color-text-quiet` | `#6b7280` | dark: `var(--lr-theme-color-text-quiet, #9aa1ac)`<br>forcedColors: `CanvasText` |
@@ -175,7 +178,7 @@ normally from an ancestor.
 | `--lr-graph-cat-7` | `--lr-theme-graph-cat-7` | `#52d6e8` | dark: `var(--lr-theme-graph-cat-7, #79e2ef)`<br>forcedColors: `Highlight` |
 | `--lr-graph-cat-8` | `--lr-theme-graph-cat-8` | `#c9d1d9` | dark: `var(--lr-theme-graph-cat-8, #e4e7eb)`<br>forcedColors: `LinkText` |
 | `--lr-hover-brightness` | `--lr-theme-hover-brightness` | `1.08` | — |
-| `--lr-icon-button-size` | `--lr-theme-icon-button-size` | `2.5rem` | — |
+| `--lr-icon-button-size` | `--lr-theme-icon-button-size` | `var(--lr-icon-button-size-scope, 2.5rem)` | — |
 | `--lr-layer-base` | `--lr-theme-z-index-base` | `0` | — |
 | `--lr-layer-content` | `--lr-theme-z-index-content` | `1` | — |
 | `--lr-layer-dropdown` | `--lr-theme-z-index-dropdown` | `900` | — |

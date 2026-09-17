@@ -552,7 +552,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-lightbox': { 'lr-hide': true, 'lr-lightbox-close': true, 'lr-show': true },
   'lr-line-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true },
   'lr-locale-picker': { 'lr-change': true, 'lr-invalid': true },
-  'lr-map': { 'lr-map-legend-toggle': true },
+  'lr-map': { 'lr-map-legend-panel-toggle': true, 'lr-map-legend-toggle': true },
   'lr-media-card': { 'lr-before-media-download': true },
   'lr-menu': { 'lr-select': true },
   'lr-menu-item': { 'lr-menu-item-change': true },

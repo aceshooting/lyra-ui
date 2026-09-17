@@ -12559,7 +12559,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 565,
+              "line": 566,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19372,35 +19372,42 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 2972,
+              "line": 3216,
               "test": "is accessible with a text filter populated, its chip shown, and a revealed required error",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 3008,
+              "line": 3252,
               "test": "is accessible in a populated state: active filters, loading spinner, and a revealed required error",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 4675,
+              "line": 4888,
+              "test": "is accessible with an auto-labelled filter at both a wide and a narrow allocation",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/filter-bar/filter-bar.test.ts",
+              "line": 5132,
               "test": "is accessible with the menu open and a selection applied",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 5636,
+              "line": 6093,
               "test": "is accessible as an all-chip bar with active chips",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 5652,
+              "line": 6109,
               "test": "is accessible as a mixed control/chip bar with active chips and a revealed required error",
               "target": "el",
               "state": "populated"
@@ -19425,7 +19432,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 2516,
+              "line": 2760,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -19442,7 +19449,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 2528,
+              "line": 2772,
               "kind": "320px allocation test signal"
             }
           ]
@@ -19505,7 +19512,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1404,
+              "line": 1477,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27125,6 +27132,20 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
+              "line": 6841,
+              "test": "keeps the collapsible legend accessible open and collapsed",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 6841,
+              "test": "keeps the collapsible legend accessible open and collapsed",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
               "line": 1602,
               "test": "keeps the interactive legend accessible in both visible and hidden states",
               "target": "el",
@@ -27163,6 +27184,27 @@
               "line": 6467,
               "test": "clusters sized categories, restores filled and stroked icons after a style reload and exports them",
               "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 7093,
+              "test": "keeps a grouped legend and a grouped interactive legend accessible",
+              "target": "readOnly",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 7093,
+              "test": "keeps a grouped legend and a grouped interactive legend accessible",
+              "target": "interactive",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 7093,
+              "test": "keeps a grouped legend and a grouped interactive legend accessible",
+              "target": "interactive",
               "state": "populated"
             }
           ],
@@ -27282,7 +27324,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3074,
+              "line": 3229,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29246,7 +29288,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 830,
+              "line": 831,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40028,51 +40070,72 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2395,
+              "line": 2400,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 4481,
+              "line": 4656,
               "test": "is accessible with tags rendered and the listbox open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2388,
+              "line": 2393,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2658,
+              "line": 2663,
               "test": "is accessible with a single enabled option",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 3229,
+              "line": 3009,
+              "test": "is accessible while open and width-synced",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/select/select.test.ts",
+              "line": 3404,
               "test": "makes every mirrored adornment wrapper decorative and inert",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 4700,
+              "line": 4875,
               "test": "is accessible with the clear button rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 4960,
+              "line": 5135,
               "test": "is accessible in every appearance",
               "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/select/select.test.ts",
+              "line": 6436,
+              "test": "keeps the trigger name as the field name, with a host aria-label still winning",
+              "target": "named",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/select/select.test.ts",
+              "line": 6436,
+              "test": "keeps the trigger name as the field name, with a host aria-label still winning",
+              "target": "hosted",
               "state": "populated"
             },
             {
@@ -40102,7 +40165,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2967,
+              "line": 3142,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -40119,7 +40182,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2898,
+              "line": 3073,
               "kind": "320px allocation test signal"
             }
           ]

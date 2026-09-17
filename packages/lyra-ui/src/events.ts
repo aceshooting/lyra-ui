@@ -1884,6 +1884,13 @@ export type LyraLocationChangeEvent = LyraEbookViewerEventMap['lr-location-chang
 export type LyraMapClickEvent = LyraMapEventMap['lr-map-click'];
 
 /**
+ * `lr-map-legend-panel-toggle` — dispatched by `<lr-map>`.
+ *
+ * Detail type: `LyraMapEventMap['lr-map-legend-panel-toggle']`.
+ */
+export type LyraMapLegendPanelToggleEvent = LyraMapEventMap['lr-map-legend-panel-toggle'];
+
+/**
  * `lr-map-legend-toggle` — dispatched by `<lr-map>`.
  *
  * Detail type: `LyraMapEventMap['lr-map-legend-toggle']`.
@@ -3798,6 +3805,7 @@ export interface LyraGlobalEventMap {
   'lr-load-more': LyraLoadMoreEvent;
   'lr-location-change': LyraLocationChangeEvent;
   'lr-map-click': LyraMapClickEvent;
+  'lr-map-legend-panel-toggle': LyraMapLegendPanelToggleEvent;
   'lr-map-legend-toggle': LyraMapLegendToggleEvent;
   'lr-map-load': LyraMapLoadEvent;
   'lr-map-marker-activate': LyraMapMarkerActivateEvent;
