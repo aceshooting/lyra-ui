@@ -6096,7 +6096,7 @@ describe('loading presentation for a pending value', () => {
       displayInput.hasAttribute('data-unknown-value'),
       'a pending value is not flagged as unknown'
     ).to.be.false;
-    expect(displayInput.querySelector('[part="unknown-value"]')).to.equal(null);
+    expect(displayInput.querySelector('[part="unknown-value"]') === null).to.be.true;
   });
 
   it('flags only the unresolved tag as pending in multiple mode, leaving a resolved tag alone', async () => {
@@ -6122,7 +6122,7 @@ describe('loading presentation for a pending value', () => {
       pendingTag.hasAttribute('data-unknown-value'),
       'the pending tag is not flagged as unknown'
     ).to.be.false;
-    expect(pendingTag.querySelector('[part="unknown-value"]')).to.equal(null);
+    expect(pendingTag.querySelector('[part="unknown-value"]') === null).to.be.true;
   });
 
   it('leaves value untouched by loading and renders the real label once the matching option mounts', async () => {

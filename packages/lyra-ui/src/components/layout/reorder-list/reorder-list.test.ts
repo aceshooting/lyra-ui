@@ -1027,7 +1027,7 @@ describe('<lr-reorder-list controlled>', () => {
     // The consumer deliberately moves focus elsewhere BEFORE resolving the held move and BEFORE
     // the host's own re-render settles the controlled reconciliation.
     externalButton.focus();
-    expect(document.activeElement).to.equal(externalButton);
+    expect(document.activeElement === externalButton).to.be.true;
 
     el.finalizePendingMove();
     await el.updateComplete;
@@ -1039,9 +1039,9 @@ describe('<lr-reorder-list controlled>', () => {
 
     expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
     expect(
-      document.activeElement,
+      document.activeElement === externalButton,
       'the deliberately-focused external button must not be stolen back',
-    ).to.equal(externalButton);
+    ).to.be.true;
   });
 
   it("still restores focus to the moved row's move button when focus was not moved away during a pending controlled reconciliation", async () => {
