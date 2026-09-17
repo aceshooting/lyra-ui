@@ -4996,7 +4996,17 @@ describe('light-DOM projection -- SSR and hydration', () => {
   const renderBody = (item: unknown, index: number) =>
     html`<span class="hydration-body">item ${item}#${index}</span>`;
 
-  async function mountServerShaped(attributes: string): Promise<LyraVirtualList> {
+  /** `renderItemOverride` is assigned in the SAME synchronous block as the element's upgrade, not
+   *  after an `await`. `setHTMLUnsafe` upgrades the element synchronously, so its
+   *  `connectedCallback` schedules the first update as a microtask -- any `await` between the
+   *  upgrade and the assignment lets that first update run with whatever `renderItem` was set at
+   *  upgrade time. Firefox reliably lands that microtask during the caller's `await`, Chromium and
+   *  WebKit happened not to, which is how a test that reassigned `renderItem` afterwards passed on
+   *  two engines and failed on the third. */
+  async function mountServerShaped(
+    attributes: string,
+    renderItemOverride?: (item: unknown, index: number) => unknown,
+  ): Promise<LyraVirtualList> {
     const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
       setHTMLUnsafe(value: string): void;
     };
@@ -5005,7 +5015,7 @@ describe('light-DOM projection -- SSR and hydration', () => {
     );
     const el = container.firstElementChild as LyraVirtualList;
     el.items = SAMPLE;
-    el.renderItem = renderBody;
+    el.renderItem = (renderItemOverride ?? renderBody) as LyraVirtualList['renderItem'];
     el.keyFunction = numberKey;
     return el;
   }
@@ -5077,13 +5087,15 @@ describe('light-DOM projection -- SSR and hydration', () => {
 
   it('recovers projection after a server-shaped first update throws', async () => {
     let shouldThrow = true;
+    // Handed to the mount rather than assigned after it, so the throw is guaranteed to land on the
+    // FIRST update on every engine -- see mountServerShaped's own note.
     const el = await mountServerShaped(
-      'style="--lr-virtual-list-height:200px" row-height="40" row-projection="light"'
+      'style="--lr-virtual-list-height:200px" row-height="40" row-projection="light"',
+      (item: unknown, index: number) => {
+        if (shouldThrow) throw new Error('first update fails');
+        return renderBody(item, index);
+      },
     );
-    el.renderItem = (item: unknown, index: number) => {
-      if (shouldThrow) throw new Error('first update fails');
-      return renderBody(item, index);
-    };
 
     // Lit deliberately re-fires a failed update's error as a fresh unhandled rejection the moment
     // the NEXT update is enqueued (ReactiveElement.__enqueueUpdate), so the recovery below cannot
