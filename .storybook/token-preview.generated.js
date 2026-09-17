@@ -678,7 +678,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-color-surface-overlay, var(--lr-color-surface))",
-          "dark": "var(--lr-theme-color-surface-overlay, #2b3038)"
+          "dark": "var(--lr-theme-color-surface-overlay, color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2))"
         }
       },
       {
@@ -2662,7 +2662,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "dimension",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-icon-button-size, 2.5rem)"
+          "light": "var(--lr-theme-icon-button-size, var(--lr-icon-button-size-scope, 2.5rem))"
         }
       },
       {

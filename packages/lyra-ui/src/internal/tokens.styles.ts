@@ -17,6 +17,19 @@ import { css } from 'lit';
 // opaque by definition -- so giving this its own --lr-theme-* hook would just reintroduce the
 // same footgun under a new name. The colour channel is irrelevant; only alpha 1 matters.
 //
+// ICON_BUTTON_SIZE_SCOPE -- why --lr-icon-button-size reads TWO ancestor inputs.
+// --lr-theme-icon-button-size is the application-wide theme hook, spelled like every other
+// --lr-theme-* name. --lr-icon-button-size-scope is the subtree override: a wrapper that wants a
+// denser (or roomier) group of icon buttons sets it on itself and leaves the application theme
+// alone. Neither of them is --lr-icon-button-size itself, and that asymmetry is the point. The
+// :host line below re-declares --lr-icon-button-size on every LyraElement, which is what lets the
+// coarse-pointer rule floor it per element -- and equally what stops a value set on a wrapper from
+// surviving the first component in between, so "set it on the toolbar" silently did nothing for an
+// icon button composed inside another component. Both inputs above are declared nowhere, so both
+// inherit the whole way down; the theme hook wins where both are set, and the floor still applies
+// to whichever value results. --lr-icon-button-size keeps its element-scoped meaning unchanged:
+// set directly on the control it is still authoritative.
+//
 // REQUIRED_MARKER -- why --lr-form-control-required-content/-color/-offset are NOT declared here.
 // The required-field marker every labelled form control renders (internal/form-control.styles.ts,
 // restated by known-date.styles.ts for its composite label) reads those three names as inline
@@ -299,8 +312,9 @@ const baseTokens = css`
        via min-inline-size/min-block-size, not by growing the glyph itself.
        Keep the resolved value at or above 24px: it backs the hit area of
        lr-date-input, lr-combobox, lr-input and lr-select, and anything smaller
-       fails WCAG 2.2 SC 2.5.8 (Target Size (Minimum)). */
-    --lr-icon-button-size: var(--lr-theme-icon-button-size, 2.5rem);
+       fails WCAG 2.2 SC 2.5.8 (Target Size (Minimum)).
+       ICON_BUTTON_SIZE_SCOPE -- why there are two ancestor inputs here. */
+    --lr-icon-button-size: var(--lr-theme-icon-button-size, var(--lr-icon-button-size-scope, 2.5rem));
 
     font-family: var(--lr-font);
     color: var(--lr-color-text);
@@ -317,7 +331,7 @@ const baseTokens = css`
   /* TOUCH_TARGET_FLOOR -- keep icon-only controls at least 44px on coarse pointers. */
   @media (hover: none), (pointer: coarse) {
     :host {
-      --lr-icon-button-size: max(var(--lr-theme-icon-button-size, 2.5rem), 2.75rem);
+      --lr-icon-button-size: max(var(--lr-theme-icon-button-size, var(--lr-icon-button-size-scope, 2.5rem)), 2.75rem);
     }
   }
 `;
@@ -351,6 +365,20 @@ const baseTokens = css`
  *                          :not([data-lr-theme='light']) appended to :host-context() matches
  *                          nothing at all, because the shadow host is featureless.
  *
+ * DARK_OVERLAY_SURFACE -- why the dark panel colour is mixed rather than pinned.
+ * Light mode resolves --lr-color-surface-overlay straight to --lr-color-surface, so ONE
+ * --lr-theme-color-surface-default override carries every dropdown, listbox, menu, toast, popover,
+ * dialog and mobile drawer with it. Dark mode cannot do that -- panel and page would land on the
+ * same near-black and an open dialog reads as a scrim with text floating on it -- so it used to pin
+ * a literal, and the cost was that re-skinning the dark base left every floating surface at the
+ * stock colour: a mismatched panel rather than a themed one. Mixing the page surface towards a
+ * fixed light accent keeps the elevation delta the note beside the declaration is about while
+ * following the base: 85 percent surface plus 15 percent accent lifts the panel a fixed amount
+ * above whatever the base happens to be, instead of asserting one absolute colour. The pair is
+ * chosen so that at the built-in #1a1a1a base it resolves to rgb(43 48 56) -- the #2b3038 this
+ * token has always shipped -- so no existing dark theme moves. A real
+ * --lr-theme-color-surface-overlay still wins outright, for a panel unrelated to the page surface.
+ *
  * Placement note: `scripts/check-contrast.mjs` and `scripts/generate-chart-palette.mjs` split this
  * file at the first occurrence of the string `@media (prefers-color-scheme: dark)` and read
  * everything after it as the dark set. The media rule that consumes this fragment is composed
@@ -368,8 +396,9 @@ const darkTokens = css`
       /* A modal panel cannot share the page surface token in dark mode: both resolve to the same
          near-black, so an open dialog reads as a scrim with text floating on it and no panel at
          all. Light mode keeps the page surface deliberately -- a white dialog on a white page is
-         separated by the scrim around it, and changing it would be churn for no legibility gain. */
-      --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, #2b3038);
+         separated by the scrim around it, and changing it would be churn for no legibility gain.
+         DARK_OVERLAY_SURFACE (above) -- why the delta is mixed rather than pinned to a literal. */
+      --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2));
       /* A 50% black scrim over an already-dark page barely darkens it, so the modal/non-modal
          boundary the scrim exists to draw disappears. Both scrims go heavier in dark mode. */
       --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.72));

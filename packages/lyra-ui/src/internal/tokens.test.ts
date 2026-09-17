@@ -65,6 +65,73 @@ async function probeNestedVar(name: string, ancestorStyle = ''): Promise<string>
   return getComputedStyle(inner).getPropertyValue(name).trim();
 }
 
+/** Mount a nested probe and hand back the inner host, so a caller can force media rules on it. */
+async function nestedProbe(ancestorStyle = ''): Promise<TokenProbe> {
+  const wrapper = (await fixture(
+    html`<div style=${ancestorStyle}><lr-nested-token-probe></lr-nested-token-probe></div>`,
+  )) as HTMLElement;
+  const outer = wrapper.querySelector(tag('nested-token-probe')) as NestedTokenProbe;
+  await outer.updateComplete;
+  const inner = outer.shadowRoot!.querySelector(tag('token-probe')) as TokenProbe;
+  await inner.updateComplete;
+  return inner;
+}
+
+/**
+ * `name` resolved to real pixels on `el`.
+ *
+ * A custom property's computed value is its token stream after var() substitution, so a token
+ * carrying `max(...)` reads back as the unevaluated text `max(2rem, 2.75rem)` — which proves the
+ * declaration exists but says nothing about which arm wins, and is whitespace-fragile across
+ * engines besides. Borrowing a real length property makes the engine do the arithmetic. Padding is
+ * the carrier because its computed value is an absolute length whatever the element's `display` is.
+ */
+function resolvedPx(el: Element, name: string): number {
+  const host = el as HTMLElement;
+  const previous = host.style.paddingInlineStart;
+  host.style.paddingInlineStart = `var(${name})`;
+  const resolved = Number.parseFloat(getComputedStyle(host).paddingInlineStart);
+  host.style.paddingInlineStart = previous;
+  return resolved;
+}
+
+/** `rem` in real pixels, read live — a non-16px root font size is a common accessibility setting. */
+function remPx(value: number): number {
+  return value * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+}
+
+/**
+ * `name` resolved through a real colour property, so a `color-mix()` is evaluated rather than
+ * echoed back as source text the way `getPropertyValue` returns it.
+ *
+ * Two serializations have to be accepted, which is the whole reason this helper exists: a plain
+ * hex or keyword comes back as `rgb(r, g, b)` on 0-255, while anything that went through
+ * `color-mix(in srgb, ...)` comes back in CSS Color 4 form as `color(srgb r g b)` on 0-1. Both are
+ * normalized to 0-255 here so a caller never has to know which arm of a token's fallback chain won.
+ */
+function resolvedColor(el: Element, name: string): readonly [number, number, number] {
+  const host = el as HTMLElement;
+  const previous = host.style.backgroundColor;
+  host.style.backgroundColor = `var(${name})`;
+  const computed = getComputedStyle(host).backgroundColor;
+  host.style.backgroundColor = previous;
+  const legacy = /^rgba?\(([^)]*)\)$/.exec(computed)?.[1];
+  const modern = /^color\(srgb ([^)]*)\)$/.exec(computed)?.[1];
+  expect(
+    legacy ?? modern,
+    `${name} resolved to "${computed}", which is neither an rgb() nor a color(srgb) colour`,
+  ).to.not.equal(undefined);
+  const scale = legacy === undefined ? 255 : 1;
+  const [red, green, blue] = (legacy ?? modern)!
+    .split(/[\s,/]+/)
+    .filter(Boolean)
+    .map((channel) => Number(channel) * scale);
+  return [red!, green!, blue!];
+}
+
+const toHex = (channels: readonly number[]) =>
+  `#${channels.map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('')}`;
+
 type PaletteMode = 'light' | 'dark';
 
 /** The palette's light grid lives on `:host`, its dark grid on `:host([data-lr-theme='dark'])`. */
@@ -258,6 +325,31 @@ it('lets --lr-theme-icon-button-size and --lr-theme-otp-input-segment-size set o
   );
 });
 
+// --lr-icon-button-size has TWO ancestor-settable inputs, and the split is deliberate rather than
+// an inconsistency. --lr-theme-icon-button-size is the application-wide theme hook, matching every
+// other --lr-theme-* name. --lr-icon-button-size-scope is the subtree override: a wrapper that
+// wants a denser (or roomier) row of icon buttons sets it on itself and leaves the application
+// theme alone. Both names are declared nowhere in any component's styles, which is exactly why
+// both inherit past an intervening host; --lr-icon-button-size itself IS re-declared on every
+// LyraElement's :host, and so cannot — the negative case below pins that.
+it('lets --lr-icon-button-size-scope set on an ancestor reach a component nested below another host', async () => {
+  expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size-scope: 2.75rem')).to.equal('2.75rem');
+});
+
+it('keeps the theme-tier input ahead of --lr-icon-button-size-scope when an ancestor sets both', async () => {
+  expect(
+    await probeNestedVar(
+      '--lr-icon-button-size',
+      '--lr-theme-icon-button-size: 3rem; --lr-icon-button-size-scope: 2rem',
+    ),
+  ).to.equal('3rem');
+});
+
+it('leaves --lr-icon-button-size at its default when neither ancestor input is set', async () => {
+  expect(await probeNestedVar('--lr-icon-button-size')).to.equal('2.5rem');
+  expect(resolvedPx(await nestedProbe(), '--lr-icon-button-size')).to.be.closeTo(remPx(2.5), 0.5);
+});
+
 it('lets the --lr-theme-focus-ring-* inputs set on an ancestor reach a component nested below another host', async () => {
   expect(await probeNestedVar('--lr-focus-ring-width', '--lr-theme-focus-ring-width: 4px')).to.equal('4px');
   expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-theme-focus-ring-offset: 5px')).to.equal('5px');
@@ -269,6 +361,13 @@ it('cannot be rethemed through the --lr-* token itself, which is why the --lr-th
   // (icon-button-size, focus-ring-width/-offset, otp-input-segment-size, popover-viewport-clamp)
   // are the only ones the shared base :host block declares under a component-looking name --
   // see build-llms.mjs's "names that look per-component but are not" note.
+  //
+  // This is NOT the same claim as "there is no ancestor route". Each of these names has a
+  // separate, inheriting input that does reach: the --lr-theme-* bridge for all four, plus
+  // --lr-icon-button-size-scope for the icon-button size specifically. What stays pinned here is
+  // that the PUBLISHED per-component name keeps its element-scoped meaning -- setting
+  // --lr-icon-button-size on the icon button itself is authoritative, and cannot be overridden
+  // from a wrapper -- so nothing that relies on that today changes.
   expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size: 3rem')).to.equal('2.5rem');
   expect(await probeNestedVar('--lr-focus-ring-width', '--lr-focus-ring-width: 4px')).to.equal('2px');
   expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-focus-ring-offset: 5px')).to.equal('2px');
@@ -287,6 +386,13 @@ it('cannot be rethemed through the --lr-* token itself, which is why the --lr-th
 // they would through the real intervening component. --lr-icon-button-size behaves differently
 // only because the SHARED base layer (which every stand-in and every real component includes)
 // re-declares it on its own :host, as proven by the negative case above.
+//
+// The supported answer to that repro is --lr-icon-button-size-scope on the wrapper, covered
+// above. Read the two together rather than as a contradiction: the sibling icon-button hooks are
+// ancestor-scoped because nothing declares them, --lr-icon-button-size is element-scoped because
+// the shared layer must be able to floor it per element (the coarse-pointer rule below cannot
+// work any other way), and --lr-icon-button-size-scope exists to give the wrapper case the
+// inheriting name it was missing without changing what the published one means.
 it('lets an ancestor-set icon-button token that the shared base layer does not re-declare reach a component nested below another host', async () => {
   expect(await probeNestedVar('--lr-icon-button-radius', '--lr-icon-button-radius: 999px')).to.equal('999px');
   expect(await probeNestedVar('--lr-icon-button-background', '--lr-icon-button-background: red')).to.equal('red');
@@ -325,6 +431,26 @@ it('leaves an explicit --lr-theme-icon-button-size at or above the touch floor u
   }
 });
 
+/** The icon-button size an ancestor style resolves to, in pixels, with the touch floor forced on. */
+async function coarsePointerNestedIconButtonPx(ancestorStyle: string): Promise<number> {
+  const inner = await nestedProbe(ancestorStyle);
+  const restore = forceCoarsePointer(inner);
+  try {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    return resolvedPx(inner, '--lr-icon-button-size');
+  } finally {
+    restore();
+  }
+}
+
+it('still applies the coarse-pointer touch floor to an ancestor --lr-icon-button-size-scope', async () => {
+  // The floor is the WCAG 2.2 SC 2.5.8 guarantee, so the new ancestor route must not be a way
+  // around it: a wrapper asking for 2rem gets 2.75rem on a touch device, while a wrapper asking
+  // for more than the floor keeps what it asked for.
+  expect(await coarsePointerNestedIconButtonPx('--lr-icon-button-size-scope: 2rem')).to.be.closeTo(remPx(2.75), 0.5);
+  expect(await coarsePointerNestedIconButtonPx('--lr-icon-button-size-scope: 3rem')).to.be.closeTo(remPx(3), 0.5);
+});
+
 it('defines the shared typography, chart, layer, and overlay token surface', async () => {
   expect(await probeVar('--lr-font-size-sm')).to.equal('0.8125rem');
   expect(await probeVar('--lr-font-weight-semibold')).to.equal('600');
@@ -334,6 +460,61 @@ it('defines the shared typography, chart, layer, and overlay token surface', asy
   expect(await probeVar('--lr-layer-modal')).to.equal('1000');
   expect(await probeVar('--lr-color-overlay')).to.equal('rgb(0 0 0 / 0.5)');
   expect(await probeVar('--lr-color-overlay-strong')).to.equal('rgb(0 0 0 / 0.92)');
+});
+
+// --- the dark overlay surface is DERIVED from the dark page surface --------------------
+//
+// Light mode resolves --lr-color-surface-overlay straight to --lr-color-surface, so one
+// --lr-theme-color-surface-default override carries every dropdown, listbox, menu, toast and
+// drawer with it. Dark mode cannot do that -- both would land on the same near-black and an open
+// dialog would read as a scrim with text floating on it, no panel at all -- so it used to pin a
+// literal instead, and a re-skinned dark base left every floating surface at the stock colour.
+// Mixing the base towards a fixed light accent keeps the elevation delta while following the base.
+//
+// Every assertion here reads a RENDERED colour: a custom property's computed value is its token
+// stream after var() substitution, so getPropertyValue hands back the color-mix() SOURCE and
+// comparing that text would prove nothing about what gets painted.
+
+/** A probe pinned to dark mode through the shipped `data-lr-theme` route, with optional inline style. */
+async function darkProbe(style = ''): Promise<TokenProbe> {
+  const el = (await fixture(
+    html`<lr-token-probe data-lr-theme="dark" style=${style}></lr-token-probe>`,
+  )) as TokenProbe;
+  await el.updateComplete;
+  return el;
+}
+
+it("keeps the derived dark overlay surface at today's panel colour on the stock base surface", async () => {
+  const overlay = resolvedColor(await darkProbe(), '--lr-color-surface-overlay');
+  const expected = [0x2b, 0x30, 0x38];
+  const drift = Math.max(...overlay.map((channel, index) => Math.abs(channel - expected[index]!)));
+  expect(drift, `resolved ${toHex(overlay)}, expected about #2b3038`).to.be.at.most(2);
+});
+
+it('moves the dark overlay surface with a re-skinned --lr-theme-color-surface-default', async () => {
+  const el = await darkProbe('--lr-theme-color-surface-default: #101820');
+  const surface = toHex(resolvedColor(el, '--lr-color-surface'));
+  const overlay = toHex(resolvedColor(el, '--lr-color-surface-overlay'));
+  expect(surface).to.equal('#101820');
+  expect(overlay, 'the overlay must follow the re-skinned base, not stay at the stock panel colour').to.not.equal(
+    '#2b3038',
+  );
+  // Following it is only worth anything while the elevation delta survives: a panel the same
+  // colour as the page it floats over is the exact failure the pinned literal existed to prevent.
+  expect(contrastRatio(overlay, surface), `${overlay} on ${surface}`).to.be.greaterThan(1.15);
+});
+
+it('lets an explicit --lr-theme-color-surface-overlay win outright in dark mode', async () => {
+  const el = await darkProbe('--lr-theme-color-surface-overlay: #3f2b56');
+  expect(toHex(resolvedColor(el, '--lr-color-surface-overlay'))).to.equal('#3f2b56');
+});
+
+it('leaves the light overlay surface resolving to the page surface', async () => {
+  const el = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
+  await el.updateComplete;
+  const overlay = toHex(resolvedColor(el, '--lr-color-surface-overlay'));
+  expect(overlay).to.equal(toHex(resolvedColor(el, '--lr-color-surface')));
+  expect(overlay).to.equal('#ffffff');
 });
 
 it('provides central reduced-motion fallbacks', () => {

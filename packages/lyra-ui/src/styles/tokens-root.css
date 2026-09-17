@@ -204,7 +204,7 @@
     :root:not(.lr-light):not([data-lr-theme='light']) {
       --lr-color-surface: var(--lr-theme-color-surface-default, #1a1a1a);
       --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #22272e);
-      --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, #2b3038);
+      --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2));
       --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.72));
       --lr-color-text: var(--lr-theme-color-text-normal, #f2f2f2);
       --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #9aa1ac);
@@ -326,7 +326,7 @@
   [data-lr-theme='dark'] {
     --lr-color-surface: var(--lr-theme-color-surface-default, #1a1a1a);
     --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #22272e);
-    --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, #2b3038);
+    --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2));
     --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.72));
     --lr-color-text: var(--lr-theme-color-text-normal, #f2f2f2);
     --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #9aa1ac);

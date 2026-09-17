@@ -1166,6 +1166,47 @@ code. See each control's own reference page for its exact pair.
   `lr-select`. It is a _floor_, not a fixed size. Keep the resolved value **at or above 24px**
   (WCAG 2.2 SC 2.5.8 target size); the default leaves headroom. Lowering it below that shrinks
   every affordance in the library at once.
+- **`--lr-icon-button-size-scope`** resizes icon buttons for **one subtree** instead of the whole
+  application. Set it on any wrapper; it inherits past intervening components and reaches every
+  icon-only control below it. Three names, three scopes — pick by how far you want the change to
+  reach:
+
+  | Property | Scope | Set it on |
+  | --- | --- | --- |
+  | `--lr-theme-icon-button-size` | application-wide | `:root`, or any ancestor |
+  | `--lr-icon-button-size-scope` | one subtree | the wrapper you want affected |
+  | `--lr-icon-button-size` | one element | the icon-only control itself |
+
+  `--lr-theme-icon-button-size` wins wherever both ancestor inputs are set. `--lr-icon-button-size`
+  is **element-scoped on purpose** and is not a wrapper knob: every component re-declares it on its
+  own host so the touch-target floor can apply per element, so a value set on a wrapper is replaced
+  at the first component in between and never reaches anything nested inside one. That behaviour is
+  unchanged — use `--lr-icon-button-size-scope` for the wrapper case.
+
+  ```css
+  /* A dense toolbar, without touching the rest of the app. */
+  .message-toolbar {
+    --lr-icon-button-size-scope: 1.75rem;
+  }
+  ```
+
+  The coarse-pointer floor still applies to both ancestor inputs: on a touch device (`hover: none`
+  or `pointer: coarse`) a resolved value below `2.75rem` is raised back to it, so the new subtree
+  knob is not a way around WCAG 2.2 SC 2.5.8 — a deliberately dense desktop toolbar still becomes
+  tappable on a phone.
+- **`--lr-color-surface-overlay` follows `--lr-theme-color-surface-default` in both modes.** It is
+  the panel colour behind every floating surface — dropdowns, listboxes, menus, toasts, popovers,
+  dialogs, and the `lr-app-rail` mobile drawer. In light mode it resolves straight to
+  `--lr-color-surface`, so a re-skinned page surface carries them all with it. Dark mode cannot
+  resolve to the page surface — panel and page would be the same near-black, and an open dialog
+  would read as a scrim with text floating on it and no panel at all — so it is **derived** from
+  the page surface instead: `color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2)`, which lifts
+  the panel a fixed amount above whatever the base happens to be. One
+  `--lr-theme-color-surface-default` override therefore re-skins every floating surface in dark
+  mode too, and the elevation delta survives the re-skin. At the built-in dark base the pair still
+  resolves to the same panel colour it always has, so no existing dark theme moves.
+  `--lr-theme-color-surface-overlay` still wins outright when you set it — reach for it only when
+  you want a panel colour unrelated to the page surface.
 - **Aligning your own content next to a checkbox or radio.** `--lr-checkbox-label-indent` /
   `--lr-radio-label-indent` publish the label offset, but custom properties inherit _down_, not
   sideways, so a sibling node in your tree cannot read them off the control. Compute the same
