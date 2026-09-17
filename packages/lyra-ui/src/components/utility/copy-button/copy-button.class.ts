@@ -149,9 +149,10 @@ export interface LyraCopyButtonEventMap {
  * This trigger has no `size` property of its own: it composes `<lr-icon-button>`, so the built-in
  * trigger's hit area is that component's shared `--lr-icon-button-size` floor (2.5rem/40px), same
  * as everywhere else in the library. For a dense action row (e.g. several copy buttons packed into
- * a toolbar) where 40px is more than the layout can afford, lower `--lr-theme-icon-button-size` --
- * NOT `--lr-icon-button-size` itself, which every `LyraElement` re-declares on its own `:host` and
- * so never reaches a composed child (`internal/tokens.test.ts` proves this) -- on this element or
+ * a toolbar) where 40px is more than the layout can afford, lower `--lr-icon-button-size-scope`
+ * (the subtree-scoped input) or `--lr-theme-icon-button-size` (the application-wide one) -- NOT
+ * `--lr-icon-button-size` itself, which every `LyraElement` re-declares on its own `:host` and so
+ * never reaches a composed child (`internal/tokens.test.ts` proves this) -- on this element or
  * any ancestor of it; `::part(base__control)` also reaches the same composed native control
  * directly for a one-off override. Either way the shrink is local to the elements it targets, not
  * a library-wide floor change. A coarse-pointer/no-hover safety net (`internal/tokens.styles.ts`'s

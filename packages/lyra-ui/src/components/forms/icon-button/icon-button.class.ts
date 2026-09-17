@@ -126,13 +126,20 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * accessibility trade-off it is. Scaling the glyph inside that floor is a separate concern and
  * already has its own inherited input, `--lr-icon-size`.
  *
- * Lowering `--lr-icon-button-size` directly on this element (or `--lr-theme-icon-button-size` on
- * an ancestor, which reaches a `<lr-icon-button>` composed inside another component -- see
- * `internal/tokens.test.ts`) is safe for a dense action row even below the ordinary 2.5rem/40px
- * floor: a coarse-pointer/no-hover media rule in `internal/tokens.styles.ts`'s `baseTokens` floors
- * the RENDERED hit area back at 2.75rem/44px regardless of how far that override lowered it, so
- * the control is still comfortably tappable the moment the pointer reaching it is a finger rather
- * than a mouse.
+ * Lowering the size for a dense action row below the ordinary 2.5rem/40px floor is safe ONLY
+ * through an ancestor lever -- `--lr-theme-icon-button-size` (application-wide) or
+ * `--lr-icon-button-size-scope` (one subtree). The coarse-pointer/no-hover media rule in
+ * `internal/tokens.styles.ts`'s `baseTokens` reads both, and floors the RENDERED hit area back at
+ * 2.75rem/44px however far the override lowered it, so the control stays comfortably tappable the
+ * moment the pointer reaching it is a finger rather than a mouse.
+ *
+ * Setting `--lr-icon-button-size` DIRECTLY on this element does NOT get that floor, and the
+ * reference said for several releases that it did. A declaration on the host comes from the outer
+ * tree and outranks the shadow tree's own `:host` rule, so the media rule never wins and the
+ * rendered hit area is exactly the value set: `--lr-icon-button-size: 1rem` really does render a
+ * 16px target under a coarse pointer. Below 24px that fails WCAG 2.2 SC 2.5.8, so the
+ * element-scoped lever is the explicit accessibility trade-off it reads as -- prefer a subtree
+ * override when the intent is merely a denser row. See `internal/tokens.test.ts`.
  *
  * @customElement lr-icon-button
  * @event focus - Native focus relayed once from the internal button.
@@ -165,8 +172,10 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *   re-declares `--lr-icon-button-size` from `--lr-theme-icon-button-size` in the shared token
  *   layer, so an ancestor rule that sets `--lr-icon-button-size` directly is reset the moment it
  *   crosses into any intervening `lr-*` component's shadow root and never reaches this element.
- *   Set it directly on this element instead, or set `--lr-theme-icon-button-size` on an ancestor
- *   to resize every icon button in the subtree at once.
+ *   Set it directly on this element, set `--lr-icon-button-size-scope` on any ancestor to resize
+ *   one subtree, or set `--lr-theme-icon-button-size` to resize every icon button in the
+ *   application at once. Only the two ancestor levers keep the coarse-pointer hit-area floor;
+ *   see `llms/shared.md`.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Corner radius of the native button.
  * @cssprop [--lr-icon-button-background=transparent] - Background fill of the native button.
  * @cssprop [--lr-icon-button-background-hover=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -

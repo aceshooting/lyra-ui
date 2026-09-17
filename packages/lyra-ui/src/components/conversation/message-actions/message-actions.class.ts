@@ -257,7 +257,8 @@ function editIcon(): SVGTemplateResult {
  * `<lr-icon-button>` (the embedded `lr-copy-button` does the same one level deeper), so each one's
  * hit area is that component's shared `--lr-icon-button-size` floor (2.5rem/40px), same as
  * everywhere else in the library. For a dense action row where 40px per action is more than the
- * layout can afford, lower `--lr-theme-icon-button-size` -- NOT `--lr-icon-button-size` itself,
+ * layout can afford, lower `--lr-icon-button-size-scope` (the subtree-scoped input) or
+ * `--lr-theme-icon-button-size` (the application-wide one) -- NOT `--lr-icon-button-size` itself,
  * which every `LyraElement` re-declares on its own `:host` and so never reaches a composed child
  * (`internal/tokens.test.ts` proves this) -- on this element or any ancestor of it;
  * `::part(regenerate-button__control)`/`::part(edit-button__control)` also reach the built-ins'
