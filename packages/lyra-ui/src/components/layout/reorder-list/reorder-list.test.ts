@@ -437,6 +437,42 @@ describe("<lr-reorder-list>", () => {
     });
   });
 
+  it("moves the middle item down via Ctrl+ArrowDown when focus is on the move button's own nested native control", async () => {
+    // Regression test: the move buttons are composed <lr-icon-button>s, so real DOM focus during
+    // normal keyboard use lands on the NATIVE <button> one shadow boundary deeper than the
+    // `[part="move-down-button"]` host -- unlike the test above, which dispatches directly on that
+    // host and so never exercises the nested boundary at all.
+    const el = await fixture<LyraReorderList>(threeItems);
+    const downIconButton = itemsOf(el)[1]!.shadowRoot!.querySelector(
+      '[part="move-down-button"]'
+    ) as HTMLElement;
+    const nativeButton = downIconButton.shadowRoot!.querySelector(
+      'button'
+    ) as HTMLButtonElement;
+    nativeButton.focus();
+
+    const listener = oneEvent(el, "lr-reorder");
+    nativeButton.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowDown",
+        ctrlKey: true,
+        bubbles: true,
+        composed: true,
+      })
+    );
+    const event = (await listener) as CustomEvent<{
+      order: string[];
+      fromIndex: number;
+      toIndex: number;
+    }>;
+
+    expect(event.detail).to.deep.equal({
+      order: ["a", "c", "b"],
+      fromIndex: 1,
+      toIndex: 2,
+    });
+  });
+
   it('does not consume no-op or nested-control modifier arrows', async () => {
     const el = await fixture<LyraReorderList>(html`
       <lr-reorder-list>
@@ -971,6 +1007,66 @@ describe('<lr-reorder-list controlled>', () => {
     el.insertBefore(middle, itemsOf(el)[0]!);
     await waitUntil(() => !middle.pending);
     expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
+  });
+
+  it('preserves a deliberate external focus choice made during a pending controlled reconciliation', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        ${threeControlledItems}
+        <button>External</button>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-reorder-list') as LyraReorderList;
+    const externalButton = wrapper.querySelector('button') as HTMLButtonElement;
+    const middle = itemsOf(el)[1]!;
+    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    (middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(middle.pending).to.equal(true);
+
+    // The consumer deliberately moves focus elsewhere BEFORE resolving the held move and BEFORE
+    // the host's own re-render settles the controlled reconciliation.
+    externalButton.focus();
+    expect(document.activeElement).to.equal(externalButton);
+
+    el.finalizePendingMove();
+    await el.updateComplete;
+    expect(middle.pending, "now waiting on the host's own re-render").to.equal(true);
+
+    // The host applies its own reorder, reusing the same element instance.
+    el.insertBefore(middle, itemsOf(el)[0]!);
+    await waitUntil(() => !middle.pending);
+
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
+    expect(
+      document.activeElement,
+      'the deliberately-focused external button must not be stolen back',
+    ).to.equal(externalButton);
+  });
+
+  it("still restores focus to the moved row's move button when focus was not moved away during a pending controlled reconciliation", async () => {
+    const el = await fixture<LyraReorderList>(threeControlledItems);
+    const middle = itemsOf(el)[1]!;
+    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    (middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(middle.pending).to.equal(true);
+
+    el.finalizePendingMove();
+    await el.updateComplete;
+    expect(middle.pending).to.equal(true);
+
+    el.insertBefore(middle, itemsOf(el)[0]!);
+    await waitUntil(() => !middle.pending);
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
+
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    await middle.updateComplete;
+    expect(['move-up-button', 'move-down-button']).to.include(
+      middle.shadowRoot!.activeElement?.getAttribute('part'),
+    );
   });
 
   it('turning controlled off while a reconciliation is pending drops it instead of leaving the list stuck busy', async () => {

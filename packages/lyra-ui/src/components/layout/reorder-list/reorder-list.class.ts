@@ -32,7 +32,52 @@ export interface LyraReorderListEventMap {
 type ReorderFocusTarget = {
   item: LyraReorderItem;
   direction: 'up' | 'down';
+  /** Composed-focused element captured when this target was armed, before the async gap
+   *  `restoreFocusAfterItemUpdate` waits through (an `updateComplete`, plus -- in `controlled`
+   *  mode -- the wait for the host's own matching re-render already elapsed by the time this was
+   *  captured). Lets that method tell a deliberate external focus change made during the gap
+   *  apart from the ordinary case where focus is still on (or was lost from) this list. */
+  preScheduleFocus: Element | null;
 };
+
+/** True when `node` is chrome the row itself rendered, whether directly in `item`'s own shadow
+ *  root or (the composed `<lr-icon-button>` move controls) inside a shadow root nested one level
+ *  deeper still. Climbs shadow-root boundaries via `.host` links rather than comparing a single
+ *  `getRootNode()` result, since a native `<button>` focused inside `<lr-icon-button>`'s OWN
+ *  shadow root has a root node that is neither `item.shadowRoot` nor the document. */
+function isRowOwnChrome(node: Element, item: LyraReorderItem): boolean {
+  let root: Node = node.getRootNode();
+  while (root instanceof ShadowRoot) {
+    if (root === item.shadowRoot) return true;
+    root = root.host.getRootNode();
+  }
+  return false;
+}
+
+/** Walks from `document.activeElement` down through nested `shadowRoot.activeElement` chains to
+ *  the deepest actually-focused element -- a composed control's real focus target (e.g. a
+ *  `<lr-icon-button>`'s own native `<button>`) sits behind one or more shadow boundaries that
+ *  `document.activeElement` alone never reaches. */
+function deepActiveElement(doc: Document): Element | null {
+  let active: Element | null = doc.activeElement;
+  while (active?.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+  return active;
+}
+
+/** True when `node` sits inside `root`'s composed subtree. `Node.contains()` alone never crosses
+ *  a shadow boundary, and the captured focus target here is typically one or two shadow roots
+ *  deep (list -> item -> composed `<lr-icon-button>` -> native `<button>`), so this climbs via
+ *  `ShadowRoot.host` whenever a plain `parentNode` walk runs out. */
+function composedContains(root: Element, node: Node): boolean {
+  let current: Node | null = node;
+  while (current) {
+    if (current instanceof Element && root.contains(current)) return true;
+    current = current instanceof ShadowRoot ? current.host : current.parentNode;
+  }
+  return false;
+}
 
 type ReorderReconciliation = {
   /** The moved item's stable identity -- reconciliation is keyed by `value`, never by element
@@ -325,7 +370,22 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     )
       return;
     this.pendingFocusTarget = null;
-    focusTarget.item.focusMoveButton(focusTarget.direction);
+    // Only steal focus back when doing so cannot override a deliberate consumer choice: either
+    // the captured pre-restore focus was already somewhere inside this list (the ordinary case --
+    // the move button just clicked/keyed, or any other row control), or there was nothing
+    // meaningful to preserve at all (null, the document body, or a node reconciliation has since
+    // disconnected). A captured focus that is a still-connected element OUTSIDE this list means
+    // the consumer moved focus there on purpose during the wait -- most likely a `controlled`
+    // host's own async `finalizePendingMove()`/reconciliation gap -- and must not be overridden.
+    const captured = focusTarget.preScheduleFocus;
+    const capturedIsElsewhere =
+      captured != null &&
+      captured !== this.ownerDocument.body &&
+      captured.isConnected &&
+      !composedContains(this, captured);
+    if (!capturedIsElsewhere) {
+      focusTarget.item.focusMoveButton(focusTarget.direction);
+    }
   }
 
   /** Physically moves `item` (already known to belong at `toIndex`) and hands off to
@@ -360,7 +420,11 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
         ? 'down'
         : 'up'
       : direction;
-    this.pendingFocusTarget = { item, direction: focusDirection };
+    this.pendingFocusTarget = {
+      item,
+      direction: focusDirection,
+      preScheduleFocus: deepActiveElement(this.ownerDocument),
+    };
     this.focusRestoreGeneration += 1;
     this.scheduleFocusRestore();
 
@@ -537,12 +601,12 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       if (!(target instanceof Element)) return false;
       // Anything the item RENDERED ITSELF is the row's own chrome, never consumer content:
       // consumer content arrives through a slot, so its root node is the document, never the
-      // item's shadow root. The predicate used to exempt only a native <button> in that root,
-      // which broke the moment the move controls became composed <lr-icon-button>s -- the native
-      // button's root became the icon button's shadow root, and the icon-button host itself
-      // matched the "custom element" arm below, so every Ctrl/Cmd+Arrow press from a move button
-      // was discarded as though it had come from a consumer's own control.
-      if (target.getRootNode() === item.shadowRoot) return false;
+      // item's shadow root (or a shadow root nested inside it). `isRowOwnChrome` climbs shadow
+      // boundaries via `.host` links to recognize a composed <lr-icon-button>'s own native
+      // <button> as the row's chrome too -- a single `getRootNode() === item.shadowRoot` check
+      // only recognizes the icon button's HOST element, one boundary short of the real focus
+      // target, and falls through to the "custom element"/`name === 'button'` arms below.
+      if (isRowOwnChrome(target, item)) return false;
       const name = target.localName;
       return (
         name === 'a' ||
