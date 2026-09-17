@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-17 after the 18.0.0 batch (lr-filter-bar chip filters, lr-map's interactive legend, lr-virtual-list's light-DOM row projection): 33,766,996 unpacked bytes. Most of the unpacked growth is not the three features themselves -- lr-map now reaches legendTypeShown/legendTypeHidden, so the slice generator moved both keys out of every locale's retrieval slice into its shared slice, and the shared slice ships in every component's declaration and runtime output across all twelve locales. Packed bytes stay inside the existing reviewed ceiling; only the unpacked ceiling moves, and the 140,000-byte drift headroom is unchanged. The approved exception still fails closed above this exact reviewed ceiling.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-17 ON the @aceshooting/lyra-ui@18.0.0 release commit: 8,315,035 packed bytes, 33,786,130 unpacked bytes, 3,549 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,21 +10,21 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 8279694,
+    "reviewedMeasurementBytes": 8315035,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928,
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
       "approvedOn": "2026-09-17",
-      "reason": "The 17.0.0 post-release batch adds a full Romanian (ro) translation catalog -- 13 new source slice files, shipped as 26 packed dist .js+.d.ts files -- plus a small amount of packed growth from lr-select's loading property, lr-combobox's sync property, and lr-streaming-text(-core)'s exportparts. A new locale is a required public artifact under this package's own locale-parity contract, not optional weight to trim. The tree was measured after this batch's own generated-artifact regeneration, and the existing 34,000-byte drift headroom remains unchanged.",
-      "approvedMaximumPackedBytes": 8313694
+      "reason": "Re-measured ON the 18.0.0 release commit, not before it. `changeset version` writes the release's own CHANGELOG section into packages/lyra-ui/CHANGELOG.md, which package.json#files ships, so any budget measured on the pre-bump tree under-counts by that whole section plus the new version string and release history embedded in package-metadata.ts. That is what took packed to 8,315,035 bytes against a ceiling of 8,313,694 re-baselined only hours earlier, and it is the same shape as the component-quality staleness one gate over. The 18.0.0 content itself is lr-filter-bar chip filters, lr-map's interactive legend and lr-virtual-list's light-DOM row projection, plus the shared-slice move that put legendTypeShown/legendTypeHidden into every locale's shared slice. Drift headroom is unchanged at 34,000 packed / 140,000 unpacked (0.41% each).",
+      "approvedMaximumPackedBytes": 8349035
     }
   },
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 33766996,
+    "reviewedMeasurementBytes": 33786130,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563,
     "reviewedOn": "2026-09-17"
@@ -38,8 +38,8 @@
     "entrypointHeadroom": 480
   },
   "maximum": {
-    "packedBytes": 8313694,
-    "unpackedBytes": 33906996,
+    "packedBytes": 8349035,
+    "unpackedBytes": 33926130,
     "fileCount": 3556
   }
 }
