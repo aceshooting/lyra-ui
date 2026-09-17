@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-17 after the 17.0.0 post-release batch (lr-select loading, lr-combobox sync, lr-streaming-text(-core) exportparts, lr-reorder-list/lr-thread-list/lr-table fixes, and a new Romanian locale): 8,279,694 packed bytes, 3,549 files, unpacked bytes still within the prior ceiling. The Romanian locale alone adds 13 source slice files, shipped as 26 packed dist .js+.d.ts files; the other changes add a small amount of packed bytes. The measurements keep the existing 34,000-byte packed drift headroom and seven files of scaffold headroom. The approved exception still fails closed above this exact reviewed ceiling.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-17 after the 18.0.0 batch (lr-filter-bar chip filters, lr-map's interactive legend, lr-virtual-list's light-DOM row projection): 33,766,996 unpacked bytes. Most of the unpacked growth is not the three features themselves -- lr-map now reaches legendTypeShown/legendTypeHidden, so the slice generator moved both keys out of every locale's retrieval slice into its shared slice, and the shared slice ships in every component's declaration and runtime output across all twelve locales. Packed bytes stay inside the existing reviewed ceiling; only the unpacked ceiling moves, and the 140,000-byte drift headroom is unchanged. The approved exception still fails closed above this exact reviewed ceiling.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -24,9 +24,10 @@
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 33538061,
+    "reviewedMeasurementBytes": 33766996,
     "headroomBytes": 140000,
-    "targetAt25PercentBytes": 28882563
+    "targetAt25PercentBytes": 28882563,
+    "reviewedOn": "2026-09-17"
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
@@ -38,7 +39,7 @@
   },
   "maximum": {
     "packedBytes": 8313694,
-    "unpackedBytes": 33678061,
+    "unpackedBytes": 33906996,
     "fileCount": 3556
   }
 }

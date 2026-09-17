@@ -24,7 +24,7 @@
     "dist/components/retrieval/index.js": 290986,
     "dist/components/utility/index.js": 119189,
     "dist/components/viewers/index.js": 230872,
-    "dist/components/viewers/pdf-viewer/pdf-viewer.js": 58689,
+    "dist/components/viewers/pdf-viewer/pdf-viewer.js": 59974,
     "dist/hydration.js": 5454,
     "dist/localization.js": 19341,
     "dist/lyra.js": 1143320,
@@ -59,6 +59,6 @@
   "dist/components/forms/select/select.js": 62.173828125,
   "dist/components/overlays/overlay/popover.js": 49.642578125,
   "dist/components/data/gauge/gauge.js": 24.5703125,
-  "dist/components/viewers/pdf-viewer/pdf-viewer.js": 58.4599609375,
+  "dist/components/viewers/pdf-viewer/pdf-viewer.js": 59.7392578125,
   "dist/components/data/flow-canvas/flow-canvas.js": 49.76171875
 }
