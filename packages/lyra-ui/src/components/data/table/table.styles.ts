@@ -444,14 +444,53 @@ export const styles = css`
   }
   /* editType: 'select' renders a native select for cell-editor; reset its own UA chrome (the
      browser's default arrow/inset) and recolor its options explicitly, since an option list
-     paints in a top-layer the shadow root's own color/background do not reach on every engine. */
+     paints in a top-layer the shadow root's own color/background do not reach on every engine.
+     The appearance reset removes the native disclosure arrow with no replacement, leaving the
+     editor looking like a plain text field -- padding-inline-end reserves room for the themed one
+     painted just below, on the enclosing cell, so the selected label never runs under it. */
   select[part='cell-editor'] {
     appearance: none;
+    padding-inline-end: calc(var(--lr-space-s) + var(--lr-size-0-75rem));
     cursor: pointer;
   }
   select[part='cell-editor'] option {
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
+  }
+  /* Painted on the cell, not the select: a <select> is a replaced form control, so it renders
+     neither ::before/::after, nor could a mask apply directly to it without clipping its own
+     text instead of merely decorating a corner of it. This reuses the mask + 'background:
+     currentColor' technique already shipped (and forced-colors-verified) for the map
+     attribution-toggle glyph in map.styles.ts, painting the same chevron shape lr-select draws
+     as a literal SVG child of its own [part='expand-icon'] (internal/icons.ts's chevronIcon()) --
+     rotated 90deg to point down exactly like that component's [part="expand-icon"] svg rule,
+     since a bare select cannot host that child directly. :has() scopes the rule to exactly the
+     cell currently rendering a select editor, so a resting cell or a text/number editor is
+     untouched. inset-inline-end is a real logical property (unlike background-position, which
+     this file's own row-expand-icon/sticky-cell rules mirror by hand under :host(:dir(rtl))), so
+     the glyph tracks the inline-end edge under RTL with no extra rule. */
+  [part='cell']:has(> select[part='cell-editor']) {
+    position: relative;
+  }
+  [part='cell']:has(> select[part='cell-editor'])::after {
+    content: '';
+    position: absolute;
+    inset-inline-end: var(--lr-space-s);
+    inset-block-start: 50%;
+    inline-size: var(--lr-size-0-75rem);
+    block-size: var(--lr-size-0-75rem);
+    color: var(--lr-color-text-quiet);
+    background: currentColor;
+    mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpolyline points="9 6 15 12 9 18"%3E%3C/polyline%3E%3C/svg%3E')
+      center / contain no-repeat;
+    transform: translateY(-50%) rotate(90deg);
+    pointer-events: none;
+  }
+  @media (forced-colors: active) {
+    [part='cell']:has(> select[part='cell-editor'])::after {
+      forced-color-adjust: none;
+      color: ButtonText;
+    }
   }
   [part='cell'][data-align='end'] {
     text-align: end;

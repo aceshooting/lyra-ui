@@ -6844,6 +6844,132 @@ describe("editType: 'select'", () => {
     expect(el.shadowRoot!.querySelectorAll('select[part="cell-editor"]').length).to.equal(1);
     await expect(el).to.be.accessible();
   });
+
+  // fr_47sJd_g3WK_fHgOUWyChXg: `appearance: none` on the select cell-editor removed the native
+  // disclosure arrow with no replacement, so an open select editor looked like a plain text
+  // field. A bare <select> is a replaced form control -- it renders neither ::before/::after, nor
+  // could a `mask` apply directly to it without clipping its own text -- so the glyph is painted
+  // on the enclosing [part='cell'] instead, scoped with :has() to exactly the cell currently
+  // rendering a select editor. Same mask + `background: currentColor` technique already shipped
+  // (and forced-colors-verified) for the map attribution-toggle glyph in map.styles.ts.
+  const withScoreColumn = (): TableColumn<Row>[] => [
+    selectEditableColumns[0]!,
+    {
+      key: 'score',
+      label: 'Score',
+      editTrigger: 'double-click',
+      editType: 'number',
+      editValue: (r) => r.score,
+      cell: (r) => r.score,
+    },
+  ];
+
+  it('paints a themed disclosure chevron only on the cell hosting an open select editor', async () => {
+    const el = await selectTable(withScoreColumn());
+    const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"] [part="cell"]')];
+    const nameCell = cells[0]!;
+    const scoreCell = cells[1]!;
+
+    expect(getComputedStyle(nameCell, '::after').maskImage, 'a resting cell paints no chevron').to.equal('none');
+
+    nameCell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const glyph = getComputedStyle(nameCell, '::after');
+    expect(glyph.maskImage, 'the open select editor cell paints a masked chevron').to.not.equal('none');
+    expect(parseFloat(glyph.width), 'the chevron has a real rendered size').to.be.greaterThan(0);
+    expect(glyph.backgroundColor, 'the glyph fill tracks its own token-driven color via currentColor').to.equal(
+      glyph.color
+    );
+
+    // Opening the number editor closes the select editor (one open editor at a time) and must
+    // never paint the same glyph on a plain numeric field.
+    scoreCell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(getComputedStyle(nameCell, '::after').maskImage, 'the now-resting name cell paints no chevron').to.equal(
+      'none'
+    );
+    expect(getComputedStyle(scoreCell, '::after').maskImage, 'a number editor cell paints no chevron').to.equal(
+      'none'
+    );
+  });
+
+  it('reserves inline-end padding on the select editor for the chevron without widening a text/number editor', async () => {
+    const el = await selectTable(withScoreColumn());
+    const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"] [part="cell"]')];
+
+    cells[0]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const select = cells[0]!.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
+    const selectPadding = parseFloat(getComputedStyle(select).paddingInlineEnd);
+
+    cells[1]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const numberInput = cells[1]!.querySelector('input[part="cell-editor"]') as HTMLInputElement;
+    const numberPadding = parseFloat(getComputedStyle(numberInput).paddingInlineEnd);
+
+    expect(
+      selectPadding,
+      'the select reserves more inline-end space than a plain text/number editor, so its own value never runs under the glyph'
+    ).to.be.greaterThan(numberPadding);
+  });
+
+  it('mirrors the chevron under dir="rtl" through a real logical inset, not a physical value', async () => {
+    const ltr = await selectTable();
+    const ltrCell = ltr.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    ltrCell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await ltr.updateComplete;
+    const ltrGlyph = getComputedStyle(ltrCell, '::after');
+
+    const rtlEl = (await fixture(html`<lr-table dir="rtl" aria-label="People"></lr-table>`)) as LyraTable<Row>;
+    rtlEl.columns = selectEditableColumns;
+    rtlEl.rows = rows;
+    rtlEl.rowKey = (r) => r.id;
+    await rtlEl.updateComplete;
+    const rtlCell = rtlEl.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    rtlCell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await rtlEl.updateComplete;
+    const rtlGlyph = getComputedStyle(rtlCell, '::after');
+
+    // The authored offset is a logical property, so its own resolved value never changes with
+    // direction...
+    expect(rtlGlyph.insetInlineEnd).to.equal(ltrGlyph.insetInlineEnd);
+    // ...while the physical side it resolves to underneath flips, proving the glyph actually moved
+    // rather than merely reporting an unused logical alias. Chromium resolves BOTH physical inset
+    // longhands to used-value pixel offsets on a positioned box (never 'auto'), so the mirror is
+    // read from which side carries the small (near-edge) offset instead.
+    expect(
+      parseFloat(ltrGlyph.right),
+      'ltr sits close to the right edge'
+    ).to.be.lessThan(parseFloat(ltrGlyph.left));
+    expect(
+      parseFloat(rtlGlyph.left),
+      'rtl sits close to the left edge instead'
+    ).to.be.lessThan(parseFloat(rtlGlyph.right));
+  });
+
+  it('keeps the select editor chevron visible and self-consistent under forced-colors', async () => {
+    if (!CSS.supports('forced-color-adjust', 'none')) return;
+    await setForcedColors('active');
+    try {
+      if (matchMedia('(forced-colors: active)').matches) {
+        const el = await selectTable();
+        const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+        cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+        await el.updateComplete;
+        const glyph = getComputedStyle(cell, '::after');
+        expect(glyph.maskImage, 'forced-colors must not strip the mask entirely').to.not.equal('none');
+        expect(
+          glyph.forcedColorAdjust,
+          'forced-color-adjust: none is required to keep the custom mask/currentColor pairing alive'
+        ).to.equal('none');
+        expect(glyph.backgroundColor, 'the glyph fill still tracks its own forced system color').to.equal(
+          glyph.color
+        );
+      }
+    } finally {
+      await setForcedColors('none');
+    }
+  });
 });
 
 describe('lifecycle super calls', () => {
