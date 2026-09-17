@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 2 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -59,8 +59,12 @@ share one implementation.
 
 **Slots:** none — content renders from `content`, not a slot.
 
-**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`) — identical to
-`<lr-streaming-text>`'s own.
+**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
+`<lr-markdown-core>` documents forwarded verbatim from the composed `<lr-markdown-core>` in
+Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `code-block`,
+`inline-code`, `link`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
+`<lr-streaming-text>` documents, since `<lr-markdown>` and `<lr-markdown-core>` share the same
+documented part vocabulary.
 
 **Themeable custom properties:** `--lr-inline-cursor-width` (default `var(--lr-size-0-125rem)`) and
 `--lr-inline-cursor-height` (default `var(--lr-size-1em)`) — the same shared inline-cursor tokens

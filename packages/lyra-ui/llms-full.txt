@@ -1821,8 +1821,8 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
 
-Eleven full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`,
-`pt-BR`, `ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
+Twelve full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`,
+`pt-BR`, `ro`, `ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
 **side-effect-only modules**: import one bare, read nothing from it, and it calls
 `registerLyraLocale()` for you.
 
@@ -1833,11 +1833,14 @@ import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this ba
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/it.js"; // Italian
 import "@aceshooting/lyra-ui/translations/pt-BR.js"; // also serves pt and pt-PT
+import "@aceshooting/lyra-ui/translations/ro.js"; // Romanian
 import "@aceshooting/lyra-ui/translations/zh-CN.js"; // also serves zh, zh-Hans and zh-Hans-CN
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
-`one`/`two`/`other`); Italian uses a non-default set too (`it`: `one`/`many`/`other`). `ar`, `fa`
+`one`/`two`/`other`); Italian uses a non-default set too (`it`: `one`/`many`/`other`), and so does
+Romanian (`ro`: `one`/`few`/`other`, where `few` covers `0` and `2`-`19` and `other` is the
+`de`-requiring form from `20` upward). `ar`, `fa`
 and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
@@ -5557,7 +5560,17 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option, everywhere it appears (trigger, `multiple` tag, synthetic
   row). `getTag` cannot serve this case: it is handed a matched option and there is none. A blank
-  return falls back to the raw value
+  return falls back to the raw value. Not consulted while `loading` suppresses that same value —
+  see below
+- `loading: boolean = false` (reflected) — whether a committed value's real label may still be
+  pending because its `<lr-option>` catalog hasn't arrived yet (e.g. an async fetch still in
+  flight). While `true`, a committed value that currently matches no option renders the localized
+  `loading` placeholder in the trigger label or the relevant `multiple` tag instead of the raw
+  value, with no `notInCatalog`/`[part='unknown-value']` badge and no synthetic
+  `showUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
+  missing". A value already matching a live option is unaffected. Never mutates
+  `value`/`selectedOptions` itself, and does not itself disable the trigger — pair it with
+  `disabled` when the control should also be non-interactive while pending
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -5609,7 +5622,14 @@ from a removed option, or a programmatic assignment with a typo) still commits �
 stays fully reachable through `value`/`selectedOptions` — but renders a dashed/italic
 `[part='unknown-value']` badge next to the trigger label, or on the relevant `multiple`-mode tag,
 instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic "not in catalog"
-stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below.
+stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below. Set `loading` while
+that same value's own `<lr-option>` catalog simply hasn't arrived yet (unlike `<lr-combobox>`,
+`<lr-select>` has no async `source` of its own, so this is consumer-driven rather than automatic):
+a still-unmatched value then renders the localized `loading` placeholder instead of the raw value,
+with no `unknown-value` badge and no synthetic `showUnknownOption` row, since it is not yet known
+to be missing. Once the matching option mounts, the real label renders on the next render with no
+`value`/`selectedOptions` re-assignment needed, whether or not `loading` is also flipped back to
+`false`.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
@@ -36100,7 +36120,12 @@ never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms
 
 **Slots:** none — content renders from `content`, not a slot.
 
-**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`)
+**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
+`<lr-markdown>` documents forwarded verbatim (no aliasing — none collides with `base`/`cursor`)
+from the composed `<lr-markdown>` in Markdown mode via `exportparts`: `content`, `heading`,
+`paragraph`, `list`, `code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math`. A
+host-level `lr-streaming-text::part(link)`/`::part(img)` rule reaches the rendered `<a>`/`<img>`
+exactly as the same rule does applied directly to `<lr-markdown>`.
 
 **Themeable custom properties:** `--lr-inline-cursor-width` (default
 `var(--lr-size-0-125rem)`, the shared inline cursor width), `--lr-inline-cursor-height` (default
@@ -36214,8 +36239,12 @@ share one implementation.
 
 **Slots:** none — content renders from `content`, not a slot.
 
-**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`) — identical to
-`<lr-streaming-text>`'s own.
+**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
+`<lr-markdown-core>` documents forwarded verbatim from the composed `<lr-markdown-core>` in
+Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `code-block`,
+`inline-code`, `link`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
+`<lr-streaming-text>` documents, since `<lr-markdown>` and `<lr-markdown-core>` share the same
+documented part vocabulary.
 
 **Themeable custom properties:** `--lr-inline-cursor-width` (default `var(--lr-size-0-125rem)`) and
 `--lr-inline-cursor-height` (default `var(--lr-size-1em)`) — the same shared inline-cursor tokens

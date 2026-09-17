@@ -130,7 +130,17 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option, everywhere it appears (trigger, `multiple` tag, synthetic
   row). `getTag` cannot serve this case: it is handed a matched option and there is none. A blank
-  return falls back to the raw value
+  return falls back to the raw value. Not consulted while `loading` suppresses that same value —
+  see below
+- `loading: boolean = false` (reflected) — whether a committed value's real label may still be
+  pending because its `<lr-option>` catalog hasn't arrived yet (e.g. an async fetch still in
+  flight). While `true`, a committed value that currently matches no option renders the localized
+  `loading` placeholder in the trigger label or the relevant `multiple` tag instead of the raw
+  value, with no `notInCatalog`/`[part='unknown-value']` badge and no synthetic
+  `showUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
+  missing". A value already matching a live option is unaffected. Never mutates
+  `value`/`selectedOptions` itself, and does not itself disable the trigger — pair it with
+  `disabled` when the control should also be non-interactive while pending
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -182,7 +192,14 @@ from a removed option, or a programmatic assignment with a typo) still commits �
 stays fully reachable through `value`/`selectedOptions` — but renders a dashed/italic
 `[part='unknown-value']` badge next to the trigger label, or on the relevant `multiple`-mode tag,
 instead of an unexplained bare label, mirroring `<lr-model-select>`'s synthetic "not in catalog"
-stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below.
+stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below. Set `loading` while
+that same value's own `<lr-option>` catalog simply hasn't arrived yet (unlike `<lr-combobox>`,
+`<lr-select>` has no async `source` of its own, so this is consumer-driven rather than automatic):
+a still-unmatched value then renders the localized `loading` placeholder instead of the raw value,
+with no `unknown-value` badge and no synthetic `showUnknownOption` row, since it is not yet known
+to be missing. Once the matching option mounts, the real label renders on the next render with no
+`value`/`selectedOptions` re-assignment needed, whether or not `loading` is also flipped back to
+`false`.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once

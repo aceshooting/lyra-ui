@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 2 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -83,7 +83,12 @@ never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms
 
 **Slots:** none — content renders from `content`, not a slot.
 
-**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`)
+**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
+`<lr-markdown>` documents forwarded verbatim (no aliasing — none collides with `base`/`cursor`)
+from the composed `<lr-markdown>` in Markdown mode via `exportparts`: `content`, `heading`,
+`paragraph`, `list`, `code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math`. A
+host-level `lr-streaming-text::part(link)`/`::part(img)` rule reaches the rendered `<a>`/`<img>`
+exactly as the same rule does applied directly to `<lr-markdown>`.
 
 **Themeable custom properties:** `--lr-inline-cursor-width` (default
 `var(--lr-size-0-125rem)`, the shared inline cursor width), `--lr-inline-cursor-height` (default
