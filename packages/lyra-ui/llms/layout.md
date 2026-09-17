@@ -1956,6 +1956,17 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   number `56` and fixes every row to that many pixels. Property callers assign a number, not a
   numeric string. Anything else (non-numeric, zero, negative, non-finite) safely canonicalizes to
   `'auto'` rather than throwing.
+- `rowProjection: 'shadow' | 'light' = 'shadow'` (attribute `row-projection`) — where
+  `renderItem`'s output is instantiated. `'shadow'` (default) stamps it inside this component's own
+  shadow root, so only inherited custom properties and the public row parts reach it. `'light'`
+  renders the windowed rows into the host's own light DOM instead, assigned into the shadow viewport
+  through internal named slots, so ordinary document CSS styles a virtualized row exactly as it
+  styles the same row unvirtualized. The component keeps owning windowing, measurement, spacer
+  sizing, `scrollToIndex()`, the external-scroller mode and the ARIA contract either way, and
+  positioning stays on the shadow-side `[part="row"]` wrapper that document CSS cannot select — so
+  consumer styles can never break windowing. Any other value canonicalizes to `'shadow'`. Left
+  unset, the rendered output is byte-identical to before and the host's light DOM stays empty.
+  See **Light-DOM row projection** below for the trade-offs it carries.
 - `itemRole: 'listitem' | 'row' = 'listitem'` (attribute `item-role`) — `'listitem'` (default)
   preserves the plain `role="list"`/`role="listitem"` mapping with `aria-setsize`/`aria-posinset`.
   `'row'` additionally maps `[part="base"]` to `role="rowgroup"`, `[part="spacer"]` to
@@ -2209,6 +2220,48 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
   decides: groups render before the rows, so an active row wins while (and only while) it needs to,
   which is right — a group header is a non-interactive `pointer-events: none` label.
+
+### Light-DOM row projection
+
+`rowProjection="light"` exists for one shape: an application whose list rows are already styled by
+its own global stylesheet, and which therefore could not adopt virtualization without rehoming a
+dozen descendant rules per row into a new custom element or a growing set of custom properties. In
+projection mode the windowed rows render into the host's own light DOM, so ordinary document CSS
+reaches row content directly.
+
+Positioning, measurement and semantics stay where they were. The `[part="row"]` wrapper remains in
+the shadow root and keeps `position: absolute`, the per-frame `transform`, `role`, `aria-setsize`/
+`aria-posinset` (or `aria-rowindex`) and the `ResizeObserver` box — document CSS cannot select it,
+so consumer styles can never break windowing. The whole part vocabulary (`base`, `spacer`, `row`,
+`group`, `sticky-group`) keeps matching in both modes, and `row-height="auto"` still measures
+projected content because the light row is an ordinary in-flow child of that wrapper.
+
+`projectedRows: HTMLElement[]` returns the projected light-DOM row wrappers in item order, and is
+empty outside projection mode. The exported type is `LyraVirtualListRowProjection`; the reserved
+attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_ROW_ATTRIBUTE`
+(`data-lr-virtual-list-row`) and `VIRTUAL_LIST_STICKY_ATTRIBUTE` (`data-lr-virtual-list-sticky`).
+
+**Known gotchas, all inherent to handing the cascade back to the consumer:**
+
+- **One component-owned wrapper sits between the host and your markup.** A slot cannot assign a text
+  node or a multi-root fragment by attribute, so each row's content lives inside a wrapper carrying
+  `data-lr-virtual-list-row`. Descendant selectors (`lr-virtual-list .row-title`) port unchanged;
+  child combinators (`lr-virtual-list > .row`), `:nth-child`, `:first-child` and sibling combinators
+  written against the unvirtualized markup do not. `:nth-child` on the wrappers reflects the current
+  *window*, not the item index.
+- **`closest('[part="row"]')` stops resolving.** A delegated listener on the host now sees an
+  un-retargeted `event.target` inside the light DOM. Use `closest('[data-lr-virtual-list-row]')`.
+- **The document cascade now reaches row content**, including resets and element-level rules that
+  previously could not, so a projected row can look different from the same row in shadow mode.
+- **Per-row light-DOM state does not survive a disconnect/reconnect.** Disconnect removes the
+  projected rows completely (no rows, no markers, no anchor left behind), so a reparenting move
+  rebuilds them. Scroll position, measurements and the window are unaffected — they live in
+  component state, not in the rows.
+- **Projection activates one task after hydration.** A server render has no DOM to project into, so
+  the first window is shadow-rendered, hydration matches the server markup, and the rows then swap
+  into the light DOM on the next task.
+- **A row taken out of flow collapses its wrapper.** `position: fixed`/`absolute` or
+  `display: none` on your own row leaves nothing for the wrapper to measure.
 
 ---
 
@@ -3447,7 +3500,8 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
 - `aria-pressed` and `aria-current` (attributes only) — forwarded reactively onto the native
   control the card actually renders, the same mechanism `<lr-button>` and `<lr-icon-button>` use.
   `aria-pressed` accepts `'true' | 'false' | 'mixed'` and reaches the `activation-button` only —
-  `link` has no pressed state, so a linked card never receives it. The global `aria-current`
+  `link` has no pressed state, so a linked card never receives it — the same **16.0.0** carve-out
+  `<lr-button>` and `<lr-icon-button>` took. The global `aria-current`
   accepts `'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'` and reaches both the
   activation button and the stretched link. Anything outside those sets is dropped rather than
   passed through, so a typo never reaches the accessibility tree. This is what lets a single-select
@@ -4221,7 +4275,10 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 Choice option entries must expose string `value` and `label` data fields; malformed entries are
 omitted independently, while supplied empty strings remain valid. A custom definition requires its
 adapter and a callable `render`; a rejected definition does not reserve its filter ID. Valid
-siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate.
+siblings remain available. Exceptions thrown by an admitted trusted renderer still propagate. A
+chip-only definition requires neither options nor an adapter — a stable filter ID and a label are
+the whole schema, since a malformed `formatValue`/`isEmpty` still has a correct fallback and so is
+guarded where it is used rather than rejected outright.
 
 **Lean registration entry.** `components/layout/filter-bar/filter-bar.js` (the default entry)
 eagerly imports every composed control this bar could possibly render — `<lr-select>`,
@@ -4242,6 +4299,7 @@ the filter `type`s actually declared:
 | `'checkbox-menu'` | `components/overlays/overlay/dropdown.js` **and** `components/layout/menu/dropdown-item.js` |
 | `'date'` / `'date-range'` | `components/forms/date-picker/date-input.js` |
 | `'text'` | `components/forms/input/input.js` |
+| `'chip'` | none — renders no control |
 
 Two more are unconditional regardless of which filter `type`s are declared: `<lr-button>` renders
 the reset action on every bar, and `<lr-chip>`/`<lr-chip-group>` render the active-filter row
@@ -4422,7 +4480,9 @@ same-named counterparts (with `combobox`'s `multiple` opting into a multi-value 
 `'date'`/`'date-range'` both map to `<lr-date-input>` (single vs. `mode="range"`), and `'text'` maps
 to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
-text the user typed, not a truncated or normalized form.
+text the user typed, not a truncated or normalized form. `'chip'` is the one type that renders no
+control at all (see **Chip-only filters** below): its value belongs to a widget elsewhere on the
+page, so the bar renders only its active-filter chip and gives it no toolbar cell.
 
 Every built-in (non-`'custom'`) filter definition additionally accepts optional `size: LyraSize`,
 `icon: unknown` and `labelVisibility: 'visible' | 'hidden'` fields, and every one whose composed
@@ -4638,12 +4698,89 @@ const filters: LyraFilterBarFilterDefinition[] = [
 The custom renderer returns a Lit `TemplateResult`; the filter bar places it in its
 `filter-control` part and re-renders it whenever the controlled value or validation state changes.
 
+### Chip-only filters
+
+Use `type: 'chip'` when the value is already owned by a widget elsewhere on the page — a calendar
+heatmap cell, a map selection, a chart brush — and the bar's job is only to *show* that the filter
+is applied and to let the user take it off. Unlike `type: 'custom'`, which still renders a control
+inside the toolbar, a chip-only filter renders **no control and no toolbar cell at all**: no `field`
+wrapper is emitted for it, so `lr-filter-bar::part(field)` and `::part(field-<filterId>)` never
+match one and a bar whose filters are *all* chip-only shows no empty column — its `controls` row
+still holds the reset button (the "clear all" action such a bar needs), the `end` slot, and the
+loading spinner, exactly like a bar with no filters at all.
+
+Everything else is unchanged from any other filter type. The value lives in `value` under its own
+filter ID, rides every `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` (so it enables
+the reset button) and toward `invalidFilterIds` when the definition is `required`, renders a
+removable active-filter chip subject to `activeFiltersDisplay`, and is cleared both by removing that
+chip and by `reset()`. A `required` chip-only filter is honoured in **bookkeeping only**: it joins
+`invalidFilterIds`, fails `checkValidity()` and moves `lr-validity-change`, but renders no inline
+error, because the bar renders no element of its own for it — the owning widget is responsible for
+its own error affordance. The inherited `placeholder` is inert here for the same reason it is for
+`type: 'custom'`: there is no field to place it in.
+
+A chip-only definition adds three optional fields of its own:
+
+```ts
+type: 'chip';
+formatValue?: (value: LyraFilterBarFieldValue, locale: string) => string;
+clearValue?: LyraFilterBarFieldValue;
+isEmpty?: (value: LyraFilterBarFieldValue) => boolean;
+```
+
+`formatValue` produces the chip's text, and its `locale` argument is the bar's `effectiveLocale` —
+the same locale every built-in type's own chip formatting and a custom adapter's `formatValue`
+already receive, and the reason a chip-only value (normally an already-formatted string such as a
+localized date) can be localized by the caller. That output is caller data, so — like a filter's
+own label — the bar never routes it through its own localization. Omitted, the fallback ladder is
+the one a custom adapter's omitted `formatValue` uses: a string array renders as a localized
+conjunction list, anything else renders verbatim through `String(value)`, and an unset value renders
+as the empty string. Verbatim is exact: a chip-only value is never run through the date branch that
+localizes a `'date'`/`'date-range'` chip, so an ISO day is not silently reformatted and a value
+containing a slash is not mangled.
+
+`clearValue` is what a chip removal (and `clearFilter()`) writes, defaulting to the empty string —
+what every non-multi built-in type writes. Declare an empty array for an array-valued chip-only
+filter. `isEmpty` overrides the built-in emptiness rule (absent, `false`, the empty string and the
+empty array are empty; everything else is set). **A domain sentinel must pair the two**: declaring
+a sentinel clear value without a matching `isEmpty` leaves the bar reading the "cleared" value as
+still set, so it keeps rendering a chip for it — the identical pairing a custom adapter's own
+`clearValue`/`isEmpty` documents. With the pair declared, the sentinel is never stored in `value`
+(cleared keys are omitted) and an absent key reads back as the sentinel for the owning widget.
+
+```ts
+const filters: LyraFilterBarFilterDefinition[] = [
+  { filterId: "query", label: "Query", type: "text" },
+  {
+    filterId: "day",
+    label: "Day",
+    type: "chip",
+    formatValue: (value, locale) =>
+      new Intl.DateTimeFormat(locale, {
+        dateStyle: "medium",
+        timeZone: "UTC",
+      }).format(new Date(`${String(value)}T00:00:00Z`)),
+  },
+];
+
+// The calendar heatmap beside the bar owns the value; the bar only shows and removes it.
+heatmap.addEventListener("app-select-day", (event) => {
+  const { isoDate } = (event as CustomEvent<{ isoDate: string }>).detail;
+  bar.value = { ...bar.value, day: isoDate };
+});
+bar.addEventListener("lr-input", (event) => {
+  const { value } = (event as LyraFilterBarInputEvent).detail;
+  heatmap.selectedDay = (value["day"] as string | undefined) ?? "";
+});
+```
+
 **TypeScript:** `LyraFilterBar<Defs extends readonly LyraFilterBarFilterDefinition[] =
 readonly LyraFilterBarFilterDefinition[]>` — `value` and the `lr-input`/`lr-reset` detail `value`
 narrow to a record keyed per `filterId`, whose value type follows that filter's own definition (a
 `'select'`, a non-`multiple` `'combobox'`, `'text'`, `'date'`, and `'date-range'` narrow to
 `string`; a `'checkbox-menu'` and a `multiple: true` `'combobox'` narrow to `readonly string[]`; a
-`'custom'` filter keeps the full unconstrained field value). Declare the schema with `as const
+`'custom'` filter keeps the full unconstrained field value, and so does a `'chip'` filter, whose
+value is owned by a widget this component never renders). Declare the schema with `as const
 satisfies readonly LyraFilterBarFilterDefinition[]` and type the element as
 `LyraFilterBar<typeof FILTERS>` to pick it up. Types only; the runtime is unchanged, and an untyped
 `<lr-filter-bar>` keeps today's `LyraFilterBarValue` (`Readonly<Record<string, string | readonly
@@ -5057,6 +5194,19 @@ These named interfaces and helper signatures are available to typed integrations
     readonly size?: LyraSize;
     readonly icon?: unknown;
     readonly labelVisibility?: LyraFilterBarLabelVisibility;
+    // Inherited from LyraFilterBarDefinitionBase.
+    readonly filterId: string;
+    readonly label: string;
+    readonly placeholder?: string;
+    readonly required?: boolean;
+    readonly defaultValue?: string | readonly string[] | boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`.
+  `LyraFilterBarChipDefinition extends LyraFilterBarDefinitionBase {
+    readonly type: 'chip';
+    readonly formatValue?: (value: LyraFilterBarFieldValue, locale: string) => string;
+    readonly clearValue?: LyraFilterBarFieldValue;
+    readonly isEmpty?: (value: LyraFilterBarFieldValue) => boolean;
     // Inherited from LyraFilterBarDefinitionBase.
     readonly filterId: string;
     readonly label: string;

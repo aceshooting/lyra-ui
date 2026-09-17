@@ -640,6 +640,7 @@ export type {
   LyraMapPointIconMode,
   LyraMapPointIconLineCap,
   LyraMapPointIconLineJoin,
+  LyraMapLegendToggleDetail,
   LyraMapMarkerActivationDetail,
   LyraMapMarkerActivationSource,
   LyraMapStyleSpecification,
@@ -822,13 +823,18 @@ export type {
 export { LyraStreamStatus } from './components/conversation/stream-status/stream-status.class.js';
 export type { StreamConnectionState } from './components/conversation/stream-status/stream-status.class.js';
 export type { LyraStreamPhase } from './internal/stream-phase.js';
-export { LyraVirtualList } from './components/layout/virtual-list/virtual-list.class.js';
+export {
+  LyraVirtualList,
+  VIRTUAL_LIST_ROW_ATTRIBUTE,
+  VIRTUAL_LIST_STICKY_ATTRIBUTE,
+} from './components/layout/virtual-list/virtual-list.class.js';
 export type {
   LyraVirtualListIndexedSource,
   LyraVirtualListGroup,
   LyraVirtualListItemRole,
   LyraVirtualListRange,
   LyraVirtualListRowHeight,
+  LyraVirtualListRowProjection,
   LyraVirtualListScroll,
   LyraVirtualListSource,
 } from './components/layout/virtual-list/virtual-list.class.js';

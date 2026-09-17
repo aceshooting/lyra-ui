@@ -2276,10 +2276,11 @@ box no matter what tier or override is in play.
   For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
   BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support
   `aria-pressed`; remove `href` and the same host attribute starts reaching the `<button>` that
-  replaces the anchor. Navigation can use the global
-  `aria-current="page|step|location|date|time|true|false"`, which does reach the anchor. Both states
-  update reactively, including native `ariaPressed`/`ariaCurrent` property assignments, attribute
-  removal and `href` changes. Empty or unsupported tokens are omitted. The native button/link role
+  replaces the anchor. That link carve-out arrived in **16.0.0** — before it, `aria-pressed` was
+  forwarded onto the anchor as well, asserting a state `role="link"` does not have. Navigation can
+  use the global `aria-current="page|step|location|date|time|true|false"`, which does reach the
+  anchor. Both states update reactively, including native `ariaPressed`/`ariaCurrent` property
+  assignments, attribute removal and `href` changes. Empty or unsupported tokens are omitted. The native button/link role
   remains unchanged for an enabled control: use pressed state for button toggles and current state
   for navigation links. A DISABLED link button drops `href` (so it genuinely cannot navigate) and
   therefore also drops the anchor's implicit role, so it renders an explicit `role="link"` — without
@@ -2359,7 +2360,8 @@ button whose purpose isn't generic.
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
 mute, favorite, or pin, and reaches the `<button>` rendering only — a link icon-button (`href` set)
-never receives it, since `role="link"` has no pressed state; `aria-current` (`page`, `step`,
+never receives it, since `role="link"` has no pressed state (that carve-out arrived in **16.0.0**;
+earlier versions forwarded it onto the anchor too); `aria-current` (`page`, `step`,
 `location`, `date`, `time`, `true`, `false`) is global and supports current-item icon buttons such
 as an active nav/pagination target in both renderings. Both follow attribute
 changes, removal, and button/link replacement without changing the native role of an enabled
