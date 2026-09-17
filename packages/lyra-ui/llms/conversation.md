@@ -1528,7 +1528,12 @@ never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms
 
 **Slots:** none — content renders from `content`, not a slot.
 
-**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`)
+**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
+`<lr-markdown>` documents forwarded verbatim (no aliasing — none collides with `base`/`cursor`)
+from the composed `<lr-markdown>` in Markdown mode via `exportparts`: `content`, `heading`,
+`paragraph`, `list`, `code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math`. A
+host-level `lr-streaming-text::part(link)`/`::part(img)` rule reaches the rendered `<a>`/`<img>`
+exactly as the same rule does applied directly to `<lr-markdown>`.
 
 **Themeable custom properties:** `--lr-inline-cursor-width` (default
 `var(--lr-size-0-125rem)`, the shared inline cursor width), `--lr-inline-cursor-height` (default
@@ -1642,8 +1647,12 @@ share one implementation.
 
 **Slots:** none — content renders from `content`, not a slot.
 
-**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`) — identical to
-`<lr-streaming-text>`'s own.
+**CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
+`<lr-markdown-core>` documents forwarded verbatim from the composed `<lr-markdown-core>` in
+Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `code-block`,
+`inline-code`, `link`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
+`<lr-streaming-text>` documents, since `<lr-markdown>` and `<lr-markdown-core>` share the same
+documented part vocabulary.
 
 **Themeable custom properties:** `--lr-inline-cursor-width` (default `var(--lr-size-0-125rem)`) and
 `--lr-inline-cursor-height` (default `var(--lr-size-1em)`) — the same shared inline-cursor tokens

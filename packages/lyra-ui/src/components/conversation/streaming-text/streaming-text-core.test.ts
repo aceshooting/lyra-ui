@@ -207,6 +207,86 @@ describe('lr-streaming-text-core rendering', () => {
   });
 });
 
+describe('composed lr-markdown-core CSS parts forwarding', () => {
+  const LINK_AND_IMAGE_CONTENT =
+    '[docs](https://example.com/docs)\n\n![alt text](https://example.com/pic.png)';
+
+  it("forwards the composed lr-markdown-core's documented parts so a host-level ::part(link)/::part(img) rule reaches the rendered <a>/<img>, matching the same rule applied directly to lr-markdown-core", async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-streaming-text-core.parts-probe::part(link) {
+            color: rgb(1, 2, 3);
+          }
+          lr-streaming-text-core.parts-probe::part(img) {
+            border: 4px solid rgb(9, 8, 7);
+          }
+          lr-markdown-core.parts-probe::part(link) {
+            color: rgb(1, 2, 3);
+          }
+          lr-markdown-core.parts-probe::part(img) {
+            border: 4px solid rgb(9, 8, 7);
+          }
+        </style>
+        <lr-streaming-text-core
+          class="parts-probe"
+          content-mode="markdown"
+          .content=${LINK_AND_IMAGE_CONTENT}
+        ></lr-streaming-text-core>
+        <lr-markdown-core class="parts-probe" .content=${LINK_AND_IMAGE_CONTENT}></lr-markdown-core>
+      </div>
+    `);
+    const streaming = wrapper.querySelector('lr-streaming-text-core') as LyraStreamingTextCore;
+    const direct = wrapper.querySelector('lr-markdown-core')!;
+    const nested = streaming.shadowRoot!.querySelector('lr-markdown-core')!;
+    await waitUntil(() => nested.shadowRoot!.querySelector('img') !== null);
+    await waitUntil(() => direct.shadowRoot!.querySelector('img') !== null);
+
+    const nestedLink = nested.shadowRoot!.querySelector('a')!;
+    const nestedImg = nested.shadowRoot!.querySelector('img')!;
+    const directLink = direct.shadowRoot!.querySelector('a')!;
+    const directImg = direct.shadowRoot!.querySelector('img')!;
+
+    expect(
+      getComputedStyle(nestedLink).color,
+      'the forwarded link part must actually receive the outer host-level rule',
+    ).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(nestedLink).color).to.equal(getComputedStyle(directLink).color);
+    expect(getComputedStyle(nestedImg).borderTopWidth).to.equal('4px');
+    expect(getComputedStyle(nestedImg).borderTopWidth).to.equal(
+      getComputedStyle(directImg).borderTopWidth,
+    );
+    expect(getComputedStyle(nestedImg).borderTopColor).to.equal(
+      getComputedStyle(directImg).borderTopColor,
+    );
+  });
+
+  it("keeps its own base/cursor parts reachable via ::part() after the lr-markdown-core exportparts forwarding was added, proving no name collision", async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-streaming-text-core.own-parts-probe::part(base) {
+            background-color: rgb(4, 5, 6);
+          }
+          lr-streaming-text-core.own-parts-probe::part(cursor) {
+            background-color: rgb(7, 8, 9);
+          }
+        </style>
+        <lr-streaming-text-core
+          class="own-parts-probe"
+          streaming
+          .content=${'hi'}
+        ></lr-streaming-text-core>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-streaming-text-core') as LyraStreamingTextCore;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(cursor).backgroundColor).to.equal('rgb(7, 8, 9)');
+  });
+});
+
 describe('lr-streaming-text-core accessibility', () => {
   it('is accessible while streaming, populated with Markdown content and a visible cursor', async () => {
     const el = (await fixture(

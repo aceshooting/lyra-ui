@@ -674,6 +674,86 @@ describe("Markdown auto-detection and rendering mode", () => {
   });
 });
 
+describe("composed lr-markdown CSS parts forwarding", () => {
+  const LINK_AND_IMAGE_CONTENT =
+    "[docs](https://example.com/docs)\n\n![alt text](https://example.com/pic.png)";
+
+  it("forwards the composed lr-markdown's documented parts so a host-level ::part(link)/::part(img) rule reaches the rendered <a>/<img>, matching the same rule applied directly to lr-markdown", async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-streaming-text.parts-probe::part(link) {
+            color: rgb(1, 2, 3);
+          }
+          lr-streaming-text.parts-probe::part(img) {
+            border: 4px solid rgb(9, 8, 7);
+          }
+          lr-markdown.parts-probe::part(link) {
+            color: rgb(1, 2, 3);
+          }
+          lr-markdown.parts-probe::part(img) {
+            border: 4px solid rgb(9, 8, 7);
+          }
+        </style>
+        <lr-streaming-text
+          class="parts-probe"
+          content-mode="markdown"
+          .content=${LINK_AND_IMAGE_CONTENT}
+        ></lr-streaming-text>
+        <lr-markdown class="parts-probe" .content=${LINK_AND_IMAGE_CONTENT}></lr-markdown>
+      </div>
+    `);
+    const streaming = wrapper.querySelector("lr-streaming-text") as LyraStreamingText;
+    const direct = wrapper.querySelector("lr-markdown")!;
+    const nested = streaming.shadowRoot!.querySelector("lr-markdown")!;
+    await waitUntil(() => nested.shadowRoot!.querySelector("img") !== null);
+    await waitUntil(() => direct.shadowRoot!.querySelector("img") !== null);
+
+    const nestedLink = nested.shadowRoot!.querySelector("a")!;
+    const nestedImg = nested.shadowRoot!.querySelector("img")!;
+    const directLink = direct.shadowRoot!.querySelector("a")!;
+    const directImg = direct.shadowRoot!.querySelector("img")!;
+
+    expect(
+      getComputedStyle(nestedLink).color,
+      "the forwarded link part must actually receive the outer host-level rule",
+    ).to.equal("rgb(1, 2, 3)");
+    expect(getComputedStyle(nestedLink).color).to.equal(getComputedStyle(directLink).color);
+    expect(getComputedStyle(nestedImg).borderTopWidth).to.equal("4px");
+    expect(getComputedStyle(nestedImg).borderTopWidth).to.equal(
+      getComputedStyle(directImg).borderTopWidth,
+    );
+    expect(getComputedStyle(nestedImg).borderTopColor).to.equal(
+      getComputedStyle(directImg).borderTopColor,
+    );
+  });
+
+  it("keeps its own base/cursor parts reachable via ::part() after the lr-markdown exportparts forwarding was added, proving no name collision", async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-streaming-text.own-parts-probe::part(base) {
+            background-color: rgb(4, 5, 6);
+          }
+          lr-streaming-text.own-parts-probe::part(cursor) {
+            background-color: rgb(7, 8, 9);
+          }
+        </style>
+        <lr-streaming-text
+          class="own-parts-probe"
+          streaming
+          .content=${"hi"}
+        ></lr-streaming-text>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-streaming-text") as LyraStreamingText;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal("rgb(4, 5, 6)");
+    expect(getComputedStyle(cursor).backgroundColor).to.equal("rgb(7, 8, 9)");
+  });
+});
+
 describe("looksLikeMarkdown()", () => {
   it("returns false for empty or plain prose", () => {
     expect(looksLikeMarkdown("")).to.be.false;
