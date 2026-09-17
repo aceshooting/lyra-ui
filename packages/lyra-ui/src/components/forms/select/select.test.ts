@@ -6056,6 +6056,109 @@ describe('unknown committed value presentation', () => {
   });
 });
 
+// A committed value whose matching <lr-option> just hasn't arrived yet (an async catalog fetch
+// still in flight) is not the same state as a genuinely stale value: `loading` renders the
+// localized loading placeholder in its place instead of badging it "not in catalog" -- see
+// `loading`'s own doc on select.class.ts, and the "unknown committed value presentation" block
+// above for the unset (default) behavior this must leave untouched.
+describe('loading presentation for a pending value', () => {
+  it('defaults to false and leaves the unknown-value badge behavior unchanged when unset', async () => {
+    const el = (await fixture(html`
+      <lr-select value="ghost">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+
+    expect(el.loading, 'loading defaults to false').to.be.false;
+    const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    expect(displayInput.hasAttribute('data-unknown-value')).to.be.true;
+    expect(displayInput.textContent).to.contain('ghost');
+    const badge = displayInput.querySelector('[part="unknown-value"]');
+    expect(badge?.textContent).to.equal('not in catalog');
+  });
+
+  it('shows the localized loading placeholder instead of the unknown-value badge while loading', async () => {
+    const el = (await fixture(html`
+      <lr-select value="ghost" loading>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+
+    expect(el.value, 'the raw value is still reachable').to.equal('ghost');
+    const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    expect(displayInput.textContent, 'the raw value is not leaked while loading').to.not.contain(
+      'ghost'
+    );
+    expect(displayInput.textContent).to.contain('Loading');
+    expect(
+      displayInput.hasAttribute('data-unknown-value'),
+      'a pending value is not flagged as unknown'
+    ).to.be.false;
+    expect(displayInput.querySelector('[part="unknown-value"]')).to.equal(null);
+  });
+
+  it('flags only the unresolved tag as pending in multiple mode, leaving a resolved tag alone', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple loading>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.value = ['a', 'ghost'];
+    await el.updateComplete;
+
+    const tags = el.shadowRoot!.querySelectorAll('[part~="tag"]');
+    expect(tags).to.have.length(2);
+    const resolvedTag = requiredItem(tags, 0, 'resolved tag');
+    const pendingTag = requiredItem(tags, 1, 'pending tag');
+    expect(resolvedTag.textContent, 'a resolved value still shows its real label').to.contain(
+      'Apple'
+    );
+    expect(resolvedTag.hasAttribute('data-unknown-value')).to.be.false;
+    expect(pendingTag.textContent).to.not.contain('ghost');
+    expect(pendingTag.textContent).to.contain('Loading');
+    expect(
+      pendingTag.hasAttribute('data-unknown-value'),
+      'the pending tag is not flagged as unknown'
+    ).to.be.false;
+    expect(pendingTag.querySelector('[part="unknown-value"]')).to.equal(null);
+  });
+
+  it('leaves value untouched by loading and renders the real label once the matching option mounts', async () => {
+    const el = (await fixture(
+      html`<lr-select value="a" loading></lr-select>`
+    )) as LyraSelect;
+    await el.updateComplete;
+    expect(el.value).to.equal('a');
+    let displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    expect(displayInput.textContent).to.contain('Loading');
+
+    const defaultSlot = el.shadowRoot!.querySelector(
+      'slot:not([name])'
+    ) as HTMLSlotElement;
+    const slotchangePromise = oneEvent(defaultSlot, 'slotchange');
+    const option = document.createElement('lr-option') as LyraOption;
+    option.setAttribute('value', 'a');
+    option.textContent = 'Apple';
+    el.append(option);
+    await slotchangePromise;
+    await el.updateComplete;
+
+    expect(el.value, 'no re-assignment of value was needed').to.equal('a');
+    displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    expect(displayInput.textContent, 'the real label renders once the option mounts').to.contain(
+      'Apple'
+    );
+
+    el.loading = false;
+    await el.updateComplete;
+    expect(el.value).to.equal('a');
+    displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    expect(displayInput.textContent).to.contain('Apple');
+  });
+});
+
 // lr-option documents start/end (and the prefix/suffix aliases)
 // adornment slots and matching CSS parts, but lr-select's listbox is built from its own
 // [part='option'] rows rather than by exposing the option elements, so none of them rendered at

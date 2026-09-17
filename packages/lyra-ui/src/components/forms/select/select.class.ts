@@ -80,7 +80,7 @@ import {
 } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_loading, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How long the listbox type-ahead buffer survives without a keystroke. Unchanged from the
@@ -240,7 +240,9 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * matching no current option (a stale value, or a programmatic assignment with a typo) still
  * commits rather than being dropped, but renders with a dashed/italic `[part='unknown-value']`
  * badge instead of silently passing the raw string off as an ordinary label -- see
- * `isUnknownValue()`.
+ * `isUnknownValue()`. Set `loading` while that same value's catalog simply hasn't arrived yet (an
+ * async fetch still in flight, say): a still-unmatched value then renders the localized `loading`
+ * placeholder instead, with no `unknown-value` badge, since it is not yet known to be missing.
  *
  * A slotted `<lr-option>`'s `start`/`end` (and the Shoelace `prefix`/`suffix` aliases) adornments
  * are cloned into the corresponding `[part='option-start']`/`[part='option-end']` listbox row,
@@ -449,6 +451,7 @@ export class LyraSelect<
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
+    loading: LYRA_DEFAULT_loading,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     select: LYRA_DEFAULT_select,
@@ -617,7 +620,8 @@ export class LyraSelect<
    * Off by default, because it adds a row to a listbox that has always rendered only real options.
    * Turn it on wherever a stored value can outlive its catalog entry: without it, the out-of-list
    * value is visible on the trigger but absent from the listbox, so a user who opens the listbox
-   * has no way back to the value they arrived with.
+   * has no way back to the value they arrived with. No synthetic row appears for a value `loading`
+   * is currently suppressing -- see that property -- since it is not yet known to be unmatched.
    * @default false
    */
   @property({ type: Boolean, attribute: 'show-unknown-option', reflect: true })
@@ -630,9 +634,26 @@ export class LyraSelect<
    * everywhere that value's label appears -- the trigger, a `multiple` tag, and the synthetic
    * listbox row -- and is used only while the value is genuinely unmatched, so it can never
    * override a real option's own label. A blank return falls back to the raw value, exactly as no
-   * hook at all would. Caller-supplied text: it is not localized here.
+   * hook at all would. Caller-supplied text: it is not localized here. Not consulted while
+   * `loading` is `true` and the value is still unresolved -- see `loading` below -- because that
+   * value is not yet known to be unmatched at all.
    */
   @property({ attribute: false }) getUnknownLabel?: (value: string) => string;
+  /**
+   * Whether a committed value's real label may still be pending -- e.g. the `<lr-option>` catalog
+   * behind it is still being fetched/mounted asynchronously and simply hasn't arrived yet. While
+   * `true`, a committed value that currently matches no option (the same condition `isUnknownValue()`
+   * tests) renders the localized `loading` placeholder in the trigger label or the relevant
+   * `multiple` tag instead of the raw value, and is not flagged with the dashed/italic
+   * `notInCatalog`/`[part='unknown-value']` badge a genuinely unmatched value gets, nor added to the
+   * synthetic `showUnknownOption` listbox row -- "not yet resolved" is a different state from "known
+   * to be missing". A value that already matches a live option is unaffected either way. Reflected
+   * so `:host([loading])` is available as a styling hook. Never mutates `value`/`selectedOptions`
+   * itself, and does not itself disable the trigger -- pair it with `disabled` when the control
+   * should also be non-interactive while its catalog is pending.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true }) loading = false;
   /**
    * Opt-in: when `true` and exactly one `<lr-option>` is enabled, the
    * trigger commits that option directly (click/Enter/Space/ArrowDown/
@@ -1708,10 +1729,15 @@ export class LyraSelect<
   }
 
   /** The label to show for one committed value: the selected occurrence's own label, else any
-   *  option sharing that value, else the raw value (a programmatic write with no matching row). */
+   *  option sharing that value, else -- while `loading` -- the localized loading placeholder, else
+   *  the raw value (a programmatic write with no matching row). */
   private labelFor(value: string, occurrenceIndex = 0): string {
     const resolved = this.resolvedLabelFor(value, occurrenceIndex);
     if (resolved !== undefined) return resolved;
+    // Not yet known whether this value is genuinely unmatched or its catalog just hasn't mounted
+    // yet -- see isUnknownValue(). getUnknownLabel is reserved for a value already known to be
+    // unmatched, exactly like the raw-value fallback below it.
+    if (this.loading) return this.localize('loading');
     // Unmatched only, so the hook can never override a real option's own label. `getTag` cannot
     // serve this case -- it is handed a matched option, which by definition does not exist here.
     const override = this.getUnknownLabel?.(value);
@@ -1722,8 +1748,14 @@ export class LyraSelect<
    *  before an option was removed, or a programmatic `value`/`defaultValue` assignment that never
    *  matched anything. Drives the dashed/italic "not in catalog" presentation in `render()`, so a
    *  genuinely unresolved value never leaks its raw string with no explanation, while
-   *  `resolvedLabelFor()` keeps the raw value itself fully reachable through `labelFor()`/`value`. */
+   *  `resolvedLabelFor()` keeps the raw value itself fully reachable through `labelFor()`/`value`.
+   *
+   *  Suppressed entirely while `loading` is `true`: an unresolved value in that window simply
+   *  hasn't had its matching `<lr-option>` mount yet, which is "not yet known", not "genuinely
+   *  unknown" -- see `labelFor()`'s own loading-placeholder fallback, which this has to agree with
+   *  so the trigger/tag text and the "not in catalog" badge are never shown at the same time. */
   private isUnknownValue(value: string, occurrenceIndex = 0): boolean {
+    if (this.loading) return false;
     return this.resolvedLabelFor(value, occurrenceIndex) === undefined;
   }
 
