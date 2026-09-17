@@ -1769,8 +1769,8 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
 
-Eleven full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`,
-`pt-BR`, `ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
+Twelve full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`,
+`pt-BR`, `ro`, `ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
 **side-effect-only modules**: import one bare, read nothing from it, and it calls
 `registerLyraLocale()` for you.
 
@@ -1781,11 +1781,14 @@ import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this ba
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/it.js"; // Italian
 import "@aceshooting/lyra-ui/translations/pt-BR.js"; // also serves pt and pt-PT
+import "@aceshooting/lyra-ui/translations/ro.js"; // Romanian
 import "@aceshooting/lyra-ui/translations/zh-CN.js"; // also serves zh, zh-Hans and zh-Hans-CN
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
-`one`/`two`/`other`); Italian uses a non-default set too (`it`: `one`/`many`/`other`). `ar`, `fa`
+`one`/`two`/`other`); Italian uses a non-default set too (`it`: `one`/`many`/`other`), and so does
+Romanian (`ro`: `one`/`few`/`other`, where `few` covers `0` and `2`-`19` and `other` is the
+`de`-requiring form from `20` upward). `ar`, `fa`
 and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.

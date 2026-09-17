@@ -20,6 +20,7 @@ import '../translations/fa.js';
 import '../translations/he.js';
 import '../translations/it.js';
 import '../translations/pt-BR.js';
+import '../translations/ro.js';
 import '../translations/zh-CN.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
 import type { LyraMessage, LyraMessageKey } from './localization-types.js';
@@ -397,6 +398,24 @@ it('resolves Italian messages and selects one/many/other catalog forms', async (
   expect(matches(1)).to.equal('1 corrispondenza');
   expect(matches(2)).to.equal('2 corrispondenze');
   expect(matches(1_000_000)).to.equal('1000000 corrispondenze');
+});
+
+it('registers the complete Romanian catalog as a discoverable locale', () => {
+  const result = getRegisteredLyraLocales();
+  expect(result).to.include('ro');
+});
+
+it('resolves Romanian messages and selects one/few/other catalog forms', async () => {
+  const romanian = await localeHost('ro');
+  expect(resolveLyraString(romanian, 'close')).to.equal('Închide');
+  const matches = (count: number) =>
+    resolveLyraString(romanian, 'viewerSearchMatchCount', undefined, undefined, { count });
+
+  // Romanian's CLDR rule is not the English one/other shape: `few` covers 0 and 2-19 (and the
+  // 101-119 exception band), while `other` is the "de"-requiring form from 20 upward.
+  expect(matches(1)).to.equal('1 potrivire');
+  expect(matches(2)).to.equal('2 potriviri');
+  expect(matches(20)).to.equal('20 de potriviri');
 });
 
 it('reaches a regional-only catalog from its bare base language and from a script-bearing tag', async () => {
