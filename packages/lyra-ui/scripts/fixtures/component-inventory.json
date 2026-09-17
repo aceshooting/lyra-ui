@@ -109197,6 +109197,16 @@
             "default": ""
           },
           {
+            "name": "loading",
+            "property": "loading",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -109543,6 +109553,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "loading",
+            "attribute": "loading",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "locale",
@@ -117181,7 +117201,51 @@
             "deprecated": null
           },
           {
+            "name": "blockquote",
+            "deprecated": null
+          },
+          {
+            "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "content",
+            "deprecated": null
+          },
+          {
             "name": "cursor",
+            "deprecated": null
+          },
+          {
+            "name": "heading",
+            "deprecated": null
+          },
+          {
+            "name": "img",
+            "deprecated": null
+          },
+          {
+            "name": "inline-code",
+            "deprecated": null
+          },
+          {
+            "name": "link",
+            "deprecated": null
+          },
+          {
+            "name": "list",
+            "deprecated": null
+          },
+          {
+            "name": "math",
+            "deprecated": null
+          },
+          {
+            "name": "paragraph",
+            "deprecated": null
+          },
+          {
+            "name": "table",
             "deprecated": null
           }
         ],
@@ -117601,7 +117665,51 @@
             "deprecated": null
           },
           {
+            "name": "blockquote",
+            "deprecated": null
+          },
+          {
+            "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "content",
+            "deprecated": null
+          },
+          {
             "name": "cursor",
+            "deprecated": null
+          },
+          {
+            "name": "heading",
+            "deprecated": null
+          },
+          {
+            "name": "img",
+            "deprecated": null
+          },
+          {
+            "name": "inline-code",
+            "deprecated": null
+          },
+          {
+            "name": "link",
+            "deprecated": null
+          },
+          {
+            "name": "list",
+            "deprecated": null
+          },
+          {
+            "name": "math",
+            "deprecated": null
+          },
+          {
+            "name": "paragraph",
+            "deprecated": null
+          },
+          {
+            "name": "table",
             "deprecated": null
           }
         ],
