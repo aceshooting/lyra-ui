@@ -4421,43 +4421,77 @@ for (const projection of ['shadow', 'light'] as const) {
   });
 }
 
-it('settles a render held out of a resize delivery when the list disconnects before the flush', async () => {
+it('drops a measurement stashed for the frame flush when the list disconnects first', async () => {
   const { el } = await externalAutoHeightFixture('shadow');
   const internals = el as unknown as {
     onRowsResized(entries: ResizeObserverEntry[]): void;
-    deliveryHeldUpdates: (() => void)[];
+    pendingRowMeasurements: Map<string, { index: number; height: number }>;
+    measuredHeights: Map<string, number>;
   };
   const row = el.renderedRows[0]!;
-  // One delivery by hand, reported at a height nowhere near the row's real one so the measurement
-  // really does request a render. The browser would run this from its own resize-observation loop.
+  // One delivery by hand, reported at a height nowhere near the row's real one. The browser would
+  // run this from its own resize-observation loop, which is what makes the fold wait for a frame.
   internals.onRowsResized([
     {
       target: row,
       borderBoxSize: [{ blockSize: 250, inlineSize: 100 }],
     } as unknown as ResizeObserverEntry,
   ]);
-  // Lit reaches scheduleUpdate() one microtask after requestUpdate(), which is where the render is
-  // held -- so this is the state a disconnect has to release rather than strand.
-  await Promise.resolve();
-  await Promise.resolve();
   expect(
-    internals.deliveryHeldUpdates.length,
-    'renders held out of the in-flight delivery'
-  ).to.be.greaterThan(0);
+    internals.pendingRowMeasurements.size,
+    'observations stashed for the frame flush'
+  ).to.equal(1);
 
   el.remove();
-  const outcome = await Promise.race([
-    el.updateComplete.then(() => 'settled'),
-    new Promise<string>((resolve) => setTimeout(() => resolve('stranded'), 500)),
-  ]);
   expect(
-    outcome,
-    'the held render resolves once the disconnect cancels the frame that would have flushed it'
-  ).to.equal('settled');
-  expect(
-    internals.deliveryHeldUpdates.length,
-    'held renders left behind by the disconnect'
+    internals.pendingRowMeasurements.size,
+    'observations left behind by the disconnect that cancelled their frame'
   ).to.equal(0);
+  await nextFrame();
+  await el.updateComplete;
+  expect(
+    [...internals.measuredHeights.values()].includes(250),
+    'the dropped observation never reaches the height cache afterwards'
+  ).to.equal(false);
+});
+
+it('adds no await hop of its own to Lit’s update cycle', async () => {
+  // Twenty components in this package compose this one, set `renderItem` from their own render,
+  // and then read rows back out of this element's shadow root after their OWN `updateComplete` --
+  // a microtask coincidence, not a documented Lit guarantee, and one this element can break from
+  // the inside. Lit's `__enqueueUpdate()` does `const result = this.scheduleUpdate(); if (result
+  // != null) await result;`, so a `scheduleUpdate()` that returns a promise delays the resolution
+  // of this element's own update promise, the next cycle chains onto that delay, and the parent's
+  // read lands a render early. That shipped once (`lr-terminal`'s per-line match/highlight test
+  // caught it) and nothing about the surrounding code says the return value is load-bearing, so
+  // pin it here rather than rediscovering it through a consumer's suite.
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${[1, 2, 3, 4, 5]}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>`
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  await el.updateComplete;
+
+  el.overscan = 3;
+  expect(el.isUpdatePending, 'an update is pending to be scheduled').to.equal(
+    true
+  );
+  const internals = el as unknown as { scheduleUpdate(): unknown };
+  const scheduled = internals.scheduleUpdate();
+  expect(
+    scheduled === undefined,
+    'scheduleUpdate() returns nothing, so Lit awaits nothing extra before settling updateComplete'
+  ).to.equal(true);
+  expect(
+    el.isUpdatePending,
+    'and it performed that update synchronously, as the default does'
+  ).to.equal(false);
 });
 
 describe('light-DOM projection -- platform characterization', () => {

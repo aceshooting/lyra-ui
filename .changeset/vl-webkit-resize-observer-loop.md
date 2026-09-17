@@ -10,21 +10,25 @@ browser re-delivers on the following frame -- but the notice arrives as an uncau
 gates with a message that named no component.
 
 The offending write is `[part="spacer"]`'s height, the list's whole virtual extent. `onRowsResized()`
-folds each newly measured row height into the offsets and asks for a render; Lit flushes that render
-on the microtask checkpoint that follows the observer callback, which is still inside the browser's
-resize-observation delivery. Under an external `scrollElement` that write resizes an *observed* box,
-because `[part="base"][data-external-scroll]` takes its own block size from the spacer and is watched
-by the container `ResizeObserver` -- and `[part="base"]` sits shallower in the tree than the rows
-just broadcast, so the browser records the resize as a skipped observation and ends the loop with the
-error. Reproduced deterministically in WebKit and, with a large enough first measurement delta, in
-Chromium too.
+folded each newly measured row height into the offsets and asked for a render; Lit flushes that
+render on the microtask checkpoint that follows the observer callback, which is still inside the
+browser's resize-observation delivery. Under an external `scrollElement` that write resizes an
+*observed* box, because `[part="base"][data-external-scroll]` takes its own block size from the
+spacer and is watched by the container `ResizeObserver` -- and `[part="base"]` sits shallower in the
+tree than the rows just broadcast, so the browser records the resize as a skipped observation and
+ends the loop with the error. Reproduced deterministically in WebKit and, with a large enough first
+measurement delta, in Chromium too.
 
-The render, and the scroll-anchor correction that belongs with it, now wait for the animation frame
-this component already used to defer `observe()` calls out of the same delivery. Both still land in
-that frame together, before its own resize-observation step, so the settled extent, scroll position
-and window are the ones they always were; only the frame the DOM write happens in moves. The wait
-applies only while an external `scrollElement` is in play, which is exactly when a render of this
-component can resize a box it is itself observing: with its own viewport scrolling,
-`[part="base"]`'s block size comes from `--lr-virtual-list-height` rather than from the spacer, so
-that mode -- and every fixed numeric `row-height` -- keeps the frame timing it has today. The error
-message itself is neither suppressed nor filtered anywhere.
+Reading inside the delivery is fine; folding the result into the offsets is what resizes the box.
+So the measurement callbacks now only stash what they observed, and the offsets rebuild -- with the
+scroll-anchor correction that belongs to it, so neither is ever painted without the other -- runs on
+the animation frame this component already used to defer `observe()` calls out of the same delivery.
+A render that still lands mid-delivery then re-reads offsets nothing has changed and writes the
+extent already in the DOM, which resizes nothing. Renders themselves are never held: this element's
+`updateComplete` keeps settling in the same microtask run as before, which is what every component
+composing it relies on when it reads rendered rows back after its own update. Only the
+external-`scrollElement` case defers at all -- with the list's own viewport scrolling,
+`[part="base"]` takes its block size from `--lr-virtual-list-height` rather than from the spacer, so
+the extent write reaches no observed box and every measurement there stays as immediate as it was,
+fixed numeric `row-height` included. The error message itself is neither suppressed nor filtered
+anywhere.
