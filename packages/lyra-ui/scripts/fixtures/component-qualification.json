@@ -37535,7 +37535,7 @@
             },
             {
               "file": "src/components/layout/reorder-list/reorder-list.test.ts",
-              "line": 729,
+              "line": 765,
               "test": "is accessible in a populated state",
               "target": "el",
               "state": "populated"
@@ -37640,7 +37640,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 323,
+              "line": 368,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37714,7 +37714,7 @@
             },
             {
               "file": "src/components/layout/reorder-list/reorder-list.test.ts",
-              "line": 729,
+              "line": 765,
               "test": "is accessible in a populated state",
               "target": "el",
               "state": "populated"
@@ -37819,7 +37819,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 323,
+              "line": 368,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43290,7 +43290,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 859,
+              "line": 939,
               "test": "is accessible while streaming, populated with Markdown content and a visible cursor",
               "target": "el",
               "state": "populated"
@@ -43316,7 +43316,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 735,
+              "line": 815,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -43450,14 +43450,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text-core.test.ts",
-              "line": 211,
+              "line": 291,
               "test": "is accessible while streaming, populated with Markdown content and a visible cursor",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/streaming-text/streaming-text-core.test.ts",
-              "line": 222,
+              "line": 302,
               "test": "is accessible once content has settled after streaming ends, still rendering Markdown",
               "target": "el",
               "state": "populated"
@@ -43483,7 +43483,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 735,
+              "line": 815,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -45334,14 +45334,14 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7281,
+              "line": 7407,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7394,
+              "line": 7520,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"
@@ -46588,49 +46588,49 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1858,
+              "line": 1933,
               "test": "renders a keyboard-reachable button with a localized accessible name once the field has a value",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2152,
+              "line": 2227,
               "test": "is accessible in both modes",
               "target": "dataMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2152,
+              "line": 2227,
               "test": "is accessible in both modes",
               "target": "slottedMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2733,
+              "line": 2808,
               "test": "is accessible with wrapped rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2894,
+              "line": 2969,
               "test": "is accessible with a part-styled dense row and a renderActions control",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3720,
+              "line": 3795,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3909,
+              "line": 3984,
               "test": "is accessible in the error state",
               "target": "el",
               "state": "populated"
