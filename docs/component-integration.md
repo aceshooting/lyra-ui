@@ -667,7 +667,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-option`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 68 KiB (69641 bytes; bundle SHA-256 `60d79943c6650c971d84a79cd576fdf3bd661fc6eff3ace2bf5a157ebacda484`)
+- Standalone gzip: 68.1 KiB (69705 bytes; bundle SHA-256 `d38660fcba6cdff1d95ad72ee1038530b2d7c18bbd71c2d51307d85e0e850edc`)
 
 </details>
 
@@ -727,7 +727,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-combobox`, `lr-date-input`, `lr-icon-button`, `lr-input`, `lr-option`, `lr-select`
 - Transitive Lyra dependencies: `lr-date-picker`, `lr-empty`, `lr-icon`
-- Standalone gzip: 124.6 KiB (127605 bytes; bundle SHA-256 `a5b512053f27f9b3b3a63c2acba2982de9993fa18b8e5a6dde0d6eb54e087f19`)
+- Standalone gzip: 124.7 KiB (127660 bytes; bundle SHA-256 `916763f28a032f6f576afd545001859f9594fce4131eee773da882f8f3319a13`)
 
 </details>
 
@@ -967,7 +967,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-checkbox`, `lr-chip`, `lr-chip-group`, `lr-combobox`, `lr-file-icon`, `lr-input`, `lr-option`, `lr-table`
 - Transitive Lyra dependencies: `lr-empty`, `lr-pagination`, `lr-skeleton`, `lr-spinner`
-- Standalone gzip: 118.7 KiB (121572 bytes; bundle SHA-256 `2e853a757ab50ab00699dd6f9c5170ebf9cf398deee654aced98e7f92c7385ec`)
+- Standalone gzip: 118.8 KiB (121643 bytes; bundle SHA-256 `75c96fea1404c2b0d40bc936fdf10362edafd5f6a179d9bdf64dbdebd19409a2`)
 
 </details>
 
@@ -1279,7 +1279,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-chip`, `lr-chip-group`, `lr-combobox`, `lr-date-input`, `lr-dropdown`, `lr-dropdown-item`, `lr-input`, `lr-option`, `lr-select`, `lr-spinner`
 - Transitive Lyra dependencies: `lr-date-picker`, `lr-empty`, `lr-menu`, `lr-menu-item`
-- Standalone gzip: 145.8 KiB (149345 bytes; bundle SHA-256 `d16cebc92d97202b24d8ee2863614d6213c22bb5653610ef9395d822b1da72b3`)
+- Standalone gzip: 145.9 KiB (149400 bytes; bundle SHA-256 `30f1339f29f81083a99af33e9c36b56220cc5c7dd619fae2524d1c4a7478be4a`)
 
 </details>
 

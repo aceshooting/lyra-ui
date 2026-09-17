@@ -28110,6 +28110,16 @@
             "default": false
           },
           {
+            "name": "sync",
+            "property": "sync",
+            "type": "PlaceSync | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "undefined"
+          },
+          {
             "name": "value",
             "property": "value",
             "type": "string | string[]",
@@ -28629,6 +28639,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "sync",
+            "attribute": "sync",
+            "type": "PlaceSync | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "undefined"
           },
           {
             "name": "validationMessage",

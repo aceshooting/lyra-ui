@@ -34,7 +34,7 @@ import {
   optionalLiteralSetConverter,
   spellcheckConverter,
 } from '../../../internal/converters.js';
-import type { PlaceStrategy } from '../../../internal/positioner.js';
+import type { PlaceStrategy, PlaceSync } from '../../../internal/positioner.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -784,6 +784,16 @@ export class LyraCombobox<
   appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined';
   /** Preferred vertical side for the floating listbox. */
   @property({ reflect: true }) placement: LyraComboboxPlacement = 'bottom';
+  /**
+   * Copies the trigger's width, height, or both onto the listbox -- the same property
+   * `<lr-dropdown>`/`<lr-popup>` spell. Unset (the default), the listbox sizes to its own content,
+   * clamped between `--lr-size-12rem` and `--lr-size-28rem`, exactly as before. Set `sync="width"`
+   * so a full-width trigger with short option labels gets a listbox that aligns to its own edges
+   * instead of floating narrower in the middle -- the width clamp described above no longer
+   * applies while this is set, since the anchor's own width is now the intentional bound.
+   * @default undefined
+   */
+  @property({ reflect: true }) sync?: PlaceSync;
   private _positioningStrategy?: PlaceStrategy;
   /**
    * CSS positioning scheme the listbox is laid out with -- the property `<lr-select>`,
@@ -2621,6 +2631,7 @@ export class LyraCombobox<
       const cleanup = place(anchor, listbox, {
         placement: `${this.placement}-start`,
         strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'fixed'),
+        sync: this.sync,
         onPlaced: () => {
           if (generation !== this.positioningGeneration) return;
           this.listboxPositioned = true;

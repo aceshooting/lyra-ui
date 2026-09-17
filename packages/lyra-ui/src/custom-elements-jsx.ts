@@ -2610,6 +2610,7 @@ export type LyraComboboxReactProps = LyraReactElementProps<
   | 'sourceDelay'
   | 'spellcheck'
   | 'strings'
+  | 'sync'
   | 'validationTarget'
   | 'validators'
   | 'value'

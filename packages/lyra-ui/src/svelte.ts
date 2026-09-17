@@ -2612,6 +2612,7 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
   | 'sourceDelay'
   | 'spellcheck'
   | 'strings'
+  | 'sync'
   | 'validationTarget'
   | 'validators'
   | 'value'

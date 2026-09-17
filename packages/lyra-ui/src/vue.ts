@@ -2605,6 +2605,7 @@ export type LyraComboboxVueProps = LyraVueCustomElement<
   | 'sourceDelay'
   | 'spellcheck'
   | 'strings'
+  | 'sync'
   | 'validationTarget'
   | 'validators'
   | 'value'

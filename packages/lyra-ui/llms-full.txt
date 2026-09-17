@@ -4931,6 +4931,13 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   default; an explicit instance value always wins. There is deliberately no `hoist` alias here:
   unlike on `lr-select`, where it is Shoelace's established spelling, it would be a boolean
   defaulting to `true`, so its attribute could only ever express the value the control already has
+- `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
+  spelled the same as on `lr-dropdown`/`lr-popup`/`lr-popover`. Unset (the default), the listbox
+  sizes to its own content, clamped between `--lr-size-12rem` and `--lr-size-28rem`, exactly as
+  before. `sync="width"` drops that content-based clamp (keeping only the outer viewport/
+  available-space ceiling) so a full-width trigger with short option labels gets a listbox that
+  aligns to its own edges instead of floating narrower in the middle. Like `placement`, a change
+  takes effect the next time the listbox opens
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or _visible_ filter text. See
   "the clear button covers two axes" below

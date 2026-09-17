@@ -374,15 +374,6 @@ export const styles = css`
     overflow-y: auto;
     overflow-x: hidden;
     inline-size: max-content;
-    min-inline-size: min(
-      var(--lr-size-12rem),
-      var(--lr-positioner-available-inline-size, var(--lr-size-12rem))
-    );
-    max-inline-size: min(
-      var(--lr-popover-viewport-clamp),
-      var(--lr-size-28rem),
-      var(--lr-positioner-available-inline-size, 100vw)
-    );
     padding: var(--lr-space-xs);
     /* The shared overlay-surface family (internal/overlay-surface.styles.ts). The popup is the
        public arm the private trigger pair never had: retinting it no longer means retinting the
@@ -399,6 +390,30 @@ export const styles = css`
     transition: opacity var(--hide-duration, var(--lr-transition-fast)),
       transform var(--hide-duration, var(--lr-transition-fast)),
       visibility var(--hide-duration, var(--lr-transition-fast));
+  }
+  /* Content-sized default: at least readable (12rem), never a page-spanning wall of text (28rem).
+     Scoped away from a width-synced listbox below, whose own inline size is the anchor's width --
+     an intentional bound the content-based clamp would otherwise fight. */
+  :host(:not([sync="width"]):not([sync="both"])) [part="listbox"] {
+    min-inline-size: min(
+      var(--lr-size-12rem),
+      var(--lr-positioner-available-inline-size, var(--lr-size-12rem))
+    );
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-size-28rem),
+      var(--lr-positioner-available-inline-size, 100vw)
+    );
+  }
+  /* place()'s sync writes the anchor's own width as an inline style, which already wins the
+     cascade over this rule's max-inline-size -- this only keeps the outer viewport/available-space
+     ceiling so an unusually wide anchor still can't push the listbox off-screen. */
+  :host([sync="width"]) [part="listbox"],
+  :host([sync="both"]) [part="listbox"] {
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-positioner-available-inline-size, 100vw)
+    );
   }
   [part="option"],
   .group-label,

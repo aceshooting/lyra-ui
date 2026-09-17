@@ -4876,6 +4876,61 @@ it('clamps its focused floating surface width through the shared popover-viewpor
   expect(getComputedStyle(listbox).maxInlineSize).to.equal('10px');
 });
 
+it('leaves the default content-sized listbox clamp at 28rem when sync is unset', async () => {
+  const el = (await fixture(html`
+    <lr-combobox style="width: 500px; --lr-transition-fast: 0s">
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="combobox-input"]'
+  )!;
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+  input.focus();
+  await waitUntil(
+    () =>
+      el.open &&
+      listbox.hasAttribute('data-positioned') &&
+      getComputedStyle(listbox).visibility === 'visible',
+    'the focused combobox did not show a positioned listbox'
+  );
+
+  expect(listbox.getBoundingClientRect().width).to.be.lessThan(500);
+});
+
+it('syncs the listbox width to a wider trigger when sync="width" is set', async () => {
+  const el = (await fixture(html`
+    <lr-combobox sync="width" style="width: 500px; --lr-transition-fast: 0s">
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const anchor = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="combobox-input"]'
+  )!;
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+  input.focus();
+  await waitUntil(
+    () =>
+      el.open &&
+      listbox.hasAttribute('data-positioned') &&
+      getComputedStyle(listbox).visibility === 'visible',
+    'the focused combobox did not show a positioned listbox'
+  );
+  await waitUntil(
+    () =>
+      Math.round(listbox.getBoundingClientRect().width) ===
+      Math.round(anchor.getBoundingClientRect().width),
+    'the synced listbox width never matched the anchor'
+  );
+
+  expect(Math.round(listbox.getBoundingClientRect().width)).to.equal(
+    Math.round(anchor.getBoundingClientRect().width)
+  );
+});
+
 it('inherits a 20px host font into clear and tag-remove controls and their one-em glyphs', async () => {
   const el = (await fixture(html`
     <lr-combobox
