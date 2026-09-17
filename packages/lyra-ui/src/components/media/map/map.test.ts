@@ -6554,3 +6554,555 @@ it('clusters sized categories, restores filled and stroked icons after a style r
   expect(errors).to.deep.equal([]);
   await expect(el).to.be.accessible();
 });
+
+describe('legend-start slot', () => {
+  it('renders legend-start ahead of the gradient and the rows, and keeps legend last', async () => {
+    const el = (await fixture(html`<lr-map>
+      <div slot="legend-start" id="header">Layers</div>
+      <div slot="legend" id="footer">Source: OSM</div>
+    </lr-map>`)) as LyraMap;
+    el.legend = [{ color: '#f00', label: 'High', pattern: 'solid' }];
+    el.legendGradient = [[0, '#f7fbff'], [100, '#08306b']];
+    await el.updateComplete;
+    await aTimeout(0);
+
+    const panel = el.shadowRoot!.querySelector('[part="legend"]')!;
+    const startSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="legend-start"]')!;
+    const endSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="legend"]')!;
+    const gradient = el.shadowRoot!.querySelector('[part="legend-gradient"]')!;
+    const firstRow = el.shadowRoot!.querySelector('.legend-row')!;
+    const following = Node.DOCUMENT_POSITION_FOLLOWING;
+
+    expect(
+      startSlot.compareDocumentPosition(gradient) & following,
+      'legend-start precedes the gradient bar',
+    ).to.equal(following);
+    expect(
+      startSlot.compareDocumentPosition(firstRow) & following,
+      'legend-start precedes the first legend row',
+    ).to.equal(following);
+    expect(
+      firstRow.compareDocumentPosition(endSlot) & following,
+      'the original legend slot still renders after the rows',
+    ).to.equal(following);
+    expect(panel.firstElementChild === startSlot, 'legend-start is the panel first child').to.be.true;
+    expect(panel.lastElementChild === endSlot, 'legend is the panel last child').to.be.true;
+    expect(
+      startSlot.assignedElements({ flatten: true }).map((node) => node.id),
+    ).to.deep.equal(['header']);
+    expect(
+      endSlot.assignedElements({ flatten: true }).map((node) => node.id),
+    ).to.deep.equal(['footer']);
+  });
+
+  it('opens the legend panel for slotted legend-start content alone', async () => {
+    const el = (await fixture(
+      html`<lr-map><div slot="legend-start" id="only-header">Layers</div></lr-map>`,
+    )) as LyraMap;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(
+      el.shadowRoot!.querySelector('[part="legend"]'),
+      'a slotted header alone still renders a panel',
+    ).to.exist;
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="legend-start"]')!;
+    expect(
+      slot.assignedElements({ flatten: true }).map((node) => node.id),
+      'the slotted header is assigned',
+    ).to.deep.equal(['only-header']);
+  });
+
+  it('renders no legend-start slot content wrapper when nothing is slotted into it', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.legend = [{ color: '#f00', label: 'High', pattern: 'solid' }];
+    await el.updateComplete;
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="legend-start"]')!;
+    expect(slot, 'the slot itself always renders inside an open panel').to.exist;
+    expect(slot.assignedNodes({ flatten: true }).length).to.equal(0);
+  });
+});
+
+describe('collapsible legend panel', () => {
+  const PANEL_LEGEND = [
+    { color: '#f00', label: 'High', pattern: 'solid' as const },
+    { color: '#00f', label: 'Low', pattern: 'dots' as const },
+  ];
+
+  function disclosure(el: LyraMap): HTMLButtonElement | null {
+    return el.shadowRoot!.querySelector<HTMLButtonElement>('button[part="legend-disclosure"]');
+  }
+
+  function shown(el: LyraMap, selector: string): boolean {
+    const node = el.shadowRoot!.querySelector<HTMLElement>(selector);
+    return node !== null && getComputedStyle(node).display !== 'none';
+  }
+
+  async function collapsibleMap(open?: 'false'): Promise<LyraMap> {
+    const el = (await fixture(
+      open === 'false'
+        ? html`<lr-map legend-collapsible legend-open="false"></lr-map>`
+        : html`<lr-map legend-collapsible></lr-map>`,
+    )) as LyraMap;
+    el.legend = PANEL_LEGEND;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('renders no disclosure and mints no list id when legendCollapsible is unset', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.legend = PANEL_LEGEND;
+    await el.updateComplete;
+
+    expect(el.legendCollapsible, 'legendCollapsible defaults false').to.be.false;
+    expect(el.legendOpen, 'legendOpen defaults true so an existing key never disappears').to.be.true;
+    expect(disclosure(el) === null, 'no disclosure button exists').to.be.true;
+    expect(
+      el.shadowRoot!.querySelector('.legend-list')!.hasAttribute('id'),
+      'no id is minted for a panel that cannot collapse',
+    ).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="legend"] [hidden]').length).to.equal(0);
+  });
+
+  it('renders a localized disclosure whose aria-expanded is present in both states', async () => {
+    const el = await collapsibleMap();
+    const button = disclosure(el)!;
+
+    expect(button.localName).to.equal('button');
+    expect(button.type).to.equal('button');
+    expect(button.textContent!.trim()).to.equal('Map legend');
+    expect(button.getAttribute('aria-expanded')).to.equal('true');
+
+    const list = el.shadowRoot!.getElementById('map-legend-list');
+    expect(list, 'the controlled row list lives in the same shadow root').to.exist;
+    expect(list!.classList.contains('legend-list')).to.be.true;
+    expect(button.getAttribute('aria-controls')).to.equal('map-legend-list');
+
+    button.click();
+    await el.updateComplete;
+    expect(el.legendOpen).to.be.false;
+    expect(
+      disclosure(el)!.getAttribute('aria-expanded'),
+      'aria-expanded renders the literal "false" rather than being dropped',
+    ).to.equal('false');
+    expect(el.getAttribute('legend-open'), 'the collapsed state reflects').to.equal('false');
+  });
+
+  it('localizes the disclosure name through a strings override', async () => {
+    const el = (await fixture(html`<lr-map legend-collapsible></lr-map>`)) as LyraMap;
+    el.legend = PANEL_LEGEND;
+    el.strings = { mapLegend: 'Légende de la carte' };
+    await el.updateComplete;
+    expect(disclosure(el)!.textContent!.trim()).to.equal('Légende de la carte');
+  });
+
+  it('parses legend-open="false" and renders collapsed on first paint', async () => {
+    const el = (await fixture(html`<lr-map legend-collapsible legend-open="false">
+      <div slot="legend-start" id="panel-head">Risk band</div>
+    </lr-map>`)) as LyraMap;
+    el.legend = [{ color: '#f00', label: 'x'.repeat(400), pattern: 'solid' }];
+    el.legendGradient = [[0, '#f7fbff'], [100, '#08306b']];
+    await el.updateComplete;
+    await aTimeout(0);
+
+    expect(el.legendOpen, 'the true-defaulting boolean parses "false"').to.be.false;
+    expect(el.legendProjection.truncated, 'the fixture really renders a limit summary').to.be.true;
+    expect(disclosure(el)!.getAttribute('aria-expanded')).to.equal('false');
+    expect(shown(el, '.legend-list'), 'rows are hidden').to.be.false;
+    expect(shown(el, '.legend-gradient'), 'the gradient is hidden').to.be.false;
+    expect(shown(el, '[part="legend-limit"]'), 'the limit summary is hidden').to.be.false;
+    expect(shown(el, 'slot[name="legend"]'), 'trailing slotted content is hidden').to.be.false;
+    expect(shown(el, 'slot[name="legend-start"]'), 'the header slot survives the collapse').to.be.true;
+    expect(
+      getComputedStyle(el.querySelector<HTMLElement>('#panel-head')!).display,
+      'slotted header content is still painted',
+    ).to.not.equal('none');
+    expect(shown(el, 'button[part="legend-disclosure"]'), 'the disclosure stays visible').to.be.true;
+
+    disclosure(el)!.click();
+    await el.updateComplete;
+    expect(el.legendOpen).to.be.true;
+    expect(shown(el, '.legend-list')).to.be.true;
+    expect(shown(el, '.legend-gradient')).to.be.true;
+    expect(shown(el, '[part="legend-limit"]')).to.be.true;
+    expect(el.hasAttribute('legend-open'), 'the open default reflects as an absent attribute').to.be.false;
+  });
+
+  it('treats preventDefault on the panel disclosure as a real veto', async () => {
+    const el = await collapsibleMap();
+    const proposals: boolean[] = [];
+    let cancelable = false;
+    el.addEventListener('lr-map-legend-panel-toggle', (event) => {
+      cancelable = event.cancelable;
+      proposals.push((event as CustomEvent<{ readonly open: boolean }>).detail.open);
+      event.preventDefault();
+    });
+
+    disclosure(el)!.click();
+    await el.updateComplete;
+
+    expect(cancelable, 'the disclosure proposal is cancelable').to.be.true;
+    expect(proposals).to.deep.equal([false]);
+    expect(el.legendOpen, 'the veto writes nothing').to.be.true;
+    expect(disclosure(el)!.getAttribute('aria-expanded')).to.equal('true');
+    expect(shown(el, '.legend-list'), 'the vetoed rows stay rendered').to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('.legend-row').length).to.equal(2);
+  });
+
+  it('reconciles a programmatic legendOpen assignment without emitting', async () => {
+    const el = await collapsibleMap();
+    let emitted = 0;
+    el.addEventListener('lr-map-legend-panel-toggle', () => {
+      emitted += 1;
+    });
+
+    el.legendOpen = false;
+    await el.updateComplete;
+    expect(emitted, 'a controlled host cannot loop through its own write').to.equal(0);
+    expect(disclosure(el)!.getAttribute('aria-expanded')).to.equal('false');
+
+    el.legendOpen = true;
+    await el.updateComplete;
+    expect(emitted).to.equal(0);
+    expect(disclosure(el)!.getAttribute('aria-expanded')).to.equal('true');
+  });
+
+  it('toggles the panel from the focused disclosure with Enter and Space', async () => {
+    const el = await collapsibleMap();
+    disclosure(el)!.focus();
+    expect(el.shadowRoot!.activeElement === disclosure(el)).to.be.true;
+
+    await sendKeys({ press: 'Enter' });
+    await el.updateComplete;
+    expect(el.legendOpen).to.be.false;
+
+    await sendKeys({ press: ' ' });
+    await el.updateComplete;
+    expect(el.legendOpen).to.be.true;
+  });
+
+  it('mirrors the collapsed disclosure chevron under RTL and points it down when open', async () => {
+    const ltr = await collapsibleMap('false');
+    const rtl = (await fixture(html`<lr-map
+      dir="rtl"
+      lang="ar"
+      legend-collapsible
+      legend-open="false"
+    ></lr-map>`)) as LyraMap;
+    rtl.legend = PANEL_LEGEND;
+    await rtl.updateComplete;
+    // The chevron transitions its rotation, and getComputedStyle reports the INTERPOLATED matrix
+    // mid-flight, so the resting value is only readable with the transition flattened.
+    for (const el of [ltr, rtl]) el.style.setProperty('--lr-transition-fast', '0s');
+
+    const glyph = (el: LyraMap): string =>
+      getComputedStyle(
+        el.shadowRoot!.querySelector<HTMLElement>('[part="legend-disclosure-icon"]')!,
+      ).transform;
+
+    expect(glyph(ltr), 'the collapsed LTR chevron keeps the shared right-pointing glyph').to.equal('none');
+    expect(glyph(rtl), 'the collapsed RTL chevron mirrors through the wrapping part').to.not.equal('none');
+
+    ltr.legendOpen = true;
+    rtl.legendOpen = true;
+    await Promise.all([ltr.updateComplete, rtl.updateComplete]);
+    await waitUntil(
+      () => glyph(ltr) !== 'none' && glyph(ltr) === glyph(rtl),
+      'an expanded chevron never settled on the same downward rotation in both directions',
+    );
+  });
+
+  it('never hides a key that has no control to restore it', async () => {
+    const el = (await fixture(html`<lr-map legend-open="false"></lr-map>`)) as LyraMap;
+    el.legend = PANEL_LEGEND;
+    await el.updateComplete;
+
+    expect(el.legendOpen).to.be.false;
+    expect(disclosure(el) === null, 'no disclosure without legendCollapsible').to.be.true;
+    expect(shown(el, '.legend-list'), 'legendOpen alone never collapses anything').to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('[part="legend"] [hidden]').length).to.equal(0);
+  });
+
+  it('keeps the controlled legendOpen across a disconnect and reconnect', async () => {
+    const el = await collapsibleMap();
+    disclosure(el)!.click();
+    await el.updateComplete;
+    expect(el.legendOpen).to.be.false;
+
+    const parent = el.parentNode!;
+    const next = el.nextSibling;
+    el.remove();
+    parent.insertBefore(el, next);
+    await el.updateComplete;
+
+    expect(el.legendOpen, 'controlled public state survives a reconnect').to.be.false;
+    expect(disclosure(el)!.getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('keeps the collapsible legend accessible open and collapsed', async () => {
+    const el = await collapsibleMap();
+    await expect(el).to.be.accessible();
+    el.legendOpen = false;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('legend sections', () => {
+  async function sectionedMap(
+    legend: LyraMap['legend'],
+    interactive = false,
+  ): Promise<LyraMap> {
+    const el = (await fixture(
+      interactive ? html`<lr-map legend-interactive></lr-map>` : html`<lr-map></lr-map>`,
+    )) as LyraMap;
+    el.legend = legend;
+    await el.updateComplete;
+    return el;
+  }
+
+  function sections(el: LyraMap): HTMLElement[] {
+    return [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-group"]')];
+  }
+
+  it('renders entries with no group exactly as today, with no section wrapper or heading', async () => {
+    const el = await sectionedMap([
+      { color: '#f00', label: 'High', pattern: 'solid' },
+      { color: '#00f', label: 'Low', pattern: 'dots' },
+    ]);
+    const list = el.shadowRoot!.querySelector('.legend-list')!;
+
+    expect(el.legend.every((entry) => !('group' in entry)), 'no group key is minted').to.be.true;
+    expect(sections(el).length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-group-heading"]').length).to.equal(0);
+    expect([...list.children].map((child) => child.className)).to.deep.equal([
+      'legend-row',
+      'legend-row',
+    ]);
+    expect([...list.children].map((child) => child.getAttribute('aria-posinset'))).to.deep.equal([
+      '1',
+      '2',
+    ]);
+  });
+
+  it('renders one labelled section per consecutive run sharing a group', async () => {
+    const el = await sectionedMap([
+      { color: '#f00', label: 'Bus', pattern: 'solid', group: 'Transit' },
+      { color: '#0f0', label: 'Tram', pattern: 'dots', group: 'Transit' },
+    ]);
+    const [section] = sections(el);
+
+    expect(sections(el).length).to.equal(1);
+    expect(section!.getAttribute('role')).to.equal('group');
+    const heading = section!.querySelector<HTMLElement>('[part="legend-group-heading"]')!;
+    expect(heading.textContent!.trim(), 'the group string renders verbatim').to.equal('Transit');
+    expect(
+      section!.getAttribute('aria-labelledby'),
+      'the visible heading names the section',
+    ).to.equal(heading.id);
+    expect(heading.id).to.not.equal('');
+    expect(
+      el.shadowRoot!.querySelectorAll(`#${heading.id}`).length,
+      'the heading id is unique inside the shadow root',
+    ).to.equal(1);
+    expect(
+      [...section!.querySelectorAll('.legend-row')].map((row) => row.textContent!.trim()),
+    ).to.deep.equal(['Bus', 'Tram']);
+    expect(section!.parentElement!.classList.contains('legend-list')).to.be.true;
+  });
+
+  it('renders two groups as two sections in declaration order', async () => {
+    const el = await sectionedMap([
+      { color: '#f00', label: 'Bus', pattern: 'solid', group: 'Transit' },
+      { color: '#0f0', label: 'Park', pattern: 'dots', group: 'Green space' },
+      { color: '#00f', label: 'Wood', pattern: 'diagonal', group: 'Green space' },
+    ]);
+
+    expect(
+      sections(el).map((section) =>
+        section.querySelector('[part="legend-group-heading"]')!.textContent!.trim(),
+      ),
+    ).to.deep.equal(['Transit', 'Green space']);
+    expect(
+      sections(el).map((section) => section.querySelectorAll('.legend-row').length),
+    ).to.deep.equal([1, 2]);
+  });
+
+  it('keeps an ungrouped entry in its declared position rather than hoisting or sinking it', async () => {
+    const el = await sectionedMap([
+      { color: '#f00', label: 'Bus', pattern: 'solid', group: 'Transit' },
+      { color: '#0f0', label: 'Loose', pattern: 'dots' },
+      { color: '#00f', label: 'Wood', pattern: 'diagonal', group: 'Green space' },
+    ]);
+    const list = el.shadowRoot!.querySelector('.legend-list')!;
+
+    expect(
+      [...list.children].map((child) =>
+        child.classList.contains('legend-group')
+          ? child.querySelector('[part="legend-group-heading"]')!.textContent!.trim()
+          : child.textContent!.trim(),
+      ),
+    ).to.deep.equal(['Transit', 'Loose', 'Green space']);
+    expect(
+      [...el.shadowRoot!.querySelectorAll('.legend-row')].map((row) => row.textContent!.trim()),
+      'declaration order is preserved across sections',
+    ).to.deep.equal(['Bus', 'Loose', 'Wood']);
+    expect(
+      [...el.shadowRoot!.querySelectorAll('.legend-row')].map((row) =>
+        row.getAttribute('aria-posinset'),
+      ),
+    ).to.deep.equal(['1', '2', '3']);
+  });
+
+  it('starts a new section when a group reappears after an interruption', async () => {
+    const el = await sectionedMap([
+      { color: '#f00', label: 'Bus', pattern: 'solid', group: 'Transit' },
+      { color: '#0f0', label: 'Park', pattern: 'dots', group: 'Green space' },
+      { color: '#00f', label: 'Tram', pattern: 'diagonal', group: 'Transit' },
+    ]);
+
+    expect(
+      sections(el).map((section) =>
+        section.querySelector('[part="legend-group-heading"]')!.textContent!.trim(),
+      ),
+      'rows are never reordered to merge a repeated group',
+    ).to.deep.equal(['Transit', 'Green space', 'Transit']);
+    expect(
+      new Set(sections(el).map((section) => section.getAttribute('aria-labelledby'))).size,
+      'each section still gets its own heading id',
+    ).to.equal(3);
+  });
+
+  it('treats a non-string, empty or whitespace-only group as ungrouped', async () => {
+    const el = await sectionedMap([
+      { color: '#f00', label: 'A', pattern: 'solid', group: '' },
+      { color: '#0f0', label: 'B', pattern: 'dots', group: '   ' },
+      { color: '#00f', label: 'C', pattern: 'diagonal', group: 7 as unknown as string },
+      { color: '#ff0', label: 'D', pattern: 'crosshatch', group: '  Padded  ' },
+    ]);
+
+    expect(el.legend.map((entry) => entry.group)).to.deep.equal([
+      undefined,
+      undefined,
+      undefined,
+      'Padded',
+    ]);
+    expect(sections(el).length, 'only the one real group renders a section').to.equal(1);
+    expect(
+      el.shadowRoot!.querySelector('[part="legend-group-heading"]')!.textContent!.trim(),
+    ).to.equal('Padded');
+    expect(
+      el.legend[3]!.group!.length,
+      'the group string is trimmed rather than left padded',
+    ).to.equal('Padded'.length);
+  });
+
+  it('bounds a very long group name without dropping the row', async () => {
+    const el = await sectionedMap([
+      { color: '#f00', label: 'A', pattern: 'solid', group: 'g'.repeat(400) },
+    ]);
+    expect(el.legend.length).to.equal(1);
+    expect(el.legend[0]!.group!.length).to.equal(256);
+    expect(el.legend[0]!.group!.endsWith('…')).to.be.true;
+  });
+
+  it('composes with legendInteractive: a grouped row still toggles and round-trips hiddenCategories', async () => {
+    const el = await sectionedMap(
+      [
+        { color: '#f00', label: 'Bus', pattern: 'solid', value: 'bus', group: 'Transit' },
+        { color: '#0f0', label: 'Tram', pattern: 'dots', value: 'tram', group: 'Transit' },
+      ],
+      true,
+    );
+    const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+      'button[part~="legend-toggle"]',
+    )];
+
+    expect(buttons.length).to.equal(2);
+    expect(buttons[0]!.closest('[part="legend-group"]'), 'the toggle lives inside its section').to.exist;
+    buttons[0]!.click();
+    await el.updateComplete;
+    expect(el.hiddenCategories).to.deep.equal(['bus']);
+    expect(
+      el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="legend-toggle"]')[0]!
+        .getAttribute('aria-pressed'),
+    ).to.equal('false');
+
+    el.hiddenCategories = [];
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="legend-toggle"]')[0]!
+        .getAttribute('aria-pressed'),
+    ).to.equal('true');
+  });
+
+  it('counts rows rather than sections against the legend limit', async () => {
+    const el = await sectionedMap(
+      Array.from({ length: 101 }, (_, index) => ({
+        color: '#f00',
+        label: `Row ${index}`,
+        pattern: 'solid' as const,
+        group: `Group ${index % 3}`,
+      })),
+    );
+
+    expect(el.legend.length, 'the 100-row cap is unchanged by grouping').to.equal(100);
+    expect(el.legendProjection.inputCount).to.equal(101);
+    expect(el.legendProjection.renderedCount).to.equal(100);
+    expect(el.legendProjection.truncated).to.be.true;
+    expect(
+      el.shadowRoot!.querySelector('[part="legend-limit"]')!.textContent!.trim(),
+    ).to.contain('100');
+    expect(
+      el.shadowRoot!.querySelectorAll('.legend-row').length,
+      'sections do not consume row budget',
+    ).to.equal(100);
+    expect(sections(el).length).to.be.greaterThan(1);
+  });
+
+  it('gives every run its own real list, and keeps the single list when nothing is grouped', async () => {
+    const ungrouped = await sectionedMap([
+      { color: '#f00', label: 'High', pattern: 'solid' },
+    ]);
+    expect(ungrouped.shadowRoot!.querySelector('.legend-list')!.getAttribute('role')).to.equal('list');
+    expect(ungrouped.shadowRoot!.querySelectorAll('[role="list"]').length).to.equal(1);
+
+    const grouped = await sectionedMap([
+      { color: '#f00', label: 'Bus', pattern: 'solid', group: 'Transit' },
+      { color: '#0f0', label: 'Loose', pattern: 'dots' },
+    ]);
+    const list = grouped.shadowRoot!.querySelector('.legend-list')!;
+    expect(
+      list.hasAttribute('role'),
+      'role=list requires listitem children, so the outer element drops its own role',
+    ).to.be.false;
+    const lists = [...grouped.shadowRoot!.querySelectorAll('[role="list"]')];
+    expect(lists.length, 'one list per run, including the ungrouped run').to.equal(2);
+    expect(
+      lists.every((node) =>
+        [...node.children].every((child) => child.getAttribute('role') === 'listitem'),
+      ),
+      'every list owns listitems only',
+    ).to.be.true;
+    expect(lists[0]!.closest('[part="legend-group"]'), 'the first list sits inside its group').to.exist;
+    expect(
+      lists[1]!.closest('[part="legend-group"]') === null,
+      'the ungrouped run has no group wrapper',
+    ).to.be.true;
+  });
+
+  it('keeps a grouped legend and a grouped interactive legend accessible', async () => {
+    const entries = [
+      { color: '#f00', label: 'Bus', pattern: 'solid' as const, value: 'bus', group: 'Transit' },
+      { color: '#0f0', label: 'Park', pattern: 'dots' as const, value: 'park', group: 'Green space' },
+      { color: '#00f', label: 'Loose', pattern: 'diagonal' as const },
+    ];
+    const readOnly = await sectionedMap(entries);
+    await expect(readOnly).to.be.accessible();
+
+    const interactive = await sectionedMap(entries, true);
+    await expect(interactive).to.be.accessible();
+    interactive.hiddenCategories = ['bus'];
+    await interactive.updateComplete;
+    await expect(interactive).to.be.accessible();
+  });
+});

@@ -8,7 +8,9 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -103,6 +105,29 @@ export interface LyraMapLegendEntry {
    * the row it belongs to still renders — only dropped rows are omissions.
    */
   readonly icon?: LyraMapPointIcon | Omit<LyraMapPointIcon, 'value'>;
+  /**
+   * Optional section this row belongs to. A key describing two layers at once could previously
+   * only be one flat list, with nothing saying which rows belonged to which.
+   *
+   * **The grouping rule, which is pinned rather than inferred:** CONSECUTIVE entries sharing an
+   * identical `group` render as one section -- a visible heading plus a `role="group"` the heading
+   * names. An entry with no `group` keeps its DECLARED position: it is never hoisted above or sunk
+   * below a section, and a `group` that reappears after an interruption opens a SECOND section
+   * rather than reordering rows to merge them. Declaration order is the one thing the legend never
+   * rewrites, because the order is itself information about the map.
+   *
+   * It is caller-supplied DATA, so it renders verbatim and is never passed through the locale
+   * catalog. It is trimmed and bounded to 256 characters (ellipsized, since it is rendered prose
+   * rather than a matched key); a non-string, empty or whitespace-only value leaves no `group` key
+   * at all, so an empty string means "ungrouped" instead of an empty heading, and a legend that
+   * never used sections reads back exactly as it did before this field existed.
+   *
+   * Like the row-level `value`, it is NOT charged to the aggregate label budget: a budget bounds
+   * rendered text, and the rendered total here is already finite and stated -- at most one heading
+   * per rendered row, so at most 100 of them, each at most 256 characters. A section is also not a
+   * row: the 100-row cap and the `legend-limit` summary count rows, never sections.
+   */
+  readonly group?: string;
 }
 
 /**
@@ -233,6 +258,9 @@ export interface LyraMapLegendProjection {
 interface NormalizedMapLegend {
   readonly entries: readonly LyraMapLegendEntry[];
   readonly projection: LyraMapLegendProjection;
+  /** Whether any admitted row carries a `group`, so the ungrouped render path stays literally the
+   *  expression it has always been rather than a nested one that merely produces the same nodes. */
+  readonly grouped: boolean;
 }
 
 const MAP_LEGEND_ITEM_LIMIT = 100;
@@ -287,6 +315,7 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
         label?: unknown;
         pattern?: unknown;
         value?: unknown;
+        group?: unknown;
         icon?: unknown;
       } | null;
       if (!candidate || typeof candidate !== 'object') continue;
@@ -310,6 +339,13 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
       const rawValue = candidate.value;
       const trimmedValue = typeof rawValue === 'string' ? rawValue.trim() : '';
       const value = trimmedValue ? trimmedValue.slice(0, MAP_LEGEND_VALUE_LIMIT) : undefined;
+      const rawGroup = candidate.group;
+      const trimmedGroup = typeof rawGroup === 'string' ? rawGroup.trim() : '';
+      // Ellipsized, not sliced: unlike `value`, a group name is rendered prose rather than a key
+      // matched against `point.field`, so a visible truncation marker is the honest bound.
+      const group = trimmedGroup
+        ? boundedLegendText(trimmedGroup, MAP_LEGEND_LABEL_LIMIT)
+        : undefined;
       const rawIcon = candidate.icon;
       const icon = isRuntimeRecord(rawIcon) ? projectIconPaint(rawIcon) : undefined;
       entries.push(Object.freeze({
@@ -319,6 +355,9 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
         // An absent or unusable category key leaves no `value` key at all, on the same reasoning as
         // `icon` below: a legend that never used categories reads back byte-identically.
         ...(value ? { value } : {}),
+        // Same rule for the section name, so an empty string means "ungrouped" rather than an
+        // empty heading and a legend that never used sections reads back byte-identically.
+        ...(group ? { group } : {}),
         // An absent or rejected glyph leaves no `icon` key at all, so a color-only row keeps
         // reading back exactly as it did before glyphs existed.
         ...(icon ? { icon } : {}),
@@ -337,7 +376,11 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
     truncatedLabelCount,
     truncated: omittedCount > 0 || truncatedLabelCount > 0,
   });
-  return { entries: frozenEntries, projection };
+  return {
+    entries: frozenEntries,
+    projection,
+    grouped: frozenEntries.some((entry) => entry.group !== undefined),
+  };
 }
 
 const EMPTY_HIDDEN_CATEGORIES = Object.freeze([]) as readonly string[];
@@ -2372,10 +2415,21 @@ export interface LyraMapLegendToggleDetail {
   readonly hiddenCategories: readonly string[];
 }
 
+/**
+ * Proposed disclosure state for the legend PANEL, which is a different thing from one category's
+ * visibility -- hence its own detail type rather than a reuse of `LyraMapLegendToggleDetail`.
+ * Frozen, and detached from the component's own state.
+ */
+export interface LyraMapLegendPanelToggleDetail {
+  /** Proposed `legendOpen` after this activation. */
+  readonly open: boolean;
+}
+
 export interface LyraMapEventMap {
   'lr-map-load': CustomEvent<null>;
   'lr-map-marker-activate': CustomEvent<LyraMapMarkerActivationDetail>;
   'lr-map-legend-toggle': CustomEvent<LyraMapLegendToggleDetail>;
+  'lr-map-legend-panel-toggle': CustomEvent<LyraMapLegendPanelToggleDetail>;
   'lr-map-click': CustomEvent<{
     readonly lngLat: readonly [number, number];
     readonly feature: Feature | undefined;
@@ -2436,6 +2490,14 @@ export interface LyraMapEventMap {
  *   before/after vocabulary would be permanent public surface nobody asked for. A programmatic
  *   `hiddenCategories` assignment reconciles without emitting anything -- this event is a
  *   DOM-interaction proposal only.
+ * @event lr-map-legend-panel-toggle - **Cancelable.** Fired once when the `legendCollapsible`
+ *   disclosure is activated by pointer or by Enter/Space, carrying the immutable
+ *   `detail: { open }` -- the proposed `legendOpen` value. It is the *panel's* disclosure, not a
+ *   *category's* visibility, so it deliberately does not reuse `lr-map-legend-toggle`.
+ *   `preventDefault()` is a real veto: `legendOpen` is not written, the rendered rows and the
+ *   disclosure's `aria-expanded` do not change, which is what lets a host own the open state and
+ *   write it itself. A programmatic `legendOpen` assignment reconciles without emitting anything,
+ *   so a controlled host cannot loop.
  * @event lr-map-marker-activate - Fired once when an accepted declarative marker is activated by
  *   pointer/click or by Enter/Space. The immutable detail carries its normalized `id`, validated
  *   `lngLat`, accepted marker snapshot, and activation `source`.
@@ -2452,6 +2514,11 @@ export interface LyraMapEventMap {
  * @slot legend - Custom legend content, rendered inside the legend panel's own layout so it stays
  *  positioned with the map instead of floating beside it. Slotted content is never made
  *  interactive by `legendInteractive`, which only reaches rows projected from `legend`.
+ * @slot legend-start - The same extension point at the TOP of the legend panel: it renders ahead
+ *  of the gradient bar and every projected row, where `legend` renders after them. A panel header
+ *  -- a title, a source note, a host-built control -- could previously only ever be a footer,
+ *  because `legend` was the only slot. Content here alone opens the panel, exactly as `legend`
+ *  content alone does, and it is never made interactive by `legendInteractive`.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch, or the entry's glyph when it carries an `icon`
  *   — in which case the swatch drops its color block and pattern overlay, keeps the `pattern`
@@ -2464,6 +2531,18 @@ export interface LyraMapEventMap {
  * @csspart legend-toggle-hidden - Second token carried alongside `legend-toggle` while that row's
  *   category is in `hiddenCategories`. State lives in the part name rather than a separate
  *   attribute, so `::part(legend-toggle-hidden)` is a reachable styling hook.
+ * @csspart legend-group - The `role="group"` wrapping one consecutive run of legend rows that
+ *   share a `group`. Absent entirely when no admitted entry carries one, so an ungrouped legend's
+ *   markup is unchanged.
+ * @csspart legend-group-heading - The visible heading naming a `legend-group`. It renders the
+ *   caller-supplied `group` string verbatim and names the group through `aria-labelledby`.
+ * @csspart legend-disclosure - The `button` that collapses and expands the whole legend panel.
+ *   Rendered only when `legendCollapsible` is set, so an unset map's legend markup is unchanged.
+ *   It carries the localized panel name as its visible, accessible label plus `aria-expanded`
+ *   rendered as the literal `"true"`/`"false"`, and it grows to the shared `--lr-icon-button-size`
+ *   hit-area floor.
+ * @csspart legend-disclosure-icon - The decorative chevron inside `legend-disclosure`. It is the
+ *   wrapping part that rotates (per the shared icon set's contract), including under RTL.
  * @csspart legend-gradient - The continuous ramp bar rendered from `legendGradient`.
  * @csspart legend-lo - The low endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
  * @csspart legend-hi - The high endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
@@ -2544,6 +2623,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-map-click',
+    'lr-map-legend-panel-toggle',
     'lr-map-legend-toggle',
     'lr-map-marker-activate',
   ]);
@@ -2610,6 +2690,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) mapStyle?: Readonly<LyraMapStyleSpecification> | string;
   private _legend = EMPTY_MAP_LEGEND;
   private _legendProjection = EMPTY_MAP_LEGEND_PROJECTION;
+  private _legendGrouped = false;
   /** Immutable, bounded entries rendered in the optional map legend. A required pattern keeps
    * category identity available when authored colors collapse or are unavailable. */
   @property({ attribute: false })
@@ -2621,6 +2702,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const normalized = normalizeMapLegend(value);
     this._legend = normalized.entries;
     this._legendProjection = normalized.projection;
+    this._legendGrouped = normalized.grouped;
     this.requestUpdate('legend', previous);
   }
 
@@ -2633,10 +2715,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   @state() private hasLegendSlot = false;
 
+  /** The same presence flag for `slot="legend-start"`, tracked separately so a header alone opens
+   *  the panel and so the two extension points never stand in for one another. */
+  @state() private hasLegendStartSlot = false;
+
   /** Light-DOM probe for slotted legend content, valid before the slot itself has ever rendered. */
-  private probeLegendSlot(): boolean {
+  private probeLegendSlot(name: 'legend' | 'legend-start'): boolean {
     for (const child of Array.from(this.children)) {
-      if (child.getAttribute('slot') === 'legend') return true;
+      if (child.getAttribute('slot') === name) return true;
     }
     return false;
   }
@@ -2729,6 +2815,75 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   @property({ type: Boolean, attribute: 'legend-interactive', reflect: true })
   legendInteractive = false;
+
+  /**
+   * Renders a disclosure button inside the legend panel that collapses the key down to its header.
+   * Default `false`, and an unset map renders exactly the panel it rendered before this property
+   * existed -- no button, no `id` minted on the row list, and no `hidden` attribute anywhere.
+   *
+   * A collapsed panel hides the gradient bar, the rows, the `legend-limit` summary and the
+   * trailing `legend` slot; the `legend-start` slot and the disclosure itself stay visible, so a
+   * slotted header survives the collapse and the control that would restore the key is never the
+   * thing the collapse hides.
+   */
+  @property({ type: Boolean, attribute: 'legend-collapsible', reflect: true })
+  legendCollapsible = false;
+
+  /**
+   * Whether a `legendCollapsible` panel is expanded. Defaults **open**, so adding only
+   * `legendCollapsible` never hides an existing key; it does nothing at all while
+   * `legendCollapsible` is unset.
+   *
+   * It is a `true`-defaulting boolean, so it uses `trueDefaultBooleanConverter` rather than Lit's
+   * presence-based boolean converter, which cannot express `legend-open="false"` at all. The
+   * reflection follows the same converter: open (the default) reflects as an ABSENT attribute and
+   * collapsed reflects as `legend-open="false"`.
+   *
+   * Controlled public state, so -- exactly like `hiddenCategories` -- it deliberately survives a
+   * disconnect and reconnect: the "reset transient open-state in `disconnectedCallback()`" rule
+   * covers dropdown/preview/tooltip `@state`, not a documented property a host owns and re-reads.
+   * A programmatic assignment reconciles the rendered panel without emitting
+   * `lr-map-legend-panel-toggle`, so a controlled host cannot loop.
+   */
+  @property({ attribute: 'legend-open', reflect: true, converter: trueDefaultBooleanConverter })
+  legendOpen = true;
+
+  /** True only when a collapsible panel is actually collapsed. `legendOpen` alone never hides
+   *  anything, so an author who sets `legend-open="false"` without `legendCollapsible` -- and
+   *  therefore renders no control to restore it -- still gets a readable key. */
+  private get legendCollapsed(): boolean {
+    return this.legendCollapsible && !this.legendOpen;
+  }
+
+  /**
+   * Flips the whole panel's disclosure from the `legendCollapsible` button.
+   *
+   * The veto is the absence of a write, not a write that is undone afterwards: a listener that
+   * owns the open state can assign its own `legendOpen` without this handler clobbering it.
+   */
+  private toggleLegendPanel(): void {
+    if (!this.legendCollapsible) return;
+    const open = !this.legendOpen;
+    const proposal = this.emit('lr-map-legend-panel-toggle', { open }, { cancelable: true });
+    if (proposal.defaultPrevented) return;
+    this.legendOpen = open;
+  }
+
+  /** The panel disclosure, or nothing at all when the panel cannot collapse. The chevron is
+   *  decorative: the button's own visible, localized text carries its name, and `aria-expanded`
+   *  carries the state. */
+  private renderLegendDisclosure(): TemplateResult | typeof nothing {
+    if (!this.legendCollapsible) return nothing;
+    return html`<button
+      part="legend-disclosure"
+      type="button"
+      aria-expanded=${this.legendOpen ? 'true' : 'false'}
+      aria-controls="map-legend-list"
+      @click=${(): void => this.toggleLegendPanel()}
+    ><span part="legend-disclosure-icon" class="legend-disclosure-icon" aria-hidden="true"
+      >${chevronIcon()}</span
+      ><span>${this.localize('mapLegend')}</span></button>`;
+  }
 
   private _hiddenCategories: readonly string[] = EMPTY_HIDDEN_CATEGORIES;
   /**
@@ -4463,7 +4618,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (canvas) {
       canvas.setAttribute('aria-label', this.effectiveMapLabel);
       canvas.setAttribute('lang', this.effectiveLocale);
-      if (this.legend.length || this.legendGradient.length >= 2 || this.hasLegendSlot || this.legendProjection.truncated) {
+      if (this.legend.length || this.legendGradient.length >= 2 || this.hasLegendSlot ||
+        this.hasLegendStartSlot || this.legendProjection.truncated) {
         canvas.setAttribute('aria-describedby', 'map-legend');
       }
       else canvas.removeAttribute('aria-describedby');
@@ -4505,11 +4661,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private onLegendSlotChange = (event: Event): void => {
     const slot = event.target as HTMLSlotElement;
-    this.hasLegendSlot = slot.assignedNodes({ flatten: true }).some(
+    const filled = slot.assignedNodes({ flatten: true }).some(
       (node) =>
         node.nodeType === Node.ELEMENT_NODE ||
         (node.textContent ?? '').trim().length > 0,
     );
+    if (slot.name === 'legend-start') this.hasLegendStartSlot = filled;
+    else this.hasLegendSlot = filled;
   };
 
   /**
@@ -4601,6 +4759,83 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.legendAnnouncementSink = undefined;
   }
 
+  /**
+   * One legend row. Extracted verbatim from the list template so the grouped and ungrouped section
+   * paths below render the same node rather than two copies that can drift.
+   *
+   * `aria-posinset`/`aria-setsize` deliberately stay whole-key values inside a section too.
+   * `aria-setsize` already reports the *input* count rather than the rendered one, so a bounded key
+   * stays honest; per-section input counts do not exist, because a row dropped by the bound carries
+   * no attributable group. A section adds a labelled sub-region; it does not renumber the key.
+   */
+  private renderLegendRow(entry: LyraMapLegendEntry, index: number): TemplateResult {
+    const key = entry.value;
+    const interactive = this.legendInteractive && key !== undefined;
+    const visible = key === undefined || !this.hiddenCategories.includes(key);
+    return html`<div
+                    class="legend-row"
+                    role="listitem"
+                    aria-posinset=${String(index + 1)}
+                    aria-setsize=${String(this.legendProjection.inputCount)}
+                  >
+                    ${interactive
+                      ? html`<button
+                          part=${visible ? 'legend-toggle' : 'legend-toggle legend-toggle-hidden'}
+                          type="button"
+                          aria-pressed=${visible ? 'true' : 'false'}
+                          @click=${(): void => this.toggleLegendCategory(entry)}
+                        >${this.renderLegendRowContent(entry)}</button>`
+                      : this.renderLegendRowContent(entry)}
+                  </div>`;
+  }
+
+  /**
+   * The row list's children: bare rows when no admitted entry carries a `group`, and otherwise one
+   * `role="group"` per CONSECUTIVE run sharing a group name, with ungrouped rows left exactly where
+   * they were declared. The ungrouped branch is literally the expression this list has always been,
+   * so a legend that uses no sections keeps rendering the markup it rendered before they existed.
+   *
+   * `group` is caller-supplied data: the heading renders it verbatim and never resolves it through
+   * the locale catalog.
+   *
+   * Each section owns its OWN `role="list"` rather than the sections sitting directly inside the
+   * outer one. `list` requires `listitem` children, and a `group` is not one -- axe reports both
+   * `aria-required-children` on the outer list and `aria-required-parent` on every row inside the
+   * group, critical, which is how this shape was caught. So a grouped legend renders one list per
+   * run (including each ungrouped run) and the outer element drops its own `role`, while an
+   * ungrouped legend keeps the single `role="list"` it has always had.
+   */
+  private renderLegendRows(): unknown {
+    if (!this._legendGrouped) {
+      return this.legend.map((entry, index) => this.renderLegendRow(entry, index));
+    }
+    const sections: { group: string | undefined; rows: TemplateResult[] }[] = [];
+    this.legend.forEach((entry, index) => {
+      const row = this.renderLegendRow(entry, index);
+      const open = sections[sections.length - 1];
+      if (open && open.group === entry.group) open.rows.push(row);
+      else sections.push({ group: entry.group, rows: [row] });
+    });
+    return sections.map((section, sectionIndex) => {
+      const rows = html`<div class="legend-section-list" role="list">${section.rows}</div>`;
+      if (section.group === undefined) return rows;
+      const headingId = `map-legend-group-${sectionIndex}`;
+      return html`<div
+                    class="legend-group"
+                    part="legend-group"
+                    role="group"
+                    aria-labelledby=${headingId}
+                  >
+                    <div
+                      class="legend-group-heading"
+                      part="legend-group-heading"
+                      id=${headingId}
+                    >${section.group}</div>
+                    ${rows}
+                  </div>`;
+    });
+  }
+
   private renderLegendGradient(): TemplateResult | typeof nothing {
     const stops = this.legendGradient;
     if (stops.length < 2) return nothing;
@@ -4608,7 +4843,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const hi = stops[stops.length - 1]!;
     const image = choroplethLegendGradientImage(stops,
       this.legendDescribesLine() ? 'linear' : this.canonicalChoropleth?.interpolation);
-    return html`<div class="legend-gradient">
+    return html`<div class="legend-gradient" ?hidden=${this.legendCollapsed}>
       <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
       <span
         part="legend-gradient"
@@ -4649,7 +4884,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this.legendProjection.truncated ||
         this.legendGradient.length ||
         this.hasLegendSlot ||
-        this.probeLegendSlot()
+        this.hasLegendStartSlot ||
+        this.probeLegendSlot('legend') ||
+        this.probeLegendSlot('legend-start')
           ? html`<div
               part="legend"
               id="map-legend"
@@ -4658,35 +4895,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               aria-controls=${this.failure || this.loading ? nothing : 'map-container'}
               data-truncated=${String(this.legendProjection.truncated)}
             >
+              <slot name="legend-start" @slotchange=${this.onLegendSlotChange}></slot>
+              ${this.renderLegendDisclosure()}
               ${this.renderLegendGradient()}
-              <div class="legend-list" role="list">
-                ${this.legend.map((entry, index) => {
-                  const key = entry.value;
-                  const interactive = this.legendInteractive && key !== undefined;
-                  const visible = key === undefined || !this.hiddenCategories.includes(key);
-                  return html`<div
-                    class="legend-row"
-                    role="listitem"
-                    aria-posinset=${String(index + 1)}
-                    aria-setsize=${String(this.legendProjection.inputCount)}
-                  >
-                    ${interactive
-                      ? html`<button
-                          part=${visible ? 'legend-toggle' : 'legend-toggle legend-toggle-hidden'}
-                          type="button"
-                          aria-pressed=${visible ? 'true' : 'false'}
-                          @click=${(): void => this.toggleLegendCategory(entry)}
-                        >${this.renderLegendRowContent(entry)}</button>`
-                      : this.renderLegendRowContent(entry)}
-                  </div>`;
-                })}
+              <div
+                class="legend-list"
+                role=${this._legendGrouped ? nothing : 'list'}
+                id=${this.legendCollapsible ? 'map-legend-list' : nothing}
+                ?hidden=${this.legendCollapsed}
+              >
+                ${this.renderLegendRows()}
               </div>
               ${this.legendProjection.truncated
-                ? html`<div id="map-legend-limit" part="legend-limit">
+                ? html`<div id="map-legend-limit" part="legend-limit" ?hidden=${this.legendCollapsed}>
                     ${this.legendLimitText()}
                   </div>`
                 : nothing}
-              <slot name="legend" @slotchange=${this.onLegendSlotChange}></slot>
+              <slot name="legend" ?hidden=${this.legendCollapsed} @slotchange=${this.onLegendSlotChange}></slot>
             </div>`
           : nothing}
       </div>

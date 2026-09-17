@@ -241,6 +241,70 @@ export const styles = css`
     gap: var(--lr-space-xs);
     min-inline-size: 0;
   }
+  /* A collapsed panel hides its gradient, rows, limit summary and trailing slot with the plain
+     hidden attribute -- but every one of those carries an author display declaration above,
+     which outranks the UA sheet's own [hidden] rule. This descendant selector restores the
+     platform meaning at author specificity, so hidden keeps removing the subtree from layout,
+     from the accessibility tree and from the tab order rather than being silently ignored. */
+  [part='legend'] [hidden] {
+    display: none;
+  }
+  /* The whole-panel disclosure rendered by legendCollapsible. A native button, so Enter/Space
+     are the platform's own activation; its visible localized text is its accessible name and
+     aria-expanded carries the state, so the chevron stays decorative. */
+  button[part='legend-disclosure'] {
+    display: flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: var(--lr-space-xs);
+    box-sizing: border-box;
+    /* WCAG 2.5.8, matching the interactive legend rows above. */
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    min-width: 0;
+    max-inline-size: 100%;
+    border: none;
+    border-radius: var(--lr-radius-xs);
+    padding: var(--lr-size-2px) var(--lr-space-xs);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: var(--lr-font-weight-semibold);
+    text-align: start;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: var(--lr-transition-interactive);
+  }
+  button[part='legend-disclosure'] > span:last-child {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  button[part='legend-disclosure']:where(:hover) {
+    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+  }
+  button[part='legend-disclosure']:where(:active) {
+    background: color-mix(in oklab, var(--lr-color-text-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  button[part='legend-disclosure']:where(:focus-visible) {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The shared icon set ships one right-pointing chevron and asks callers to rotate the WRAPPING
+     part, never the svg. Collapsed points along the reading direction; expanded points down in
+     both directions. --lr-transition-fast collapses to ~0ms under prefers-reduced-motion in
+     tokens.styles.ts, so the rotation needs no separate media query here. */
+  [part='legend-disclosure-icon'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    transition: transform var(--lr-transition-fast);
+  }
+  :host(:dir(rtl)) [part='legend-disclosure-icon'] {
+    transform: rotate(180deg);
+  }
+  button[part='legend-disclosure'][aria-expanded='true'] [part='legend-disclosure-icon'],
+  :host(:dir(rtl)) button[part='legend-disclosure'][aria-expanded='true'] [part='legend-disclosure-icon'] {
+    transform: rotate(90deg);
+  }
   /* Continuous choropleth key: low caption, ramp bar, high caption on one row -- the same shape
      lr-heatmap's gradient legend uses, so the two components read alike. */
   .legend-gradient {
@@ -266,6 +330,21 @@ export const styles = css`
      */
   :host(:dir(rtl)) .legend-gradient .gradient-bar {
     transform: scaleX(-1);
+  }
+  /* One consecutive run of rows sharing a group. Stacked like the list itself so a section reads
+     as a slice of the same key rather than a separate panel; the heading carries the name. */
+  .legend-group,
+  .legend-section-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-xs);
+    min-inline-size: 0;
+  }
+  [part='legend-group-heading'] {
+    min-inline-size: 0;
+    color: var(--lr-color-text-quiet);
+    font-weight: var(--lr-font-weight-semibold);
+    overflow-wrap: anywhere;
   }
   .legend-row {
     display: flex;

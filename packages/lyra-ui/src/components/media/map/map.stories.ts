@@ -632,3 +632,72 @@ export const InteractiveLegendControlledHost: Story = {
     ></lr-map>`;
   },
 };
+
+export const LegendHeaderSlot: Story = {
+  parameters: { docs: { description: { story: 'The `legend-start` slot renders at the TOP of the legend panel — ahead of the gradient bar and every projected row — where the original `legend` slot renders after them. Before it existed, a host-authored panel header could only ever be a footer. Both slots are shown here at once: the header names the key, the footer carries the attribution note. Either one alone opens the panel, exactly as `legend` content alone already did, and neither is made interactive by `legend-interactive`.' } } },
+  render: () => html`<lr-map
+    label="Legend with a slotted header and footer"
+    .mapStyle=${OFFLINE_RASTER_STYLE}
+    .zoom=${13}
+    .legend=${legend()}
+  >
+    <strong slot="legend-start">Risk band</strong>
+    <small slot="legend">Source: internal survey</small>
+  </lr-map>`,
+};
+
+export const CollapsibleLegend: Story = {
+  parameters: { docs: { description: { story: 'Opt-in with `legend-collapsible`. The panel grows a native disclosure button whose visible localized text is its accessible name and whose `aria-expanded` renders the literal "true"/"false"; it points at the row list through `aria-controls` inside the same shadow root. `legendOpen` defaults **open**, so adding only `legend-collapsible` never hides an existing key — write `legend-open="false"` to start collapsed (it is a true-defaulting boolean, so the string form is required; the bare attribute cannot express `false`). Collapsing hides the gradient, the rows, the `legend-limit` summary and the trailing `legend` slot, while the `legend-start` slot and the disclosure itself stay visible, so a slotted header survives the collapse and the control that restores the key is never what the collapse hides.' } } },
+  render: () => html`<lr-map
+    label="Collapsible legend"
+    legend-collapsible
+    .mapStyle=${OFFLINE_RASTER_STYLE}
+    .zoom=${13}
+    .dataLayers=${[interactiveLayer()]}
+    .legend=${interactiveLegend()}
+  >
+    <strong slot="legend-start">Places</strong>
+  </lr-map>`,
+};
+
+export const CollapsibleLegendControlledHost: Story = {
+  parameters: { docs: { description: { story: 'A controlled host: the listener calls `preventDefault()` on `lr-map-legend-panel-toggle`, so the component writes nothing at all — no `legendOpen`, no `aria-expanded` change and no re-render — and the host assigns its own value from the proposal in `event.detail.open`. Here it refuses to collapse the panel while a category is hidden, because the key is the only thing explaining the muted points; that is a policy the component deliberately does not encode. A programmatic `legendOpen` assignment reconciles without emitting the event, so this loop cannot recur.' } } },
+  render: () => {
+    const onPanelToggle = (event: Event): void => {
+      const proposal = event as CustomEvent<{ readonly open: boolean }>;
+      proposal.preventDefault();
+      const map = event.currentTarget as HTMLElement & {
+        legendOpen: boolean;
+        hiddenCategories: readonly string[];
+      };
+      if (!proposal.detail.open && map.hiddenCategories.length > 0) return;
+      map.legendOpen = proposal.detail.open;
+    };
+    return html`<lr-map
+      label="Host-controlled legend disclosure"
+      legend-collapsible
+      legend-interactive
+      @lr-map-legend-panel-toggle=${onPanelToggle}
+      .mapStyle=${OFFLINE_RASTER_STYLE}
+      .zoom=${13}
+      .dataLayers=${[interactiveLayer()]}
+      .legend=${interactiveLegend()}
+    ></lr-map>`;
+  },
+};
+
+export const SectionedLegend: Story = {
+  parameters: { docs: { description: { story: 'A `group` on a legend entry splits one flat key into labelled sections, which is what a map painting two layers at once needs. Consecutive entries sharing an identical `group` render as one section — a visible heading plus a `role="group"` the heading names — and an entry with no `group` keeps its declared position rather than being hoisted or sunk. Declaration order is never rewritten, so a repeated group after an interruption opens a second section instead of merging. `group` is caller-supplied data: it renders verbatim and is never resolved through the locale catalogue. Sections are not rows: the 100-row cap and the `legend-limit` summary still count rows.' } } },
+  render: () => html`<lr-map
+    label="Sectioned legend"
+    legend-collapsible
+    .mapStyle=${OFFLINE_RASTER_STYLE}
+    .zoom=${13}
+    .legend=${[
+      { color: storyColor('brand'), label: 'Bus', pattern: 'solid', group: 'Transit' },
+      { color: storyColor('success'), label: 'Tram', pattern: 'diagonal', group: 'Transit' },
+      { color: storyColor('warning'), label: 'Unclassified', pattern: 'dots' },
+      { color: storyColor('danger'), label: 'Flood plain', pattern: 'crosshatch', group: 'Hazards' },
+    ] satisfies LyraMapLegendEntry[]}
+  ></lr-map>`,
+};
