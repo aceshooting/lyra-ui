@@ -406,14 +406,15 @@ export const styles = css`
     );
   }
   /* place()'s sync writes the anchor's own width as an inline style, which already wins the
-     cascade over this rule's max-inline-size -- this only keeps the outer viewport/available-space
-     ceiling so an unusually wide anchor still can't push the listbox off-screen. */
+     cascade over this rule's max-inline-size -- this only keeps the available-space ceiling so an
+     unusually wide anchor still can't push the listbox off-screen. No --lr-popover-viewport-clamp
+     term here, matching lr-popup: that ceiling exists for a free-floating surface that could be
+     sized past the viewport, and a width-synced listbox is anchored to an element already on
+     screen and measured against the space actually available beside it. Keeping the 92vw default
+     would shorten the listbox against its own anchor in the full-width case sync was added for. */
   :host([sync="width"]) [part="listbox"],
   :host([sync="both"]) [part="listbox"] {
-    max-inline-size: min(
-      var(--lr-popover-viewport-clamp),
-      var(--lr-positioner-available-inline-size, 100vw)
-    );
+    max-inline-size: var(--lr-positioner-available-inline-size, 100vw);
   }
   [part="option"],
   .group-label,

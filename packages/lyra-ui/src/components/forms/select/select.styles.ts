@@ -468,11 +468,6 @@ export const styles = css`
     overflow-y: auto;
     overflow-x: hidden;
     inline-size: max-content;
-    min-inline-size: var(--lr-size-12rem);
-    max-inline-size: min(
-      var(--lr-popover-viewport-clamp),
-      var(--lr-size-28rem)
-    );
     padding: var(--lr-space-xs);
     /* The shared overlay-surface family (internal/overlay-surface.styles.ts): the listbox is a
        floating surface and retints with every other popup, not with the trigger it drops from. */
@@ -488,6 +483,27 @@ export const styles = css`
     transition: opacity var(--hide-duration, var(--lr-transition-fast)),
       transform var(--hide-duration, var(--lr-transition-fast)),
       visibility var(--hide-duration, var(--lr-transition-fast));
+  }
+  /* Content-sized default: at least readable (12rem), never a page-spanning wall of text (28rem).
+     Scoped away from a width-synced listbox below, whose own inline size is the trigger's width --
+     an intentional bound the content-based clamp would otherwise fight. Unset sync renders exactly
+     what this part always rendered. */
+  :host(:not([sync="width"]):not([sync="both"])) [part="listbox"] {
+    min-inline-size: var(--lr-size-12rem);
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-size-28rem)
+    );
+  }
+  /* place()'s sync writes the trigger's own width as an inline style, which already wins the
+     cascade over this rule's max-inline-size -- this only keeps the available-space ceiling so an
+     unusually wide trigger still can't push the listbox off-screen. No --lr-popover-viewport-clamp
+     term here, matching lr-popup and lr-combobox: that ceiling exists for a free-floating surface
+     that could be sized past the viewport, and a width-synced listbox is anchored to an element
+     already on screen and measured against the space actually available beside it. */
+  :host([sync="width"]) [part="listbox"],
+  :host([sync="both"]) [part="listbox"] {
+    max-inline-size: var(--lr-positioner-available-inline-size, 100vw);
   }
   :host([hoist]) [part="listbox"] {
     position: fixed;

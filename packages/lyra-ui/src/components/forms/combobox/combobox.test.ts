@@ -4931,6 +4931,161 @@ it('syncs the listbox width to a wider trigger when sync="width" is set', async 
   );
 });
 
+// `place()` writes the anchor's width onto the listbox as an inline style and only releases a
+// dimension it owns on its next setup, and `updated()` re-positions on `open` alone -- so that
+// inline width really does outlive an `el.sync = undefined` on an open listbox. It is invisible
+// anyway, which is the point of asserting the RENDERED width here rather than the inline style:
+// dropping the attribute re-matches the unsynced `:host(:not([sync=...]))` rule, whose
+// `max-inline-size` caps the stale inline width back down to the content clamp. `lr-select` keys
+// its reposition on `sync` for a stricter reason (it re-runs place()); this pins that the combobox
+// reaches the same rendered end state through the cascade, so a future refactor of either the rule
+// or the reposition guard cannot silently strand a listbox at its anchor's width.
+it('releases the synced inline width when sync is unset while the listbox is open', async () => {
+  const el = (await fixture(html`
+    <lr-combobox sync="width" style="width: 500px; --lr-transition-fast: 0s">
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const anchor = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="combobox-input"]'
+  )!;
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+  input.focus();
+  await waitUntil(
+    () =>
+      el.open &&
+      listbox.hasAttribute('data-positioned') &&
+      getComputedStyle(listbox).visibility === 'visible',
+    'the focused combobox did not show a positioned listbox'
+  );
+  await waitUntil(
+    () =>
+      Math.round(listbox.getBoundingClientRect().width) ===
+      Math.round(anchor.getBoundingClientRect().width),
+    'the synced listbox width never matched the anchor'
+  );
+
+  el.sync = undefined;
+  await el.updateComplete;
+  await waitUntil(
+    () =>
+      Math.round(listbox.getBoundingClientRect().width) <
+      Math.round(anchor.getBoundingClientRect().width),
+    'the listbox stayed at the anchor width after sync was unset'
+  );
+
+  expect(
+    Math.round(listbox.getBoundingClientRect().width),
+    'an unsynced listbox falls back to its own content-sized clamp'
+  ).to.be.lessThan(Math.round(anchor.getBoundingClientRect().width));
+});
+
+it('matches a width-synced listbox to an anchor wider than the viewport clamp', async () => {
+  // `--lr-popover-viewport-clamp` defaults to 92vw, so a trigger wider than 92vw is exactly a
+  // trigger wider than the clamp. Authoring the token below the anchor width reproduces that
+  // relationship deterministically at any test-runner window size. Before the fix the synced
+  // listbox rendered at the clamp (200px) against a 500px anchor.
+  const el = (await fixture(html`
+    <lr-combobox
+      sync="width"
+      style="width: 500px; --lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
+    >
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const anchor = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="combobox-input"]'
+  )!;
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+  input.focus();
+  await waitUntil(
+    () =>
+      el.open &&
+      listbox.hasAttribute('data-positioned') &&
+      getComputedStyle(listbox).visibility === 'visible',
+    'the focused combobox did not show a positioned listbox'
+  );
+
+  const anchorWidth = anchor.getBoundingClientRect().width;
+  expect(anchorWidth, 'the fixture anchor is wider than the authored clamp').to.be.greaterThan(200);
+  expect(
+    listbox.getBoundingClientRect().width,
+    'the width-synced listbox is still short of its own anchor'
+  ).to.be.closeTo(anchorWidth, 0.5);
+});
+
+it('still bounds a width-synced listbox by the measured available inline space', async () => {
+  // The viewport-clamp term is gone, but the available-space term must still keep an anchor far
+  // wider than the viewport from pushing the listbox off-screen.
+  const el = (await fixture(html`
+    <lr-combobox sync="width" style="width: 3000px; --lr-transition-fast: 0s">
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const anchor = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="combobox-input"]'
+  )!;
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+  input.focus();
+  await waitUntil(
+    () =>
+      el.open &&
+      listbox.hasAttribute('data-positioned') &&
+      getComputedStyle(listbox).visibility === 'visible',
+    'the focused combobox did not show a positioned listbox'
+  );
+
+  const available = Number.parseFloat(
+    listbox.style.getPropertyValue('--lr-positioner-available-inline-size')
+  );
+  expect(available, 'the positioner published an available inline size').to.be.greaterThan(0);
+  const rendered = listbox.getBoundingClientRect().width;
+  expect(rendered, 'the over-wide anchor width was not copied verbatim').to.be.lessThan(
+    anchor.getBoundingClientRect().width
+  );
+  expect(rendered, 'the listbox settles on the measured available space').to.be.closeTo(
+    available,
+    0.5
+  );
+});
+
+it('keeps the unsynced listbox capped by the viewport clamp under an over-wide trigger', async () => {
+  // The paired half of the two rules above: with `sync` unset the content clamp is unchanged, so
+  // a wide trigger must NOT widen the listbox past `min(--lr-popover-viewport-clamp, 28rem)`.
+  const el = (await fixture(html`
+    <lr-combobox
+      style="width: 500px; --lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
+    >
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part="combobox-input"]'
+  )!;
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+  input.focus();
+  await waitUntil(
+    () =>
+      el.open &&
+      listbox.hasAttribute('data-positioned') &&
+      getComputedStyle(listbox).visibility === 'visible',
+    'the focused combobox did not show a positioned listbox'
+  );
+  await waitUntil(
+    () => getComputedStyle(listbox).maxInlineSize === '200px',
+    'the unsynced listbox did not keep the viewport clamp'
+  );
+
+  expect(listbox.getBoundingClientRect().width).to.be.at.most(200);
+});
+
 it('inherits a 20px host font into clear and tag-remove controls and their one-em glyphs', async () => {
   const el = (await fixture(html`
     <lr-combobox

@@ -10,7 +10,11 @@ import { sendKeys } from "@web/test-runner-commands";
 import type { PropertyValues } from "lit";
 import "./select.js";
 import "../combobox/option.js";
+// Registered so the `sync` vocabulary can be asserted against its sibling control directly,
+// rather than against a restatement of what that control is believed to accept.
+import "../combobox/combobox.js";
 import type { LyraSelect } from "./select.js";
+import type { LyraCombobox } from "../combobox/combobox.js";
 import type { LyraOption } from "../combobox/option.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {
@@ -18,6 +22,7 @@ import {
   SET_OPTION_SELECTED_FROM_OWNER,
 } from "../../../internal/option-selection.js";
 import { styles } from "./select.styles.js";
+import { registerLyraLocale } from "../../../internal/localization.js";
 import { resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import {
   __setAnchoredOverlayRuntimeLoaderForTesting,
@@ -2844,6 +2849,176 @@ it('clamps its keyboard-opened floating surface width through the shared popover
   );
 
   expect(getComputedStyle(listbox).maxInlineSize).to.equal('10px');
+});
+
+// `sync` is the shared anchored-surface sizing vocabulary `<lr-popup>`, `<lr-popover>`,
+// `<lr-dropdown>` and `<lr-combobox>` already spell; this is the fourth trigger-plus-listbox
+// control to take it, with the same type (`PlaceSync`), the same unset default, and the same
+// corrected clamp -- a synced listbox is bounded by the measured available space alone, never by
+// `--lr-popover-viewport-clamp`.
+describe('sync (listbox sizing shared with lr-popup/lr-dropdown/lr-combobox)', () => {
+  // The clamp tokens are authored to fixed pixel values so the content-sized default is a
+  // deterministic measured number on any test-runner window, rather than a root-font-size guess.
+  const clampedTokens =
+    '--lr-size-12rem: 150px; --lr-size-28rem: 300px; --lr-transition-fast: 0s';
+
+  async function openPositioned(el: LyraSelect): Promise<HTMLElement> {
+    const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    el.open = true;
+    await el.updateComplete;
+    // `deferredPlaceReady` keeps the popup concealed until the first placement has actually run,
+    // so a visible listbox is a placed listbox -- the synced width is already written here.
+    await waitUntil(
+      () => el.open && getComputedStyle(listbox).visibility === 'visible',
+      'the opened select never showed a placed listbox'
+    );
+    return listbox;
+  }
+
+  const triggerWidth = (el: LyraSelect): number =>
+    el
+      .shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!
+      .getBoundingClientRect().width;
+
+  it('is unset by default and leaves the content-sized listbox clamp untouched', async () => {
+    const el = (await fixture(html`
+      <lr-select style="width: 500px; ${clampedTokens}">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+
+    expect(el.sync, 'sync is unset by default').to.equal(undefined);
+    expect(el.hasAttribute('sync'), 'nothing is reflected for an unset sync').to.be.false;
+
+    const listbox = await openPositioned(el);
+    expect(triggerWidth(el), 'the fixture trigger is much wider than the content clamp').to.be.greaterThan(
+      400
+    );
+    expect(getComputedStyle(listbox).minInlineSize).to.equal('150px');
+    expect(getComputedStyle(listbox).maxInlineSize).to.equal('300px');
+    expect(
+      listbox.getBoundingClientRect().width,
+      'an unsynced listbox still sizes to its own content floor'
+    ).to.be.closeTo(150, 0.5);
+  });
+
+  it('renders the listbox at the rendered trigger width under sync="width"', async () => {
+    const el = (await fixture(html`
+      <lr-select sync="width" style="width: 500px; ${clampedTokens}">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+
+    expect(el.sync).to.equal('width');
+    const listbox = await openPositioned(el);
+    expect(
+      listbox.getBoundingClientRect().width,
+      'the width-synced listbox aligns to its own trigger edges'
+    ).to.be.closeTo(triggerWidth(el), 0.5);
+  });
+
+  it('matches a width-synced listbox to a trigger wider than the viewport clamp', async () => {
+    // The corrected clamp ported from `<lr-combobox>`: `--lr-popover-viewport-clamp` defaults to
+    // 92vw, so a trigger wider than 92vw is a trigger wider than the clamp. Authoring the token
+    // below the trigger width reproduces that at any window size.
+    const el = (await fixture(html`
+      <lr-select
+        sync="width"
+        style="width: 500px; --lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
+      >
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+
+    const listbox = await openPositioned(el);
+    expect(triggerWidth(el), 'the fixture trigger is wider than the authored clamp').to.be.greaterThan(
+      200
+    );
+    expect(
+      listbox.getBoundingClientRect().width,
+      'no viewport-clamp shortfall against the trigger'
+    ).to.be.closeTo(triggerWidth(el), 0.5);
+  });
+
+  it('still bounds a width-synced listbox by the measured available inline space', async () => {
+    const el = (await fixture(html`
+      <lr-select sync="width" style="width: 3000px; --lr-transition-fast: 0s">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+
+    const listbox = await openPositioned(el);
+    const available = Number.parseFloat(
+      listbox.style.getPropertyValue('--lr-positioner-available-inline-size')
+    );
+    expect(available, 'the positioner published an available inline size').to.be.greaterThan(0);
+    const rendered = listbox.getBoundingClientRect().width;
+    expect(rendered, 'the over-wide trigger width was not copied verbatim').to.be.lessThan(
+      triggerWidth(el)
+    );
+    expect(rendered, 'the listbox settles on the measured available space').to.be.closeTo(
+      available,
+      0.5
+    );
+  });
+
+  it('accepts exactly the value set lr-combobox accepts, with the same unset default', async () => {
+    const select = (await fixture(html`<lr-select></lr-select>`)) as LyraSelect;
+    const combobox = (await fixture(
+      html`<lr-combobox></lr-combobox>`
+    )) as LyraCombobox;
+
+    expect(select.sync, 'the same unset default').to.equal(combobox.sync);
+    for (const value of ['width', 'height', 'both'] as const) {
+      select.sync = value;
+      combobox.sync = value;
+      await Promise.all([select.updateComplete, combobox.updateComplete]);
+      expect(select.getAttribute('sync'), `sync="${value}" reflects`).to.equal(
+        combobox.getAttribute('sync')
+      );
+      expect(select.sync).to.equal(combobox.sync);
+    }
+  });
+
+  it('returns to the content-sized clamp when sync is unset again', async () => {
+    // AGENTS.md: every new opt-in property gets an explicit unset-regression test. Unsetting has
+    // to release the inline width the positioner wrote, not merely stop maintaining it.
+    const el = (await fixture(html`
+      <lr-select sync="width" style="width: 500px; ${clampedTokens}">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+
+    const listbox = await openPositioned(el);
+    expect(listbox.getBoundingClientRect().width).to.be.closeTo(triggerWidth(el), 0.5);
+
+    el.sync = undefined;
+    await el.updateComplete;
+    expect(el.hasAttribute('sync'), 'the reflected attribute is removed').to.be.false;
+    await waitUntil(
+      () =>
+        getComputedStyle(listbox).visibility === 'visible' &&
+        Math.abs(listbox.getBoundingClientRect().width - 150) < 0.5,
+      'the still-open listbox never returned to its content-sized clamp'
+    );
+
+    expect(getComputedStyle(listbox).minInlineSize).to.equal('150px');
+    expect(getComputedStyle(listbox).maxInlineSize).to.equal('300px');
+  });
+
+  it('is accessible while open and width-synced', async () => {
+    const el = (await fixture(html`
+      <lr-select sync="width" label="Fruit" style="width: 500px; --lr-transition-fast: 0s">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+
+    const listbox = await openPositioned(el);
+    // Same mid-fade color-contrast guard the other open-state axe check uses.
+    listbox.getAnimations().forEach((animation) => animation.finish());
+    await expect(el).to.be.accessible();
+  });
 });
 
 it('inherits a 20px host font into its clear and tag-remove controls and their one-em glyphs', async () => {
@@ -6156,6 +6331,142 @@ describe('loading presentation for a pending value', () => {
     expect(el.value).to.equal('a');
     displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
     expect(displayInput.textContent).to.contain('Apple');
+  });
+
+  // The other half of the same state: a create form whose catalog is still being fetched, or an
+  // edit form whose saved selection is legitimately empty. `labelFor()` is never reached there, so
+  // the trigger used to fall back to the consumer's own `placeholder` and a consumer had to
+  // re-localize a string `<lr-select>` already owns.
+  describe('empty selection', () => {
+    const displayText = (el: LyraSelect): string =>
+      el.shadowRoot!.querySelector('[part="display-input"]')!.textContent!.trim();
+
+    it('renders the localized loading text in place of the placeholder', async () => {
+      const el = (await fixture(html`
+        <lr-select loading placeholder="Pick a fruit" label="Fruit"></lr-select>
+      `)) as LyraSelect;
+      await el.updateComplete;
+
+      expect(el.value, 'the selection really is empty').to.equal('');
+      expect(displayText(el)).to.equal('Loading…');
+      expect(displayText(el), 'the consumer placeholder is not shown').to.not.contain(
+        'Pick a fruit'
+      );
+    });
+
+    it('renders the very same localized string the committed-value path renders', async () => {
+      const empty = (await fixture(html`
+        <lr-select loading placeholder="Pick a fruit" label="Fruit"></lr-select>
+      `)) as LyraSelect;
+      const committed = (await fixture(html`
+        <lr-select loading value="ghost" placeholder="Pick a fruit" label="Fruit"></lr-select>
+      `)) as LyraSelect;
+      empty.strings = { loading: 'MARKER-LOADING' };
+      committed.strings = { loading: 'MARKER-LOADING' };
+      await Promise.all([empty.updateComplete, committed.updateComplete]);
+
+      expect(displayText(empty), 'the override reaches this branch too').to.equal(
+        'MARKER-LOADING'
+      );
+      expect(
+        displayText(empty),
+        'one string covers both halves of the loading state'
+      ).to.equal(displayText(committed));
+    });
+
+    it('routes that text through registerLyraLocale rather than a literal fallback', async () => {
+      // A literal second-arg fallback on `localize()` outranks every registered catalog forever,
+      // so a `.strings` override alone cannot prove this branch is translatable.
+      registerLyraLocale('qaa-QA', { loading: 'Chargement…' });
+      const el = (await fixture(html`
+        <lr-select
+          loading
+          locale="qaa-QA"
+          placeholder="Pick a fruit"
+          label="Fruit"
+        ></lr-select>
+      `)) as LyraSelect;
+      await el.updateComplete;
+
+      expect(displayText(el)).to.equal('Chargement…');
+    });
+
+    it('unset-regression: loading false renders the consumer placeholder exactly as before', async () => {
+      const el = (await fixture(html`
+        <lr-select placeholder="Pick a fruit" label="Fruit"></lr-select>
+      `)) as LyraSelect;
+      await el.updateComplete;
+
+      expect(el.loading).to.be.false;
+      expect(displayText(el)).to.equal('Pick a fruit');
+      const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+      expect(displayInput.hasAttribute('data-placeholder')).to.be.true;
+
+      // And it comes back the moment loading clears, without a value ever being written.
+      el.loading = true;
+      await el.updateComplete;
+      expect(displayText(el)).to.equal('Loading…');
+      el.loading = false;
+      await el.updateComplete;
+      expect(el.value, 'loading never touches value').to.equal('');
+      expect(displayText(el)).to.equal('Pick a fruit');
+    });
+
+    it('leaves a committed unresolved value on its own established loading path', async () => {
+      const el = (await fixture(html`
+        <lr-select loading value="ghost" placeholder="Pick a fruit" label="Fruit">
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      `)) as LyraSelect;
+      await el.updateComplete;
+
+      expect(el.value).to.equal('ghost');
+      expect(displayText(el)).to.equal('Loading…');
+      const displayInput = el.shadowRoot!.querySelector('[part="display-input"]')!;
+      expect(
+        displayInput.hasAttribute('data-unknown-value'),
+        'a pending value is still not flagged as unknown'
+      ).to.be.false;
+      expect(
+        displayInput.hasAttribute('data-placeholder'),
+        'a committed value is still not a placeholder rendering'
+      ).to.be.false;
+    });
+
+    it('keeps the trigger name as the field name, with a host aria-label still winning', async () => {
+      const named = (await fixture(html`
+        <lr-select loading placeholder="Pick a fruit"></lr-select>
+      `)) as LyraSelect;
+      await named.updateComplete;
+      const namedTrigger = named.shadowRoot!.querySelector('[part="trigger"]')!;
+      expect(
+        namedTrigger.getAttribute('aria-label'),
+        'the loading text is the value; the placeholder still names the field'
+      ).to.equal('Pick a fruit');
+      expect(displayText(named)).to.equal('Loading…');
+      await expect(named).to.be.accessible();
+
+      const hosted = (await fixture(html`
+        <lr-select loading aria-label="Sort order" placeholder="Pick a fruit"></lr-select>
+      `)) as LyraSelect;
+      await hosted.updateComplete;
+      expect(
+        hosted.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-label'),
+        'a host aria-label still wins over every computed internal name'
+      ).to.equal('Sort order');
+      expect(displayText(hosted)).to.equal('Loading…');
+      await expect(hosted).to.be.accessible();
+    });
+
+    it('falls back to the localized Select name when nothing else names the field', async () => {
+      const el = (await fixture(html`<lr-select loading></lr-select>`)) as LyraSelect;
+      await el.updateComplete;
+
+      expect(
+        el.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-label')
+      ).to.equal('Select');
+      expect(displayText(el)).to.equal('Loading…');
+    });
   });
 });
 

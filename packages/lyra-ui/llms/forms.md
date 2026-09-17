@@ -274,10 +274,14 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
   spelled the same as on `lr-dropdown`/`lr-popup`/`lr-popover`. Unset (the default), the listbox
   sizes to its own content, clamped between `--lr-size-12rem` and `--lr-size-28rem`, exactly as
-  before. `sync="width"` drops that content-based clamp (keeping only the outer viewport/
-  available-space ceiling) so a full-width trigger with short option labels gets a listbox that
-  aligns to its own edges instead of floating narrower in the middle. Like `placement`, a change
-  takes effect the next time the listbox opens
+  before. `sync="width"` drops that content-based clamp so a full-width trigger with short option
+  labels gets a listbox that aligns to its own edges instead of floating narrower in the middle.
+  A synced listbox is capped on `--lr-positioner-available-inline-size` **alone** — the space the
+  positioner actually measured beside the anchor, which still keeps an over-wide trigger from
+  pushing it off-screen. `--lr-popover-viewport-clamp` does **not** apply to a synced listbox — its
+  92vw default used to shorten the listbox against its own trigger in exactly the full-width case
+  `sync` exists for, and `lr-popup` never applied it either. It still applies with `sync` unset.
+  Like `placement`, a change takes effect the next time the listbox opens
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or _visible_ filter text. See
   "the clear button covers two axes" below
@@ -862,7 +866,11 @@ exactly like the multi-option case, until the trigger is actually activated.
 
 **Properties:**
 
-- `placeholder: string = ''`
+- `placeholder: string = ''` — text shown on the trigger while nothing is selected, and the
+  trigger's accessible name when neither a host `aria-label` nor a `label` supplies one. One
+  exception to "an empty selection always shows this": while `loading` is `true` the trigger shows
+  the localized `loading` text instead — see `loading` below. The accessible name is unaffected
+  either way
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
@@ -901,6 +909,17 @@ exactly like the multi-option case, until the trigger is actually activated.
   authored, the listbox is actually placed with the cascading `--lr-positioning-strategy` custom
   property honored ahead of that default — see the listbox's own **Themeable custom properties**
   below
+- `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
+  spelled and typed the same as on `lr-popup`/`lr-popover`/`lr-dropdown`/`lr-combobox`
+  (`'width' | 'height' | 'both'`). Unset (the default), the listbox sizes to its own content,
+  clamped between `--lr-size-12rem` and `min(--lr-popover-viewport-clamp, --lr-size-28rem)`,
+  exactly as before. `sync="width"` drops that content-based clamp so a full-width trigger with
+  short option labels gets a listbox that aligns to its own edges instead of floating narrower in
+  the middle. A synced listbox is capped on `--lr-positioner-available-inline-size` **alone** — the
+  space the positioner actually measured beside the trigger, which still keeps an over-wide trigger
+  from pushing it off-screen; `--lr-popover-viewport-clamp` does **not** apply to a synced listbox,
+  and still does with `sync` unset. Assignment while open repositions in place without closing;
+  unsetting it releases the inline width the positioner wrote
 - `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
   keyboard-reachable, re-selectable row. Off by default
@@ -915,9 +934,16 @@ exactly like the multi-option case, until the trigger is actually activated.
   `loading` placeholder in the trigger label or the relevant `multiple` tag instead of the raw
   value, with no `notInCatalog`/`[part='unknown-value']` badge and no synthetic
   `showUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
-  missing". A value already matching a live option is unaffected. Never mutates
-  `value`/`selectedOptions` itself, and does not itself disable the trigger — pair it with
-  `disabled` when the control should also be non-interactive while pending
+  missing". It covers an **empty** selection too: with nothing selected — a create form whose
+  catalogue is still being fetched, or an edit form whose saved selection is legitimately empty —
+  the trigger renders that same localized text in place of `placeholder`, from the same `loading`
+  message key, so both halves of a pending state read the same words and one
+  `registerLyraLocale()` translation reaches both. Nothing to re-localize in the consuming app.
+  With `loading` false an empty selection renders `placeholder` exactly as before. The trigger's
+  accessible name never changes for this: a host `aria-label` wins, then `label`, then
+  `placeholder`, then the localized `select` fallback. A value already matching a live option is
+  unaffected. Never mutates `value`/`selectedOptions` itself, and does not itself disable the
+  trigger — pair it with `disabled` when the control should also be non-interactive while pending
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -976,7 +1002,10 @@ a still-unmatched value then renders the localized `loading` placeholder instead
 with no `unknown-value` badge and no synthetic `showUnknownOption` row, since it is not yet known
 to be missing. Once the matching option mounts, the real label renders on the next render with no
 `value`/`selectedOptions` re-assignment needed, whether or not `loading` is also flipped back to
-`false`.
+`false`. The same flag covers the other half of that state: with **nothing** selected the trigger
+renders the same localized `loading` text in place of `placeholder`, so a consumer never has to
+hand-write a conditional placeholder bound to the same flag and re-localize, in its own catalogue,
+the string this control already owns.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
@@ -2422,15 +2451,23 @@ above 24px — see `llms/shared.md`. **`--lr-icon-button-size` is element-scoped
 token in this section:** the shared token layer re-declares it on every `lr-*` host's own `:host`,
 so a rule that sets `--lr-icon-button-size` on an ancestor wrapper is reset the moment it crosses
 into any intervening `lr-*` component and never reaches a `<lr-icon-button>` composed inside it
-(e.g. one slotted through `<lr-popover>`). The only two levers that actually reach it are: setting
+(e.g. one slotted through `<lr-popover>`). The three levers that actually reach it are: setting
 `--lr-icon-button-size` directly on the icon button element itself, where no intervening component
-sits between the rule and the property; or setting `--lr-theme-icon-button-size` on an ancestor,
-which the shared layer reads through `var()` at every level and which therefore reaches a
+sits between the rule and the property; setting `--lr-icon-button-size-scope` on any ancestor to
+resize one subtree; or setting `--lr-theme-icon-button-size` on an ancestor to resize the whole
+application. The shared layer reads the latter two through `var()` at every level, so both reach a
 `<lr-icon-button>` composed inside another component, e.g. `<lr-copy-button>`/
-`<lr-message-actions>`. Lowering the floor for a dense action row through either lever is safe even
-below 24px: a coarse-pointer/no-hover media rule floors the RENDERED hit area back at 2.75rem/44px
-regardless of how far the override lowered it, so the control stays comfortably tappable the moment
-the pointer reaching it is a finger rather than a mouse. `--lr-icon-button-radius` (default
+`<lr-message-actions>` -- see `llms/shared.md` for the full scope table.
+
+Lowering the floor for a dense action row below 24px is safe **only through the two ancestor
+levers**. The coarse-pointer/no-hover media rule reads those, and floors the RENDERED hit area back
+at 2.75rem/44px however far the override lowered it, so the control stays comfortably tappable the
+moment the pointer reaching it is a finger rather than a mouse. It does **not** rescue
+`--lr-icon-button-size` set directly on the element: that declaration comes from the outer tree and
+outranks the shadow tree's own `:host` rule, so the media rule never wins and the rendered hit area
+is exactly the value set -- `--lr-icon-button-size: 1rem` really does render a 16px target under a
+coarse pointer, which fails WCAG 2.2 SC 2.5.8. Prefer `--lr-icon-button-size-scope` when the intent
+is a denser row; reach for the element-scoped name only as a deliberate, localized trade-off. `--lr-icon-button-radius` (default
 `--lr-radius`) is not re-declared anywhere in the shared layer, so — like every other token below —
 it inherits normally from an ancestor even through an intervening component; it is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same

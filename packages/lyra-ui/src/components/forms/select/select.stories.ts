@@ -538,3 +538,54 @@ export const PositioningStrategy: Story = {
     </div>
   `,
 };
+
+export const SyncWidth: Story = {
+  parameters: { docs: { description: { story: '`sync` is the shared anchored-surface sizing vocabulary `<lr-popup>`, `<lr-popover>`, `<lr-dropdown>` and `<lr-combobox>` all spell the same way. Unset (the default, first below) the listbox sizes to its own content between `--lr-size-12rem` and `--lr-size-28rem`, so a full-width trigger with short option labels opens a listbox visibly narrower than, and floating centred under, its own trigger. `sync="width"` (second) copies the rendered trigger width onto the listbox instead, so it aligns to the trigger’s own edges; the space measured beside the anchor still bounds it, so an over-wide trigger cannot push it off-screen.' } } },
+  render: () => html`
+    <div style="display: grid; gap: 2rem; padding-block-end: 14rem;">
+      <lr-select label="Content-sized listbox (sync unset)" open>
+        <lr-option value="s">S</lr-option>
+        <lr-option value="m">M</lr-option>
+        <lr-option value="l">L</lr-option>
+      </lr-select>
+      <lr-select label="Trigger-width listbox" sync="width" open>
+        <lr-option value="s">S</lr-option>
+        <lr-option value="m">M</lr-option>
+        <lr-option value="l">L</lr-option>
+      </lr-select>
+    </div>
+  `,
+};
+
+export const LoadingCatalog: Story = {
+  parameters: { docs: { description: { story: 'A create form whose option catalogue is still being fetched. `loading` covers the whole pending state: the trigger shows the localized `loading` text in place of the `placeholder` while the selection is empty, and in place of a still-unmatched committed value on the edit form beside it — the same string in both, from the same `loading` message key, so nothing has to be re-localized in the consuming app. About a second and a half in, the options mount, `loading` clears, and the empty field falls back to its own `placeholder` while the saved value resolves to its real label.' } } },
+  render: () => html`
+    <div style="display: grid; gap: 1rem; max-width: 20rem;">
+      <lr-select label="Model (create form)" placeholder="Pick a model…" loading></lr-select>
+      <lr-select label="Model (edit form)" value="balanced" loading></lr-select>
+      <button
+        type="button"
+        style="justify-self: start;"
+        @click=${(event: Event) => {
+          const root = (event.currentTarget as HTMLElement).parentElement!;
+          window.setTimeout(() => {
+            for (const select of root.querySelectorAll<LyraSelect>('lr-select')) {
+              for (const row of [
+                { value: 'fast', label: 'Fast' },
+                { value: 'balanced', label: 'Balanced' },
+              ]) {
+                const option = document.createElement('lr-option');
+                option.setAttribute('value', row.value);
+                option.textContent = row.label;
+                select.append(option);
+              }
+              select.loading = false;
+            }
+          }, 1500);
+        }}
+      >
+        Load the catalogue
+      </button>
+    </div>
+  `,
+};

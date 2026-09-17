@@ -13,7 +13,7 @@ import {
   deferredPlaceReady as place,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
-import type { PlaceStrategy } from '../../../internal/positioner.js';
+import type { PlaceStrategy, PlaceSync } from '../../../internal/positioner.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import type {
   LyraPickerDetailValue,
@@ -242,7 +242,10 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * badge instead of silently passing the raw string off as an ordinary label -- see
  * `isUnknownValue()`. Set `loading` while that same value's catalog simply hasn't arrived yet (an
  * async fetch still in flight, say): a still-unmatched value then renders the localized `loading`
- * placeholder instead, with no `unknown-value` badge, since it is not yet known to be missing.
+ * placeholder instead, with no `unknown-value` badge, since it is not yet known to be missing. The
+ * same flag covers an empty selection too -- with nothing selected the trigger shows that same
+ * localized text in place of `placeholder`, so both halves of a pending state read the same words
+ * without a consumer re-localizing them.
  *
  * A slotted `<lr-option>`'s `start`/`end` (and the Shoelace `prefix`/`suffix` aliases) adornments
  * are cloned into the corresponding `[part='option-start']`/`[part='option-end']` listbox row,
@@ -503,6 +506,12 @@ export class LyraSelect<
     defaultValue: { attribute: 'default-value', noAccessor: true },
   };
 
+  /** Text shown on the trigger while nothing is selected. It still names the trigger when neither
+   *  a host `aria-label` nor a `label` does. One exception to "an empty selection always shows
+   *  this": while `loading` is `true` the trigger shows the localized `loading` text instead, so a
+   *  consumer never has to re-localize that string in its own catalog to cover the empty half of a
+   *  pending state -- see {@link loading}. The trigger's accessible name is unaffected either way.
+   * @default '' */
   @property() placeholder = '';
   /** Visible label. A host `aria-label` wins on the internal trigger by attribute presence,
    * including an explicitly empty value that suppresses this label's naming fallback. */
@@ -551,6 +560,19 @@ export class LyraSelect<
    *  and the `left`/`right` component is swapped under RTL. Changes reposition an already-open
    *  listbox without closing it or changing overlay stack ownership. */
   @property({ reflect: true }) placement: Placement = 'bottom';
+  /**
+   * Copies the trigger's width, height, or both onto the listbox -- the same property
+   * `<lr-popup>`/`<lr-popover>`/`<lr-dropdown>`/`<lr-combobox>` spell, with the same values. Unset
+   * (the default), the listbox sizes to its own content, clamped between `--lr-size-12rem` and
+   * `--lr-size-28rem`, exactly as before. Set `sync="width"` so a full-width trigger with short
+   * option labels gets a listbox that aligns to its own edges instead of floating narrower in the
+   * middle -- the content clamp above no longer applies while this is set, since the trigger's own
+   * width is now the intentional bound. A synced listbox is still bounded by the space actually
+   * measured beside its anchor, so an over-wide trigger cannot push it off-screen. Changes
+   * reposition an already-open listbox without closing it.
+   * @default undefined
+   */
+  @property({ reflect: true }) sync?: PlaceSync;
   private _positioningStrategy?: PlaceStrategy;
   /**
    * CSS positioning scheme the listbox is laid out with -- the one property `<lr-select>`,
@@ -647,7 +669,13 @@ export class LyraSelect<
    * `multiple` tag instead of the raw value, and is not flagged with the dashed/italic
    * `notInCatalog`/`[part='unknown-value']` badge a genuinely unmatched value gets, nor added to the
    * synthetic `showUnknownOption` listbox row -- "not yet resolved" is a different state from "known
-   * to be missing". A value that already matches a live option is unaffected either way. Reflected
+   * to be missing". With nothing selected at all -- a create form whose catalog is still being
+   * fetched, or an edit form whose saved selection is legitimately empty -- the trigger shows that
+   * same localized `loading` text in place of `placeholder`, so one property covers the whole
+   * pending state rather than only its committed-value half and the two halves always read the
+   * same words. The trigger's accessible name is unchanged by this: a host `aria-label` still
+   * wins, then `label`, then `placeholder`, then the localized `select` fallback.
+   * A value that already matches a live option is unaffected either way. Reflected
    * so `:host([loading])` is available as a styling hook. Never mutates `value`/`selectedOptions`
    * itself, and does not itself disable the trigger -- pair it with `disabled` when the control
    * should also be non-interactive while its catalog is pending.
@@ -2013,6 +2041,7 @@ export class LyraSelect<
     this.cleanup = place(anchor, listbox, {
       placement: rtlAwarePlacement(this.placement, this),
       strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
+      sync: this.sync,
     });
     this.positioningReady = this.cleanup.ready;
   }
@@ -2100,6 +2129,10 @@ export class LyraSelect<
       this.isConnected &&
       (changed.has('placement') ||
         changed.has('positioningStrategy') ||
+        // `sync` is the one placement option that writes inline sizing onto the listbox, so
+        // dropping it has to re-run place() -- the positioner releases the width it owns on the
+        // next setup, and nothing else would ever clear it.
+        changed.has('sync') ||
         this.positionedDirection !== this.effectiveDirection);
     // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
     // while nothing about the state actually moved: tearing down and rebuilding the popup
@@ -2667,6 +2700,14 @@ export class LyraSelect<
       .map((value, index) => this.labelFor(value, index))
       .join(', ');
     const hasValue = this._selected.length > 0;
+    // `loading` covers the whole pending state, not just its committed-value half. With nothing
+    // selected `labelFor()` is never reached, so this branch used to fall through to the
+    // consumer's own `placeholder` -- forcing them to re-localize, in their own catalog, the exact
+    // string this control already owns and renders for a pending committed value. Same key, so
+    // both halves are always the same words.
+    const emptyDisplayText = this.loading
+      ? this.localize('loading')
+      : this.placeholder;
     // Single-mode only: a multi-mode unknown value is flagged per chip by renderTag() instead, and
     // this sr-only join text stays a plain readable string for assistive technology.
     const singleValueUnknown =
@@ -2771,7 +2812,7 @@ export class LyraSelect<
                 ? selectedLabel
                 : this.multiple && hasValue
                 ? selectedLabels
-                : this.placeholder}${singleValueUnknown
+                : emptyDisplayText}${singleValueUnknown
                 ? html`<span part="unknown-value">${this.localize('notInCatalog')}</span>`
                 : ''}</span
             >
