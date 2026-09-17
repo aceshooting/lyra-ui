@@ -1387,6 +1387,81 @@ describe("data mode", () => {
       expect(selectFired).to.be.false;
     });
 
+    it("isolates a renderActions lr-dropdown/lr-menu's own lr-select from row selection on a real menu-item choice", async () => {
+      const menuSelections: string[] = [];
+      const el = (await fixture(
+        html`<lr-thread-list
+          style="block-size:400px"
+          .threads=${threads}
+        ></lr-thread-list>`
+      )) as LyraThreadList;
+      el.renderActions = (thread) => html`
+        <lr-dropdown id="menu-${thread.id}" placement="bottom-end">
+          <button slot="trigger" type="button" aria-label="Conversation actions">
+            ⋮
+          </button>
+          <lr-menu
+            label="Conversation actions"
+            @lr-select=${(e: CustomEvent<{ item: { value?: string } }>) => {
+              // The consumer's own action handling for the menu choice -- attached directly to
+              // the <lr-menu> this callback renders, exactly like a real integration would.
+              menuSelections.push(e.detail.item.value ?? "");
+            }}
+          >
+            <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+          </lr-menu>
+        </lr-dropdown>
+      `;
+      await el.updateComplete;
+      await nextFrame();
+
+      const row = dataRow(el, "t1");
+      const dropdown = row.querySelector("lr-dropdown") as LyraDropdown;
+      await dropdown.show();
+      await dropdown.updateComplete;
+      await nextFrame();
+      const deleteItem = dropdown.querySelector(
+        'lr-menu-item[value="delete"]'
+      ) as HTMLElement;
+
+      let selectFired = false;
+      el.addEventListener("lr-select", () => {
+        selectFired = true;
+      });
+
+      // A real interaction -- not a synthetic `lr-select` dispatch -- runs the menu item's own
+      // click handling, which is what actually fires <lr-menu>'s own `lr-select` in real usage.
+      deleteItem.click();
+      await nextFrame();
+
+      expect(
+        selectFired,
+        "choosing a renderActions menu action must not also select/open the conversation"
+      ).to.equal(false);
+      expect(
+        menuSelections,
+        "the consumer's own lr-select handling on the rendered <lr-menu> must still run"
+      ).to.deep.equal(["delete"]);
+    });
+
+    it("still fires lr-select with the correct detail from a real click on the row itself (unaffected by the renderActions isolation above)", async () => {
+      const el = (await fixture(
+        html`<lr-thread-list
+          style="block-size:400px"
+          .threads=${threads}
+        ></lr-thread-list>`
+      )) as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+      const row = dataRow(el, "t1");
+
+      const selectPromise = oneEvent(el, "lr-select");
+      row.click();
+      expect((await selectPromise).detail).to.deep.equal({
+        conversationId: "t1",
+      });
+    });
+
     it("paints a real open menu in an earlier virtual row above the later rows it overlaps", async () => {
       const el = (await fixture(
         html`<lr-thread-list

@@ -1398,8 +1398,21 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         @lr-select=${(e: Event) => {
           // conversation-item's own lr-select bubbles+composes with no detail (LyraElement.emit()'s
           // defaults) -- without stopping it here it would keep bubbling straight through this
-          // component under the same name, right behind the correctly-shaped re-emit below.
+          // component under the same name, right behind the correctly-shaped re-emit below. Also
+          // absorbs a same-named lr-select that merely bubbled through from a `renderActions`-
+          // rendered descendant (e.g. a consumer's <lr-dropdown>+<lr-menu>) so it can never leak
+          // past this row either.
           e.stopPropagation();
+          // Only a REAL row activation dispatches lr-select directly on <lr-conversation-item>
+          // itself: conversation-item.class.ts's select() calls this.emit(...), which is
+          // LyraElement.emit()'s this.dispatchEvent() on the host -- no shadow-root boundary is
+          // crossed at the point of dispatch, so e.target is the item element with no retargeting,
+          // matching e.currentTarget (this listener, bound to <lr-conversation-item> itself). A
+          // `renderActions`-rendered descendant's own lr-select (e.g. <lr-menu>'s
+          // this.emit('lr-select', { item }, ...) on item choice, menu.class.ts's
+          // onOwnedItemSelect()) instead targets that descendant element, so e.target !==
+          // e.currentTarget here and the event is correctly ignored for row-selection purposes.
+          if (e.target !== e.currentTarget) return;
           this.emit('lr-select', { conversationId: thread.id });
         }}
         @lr-rename=${(
