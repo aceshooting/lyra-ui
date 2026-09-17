@@ -4286,6 +4286,180 @@ it("aligns an early row to the bottom of the band the external scroller has not 
   ).to.be.closeTo(scroller.getBoundingClientRect().bottom, 2);
 });
 
+/* --- auto-height measurement inside the browser's resize-observation loop ------------------- */
+
+/** Real row heights deliberately far from the 48px estimate an unmeasured row contributes, so the
+ *  first measurement of a freshly revealed window really does move the list's own extent -- the
+ *  write that must not land while the browser is delivering resize observations. */
+const AUTO_ROW_HEIGHTS = [96, 72, 120, 84];
+const autoRowHeight = (index: number): number =>
+  AUTO_ROW_HEIGHTS[index % AUTO_ROW_HEIGHTS.length]!;
+const renderAutoHeightRow = (item: unknown, index: number) =>
+  html`<div style="block-size:${autoRowHeight(index)}px">item ${item}</div>`;
+const AUTO_HEIGHT_ITEM_COUNT = 300;
+
+/**
+ * Runs `body` with every uncaught window error recorded, through both delivery paths -- an `error`
+ * listener and the `onerror` handler property -- restoring both afterwards. A ResizeObserver loop
+ * notice is never a thrown exception in any of this component's own frames: the browser fires it at
+ * the window, so only a window-level handler can observe it at all.
+ */
+async function recordWindowErrors(
+  body: () => Promise<void>
+): Promise<string[]> {
+  const messages: string[] = [];
+  const listener = (event: ErrorEvent): void => {
+    messages.push(event.message);
+  };
+  const previousOnError = window.onerror;
+  window.addEventListener('error', listener);
+  window.onerror = (event, source, lineno, colno, error) => {
+    messages.push(
+      typeof event === 'string' ? event : (event as ErrorEvent).message
+    );
+    return previousOnError
+      ? previousOnError.call(window, event, source, lineno, colno, error)
+      : false;
+  };
+  try {
+    await body();
+  } finally {
+    window.removeEventListener('error', listener);
+    window.onerror = previousOnError;
+  }
+  return [...new Set(messages)];
+}
+
+/** The reported shape: `row-height="auto"` rows inside a consumer-owned scrollport. */
+async function externalAutoHeightFixture(
+  projection: 'shadow' | 'light'
+): Promise<{ scroller: HTMLElement; el: LyraVirtualList }> {
+  const items = Array.from(
+    { length: AUTO_HEIGHT_ITEM_COUNT },
+    (_, index) => index
+  );
+  const scroller = (await fixture(html`
+    <div style="block-size:${EXTERNAL_SCROLLER_HEIGHT}px;overflow:auto">
+      <div style="block-size:${EXTERNAL_LEAD_IN_HEIGHT}px"></div>
+      <lr-virtual-list
+        row-height="auto"
+        row-projection=${projection}
+        .items=${items}
+        .renderItem=${renderAutoHeightRow}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    </div>
+  `)) as HTMLElement;
+  const el = scroller.querySelector('lr-virtual-list') as LyraVirtualList;
+  el.scrollElement = scroller;
+  await el.updateComplete;
+  await nextFrame();
+  return { scroller, el };
+}
+
+for (const projection of ['shadow', 'light'] as const) {
+  it(`measures a window revealed by an external jump to the end without a ResizeObserver loop error (row-projection="${projection}")`, async () => {
+    const { scroller, el } = await externalAutoHeightFixture(projection);
+    /** The window has caught up with the scroll position, and every row in it contributes its own
+     *  measured height to the offsets rather than the unmeasured-row estimate. */
+    const settled = (): boolean => {
+      const indices = renderedIndices(el);
+      if (indices.length === 0) return false;
+      const anchor = el.indexAtOffset(
+        scroller.scrollTop - EXTERNAL_LEAD_IN_HEIGHT
+      );
+      if (!indices.includes(anchor)) return false;
+      return indices.every(
+        (index) =>
+          Math.abs(
+            el.offsetForIndex(index + 1) -
+              el.offsetForIndex(index) -
+              autoRowHeight(index)
+          ) <= 1
+      );
+    };
+
+    const errors = await recordWindowErrors(async () => {
+      scroller.scrollTop = scroller.scrollHeight;
+      scroller.dispatchEvent(new Event('scroll'));
+      await waitUntil(settled, 'the revealed window measured and settled', {
+        timeout: 3000,
+        interval: 30,
+      });
+      await el.updateComplete;
+      await nextFrame();
+      await nextFrame();
+    });
+
+    expect(
+      errors.join(' | '),
+      'uncaught window errors raised while the revealed window measured'
+    ).to.equal('');
+
+    // Error-free is only half of it: the extent has to be the one the measurements imply, and the
+    // rendered rows have to sit where the offsets say they do.
+    const indices = renderedIndices(el);
+    expect(indices.length, 'rows windowed after the jump').to.be.greaterThan(0);
+    for (const index of indices) {
+      expect(
+        el.offsetForIndex(index + 1) - el.offsetForIndex(index),
+        `measured height folded into the offsets for row ${index}`
+      ).to.be.closeTo(autoRowHeight(index), 1);
+    }
+    const spacer = el.shadowRoot!.querySelector(
+      '[part="spacer"]'
+    ) as HTMLElement;
+    expect(
+      spacer.getBoundingClientRect().height,
+      "the rendered extent against the list's own offset space"
+    ).to.be.closeTo(el.offsetForIndex(AUTO_HEIGHT_ITEM_COUNT), 1);
+    expect(
+      el.renderedRows[0]!.getBoundingClientRect().top -
+        spacer.getBoundingClientRect().top,
+      'the first windowed row against its own offset'
+    ).to.be.closeTo(el.offsetForIndex(indices[0]!), 1.5);
+  });
+}
+
+it('settles a render held out of a resize delivery when the list disconnects before the flush', async () => {
+  const { el } = await externalAutoHeightFixture('shadow');
+  const internals = el as unknown as {
+    onRowsResized(entries: ResizeObserverEntry[]): void;
+    deliveryHeldUpdates: (() => void)[];
+  };
+  const row = el.renderedRows[0]!;
+  // One delivery by hand, reported at a height nowhere near the row's real one so the measurement
+  // really does request a render. The browser would run this from its own resize-observation loop.
+  internals.onRowsResized([
+    {
+      target: row,
+      borderBoxSize: [{ blockSize: 250, inlineSize: 100 }],
+    } as unknown as ResizeObserverEntry,
+  ]);
+  // Lit reaches scheduleUpdate() one microtask after requestUpdate(), which is where the render is
+  // held -- so this is the state a disconnect has to release rather than strand.
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(
+    internals.deliveryHeldUpdates.length,
+    'renders held out of the in-flight delivery'
+  ).to.be.greaterThan(0);
+
+  el.remove();
+  const outcome = await Promise.race([
+    el.updateComplete.then(() => 'settled'),
+    new Promise<string>((resolve) => setTimeout(() => resolve('stranded'), 500)),
+  ]);
+  expect(
+    outcome,
+    'the held render resolves once the disconnect cancels the frame that would have flushed it'
+  ).to.equal('settled');
+  expect(
+    internals.deliveryHeldUpdates.length,
+    'held renders left behind by the disconnect'
+  ).to.equal(0);
+});
+
 describe('light-DOM projection -- platform characterization', () => {
   /** Injects a document-scope stylesheet and hands back its teardown. The design's whole premise is
    *  that the DOCUMENT cascade reaches projected rows, so these rules deliberately live outside any

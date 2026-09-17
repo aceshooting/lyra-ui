@@ -898,9 +898,18 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private externalMetricsPending = false;
   private ownerRealmGeneration = 0;
   /** True for the remainder of the frame in which any of this component's `ResizeObserver`s
-   *  delivered -- so `syncRowObservers()` can tell that the re-render it is running inside is still
-   *  part of the browser's current resize-observation loop. See `beginResizeDelivery()`. */
+   *  delivered -- so `scheduleUpdate()` can hold this component's DOM writes out of the browser's
+   *  current resize-observation loop, and `syncRowObservers()` can tell that a re-render it is
+   *  running inside is still part of one. See `beginResizeDelivery()`. */
   private inResizeDelivery = false;
+  /** Renders held out of the delivery by `scheduleUpdate()`, resolved by that same frame flush.
+   *  Always drained -- a held update that never resolves leaves `isUpdatePending` true forever,
+   *  which silently swallows every later `requestUpdate()` and never settles `updateComplete`. */
+  private readonly deliveryHeldUpdates: (() => void)[] = [];
+  /** Scroll-anchor correction the measurement callbacks handed to that flush, in list-offset
+   *  pixels. Accumulated rather than applied in place so it stays paired with the render it
+   *  corrects. See `anchorAfterMeasurement()`. */
+  private pendingMeasurementScrollDelta = 0;
   /** Rows that entered the window during such a re-render: already owned by `observedRows`, but not
    *  yet handed to `rowResizeObserver`. Always a subset of `observedRows` -- `syncRowObservers()`
    *  drops an entry here whenever it drops the same identity there. */
@@ -1065,6 +1074,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.deferredRowObservations.clear();
     this.deferredGroupObservations.clear();
     this.inResizeDelivery = false;
+    // The frame that would have flushed these is about to be cancelled, so drop the correction it
+    // was carrying and let every held render proceed rather than stranding it.
+    this.pendingMeasurementScrollDelta = 0;
+    this.releaseHeldUpdates();
     if (this.rowObserveRafId !== undefined) {
       this.rowObserveRafOwner?.cancelAnimationFrame(this.rowObserveRafId);
     }
@@ -1092,6 +1105,60 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
     this.attachContainerListeners();
+  }
+
+  /**
+   * Holds this component's own DOM writes out of the browser's resize-observation delivery.
+   *
+   * `row-height="auto"` measurement is inherently read-then-write: `onRowsResized()` folds each new
+   * height into the offsets, and the render that follows writes `[part="spacer"]`'s block size --
+   * the list's whole virtual extent. Under an external `scrollElement` that one write resizes an
+   * *observed* box, because `[part="base"][data-external-scroll]` takes its own block size from the
+   * spacer and is watched by `containerResizeObserver`. Lit flushes a `requestUpdate()` on the
+   * microtask checkpoint that follows the observer callback, which is still inside the delivery,
+   * and `[part="base"]` sits shallower in the tree than the rows just broadcast -- so the browser
+   * records that resize as a *skipped* observation, ends the loop, and fires an uncaught window
+   * `ErrorEvent` reading "ResizeObserver loop completed with undelivered notifications". Nothing is
+   * actually dropped (the observation is re-delivered on the next frame) but the error is uncaught,
+   * so it lands on whatever is running at the time -- which is why it surfaced as unattributable
+   * flake in consumers' clean-console gates rather than here.
+   *
+   * Waiting for `beginResizeDelivery()`'s existing frame tick is the whole fix, and it is a timing
+   * change only: the held render still runs before that frame's own resize-observation step, so the
+   * settled extent, scroll position and window are byte-for-byte the ones they were. Any render
+   * reaching the delivery is held, not only the measurement-driven one, because every one of them
+   * writes that same extent.
+   *
+   * Held only while an external `scrollElement` is in play, because that is exactly when a render
+   * of this component can resize a box one of its own observers is watching. With its own viewport
+   * scrolling, `[part="base"]` takes its block size from `--lr-virtual-list-height` rather than from
+   * the spacer, so the extent write reaches no observed box and every mode -- fixed `row-height`
+   * included -- keeps the frame timing it has today.
+   *
+   * `performUpdate()` bypasses this hook, which is why `syncRowObservers()` keeps its own
+   * `inResizeDelivery` guard rather than relying on renders never landing mid-delivery.
+   */
+  protected override async scheduleUpdate(): Promise<void> {
+    while (this.holdsWritesDuringDelivery) await this.resizeDeliveryFlushed();
+    super.scheduleUpdate();
+  }
+
+  /** True while a DOM write from this component would land inside the browser's current
+   *  resize-observation delivery *and* could resize an observed box. See `scheduleUpdate()`. */
+  private get holdsWritesDuringDelivery(): boolean {
+    return this.inResizeDelivery && this.externalScroller !== undefined;
+  }
+
+  /** Resolves once the in-flight resize-observation delivery has been flushed (or torn down). */
+  private resizeDeliveryFlushed(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      this.deliveryHeldUpdates.push(resolve);
+    });
+  }
+
+  private releaseHeldUpdates(): void {
+    if (this.deliveryHeldUpdates.length === 0) return;
+    for (const resolve of this.deliveryHeldUpdates.splice(0)) resolve();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -1747,12 +1814,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     if (changed) {
       this.indexedMeasurementIndexDirty = true;
-      if (base && scrollAdjustment !== 0) {
-        const nextScrollTop = oldScrollTop + scrollAdjustment;
-        this.applyScrollPosition(nextScrollTop);
-        this.containerScrollTop = Math.max(0, nextScrollTop);
-        this.pendingScrollTop = null;
-      }
+      if (base) this.anchorAfterMeasurement(scrollAdjustment, oldScrollTop);
       this.offsetsDirty = true;
       this.measurementGeneration += 1;
       this.requestUpdate();
@@ -1784,16 +1846,46 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       changed = true;
     }
     if (!changed) return;
-    if (base && scrollAdjustment !== 0) {
-      const nextScrollTop = oldScrollTop + scrollAdjustment;
-      this.applyScrollPosition(nextScrollTop);
-      this.containerScrollTop = Math.max(0, nextScrollTop);
-      this.pendingScrollTop = null;
-    }
+    if (base) this.anchorAfterMeasurement(scrollAdjustment, oldScrollTop);
     this.offsetsDirty = true;
     this.measurementGeneration += 1;
     this.requestUpdate();
   };
+
+  /**
+   * Keeps the first visible row anchored after a measurement changed the height of a row above it.
+   *
+   * While this component's writes are being held out of a resize-observation delivery the
+   * correction is accumulated for `beginResizeDelivery()`'s frame tick instead of being written in
+   * place, so it stays paired with the render `scheduleUpdate()` is holding for that same tick --
+   * scrolling a frame ahead of the layout it compensates for would paint one frame of exactly the
+   * jump this exists to prevent. The deferred form re-reads the live position rather than reusing a
+   * stale `from`, so a user scroll landing in between is corrected from where the scroller is.
+   */
+  private anchorAfterMeasurement(adjustment: number, from: number): void {
+    if (adjustment === 0) return;
+    if (this.holdsWritesDuringDelivery) {
+      this.pendingMeasurementScrollDelta += adjustment;
+      return;
+    }
+    const nextScrollTop = from + adjustment;
+    this.applyScrollPosition(nextScrollTop);
+    this.containerScrollTop = Math.max(0, nextScrollTop);
+    this.pendingScrollTop = null;
+  }
+
+  /** Applies what the measurement callbacks handed to this frame, in the order they ran in before
+   *  they were deferred: the scroll-anchor correction first, then the renders held behind it. */
+  private flushDeferredMeasurementWrites(): void {
+    const adjustment = this.pendingMeasurementScrollDelta;
+    this.pendingMeasurementScrollDelta = 0;
+    if (adjustment !== 0 && this.scrollContainer) {
+      const from =
+        this.readScrollMetrics()?.rawScrollTop ?? this.containerScrollTop;
+      this.anchorAfterMeasurement(adjustment, from);
+    }
+    this.releaseHeldUpdates();
+  }
 
   /**
    * Marks the rest of this frame as "inside a resize-observation delivery", and schedules the
@@ -1802,19 +1894,23 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * `viewportHeight`, `stickyHeight`) and so can re-render the list -- and a re-render can move the
    * window.
    *
-   * Re-rendering from inside a resize callback is inherent to `row-height="auto"` and is fine;
-   * calling `observe()` from inside one is not. A brand-new observation is always active, and the
-   * browser has already broadcast that DOM depth for this frame, so it is recorded as a *skipped*
-   * observation and the loop ends by dispatching an uncaught `ErrorEvent` reading "ResizeObserver
-   * loop completed with undelivered notifications". Nothing is actually wrong -- but the error is
-   * uncaught, so it lands on whatever is running at the time, which is why it showed up as
-   * unattributable flake in this component's *consumers* rather than here.
+   * Two things must not happen inside a delivery, and both end the same way. Calling `observe()`
+   * registers a brand-new observation, which is always active at a DOM depth the browser has
+   * already broadcast this frame. Writing layout that resizes an already-observed box does the same
+   * from the other direction: `[part="spacer"]`'s extent write resizes `[part="base"]` under an
+   * external `scrollElement` (see `scheduleUpdate()`), and `[part="base"]` is shallower than the
+   * rows just broadcast. Either way the observation is recorded as a *skipped* one, the loop ends,
+   * and an uncaught `ErrorEvent` reading "ResizeObserver loop completed with undelivered
+   * notifications" is dispatched. Nothing is actually wrong -- but the error is uncaught, so it
+   * lands on whatever is running at the time, which is why it showed up as unattributable flake in
+   * this component's *consumers* rather than here.
    *
-   * Holding just those `observe()` calls until the next frame is the whole fix. The offsets
-   * rebuild, the re-render, and the scroll-anchor correction all still happen synchronously, so
-   * what gets painted is unchanged; only the moment the *newly windowed* rows start being measured
-   * moves by a frame, during which they render at the same `DEFAULT_ROW_ESTIMATE_PX` they already
-   * would have.
+   * So this frame carries all three: the deferred `observe()` calls, the accumulated scroll-anchor
+   * correction, and the renders `scheduleUpdate()` held. The offsets rebuild still happens
+   * synchronously inside the callback -- only the DOM writes move, and they move together, so no
+   * frame is ever painted with one applied and another still pending. What a newly windowed row
+   * shows during that one frame is the same `DEFAULT_ROW_ESTIMATE_PX` geometry it already would
+   * have shown.
    */
   private beginResizeDelivery(): void {
     this.inResizeDelivery = true;
@@ -1823,6 +1919,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const ownerWindow = ownerDocument.defaultView;
     if (!ownerWindow || !this.isConnected) {
       this.inResizeDelivery = false;
+      // Nothing will flush now, so anything already held has to go free here or it never does.
+      this.releaseHeldUpdates();
       return;
     }
     const generation = this.ownerRealmGeneration;
@@ -1849,6 +1947,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           groupObserver.observe(el);
       }
       this.deferredGroupObservations.clear();
+      this.flushDeferredMeasurementWrites();
     });
     this.rowObserveRafId = handle;
     this.rowObserveRafOwner = ownerWindow;
