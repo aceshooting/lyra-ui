@@ -408,3 +408,41 @@ export const ExternalScrollElement: Story = {
     `;
   },
 };
+
+/**
+ * `row-projection="light"` renders the windowed rows into the host's own light DOM, so the
+ * document stylesheet below reaches row content directly — no custom properties threaded through
+ * the shadow boundary, no per-row custom element. The component still owns windowing, measurement
+ * and the ARIA contract: positioning lives on the shadow-side `[part="row"]` wrapper, which the
+ * document cannot select.
+ *
+ * The same rules would style these rows unvirtualized, which is the whole point. Note that they are
+ * written as descendant selectors — a child combinator would not survive, because each projected
+ * row sits inside one component-owned `[data-lr-virtual-list-row]` wrapper.
+ */
+export const LightDomProjection: Story = {
+  render: () => html`
+    <style>
+      .projected-demo .projected-title {
+        font-weight: var(--lr-font-weight-semibold);
+        color: var(--lr-color-brand);
+      }
+      .projected-demo .projected-meta {
+        color: var(--lr-color-text-quiet);
+        font-size: var(--lr-font-size-sm);
+      }
+    </style>
+    <div class="projected-demo" style="max-width: 32rem;">
+      <lr-virtual-list
+        row-projection="light"
+        style="--lr-virtual-list-height: 20rem;"
+        .items=${messages}
+        .renderItem=${(item: DemoMessage) => html`
+          <div class="projected-title">${item.author}</div>
+          <div class="projected-meta">${item.text}</div>
+        `}
+        .keyFunction=${keyFunction}
+      ></lr-virtual-list>
+    </div>
+  `,
+};

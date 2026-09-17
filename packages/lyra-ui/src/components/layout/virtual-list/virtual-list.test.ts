@@ -9,6 +9,8 @@ import {
 import "./virtual-list.js";
 import {
   MAX_OVERSCAN_ROWS,
+  VIRTUAL_LIST_ROW_ATTRIBUTE,
+  VIRTUAL_LIST_STICKY_ATTRIBUTE,
   type LyraVirtualList,
   type LyraVirtualListIndexedSource,
 } from "./virtual-list.js";
@@ -28,6 +30,10 @@ async function nextFrame(): Promise<void> {
     requestAnimationFrame(() => requestAnimationFrame(() => r()))
   );
 }
+
+/** Sentinel for "emit no row-projection attribute at all", distinguishing the unset state from
+ *  an explicit `row-projection="shadow"` in the byte-identity regression below. */
+const nothingAttribute = Symbol('no row-projection attribute');
 
 const numberKey = (item: unknown) => item as number;
 const stringKey = (item: unknown) => item as string;
@@ -4278,4 +4284,843 @@ it("aligns an early row to the bottom of the band the external scroller has not 
     spacerTop + EXTERNAL_ROW_HEIGHT,
     "the bottom of row 0's slot against the external scrollport's bottom edge"
   ).to.be.closeTo(scroller.getBoundingClientRect().bottom, 2);
+});
+
+describe('light-DOM projection -- platform characterization', () => {
+  /** Injects a document-scope stylesheet and hands back its teardown. The design's whole premise is
+   *  that the DOCUMENT cascade reaches projected rows, so these rules deliberately live outside any
+   *  shadow root. */
+  function withDocumentStyles(cssText: string): () => void {
+    const style = document.createElement('style');
+    style.textContent = cssText;
+    document.head.append(style);
+    return () => style.remove();
+  }
+
+  /** The mechanism under test, stripped to its bones: an absolutely positioned, transform-offset
+   *  shadow wrapper whose only child is a named <slot>, fed from the host's own light DOM. No
+   *  custom element is registered -- a plain <div> accepts a shadow root, so this characterizes the
+   *  platform rather than any component. */
+  async function spikeFixture(options: {
+    shadowCss?: string;
+    lightMarkup: string;
+  }): Promise<{
+    host: HTMLDivElement;
+    root: ShadowRoot;
+    viewport: HTMLElement;
+    wrapper: HTMLElement;
+    slot: HTMLSlotElement;
+  }> {
+    const host = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = `
+      <style>
+        :host { display: block; }
+        .viewport { position: relative; }
+        .wrapper {
+          position: absolute;
+          inset-inline-start: 0;
+          inset-block-start: 0;
+          inline-size: 100%;
+          transform: translateY(120px);
+        }
+        ${options.shadowCss ?? ''}
+      </style>
+      <div class="viewport"><div class="wrapper"><slot name="probe"></slot></div></div>
+    `;
+    host.innerHTML = options.lightMarkup;
+    await nextFrame();
+    return {
+      host,
+      root,
+      viewport: root.querySelector('.viewport') as HTMLElement,
+      wrapper: root.querySelector('.wrapper') as HTMLElement,
+      slot: root.querySelector('slot') as HTMLSlotElement,
+    };
+  }
+
+  it('lays a slotted light node out at the shadow wrapper it is assigned into', async () => {
+    const { host, viewport, wrapper, slot } = await spikeFixture({
+      lightMarkup: '<div class="probe" slot="probe" style="block-size:40px">row body</div>',
+    });
+    const probe = host.querySelector('.probe') as HTMLElement;
+
+    expect(slot.assignedNodes({ flatten: false }).length, 'assigned node count').to.equal(1);
+    expect(
+      Math.round(wrapper.getBoundingClientRect().top - viewport.getBoundingClientRect().top),
+      'the shadow wrapper sits at its own translateY offset'
+    ).to.equal(120);
+    expect(
+      Math.round(probe.getBoundingClientRect().top - wrapper.getBoundingClientRect().top),
+      'the slotted light node is laid out inside that transformed wrapper, not at its own DOM position'
+    ).to.equal(0);
+    expect(
+      Math.round(probe.getBoundingClientRect().width - wrapper.getBoundingClientRect().width),
+      'the slotted node inherits the wrapper box width'
+    ).to.equal(0);
+  });
+
+  it('lets the document cascade beat ::slotted() on the slotted node and reach its descendants', async () => {
+    const removeStyles = withDocumentStyles(`
+      /* Same specificity as ::slotted(.probe) (0,1,1) -- the outer tree must still win. */
+      div.doc-probe { color: rgb(255, 0, 0); }
+      /* One-word element selector, far LOWER specificity -- the outer tree must still win. */
+      div { background-color: rgb(0, 128, 0); }
+      .doc-probe-child { color: rgb(255, 255, 0); }
+    `);
+    try {
+      const { host } = await spikeFixture({
+        shadowCss: `
+          ::slotted(.doc-probe) {
+            color: rgb(0, 0, 255);
+            background-color: rgb(0, 0, 255);
+          }
+        `,
+        lightMarkup:
+          '<div class="doc-probe" slot="probe"><span class="doc-probe-child">inner</span></div>',
+      });
+      const probe = host.querySelector('.doc-probe') as HTMLElement;
+      const child = host.querySelector('.doc-probe-child') as HTMLElement;
+
+      expect(
+        getComputedStyle(probe).color,
+        'a same-specificity document rule beats ::slotted()'
+      ).to.equal('rgb(255, 0, 0)');
+      expect(
+        getComputedStyle(probe).backgroundColor,
+        'even a lower-specificity document rule beats ::slotted() (outer tree wins, regardless of specificity)'
+      ).to.equal('rgb(0, 128, 0)');
+      expect(
+        getComputedStyle(child).color,
+        'the document cascade reaches descendants of the slotted node, which ::slotted() cannot'
+      ).to.equal('rgb(255, 255, 0)');
+    } finally {
+      removeStyles();
+    }
+  });
+
+  it('inherits from the shadow wrapper through the flat tree into slotted content', async () => {
+    const { host } = await spikeFixture({
+      shadowCss: '.wrapper { overflow-wrap: anywhere; }',
+      lightMarkup: '<div class="inherit-probe" slot="probe">body</div>',
+    });
+    const probe = host.querySelector('.inherit-probe') as HTMLElement;
+    expect(
+      getComputedStyle(probe).overflowWrap,
+      'inherited properties flow across the slot boundary from the shadow wrapper'
+    ).to.equal('anywhere');
+  });
+
+  it('measures slotted content through a ResizeObserver on the absolutely positioned shadow wrapper', async () => {
+    const { host, wrapper } = await spikeFixture({
+      lightMarkup: '<div class="size-probe" slot="probe" style="block-size:40px">body</div>',
+    });
+    const probe = host.querySelector('.size-probe') as HTMLElement;
+    const sizes: number[] = [];
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        sizes.push(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+      }
+    });
+    try {
+      observer.observe(wrapper);
+      await waitUntil(() => sizes.length > 0, 'the wrapper reports an initial size');
+      expect(sizes.at(-1), 'the wrapper box takes its height from the slotted content').to.be.closeTo(
+        40,
+        1
+      );
+      expect(
+        Math.round(wrapper.getBoundingClientRect().height),
+        'the wrapper rect agrees with the observed box'
+      ).to.equal(40);
+
+      const before = sizes.length;
+      probe.style.blockSize = '90px';
+      await waitUntil(() => sizes.length > before, 'a slotted content growth is reported');
+      expect(sizes.at(-1), 'a slotted growth resizes the shadow wrapper').to.be.closeTo(90, 1);
+    } finally {
+      observer.disconnect();
+    }
+  });
+
+  it('renders nothing for a light child whose slot name matches no slot', async () => {
+    const { host, slot } = await spikeFixture({
+      lightMarkup:
+        '<div class="orphan" slot="no-such-slot" style="block-size:40px">orphan</div>',
+    });
+    const orphan = host.querySelector('.orphan') as HTMLElement;
+
+    expect(orphan.assignedSlot === null, 'an unmatched name is assigned to no slot').to.be.true;
+    expect(slot.assignedNodes({ flatten: false }).length, 'the named slot stays empty').to.equal(0);
+    const rect = orphan.getBoundingClientRect();
+    expect(Math.round(rect.width), 'unassigned light children generate no box (width)').to.equal(0);
+    expect(Math.round(rect.height), 'unassigned light children generate no box (height)').to.equal(0);
+    expect(orphan.offsetParent === null, 'unassigned light children are not laid out').to.be.true;
+  });
+
+  it('blocks focus of a button inside an inert, aria-hidden LIGHT wrapper that is slotted', async () => {
+    const { host } = await spikeFixture({
+      lightMarkup:
+        '<div class="band" slot="probe" inert aria-hidden="true" style="pointer-events:none"><button type="button" class="band-button">Press</button></div>',
+    });
+    const button = host.querySelector('.band-button') as HTMLButtonElement;
+    const outside = (await fixture(html`<button type="button">outside</button>`)) as HTMLButtonElement;
+    outside.focus();
+    expect(document.activeElement === outside, 'the control outside the band focuses normally').to.be
+      .true;
+
+    button.focus();
+    expect(document.activeElement === button, 'an inert light wrapper refuses focus for its subtree')
+      .to.be.false;
+    expect(button.matches(':focus'), 'and the button never matches :focus').to.be.false;
+    expect(
+      getComputedStyle(button).pointerEvents,
+      'pointer-events: none on the light wrapper inherits to its subtree'
+    ).to.equal('none');
+  });
+});
+
+describe('rowProjection property surface', () => {
+  const SAMPLE = Array.from({ length: 200 }, (_, index) => index);
+
+  async function projectionFixture(markup: unknown): Promise<LyraVirtualList> {
+    const el = (await fixture(markup as never)) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    return el;
+  }
+
+  it('defaults to shadow and normalizes unsupported attributes and untyped property writes', async () => {
+    const unset = await projectionFixture(html`
+      <lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${SAMPLE}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    `);
+    expect(unset.rowProjection, 'unset default').to.equal('shadow');
+
+    const light = await projectionFixture(html`
+      <lr-virtual-list
+        row-projection="light"
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${SAMPLE}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    `);
+    expect(light.rowProjection, 'row-projection="light" parses').to.equal('light');
+
+    const bogus = await projectionFixture(html`
+      <lr-virtual-list
+        row-projection="deep"
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${SAMPLE}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    `);
+    expect(bogus.rowProjection, 'an unsupported attribute normalizes back').to.equal('shadow');
+    expect(bogus.childNodes.length, 'and it projects nothing').to.equal(0);
+
+    (light as unknown as Record<string, unknown>)['rowProjection'] = 'deep';
+    await light.updateComplete;
+    await nextFrame();
+    expect(light.rowProjection, 'an untyped property write normalizes back').to.equal('shadow');
+    expect(light.childNodes.length, 'and the light DOM is emptied again').to.equal(0);
+  });
+
+  it('exports the reserved light-DOM attribute names', () => {
+    expect(VIRTUAL_LIST_ROW_ATTRIBUTE).to.equal('data-lr-virtual-list-row');
+    expect(VIRTUAL_LIST_STICKY_ATTRIBUTE).to.equal('data-lr-virtual-list-sticky');
+  });
+
+  it('exposes an empty projectedRows while the property is unset', async () => {
+    const el = await projectionFixture(html`
+      <lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${SAMPLE}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    `);
+    expect(el.projectedRows.length, 'no projected rows in shadow mode').to.equal(0);
+    expect(el.renderedRows.length, 'while the shadow window is populated').to.be.greaterThan(0);
+  });
+
+  it('renders byte-identically with row-projection unset and row-projection="shadow"', async () => {
+    const build = (projection: string | typeof nothingAttribute) =>
+      projection === nothingAttribute
+        ? html`
+            <lr-virtual-list
+              style="--lr-virtual-list-height:200px"
+              row-height="40"
+              .items=${SAMPLE}
+              .renderItem=${renderText}
+              .keyFunction=${numberKey}
+            ></lr-virtual-list>
+          `
+        : html`
+            <lr-virtual-list
+              row-projection="shadow"
+              style="--lr-virtual-list-height:200px"
+              row-height="40"
+              .items=${SAMPLE}
+              .renderItem=${renderText}
+              .keyFunction=${numberKey}
+            ></lr-virtual-list>
+          `;
+
+    const unset = await projectionFixture(build(nothingAttribute));
+    const explicit = await projectionFixture(build('shadow'));
+
+    const compare = async (stage: string) => {
+      await Promise.all([unset.updateComplete, explicit.updateComplete]);
+      await nextFrame();
+      expect(unset.shadowRoot!.innerHTML, `shadow markup after ${stage}`).to.equal(
+        explicit.shadowRoot!.innerHTML
+      );
+      expect(unset.shadowRoot!.querySelectorAll('slot').length, `no slots after ${stage}`).to.equal(
+        0
+      );
+      expect(unset.childNodes.length, `unset host light DOM after ${stage}`).to.equal(0);
+      expect(explicit.childNodes.length, `explicit host light DOM after ${stage}`).to.equal(0);
+    };
+
+    await compare('mount');
+
+    for (const el of [unset, explicit]) el.scrollContainer!.scrollTop = 1200;
+    for (const el of [unset, explicit])
+      el.scrollContainer!.dispatchEvent(new Event('scroll'));
+    await compare('a scroll');
+
+    const replacement = Array.from({ length: 140 }, (_, index) => index + 1000);
+    for (const el of [unset, explicit]) el.items = replacement;
+    await compare('an items reassignment');
+
+    for (const el of [unset, explicit]) el.rowHeight = 24;
+    await compare('a row-height change');
+
+    for (const el of [unset, explicit]) el.rowHeight = 'auto';
+    await compare('a switch to auto row height');
+
+    unset.remove();
+    explicit.remove();
+    expect(unset.childNodes.length, 'unset host light DOM after remove()').to.equal(0);
+    expect(explicit.childNodes.length, 'explicit host light DOM after remove()').to.equal(0);
+  });
+});
+
+describe('light-DOM projection -- shadow side', () => {
+  const SAMPLE = Array.from({ length: 200 }, (_, index) => index);
+  const renderBody = (item: unknown, index: number) =>
+    html`<span class="row-body">item ${item}#${index}</span>`;
+
+  /** Attribute snapshot of a row wrapper, order-independent, children excluded -- so a projection
+   *  run can be compared against a shadow run without the slot/content difference drowning it. */
+  function attributeSnapshot(el: Element): string {
+    return [...el.attributes]
+      .map((attribute) => `${attribute.name}=${attribute.value}`)
+      .sort()
+      .join('|');
+  }
+
+  async function mountPair(extra: {
+    itemRole?: string;
+    rowIndexOffset?: string;
+    activeItemId?: number;
+  }): Promise<{ shadowMode: LyraVirtualList; lightMode: LyraVirtualList }> {
+    const build = (projection: 'shadow' | 'light') => {
+      const el = document.createElement('lr-virtual-list') as LyraVirtualList;
+      el.setAttribute('style', '--lr-virtual-list-height:200px');
+      el.setAttribute('row-height', '40');
+      el.setAttribute('row-projection', projection);
+      if (extra.itemRole) el.setAttribute('item-role', extra.itemRole);
+      if (extra.rowIndexOffset) el.setAttribute('row-index-offset', extra.rowIndexOffset);
+      // A numeric key needs the property: an attribute value is always a string, and the typed
+      // comparison against `keyFunction`'s number result would never match.
+      if (extra.activeItemId !== undefined) el.activeItemId = extra.activeItemId;
+      el.items = SAMPLE;
+      el.renderItem = renderBody;
+      el.keyFunction = numberKey;
+      return el;
+    };
+    const host = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    const shadowMode = build('shadow');
+    const lightMode = build('light');
+    host.append(shadowMode, lightMode);
+    await Promise.all([shadowMode.updateComplete, lightMode.updateComplete]);
+    await nextFrame();
+    return { shadowMode, lightMode };
+  }
+
+  it('replaces each row body with exactly one uniquely named slot and no consumer markup', async () => {
+    const { lightMode } = await mountPair({});
+    const rows = lightMode.renderedRows;
+    expect(rows.length, 'a populated window').to.be.greaterThan(1);
+
+    const names = new Set<string>();
+    for (const row of rows) {
+      const slots = row.querySelectorAll('slot');
+      expect(slots.length, `exactly one slot in row ${row.getAttribute('data-row-index')}`).to.equal(
+        1
+      );
+      const name = slots[0]!.getAttribute('name') ?? '';
+      expect(name.length, 'the slot name is never empty').to.be.greaterThan(0);
+      names.add(name);
+      expect(
+        row.querySelector('.row-body') === null,
+        'no consumer markup is stamped in the shadow root'
+      ).to.be.true;
+    }
+    expect(names.size, 'one distinct slot name per windowed row').to.equal(rows.length);
+    expect(
+      lightMode.shadowRoot!.querySelectorAll('slot:not([name])').length,
+      'no unnamed slot anywhere -- an unmatched projected row must stay invisible'
+    ).to.equal(0);
+  });
+
+  it('keeps every row attribute identical to shadow mode', async () => {
+    const listitem = await mountPair({ activeItemId: 3 });
+    const listitemShadow = listitem.shadowMode.renderedRows.map(attributeSnapshot);
+    const listitemLight = listitem.lightMode.renderedRows.map(attributeSnapshot);
+    expect(listitemLight, 'listitem-mode row attributes').to.deep.equal(listitemShadow);
+    expect(
+      listitemLight.some((snapshot) => snapshot.includes('aria-current=true')),
+      'the active row still carries aria-current'
+    ).to.be.true;
+
+    const rowMode = await mountPair({ itemRole: 'row', rowIndexOffset: '1' });
+    expect(
+      rowMode.lightMode.renderedRows.map(attributeSnapshot),
+      'row-mode row attributes incl. aria-rowindex + row-index-offset'
+    ).to.deep.equal(rowMode.shadowMode.renderedRows.map(attributeSnapshot));
+    expect(
+      rowMode.lightMode.renderedRows[0]!.getAttribute('aria-rowindex'),
+      'aria-rowindex still honors row-index-offset'
+    ).to.equal('2');
+  });
+
+  it('still matches lr-virtual-list::part(row) in projection mode', async () => {
+    const style = document.createElement('style');
+    style.textContent = 'lr-virtual-list::part(row) { padding-inline-start: 7px; }';
+    document.head.append(style);
+    try {
+      const { shadowMode, lightMode } = await mountPair({});
+      expect(
+        getComputedStyle(shadowMode.renderedRows[0]!).paddingInlineStart,
+        '::part(row) in shadow mode'
+      ).to.equal('7px');
+      expect(
+        getComputedStyle(lightMode.renderedRows[0]!).paddingInlineStart,
+        '::part(row) in projection mode -- the positioning wrapper never leaves the shadow root'
+      ).to.equal('7px');
+    } finally {
+      style.remove();
+    }
+  });
+});
+
+describe('light-DOM projection -- the light render root', () => {
+  const BIG = Array.from({ length: 1000 }, (_, index) => index);
+  const renderBody = (item: unknown, index: number) =>
+    html`<span class="projected-body">item ${item}#${index}</span>`;
+
+  async function projected(
+    overrides: Partial<{
+      items: readonly unknown[];
+      renderItem: (item: unknown, index: number) => unknown;
+      rowHeight: string;
+    }> = {}
+  ): Promise<LyraVirtualList> {
+    const el = document.createElement('lr-virtual-list') as LyraVirtualList;
+    el.setAttribute('style', '--lr-virtual-list-height:200px');
+    el.setAttribute('row-height', overrides.rowHeight ?? '40');
+    el.setAttribute('row-projection', 'light');
+    el.items = overrides.items ?? BIG;
+    el.renderItem = overrides.renderItem ?? renderBody;
+    el.keyFunction = numberKey;
+    const host = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    host.append(el);
+    await el.updateComplete;
+    await nextFrame();
+    return el;
+  }
+
+  /** Every slot name the shadow window is asking for, and every name the light window supplies. */
+  function slotNames(el: LyraVirtualList): { wanted: string[]; supplied: string[] } {
+    return {
+      wanted: [...el.shadowRoot!.querySelectorAll('slot')].map(
+        (slot) => slot.getAttribute('name') ?? ''
+      ),
+      supplied: el.projectedRows.map((row) => row.getAttribute('slot') ?? ''),
+    };
+  }
+
+  it('projects one light child per windowed row, carrying the reserved attributes', async () => {
+    const el = await projected();
+    const rows = el.projectedRows;
+    expect(rows.length, 'a populated projected window').to.be.greaterThan(1);
+    expect(rows.length, 'exactly one projected row per shadow row').to.equal(
+      el.renderedRows.length
+    );
+
+    const shadowRows = el.renderedRows;
+    rows.forEach((row, position) => {
+      const shadowRow = shadowRows[position]!;
+      expect(row.hasAttribute(VIRTUAL_LIST_ROW_ATTRIBUTE), 'reserved attribute').to.be.true;
+      expect(row.getAttribute('data-row-index'), 'mirrored data-row-index').to.equal(
+        shadowRow.getAttribute('data-row-index')
+      );
+      expect(row.getAttribute('data-row-key'), 'mirrored data-row-key').to.equal(
+        shadowRow.getAttribute('data-row-key')
+      );
+      expect(row.hasAttribute('part'), 'a light node must never claim a part').to.be.false;
+      expect(row.hasAttribute('role'), 'the shadow wrapper owns semantics').to.be.false;
+      expect(row.querySelector('.projected-body') !== null, 'consumer markup inside').to.be.true;
+      expect(
+        row.assignedSlot?.getAttribute('name') ?? null,
+        'assigned into its own shadow row wrapper'
+      ).to.equal(shadowRow.querySelector('slot')!.getAttribute('name'));
+    });
+
+    const { wanted, supplied } = slotNames(el);
+    expect(supplied, 'the two sides key on the same identities').to.deep.equal(wanted);
+  });
+
+  it('calls renderItem exactly once per windowed row per update', async () => {
+    let calls = 0;
+    const counting = (item: unknown, index: number) => {
+      calls += 1;
+      return renderBody(item, index);
+    };
+    const el = await projected({ renderItem: counting });
+    const windowSize = el.renderedRows.length;
+    expect(windowSize).to.be.greaterThan(1);
+
+    calls = 0;
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(calls, 'the slot path does not double-render consumer content').to.equal(windowSize);
+  });
+
+  it('lets a document stylesheet reach projected row content', async () => {
+    const style = document.createElement('style');
+    style.textContent = '.projected-body { letter-spacing: 3px; font-style: italic; }';
+    document.head.append(style);
+    try {
+      const el = await projected();
+      const body = el.projectedRows[0]!.querySelector('.projected-body') as HTMLElement;
+      expect(getComputedStyle(body).letterSpacing, 'document rule reaches row content').to.equal(
+        '3px'
+      );
+      expect(getComputedStyle(body).fontStyle).to.equal('italic');
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('stays bounded and stale-free across a long scroll', async () => {
+    const el = await projected();
+    const initial = el.projectedRows.length;
+    const container = el.scrollContainer!;
+    for (let step = 0; step < 120; step += 1) {
+      container.scrollTop = step * 320;
+      container.dispatchEvent(new Event('scroll'));
+      await nextFrame();
+      await el.updateComplete;
+      expect(el.projectedRows.length, `projected rows at step ${step}`).to.equal(
+        el.renderedRows.length
+      );
+    }
+    await nextFrame();
+    expect(el.projectedRows.length, 'window stays bounded').to.be.lessThan(initial * 3);
+    const { wanted, supplied } = slotNames(el);
+    expect(supplied, 'no stale slot names survive scrolling').to.deep.equal(wanted);
+    // Element children only: lit-html's own marker comments live between them, and the disconnect
+    // test below is what proves none of them survive teardown.
+    expect(
+      el.children.length,
+      'the projected rows are the host\'s only element children'
+    ).to.equal(el.projectedRows.length);
+  });
+
+  it('leaves no orphan light rows after an items reassignment', async () => {
+    const el = await projected();
+    el.keyFunction = stringKey;
+    el.items = Array.from({ length: 50 }, (_, index) => `fresh-${index}`);
+    await el.updateComplete;
+    await nextFrame();
+
+    expect(el.projectedRows.length).to.equal(el.renderedRows.length);
+    const { wanted, supplied } = slotNames(el);
+    expect(supplied, 'the new keyed set replaced the old one wholesale').to.deep.equal(wanted);
+    expect(
+      el.projectedRows.every((row) => (row.textContent ?? '').includes('fresh-')),
+      'no row from the previous source survived'
+    ).to.be.true;
+  });
+
+  it('empties the host light DOM completely on disconnect', async () => {
+    const el = await projected();
+    expect(el.childNodes.length).to.be.greaterThan(1);
+    el.remove();
+    expect(el.childNodes.length, 'no rows, no lit marker, no anchor').to.equal(0);
+    expect(el.projectedRows.length).to.equal(0);
+  });
+
+  it('re-projects on reconnect with no reactive property change', async () => {
+    const el = await projected();
+    const host = el.parentElement!;
+    const before = el.renderedRows.map((row) => row.getAttribute('data-row-index'));
+    el.remove();
+    expect(el.childNodes.length).to.equal(0);
+
+    host.append(el);
+    expect(el.projectedRows.length, 'reconnect re-projects synchronously').to.equal(
+      el.renderedRows.length
+    );
+    expect(
+      el.renderedRows.map((row) => row.getAttribute('data-row-index')),
+      'the same window is restored'
+    ).to.deep.equal(before);
+    const { wanted, supplied } = slotNames(el);
+    expect(supplied, 'renderedRows and projectedRows pair up 1:1 again').to.deep.equal(wanted);
+  });
+
+  it('switches the mode off and back on cleanly', async () => {
+    const el = await projected();
+    expect(el.projectedRows.length).to.be.greaterThan(0);
+
+    el.rowProjection = 'shadow';
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.childNodes.length, 'every light child and the anchor are removed').to.equal(0);
+    expect(
+      el.renderedRows[0]!.querySelector('.projected-body') !== null,
+      'shadow-rendered row content is restored'
+    ).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('slot').length, 'and no slots remain').to.equal(0);
+
+    el.rowProjection = 'light';
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.projectedRows.length, 're-projects').to.equal(el.renderedRows.length);
+    expect(
+      el.renderedRows[0]!.querySelector('.projected-body') === null,
+      'the shadow root stops stamping consumer content again'
+    ).to.be.true;
+  });
+
+  it('preserves consumer light children added before and after the first projection', async () => {
+    const el = document.createElement('lr-virtual-list') as LyraVirtualList;
+    el.setAttribute('style', '--lr-virtual-list-height:200px');
+    el.setAttribute('row-height', '40');
+    el.setAttribute('row-projection', 'light');
+    el.items = BIG;
+    el.renderItem = renderBody;
+    el.keyFunction = numberKey;
+    const early = document.createElement('span');
+    early.id = 'consumer-early';
+    el.append(early);
+
+    const host = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    host.append(el);
+    await el.updateComplete;
+    await nextFrame();
+
+    const late = document.createElement('span');
+    late.id = 'consumer-late';
+    el.append(late);
+    el.requestUpdate();
+    await el.updateComplete;
+    await nextFrame();
+
+    expect(el.querySelector('#consumer-early') !== null, 'pre-projection child survives').to.be.true;
+    expect(el.querySelector('#consumer-late') !== null, 'post-projection child survives').to.be.true;
+    expect(early.parentNode === el && late.parentNode === el, 'both stay direct children').to.be
+      .true;
+    expect(
+      el.projectedRows.length,
+      'consumer children are not mistaken for projected rows'
+    ).to.equal(el.renderedRows.length);
+
+    el.remove();
+    expect(el.querySelector('#consumer-early') !== null, 'teardown keeps consumer children').to.be
+      .true;
+    expect(el.querySelector('#consumer-late') !== null).to.be.true;
+    expect(el.childNodes.length, 'and removes exactly its own nodes').to.equal(2);
+  });
+
+  it('re-creates projected rows in the adopted owner document', async () => {
+    const el = await projected();
+    const originalAnchor = [...el.childNodes].find((node) => node.nodeType === Node.COMMENT_NODE)!;
+    expect(originalAnchor.ownerDocument === document, 'anchor starts in this document').to.be.true;
+
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const frameDocument = frame.contentDocument!;
+      el.remove();
+      frameDocument.body.append(frameDocument.adoptNode(el));
+      await el.updateComplete;
+      await nextFrame();
+
+      expect(el.projectedRows.length, 're-projected in the new realm').to.equal(
+        el.renderedRows.length
+      );
+      expect(
+        el.projectedRows.every((row) => row.ownerDocument === frameDocument),
+        'every projected row belongs to the adopted owner document'
+      ).to.be.true;
+      expect(
+        originalAnchor.parentNode === el,
+        'the anchor from the previous realm is gone'
+      ).to.be.false;
+    } finally {
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      frame.remove();
+    }
+  });
+});
+
+describe('light-DOM projection -- SSR and hydration', () => {
+  const SERVER_SHADOW = '<template shadowrootmode="open"></template>';
+  const SAMPLE = Array.from({ length: 300 }, (_, index) => index);
+  const renderBody = (item: unknown, index: number) =>
+    html`<span class="hydration-body">item ${item}#${index}</span>`;
+
+  async function mountServerShaped(attributes: string): Promise<LyraVirtualList> {
+    const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
+      setHTMLUnsafe(value: string): void;
+    };
+    container.setHTMLUnsafe(
+      `<lr-virtual-list ${attributes}>${SERVER_SHADOW}</lr-virtual-list>`
+    );
+    const el = container.firstElementChild as LyraVirtualList;
+    el.items = SAMPLE;
+    el.renderItem = renderBody;
+    el.keyFunction = numberKey;
+    return el;
+  }
+
+  it('projects from the very first render on a browser-only mount', async () => {
+    const host = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    const el = document.createElement('lr-virtual-list') as LyraVirtualList;
+    el.setAttribute('style', '--lr-virtual-list-height:200px');
+    el.setAttribute('row-height', '40');
+    el.setAttribute('row-projection', 'light');
+    el.items = SAMPLE;
+    el.renderItem = renderBody;
+    el.keyFunction = numberKey;
+
+    host.append(el);
+    let stamped = false;
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (
+            node instanceof Element &&
+            (node.matches('.hydration-body') || node.querySelector('.hydration-body') !== null)
+          )
+            stamped = true;
+        }
+      }
+    });
+    try {
+      observer.observe(el.shadowRoot!, { subtree: true, childList: true });
+      await el.updateComplete;
+      await nextFrame();
+      await el.updateComplete;
+
+      expect(el.projectedRows.length, 'rows land in the light DOM').to.be.greaterThan(0);
+      expect(
+        stamped,
+        'consumer content is never stamped into the shadow root -- no flash of shadow-rendered rows'
+      ).to.be.false;
+    } finally {
+      observer.disconnect();
+    }
+  });
+
+  it('defers projection by one task on a server-shaped mount, then moves the rows', async () => {
+    const el = await mountServerShaped(
+      'style="--lr-virtual-list-height:200px" row-height="40" row-projection="light"'
+    );
+
+    await el.updateComplete;
+    expect(el.projectedRows.length, 'the first render reproduces the server window').to.equal(0);
+    expect(el.renderedRows.length, 'and that window is populated, not empty').to.be.greaterThan(0);
+    expect(
+      el.shadowRoot!.querySelector('.hydration-body') !== null,
+      'consumer content is briefly shadow-rendered, exactly as the server serialized it'
+    ).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('slot').length, 'and no slots yet').to.equal(0);
+
+    await aTimeout(0);
+    await el.updateComplete;
+    await nextFrame();
+    await el.updateComplete;
+
+    expect(el.projectedRows.length, 'one task later the rows have moved').to.be.greaterThan(0);
+    expect(
+      el.shadowRoot!.querySelector('.hydration-body') === null,
+      'and the shadow root stops stamping consumer content'
+    ).to.be.true;
+  });
+
+  it('recovers projection after a server-shaped first update throws', async () => {
+    let shouldThrow = true;
+    const el = await mountServerShaped(
+      'style="--lr-virtual-list-height:200px" row-height="40" row-projection="light"'
+    );
+    el.renderItem = (item: unknown, index: number) => {
+      if (shouldThrow) throw new Error('first update fails');
+      return renderBody(item, index);
+    };
+
+    // Lit deliberately re-fires a failed update's error as a fresh unhandled rejection the moment
+    // the NEXT update is enqueued (ReactiveElement.__enqueueUpdate), so the recovery below cannot
+    // avoid one. The test runner's uncaught-error logger reports it through console.error and does
+    // not honour preventDefault(), so both are captured here and restored afterwards -- otherwise
+    // this test alone would fail the strict-console CI lanes.
+    const suppress = (event: PromiseRejectionEvent) => event.preventDefault();
+    const originalError = console.error;
+    const errors: unknown[][] = [];
+    console.error = (...args: unknown[]) => errors.push(args);
+    window.addEventListener('unhandledrejection', suppress);
+    try {
+      let threw = false;
+      await el.updateComplete.catch(() => {
+        threw = true;
+      });
+      expect(threw, 'the first update really did fail').to.be.true;
+
+      shouldThrow = false;
+      el.requestUpdate();
+      await el.updateComplete;
+      await nextFrame();
+      await el.updateComplete;
+
+      expect(
+        el.projectedRows.length,
+        'projection is not deferred forever by a failed first update'
+      ).to.be.greaterThan(0);
+      // Let the re-fired rejection land while the capture is still installed.
+      await aTimeout(50);
+    } finally {
+      console.error = originalError;
+      window.removeEventListener('unhandledrejection', suppress);
+    }
+    expect(
+      errors.flat().map(String).some((message) => message.includes('first update fails')),
+      'the captured noise is the expected re-fired update error, not something unrelated'
+    ).to.be.true;
+  });
 });

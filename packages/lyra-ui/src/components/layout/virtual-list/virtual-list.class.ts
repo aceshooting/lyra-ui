@@ -1,8 +1,18 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  render,
+  type RootPart,
+  type TemplateResult,
+  type PropertyValues,
+} from 'lit';
+import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { literalSetConverter } from '../../../internal/converters.js';
+import { tag } from '../../../internal/prefix.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import {
   finiteAdd,
@@ -85,6 +95,46 @@ function virtualListGroupsChanged(
 /** The ARIA role pairing each rendered row participates in -- see `itemRole`'s own doc for what
  *  each value maps to. */
 export type LyraVirtualListItemRole = 'listitem' | 'row';
+
+/**
+ * Where `renderItem`'s output is instantiated.
+ *
+ * - `'shadow'` (the default) stamps it inside this component's shadow root, where only inherited
+ *   custom properties and an explicitly exported part reach it.
+ * - `'light'` stamps it into the HOST'S OWN light DOM, assigned back into the windowed row wrapper
+ *   through an internal named slot, so an ordinary document stylesheet styles a virtualized row.
+ *   Windowing, measurement, spacer sizing, `scrollToIndex()`, the external-scroller mode and the
+ *   ARIA contract all stay with this component either way.
+ */
+export type LyraVirtualListRowProjection = 'shadow' | 'light';
+
+const ROW_PROJECTION = literalSetConverter<LyraVirtualListRowProjection>(
+  ['shadow', 'light'],
+  'shadow'
+);
+
+/**
+ * Reserved attribute marking a light-DOM row wrapper this component created in
+ * `row-projection="light"` mode, so consumer CSS, DOM diffing and snapshot tests can recognise a
+ * library-owned light-DOM node. `::part()` cannot address one -- a projected row is in the
+ * document's tree, not a shadow tree -- so this replaces `closest('[part="row"]')` for a delegated
+ * listener in that mode. Built through `tag()`, exactly like `ANNOUNCEMENT_SINK_ATTRIBUTE`.
+ */
+export const VIRTUAL_LIST_ROW_ATTRIBUTE = `data-${tag('virtual-list-row')}`;
+
+/** Reserved attribute marking the projected sticky-band wrapper. Same rationale as
+ *  {@linkcode VIRTUAL_LIST_ROW_ATTRIBUTE}. */
+export const VIRTUAL_LIST_STICKY_ATTRIBUTE = `data-${tag('virtual-list-sticky')}`;
+
+/** lit-html binds attribute VALUES, never attribute NAMES, and the two reserved names above are
+ *  derived from `tag()` rather than typed out — so the light template splices them in as static
+ *  values. Both are module-level constants on purpose: `lit/static-html.js` caches a call site's
+ *  expanded template by static-value identity, and a fresh `unsafeStatic()` per render would miss
+ *  that cache on every frame. */
+const ROW_ATTRIBUTE_STATIC = unsafeStatic(VIRTUAL_LIST_ROW_ATTRIBUTE);
+
+/** Text of the trailing comment node that bounds the light-DOM render part. */
+const PROJECTION_ANCHOR_MARKER = `${tag('virtual-list')}-projection`;
 
 /** A fixed positive pixel height, or live per-row measurement. */
 export type LyraVirtualListRowHeight = number | 'auto';
@@ -443,6 +493,25 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   @property({ attribute: 'item-role' }) itemRole: LyraVirtualListItemRole =
     'listitem';
 
+  /** Where `renderItem`'s output is instantiated: `'shadow'` (the default) inside this component's
+   *  shadow root, or `'light'` as a child of the host itself so ordinary document CSS reaches it.
+   *  See the class doc's "Light-DOM row projection" section for the full contract. Unsupported
+   *  attribute values and untyped property writes normalize back to `'shadow'`; the property is
+   *  deliberately not reflected, matching `itemRole`. */
+  private _rowProjection: LyraVirtualListRowProjection = 'shadow';
+
+  @property({ attribute: 'row-projection', converter: ROW_PROJECTION })
+  get rowProjection(): LyraVirtualListRowProjection {
+    return this._rowProjection;
+  }
+  set rowProjection(next: LyraVirtualListRowProjection) {
+    const normalized = ROW_PROJECTION.normalize(next);
+    const previous = this._rowProjection;
+    if (previous === normalized) return;
+    this._rowProjection = normalized;
+    this.requestUpdate('rowProjection', previous);
+  }
+
   /** Added to a row's 1-based index to compute `aria-rowindex` in `item-role="row"` mode (e.g. `1`
    *  when a consumer renders its own header row occupying `aria-rowindex="1"` outside this
    *  component). No effect in `'listitem'` mode. */
@@ -546,6 +615,25 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   get renderedRows(): HTMLElement[] {
     const root = this.renderRoot as ParentNode | undefined;
     return root ? [...root.querySelectorAll<HTMLElement>('[part="row"]')] : [];
+  }
+
+  /**
+   * The projected light-DOM row wrappers (`[data-lr-virtual-list-row]`) that currently exist as
+   * direct children of this host, in item order — the `row-projection="light"` counterpart of
+   * {@linkcode renderedRows}, and always empty in the default `'shadow'` mode.
+   *
+   * Each one pairs 1:1 with the `[part="row"]` wrapper it is slotted into and mirrors that
+   * wrapper's `data-row-index`/`data-row-key`. Only direct children are considered, so a nested
+   * `<lr-virtual-list>` inside a projected row never contributes its own rows here. Treat the
+   * returned elements as read-only: their lifetime belongs to the windowing math, and any of them
+   * can be recycled or removed on the next update.
+   */
+  get projectedRows(): HTMLElement[] {
+    const rows: HTMLElement[] = [];
+    for (const child of this.children) {
+      if (child.hasAttribute(VIRTUAL_LIST_ROW_ATTRIBUTE)) rows.push(child as HTMLElement);
+    }
+    return rows;
   }
 
   /** The configured external scroller once it is usable, or `undefined` whenever this component
@@ -729,6 +817,37 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   private renderStart = 0;
   private renderEnd = -1;
+  /** The window the most recent shadow `render()` emitted, with each row's identity already
+   *  resolved. `row-projection="light"` renders the SAME array, keyed by the SAME identity, so the
+   *  two sides can never disagree about which rows exist or what they are called. */
+  private renderedWindow: readonly {
+    item: unknown;
+    index: number;
+    identity: string;
+  }[] = [];
+  /** Trailing comment bounding the light-DOM render part; also where lit-html caches that part. */
+  private projectionAnchor?: Comment;
+  private projectionPart?: RootPart;
+  /**
+   * True until the first render is safely past. A server render can never produce projected rows --
+   * `@lit-labs/ssr` calls `connectedCallback()`, `willUpdate()` and `render()`, never
+   * `update()`/`updated()`, and there is no DOM to render into -- so activating projection
+   * unconditionally would serialize this component's bounded deterministic first window EMPTY and
+   * make the browser's first render disagree with the markup it is hydrating.
+   *
+   * Released through `seedFirstRenderState()`, the same helper `renderUnmeasuredWindow` uses: a
+   * browser-only mount clears it synchronously inside `connectedCallback()` (so the very first
+   * render is already projected, with no flash and no extra update), while a hydrating mount keeps
+   * the server's shadow-rendered window for exactly its first render and swaps into the light DOM
+   * one task later.
+   */
+  private projectionDeferred = true;
+
+  /** Stable reference so `seedFirstRenderState()`'s pending set dedupes the re-arm below. */
+  private readonly releaseRowProjection = (): void => {
+    this.projectionDeferred = false;
+    this.requestUpdate();
+  };
   private visibleStart = 0;
   private visibleEnd = -1;
   private lastEmittedStart = -1;
@@ -856,6 +975,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         this.renderUnmeasuredWindow = false;
         this.requestUpdate();
       });
+      this.seedFirstRenderState(this.releaseRowProjection);
+      // seedFirstRenderState() is a no-op once this element has updated, so an element that first
+      // connected into an ownerless document (which seeds nothing at all) would otherwise carry a
+      // stranded deferral into the realm that can actually render it.
+      if (this.hasUpdated) this.projectionDeferred = false;
     }
     this.resetOwnerRealmWork();
     const ownerDocument = this.ownerDocument;
@@ -897,6 +1021,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // triggers one, which would otherwise leave every already-rendered row
     // permanently unwatched by the freshly created ResizeObserver above.
     if (this.hasUpdated) {
+      // First, for the same reason it runs before syncRowObservers() in updated(): a reconnect
+      // that changes no reactive property never triggers a Lit render, so without this the rows
+      // would be observed and measured while their projected content is still torn down.
+      this.syncRowProjection();
       this.attachContainerListeners();
       this.syncRowObservers();
       this.syncGroupObservers();
@@ -905,12 +1033,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   override disconnectedCallback(): void {
+    // Deliberately NOT inside resetOwnerRealmWork(): that also runs on connect, where tearing the
+    // projection down would destroy and rebuild every row on each reconnect.
+    this.teardownRowProjection();
     this.resetOwnerRealmWork();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.teardownRowProjection();
     this.resetOwnerRealmWork();
   }
 
@@ -964,6 +1096,22 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Re-arm rather than assume. LyraElement drops its deferred seeds when a first update throws
+    // -- that update is not a hydration this element can still correct -- and it clears the
+    // hydration flag at the same time, so seeding again here runs SYNCHRONOUSLY and this update
+    // projects. Guarded on `!hasUpdated` because `seedFirstRenderState()` is a no-op past the
+    // first update anyway; on every healthy path the seed above already released the flag, so this
+    // is inert.
+    // `ownerDocument` is optional-chained because this runs under SSR too: @lit-labs/ssr's element
+    // renderer calls `willUpdate()` directly and never calls the element's own
+    // `connectedCallback()`, so the identical guard there never runs and this is the first read.
+    // A server-rendered element has no owner document at all, and a bare `.defaultView` throws.
+    if (
+      this.projectionDeferred &&
+      !this.hasUpdated &&
+      this.ownerDocument?.defaultView
+    )
+      this.seedFirstRenderState(this.releaseRowProjection);
     this.isFirstUpdate = !this.hasUpdated;
     if (
       changed.has('items') ||
@@ -1020,6 +1168,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Ordering is load-bearing twice over. The row wrappers must be populated before the first
+    // ResizeObserver.observe() below, or the first measurement is a spurious zero; and before
+    // maybeCorrectPendingScroll() -> performScrollTo() -> readScrollMetrics() forces layout, which
+    // would otherwise read a list of zero-height rows.
+    this.syncRowProjection();
     this.syncRowObservers();
     this.syncGroupObservers();
     this.syncStickyOverlay();
@@ -1953,11 +2106,120 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.emit('lr-load-more');
   }
 
+  /** True whenever `renderItem`'s output belongs in the host's light DOM for THIS render. */
+  private get projectionActive(): boolean {
+    return !this.projectionDeferred && this.rowProjection === 'light';
+  }
+
+  /** The internal slot name pairing one shadow row wrapper with its projected light-DOM row.
+   *  Keyed by the component's own row identity -- already the `repeat()` key on both sides -- so a
+   *  scroll or a reorder moves rows without rewriting a single `slot`/`name` attribute. Slot
+   *  matching is exact whole-value string comparison, so an identity containing a space or a colon
+   *  still pairs correctly, and the name is never empty so it can never collide with a default
+   *  slot (of which this component renders none). */
+  private rowSlotName(identity: string): string {
+    return `${tag('virtual-list')}-row-${identity}`;
+  }
+
+  /**
+   * Mounts, updates or tears down the light-DOM render root that holds `renderItem`'s output in
+   * `row-projection="light"` mode.
+   *
+   * The container is the HOST ITSELF — a slottable must be a direct child of the host — bounded by
+   * a trailing comment anchor, so the part only ever owns `[startMarker … anchor)`. Anything a
+   * consumer appends to this element later lands after the anchor and is never cleared by a
+   * re-render, which is also what keeps a server-rendered light child alive across hydration.
+   * `host: this` matches `ReactiveElement`'s own render options, so a `renderItem` template whose
+   * event binding is a method reference gets the same `this` it gets in shadow mode.
+   */
+  private syncRowProjection(): void {
+    if (!this.projectionActive || !this.isConnected) {
+      if (this.projectionAnchor !== undefined) this.teardownRowProjection();
+      return;
+    }
+    const anchor = this.ensureProjectionAnchor();
+    this.projectionPart = render(this.renderProjectedRows(), this, {
+      renderBefore: anchor,
+      host: this,
+    });
+  }
+
+  private ensureProjectionAnchor(): Comment {
+    const existing = this.projectionAnchor;
+    if (
+      existing !== undefined &&
+      existing.parentNode === this &&
+      existing.ownerDocument === this.ownerDocument
+    )
+      return existing;
+    if (existing !== undefined) this.teardownRowProjection();
+    const anchor = this.ownerDocument.createComment(PROJECTION_ANCHOR_MARKER);
+    // append(), never insertBefore(): the anchor bounds the part from the END, so a consumer's own
+    // light children -- whether they were already here or arrive later -- always sit outside it.
+    this.append(anchor);
+    this.projectionAnchor = anchor;
+    this.projectionPart = undefined;
+    return anchor;
+  }
+
+  /**
+   * Removes the projection completely, using public API only: `render(nothing, …)` so lit-html
+   * detaches its own child parts and their directives, then the part's start marker, then the
+   * anchor. Discarding the anchor discards lit's cached root part with it (the cache lives on the
+   * `renderBefore` node), so no private-field poking is ever required and a later re-projection
+   * starts from a genuinely fresh part.
+   *
+   * After this the host's light DOM holds exactly what the consumer put there: no rows, no lit
+   * markers, no anchor. The accepted cost is that per-row DOM state inside a projected row does not
+   * survive a disconnect/reconnect; scroll position, measurements and the window are unaffected,
+   * because they live in component state rather than in the rows.
+   */
+  private teardownRowProjection(): void {
+    const anchor = this.projectionAnchor;
+    const part = this.projectionPart;
+    this.projectionAnchor = undefined;
+    this.projectionPart = undefined;
+    if (anchor === undefined) return;
+    if (part !== undefined) {
+      const container = anchor.parentNode;
+      if (container !== null)
+        render(nothing, container as HTMLElement, {
+          renderBefore: anchor,
+          host: this,
+        });
+      const start = part.startNode;
+      start?.parentNode?.removeChild(start);
+    }
+    anchor.parentNode?.removeChild(anchor);
+  }
+
+  /**
+   * One light-DOM wrapper per windowed row, over the same array and keyed by the same identity the
+   * shadow window used. The wrapper carries no `part` (a `part` attribute outside a shadow tree is
+   * inert), no `role` and no inline positioning — the `[part="row"]` wrapper it is slotted into
+   * keeps sole ownership of absolute positioning, the per-frame transform and every ARIA
+   * attribute, so consumer CSS cannot break windowing. `data-row-index`/`data-row-key` are mirrored
+   * so document CSS and delegated listeners can still address a specific row.
+   */
+  private renderProjectedRows(): unknown {
+    return repeat(
+      this.renderedWindow,
+      (w) => w.identity,
+      (w) => staticHtml`<div
+          ${ROW_ATTRIBUTE_STATIC}
+          slot=${this.rowSlotName(w.identity)}
+          data-row-index=${w.index}
+          data-row-key=${domKeyToken(this.keyOf(w.item, w.index))}
+        >${this.renderItem(w.item, w.index)}</div>`
+    );
+  }
+
   private renderRow(
     item: unknown,
     index: number,
     total: number,
-    activeIndex: number
+    activeIndex: number,
+    identity: string
   ): TemplateResult {
     const key = this.keyOf(item, index);
     const top = this.offsetAt(index);
@@ -1975,7 +2237,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         aria-current=${isActive ? 'true' : 'false'}
         style=${styleMap({ transform: `translateY(${top}px)` })}
       >
-        ${this.renderItem(item, index)}
+        ${this.projectionActive
+          ? html`<slot name=${this.rowSlotName(identity)}></slot>`
+          : this.renderItem(item, index)}
       </div>
     `;
   }
@@ -2164,10 +2428,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   override render(): TemplateResult {
     const n = this.itemCount;
     const totalHeight = this.offsetAt(n);
-    const windowed: { item: unknown; index: number }[] = [];
+    // The identity is computed once here and reused by both the `repeat()` key and the row
+    // template (and, in projection mode, by the light-DOM template through `renderedWindow`), so
+    // enabling projection adds no extra `identityAt()` call per row per frame.
+    const windowed: { item: unknown; index: number; identity: string }[] = [];
     for (let i = this.renderStart; i <= this.renderEnd; i++) {
-      windowed.push({ item: this.itemAt(i), index: i });
+      const item = this.itemAt(i);
+      windowed.push({ item, index: i, identity: this.identityAt(i, item) });
     }
+    this.renderedWindow = windowed;
     const isRowMode = this.itemRole === 'row';
     // Native keyboard/anchor scrolling gets the same treatment as the programmatic paths, from one
     // declaration -- and the attribute is absent entirely while there is no sticky layer.
@@ -2197,8 +2466,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           ${this.renderGroups()}
           ${repeat(
             windowed,
-            (w) => this.identityAt(w.index, w.item),
-            (w) => this.renderRow(w.item, w.index, n, activeIndex)
+            (w) => w.identity,
+            (w) => this.renderRow(w.item, w.index, n, activeIndex, w.identity)
           )}
           ${this.renderStickyLayer()}
         </div>

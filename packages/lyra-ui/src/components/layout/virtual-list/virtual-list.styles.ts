@@ -104,7 +104,12 @@ export const styles = css`
   /* lr-thread-list's renderItem output lands in this shadow root, so an excerpt's <mark> is
      unreachable from the thread-list stylesheet or a rule following ::part(row-excerpt). Pinned to
      that callback's own part so other virtualized row hooks keep their semantics; the public
-     properties inherit from lr-thread-list through this host and stay component-scoped. */
+     properties inherit from lr-thread-list through this host and stay component-scoped.
+     SHADOW-MODE ONLY: under row-projection="light" the row content is a slotted light-DOM node, and
+     a shadow rule cannot style a slotted node's descendants -- only ::slotted() reaches the slotted
+     node itself, never inside it. lr-thread-list does not opt into projection, so nothing in this
+     repo regresses; a future projected consumer owns this highlight from its own stylesheet, which
+     it can do precisely because projection hands the cascade back. */
   [part="row"] [part~="row-excerpt"] mark {
     background: var(
       --lr-thread-list-excerpt-highlight-background,
