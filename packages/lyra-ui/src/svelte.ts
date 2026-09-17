@@ -9251,6 +9251,7 @@ export type LyraSelectSvelteProps = LyraSvelteElementProps<
   | 'hint'
   | 'hoist'
   | 'label'
+  | 'loading'
   | 'locale'
   | 'maxOptionsVisible'
   | 'multiple'

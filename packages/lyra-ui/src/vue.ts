@@ -9244,6 +9244,7 @@ export type LyraSelectVueProps = LyraVueCustomElement<
   | 'hint'
   | 'hoist'
   | 'label'
+  | 'loading'
   | 'locale'
   | 'maxOptionsVisible'
   | 'multiple'

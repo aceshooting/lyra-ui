@@ -9249,6 +9249,7 @@ export type LyraSelectReactProps = LyraReactElementProps<
   | 'hint'
   | 'hoist'
   | 'label'
+  | 'loading'
   | 'locale'
   | 'maxOptionsVisible'
   | 'multiple'
