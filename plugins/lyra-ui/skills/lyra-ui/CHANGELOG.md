@@ -1,5 +1,259 @@
 # Changelog
 
+## 18.0.0
+
+### Major Changes
+
+- 555b974: **Major only because several exported TypeScript unions and maps gained members. No runtime
+  behaviour changes, no attribute or event was removed or renamed, and no default moved.** If you do
+  not perform exhaustive type-level matching over the members listed below, this release is a
+  drop-in upgrade and you can stop reading here.
+  
+  The public-API gate classifies widening an exported union as breaking, and it is right to: a
+  consumer with an exhaustive `switch` over one of these, or a mapped type keyed by one, stops
+  compiling until the new member is handled. Nothing else about them changed.
+  
+  **`lr-filter-bar`**
+  - `LyraFilterBarControlType` gains `'chip'`.
+  - `LyraFilterBarFilterDefinition` gains `LyraFilterBarChipDefinition`.
+  - `LyraFilterBarDefinitionValue<D>` gains an arm resolving a chip filter to the full
+    `LyraFilterBarFieldValue`, exactly as `'custom'` already does. Every other `D` resolves as before.
+  
+  An exhaustive `switch (definition.type)` over a filter schema now needs a `'chip'` case, and a
+  `Record<LyraFilterBarControlType, T>` needs a `chip` key.
+  
+  **`lr-map`**
+  - `LyraMapLegendEntry` gains an optional `value` category key.
+  - `LyraMapEventMap` gains `'lr-map-legend-toggle'`.
+  - New exported `LyraMapLegendToggleDetail`.
+  
+  A `Record<keyof LyraMapEventMap, T>` needs the new key. `LyraMapLegendEntry` is only widened by an
+  optional property, so constructing one is unaffected; only code that enumerates its keys is.
+  
+  **`lr-virtual-list`**
+  - New `rowProjection` property and `row-projection` attribute, new `projectedRows` getter, new
+    exported `LyraVirtualListRowProjection`, and two exported constants,
+    `VIRTUAL_LIST_ROW_ATTRIBUTE` and `VIRTUAL_LIST_STICKY_ATTRIBUTE`.
+  
+  **Generated framework declarations.** `./custom-elements-jsx`, `./vue` and `./svelte` are
+  regenerated from the manifest, so the prop types for the components above widen accordingly. This
+  is the bulk of the gate's reported diff and needs no action.
+  
+  **Migration:** add the new members to any exhaustive union handling; otherwise upgrade directly.
+
+### Minor Changes
+
+- 49eb3ef: `<lr-combobox>` gains `sync` (unset by default), spelled and shaped identically to
+  `<lr-dropdown>`/`<lr-popup>`/`<lr-popover>`'s property of the same name. Setting `sync="width"`
+  copies the trigger's rendered width onto the listbox and drops the previously fixed 12rem-28rem
+  content-based clamp (keeping only the outer viewport/available-space ceiling), so a full-width
+  trigger with short option labels gets a listbox that aligns to its own edges instead of floating
+  narrower in the middle. Left unset, the listbox continues to size to its own content exactly as
+  before.
+- 204aeb4: **`<lr-filter-bar>`: a control-less `type: 'chip'` filter, for a value owned by a widget elsewhere
+  on the page.**
+  
+  A calendar heatmap cell, a map selection, a chart brush — the filter is real, but the control that
+  sets it is not in the toolbar. Until now the only way to surface such a filter in the bar was a
+  `type: 'custom'` definition whose renderer drew something inert just to occupy the cell it was
+  forced to claim.
+  
+  `type: 'chip'` renders **no control and no toolbar cell**: no `field` wrapper is emitted for it, so
+  `lr-filter-bar::part(field)` and `::part(field-<filterId>)` never match one, and a bar whose filters
+  are *all* chip-only paints no empty column — its `controls` row still renders the reset button (the
+  "clear all" action such a bar needs), the `end` slot and the loading spinner, exactly like a bar
+  declaring no filters at all.
+  
+  Everything else is unchanged from any other filter type. The value lives in `value` under its own
+  filter ID, rides every `lr-input`/`lr-reset` detail, counts toward `hasActiveFilters` (so it enables
+  the reset button) and toward `invalidFilterIds` when `required`, renders a removable active-filter
+  chip subject to `activeFiltersDisplay`, and is cleared both by removing that chip and by `reset()`.
+  A `required` chip-only filter is honoured in bookkeeping only — it joins `invalidFilterIds`, fails
+  `checkValidity()` and moves `lr-validity-change` — but renders no inline error, because the bar
+  renders no element of its own for it; the owning widget keeps its own error affordance. The
+  inherited `placeholder` is inert here for the same reason it already is for `type: 'custom'`.
+  
+  **Chip text.** An optional `formatValue(value, locale)` produces it, and `locale` is the bar's
+  `effectiveLocale` — the same locale every built-in type's own chip formatting and a custom adapter's
+  `formatValue` already receive, so the caller localizes its own data. Omitted, the fallback ladder is
+  the one a custom adapter's omitted `formatValue` uses: a string array renders as a localized
+  conjunction list, anything else renders verbatim through `String(value)`, and an unset value renders
+  empty. Verbatim is exact — a chip-only value never passes through the date branch that localizes a
+  `'date'`/`'date-range'` chip, so an ISO day is not silently reformatted and a value containing a
+  slash is not mangled.
+  
+  **Clearing.** An optional `clearValue` (default `''`, what every non-multi built-in type writes) is
+  what a chip removal writes; declare `[]` for an array-valued chip-only filter. An optional `isEmpty`
+  overrides the built-in emptiness rule. A domain sentinel must pair the two: a sentinel clear value
+  with no matching `isEmpty` leaves the bar reading the "cleared" value as still set and still
+  rendering a chip for it — the identical pairing a custom adapter's own `clearValue`/`isEmpty`
+  already documents. With the pair declared, the sentinel is never stored in `value` and an absent key
+  reads back as the sentinel for the owning widget.
+  
+  **Additive only.** A schema declaring no `'chip'` filter renders byte-identical shadow DOM: the
+  render path keys on `type === 'chip'` exactly, never on "not a known control type", so an
+  unrecognized `type` still falls back to `<lr-select>` as before. At the type level, a `'chip'` filter
+  keeps the full unconstrained field value in `LyraFilterBarValueFor<Defs>`, like `'custom'`. New
+  exported type: `LyraFilterBarChipDefinition`.
+- af5a12e: `<lr-map>` gains an opt-in interactive legend, so a categorical point layer's key can double as its
+  layer switch instead of needing a hand-built checkbox group positioned over the canvas.
+  
+  `legendInteractive` (attribute `legend-interactive`, default `false`) turns every legend row that
+  carries the new `LyraMapLegendEntry.value` category key into a keyboard-operable toggle button.
+  `value` is the same string a `point.colors` / `point.icons` record matches against
+  `point.field` / `point.iconField`, so one set of category records can feed both the paint and the
+  key and the two cannot drift. It is distinct from — and does not derive from — the `value` on a
+  row's `icon` record, which is still dropped from the canonical readback as before. Rows without a
+  `value` stay inert even when `legendInteractive` is set.
+  
+  `hiddenCategories: readonly string[]` is the controlled state, mirroring `<lr-chart>`'s
+  `hiddenDatasets`, and is honoured on first render rather than only after a user toggle. Activating a
+  toggle emits a cancelable `lr-map-legend-toggle` carrying the activated key, its proposed
+  visibility, and the complete proposed hidden set; `preventDefault()` is a real veto — nothing is
+  written, the row's `aria-pressed` does not change, the map is not repainted, and no announcement is
+  made — so a host can own the state itself. A programmatic `hiddenCategories` assignment reconciles
+  silently and emits nothing.
+  
+  A hidden category's points, point icons and stroke are muted in the rendered MapLibre layers
+  through the new `--lr-map-hidden-category-opacity` (default `0.15`), resolved live from the cascade
+  because MapLibre paints to a WebGL canvas that never sees `var()`. The legend row itself dims only
+  its decorative swatch (`--lr-map-legend-hidden-swatch-opacity`, default `0.5`) and re-colors its
+  label through the quiet-text token, so the label keeps WCAG AA contrast rather than fading with the
+  swatch. New parts: `legend-toggle` and `legend-toggle-hidden`.
+  
+  Each toggle is an ordinary tabbable `<button>` with `aria-pressed` rendering both `"true"` and
+  `"false"`, matching `<lr-chart>` and `<lr-graph-legend>` rather than introducing a third legend
+  vocabulary; a long interactive legend therefore contributes one tab stop per keyed row. Show/hide
+  state changes are announced through the shared light-DOM live region.
+  
+  With `legendInteractive` left unset, the legend DOM and every MapLibre paint property are
+  byte-identical to before: no button is rendered and `circle-opacity` is never written at all.
+- 3024e74: Added a complete Romanian (`ro`) translation catalog, the twelfth full locale to ship with the
+  package. Like every other locale, it is split into twelve side-effect-only per-family slices
+  (`@aceshooting/lyra-ui/translations/ro/<family>.js`) plus the back-compat aggregate
+  `@aceshooting/lyra-ui/translations/ro.js`, covering all 1,291 keys in `LYRA_DEFAULT_STRINGS`
+  (including the 14 pluralized entries). Romanian's CLDR plural category set is `one`/`few`/`other`
+  rather than English's `one`/`other` — `few` covers `0` and `2`-`19` (and the `101`-`119`-per-hundred
+  band), while `other` is the `de`-requiring form from `20` upward (`"20 de rezultate"` vs.
+  `"2 rezultate"`) — so every pluralized message was authored with all three categories rather than
+  widening `few` to `other`.
+- 9db9165: `<lr-select>` gains `loading` (default `false`, reflected). A committed value whose catalog hasn't
+  arrived yet -- `<lr-option>`s still being fetched/mounted asynchronously -- previously had no way to
+  distinguish itself from a genuinely stale value: both rendered the raw value string badged
+  dashed/italic `notInCatalog`. Setting `loading` while the matching option is still pending instead
+  renders the localized `loading` placeholder, with no `unknown-value` badge and no synthetic
+  `showUnknownOption` listbox row, in the trigger label or the relevant `multiple`-mode tag. Once the
+  matching `<lr-option>` mounts, the real label renders automatically on the next render, with or
+  without also flipping `loading` back to `false`. A value that already matches a live option, and
+  every existing `loading`-unset unknown-value/`getUnknownLabel` behavior, is unchanged.
+- 1942512: `<lr-streaming-text>`/`<lr-streaming-text-core>` now forward their composed
+  `<lr-markdown>`/`<lr-markdown-core>`'s documented CSS parts (`content`, `heading`, `paragraph`,
+  `list`, `code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math`) through
+  `exportparts`, reusing each name verbatim since none collides with either wrapper's own `base`/
+  `cursor` parts. A host-level `lr-streaming-text::part(link)`/`::part(img)` (or the `-core` variant's
+  equivalent) rule now reaches the rendered `<a>`/`<img>` the same way it already does applied
+  directly to `<lr-markdown>`/`<lr-markdown-core>` -- previously that styling surface was unreachable
+  from outside either wrapper's own shadow boundary.
+- c78f78c: `<lr-virtual-list>` gains `row-projection`, an opt-in light-DOM row projection mode, so an
+  application whose list rows are already styled by its own global stylesheet can adopt virtualization
+  without rehoming every row rule.
+  
+  Until now `renderItem`'s output was stamped inside the component's shadow root, so document CSS
+  could not reach row content: adopting virtualization meant moving a dozen descendant rules per row
+  into a new custom element or a growing set of custom properties — a stylesheet refactor, paid
+  exactly by the lists long enough to need virtualizing. With `row-projection="light"` the windowed
+  rows are rendered into the host's own light DOM and assigned into the shadow viewport through
+  internal named slots. The component keeps owning windowing, measurement, spacer sizing,
+  `scrollToIndex()`, the external-scroller mode and the ARIA contract; the consumer keeps owning the
+  row markup and its cascade, and ordinary document CSS styles a virtualized row exactly as it styles
+  the same row unvirtualized.
+  
+  Positioning stays on the shadow-side `[part="row"]` wrapper, which the document cannot select, so
+  windowing is not overridable by consumer CSS and the whole existing part vocabulary — `base`,
+  `spacer`, `row`, `group`, `sticky-group` — keeps matching in both modes.
+  
+  Costs, stated plainly rather than hidden:
+  
+  - Each projected row sits inside one component-owned wrapper element carrying the reserved
+    `data-lr-virtual-list-row` attribute (exported as `VIRTUAL_LIST_ROW_ATTRIBUTE`; the sticky band's
+    counterpart is `VIRTUAL_LIST_STICKY_ATTRIBUTE`). Descendant selectors port unchanged; child
+    combinators, `:nth-child`, `:first-child` and sibling combinators written against unvirtualized
+    markup do not, and `:nth-child` reflects the current window rather than the item index.
+  - A delegated listener on the host now sees an un-retargeted `event.target`, so
+    `closest('[part="row"]')` no longer resolves — use `closest('[data-lr-virtual-list-row]')`.
+  - The document cascade now reaches row content, including resets that previously could not.
+  - Per-row light-DOM state does not survive a disconnect/reconnect, because disconnect removes the
+    projected rows completely.
+  - On a hydrated page the first window is shadow-rendered for one task before it swaps into the
+    light DOM, so server markup and the first client render agree.
+  
+  `rowProjection` is `'shadow'` by default. Left unset, every existing list renders byte-identically
+  and the host's light DOM stays empty.
+
+### Patch Changes
+
+- ce460db: **Documentation: `aria-pressed` stopped reaching a link button (`href` set) in 16.0.0 — recorded
+  here because 16.0.0 filed it where nobody would find it.**
+  
+  No behaviour changes in this release. This entry exists because the change itself shipped without a
+  discoverable release note, and a consumer pinning the old contract met it as an unexplained test
+  failure after a dependency bump.
+  
+  **What changed, and when.** Through 15.0.0, `<lr-button>`, `<lr-icon-button>` and `<lr-card>`
+  forwarded a host `aria-pressed` onto the `<a>` they render when `href` is set. Since **16.0.0** they
+  do not: `aria-pressed` reaches the `<button>` rendering only. `role="link"` has no pressed state, so
+  forwarding it there asserted an ARIA state that does not exist on that role — an ARIA conformance
+  failure, not a feature. The behaviour is correct and is not being reverted.
+  
+  This narrowed a documented forwarding contract, so it was a **breaking change** for anyone relying
+  on the old behaviour, and it should have been filed as one. 16.0.0 did describe it, but as the third
+  sub-heading of a long `<lr-card>` disabled-state entry whose opening sentence never mentions
+  `<lr-button>` — so neither scanning the release notes for button changes nor reading a per-component
+  digest surfaced it.
+  
+  **Migration.** If the control is a real toggle, drop `href` — the same host `aria-pressed` then
+  reaches the `<button>` that replaces the anchor, and the pressed state is exposed again. If it is a
+  navigation target, use the global `aria-current` (`page`, `step`, `location`, `date`, `time`,
+  `true`, `false`) instead: that one is valid on `role="link"` and does still reach the anchor.
+  
+  The `lr-button`, `lr-icon-button` and `lr-card` reference sections now name 16.0.0 as the version
+  the carve-out landed in, so the rule can be dated from the reference alone.
+- 87d02cb: Fixed `<lr-reorder-list>`'s documented Ctrl/Cmd+ArrowUp/ArrowDown shortcut so it fires from real
+  keyboard focus on a row's own move button, not only when a `keydown` happens to be dispatched
+  synthetically on the button's host element. The move buttons are composed `<lr-icon-button>`s, so
+  real DOM focus during ordinary keyboard use lands on that button's own native `<button>` — one
+  shadow boundary deeper than `<lr-reorder-item>`'s own shadow root. The exclusion predicate that
+  tells the row's own chrome apart from a consumer's nested control only recognized an element whose
+  root node was exactly the item's shadow root, so the nested native button fell through to the
+  generic `name === 'button'` exclusion and every Ctrl/Cmd+Arrow press starting from real focus on a
+  move button was discarded as though it had come from a consumer's own control.
+- 87d02cb: Fixed `<lr-reorder-list>` in `controlled` mode so it no longer steals focus back to the moved row
+  when the consumer has deliberately moved focus elsewhere while an async `finalizePendingMove()` /
+  host reconciliation is still in flight. Previously the post-move focus restore unconditionally
+  focused the moved row's move button once the host's re-render settled, even when the consumer had
+  already moved focus to an unrelated control on the page in the meantime — overriding that
+  deliberate choice. The restore now only runs when the pre-restore focus was still somewhere inside
+  this list, or there was nothing meaningful to preserve (nothing focused, or the previously-focused
+  node was disconnected by the host's own reconciliation); a still-connected external focus target
+  is left alone.
+- cada7da: `<lr-table>`'s `editType: 'select'` cell editor now shows a themed disclosure chevron instead of
+  looking like a plain text field. `appearance: none` on `select[part='cell-editor']` removed the
+  native arrow with no replacement; the glyph is repainted on the enclosing `[part='cell']` (a bare
+  `<select>` cannot host a decorative child, and a `mask` can't apply to the select itself without
+  clipping its own text), using the same mask + `background: currentColor` technique already shipped
+  for the map attribution-toggle glyph, positioned at the logical inline-end edge so it mirrors
+  correctly under `dir="rtl"` and survives `forced-colors: active`. The `text`/`number` cell editors
+  are unaffected.
+- e4402ef: Fixed `<lr-thread-list>` data-mode rows so choosing a `renderActions`-rendered menu action (for
+  example a consumer's `<lr-dropdown>` containing an `<lr-menu>`) no longer also fires the row's own
+  `lr-select` and selects/opens the conversation. The row's `lr-select` listener previously reacted to
+  any `lr-select`-named event that bubbled through the `<lr-conversation-item>`, including one
+  coincidentally emitted by a `renderActions`-rendered descendant (`<lr-menu>` fires its own
+  `lr-select` on item choice). It now only treats the event as row activation when it was dispatched
+  directly on the `<lr-conversation-item>` itself (`e.target === e.currentTarget`), which is how a
+  real row click/keyboard activation always dispatches it; a descendant's bubbled event is still
+  absorbed at the row boundary (as before) but no longer re-emitted as the row's own selection.
+
 ## 17.0.0
 
 ### Major Changes
