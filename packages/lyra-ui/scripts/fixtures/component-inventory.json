@@ -60748,6 +60748,22 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "exportData",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "format",
+                    "type": "LyraHeatmapExportFormat",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "string"
+              }
+            ]
+          },
+          {
             "name": "refreshTheme",
             "overloads": [
               {

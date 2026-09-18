@@ -18722,7 +18722,7 @@
           "evidence": [
             {
               "file": "src/components/utility/export-button/export-button.test.ts",
-              "line": 1271,
+              "line": 1297,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -18739,7 +18739,7 @@
           "evidence": [
             {
               "file": "src/components/utility/export-button/export-button.test.ts",
-              "line": 1270,
+              "line": 1296,
               "kind": "320px allocation test signal"
             }
           ]
@@ -23000,7 +23000,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2264,
+              "line": 2299,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

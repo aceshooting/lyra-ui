@@ -37,6 +37,44 @@ export const Default: Story = {
   `,
 };
 
+export const PngExport: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Call exportData(\'png\') after the heatmap paints to capture its axes, cells, canvas overlays, and frozen label bands without the DOM legend or tooltip.',
+      },
+    },
+  },
+  render: () => html`
+    <div @click=${(event: Event) => {
+      const container = event.currentTarget as HTMLElement;
+      const heatmap = container.querySelector('lr-heatmap') as LyraHeatmap;
+      const output = container.querySelector('output');
+      if (output) output.textContent = heatmap.exportData('png') ? 'PNG snapshot ready.' : 'PNG is not ready yet.';
+    }}>
+      <lr-heatmap
+        sticky-labels="both"
+        style="--lr-heatmap-grid-max-block-size: 12rem"
+        cell-size="24"
+        .data=${{
+          kind: 'matrix',
+          rowLabels: ['Mon', 'Tue', 'Wed', 'Thu'],
+          colLabels: ['0h', '6h', '12h', '18h'],
+          values: [
+            [1, 4, 9, 2],
+            [0, 2, 6, 3],
+            [5, 8, 3, 1],
+            [-1, 1, 4, 7],
+          ],
+        }}
+      ></lr-heatmap>
+      <button type="button">Export PNG</button>
+      <output aria-live="polite">No export yet.</output>
+    </div>
+  `,
+};
+
 export const SqrtScaleFitToWidth: Story = {
   render: () => html`
     <lr-heatmap
@@ -616,4 +654,3 @@ export const WithoutLegend: Story = {
     </div>
   `,
 };
-

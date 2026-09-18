@@ -483,6 +483,7 @@ export type {
   HeatmapSelectionChangeDetail,
   HeatmapSelectionSource,
   LyraHeatmapCellClickDetail,
+  LyraHeatmapExportFormat,
   LyraHeatmapMatrixGeometryChangeDetail,
 } from './components/data/heatmap/heatmap.class.js';
 export {

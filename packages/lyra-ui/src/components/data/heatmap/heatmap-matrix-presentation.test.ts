@@ -139,6 +139,27 @@ it('paints sparse and frozen labels without changing data and exports those same
   expect(el.data).to.deep.equal(data);
 });
 
+it('exports the painted canvas and frozen label layers as a PNG without DOM overlays', async () => {
+  const beforePaint = document.createElement('lr-heatmap') as LyraHeatmap;
+  expect(beforePaint.exportData('png')).to.equal('');
+
+  const el = await matrix();
+  el.stickyLabels = 'both';
+  el.accessibleCells = true;
+  await el.updateComplete;
+  draw(el);
+
+  const baseCanvas = canvas(el).toDataURL('image/png');
+  const exported = el.exportData('png');
+  expect(exported).to.match(/^data:image\/png;base64,/);
+  expect(exported).to.not.equal(baseCanvas);
+  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="cell"]')).to.exist;
+
+  el.remove();
+  expect(el.exportData('png')).to.equal('');
+});
+
 it('scales a single square cell with its container and bounds invalid presentation values', async () => {
   const el = await matrix();
   el.data = { kind: 'matrix', rowLabels: ['Row'], colLabels: ['Column'], values: [[1]] };

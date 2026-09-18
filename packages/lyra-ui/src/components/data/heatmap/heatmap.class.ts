@@ -538,6 +538,10 @@ export interface LyraHeatmapEventMap {
   'lr-matrix-geometry-change': CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>;
   'lr-selection-change': CustomEvent<HeatmapSelectionChangeDetail>;
 }
+
+/** The raster snapshot format returned by `LyraHeatmap.exportData()`. */
+export type LyraHeatmapExportFormat = 'png';
+
 /**
  * `<lr-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw
  * loop. Its discriminated `data` property selects one of two projections:
@@ -929,6 +933,37 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   get matrixGeometry(): Readonly<LyraHeatmapMatrixGeometryChangeDetail> | undefined {
     if (this.effectiveMode !== 'matrix') return undefined;
     return this.lastPaintedMatrixGeometry;
+  }
+
+  /**
+   * Returns a PNG data URL for the most recently completed canvas paint. The snapshot includes the
+   * painted axes, cells, and canvas overlays, plus frozen label bands when `stickyLabels` is in
+   * use; DOM-only legend, tooltip, and accessible-cell overlays are intentionally omitted. An
+   * empty string means the component has not completed a paint yet, its canvas has no dimensions,
+   * it is waiting for deferred visibility, or the browser could not encode the snapshot.
+   */
+  exportData(format: LyraHeatmapExportFormat): string {
+    if (format !== 'png' || !this.canvasHasContent || !this.canvas) return '';
+    if (this.canvas.width <= 0 || this.canvas.height <= 0) return '';
+    try {
+      const rowBand = this.frozenBandCanvas('row-labels');
+      const colBand = this.frozenBandCanvas('col-labels');
+      if (!rowBand && !colBand) return this.canvas.toDataURL('image/png');
+
+      const composite = this.ownerDocument.createElement('canvas');
+      composite.width = this.canvas.width;
+      composite.height = this.canvas.height;
+      const context = composite.getContext('2d');
+      if (!context) return '';
+      context.drawImage(this.canvas, 0, 0);
+      if (rowBand && rowBand.width > 0 && rowBand.height > 0)
+        context.drawImage(rowBand, 0, 0);
+      if (colBand && colBand.width > 0 && colBand.height > 0)
+        context.drawImage(colBand, 0, 0);
+      return composite.toDataURL('image/png');
+    } catch {
+      return '';
+    }
   }
 
   /** The geometry the last `drawMatrix()` pass painted with, frozen and shared with the
