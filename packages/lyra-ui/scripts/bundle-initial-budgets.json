@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard marginal gzip budgets in KiB for splitting-aware production ESM. Each route adds one anchored component to the representative application shell in $baseline; only the entry and its transitively static chunks count as initial, while dynamic first-open chunks remain in the separate total-cost budgets. Ceilings resolve to positive whole-byte limits and retain at most 4% drift. The 2026-09-16 review remeasured the menu route after the current shared slot-collection and menu-item compatibility surfaces were present: it measured 10,272 initial gzip bytes, so its reviewed ceiling is 10,478 bytes (2% headroom). The 2026-09-17 review remeasured the combobox route after its new sync property: it measured 29,850 initial gzip bytes, so its reviewed ceiling is 30,447 bytes (2% headroom). Other ceilings retain their previously reviewed measurements.",
+  "$comment": "Hard marginal gzip budgets in KiB for splitting-aware production ESM. Each route adds one anchored component to the representative application shell in $baseline; only the entry and its transitively static chunks count as initial, while dynamic first-open chunks remain in the separate total-cost budgets. Ceilings resolve to positive whole-byte limits and retain at most 4% drift. The 2026-09-16 review remeasured the menu route after the current shared slot-collection and menu-item compatibility surfaces were present: it measured 10,272 initial gzip bytes, so its reviewed ceiling is 10,478 bytes (2% headroom). The 2026-09-17 review remeasured the combobox route after its new sync property: it measured 29,850 initial gzip bytes, so its reviewed ceiling is 30,447 bytes (2% headroom). The 2026-09-18 review remeasured the export-button route after its compact size and appearance options: it measured 8,826 initial gzip bytes, so its reviewed ceiling is 9,004 bytes (2% headroom). Other ceilings retain their previously reviewed measurements.",
   "$baseline": [
     "dist/components/data/stat/stat.js",
     "dist/components/overlays/callout/callout.js",
@@ -25,7 +25,7 @@
     "dist/components/overlays/popup/popup.js": 4,
     "dist/components/retrieval/citation-badge/citation-badge.js": 3,
     "dist/components/retrieval/entity-chip/entity-chip.js": 2,
-    "dist/components/utility/export-button/export-button.js": 8,
+    "dist/components/utility/export-button/export-button.js": 8.79296875,
     "dist/components/utility/mention-popover/mention-popover.js": 5.3291015625,
     "dist/components/utility/tour/tour.js": 11
   }
