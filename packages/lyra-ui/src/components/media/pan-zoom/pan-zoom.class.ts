@@ -38,8 +38,6 @@ export interface LyraPanZoomEventMap {
   focus: FocusEvent;
 }
 
-export type { LyraImageFit } from '../../../internal/image-fit.js';
-
 /**
  * `<lr-pan-zoom>` — a scrollable frame for inspecting slotted or image content at a bounded zoom
  * level. This is the intentionally renamed home of the original Lyra `lr-zoomable-frame`
