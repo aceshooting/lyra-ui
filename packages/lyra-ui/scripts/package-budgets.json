@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-18 ON the @aceshooting/lyra-ui@18.2.0 release commit: 8,351,628 packed bytes, 3,549 files (unpacked unchanged within its existing reviewed ceiling). Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-18 on the current 18.2.0 source tree with the pending export-button, heatmap, and lightbox changes: 8,351,628 packed bytes, 33,935,107 unpacked bytes, 3,551 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -24,7 +24,7 @@
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 33786928,
+    "reviewedMeasurementBytes": 33935107,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563,
     "reviewedOn": "2026-09-18"
@@ -39,7 +39,7 @@
   },
   "maximum": {
     "packedBytes": 8385628,
-    "unpackedBytes": 33926928,
+    "unpackedBytes": 34075107,
     "fileCount": 3556
   }
 }
