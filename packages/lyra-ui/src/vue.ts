@@ -6372,6 +6372,7 @@ export type LyraMapVueProps = LyraVueCustomElement<
   | 'label'
   | 'legend'
   | 'legendCollapsible'
+  | 'legendControlRole'
   | 'legendGradient'
   | 'legendGradientHiLabel'
   | 'legendGradientLoLabel'
@@ -6401,6 +6402,7 @@ export type LyraMapVueProps = LyraVueCustomElement<
   | '--lr-map-popup-close-button-hover-color',
   {
     'legend-collapsible'?: LyraMap['legendCollapsible'];
+    'legend-control-role'?: LyraMap['legendControlRole'];
     'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];
     'legend-gradient-lo-label'?: LyraMap['legendGradientLoLabel'];
     'legend-interactive'?: LyraMap['legendInteractive'];

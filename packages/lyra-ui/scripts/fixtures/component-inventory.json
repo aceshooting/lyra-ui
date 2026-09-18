@@ -73505,6 +73505,15 @@
             "default": false
           },
           {
+            "name": "legend-control-role",
+            "property": "legendControlRole",
+            "type": "LyraMapLegendControlRole",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "legend-gradient-hi-label",
             "property": "legendGradientHiLabel",
             "type": "string | null",
@@ -73632,6 +73641,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "legendControlRole",
+            "attribute": "legend-control-role",
+            "type": "LyraMapLegendControlRole",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "legendGradient",

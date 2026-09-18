@@ -27132,14 +27132,14 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 6841,
+              "line": 7019,
               "test": "keeps the collapsible legend accessible open and collapsed",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 6841,
+              "line": 7019,
               "test": "keeps the collapsible legend accessible open and collapsed",
               "target": "el",
               "state": "open"
@@ -27160,49 +27160,63 @@
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2023,
+              "line": 1923,
+              "test": "stays axe-clean with a checkbox legend, populated and collapsed",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 1923,
+              "test": "stays axe-clean with a checkbox legend, populated and collapsed",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map.test.ts",
+              "line": 2201,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2906,
+              "line": 3084,
               "test": "adds a maplibregl.Marker per entry in markers",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 6372,
+              "line": 6550,
               "test": "styles and localizes peer-added controls inside the shadow root",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 6467,
+              "line": 6645,
               "test": "clusters sized categories, restores filled and stroked icons after a style reload and exports them",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 7093,
+              "line": 7271,
               "test": "keeps a grouped legend and a grouped interactive legend accessible",
               "target": "readOnly",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 7093,
+              "line": 7271,
               "test": "keeps a grouped legend and a grouped interactive legend accessible",
               "target": "interactive",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 7093,
+              "line": 7271,
               "test": "keeps a grouped legend and a grouped interactive legend accessible",
               "target": "interactive",
               "state": "populated"
@@ -27324,7 +27338,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3229,
+              "line": 3275,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -305,12 +305,28 @@ export function buildTokens() {
   }
   const rows = shared.filter((token) => typeof token.themeInput === 'string');
   const plain = shared.filter((token) => token.themeInput === undefined);
+  // The themeInput read does not have to be the OUTERMOST var(): a token may wrap it in a
+  // narrower-scope input first, which is how --lr-icon-button-size reads
+  // --lr-icon-button-size-scope ahead of --lr-theme-icon-button-size. What the contract actually
+  // requires is that the declared themeInput is read SOMEWHERE in the chain and has a fallback, so
+  // find it and take its balanced argument rather than string-stripping a fixed prefix.
   const fallback = (token) => {
-    const prefix = `var(${token.themeInput}, `;
-    if (!token.values.light.startsWith(prefix) || !token.values.light.endsWith(')')) {
+    const marker = `var(${token.themeInput}, `;
+    const start = token.values.light.indexOf(marker);
+    if (start === -1) {
       throw new Error(`${token.name}: light value must read its declared themeInput with a fallback.`);
     }
-    return token.values.light.slice(prefix.length, -1);
+    let depth = 1;
+    let i = start + marker.length;
+    for (; i < token.values.light.length && depth > 0; i += 1) {
+      const ch = token.values.light[i];
+      if (ch === '(') depth += 1;
+      else if (ch === ')') depth -= 1;
+    }
+    if (depth !== 0) {
+      throw new Error(`${token.name}: light value has an unbalanced themeInput fallback.`);
+    }
+    return token.values.light.slice(start + marker.length, i - 1);
   };
   const modeOverrides = (token) =>
     ['dark', 'forcedColors', 'reducedMotion']
@@ -375,8 +391,10 @@ export function buildTokens() {
     '`--lr-theme-otp-input-segment-size`, or `--lr-theme-popover-viewport-clamp` instead.',
     '`--lr-icon-button-size` additionally has a dedicated subtree-scoped input,',
     '`--lr-icon-button-size-scope`, which an ancestor rule can set without reaching for the',
-    'application-wide `--lr-theme-icon-button-size`; the theme input still wins over it when both',
-    'are set. Every other `--lr-<component>-*` token — including',
+    'application-wide `--lr-theme-icon-button-size`. The subtree input wins where both are set,',
+    'because the shipped `design-tokens.css` declares the theme tier on `:root` and a var() chain',
+    'only falls through for a property that is unset everywhere. Every other `--lr-<component>-*`',
+    'token — including',
     'the rest of `lr-icon-button`\'s own (`-radius`, `-background`, `-color`, `-border`, and their',
     '`-hover`/`-active` variants) — is not re-declared anywhere in the shared layer and inherits',
     'normally from an ancestor.',

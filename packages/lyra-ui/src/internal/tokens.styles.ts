@@ -26,8 +26,15 @@ import { css } from 'lit';
 // coarse-pointer rule floor it per element -- and equally what stops a value set on a wrapper from
 // surviving the first component in between, so "set it on the toolbar" silently did nothing for an
 // icon button composed inside another component. Both inputs above are declared nowhere, so both
-// inherit the whole way down; the theme hook wins where both are set, and the floor still applies
-// to whichever value results. --lr-icon-button-size keeps its element-scoped meaning unchanged:
+// inherit the whole way down; the SCOPE input wins where both are set, and the floor still applies
+// to whichever value results. ORDER MATTERS AND IS NOT ARBITRARY: the scope input is read FIRST,
+// because `design-tokens.css` -- a shipped, exported stylesheet most consumers load -- sets
+// --lr-theme-icon-button-size on :root in both colour schemes. A `var()` chain only falls through
+// when the referenced property is unset EVERYWHERE, not merely shadowed nearer the element, so
+// reading the theme tier first made the scope input dead for every consumer of that stylesheet --
+// silently, which is the exact failure the scope input was added to remove. Subtree-specific beats
+// application-wide anyway, so scope-first is also the right precedence on its own merits.
+// --lr-icon-button-size keeps its element-scoped meaning unchanged:
 // set directly on the control it is still authoritative.
 //
 // REQUIRED_MARKER -- why --lr-form-control-required-content/-color/-offset are NOT declared here.
@@ -314,7 +321,7 @@ const baseTokens = css`
        lr-date-input, lr-combobox, lr-input and lr-select, and anything smaller
        fails WCAG 2.2 SC 2.5.8 (Target Size (Minimum)).
        ICON_BUTTON_SIZE_SCOPE -- why there are two ancestor inputs here. */
-    --lr-icon-button-size: var(--lr-theme-icon-button-size, var(--lr-icon-button-size-scope, 2.5rem));
+    --lr-icon-button-size: var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.5rem));
 
     font-family: var(--lr-font);
     color: var(--lr-color-text);
@@ -331,7 +338,7 @@ const baseTokens = css`
   /* TOUCH_TARGET_FLOOR -- keep icon-only controls at least 44px on coarse pointers. */
   @media (hover: none), (pointer: coarse) {
     :host {
-      --lr-icon-button-size: max(var(--lr-theme-icon-button-size, var(--lr-icon-button-size-scope, 2.5rem)), 2.75rem);
+      --lr-icon-button-size: max(var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.5rem)), 2.75rem);
     }
   }
 `;

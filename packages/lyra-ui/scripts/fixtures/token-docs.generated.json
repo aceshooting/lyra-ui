@@ -1515,7 +1515,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for icon button size.",
       "values": {
-        "light": "var(--lr-theme-icon-button-size, var(--lr-icon-button-size-scope, 2.5rem))"
+        "light": "var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.5rem))"
       },
       "themeInput": "--lr-theme-icon-button-size"
     },

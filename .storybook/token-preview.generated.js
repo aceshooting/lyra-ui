@@ -2662,7 +2662,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "dimension",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-icon-button-size, var(--lr-icon-button-size-scope, 2.5rem))"
+          "light": "var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.5rem))"
         }
       },
       {

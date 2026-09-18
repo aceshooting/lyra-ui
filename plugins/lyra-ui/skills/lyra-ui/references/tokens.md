@@ -55,8 +55,10 @@ look arbitrary rather than systematic. Reach through a subtree with `--lr-theme-
 `--lr-theme-otp-input-segment-size`, or `--lr-theme-popover-viewport-clamp` instead.
 `--lr-icon-button-size` additionally has a dedicated subtree-scoped input,
 `--lr-icon-button-size-scope`, which an ancestor rule can set without reaching for the
-application-wide `--lr-theme-icon-button-size`; the theme input still wins over it when both
-are set. Every other `--lr-<component>-*` token — including
+application-wide `--lr-theme-icon-button-size`. The subtree input wins where both are set,
+because the shipped `design-tokens.css` declares the theme tier on `:root` and a var() chain
+only falls through for a property that is unset everywhere. Every other `--lr-<component>-*`
+token — including
 the rest of `lr-icon-button`'s own (`-radius`, `-background`, `-color`, `-border`, and their
 `-hover`/`-active` variants) — is not re-declared anywhere in the shared layer and inherits
 normally from an ancestor.
@@ -178,7 +180,7 @@ normally from an ancestor.
 | `--lr-graph-cat-7` | `--lr-theme-graph-cat-7` | `#52d6e8` | dark: `var(--lr-theme-graph-cat-7, #79e2ef)`<br>forcedColors: `Highlight` |
 | `--lr-graph-cat-8` | `--lr-theme-graph-cat-8` | `#c9d1d9` | dark: `var(--lr-theme-graph-cat-8, #e4e7eb)`<br>forcedColors: `LinkText` |
 | `--lr-hover-brightness` | `--lr-theme-hover-brightness` | `1.08` | — |
-| `--lr-icon-button-size` | `--lr-theme-icon-button-size` | `var(--lr-icon-button-size-scope, 2.5rem)` | — |
+| `--lr-icon-button-size` | `--lr-theme-icon-button-size` | `2.5rem` | — |
 | `--lr-layer-base` | `--lr-theme-z-index-base` | `0` | — |
 | `--lr-layer-content` | `--lr-theme-z-index-content` | `1` | — |
 | `--lr-layer-dropdown` | `--lr-theme-z-index-dropdown` | `900` | — |

@@ -624,6 +624,7 @@ export type {
   LyraMapChoroplethInterpolation,
   LyraMapLegendGradientStop,
   LyraMapLegendPattern,
+  LyraMapLegendControlRole,
   LyraMapLegendProjection,
   LyraMapChoroplethLayer,
   LyraMapMarker,

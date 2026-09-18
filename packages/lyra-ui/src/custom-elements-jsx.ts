@@ -6377,6 +6377,7 @@ export type LyraMapReactProps = LyraReactElementProps<
   | 'label'
   | 'legend'
   | 'legendCollapsible'
+  | 'legendControlRole'
   | 'legendGradient'
   | 'legendGradientHiLabel'
   | 'legendGradientLoLabel'
@@ -6406,6 +6407,7 @@ export type LyraMapReactProps = LyraReactElementProps<
   | '--lr-map-popup-close-button-hover-color',
   {
     'legend-collapsible'?: LyraMap['legendCollapsible'];
+    'legend-control-role'?: LyraMap['legendControlRole'];
     'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];
     'legend-gradient-lo-label'?: LyraMap['legendGradientLoLabel'];
     'legend-interactive'?: LyraMap['legendInteractive'];

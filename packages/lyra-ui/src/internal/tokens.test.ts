@@ -336,13 +336,38 @@ it('lets --lr-icon-button-size-scope set on an ancestor reach a component nested
   expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size-scope: 2.75rem')).to.equal('2.75rem');
 });
 
-it('keeps the theme-tier input ahead of --lr-icon-button-size-scope when an ancestor sets both', async () => {
+// The SCOPE input is read ahead of the theme tier, and that order is load-bearing rather than a
+// preference. `design-tokens.css` -- a shipped, exported stylesheet -- sets
+// --lr-theme-icon-button-size on :root, and a var() chain only falls through when the referenced
+// property is unset EVERYWHERE, not merely shadowed nearer the element. Reading the theme tier
+// first therefore made the scope input inert for every consumer of that stylesheet, silently. It
+// shipped that way in 18.1.0 and a consumer found it by measuring, not by reading. The
+// root-declared case below is the regression guard; this pair only pins the precedence.
+it('reads --lr-icon-button-size-scope ahead of the theme-tier input when an ancestor sets both', async () => {
   expect(
     await probeNestedVar(
       '--lr-icon-button-size',
       '--lr-theme-icon-button-size: 3rem; --lr-icon-button-size-scope: 2rem',
     ),
-  ).to.equal('3rem');
+  ).to.equal('2rem');
+});
+
+// THE case the 18.1.0 tests missed: every fixture here composes only the base token layer, so
+// --lr-theme-icon-button-size was never set at the document root the way a real consumer's
+// design-tokens.css sets it. With the theme tier read first, this probe returned the root's value
+// and the scope override was dead. Declaring it on :root reproduces the shipped stylesheet.
+it('still honours --lr-icon-button-size-scope when the theme tier is declared at the document root', async () => {
+  const style = document.createElement('style');
+  style.textContent = ':root { --lr-theme-icon-button-size: 2.5rem; }';
+  document.head.append(style);
+  try {
+    expect(
+      await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size-scope: 2rem'),
+      'a root-declared theme tier must not make the subtree override inert',
+    ).to.equal('2rem');
+  } finally {
+    style.remove();
+  }
 });
 
 it('leaves --lr-icon-button-size at its default when neither ancestor input is set', async () => {

@@ -1177,7 +1177,12 @@ code. See each control's own reference page for its exact pair.
   | `--lr-icon-button-size-scope` | one subtree | the wrapper you want affected |
   | `--lr-icon-button-size` | one element | the icon-only control itself |
 
-  `--lr-theme-icon-button-size` wins wherever both ancestor inputs are set. `--lr-icon-button-size`
+  `--lr-icon-button-size-scope` wins wherever both ancestor inputs are set — the narrower scope
+  takes precedence, and it has to: the shipped `design-tokens.css` declares
+  `--lr-theme-icon-button-size` on `:root`, and a `var()` chain only falls through for a property
+  that is unset *everywhere*, not merely shadowed nearer the element. Reading the theme tier first
+  therefore made this knob inert for anyone loading that stylesheet (a real 18.1.0 defect, fixed in
+  18.2.0). `--lr-icon-button-size`
   is **element-scoped on purpose** and is not a wrapper knob: every component re-declares it on its
   own host so the touch-target floor can apply per element, so a value set on a wrapper is replaced
   at the first component in between and never reaches anything nested inside one. That behaviour is
