@@ -1,5 +1,13 @@
 # Changelog
 
+## 18.3.0
+
+### Minor Changes
+
+- f652e93: Add compact sizing and outlined or quiet appearances to `lr-export-button`, plus a public PNG export
+  method for `lr-heatmap` that captures the painted canvas and frozen label bands.
+- 29e5202: Add an opt-in fit-to-viewport policy to `lr-lightbox`, reusing the image viewer fit vocabulary for landscape and tall images.
+
 ## 18.2.0
 
 ### Minor Changes
