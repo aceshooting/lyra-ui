@@ -1,0 +1,69 @@
+# Makes a release stay visibly incomplete until the published upgrade feed matches npm.
+#
+# The documented upgrade workflow tells every consumer -- and every upgrading agent -- to read
+# https://www.lyra-ui.com/changelog.json and diff from its "latest". That feed is built and deployed
+# by the SIBLING lyra-ui.com repository, so between `npm publish` and that deploy npm and the feed
+# disagree, and every upgrading consumer concludes it is already current. It happened on four
+# releases across two reports; one of the skipped releases carried a bug fix a consumer was waiting
+# for.
+#
+# scripts/publish.sh waits for this at its tail, but publish.sh is not the only way a version
+# reaches npm: publish.yml also runs on `workflow_dispatch` (the re-publish/recovery path) and on
+# any `release: published` event, and on those paths nothing was watching. This workflow is that
+# missing half.
+#
+# It deliberately lives OUTSIDE publish.yml. Everything from publish.yml's `publish:` job to the end
+# of that file is a credential-bearing region that must not check out source or install
+# dependencies -- scripts/release-integrity.test.mjs enforces exactly that -- and this check needs a
+# checkout to run. `workflow_run` keeps it strictly after the credentialed job, in its own
+# unprivileged workflow, and still fires however Publish was triggered.
+name: Release feed freshness
+
+on:
+  workflow_run:
+    workflows: [Publish]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version the feed must report, e.g. 18.3.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  feed-matches-npm:
+    # A failed or cancelled Publish never reached `npm publish`, so there is nothing to wait for.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Wait for the published upgrade feed to match npm
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          # On the workflow_run path the release version is whatever npm now calls latest; a
+          # dispatch can pin an explicit one.
+          VERSION="${REQUESTED_VERSION:-$(npm view @aceshooting/lyra-ui dist-tags.latest)}"
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::Could not resolve @aceshooting/lyra-ui dist-tags.latest from npm."
+            exit 1
+          fi
+          echo "::notice::Waiting for the upgrade feed to report @aceshooting/lyra-ui@${VERSION}."
+          echo "If this job is waiting, deploy the sibling lyra-ui.com site now."
+          if ! node scripts/release-integrity.mjs verify-site-freshness \
+            --package @aceshooting/lyra-ui \
+            --version "$VERSION" \
+            --timeout-seconds 1800 \
+            --poll-seconds 30; then
+            echo "::error::RELEASE INCOMPLETE -- npm has ${VERSION} but the published feed does not. Deploy ../lyra-ui.com, then re-run this job."
+            exit 1
+          fi
+          echo "::notice::npm, changelog.json and the component catalog all report ${VERSION}."

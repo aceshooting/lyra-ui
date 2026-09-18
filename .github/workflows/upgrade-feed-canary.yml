@@ -1,0 +1,52 @@
+# Standing detector for npm/published-feed drift.
+#
+# The release path is gated in two places now (scripts/publish.sh's tail and publish.yml's
+# feed-freshness job), but a gate on the release path can only catch drift that exists AT release
+# time. The feed can go stale afterwards and has every reason to: lyra-ui.com is a separate
+# repository with its own deploy, and a redeploy from a checkout that is not at the release commit
+# republishes the previous version's feed over the current one without changing the component count
+# that every other check looks at.
+#
+# Both stale-feed reports reached us the same way -- a consumer audit, days later, from a project
+# that had silently skipped a release. Nothing in this repository was watching in between. This is.
+# It resolves what npm says is current and asserts the published feed and the component catalog
+# agree, so drift surfaces as a failed run here instead of as a bug report.
+name: Upgrade feed canary
+
+on:
+  schedule:
+    # Daily, deliberately off the hour: GitHub delays cron runs scheduled on it.
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  feed-matches-npm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Assert the published feed and catalog match npm's latest
+        run: |
+          set -euo pipefail
+          VERSION="$(npm view @aceshooting/lyra-ui dist-tags.latest)"
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::Could not resolve @aceshooting/lyra-ui dist-tags.latest from npm."
+            exit 1
+          fi
+          echo "npm reports @aceshooting/lyra-ui@${VERSION} as latest."
+          # A short window, not publish.sh's hour: this is a detector, not a waiter. It only
+          # absorbs transient propagation right after a deploy; anything longer is real drift.
+          if ! node scripts/release-integrity.mjs verify-site-freshness \
+            --package @aceshooting/lyra-ui \
+            --version "$VERSION" \
+            --timeout-seconds 180 \
+            --poll-seconds 30; then
+            echo "::error::The published upgrade feed has drifted from npm (latest is ${VERSION}). Every upgrading consumer reading changelog.json concludes it is already current. Redeploy ../lyra-ui.com from a checkout at the release commit."
+            exit 1
+          fi
