@@ -1,5 +1,234 @@
 # Changelog
 
+## 18.1.0
+
+### Minor Changes
+
+- 6137062: `<lr-filter-bar>`: under `activeFiltersDisplay="changed"`, the reset button now keys its enablement
+  on `hasChangedFilters` instead of `hasActiveFilters`.
+  
+  `'changed'` exists to say that a filter sitting at its own declared `defaultValue` is not something
+  the user applied, and it already suppressed that filter's chip. The reset button next to the empty
+  chip row stayed enabled anyway, so a defaults-only bar rendered "nothing is applied" and "press here
+  to clear what's applied" side by side, and pressing it was a no-op that still emitted `lr-input` and
+  `lr-reset`.
+  
+  Nothing else changes: enablement under `activeFiltersDisplay="all"` (the default) and `"hidden"` is
+  byte for byte what it was, `disabled`/`loading` still win in every mode, `hasActiveFilters` keeps its
+  meaning, and `reset()` itself is untouched — it still restores every declared `defaultValue`.
+- 6137062: `<lr-filter-bar>`: add a public read-only `hasChangedFilters`.
+  
+  `hasActiveFilters` answers "does any filter hold a value", which is deliberately `true` for a bar
+  whose filters were declared with their own non-empty `defaultValue` and have never been touched —
+  so a host that wanted to show "3 filters applied", enable an "Apply"/"Save search" action, or badge
+  a collapsed filter panel had to re-derive the default comparison itself from `filters` and `value`.
+  `hasChangedFilters` exposes it directly, using the exact equality `activeFiltersDisplay: 'changed'`
+  already filters its chip row on: a `readonly string[]` default compares positionally, everything
+  else compares with `Object.is`, and a filter with no declared `defaultValue` counts as changed the
+  moment it holds any value at all. Clearing a filter that *does* declare one also counts as changed,
+  since `reset()` would restore it — which is the one case where it differs from the `'changed'` chip
+  row, whose entries are non-empty values by construction.
+  
+  `hasActiveFilters` is unchanged, and so is every existing behaviour keyed on it.
+- 6137062: `<lr-filter-bar>`: a filter definition's `labelVisibility` accepts a third value, `'auto'`.
+  
+  `'visible'` and `'hidden'` were an all-or-nothing choice made once, at definition time, for a
+  component that is as likely to sit in a 320px side panel as across a full page — so a bar authored
+  for a dashboard lost a whole row of vertical space in a drawer, and one authored for the drawer
+  shipped unlabelled fields to the dashboard. `'auto'` renders exactly what `'visible'` does (same
+  stacked label element, same accessible name computed from it, no `aria-label` and no placeholder
+  fallback) and visually clips that label once the bar's **own** allocation — a container query on the
+  host, not the viewport — drops below `30rem`. The label element stays in the DOM at every width, so
+  the field's accessible name is identical in both states; the previous workaround, visually hiding
+  `::part(filter-control-label)` from a consumer stylesheet, removed the name along with the text.
+  
+  `'checkbox-menu'` participates through its own trigger label run, the same one `'hidden'` already
+  clips there.
+  
+  `'visible'`, `'hidden'` and an unset `labelVisibility` are unchanged at every allocation. The host
+  does become an inline-size query container (with the library's standard
+  `contain-intrinsic-inline-size` fallback), which is a no-op for a bar in an ordinary block or flex
+  allocation.
+- 3f4be41: `<lr-map>`: add `legendCollapsible`/`legendOpen` and the cancelable `lr-map-legend-panel-toggle`.
+  
+  The legend panel could not be collapsed at all, so a large key permanently covered part of the map.
+  `legend-collapsible` renders a native disclosure button inside the panel whose visible localized
+  text is its accessible name, whose `aria-expanded` renders the literal `"true"`/`"false"`, and whose
+  `aria-controls` names the row list in the same shadow root. `legendOpen` defaults **open**, so adding
+  only `legendCollapsible` never hides an existing key; it is a `true`-defaulting boolean, so
+  `legend-open="false"` parses and the open default reflects as an absent attribute.
+  
+  Activation emits the cancelable `lr-map-legend-panel-toggle` (`detail: { open }`). `preventDefault()`
+  is a real veto — nothing is written and nothing re-renders — so a host can own the open state, and a
+  programmatic `legendOpen` assignment reconciles without emitting, so a controlled host cannot loop.
+  Collapsing hides the gradient, the rows, the `legend-limit` summary and the trailing `legend` slot;
+  the `legend-start` slot and the disclosure stay visible. New `legend-disclosure` and
+  `legend-disclosure-icon` parts. With `legendCollapsible` unset the rendered legend is unchanged.
+- 3f4be41: `<lr-map>`: add an optional `group` to `LyraMapLegendEntry`, splitting the legend into sections.
+  
+  `legend` was one flat array rendered as a single list, so a key covering two layers could not say
+  which rows belonged to which. Consecutive entries sharing an identical `group` now render as one
+  section — a visible `legend-group-heading` plus a `role="group"` that heading names through
+  `aria-labelledby`. The grouping rule is pinned rather than inferred: an entry with no `group` keeps
+  its **declared** position (never hoisted or sunk), and a `group` that reappears after an interruption
+  opens a second section rather than reordering rows to merge them.
+  
+  `group` is caller-supplied data, so it renders verbatim and is never passed through the locale
+  catalog; it is trimmed, bounded to 256 characters, and a non-string, empty or whitespace-only value
+  means "ungrouped" rather than an empty heading. Sections are not rows: the 100-row cap and the
+  `legend-limit` summary still count rows. A grouped legend gives each run its own `role="list"`
+  (a `list` may only own `listitem`s), while a legend with no groups renders exactly as before. New
+  `legend-group` and `legend-group-heading` parts.
+- 3f4be41: `<lr-map>`: add a `legend-start` slot that renders at the top of the legend panel.
+  
+  The panel's only host extension point was `slot="legend"`, which renders after the gradient bar and
+  every projected row — so a host-authored panel header (a title, a source note, a control) could only
+  ever be a footer. `legend-start` renders ahead of both. Content in it alone opens the panel, exactly
+  as `legend` content alone already did, and it is never made interactive by `legendInteractive`. The
+  existing `legend` slot keeps its position, so an unset map's legend markup is unchanged.
+- 42af229: `<lr-select>`: `loading` now covers the whole pending state, not only its committed-value half.
+  It already rewrote an unresolved committed value's label to the localized `loading` text and
+  suppressed the "not in catalog" badge; with nothing selected at all -- a create form whose option
+  catalogue is still being fetched, or an edit form whose saved selection is legitimately empty --
+  `labelFor()` was never reached and the trigger fell through to the consumer's own `placeholder`.
+  Covering that half meant hand-writing a conditional placeholder bound to the same flag and
+  re-localizing, in the consuming app's own catalogue, the exact string this control already owns.
+  
+  The trigger now renders the same localized text in place of `placeholder` while `loading` is
+  `true` and the selection is empty -- the existing `loading` message key, so both halves always read
+  the same words and a `registerLyraLocale()` translation reaches them both. With `loading` false an
+  empty selection renders the consumer's `placeholder` exactly as before, `value` is never touched,
+  and the trigger's accessible name is unchanged: a host `aria-label` still wins, then `label`, then
+  `placeholder`, then the localized `select` fallback.
+- 42af229: `<lr-select>`: new `sync` property, closing the shared anchored-surface sizing vocabulary
+  `<lr-popup>`, `<lr-popover>`, `<lr-dropdown>` and `<lr-combobox>` already spell. It takes the same
+  `'width' | 'height' | 'both'` type (`PlaceSync`), the same unset default, and is wired through the
+  same `place()` option, so `sync="width"` copies the rendered trigger width onto the listbox: a
+  full-width select with short option labels no longer opens a listbox visibly narrower than, and
+  floating centred under, its own trigger. Changes reposition an already-open listbox without closing
+  it, and unsetting it releases the inline width the positioner wrote.
+  
+  With `sync` unset the listbox renders exactly as before -- `inline-size: max-content` between
+  `--lr-size-12rem` and `min(--lr-popover-viewport-clamp, --lr-size-28rem)`. A synced listbox is
+  capped on `--lr-positioner-available-inline-size` alone, adopting the corrected clamp rather than
+  the viewport-clamp shortfall it would otherwise have inherited, so it matches its trigger at any
+  width while the measured available space still keeps it on screen.
+- b22fdbb: Design tokens: add `--lr-icon-button-size-scope`, an ancestor-scoped input for the icon-only
+  control size.
+  
+  `--lr-icon-button-size` is element-scoped and has to stay that way: the shared token layer
+  re-declares it on every `lr-*` host so the coarse-pointer touch-target floor can apply per element.
+  The side effect is that a wrapper setting `--lr-icon-button-size` is replaced at the first
+  component in between, so it never reaches an icon button composed inside another component — a
+  `<lr-icon-button>` slotted through `<lr-popover>`, or the copy affordance inside `<lr-code-block>`.
+  The only ancestor lever was `--lr-theme-icon-button-size`, which is application-wide by design, so
+  "make just this toolbar denser" meant reaching for the global theme input and scoping it by hand.
+  
+  `--lr-icon-button-size-scope` is declared nowhere, so it inherits the whole way down and reaches
+  every icon-only control below the wrapper that sets it:
+  
+  ```css
+  .message-toolbar {
+    --lr-icon-button-size-scope: 1.75rem;
+  }
+  ```
+  
+  Precedence is `--lr-theme-icon-button-size` → `--lr-icon-button-size-scope` → the `2.5rem` default,
+  and the coarse-pointer floor still raises a resolved value below `2.75rem` back to it, so the new
+  knob is not a route around WCAG 2.2 SC 2.5.8. Purely additive: `--lr-icon-button-size` keeps its
+  current element-scoped behaviour exactly, and the resolved default is unchanged.
+
+### Patch Changes
+
+- 6137062: Docs: `<lr-filter-bar>`'s consumer reference now covers `hasChangedFilters` (and how it differs from
+  `hasActiveFilters` on a defaults-only bar), the `activeFiltersDisplay="changed"` reset-enablement
+  coupling, and `labelVisibility: 'auto'` with its `30rem` container-query threshold.
+- 3f4be41: Document `<lr-map>`'s collapsible legend, `legend-start` slot and legend sections in the authored
+  `llms/media.md` reference: `legendCollapsible`/`legendOpen` (including the `true` default and the
+  `legend-open="false"` parse), the cancelable `lr-map-legend-panel-toggle`, the `group` field and its
+  pinned ordering rule, and the four new parts.
+- 42af229: `<lr-combobox>`: a `sync="width"`/`sync="both"` listbox is no longer shortened by
+  `--lr-popover-viewport-clamp`. The synced rule capped the listbox at
+  `min(var(--lr-popover-viewport-clamp), var(--lr-positioner-available-inline-size, 100vw))`, and the
+  clamp's 92vw default resolves below the width of exactly the full-width trigger `sync` exists to
+  serve -- a 738px trigger in an 800px viewport got a 736px listbox, and the shortfall grows with the
+  trigger. The synced rule now caps on `var(--lr-positioner-available-inline-size, 100vw)` alone,
+  matching `<lr-popup>`: a width-synced listbox is anchored to an element already on screen and
+  measured against the space actually available beside it, so the extra viewport ceiling had nothing
+  left to protect against, while the available-space term still keeps an over-wide anchor from
+  pushing the listbox off-screen. An unsynced listbox is unchanged and keeps
+  `min(--lr-popover-viewport-clamp, --lr-size-28rem)`.
+- 42af229: Docs: `llms/forms.md` now documents `<lr-select>`'s new `sync` property (same vocabulary note as
+  `<lr-combobox>`'s, stating its unset default), records that a width-synced listbox on **both**
+  controls is capped on `--lr-positioner-available-inline-size` alone rather than also by
+  `--lr-popover-viewport-clamp`, and describes `loading`'s coverage of an empty selection alongside
+  the `placeholder` entry it now takes precedence over.
+- b22fdbb: Design tokens: derive the dark-mode overlay surface from the page surface instead of pinning it.
+  
+  `--lr-color-surface-overlay` is the panel colour behind every floating surface — dropdowns,
+  listboxes, menus, toasts, popovers, dialogs, and the `lr-app-rail` mobile drawer. In light mode it
+  already resolves straight to `--lr-color-surface`, so one `--lr-theme-color-surface-default`
+  override carries all of them with it. Dark mode pinned a literal instead, because panel and page
+  resolving to the same near-black makes an open dialog read as a scrim with text floating on it and
+  no panel at all. The cost was that re-skinning the dark base surface left every floating surface at
+  the stock colour — a mismatched panel rather than a themed one.
+  
+  It is now derived, keeping the elevation delta the literal existed to provide:
+  
+  ```css
+  --lr-color-surface-overlay: var(
+    --lr-theme-color-surface-overlay,
+    color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2)
+  );
+  ```
+  
+  At the built-in dark base the pair resolves to the same panel colour it always has, so no existing
+  dark theme moves. Light mode is untouched, and an explicit `--lr-theme-color-surface-overlay` still
+  wins outright.
+- b22fdbb: Docs: state the icon-button size scopes and the derived dark overlay surface in `llms/shared.md`.
+  
+  Three properties now resize icon-only controls and they differ only in how far they reach, which is
+  not something a consumer can infer from the names: `--lr-theme-icon-button-size` is
+  application-wide, `--lr-icon-button-size-scope` covers one subtree, and `--lr-icon-button-size` is
+  element-scoped because the shared token layer re-declares it on every host. The reference now says
+  so in one table, with the precedence order and the coarse-pointer floor spelled out, instead of
+  leaving "my wrapper rule does nothing" to be rediscovered per project.
+  
+  The overlay-surface entry records that `--lr-color-surface-overlay` follows
+  `--lr-theme-color-surface-default` in dark mode as well as light, so a single base-surface override
+  re-skins every dropdown, listbox, menu, toast and drawer, and explains why dark derives the value
+  rather than resolving straight to the page surface the way light does.
+- 90449c6: `<lr-virtual-list>`: `row-height="auto"` driven by an external `scrollElement` no longer raises the
+  uncaught window error "ResizeObserver loop completed with undelivered notifications." when the
+  scroller jumps to its end and the newly revealed window measures. Nothing was ever dropped -- the
+  browser re-delivers on the following frame -- but the notice arrives as an uncaught `ErrorEvent` on
+  `window`, so it landed on whatever was running at the time and failed consumers' clean-console e2e
+  gates with a message that named no component.
+  
+  The offending write is `[part="spacer"]`'s height, the list's whole virtual extent. `onRowsResized()`
+  folded each newly measured row height into the offsets and asked for a render; Lit flushes that
+  render on the microtask checkpoint that follows the observer callback, which is still inside the
+  browser's resize-observation delivery. Under an external `scrollElement` that write resizes an
+  *observed* box, because `[part="base"][data-external-scroll]` takes its own block size from the
+  spacer and is watched by the container `ResizeObserver` -- and `[part="base"]` sits shallower in the
+  tree than the rows just broadcast, so the browser records the resize as a skipped observation and
+  ends the loop with the error. Reproduced deterministically in WebKit and, with a large enough first
+  measurement delta, in Chromium too.
+  
+  Reading inside the delivery is fine; folding the result into the offsets is what resizes the box.
+  So the measurement callbacks now only stash what they observed, and the offsets rebuild -- with the
+  scroll-anchor correction that belongs to it, so neither is ever painted without the other -- runs on
+  the animation frame this component already used to defer `observe()` calls out of the same delivery.
+  A render that still lands mid-delivery then re-reads offsets nothing has changed and writes the
+  extent already in the DOM, which resizes nothing. Renders themselves are never held: this element's
+  `updateComplete` keeps settling in the same microtask run as before, which is what every component
+  composing it relies on when it reads rendered rows back after its own update. Only the
+  external-`scrollElement` case defers at all -- with the list's own viewport scrolling,
+  `[part="base"]` takes its block size from `--lr-virtual-list-height` rather than from the spacer, so
+  the extent write reaches no observed box and every measurement there stays as immediate as it was,
+  fixed numeric `row-height` included. The error message itself is neither suppressed nor filtered
+  anywhere.
+
 ## 18.0.0
 
 ### Major Changes
