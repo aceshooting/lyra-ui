@@ -6063,6 +6063,7 @@ export type LyraKnownDateReactProps = LyraReactElementProps<
 export type LyraLightboxReactProps = LyraReactElementProps<
   LyraLightbox,
   | 'accessibleLabel'
+  | 'fit'
   | 'goTo'
   | 'images'
   | 'index'
@@ -7551,6 +7552,7 @@ export type LyraPanZoomReactProps = LyraReactElementProps<
   LyraPanZoom,
   | 'accessibleLabel'
   | 'alt'
+  | 'fit'
   | 'locale'
   | 'maxZoom'
   | 'minZoom'

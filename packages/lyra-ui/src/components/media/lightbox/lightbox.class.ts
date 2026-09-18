@@ -8,6 +8,7 @@ import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.j
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './lightbox.styles.js';
 import '../pan-zoom/pan-zoom.class.js';
@@ -17,6 +18,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_close, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type { LyraImageFit } from '../../../internal/image-fit.js';
 
 /** One image in the set `<lr-lightbox>` browses. `alt`/`caption` are caller-supplied data
  *  (like a filename), not routed through `localize()` -- only the component's own chrome
@@ -256,6 +258,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private _images: readonly LyraLightboxImage[] = EMPTY_LIGHTBOX_IMAGES;
+  private _fit: LyraImageFit = 'actual';
 
   /** The ordered, bounded, immutable set of images being browsed. Assign a new collection to
    * update it; malformed records are omitted and at most 10,000 candidates are inspected. */
@@ -291,6 +294,20 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  reflected: nothing styles or queries `[show-counter]`, so the serializing half of a
    *  reflecting converter would be dead code on a modal that already churns attributes. */
   @property({ attribute: 'show-counter', converter: trueDefaultBooleanConverter }) showCounter = true;
+
+  /** Base image sizing policy, using the same vocabulary as `<lr-image-viewer>`. `actual`
+   * preserves the current natural-size behavior; `contain` fits the complete image inside the
+   * available stage and `width` fills its inline size. Fit recalculates from layout when the
+   * stage allocation changes. Explicit user zoom remains in effect until navigation or a reset. */
+  @property({ reflect: true })
+  get fit(): LyraImageFit {
+    return this._fit;
+  }
+  set fit(value: LyraImageFit) {
+    const old = this._fit;
+    this._fit = normalizeImageFit(value, 'actual');
+    this.requestUpdate('fit', old);
+  }
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.minZoom`. Same default as
    *  `<lr-pan-zoom>` itself. */
@@ -719,6 +736,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
             exportparts="viewport:frame-viewport,content:frame-content,controls:frame-controls"
             src=${image?.src ?? ''}
             alt=${image?.alt ?? ''}
+            .fit=${this.fit}
             .minZoom=${this.minZoom}
             .maxZoom=${this.maxZoom}
             .zoomStep=${this.zoomStep}

@@ -6065,6 +6065,7 @@ export type LyraKnownDateSvelteProps = LyraSvelteElementProps<
 export type LyraLightboxSvelteProps = LyraSvelteElementProps<
   LyraLightbox,
   | 'accessibleLabel'
+  | 'fit'
   | 'goTo'
   | 'images'
   | 'index'
@@ -7553,6 +7554,7 @@ export type LyraPanZoomSvelteProps = LyraSvelteElementProps<
   LyraPanZoom,
   | 'accessibleLabel'
   | 'alt'
+  | 'fit'
   | 'locale'
   | 'maxZoom'
   | 'minZoom'

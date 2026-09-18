@@ -24,10 +24,10 @@
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 33786130,
+    "reviewedMeasurementBytes": 33786928,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563,
-    "reviewedOn": "2026-09-17"
+    "reviewedOn": "2026-09-18"
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
@@ -39,7 +39,7 @@
   },
   "maximum": {
     "packedBytes": 8385628,
-    "unpackedBytes": 33926130,
+    "unpackedBytes": 33926928,
     "fileCount": 3556
   }
 }

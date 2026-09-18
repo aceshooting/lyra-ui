@@ -6058,6 +6058,7 @@ export type LyraKnownDateVueProps = LyraVueCustomElement<
 export type LyraLightboxVueProps = LyraVueCustomElement<
   LyraLightbox,
   | 'accessibleLabel'
+  | 'fit'
   | 'goTo'
   | 'images'
   | 'index'
@@ -7546,6 +7547,7 @@ export type LyraPanZoomVueProps = LyraVueCustomElement<
   LyraPanZoom,
   | 'accessibleLabel'
   | 'alt'
+  | 'fit'
   | 'locale'
   | 'maxZoom'
   | 'minZoom'

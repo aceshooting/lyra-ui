@@ -27,6 +27,10 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
   `zoomStep: number = 0.25` — bounded, finite zoom configuration
 - `src: string = ''` and `alt: string = ''` — optional safe image source. A rejected URL is treated
   as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
+- `fit: LyraImageFit = 'actual'` (reflected) — base sizing policy for an image supplied through
+  `src`, using the same `contain`/`width`/`actual` vocabulary as `<lr-image-viewer>`. `actual`
+  preserves the historical natural-size layout; the other modes resolve against the viewport and
+  update with its allocation, including when an image loads after the frame first renders.
 - `accessibleLabel: string | null` (attribute `aria-label`) — a declarative host label remains on
   the host while the focusable viewport receives the localized inspection-surface purpose name.
   A property-only value names the viewport and updates reactively without creating a host attribute. This avoids cloning one author label onto both the outer component and nested `role="group"`. An explicitly empty direct property remains empty; a present host attribute, including an empty one, leaves the viewport's localized purpose name intact.

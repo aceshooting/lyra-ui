@@ -46,6 +46,13 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-pan-zoom>`, which does the
   normalizing.
+- `fit: LyraImageFit = 'actual'` (reflected) — opt-in base sizing policy for the current image,
+  reusing `<lr-image-viewer>`'s `contain`/`width`/`actual` vocabulary. The default preserves the
+  existing natural-size behavior. `contain` fits both landscape and tall images inside the stage;
+  `width` fills its inline size. CSS recalculates either policy when the stage is resized or a
+  delayed image source finishes loading, so navigation and opening do not require consumer timers.
+  Fit is the base zoom policy: an explicit user zoom remains until navigation or a reset, and
+  changing the theme does not mutate the lightbox's zoom property.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
   overriding the localized `lightboxLabel`.
 
@@ -102,6 +109,10 @@ photo content.
 - zoom/pan reset on navigation is imperative (`resetView()` from `updated()`), not a binding; the
   frame element is reused across navigations rather than recreated, so a keyboard user who tabbed
   into the viewport keeps focus.
+- fit sizing is CSS-driven inside the stable frame. The rendered DOM image is not copied or
+  measured by the lightbox, so stale load events cannot apply a previous image's size. The fit
+  policy covers the painted image only; the lightbox's DOM caption, toolbar, legend-like actions,
+  and tooltip content remain outside that image surface.
 - scope for v1: no per-image slotted content (data-driven via `images` only), no dot indicators, no
   visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
   still observable through the before/after events and methods above.

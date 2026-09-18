@@ -26186,14 +26186,14 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 158,
+              "line": 254,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 583,
+              "line": 679,
               "test": "caps a long caption instead of letting it starve the stage",
               "target": "el",
               "state": "open"
@@ -26207,7 +26207,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 196,
+              "line": 292,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26218,7 +26218,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 393,
+              "line": 489,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26235,7 +26235,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 588,
+              "line": 53,
               "kind": "320px allocation test signal"
             }
           ]

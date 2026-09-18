@@ -46,6 +46,28 @@ export const styles = css`
     display: block;
     max-inline-size: none;
   }
+  /* Actual keeps the historical max-content layout. The other policies establish a definite
+     viewport-sized basis, so CSS can resolve image sizing both before and after a delayed load and
+     again whenever the containing lightbox is resized. */
+  :host([fit='contain']) [part='content'],
+  :host([fit='width']) [part='content'] {
+    inline-size: 100%;
+  }
+  :host([fit='contain']) [part='content'] {
+    block-size: 100%;
+  }
+  :host([fit='contain']) [part='content'] img {
+    min-inline-size: 0;
+    min-block-size: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+  }
+  :host([fit='width']) [part='content'] img {
+    max-inline-size: 100%;
+    inline-size: 100%;
+    block-size: auto;
+  }
   [part='controls'] {
     display: flex;
     align-items: center;

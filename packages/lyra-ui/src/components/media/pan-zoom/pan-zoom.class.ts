@@ -6,6 +6,7 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { styles } from './pan-zoom.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -37,6 +38,8 @@ export interface LyraPanZoomEventMap {
   focus: FocusEvent;
 }
 
+export type { LyraImageFit } from '../../../internal/image-fit.js';
+
 /**
  * `<lr-pan-zoom>` — a scrollable frame for inspecting slotted or image content at a bounded zoom
  * level. This is the intentionally renamed home of the original Lyra `lr-zoomable-frame`
@@ -44,6 +47,8 @@ export interface LyraPanZoomEventMap {
  *
  * `resetZoom()` returns zoom to 1 while preserving the native scroll offset. `resetView()` also
  * returns the viewport to its origin for consumers that replace the inspected content.
+ * `fit` controls the base layout of an image supplied through `src`: `actual` preserves the
+ * existing natural-size behavior, while `contain` and `width` size it against the viewport.
  * The three controls are independently tabbable native buttons in a labelled `group`; they do not
  * claim the arrow-key navigation contract of an ARIA toolbar.
  *
@@ -86,6 +91,17 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
+  private _fit: LyraImageFit = 'actual';
+  /** Base image sizing policy. The default preserves the natural-size behavior of this frame. */
+  @property({ reflect: true })
+  get fit(): LyraImageFit {
+    return this._fit;
+  }
+  set fit(value: LyraImageFit) {
+    const old = this._fit;
+    this._fit = normalizeImageFit(value, 'actual');
+    this.requestUpdate('fit', old);
+  }
   @property() src = '';
   @property() alt = '';
   /** Overall host name when supplied as `aria-label`. A property-only value names the focusable

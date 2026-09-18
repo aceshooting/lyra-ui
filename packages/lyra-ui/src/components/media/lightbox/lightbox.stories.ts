@@ -108,6 +108,17 @@ export const CounterHidden: Story = {
   `,
 };
 
+/** Opt-in fit sizing keeps both a wide and a tall image inside the available stage. The policy is
+ * recalculated by layout when the stage changes size; zoom remains an explicit user choice. */
+export const FitToViewport: Story = {
+  render: (_args, context) => html`<lr-lightbox
+    fit="contain"
+    .images=${images}
+    .open=${context.viewMode !== 'docs'}
+    style="position: static; inset: auto; display: flex; inline-size: 320px; block-size: 24rem;"
+  ></lr-lightbox>`,
+};
+
 /** An in-flow 320px allocation exercises the toolbar with a long unbroken slotted action while
  * the built-in close control remains available. */
 export const NarrowAllocation: Story = {

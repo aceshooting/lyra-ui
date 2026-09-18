@@ -22,13 +22,14 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './image-viewer.styles.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type LyraImageFit = 'contain' | 'width' | 'actual';
+export type { LyraImageFit } from '../../../internal/image-fit.js';
 export type LyraImageRotation = 0 | 90 | 180 | 270;
 /** Finite percentage coordinates. Negative widths/heights are rejected when rendered. */
 export interface LyraImageRegionRect {
@@ -47,12 +48,6 @@ const ARROW_STEP_PERCENT = 2;
 /** Maximum region buttons projected at once. An active region beyond the leading window replaces
  * the final entry so anchor identity remains reachable without making an unbounded tab/DOM list. */
 export const IMAGE_VIEWER_HIGHLIGHT_LIMIT = 200;
-const IMAGE_FITS = new Set<LyraImageFit>(['contain', 'width', 'actual']);
-
-function normalizeImageFit(value: unknown): LyraImageFit {
-  return IMAGE_FITS.has(value as LyraImageFit) ? value as LyraImageFit : 'contain';
-}
-
 function normalizeImageRotation(value: unknown): LyraImageRotation {
   const degrees = typeof value === 'number' ? finiteNumber(value, 0) : 0;
   const steps = Math.round(degrees / 90);

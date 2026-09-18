@@ -17,6 +17,27 @@ const image = {
   caption: 'A blue square',
 };
 
+function sizedImage(width: number, height: number, color: string, alt: string): LyraLightboxImage {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${color}"/></svg>`;
+  return {
+    src: `data:image/svg+xml,${encodeURIComponent(svg)}`,
+    alt,
+  };
+}
+
+async function waitForImage(
+  frame: HTMLElement,
+  width: number,
+  height: number,
+): Promise<HTMLImageElement> {
+  let imageEl: HTMLImageElement | null = null;
+  await waitUntil(() => {
+    imageEl = frame.shadowRoot?.querySelector('img') ?? null;
+    return imageEl?.complete === true && imageEl.naturalWidth === width && imageEl.naturalHeight === height;
+  }, `the ${width}x${height} image did not load`);
+  return imageEl!;
+}
+
 it('renders the image frame and exposes a dialog when opened', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
   expect(el.shadowRoot!.querySelector('[part="frame"]') !== null).to.be.true;
@@ -26,6 +47,81 @@ it('renders the image frame and exposes a dialog when opened', async () => {
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="panel"]')!.getAttribute('role')).to.equal('dialog');
   expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('A blue square');
+  el.open = false;
+});
+
+it('fits landscape and tall images on open and navigation at narrow allocations', async () => {
+  const landscape = sizedImage(720, 360, '#0969da', 'Landscape');
+  const tall = sizedImage(360, 720, '#cf222e', 'Tall');
+
+  for (const width of [320, 375]) {
+    const el = (await fixture(html`
+      <lr-lightbox
+        fit="contain"
+        open
+        .images=${[landscape, tall, landscape]}
+        style=${`position: static; inset: auto; inline-size: ${width}px; block-size: 320px;`}
+      ></lr-lightbox>
+    `)) as LyraLightbox;
+    await el.updateComplete;
+
+    const frame = el.shadowRoot!.querySelector('lr-pan-zoom') as HTMLElement & {
+      zoom: number;
+      fit: string;
+      updateComplete: Promise<boolean>;
+    };
+    const viewport = frame.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const assertFits = async (expectedWidth: number, expectedHeight: number): Promise<void> => {
+      await frame.updateComplete;
+      const imageEl = await waitForImage(frame, expectedWidth, expectedHeight);
+      const imageBounds = imageEl.getBoundingClientRect();
+      expect(imageBounds.width, `${width}px ${expectedWidth}x${expectedHeight} inline fit`).to.be.at.most(
+        viewport.clientWidth + 2,
+      );
+      expect(imageBounds.height, `${width}px ${expectedWidth}x${expectedHeight} block fit`).to.be.at.most(
+        viewport.clientHeight + 2,
+      );
+      expect(frame.fit).to.equal('contain');
+    };
+
+    await assertFits(720, 360);
+    frame.zoom = 2;
+    await frame.updateComplete;
+    const zoomBeforeResize = frame.zoom;
+    el.style.inlineSize = `${width === 320 ? 375 : 320}px`;
+    await waitUntil(() => frame.getBoundingClientRect().width > 0);
+    expect(frame.zoom).to.equal(zoomBeforeResize);
+
+    el.next();
+    await el.updateComplete;
+    await assertFits(360, 720);
+    expect(frame.zoom).to.equal(1);
+
+    el.goTo(2);
+    await el.updateComplete;
+    await assertFits(720, 360);
+
+    el.previous();
+    await el.updateComplete;
+    await assertFits(360, 720);
+    el.open = false;
+  }
+});
+
+it('keeps the existing actual-size default and normalizes an invalid fit', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
+  const frame = el.shadowRoot!.querySelector('lr-pan-zoom') as HTMLElement & { fit: string };
+  expect(el.fit).to.equal('actual');
+  expect(frame.fit).to.equal('actual');
+
+  el.fit = 'invalid' as never;
+  await el.updateComplete;
+  expect(el.fit).to.equal('actual');
+  expect(frame.fit).to.equal('actual');
+
+  el.fit = 'width';
+  await el.updateComplete;
+  expect(frame.fit).to.equal('width');
   el.open = false;
 });
 
