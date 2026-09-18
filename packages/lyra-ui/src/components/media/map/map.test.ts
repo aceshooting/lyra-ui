@@ -1755,6 +1755,184 @@ it('emits nothing for a programmatic hiddenCategories assignment', async () => {
   expect(legendToggles(el)[0]!.getAttribute('aria-pressed')).to.equal('true');
 });
 
+// ---------------------------------------------------------------------------
+// `legendControlRole` lets an interactive legend row present as a checkbox instead of the default
+// toggle button. Default is 'button', which is exactly what 18.1.0 already renders -- these tests
+// pin the unset case byte-identical, then check the 'checkbox' branch shares every other behavior
+// (click, keyboard, veto, hiddenCategories, sections, collapsing) with the button branch, differing
+// only in the exposed role and the aria-pressed/aria-checked attribute.
+// ---------------------------------------------------------------------------
+
+it('defaults legendControlRole to button and renders unchanged aria-pressed markup', async () => {
+  const el = await interactiveLegendMap();
+  expect(el.legendControlRole).to.equal('button');
+  // Like every other accessor-backed closed-string reflect property in this codebase (e.g.
+  // `lr-heatmap`'s `stickyLabels`), Lit reflects the default onto the attribute on first update
+  // because the property is backed by a user-defined get/set pair; that host attribute is
+  // unrelated to the LEGEND MARKUP byte-identity this test actually pins below.
+  expect(el.getAttribute('legend-control-role')).to.equal('button');
+
+  const buttons = legendToggles(el);
+  expect(buttons.map((button) => button.getAttribute('role'))).to.deep.equal([null, null]);
+  expect(buttons.map((button) => button.hasAttribute('aria-checked'))).to.deep.equal([false, false]);
+  expect(buttons.map((button) => button.getAttribute('aria-pressed'))).to.deep.equal(['true', 'true']);
+
+  el.hiddenCategories = ['work'];
+  await el.updateComplete;
+  expect(legendToggles(el).map((button) => button.getAttribute('aria-pressed'))).to.deep.equal([
+    'true',
+    'false',
+  ]);
+});
+
+it('reflects legendControlRole as a dash-cased attribute and normalizes an unsupported value', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.legendControlRole = 'checkbox';
+  await el.updateComplete;
+  expect(el.getAttribute('legend-control-role')).to.equal('checkbox');
+  expect(el.hasAttribute('legendcontrolrole')).to.be.false;
+
+  el.setAttribute('legend-control-role', 'radio');
+  await el.updateComplete;
+  expect(el.legendControlRole, 'an unsupported value falls back to button').to.equal('button');
+  expect(el.getAttribute('legend-control-role')).to.equal('button');
+});
+
+function legendCheckboxes(el: LyraMap): HTMLButtonElement[] {
+  return [
+    ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+      'button[part~="legend-toggle"][role="checkbox"]',
+    ),
+  ];
+}
+
+it('renders checkbox semantics with both aria-checked values under legendControlRole="checkbox"', async () => {
+  const el = (await fixture(
+    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+  )) as LyraMap;
+  el.legend = CATEGORY_LEGEND;
+  await el.updateComplete;
+
+  const checkboxes = legendCheckboxes(el);
+  expect(checkboxes.length).to.equal(2);
+  expect(checkboxes.map((box) => box.getAttribute('role'))).to.deep.equal(['checkbox', 'checkbox']);
+  expect(checkboxes.map((box) => box.getAttribute('aria-checked'))).to.deep.equal(['true', 'true']);
+  expect(checkboxes.map((box) => box.hasAttribute('aria-pressed'))).to.deep.equal([false, false]);
+
+  el.hiddenCategories = ['work'];
+  await el.updateComplete;
+  const afterHide = legendCheckboxes(el);
+  expect(
+    afterHide.map((box) => box.getAttribute('aria-checked')),
+    'a hidden category renders unchecked',
+  ).to.deep.equal(['true', 'false']);
+  expect(afterHide[1]!.getAttribute('part')).to.equal('legend-toggle legend-toggle-hidden');
+});
+
+it('toggles a checkbox legend row from a click and round-trips hiddenCategories', async () => {
+  const el = (await fixture(
+    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+  )) as LyraMap;
+  el.legend = CATEGORY_LEGEND;
+  await el.updateComplete;
+
+  legendCheckboxes(el)[0]!.click();
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal(['home']);
+  expect(legendCheckboxes(el)[0]!.getAttribute('aria-checked')).to.equal('false');
+
+  legendCheckboxes(el)[0]!.click();
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal([]);
+  expect(legendCheckboxes(el)[0]!.getAttribute('aria-checked')).to.equal('true');
+});
+
+it('toggles a focused checkbox legend row with Enter and Space', async () => {
+  const el = (await fixture(
+    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+  )) as LyraMap;
+  el.legend = CATEGORY_LEGEND;
+  await el.updateComplete;
+  legendCheckboxes(el)[0]!.focus();
+  expect(el.shadowRoot!.activeElement === legendCheckboxes(el)[0]).to.be.true;
+
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal(['home']);
+  expect(legendCheckboxes(el)[0]!.getAttribute('aria-checked')).to.equal('false');
+
+  await sendKeys({ press: ' ' });
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal([]);
+  expect(legendCheckboxes(el)[0]!.getAttribute('aria-checked')).to.equal('true');
+});
+
+it('lets a lr-map-legend-toggle listener veto a checkbox row activation outright', async () => {
+  const el = (await fixture(
+    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+  )) as LyraMap;
+  el.legend = CATEGORY_LEGEND;
+  await el.updateComplete;
+  el.addEventListener('lr-map-legend-toggle', (event) => {
+    event.preventDefault();
+  });
+
+  legendCheckboxes(el)[0]!.click();
+  await el.updateComplete;
+
+  expect(el.hiddenCategories).to.deep.equal([]);
+  expect(legendCheckboxes(el)[0]!.getAttribute('aria-checked')).to.equal('true');
+  expect(legendCheckboxes(el)[0]!.getAttribute('part')).to.equal('legend-toggle');
+});
+
+it('composes legendControlRole="checkbox" with grouped sections', async () => {
+  const el = (await fixture(
+    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+  )) as LyraMap;
+  el.legend = [
+    { color: '#f00', label: 'Bus', pattern: 'solid', value: 'bus', group: 'Transit' },
+    { color: '#0f0', label: 'Tram', pattern: 'dots', value: 'tram', group: 'Transit' },
+  ];
+  await el.updateComplete;
+
+  const checkboxes = legendCheckboxes(el);
+  expect(checkboxes.length).to.equal(2);
+  expect(checkboxes[0]!.closest('[part="legend-group"]'), 'the checkbox lives inside its section').to
+    .exist;
+
+  checkboxes[0]!.click();
+  await el.updateComplete;
+  expect(el.hiddenCategories).to.deep.equal(['bus']);
+  expect(legendCheckboxes(el)[0]!.getAttribute('aria-checked')).to.equal('false');
+});
+
+it('composes legendControlRole="checkbox" with legendCollapsible', async () => {
+  const el = (await fixture(
+    html`<lr-map legend-interactive legend-control-role="checkbox" legend-collapsible></lr-map>`,
+  )) as LyraMap;
+  el.legend = CATEGORY_LEGEND;
+  await el.updateComplete;
+
+  expect(legendCheckboxes(el).length).to.equal(2);
+  el.legendOpen = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('.legend-list')!.hasAttribute('hidden')).to.be.true;
+  expect(legendCheckboxes(el).length, 'the checkbox rows still exist while collapsed').to.equal(2);
+});
+
+it('stays axe-clean with a checkbox legend, populated and collapsed', async () => {
+  const el = (await fixture(
+    html`<lr-map legend-interactive legend-control-role="checkbox" legend-collapsible></lr-map>`,
+  )) as LyraMap;
+  el.legend = CATEGORY_LEGEND;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+
+  el.legendOpen = false;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
 it('normalizes a legend assignment that fails Array.isArray (a revoked Proxy) to empty instead of throwing', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   const { proxy, revoke } = Proxy.revocable([], {});

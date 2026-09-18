@@ -472,6 +472,18 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   roving tabindex: a 100-row interactive legend contributes 100 tab stops, exactly as a 100-series
   `lr-chart` legend does. Each interactive row also grows to the shared `--lr-icon-button-size`
   hit-area floor (WCAG 2.5.8), which the panel's existing `max-block-size` and scrolling contain.
+- `legendControlRole: 'button' | 'checkbox' = 'button'` (attribute `legend-control-role`,
+  reflected) — how each `legendInteractive` row's toggle presents itself to assistive tech; inert
+  while `legendInteractive` is unset, exactly like the toggle itself. `'button'` is byte-identical
+  to every legend rendered before this property existed: `<button aria-pressed>`. `'checkbox'`
+  renders the SAME `<button>` element with its implicit role overridden to `role="checkbox"` and
+  `aria-checked` in place of `aria-pressed` — the swatch, the label, the click handler and the
+  platform's own Enter/Space activation are unchanged, so `hiddenCategories`, the cancelable
+  `lr-map-legend-toggle` veto, `group` sections and `legendCollapsible` all compose with either
+  role. `aria-checked` tracks the same visibility flag `aria-pressed` does, inverted from
+  `hiddenCategories`: a hidden category renders `aria-checked="false"`. Prefer `'checkbox'` when the
+  legend reads as a checklist of independent show/hide toggles; prefer the `'button'` default when
+  it reads as a set of filtering actions. An unsupported value normalizes back to `'button'`.
 - `legendCollapsible: boolean = false` (attribute `legend-collapsible`, reflected) — opt-in: renders
   a `legend-disclosure` `button` inside the panel that collapses the key down to its header, so a
   large legend stops permanently covering part of the map. Unset, the panel renders exactly what it
@@ -866,10 +878,13 @@ container in the tree, so `legend` withholds `aria-controls` rather than leaving
 idref.
 Under `legendInteractive`, a row carrying a `value` wraps its swatch and label in a
 `legend-toggle` `button` with `aria-pressed` rendered as the literal `"true"`/`"false"` — never
-omitted, because a missing attribute reports "not a toggle button" rather than "unpressed". The
-button's accessible name is its own visible label (caller-supplied data, so deliberately not
-localized), scoped by the legend's own localized group name; no `aria-label` restates the state,
-which would make assistive tech announce it twice. A hidden row's button additionally carries the
+omitted, because a missing attribute reports "not a toggle button" rather than "unpressed". Setting
+`legendControlRole="checkbox"` renders the SAME `button` with `role="checkbox"` and `aria-checked`
+(also always the literal `"true"`/`"false"`) in place of `aria-pressed`, and nothing else about the
+row changes. The button's accessible name is its own visible label (caller-supplied data, so
+deliberately not localized), scoped by the legend's own localized group name; no `aria-label`
+restates the state, which would make assistive tech announce it twice. A hidden row's button
+additionally carries the
 `legend-toggle-hidden` token — state lives in the part name, so `::part(legend-toggle-hidden)` is a
 reachable hook — and dims only its `aria-hidden` swatch while re-colouring the label through the
 quiet text token, so the label keeps AA contrast rather than fading with the whole button. In

@@ -611,6 +611,19 @@ export const InteractiveLegend: Story = {
   ></lr-map>`,
 };
 
+export const InteractiveLegendCheckboxRole: Story = {
+  parameters: { docs: { description: { story: 'Opt-in with `legend-control-role="checkbox"` alongside `legend-interactive`. Renders the SAME row -- swatch, label, click handler, Tab/Enter/Space activation -- but exposes it as `role="checkbox"` with `aria-checked` in place of `aria-pressed`. Prefer this when the legend reads as a set of independent show/hide toggles (a checklist) rather than a set of pressed/unpressed actions; prefer the default `button` role when the legend reads as filtering actions. A hidden category renders `aria-checked="false"`, inverted the same way `aria-pressed` already was.' } } },
+  render: () => html`<lr-map
+    label="Checkbox-role category legend"
+    legend-interactive
+    legend-control-role="checkbox"
+    .mapStyle=${OFFLINE_RASTER_STYLE}
+    .zoom=${13}
+    .dataLayers=${[interactiveLayer()]}
+    .legend=${interactiveLegend()}
+  ></lr-map>`,
+};
+
 export const InteractiveLegendControlledHost: Story = {
   parameters: { docs: { description: { story: 'A controlled host: the listener calls `preventDefault()` on `lr-map-legend-toggle`, so the component writes nothing at all — no `hiddenCategories`, no `aria-pressed` change, no paint change and no announcement — and the host assigns its own set from the proposal in `event.detail.hiddenCategories`. Here it refuses to hide the last visible category, which is a policy the component deliberately does not encode. A programmatic `hiddenCategories` assignment reconciles without emitting the event, so this loop cannot recur.' } } },
   render: () => {

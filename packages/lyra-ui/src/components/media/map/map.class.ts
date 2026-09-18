@@ -8,7 +8,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -64,6 +64,17 @@ function hasMapStyle(style: LyraMapStyleSpecification | string | undefined): boo
 
 /** Non-color encoding retained when a legend entry's authored color is unavailable. */
 export type LyraMapLegendPattern = 'solid' | 'diagonal' | 'dots' | 'crosshatch';
+
+/**
+ * Presentation role for each keyed `legendInteractive` row's toggle control. See the
+ * `legendControlRole` property JSDoc for the full contract.
+ */
+export type LyraMapLegendControlRole = 'button' | 'checkbox';
+
+const LEGEND_CONTROL_ROLE = literalSetConverter<LyraMapLegendControlRole>(
+  ['button', 'checkbox'],
+  'button',
+);
 
 /** One immutable, bounded map-legend row. Pattern is required so color is never the sole cue. */
 export interface LyraMapLegendEntry {
@@ -2816,6 +2827,41 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ type: Boolean, attribute: 'legend-interactive', reflect: true })
   legendInteractive = false;
 
+  private _legendControlRole: LyraMapLegendControlRole = 'button';
+
+  /**
+   * How each keyed `legendInteractive` row's toggle control presents itself to assistive tech.
+   * Inert while `legendInteractive` is unset, exactly like the toggle itself.
+   *
+   * - `'button'` (default) -- `<button aria-pressed>`, byte-identical to every 18.1.0 interactive
+   *   legend. Leaving this property unset changes nothing.
+   * - `'checkbox'` -- the SAME `<button>` element `renderLegendRow()` already renders, with its
+   *   implicit role overridden to `role="checkbox"` and `aria-checked` in place of `aria-pressed`.
+   *   A native `<input type="checkbox">` was considered and rejected: it would need its own
+   *   swatch/label markup and its own click/keyboard wiring duplicated from the button branch,
+   *   splitting `renderLegendRowContent()` in two. `<button role="checkbox">` keeps the swatch,
+   *   the label, the click handler and the platform's own Enter/Space activation exactly as they
+   *   are for the button branch -- only the two ARIA attributes differ, so the CSS in
+   *   `map.styles.ts` (which targets `button[part~='legend-toggle']`, never a role or an ARIA
+   *   state) needs no `'checkbox'`-specific rule.
+   *
+   * `aria-checked` tracks the same `visible` flag `aria-pressed` does, inverted from
+   * `hiddenCategories`: a hidden category renders `aria-checked="false"`. Both states always
+   * render explicitly (`"true"`/`"false"`), never a Lit `?aria-*` presence directive, which cannot
+   * express the false state at all.
+   */
+  @property({ converter: LEGEND_CONTROL_ROLE, attribute: 'legend-control-role', reflect: true })
+  get legendControlRole(): LyraMapLegendControlRole {
+    return this._legendControlRole;
+  }
+  set legendControlRole(next: LyraMapLegendControlRole) {
+    const normalized = LEGEND_CONTROL_ROLE.normalizeReflected(this, 'legend-control-role', next);
+    const old = this._legendControlRole;
+    if (old === normalized) return;
+    this._legendControlRole = normalized;
+    this.requestUpdate('legendControlRole', old);
+  }
+
   /**
    * Renders a disclosure button inside the legend panel that collapses the key down to its header.
    * Default `false`, and an unset map renders exactly the panel it rendered before this property
@@ -4772,6 +4818,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const key = entry.value;
     const interactive = this.legendInteractive && key !== undefined;
     const visible = key === undefined || !this.hiddenCategories.includes(key);
+    const checkbox = this.legendControlRole === 'checkbox';
     return html`<div
                     class="legend-row"
                     role="listitem"
@@ -4782,7 +4829,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
                       ? html`<button
                           part=${visible ? 'legend-toggle' : 'legend-toggle legend-toggle-hidden'}
                           type="button"
-                          aria-pressed=${visible ? 'true' : 'false'}
+                          role=${checkbox ? 'checkbox' : nothing}
+                          aria-pressed=${checkbox ? nothing : visible ? 'true' : 'false'}
+                          aria-checked=${checkbox ? (visible ? 'true' : 'false') : nothing}
                           @click=${(): void => this.toggleLegendCategory(entry)}
                         >${this.renderLegendRowContent(entry)}</button>`
                       : this.renderLegendRowContent(entry)}
