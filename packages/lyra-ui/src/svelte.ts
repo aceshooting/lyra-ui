@@ -4485,6 +4485,7 @@ never,
 export type LyraExportButtonSvelteProps = LyraSvelteElementProps<
   LyraExportButton,
   | 'accessibleLabel'
+  | 'appearance'
   | 'bom'
   | 'columns'
   | 'disabled'
@@ -4496,6 +4497,7 @@ export type LyraExportButtonSvelteProps = LyraSvelteElementProps<
   | 'locale'
   | 'open'
   | 'rows'
+  | 'size'
   | 'strings',
   {},
   LyraExportButtonEventMap,

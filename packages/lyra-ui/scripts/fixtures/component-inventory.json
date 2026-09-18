@@ -50982,6 +50982,15 @@
       "surface": {
         "attributes": [
           {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraExportButtonAppearance | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string | null",
@@ -51059,6 +51068,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -51071,6 +51089,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraExportButtonAppearance | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "bom",
@@ -51174,6 +51201,15 @@
             "type": "readonly Readonly<Record<string, unknown>>[]",
             "readonly": false,
             "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": false
           }

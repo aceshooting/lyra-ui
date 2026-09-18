@@ -4478,6 +4478,7 @@ never,
 export type LyraExportButtonVueProps = LyraVueCustomElement<
   LyraExportButton,
   | 'accessibleLabel'
+  | 'appearance'
   | 'bom'
   | 'columns'
   | 'disabled'
@@ -4489,6 +4490,7 @@ export type LyraExportButtonVueProps = LyraVueCustomElement<
   | 'locale'
   | 'open'
   | 'rows'
+  | 'size'
   | 'strings',
   {},
   LyraExportButtonEventMap,

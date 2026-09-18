@@ -2,6 +2,14 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { optionalLiteralSetConverter } from '../../../internal/converters.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraAppearance,
+  type LyraSize,
+} from '../../../internal/variants.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import {
   deferredPlaceReady as place,
   type DeferredOperationHandle,
@@ -28,6 +36,14 @@ import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel, LYR
 
 
 export type LyraExportFormat = 'csv' | 'json';
+
+/** The export trigger's compact treatments. Unset preserves its established chrome. */
+export type LyraExportButtonAppearance = Extract<LyraAppearance, 'outlined'> | 'quiet';
+
+const EXPORT_BUTTON_APPEARANCE = optionalLiteralSetConverter<LyraExportButtonAppearance>([
+  'outlined',
+  'quiet',
+]);
 
 export interface LyraExportFormatDescriptor {
   /** Stable format id carried through `lr-export`. */
@@ -161,6 +177,11 @@ export interface LyraExportButtonEventMap {
  *   menu's `fixed` default, read from computed style when it is (re)positioned. Set it once on
  *   `:root`, a theme, or one clipping ancestor to change every unset export button beneath it; an
  *   unrecognized value falls back to `fixed`.
+ * @property size - Optional density on the shared `2xs` through `xl` ladder, including the
+ *   `small`/`medium`/`large` aliases. It changes the trigger and menu-row typography and padding;
+ *   the 40px default hit-area floor remains in place. Unset preserves the established geometry.
+ * @property appearance - Optional `outlined` or `quiet` trigger treatment. Unset preserves the
+ *   established surface, border, and text colors.
  * @status stable
  * @since 4.0.0
  */
@@ -175,7 +196,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
     rows: { attribute: false, noAccessor: true },
@@ -272,6 +293,37 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this._formats = Object.freeze(formats);
     this.requestUpdate('formats', previous);
   }
+
+  private _size?: LyraSize;
+
+  /** Optional density tier on the shared ladder. Omission preserves the original trigger geometry. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
+
+  /** Optional compact trigger treatment. Omission preserves the original trigger chrome. */
+  @property({ reflect: true, converter: EXPORT_BUTTON_APPEARANCE })
+  get appearance(): LyraExportButtonAppearance | undefined {
+    return this._appearance;
+  }
+  set appearance(next: LyraExportButtonAppearance | undefined) {
+    const normalized = EXPORT_BUTTON_APPEARANCE.normalizeReflected(this, 'appearance', next);
+    const old = this._appearance;
+    if (old === normalized) return;
+    this._appearance = normalized;
+    this.requestUpdate('appearance', old);
+  }
+
+  private _appearance?: LyraExportButtonAppearance;
+
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Controlled busy state for async/server-generated exports. */
   @property({ type: Boolean, reflect: true }) loading = false;

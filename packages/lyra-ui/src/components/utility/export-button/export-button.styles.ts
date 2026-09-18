@@ -5,6 +5,37 @@ export const styles = css`
   :host {
     display: inline-block;
     position: relative;
+    --_lr-export-button-background: var(--lr-color-surface);
+    --_lr-export-button-color: var(--lr-color-text);
+    --_lr-export-button-border: var(--lr-color-border);
+    --_lr-export-button-hover-background: var(--lr-color-surface);
+    --_lr-export-button-hover-color: var(--lr-color-text);
+    --_lr-export-button-hover-border: var(--lr-color-brand);
+    --_lr-export-button-active-background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-export-button-active-color: var(--lr-color-text);
+    --_lr-export-button-active-border: var(--lr-color-brand);
+  }
+  :host([appearance='outlined']) {
+    --_lr-export-button-background: transparent;
+    --_lr-export-button-color: var(--lr-color-brand);
+    --_lr-export-button-border: var(--lr-color-border-strong);
+    --_lr-export-button-hover-background: var(--lr-color-brand-quiet);
+    --_lr-export-button-hover-color: var(--lr-color-brand);
+    --_lr-export-button-hover-border: var(--lr-color-brand);
+    --_lr-export-button-active-background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-export-button-active-color: var(--lr-color-brand);
+    --_lr-export-button-active-border: var(--lr-color-brand);
+  }
+  :host([appearance='quiet']) {
+    --_lr-export-button-background: transparent;
+    --_lr-export-button-color: var(--lr-color-text-quiet);
+    --_lr-export-button-border: var(--lr-color-border);
+    --_lr-export-button-hover-background: var(--lr-color-brand-quiet);
+    --_lr-export-button-hover-color: var(--lr-color-text-quiet);
+    --_lr-export-button-hover-border: var(--lr-color-brand);
+    --_lr-export-button-active-background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-export-button-active-color: var(--lr-color-text-quiet);
+    --_lr-export-button-active-border: var(--lr-color-brand);
   }
   [part~='trigger'] {
     display: inline-flex;
@@ -12,10 +43,10 @@ export const styles = css`
     justify-content: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--_lr-export-button-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    background: var(--_lr-export-button-background);
+    color: var(--_lr-export-button-color);
     font: inherit;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
@@ -25,13 +56,39 @@ export const styles = css`
      [part='trigger']:hover:not(:disabled) is (0,3,0) and out-ranks the source-later :active rule
      below, swallowing the pressed state. */
   :where([part~='trigger']):hover:where(:not(:disabled)) {
-    border-color: var(--lr-color-brand);
+    background: var(--_lr-export-button-hover-background);
+    color: var(--_lr-export-button-hover-color);
+    border-color: var(--_lr-export-button-hover-border);
   }
   /* Same :where() shape as the hover rule above, so the two tie at (0,1,0) and source order hands
      this one the press. */
   :where([part~='trigger']):active:where(:not(:disabled)) {
-    border-color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--_lr-export-button-active-background);
+    color: var(--_lr-export-button-active-color);
+    border-color: var(--_lr-export-button-active-border);
+  }
+  :host([size='2xs']) [part~='trigger'],
+  :host([size='xs']) [part~='trigger'],
+  :host([size='s']) [part~='trigger'],
+  :host([size='small']) [part~='trigger'],
+  :host([size='m']) [part~='trigger'],
+  :host([size='medium']) [part~='trigger'],
+  :host([size='l']) [part~='trigger'],
+  :host([size='large']) [part~='trigger'],
+  :host([size='xl']) [part~='trigger'],
+  :host([size='2xs']) [part='menu-item'],
+  :host([size='xs']) [part='menu-item'],
+  :host([size='s']) [part='menu-item'],
+  :host([size='small']) [part='menu-item'],
+  :host([size='m']) [part='menu-item'],
+  :host([size='medium']) [part='menu-item'],
+  :host([size='l']) [part='menu-item'],
+  :host([size='large']) [part='menu-item'],
+  :host([size='xl']) [part='menu-item'] {
+    font-size: var(--lr-form-control-font-size);
+    padding-block: var(--lr-form-control-padding-block);
+    padding-inline: var(--lr-form-control-padding-inline);
+    min-block-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
   }
   [part~='trigger']:disabled {
     opacity: var(--lr-opacity-disabled);

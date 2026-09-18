@@ -411,6 +411,7 @@ export { LyraFunnel } from './components/data/funnel/funnel.class.js';
 export type { LyraFunnelStage } from './components/data/funnel/funnel.class.js';
 export { LyraExportButton } from './components/utility/export-button/export-button.class.js';
 export type {
+  LyraExportButtonAppearance,
   LyraExportFormat,
   LyraExportFormatDescriptor,
   LyraExportFormatOption,

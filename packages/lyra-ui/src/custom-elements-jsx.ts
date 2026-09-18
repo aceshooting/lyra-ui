@@ -4483,6 +4483,7 @@ never,
 export type LyraExportButtonReactProps = LyraReactElementProps<
   LyraExportButton,
   | 'accessibleLabel'
+  | 'appearance'
   | 'bom'
   | 'columns'
   | 'disabled'
@@ -4494,6 +4495,7 @@ export type LyraExportButtonReactProps = LyraReactElementProps<
   | 'locale'
   | 'open'
   | 'rows'
+  | 'size'
   | 'strings',
   {},
   LyraExportButtonEventMap,

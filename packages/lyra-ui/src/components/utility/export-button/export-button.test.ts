@@ -1239,6 +1239,32 @@ it('gives the trigger and menu items the shared minimum hit area', async () => {
   }
 });
 
+it('supports opt-in compact density and outlined or quiet trigger treatments', async () => {
+  const legacy = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  const legacyTrigger = legacy.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  const legacyStyle = getComputedStyle(legacyTrigger);
+
+  const el = (await fixture(
+    html`<lr-export-button size="s" appearance="outlined"></lr-export-button>`,
+  )) as LyraExportButton;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  const compactStyle = getComputedStyle(trigger);
+
+  expect(el.size).to.equal('s');
+  expect(el.appearance).to.equal('outlined');
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(el.getAttribute('appearance')).to.equal('outlined');
+  expect(compactStyle.fontSize).to.not.equal(legacyStyle.fontSize);
+  expect(compactStyle.paddingInline).to.not.equal(legacyStyle.paddingInline);
+  expect(compactStyle.backgroundColor).to.not.equal(legacyStyle.backgroundColor);
+  expect(compactStyle.minBlockSize).to.equal('40px');
+
+  el.appearance = 'quiet';
+  await el.updateComplete;
+  expect(el.getAttribute('appearance')).to.equal('quiet');
+  expect(getComputedStyle(trigger).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+});
+
 it('bounds and wraps a long rendered format menu within the popover viewport clamp', async () => {
   const el = await fixture<LyraExportButton>(html`
     <lr-export-button

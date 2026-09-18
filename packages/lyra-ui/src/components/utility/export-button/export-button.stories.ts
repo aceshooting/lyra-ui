@@ -90,6 +90,28 @@ export const MultiFormatMenu: Story = {
   `,
 };
 
+export const CompactOutlined: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The opt-in small density keeps the shared 40px hit-area floor while outlined chrome aligns the export action with a compact toolbar.',
+      },
+    },
+  },
+  render: () => html`
+    <div dir="rtl">
+      <lr-export-button
+        size="s"
+        appearance="outlined"
+        label="تنزيل التقرير"
+        .rows=${rows}
+        .columns=${columns}
+      ></lr-export-button>
+    </div>
+  `,
+};
+
 export const Disabled: Story = {
   render: () => html`
     <lr-export-button filename="demo" .rows=${rows} .columns=${columns} disabled></lr-export-button>

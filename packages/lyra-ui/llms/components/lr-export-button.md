@@ -57,6 +57,11 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
   copy. `formatId` must be nonempty and unique; malformed options and later duplicates are omitted
   first-wins before menu state, focus reconciliation, or export events. Custom format ids are
   event-only; no custom encoder is bundled
+- `size?: LyraSize` — optional density on the shared `2xs` through `xl` ladder, including the
+  `small`/`medium`/`large` aliases. It changes trigger and menu-row typography and padding while
+  retaining the shared 40px minimum hit-area floor. Unset preserves the established geometry
+- `appearance?: LyraExportButtonAppearance` — `outlined` or `quiet` trigger treatment. Unset
+  preserves the established surface, border, and text colors
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
