@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-17 ON the @aceshooting/lyra-ui@18.0.0 release commit: 8,315,035 packed bytes, 33,786,130 unpacked bytes, 3,549 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-18 ON the @aceshooting/lyra-ui@18.2.0 release commit: 8,351,628 packed bytes, 3,549 files (unpacked unchanged within its existing reviewed ceiling). Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,15 +10,15 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 8315035,
+    "reviewedMeasurementBytes": 8351628,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928,
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
-      "approvedOn": "2026-09-17",
-      "reason": "Re-measured ON the 18.0.0 release commit, not before it. `changeset version` writes the release's own CHANGELOG section into packages/lyra-ui/CHANGELOG.md, which package.json#files ships, so any budget measured on the pre-bump tree under-counts by that whole section plus the new version string and release history embedded in package-metadata.ts. That is what took packed to 8,315,035 bytes against a ceiling of 8,313,694 re-baselined only hours earlier, and it is the same shape as the component-quality staleness one gate over. The 18.0.0 content itself is lr-filter-bar chip filters, lr-map's interactive legend and lr-virtual-list's light-DOM row projection, plus the shared-slice move that put legendTypeShown/legendTypeHidden into every locale's shared slice. Drift headroom is unchanged at 34,000 packed / 140,000 unpacked (0.41% each).",
-      "approvedMaximumPackedBytes": 8349035
+      "approvedOn": "2026-09-18",
+      "reason": "Re-measured ON the 18.2.0 release commit, per this file's own rule that a pre-bump measurement always under-counts: `changeset version` writes the release's CHANGELOG section (a shipped file) and the new version and release history in package-metadata.ts. The prior ceiling of 8,349,035 was set on the 18.0.0 release commit; 18.2.0 measured 8,351,628, over by 2,593 bytes (0.03%). The growth is lr-map's legendControlRole (the property, its checkbox render branch, stories and the regenerated manifest/editor-data/llms surfaces) plus the --lr-icon-button-size-scope precedence fix and its regression test. Drift headroom is unchanged at 34,000 packed bytes (0.41%); unpacked and fileCount both stayed within their existing reviewed ceilings and are not re-baselined here.",
+      "approvedMaximumPackedBytes": 8385628
     }
   },
   "unpackedBudgetPolicy": {
@@ -38,7 +38,7 @@
     "entrypointHeadroom": 480
   },
   "maximum": {
-    "packedBytes": 8349035,
+    "packedBytes": 8385628,
     "unpackedBytes": 33926130,
     "fileCount": 3556
   }
