@@ -18,6 +18,20 @@ latest published `@aceshooting/lyra-ui`.
    the project's installed version and `latest`. Treat `kind: "major"` entries as required reading —
    they are the breaking changes.
 
+   **npm is the authority on what is published; the feed only carries the notes.** The site is
+   built and deployed from a separate repository, so its `latest` can sit behind npm's for as long
+   as that deploy lags. You already hold both numbers — compare them. If they disagree the feed is
+   stale, and three things follow: bump to npm's version, never the feed's; never conclude the
+   project is already current because the feed says so; and say plainly in your report that the
+   feed was behind, naming both versions.
+
+   A stale feed is also missing the release notes the paragraph above just told you to read, so the
+   pre-bump read has a fallback: `node_modules/@aceshooting/lyra-ui/CHANGELOG.md` ships inside the
+   installed package and documents every published release, including ones absent from the feed
+   entirely. When the feed is behind, read the notes there — before bumping from the currently
+   installed copy, and again from the new one in step 2 — instead of treating the feed's silence as
+   "nothing changed". Consumers have twice skipped a released bug fix by trusting a stale `latest`.
+
 2. **Read what changed.** After bumping, read `node_modules/@aceshooting/lyra-ui/CHANGELOG.md`
    between the old and new version. Note anything that could affect this project: breaking changes,
    deprecations, or behavior changes to components the project already uses.

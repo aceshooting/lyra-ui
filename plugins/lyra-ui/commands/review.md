@@ -59,7 +59,10 @@ Do these in order and stop on the first one that fails; never guess past a missi
    so up front and recommend `/lyra-ui:update` first, but continue the audit against the
    installed version. The kept release notes let reviewers classify a workaround as *already
    fixed in a newer release* (see the taxonomy in step 2), which is a different action from *fix
-   here now*.
+   here now*. If the feed's `latest` is behind `npm view`'s, the feed is stale, not authoritative:
+   trust npm for what exists and read `node_modules/@aceshooting/lyra-ui/CHANGELOG.md` for the
+   notes it is missing. Otherwise a workaround that a newer release already fixed gets audited as
+   still-broken and re-filed.
 7. **Load and reconcile the ledger.** Look for the project's request tracker at
    `docs/lyra-ui-requests.md`. If the project already tracks requests under another name (for
    example `docs/lyra-ui-open-requests.md` or `docs/lyra-request-statuses.json`), adopt that
