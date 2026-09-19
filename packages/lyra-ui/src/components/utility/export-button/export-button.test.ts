@@ -1766,3 +1766,58 @@ describe('lazy row source', () => {
     expect(text).to.equal('ID,Name');
   });
 });
+
+// `lr-button` exposes its resting and hover paint as public custom properties
+// (`--lr-button-hover-color`, `--lr-button-hover-border`, ...) layered over private `--_lr-button-*`
+// defaults. `lr-export-button` resolved the same nine values, but only through private
+// `--_lr-export-button-*` names, so the ONLY way to repaint a trigger was `::part(trigger)` --
+// which two consumers independently ended up doing, one of them to undo `appearance="outlined"`
+// recolouring its label to `--lr-color-brand` with no neutral escape hatch.
+describe('trigger paint custom properties', () => {
+  const trigger = (el: LyraExportButton) =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part~="trigger"]')!;
+
+  it('honors the resting background, color and border properties', async () => {
+    const el = (await fixture(html`
+      <lr-export-button
+        .rows=${rows}
+        .columns=${columns}
+        style="--lr-transition-fast: 0s; --lr-export-button-background: rgb(1, 2, 3); --lr-export-button-color: rgb(4, 5, 6); --lr-export-button-border: rgb(7, 8, 9);"
+      ></lr-export-button>
+    `)) as LyraExportButton;
+    await el.updateComplete;
+    const styles = getComputedStyle(trigger(el));
+    expect(styles.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(styles.color).to.equal('rgb(4, 5, 6)');
+    expect(styles.borderTopColor).to.equal('rgb(7, 8, 9)');
+  });
+
+  // The reported case: outlined paints the label `--lr-color-brand` and offers no `variant`
+  // opt-out, so a neutral-text outlined trigger was unreachable through documented properties.
+  it('lets an author override the outlined appearance back to neutral text', async () => {
+    const el = (await fixture(html`
+      <lr-export-button
+        appearance="outlined"
+        .rows=${rows}
+        .columns=${columns}
+        style="--lr-transition-fast: 0s; --lr-export-button-color: rgb(11, 22, 33);"
+      ></lr-export-button>
+    `)) as LyraExportButton;
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).color).to.equal('rgb(11, 22, 33)');
+  });
+
+  it('leaves the appearance defaults untouched when the properties are unset', async () => {
+    const plain = (await fixture(html`
+      <lr-export-button .rows=${rows} .columns=${columns}></lr-export-button>
+    `)) as LyraExportButton;
+    const outlined = (await fixture(html`
+      <lr-export-button appearance="outlined" .rows=${rows} .columns=${columns}></lr-export-button>
+    `)) as LyraExportButton;
+    await Promise.all([plain.updateComplete, outlined.updateComplete]);
+    // Not an assertion on specific values -- only that the two appearances still differ, i.e.
+    // adding the public layer did not collapse them onto one paint.
+    expect(getComputedStyle(trigger(plain)).color)
+      .to.not.equal(getComputedStyle(trigger(outlined)).color);
+  });
+});

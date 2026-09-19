@@ -93,8 +93,16 @@ closes caused by disablement, loading, or an unusable format list emit neither e
 attempt regardless of outcome — style with `::part(trigger-error)`), `menu`, `menu-item`,
 `format-label`, `format-description`
 
-**Themeable custom properties:** shared tokens only, including `--lr-popover-viewport-clamp`
-(default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
+**Themeable custom properties:** the trigger's paint is settable per state. At rest,
+`--lr-export-button-background`, `--lr-export-button-color` and `--lr-export-button-border`; on
+hover, `--lr-export-button-hover-background`, `--lr-export-button-hover-color` and
+`--lr-export-button-hover-border`; while pressed, `--lr-export-button-active-background`,
+`--lr-export-button-active-color` and `--lr-export-button-active-border`. Each layers over whatever
+the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
+keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
+the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
+opt out. Before 18.4.0 none of these existed and the only lever was `::part(trigger)`. Plus shared
+tokens, including `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.
 

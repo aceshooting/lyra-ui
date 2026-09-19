@@ -51275,6 +51275,51 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-export-button-active-background",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-background",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-hover-background",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-hover-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,

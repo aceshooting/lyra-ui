@@ -43,10 +43,11 @@ export const styles = css`
     justify-content: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--_lr-export-button-border);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-export-button-border, var(--_lr-export-button-border));
     border-radius: var(--lr-radius);
-    background: var(--_lr-export-button-background);
-    color: var(--_lr-export-button-color);
+    background: var(--lr-export-button-background, var(--_lr-export-button-background));
+    color: var(--lr-export-button-color, var(--_lr-export-button-color));
     font: inherit;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
@@ -56,16 +57,16 @@ export const styles = css`
      [part='trigger']:hover:not(:disabled) is (0,3,0) and out-ranks the source-later :active rule
      below, swallowing the pressed state. */
   :where([part~='trigger']):hover:where(:not(:disabled)) {
-    background: var(--_lr-export-button-hover-background);
-    color: var(--_lr-export-button-hover-color);
-    border-color: var(--_lr-export-button-hover-border);
+    background: var(--lr-export-button-hover-background, var(--_lr-export-button-hover-background));
+    color: var(--lr-export-button-hover-color, var(--_lr-export-button-hover-color));
+    border-color: var(--lr-export-button-hover-border, var(--_lr-export-button-hover-border));
   }
   /* Same :where() shape as the hover rule above, so the two tie at (0,1,0) and source order hands
      this one the press. */
   :where([part~='trigger']):active:where(:not(:disabled)) {
-    background: var(--_lr-export-button-active-background);
-    color: var(--_lr-export-button-active-color);
-    border-color: var(--_lr-export-button-active-border);
+    background: var(--lr-export-button-active-background, var(--_lr-export-button-active-background));
+    color: var(--lr-export-button-active-color, var(--_lr-export-button-active-color));
+    border-color: var(--lr-export-button-active-border, var(--_lr-export-button-active-border));
   }
   :host([size='2xs']) [part~='trigger'],
   :host([size='xs']) [part~='trigger'],

@@ -177,6 +177,18 @@ export interface LyraExportButtonEventMap {
  *   menu's `fixed` default, read from computed style when it is (re)positioned. Set it once on
  *   `:root`, a theme, or one clipping ancestor to change every unset export button beneath it; an
  *   unrecognized value falls back to `fixed`.
+ * @cssprop --lr-export-button-background - Trigger fill at rest. Overrides whatever the current
+ *   `appearance` resolves to, leaving every other paint untouched.
+ * @cssprop --lr-export-button-color - Trigger label and icon colour at rest. The escape hatch for
+ *   `appearance="outlined"`, which paints the label `--lr-color-brand` and has no `variant` of its
+ *   own to return it to neutral text.
+ * @cssprop --lr-export-button-border - Trigger edge colour at rest.
+ * @cssprop --lr-export-button-hover-background - Trigger fill on hover.
+ * @cssprop --lr-export-button-hover-color - Trigger label and icon colour on hover.
+ * @cssprop --lr-export-button-hover-border - Trigger edge colour on hover.
+ * @cssprop --lr-export-button-active-background - Trigger fill while pressed.
+ * @cssprop --lr-export-button-active-color - Trigger label and icon colour while pressed.
+ * @cssprop --lr-export-button-active-border - Trigger edge colour while pressed.
  * @property size - Optional density on the shared `2xs` through `xl` ladder, including the
  *   `small`/`medium`/`large` aliases. It changes the trigger and menu-row typography and padding;
  *   the 40px default hit-area floor remains in place. Unset preserves the established geometry.
