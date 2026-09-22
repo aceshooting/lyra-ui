@@ -45425,49 +45425,49 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4392,
+              "line": 4447,
               "test": "is accessible with expandedContent and an open row",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5633,
+              "line": 5688,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6080,
+              "line": 6135,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6625,
+              "line": 6680,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6839,
+              "line": 6894,
               "test": "is accessible with a select cell editor open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7407,
+              "line": 7462,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7520,
+              "line": 7575,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"

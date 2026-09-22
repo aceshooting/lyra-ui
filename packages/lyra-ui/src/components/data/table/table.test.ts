@@ -2773,6 +2773,61 @@ it('settles into a stable hidden state across repeated layout passes, without os
   }
 });
 
+for (const extraColumn of ['expansion', 'total', 'both'] as const) {
+  for (const loading of [false, true]) {
+    it(`includes ${extraColumn} column widths when priority columns hide${loading ? ' during skeleton loading' : ''}`, async () => {
+      const el = await fixture<LyraTable<Row>>(html`<lr-table
+        style="inline-size: 100px"
+        scroll-mode="auto"
+        priority-columns-visible
+        .columns=${[
+          { key: 'name', label: 'Name', headerCell: forcedWidthHeaderCell(200, 'Name'), cell: (row: Row) => row.name },
+          { key: 'score', label: 'Score', priority: 'low', headerCell: forcedWidthHeaderCell(200, 'Score'), cell: (row: Row) => row.score },
+        ] satisfies TableColumn<Row>[]}
+        .rows=${rows}
+        .expandedContent=${extraColumn !== 'total' ? (row: Row) => html`<p>${row.name}</p>` : undefined}
+        .rowTotal=${extraColumn !== 'expansion' ? (row: Row) => row.score : undefined}
+        .loading=${loading}
+        loading-appearance="skeleton"
+      ></lr-table>`);
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const structuralWidth = [...el.shadowRoot!.querySelectorAll<HTMLElement>('thead th:not([data-col-key])')]
+        .reduce((sum, header) => sum + header.getBoundingClientRect().width, 0);
+      expect(structuralWidth).to.be.greaterThan(4);
+      // The data columns alone fit, but the complete grid does not. Derive the boundary from
+      // rendered geometry so font metrics and expansion-control sizes can vary by engine/theme.
+      const borderWidth = el.getBoundingClientRect().width - base.clientWidth;
+      el.style.inlineSize = `${base.scrollWidth - structuralWidth / 2 + borderWidth}px`;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      expect(base.scrollWidth - base.clientWidth).to.be.greaterThan(1);
+
+      // A broken implementation can starve timers with a hide/reveal microtask loop. Detach only
+      // after excessive attribute changes so the regression fails instead of wedging the runner.
+      let mutations = 0;
+      const observer = new MutationObserver((records) => {
+        mutations += records.length;
+        if (mutations > 16) el.remove();
+      });
+      observer.observe(base, { attributes: true, attributeFilter: ['data-hide-priority-low'] });
+      try {
+        el.priorityColumnsVisible = false;
+        for (let frame = 0; frame < 6; frame++) {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          expect(el.isConnected, 'priority hiding must settle without a render loop').to.be.true;
+          expect(el.hasHiddenPriorityColumns).to.be.true;
+          const low = el.shadowRoot!.querySelector<HTMLElement>('th[data-priority="low"]')!;
+          expect(getComputedStyle(low).display).to.equal('none');
+        }
+        el.style.inlineSize = '1000px';
+        await waitUntil(() => !el.hasHiddenPriorityColumns, 'columns did not return after widening');
+        expect(mutations).to.be.at.most(2);
+      } finally {
+        observer.disconnect();
+      }
+    });
+  }
+}
+
 it('swaps the reveal-columns-button label between revealColumnsLabel and hideColumnsLabel on toggle', async () => {
   const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;

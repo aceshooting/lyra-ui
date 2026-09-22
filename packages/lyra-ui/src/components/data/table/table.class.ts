@@ -1542,7 +1542,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private readonly priorityTierNaturalWidth = new Map<'low' | 'medium', number>();
 
   /** Last-measured natural (unstretched) rendered width of every ALWAYS-visible (no `priority`)
-   *  header combined, mirroring `priorityTierNaturalWidth` above for the one group that is never
+   *  header combined, including expansion and row-total columns. Mirrors `priorityTierNaturalWidth`
+   *  above for the one group that is never
    *  itself hidden. It exists for the same reason: once any tier is hidden, `[part='table']`'s own
    *  `inline-size: 100%` (table.styles.ts) makes the browser's auto table layout stretch every
    *  still-rendered column to fill whatever room the hidden ones vacated, so `[part='base']`'s own
@@ -2058,7 +2059,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const mediumActuallyHidden = refreshNaturalWidth('medium', mediumHeaders);
 
     if (genuineOverflow) {
-      const alwaysHeaders = [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].filter(
+      // Structural columns have no data-col-key, but still consume width after priority columns
+      // hide. Omitting them underestimates the full grid and can alternate hide/reveal indefinitely.
+      const alwaysHeaders = [...this.renderRoot.querySelectorAll<HTMLElement>('[part="head"] > tr > th')].filter(
         (header) => !header.hasAttribute('data-priority')
       );
       const alwaysWidth = alwaysHeaders.reduce((sum, header) => sum + header.getBoundingClientRect().width, 0);
