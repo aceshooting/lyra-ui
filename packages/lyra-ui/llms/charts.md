@@ -1561,6 +1561,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly x: number;
     readonly y: number;
     readonly r?: number;
+    readonly id?: string | number;
     readonly label?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
