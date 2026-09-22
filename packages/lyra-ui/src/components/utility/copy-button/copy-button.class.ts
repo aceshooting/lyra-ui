@@ -225,14 +225,17 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
    * `id.property`. */
   @property() from = '';
 
-  /** Accessible name and resting tooltip text. Empty uses the localized Copy string. */
-  @property({ attribute: 'copy-label' }) copyLabel = '';
+  /** Accessible name and resting tooltip text. When omitted, uses localized Copy; an explicit
+   *  empty string intentionally suppresses that fallback. */
+  @property({ attribute: 'copy-label' }) copyLabel?: string;
 
-  /** Confirmation accessible name and tooltip text. Empty uses the localized Copied string. */
-  @property({ attribute: 'success-label' }) successLabel = '';
+  /** Confirmation accessible name and tooltip text. When omitted, uses localized Copied; an
+   *  explicit empty string intentionally suppresses that fallback. */
+  @property({ attribute: 'success-label' }) successLabel?: string;
 
-  /** Failure accessible name and tooltip text. Empty uses the localized failure string. */
-  @property({ attribute: 'error-label' }) errorLabel = '';
+  /** Failure accessible name and tooltip text. When omitted, uses localized failure copy; an
+   *  explicit empty string intentionally suppresses that fallback. */
+  @property({ attribute: 'error-label' }) errorLabel?: string;
 
   /** Tooltip behavior: normal hover/focus plus feedback, feedback only, or disabled. */
   @property({ reflect: true }) tooltip: LyraCopyButtonTooltip = 'full';
@@ -654,9 +657,9 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   };
 
   private statusLabel(status: CopyStatus): string {
-    if (status === 'success') return this.successLabel || this.localize('copied');
-    if (status === 'error') return this.errorLabel || this.localize('copyFailed');
-    return this.copyLabel || this.localize('copy');
+    if (status === 'success') return this.successLabel == null ? this.localize('copied') : this.successLabel;
+    if (status === 'error') return this.errorLabel == null ? this.localize('copyFailed') : this.errorLabel;
+    return this.copyLabel == null ? this.localize('copy') : this.copyLabel;
   }
 
   private renderIcon(): TemplateResult {

@@ -3,6 +3,8 @@ import { html } from "lit";
 import "./chat-message.js";
 import '../../utility/copy-button/copy-button.js';
 
+const storyLocale = (): string => document.documentElement.lang || navigator.language;
+
 const meta: Meta = {
   title: "ChatMessage",
   component: "lr-chat-message",
@@ -193,7 +195,7 @@ export const CustomTimestampFormat: Story = {
       message-role="user"
       .timestamp=${new Date()}
       .formatTimestamp=${(date: Date) =>
-        `${date.toLocaleDateString()} · ${date.toLocaleTimeString()}`}
+        `${date.toLocaleDateString(storyLocale())} · ${date.toLocaleTimeString(storyLocale())}`}
       style="max-width: 32rem; display: block;"
     >
       Overriding the default hour:minute rendering with a full date + time via

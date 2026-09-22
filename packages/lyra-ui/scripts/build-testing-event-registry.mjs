@@ -32,7 +32,7 @@ import { isMainModule } from './is-main-module.mjs';
 // factory does not model; `event-factory.ts`'s `Name` type parameter filters to `lr-${string}`
 // regardless of what this file emits, so listing them here would be inert, not wrong.
 
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -122,15 +122,11 @@ function resolveTagCancelability(manifest) {
 
 export function buildRegistrySource() {
   const manifest = readManifest();
-  // Deleted first (rather than merely overwritten) so a stale previous run's imports can never
-  // leak into the freshly computed set below, whatever this generator's output shape becomes.
-  // `LyraTagEventTypes` itself deliberately does NOT end in the literal `EventMap` suffix
-  // `collectEventMaps()` scans for (see the file header): if it did, this generator's own output
-  // would register itself as a fake component event map on every run after the first, and worse,
-  // `generate-event-types.mjs` would pick up the same false match the next time `pnpm run events`
-  // regenerates `src/events.ts`.
-  if (existsSync(outputFile)) unlinkSync(outputFile);
-  const maps = collectEventMaps();
+  // Keep the generated registry in the source tree while the census runs. The freshness check
+  // calls this function concurrently with other source readers, so deleting the tracked output
+  // here would expose a transient ENOENT to an otherwise unrelated check. Excluding it explicitly
+  // also keeps this safe if the generated interface names change in the future.
+  const maps = collectEventMaps({ excludeFiles: [outputFile] });
   const tagEventMaps = resolveTagEventMaps({ manifest, maps });
   const tagCancelability = resolveTagCancelability(manifest);
 
@@ -199,20 +195,15 @@ export function buildRegistrySource() {
   return `${lines.join('\n').replace(/\n+$/, '')}\n`;
 }
 
-function main(argv = process.argv.slice(2)) {
+export function main(argv = process.argv.slice(2)) {
   const check = argv.includes('--check');
-  // Read BEFORE building: `buildRegistrySource()` deletes the output file so that its own previous
-  // output is not rescanned as a component event map (see its body). A check that read afterwards
-  // would therefore always see a missing file, and would leave the tree with the file deleted.
   const previous = existsSync(outputFile) ? readFileSync(outputFile, 'utf8') : null;
   const text = buildRegistrySource();
   const relative = path.relative(packageDir, outputFile);
   const tagCount = text.match(/^  '[^']+': Lyra/gm)?.length ?? 0;
   if (check) {
-    // Restore exactly what was there, so a check never mutates the working tree. Fail closed: a
-    // missing file is as stale as a divergent one, since the registry `createLyraEvent()`
-    // validates against would then not exist at all.
-    if (previous !== null) writeFileSync(outputFile, previous);
+    // A check is read-only. Fail closed: a missing file is as stale as a divergent one, since the
+    // registry `createLyraEvent()` validates against would then not exist at all.
     if (previous !== text) {
       console.error(
         `${relative} is stale; run \`pnpm run testing-event-registry\` and commit the result.`,

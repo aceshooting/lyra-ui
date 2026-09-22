@@ -3093,6 +3093,11 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
 request with exactly one of `{ frameGeneration, result }` or `{ frameGeneration, error }`. Missing,
 stale, or ambiguous correlation fails closed. Both methods are no-ops before a frame exists.
 
+The initial `host-context` message includes a document-bound nonce and transfers a `MessagePort` to
+the executable document. Frame requests and host messages after bootstrap use that port. A same-frame
+navigation closes the port, invalidates the nonce and generation, and mounts a fresh sandbox before
+host data can be delivered.
+
 **Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
 `McpAppToolCallDetail`, `McpAppToolResultOptions`, and `LyraMcpAppEventMap`.
 

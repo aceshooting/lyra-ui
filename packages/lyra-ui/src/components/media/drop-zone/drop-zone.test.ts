@@ -232,6 +232,17 @@ it('recursively adds files from a dropped folder when multiple', async () => {
   expect(detail.files.map((f) => f.name)).to.deep.equal(['nested.csv']);
 });
 
+it('honors the plain-HTML attribute form multiple="false"', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple="false"><div>region</div></lr-drop-zone>`);
+  expect(el.multiple).to.equal(false);
+  const result = oneEvent(el, 'lr-files');
+  dropFolderWith(base(el), 'photos');
+  const event = await result;
+  const detail = event.detail as LyraDropZoneFilesDetail;
+  expect(detail.files).to.deep.equal([]);
+  expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['directory']);
+});
+
 it('rejects a dropped folder outright while not multiple', async () => {
   const el = await fixture<LyraDropZone>(html`<lr-drop-zone .multiple=${false}><div>region</div></lr-drop-zone>`);
   const result = oneEvent(el, 'lr-files');

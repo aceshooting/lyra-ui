@@ -91,9 +91,14 @@ function moduleSpecifier(file) {
  * per event name already covers it — without this script needing to re-implement the heritage
  * resolution (`extends` / `Omit` / `Pick`) that `check-event-contracts.mjs` owns.
  */
-export function collectEventMaps() {
+export function collectEventMaps({ excludeFiles = [] } = {}) {
+  const excludedFiles = new Set([outputFile, ...excludeFiles].map((file) => path.resolve(file)));
   const maps = [];
-  for (const file of walk(sourceDir).filter(isShippedSource).sort(byLocale)) {
+  for (const file of walk(sourceDir)
+    .filter(
+      (candidate) => isShippedSource(candidate) && !excludedFiles.has(path.resolve(candidate)),
+    )
+    .sort(byLocale)) {
     const source = readFileSync(file, 'utf8');
     if (!EVENT_MAP_DECLARATION_RE.test(source)) continue;
 

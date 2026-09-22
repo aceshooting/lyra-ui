@@ -83,10 +83,10 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
 'streaming'`, `lr-chat-composer`'s own union; invalid values read as `idle` without rewriting the
   host attribute
-- `composerPlaceholder: string = ''` (attribute `composer-placeholder`)
+- `composerPlaceholder?: string` (attribute `composer-placeholder`)
 - `composerMinRows: number = 1` (attribute `composer-min-rows`), `composerMaxRows: number = 8`
   (attribute `composer-max-rows`)
-- `label: string = ''` — accessible name and visible heading
+- `label?: string` — accessible name and visible heading; omission uses the localized default and an explicit empty string suppresses it
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host-level accessible-name
   override for the internal `role="region"` root
 

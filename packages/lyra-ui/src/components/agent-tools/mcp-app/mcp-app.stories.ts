@@ -89,18 +89,24 @@ export const CorrelatedToolReply: Story = {
           <p id="status">Requesting the current weather…</p>
           <script>
             addEventListener('message', (event) => {
-              if (event.data?.type !== 'tool-result') return;
-              document.querySelector('#status').textContent =
-                'Weather result received for this frame generation.';
+              if (event.data?.type !== 'host-context' || !event.ports[0]) return;
+              const port = event.ports[0];
+              port.addEventListener('message', (portEvent) => {
+                if (portEvent.data?.type !== 'tool-result') return;
+                document.querySelector('#status').textContent =
+                  'Weather result received for this frame generation.';
+              });
+              port.start();
+              port.postMessage({
+                channel: 'lyra-mcp-app',
+                version: 1,
+                type: 'tool-call',
+                requestId: 'weather-story',
+                name: 'get_weather',
+                args: { city: 'Luxembourg' },
+                nonce: event.data.nonce
+              });
             });
-            parent.postMessage({
-              channel: 'lyra-mcp-app',
-              version: 1,
-              type: 'tool-call',
-              requestId: 'weather-story',
-              name: 'get_weather',
-              args: { city: 'Luxembourg' }
-            }, '*');
           </script>
         </body></html>`,
       }}

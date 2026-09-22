@@ -31,6 +31,10 @@ function queryInputOf(el: LyraRetrievalSearch): HTMLElement {
   return el.shadowRoot!.querySelector('[part="query"]') as HTMLElement;
 }
 
+function nativeQueryInputOf(el: LyraRetrievalSearch): HTMLInputElement {
+  return queryInputOf(el).shadowRoot!.querySelector('input') as HTMLInputElement;
+}
+
 function modeOf(el: LyraRetrievalSearch): HTMLElement {
   return el.shadowRoot!.querySelector('[part="mode"]') as HTMLElement;
 }
@@ -823,6 +827,22 @@ describe('loading / error / empty status region', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="empty"]') == null).to.be.true;
   });
+});
+
+it('uses the localized search placeholder only when omitted and preserves an explicit empty placeholder', async () => {
+  const omitted = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
+  expect(omitted.placeholder).to.equal(undefined);
+  expect(nativeQueryInputOf(omitted).getAttribute('placeholder')).to.equal('Search');
+
+  const localized = (await fixture(
+    html`<lr-retrieval-search .strings=${{ search: 'Rechercher' }}></lr-retrieval-search>`,
+  )) as LyraRetrievalSearch;
+  expect(nativeQueryInputOf(localized).getAttribute('placeholder')).to.equal('Rechercher');
+
+  const explicit = (await fixture(html`<lr-retrieval-search placeholder=""></lr-retrieval-search>`)) as LyraRetrievalSearch;
+  await explicit.updateComplete;
+  expect(explicit.placeholder).to.equal('');
+  expect(nativeQueryInputOf(explicit).getAttribute('placeholder')).to.equal('');
 });
 
 describe('accessible naming', () => {

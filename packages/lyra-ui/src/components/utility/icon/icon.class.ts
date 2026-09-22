@@ -5,7 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isUnsafeSvgCloneAttribute } from '../../../internal/safe-svg.js';
+import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
 import { isAbortError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
 import { getIconLibrary, subscribeIconLibrary } from './icon-library.js';
@@ -286,8 +286,9 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
 
   /**
    * SVG geometry distributed through a shadow-DOM slot does not paint reliably in Chromium when
-   * the slot itself is inside an SVG. Keep the public custom-content slot, but clone its trusted
-   * SVG nodes into the component-owned SVG so path/circle/group content has a real SVG parent.
+   * the slot itself is inside an SVG. Keep the public custom-content slot, but clone its
+   * consumer-supplied SVG nodes into the component-owned SVG so path/circle/group content has a
+   * real SVG parent; the clone boundary applies the shared SVG safety filters first.
    */
   private syncCustomNodes(): void {
     // Only the built-in render owns a slot; a fetched document is never merged with slotted nodes.
@@ -334,9 +335,10 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     // Creating it with the SVG namespace produces an inert node that can never
     // upgrade; skip it rather than silently changing its semantics.
     if (element.localName.includes('-')) return null;
+    if (isUnsafeSvgCloneElement(element.localName)) return null;
     const copy = this.ownerDocument.createElementNS('http://www.w3.org/2000/svg', element.localName);
     for (const attribute of element.attributes) {
-      if (isUnsafeSvgCloneAttribute(attribute.name)) continue;
+      if (isUnsafeSvgCloneAttribute(attribute.name, attribute.value)) continue;
       copy.setAttribute(attribute.name, attribute.value);
     }
     for (const child of element.childNodes) {

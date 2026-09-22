@@ -179,7 +179,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   static override styles = [LyraElement.styles, styles];
 
   /** Accessible name and visible heading for the workspace. */
-  @property() label = '';
+  @property() label?: string;
 
   /** Host-level accessible-name override for the internal `role="region"` root. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -256,7 +256,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   /** Placeholder for the built-in composer. */
-  @property({ attribute: 'composer-placeholder' }) composerPlaceholder = '';
+  @property({ attribute: 'composer-placeholder' }) composerPlaceholder?: string;
 
   /** Minimum and maximum rows for the built-in composer. */
   @property({ type: Number, attribute: 'composer-min-rows' }) composerMinRows = 1;
@@ -455,8 +455,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel ?? (this.label || this.localize('agentWorkspaceLabel'));
-    const heading = this.label || this.localize('agentWorkspaceLabel');
+    const label = this.accessibleLabel ?? (this.label == null ? this.localize('agentWorkspaceLabel') : this.label);
+    const heading = this.label == null ? this.localize('agentWorkspaceLabel') : this.label;
     const hasSlottedDetails = this.hasSlotted('details');
     const hasDetails = hasSlottedDetails || (this.showDetails && this.hasBuiltInDetails);
     const hasSlottedComposer = this.hasSlotted('composer');
@@ -499,7 +499,9 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                   .status=${this.composerStatus}
                   .minRows=${this.safeComposerMinRows}
                   .maxRows=${this.safeComposerMaxRows}
-                  placeholder=${this.composerPlaceholder || this.localize('composerPlaceholder')}
+                  placeholder=${this.composerPlaceholder == null
+                    ? this.localize('composerPlaceholder')
+                    : this.composerPlaceholder}
                 ></lr-chat-composer>`
               : nothing}
           </slot>

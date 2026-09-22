@@ -106,6 +106,36 @@ it('strips event-handler and href attributes when cloning slotted custom SVG con
   expect(anchor === null || !anchor.hasAttribute('href')).to.be.true;
 });
 
+it('rejects executable and embedded elements and secondary resource sinks from inert slotted SVG', async () => {
+  const flag = window as unknown as Record<string, unknown>;
+  delete flag['__lrIconSlotXss'];
+  const source = new DOMParser().parseFromString(
+    '<svg xmlns="http://www.w3.org/2000/svg">' +
+      '<script>window.__lrIconSlotXss = "script";</script>' +
+      '<foreignObject><div>embedded</div></foreignObject>' +
+      '<style>path { stroke: url(https://tracker.test/style.svg#x); }</style>' +
+      '<image href="https://tracker.test/image.svg" />' +
+      '<path id="external" fill="url(https://tracker.test/paint.svg#x)" ' +
+        'style="stroke: url(https://tracker.test/stroke.svg#x)" />' +
+      '<path id="local" fill="url(#paint)" />' +
+    '</svg>',
+    'image/svg+xml',
+  );
+  const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+  for (const child of [...source.documentElement.children]) {
+    el.append(document.importNode(child, true));
+  }
+  await el.updateComplete;
+
+  const shadow = el.shadowRoot!;
+  expect(shadow.querySelectorAll('script, foreignObject, style, image')).to.have.length(0);
+  expect(shadow.querySelector('#external')?.hasAttribute('fill')).to.be.false;
+  expect(shadow.querySelector('#external')?.hasAttribute('style')).to.be.false;
+  expect(shadow.querySelector('#local')?.getAttribute('fill')).to.equal('url(#paint)');
+  expect(flag['__lrIconSlotXss']).to.equal(undefined);
+  expect(shadow.innerHTML.includes('tracker.test')).to.be.false;
+});
+
 it('tracks assigned SVG attribute and descendant mutations only while connected', async () => {
   const el = (await fixture(html`
     <lr-icon

@@ -24,10 +24,47 @@ function frameMessage(
   source: MessageEventSource | null,
   data: unknown,
   origin = '',
+  authenticate = true,
 ): MessageEvent {
-  const event = new MessageEvent('message', { data, origin });
+  const owner = Array.from(document.querySelectorAll('lr-mcp-app')).find((candidate) =>
+    candidate.shadowRoot?.querySelector('iframe')?.contentWindow === source,
+  ) as (HTMLElement & { frameNonce?: string }) | undefined;
+  const authenticatedData = authenticate && owner?.frameNonce && data && typeof data === 'object' && !Array.isArray(data)
+    ? { ...(data as Record<string, unknown>), nonce: owner.frameNonce }
+    : data;
+  const event = new MessageEvent('message', { data: authenticatedData, origin });
   Object.defineProperty(event, 'source', { configurable: true, value: source });
   return event;
+}
+
+function dispatchFrameMessage(
+  source: MessageEventSource | null,
+  data: unknown,
+  origin = '',
+  authenticate = true,
+): void {
+  const event = frameMessage(source, data, origin, authenticate);
+  const owner = Array.from(document.querySelectorAll('lr-mcp-app')).find((candidate) =>
+    candidate.shadowRoot?.querySelector('iframe')?.contentWindow === source,
+  ) as (HTMLElement & { framePort?: MessagePort; onPortMessage?: (event: MessageEvent) => void }) | undefined;
+  if (owner?.framePort && origin === 'null' && authenticate) {
+    owner.onPortMessage?.(event);
+  } else {
+    window.dispatchEvent(event);
+  }
+}
+
+function dispatchPortMessage(el: LyraMcpApp, data: unknown): void {
+  const internal = el as unknown as {
+    framePort?: MessagePort;
+    onPortMessage?: (event: MessageEvent) => void;
+    frameNonce?: string;
+  };
+  const frame = el.shadowRoot!.querySelector('iframe')!;
+  const authenticatedData = data && typeof data === 'object' && !Array.isArray(data)
+    ? { ...(data as Record<string, unknown>), nonce: internal.frameNonce }
+    : data;
+  internal.onPortMessage?.(frameMessage(frame.contentWindow, authenticatedData, 'null', false));
 }
 
 it('renders executable app HTML only inside a uniquely-origin sandbox with CSP metadata', async () => {
@@ -196,7 +233,7 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   ></lr-mcp-app>`)) as LyraMcpApp;
   const iframe = el.shadowRoot!.querySelector('iframe')!;
   const toolCall = oneEvent(el, 'lr-mcp-tool-call');
-  window.dispatchEvent(frameMessage(
+  dispatchFrameMessage(
     iframe.contentWindow,
     {
       channel: 'lyra-mcp-app',
@@ -207,16 +244,16 @@ it('accepts messages only from its own frame and clamps resize requests', async 
       args: { city: 'Luxembourg' },
     },
     'null',
-  ));
+  );
   const event = await toolCall as CustomEvent<{ requestId: string; name: string; args: unknown }>;
   expect(event.detail.name).to.equal('refresh_weather');
 
   const resize = oneEvent(el, 'lr-mcp-resize');
-  window.dispatchEvent(frameMessage(
+  dispatchFrameMessage(
     iframe.contentWindow,
     { channel: 'lyra-mcp-app', version: 1, type: 'resize', height: 50_000 },
     'null',
-  ));
+  );
   expect((await resize).detail.height).to.equal(500);
   await el.updateComplete;
   expect(iframe.style.height).to.equal('500px');
@@ -225,10 +262,10 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   el.addEventListener('lr-mcp-tool-call', () => {
     leaked = true;
   });
-  window.dispatchEvent(frameMessage(
+  dispatchFrameMessage(
     window,
     { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'bad', args: {} },
-  ));
+  );
   expect(leaked).to.be.false;
 });
 
@@ -238,11 +275,11 @@ it('forwards typed message, link, and log requests while rejecting malformed lin
   ></lr-mcp-app>`)) as LyraMcpApp;
   const iframe = el.shadowRoot!.querySelector('iframe')!;
   const dispatch = (data: Record<string, unknown>) => {
-    window.dispatchEvent(frameMessage(
+    dispatchFrameMessage(
       iframe.contentWindow,
       { channel: 'lyra-mcp-app', version: 1, ...data },
       'null',
-    ));
+    );
   };
 
   const sendMessage = oneEvent(el, 'lr-mcp-send-message');
@@ -376,13 +413,13 @@ it('authenticates remote uniquely-origin sandbox messages by frame window and op
   el.addEventListener('lr-mcp-tool-call', () => calls++);
   const data = { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'weather', args: {} };
 
-  window.dispatchEvent(frameMessage(iframe.contentWindow, data, 'https://apps.example.test'));
+  dispatchFrameMessage(iframe.contentWindow, data, 'https://apps.example.test');
   expect(calls).to.equal(0);
 
-  window.dispatchEvent(frameMessage(window, data, 'null'));
+  dispatchFrameMessage(window, data, 'null');
   expect(calls).to.equal(0);
 
-  window.dispatchEvent(frameMessage(iframe.contentWindow, data, 'null'));
+  dispatchFrameMessage(iframe.contentWindow, data, 'null');
   expect(calls).to.equal(1);
 });
 
@@ -452,20 +489,19 @@ it('retargets authenticated frame messages to the adopted owner window and clean
     await el.updateComplete;
     const sandboxWindow = el.shadowRoot!.querySelector('iframe')!.contentWindow;
 
-    window.dispatchEvent(frameMessage(sandboxWindow, data, 'null'));
+    dispatchFrameMessage(sandboxWindow, data, 'null');
     expect(calls, 'the prior parent window must no longer reach the component').to.equal(0);
 
     ownerWindow.dispatchEvent(frameMessage(ownerWindow, data, 'null'));
     expect(calls, 'another window in the right realm is still the wrong source').to.equal(0);
 
-    ownerWindow.dispatchEvent(frameMessage(sandboxWindow, data, 'null'));
+    dispatchPortMessage(el, data);
     expect(calls).to.equal(1);
 
     el.remove();
     ownerDocument.body.append(el);
     await el.updateComplete;
-    const reconnectedSandboxWindow = el.shadowRoot!.querySelector('iframe')!.contentWindow;
-    ownerWindow.dispatchEvent(frameMessage(reconnectedSandboxWindow, data, 'null'));
+    dispatchPortMessage(el, data);
     expect(calls).to.equal(2);
   } finally {
     el.remove();
@@ -502,10 +538,42 @@ it('replaces the iframe window across resource navigation so the previous opaque
   let calls = 0;
   el.addEventListener('lr-mcp-tool-call', () => calls++);
   const data = { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'stale', args: {} };
-  window.dispatchEvent(frameMessage(oldWindow, data, 'null'));
+  dispatchFrameMessage(oldWindow, data, 'null');
   expect(calls).to.equal(0);
-  window.dispatchEvent(frameMessage(newFrame.contentWindow, data, 'null'));
+  dispatchFrameMessage(newFrame.contentWindow, data, 'null');
   expect(calls).to.equal(1);
+});
+
+it('drops the document nonce and message port when the mounted frame navigates itself', async () => {
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+    .resource=${{ uri: 'ui://self-navigation', html: '<p>App</p>' }}
+  ></lr-mcp-app>`);
+  let frame = el.shadowRoot!.querySelector('iframe')!;
+  const internal = el as unknown as { frameNonce?: string; framePort?: MessagePort };
+  if (!internal.framePort) {
+    frame.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    frame = el.shadowRoot!.querySelector('iframe')!;
+  }
+  expect(typeof internal.framePort, 'the initial document owns the channel').to.equal('object');
+  const oldNonce = internal.frameNonce;
+  let calls = 0;
+  el.addEventListener('lr-mcp-tool-call', () => calls++);
+
+  // A navigated document keeps the same WindowProxy until the load event is handled. Its message
+  // must already fail closed in that interval, before the keyed iframe replacement is rendered.
+  frame.dispatchEvent(new Event('load'));
+  dispatchFrameMessage(
+    frame.contentWindow,
+    { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'spoofed', args: {}, nonce: oldNonce },
+    'null',
+    false,
+  );
+  expect(calls, 'the previous document nonce is invalid immediately on navigation').to.equal(0);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('iframe') === frame).to.equal(false);
+  expect(typeof internal.framePort, 'the navigated document cannot retain the old channel').to.equal('undefined');
 });
 
 it('ignores a detached previous frame load after replacing the resource', async () => {
@@ -648,7 +716,7 @@ it('drops a tool result whose frame generation no longer matches the mounted fra
   const firstWindow = el.shadowRoot!.querySelector('iframe')!.contentWindow;
 
   const firstCall = oneEvent(el, 'lr-mcp-tool-call');
-  window.dispatchEvent(frameMessage(
+  dispatchFrameMessage(
     firstWindow,
     {
       channel: 'lyra-mcp-app',
@@ -659,7 +727,7 @@ it('drops a tool result whose frame generation no longer matches the mounted fra
       args: {},
     },
     'null',
-  ));
+  );
   const staleGeneration = (await firstCall).detail.frameGeneration;
   expect(typeof staleGeneration, 'the request carries the generation it came from').to.equal('number');
 
@@ -686,7 +754,7 @@ it('drops a tool result whose frame generation no longer matches the mounted fra
   ).to.equal(0);
 
   const secondCall = oneEvent(el, 'lr-mcp-tool-call');
-  window.dispatchEvent(frameMessage(
+  dispatchFrameMessage(
     secondWindow,
     {
       channel: 'lyra-mcp-app',
@@ -697,7 +765,7 @@ it('drops a tool result whose frame generation no longer matches the mounted fra
       args: {},
     },
     'null',
-  ));
+  );
   const liveGeneration = (await secondCall).detail.frameGeneration;
   expect(liveGeneration).to.not.equal(staleGeneration);
 
@@ -716,7 +784,7 @@ it('invalidates tool-result correlation when a connected frame is adopted or rec
   const frameGeneration = async (): Promise<number> => {
     const frame = el.shadowRoot!.querySelector('iframe')!;
     const call = oneEvent(el, 'lr-mcp-tool-call');
-    window.dispatchEvent(frameMessage(
+    dispatchFrameMessage(
       frame.contentWindow,
       {
         channel: 'lyra-mcp-app',
@@ -727,7 +795,7 @@ it('invalidates tool-result correlation when a connected frame is adopted or rec
         args: {},
       },
       'null',
-    ));
+    );
     return (await call).detail.frameGeneration as number;
   };
 

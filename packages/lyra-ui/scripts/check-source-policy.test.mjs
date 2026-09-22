@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   collectSourcePolicyFindings,
   findOpaqueReviewTokens,
+  findBareGlobalIsNaNCalls,
   findUnboundAnnouncerTimerHosts,
   findNulByteLines,
   findUnboundAnnouncementSinks,
@@ -46,6 +47,19 @@ test('shipped-source hygiene rejects opaque review IDs without flagging public s
     { line: 2, token: 'C-789' },
   ]);
   assert.deepEqual(findOpaqueReviewTokens('WCAG 2.5.8; ISO-8601; SHA-256; issue 123'), []);
+});
+
+test('numeric source policy rejects coercive global isNaN while allowing Number.isNaN', () => {
+  const source = [
+    '// isNaN() in a comment is not executable code.',
+    'const text = "isNaN(value)";',
+    'function check(value) {',
+    '  if (isNaN(value)) return;',
+    '  if (Number.isNaN(value)) return;',
+    '}',
+  ].join('\n');
+
+  assert.deepEqual(findBareGlobalIsNaNCalls(source), [{ line: 4 }]);
 });
 
 test('Announcer timer policy requires an owner-window binding', () => {

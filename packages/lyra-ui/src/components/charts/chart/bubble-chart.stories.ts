@@ -14,9 +14,9 @@ type Story = StoryObj;
 export const Default: Story = {
   render: () => {
     const bubblePoints: LyraChartPoint[] = [
-      { x: 10, y: 20, r: 8, label: 'North cluster' },
-      { x: 15, y: 10, r: 12, label: 'Central cluster' },
-      { x: 20, y: 30, r: 6, label: 'South cluster' },
+      { x: 10, y: 20, r: 8, id: 'north', label: 'North cluster' },
+      { x: 15, y: 10, r: 12, id: 'central', label: 'Central cluster' },
+      { x: 20, y: 30, r: 6, id: 'south', label: 'South cluster' },
     ];
     const series: LyraChartSeries[] = [
       { label: 'Clusters', points: bubblePoints },

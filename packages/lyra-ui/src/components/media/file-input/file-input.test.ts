@@ -107,6 +107,27 @@ it("renders the label text by default", async () => {
   );
 });
 
+it('uses the localized label only when omitted and preserves an explicit empty label', async () => {
+  const omitted = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  expect(omitted.label).to.equal(undefined);
+  expect(omitted.shadowRoot!.querySelector('[part="dropzone-text"]')!.textContent).to.contain(
+    'Drop files here or click to browse',
+  );
+
+  const localized = (await fixture(
+    html`<lr-file-input .strings=${{ fileInputDefaultLabel: 'Déposer les fichiers' }}></lr-file-input>`,
+  )) as LyraFileInput;
+  expect(localized.shadowRoot!.querySelector('[part="dropzone-text"]')!.textContent).to.contain(
+    'Déposer les fichiers',
+  );
+
+  const explicit = (await fixture(html`<lr-file-input label=""></lr-file-input>`)) as LyraFileInput;
+  await explicit.updateComplete;
+  expect(explicit.label).to.equal('');
+  expect(explicit.shadowRoot!.querySelector('[part="dropzone-text"]')!.textContent).to.equal('');
+  expect(explicit.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it("emits lr-files with all files accepted when no mime restrictions are set", async () => {
   const el = (await fixture(
     html`<lr-file-input multiple></lr-file-input>`
@@ -1727,7 +1748,7 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
     expect(el.fileCount).to.equal(0);
     expect(el.dragging).to.be.false;
     expect(el.hint).to.equal("");
-    expect(el.label).to.equal("");
+    expect(el.label).to.equal(undefined);
     expect(el.name).to.equal(null);
     expect(el.required).to.be.false;
     expect(el.size).to.equal("m");

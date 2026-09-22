@@ -172,7 +172,9 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * comments or script strings cannot redirect policy insertion away from the parsed document head.
  * Remote resources accept only relative and HTTP(S) document URLs and never send a referrer.
  * The frame can request tools, messages, links, logs, and resizing only through typed events;
- * the component never performs those external actions itself.
+ * the component never performs those external actions itself. The initial host context transfers
+ * a document-bound message port and nonce; later host messages stay on that port, and a navigation
+ * invalidates both before the iframe is remounted.
  * Resource records and nested CSP/metadata collections are bounded clone-owned readonly
  * snapshots. Create and reassign a new resource record after changes.
  *
@@ -226,15 +228,29 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   private errorAnnouncementSink?: AnnouncementSink;
   private suppressNextResourceAnnouncement = true;
   private messageWindow?: Window;
+  /** Secret bound to the currently loaded document. It never crosses a navigation. */
+  private frameNonce?: string;
+  private framePort?: MessagePort;
+  private bootstrapPort?: { frame: HTMLIFrameElement; port: MessagePort };
 
   private resourceAvailable(resource: McpAppResource | null | undefined): boolean {
     return resolveResource(resource) !== null;
   }
 
   private invalidateFrame(): void {
+    this.closeFramePort();
+    this.bootstrapPort?.port.close();
+    this.bootstrapPort = undefined;
+    this.frameNonce = this.resourceAvailable(this.resource) ? this.createFrameNonce() : undefined;
     this.loaded = false;
     this.frameGeneration++;
     this.requestUpdate();
+  }
+
+  private closeFramePort(): void {
+    this.framePort?.removeEventListener('message', this.onPortMessage);
+    this.framePort?.close();
+    this.framePort = undefined;
   }
 
   private syncAnnouncementSinks(): void {
@@ -314,6 +330,10 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
         else if (wasAvailable) this.errorAnnouncementSink?.announce(this.localize('mcpAppUnavailable'));
       }
       this.loaded = false;
+      this.closeFramePort();
+      this.bootstrapPort?.port.close();
+      this.bootstrapPort = undefined;
+      this.frameNonce = this.resourceAvailable(this.resource) ? this.createFrameNonce() : undefined;
       this.frameGeneration++;
     }
     if (changed.has('resource') || changed.has('height') || changed.has('maxHeight')) {
@@ -334,9 +354,13 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   private expectedOrigin(): 'null' | null {
     if (!resolveResource(this.resource)) return null;
     // The frame intentionally omits allow-same-origin. Both srcdoc and network documents
-    // therefore have an opaque origin serialized as "null"; the contentWindow identity is
-    // the authentication boundary that distinguishes this frame from every other opaque frame.
+    // therefore have an opaque origin serialized as "null"; the nonce and transferred port are
+    // the authentication boundary, while contentWindow identity rejects foreign frames.
     return 'null';
+  }
+
+  private createFrameNonce(): string {
+    return crypto.randomUUID();
   }
 
   private onLoad(
@@ -351,8 +375,21 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     ) return;
     const currentResource = resolveResource(this.resource);
     if (!currentResource || currentResource.resource !== resource.resource) return;
+    // A second load on the same iframe is a navigation inside the sandbox. The WindowProxy is
+    // stable across that navigation, so source/origin checks alone would continue trusting the
+    // new document. Drop the port and remount before it can receive any host data.
+    if (this.loaded) {
+      this.invalidateFrame();
+      return;
+    }
+    this.frameNonce ??= this.createFrameNonce();
+    const frame = event.currentTarget as HTMLIFrameElement;
+    const port = new MessageChannel();
+    this.framePort = port.port1;
+    this.framePort.addEventListener('message', this.onPortMessage);
+    this.framePort.start();
     this.loaded = true;
-    this.emit('lr-mcp-ready', { uri: resource.uri });
+    this.bootstrapPort = { frame, port: port.port2 };
     this.postHostContext({
       resource: {
         uri: resource.uri,
@@ -361,14 +398,32 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
       locale: this.effectiveLocale,
       direction: this.effectiveDirection,
     });
+    // A test or consumer subclass may override postHostContext(). Do not leave an untransferred
+    // port entangled with the host in that case.
+    this.bootstrapPort?.port.close();
+    this.bootstrapPort = undefined;
+    this.emit('lr-mcp-ready', { uri: resource.uri });
   }
 
   private onMessage = (event: MessageEvent): void => {
+    // Once the bootstrap port is transferred, window messages are no longer part of the protocol.
+    // A navigated document retains the WindowProxy, so accepting this path after bootstrap would
+    // let a document that learned the nonce impersonate the prior app before its load event.
+    if (this.framePort) return;
     if (event.currentTarget !== this.messageWindow) return;
     if (!this.frame?.contentWindow || event.source !== this.frame.contentWindow) return;
     const expectedOrigin = this.expectedOrigin();
     if (expectedOrigin && event.origin !== expectedOrigin) return;
-    const message = record(event.data);
+    this.handleMessage(event.data);
+  };
+
+  private onPortMessage = (event: MessageEvent): void => {
+    this.handleMessage(event.data);
+  };
+
+  private handleMessage(data: unknown): void {
+    const message = record(data);
+    if (typeof this.frameNonce !== 'string' || message?.['nonce'] !== this.frameNonce) return;
     if (message?.['channel'] !== 'lyra-mcp-app' || message['version'] !== 1 || typeof message['type'] !== 'string') return;
     switch (message['type']) {
       case 'resize': {
@@ -406,28 +461,30 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     }
   };
 
-  private post(message: HostMessage): void {
-    const target = this.frame?.contentWindow;
-    if (!target) return;
-    // The sandbox never grants `allow-same-origin`, so a resolved resource's frame always carries
-    // a forced-opaque origin, whether it came from `html` or `src`; `expectedOrigin()` above can
-    // only ever return `'null' | null`, never a real origin. A strict outbound targetOrigin check
-    // is therefore unreachable as long as the sandbox omits `allow-same-origin` -- there is no
-    // known origin to restrict to, and the platform rejects the literal string `"null"` as a
-    // *outbound* postMessage() targetOrigin (only `'*'` or a value that parses as an absolute URL
-    // is accepted; `new URL('null')` throws), so passing `expectedOrigin()`'s result straight
-    // through would throw a `SyntaxError` on every real send. `target.postMessage(message, '*')`
-    // below is therefore not a strict-origin fix -- closing this down for real would mean granting
-    // `allow-same-origin` (a materially larger sandbox-escape tradeoff, out of scope here) so the
-    // frame's origin becomes a real, checkable value instead of always-opaque. What this line does
-    // keep as the actual security boundary is `target` itself, re-resolved from the live DOM on
-    // every call, so a stale or foreign window can never receive a message meant for the current
-    // frame generation.
-    target.postMessage(message, '*');
+  private post(
+    message: HostMessage,
+    frame: HTMLIFrameElement | undefined = this.frame,
+    transferPort?: MessagePort,
+  ): void {
+    const nonce = this.frameNonce;
+    if (typeof nonce !== 'string') return;
+    if (transferPort) {
+      const target = frame?.contentWindow;
+      if (!target) return;
+      target.postMessage({ ...message, nonce }, '*', [transferPort]);
+      return;
+    }
+    this.framePort?.postMessage({ ...message, nonce });
   }
 
   postHostContext(context: unknown): void {
-    this.post({ channel: 'lyra-mcp-app', version: 1, type: 'host-context', context });
+    const bootstrap = this.bootstrapPort;
+    this.bootstrapPort = undefined;
+    this.post(
+      { channel: 'lyra-mcp-app', version: 1, type: 'host-context', context },
+      bootstrap?.frame,
+      bootstrap?.port,
+    );
   }
 
   /** Resolves a prior `lr-mcp-tool-call`. The required frame generation binds the asynchronous

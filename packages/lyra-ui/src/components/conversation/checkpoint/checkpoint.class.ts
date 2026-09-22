@@ -41,11 +41,9 @@ function bookmarkIcon(): SVGTemplateResult {
   `;
 }
 
-/** `hour:minute` in the component's effective locale. The `'en'` guard mirrors the library-wide
- *  locale-resolution fallback — an empty locale string would make the `Intl.DateTimeFormat`
- *  constructor throw. */
+/** `hour:minute` in the component's effective locale. */
 function defaultFormatTimestamp(date: Date, locale: string): string {
-  return getDateTimeFormat(locale || 'en', { hour: 'numeric', minute: '2-digit' }).format(date);
+  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`

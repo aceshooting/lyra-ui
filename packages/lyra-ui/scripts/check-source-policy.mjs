@@ -38,6 +38,9 @@ import { isMainModule } from './is-main-module.mjs';
 //                           type/default text, it desyncs check:pinned-upstream-manifests.
 //   announcer-timer-realm   A component-owned Announcer must bind its timers to the host's owner
 //                           window on connection/adoption instead of retaining the ambient realm.
+//   bare-global-isNaN       The coercive global isNaN() accepts values such as numeric strings and
+//                           treats Infinity as valid; use Number.isFinite() or a shared
+//                           finite-number helper for numeric validation.
 //   physical-css            *.styles.ts must use logical properties (inset-inline-*,
 //                           margin-inline-*, text-align: start/end, ...) instead of physical
 //                           left/right ones, except inside `:dir()` rules, in rule blocks that
@@ -206,6 +209,16 @@ export function findOpaqueReviewTokens(source) {
     line: lineOf(source, match.index),
     token: match[0],
   }));
+}
+
+/** Finds coercive global `isNaN(...)` calls while allowing `Number.isNaN(...)`. */
+export function findBareGlobalIsNaNCalls(source, file = '<source>') {
+  const calls = [];
+  visitSyntaxNodes(parseSyntaxProgram(source, file), (node) => {
+    if (node.type !== 'CallExpression' || syntaxIdentifierName(node.callee) !== 'isNaN') return;
+    calls.push({ line: lineOf(source, node.start ?? 0) });
+  });
+  return calls;
 }
 
 /**
@@ -1188,6 +1201,13 @@ export function collectSourcePolicyFindings({
   if (file.endsWith('.styles.ts')) {
     checkPhysicalCss(file, source, findings);
     return findings;
+  }
+
+  for (const { line } of findBareGlobalIsNaNCalls(source, file)) {
+    findings.push(
+      `${rel(file)}:${line} [bare-global-isNaN] use Number.isFinite() or a shared finite-number ` +
+        'helper instead of coercive global isNaN()',
+    );
   }
 
   const stripped = stripJsComments(source);

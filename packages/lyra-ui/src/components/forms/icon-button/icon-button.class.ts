@@ -9,7 +9,7 @@ import {
 import { styles } from './icon-button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
-import { isUnsafeSvgCloneAttribute } from '../../../internal/safe-svg.js';
+import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -45,9 +45,10 @@ function needsSvgNamespaceFallback(node: Element): boolean {
  *  to avoid reintroducing for slotted content like `<lr-flag>`. */
 function cloneToSvgNamespace(node: Element): SVGElement | null {
   if (node.localName.includes('-')) return null;
+  if (isUnsafeSvgCloneElement(node.localName)) return null;
   const copy = node.ownerDocument.createElementNS(SVG_NAMESPACE, node.localName);
   for (const attribute of node.attributes) {
-    if (isUnsafeSvgCloneAttribute(attribute.name)) continue;
+    if (isUnsafeSvgCloneAttribute(attribute.name, attribute.value)) continue;
     copy.setAttribute(attribute.name, attribute.value);
   }
   for (const child of node.childNodes) {

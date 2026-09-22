@@ -100,10 +100,11 @@ structured points retain their y-value formatting.
     draws side by side with the first on that axis. Omitted series share one implicit group, so
     every chart written before `stack` existed sums exactly as it always did. Only meaningful on an
     axis that is actually stacked — see `stacked`/`stackedAxes` below.
-  `LyraChartPoint { readonly x: number; readonly
-  y: number; readonly r?: number; readonly label?: string }`: `r` is the bubble
-  radius, and the optional per-point `label` is retained by events, CSV export, keyboard
-  announcements, generated summaries, and the accessible table. Point wording is localized as
+  `LyraChartPoint { readonly x: number; readonly y: number; readonly r?: number; readonly id?:
+  string | number; readonly label?: string }`: `r` is the bubble radius, and the optional primitive
+  `id` is retained by activation events for application navigation or selection. Objects, symbols,
+  and non-finite numeric ids are omitted. The optional per-point `label` is retained by events, CSV
+  export, keyboard announcements, generated summaries, and the accessible table. Point wording is localized as
   whole messages: `chartPointCoordinates`, `chartBubblePointCoordinates`, and
   `chartLabeledPoint` own coordinate names, order, separators, and the label wrapper. A caller's
   point label is interpolated verbatim rather than translated or parsed. At runtime, non-record
@@ -381,7 +382,8 @@ const series = [
 point/segment, when a generated-table value is activated, or when Enter/Space activates the
 keyboard-current canvas datum; `detail: { datasetIndex: number, index: number, label: string |
 undefined, value: unknown }`). For scatter/bubble points, `label` prefers the per-point label and
-`value` is the complete `LyraChartPoint`, including optional `r` and `label`.
+`value` is the complete `LyraChartPoint`, including optional `r`, `id`, and `label`. A primitive
+`id` survives the same pointer, data-table, and keyboard activation paths; invalid ids are omitted.
 `lr-datum-activate` emits the same activation with `kind: 'bar'|'point'|'segment'|'slice'` for
 family-wide handling; `lr-point-click` remains as a compatibility event. Also
 `lr-before-legend-visibility-change` (cancelable proposal), and

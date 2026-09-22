@@ -25012,12 +25012,12 @@ buttons.
   Resolution prefers an element in the button's own root, then falls back to the owner document;
   a duplicate same-root id therefore wins without preventing a shadow-contained button from
   targeting an otherwise valid document-owned source.
-- `copyLabel: string = ''` (attribute `copy-label`) — built-in button accessible name and resting
-  tooltip text; empty uses localized `copy`.
-- `successLabel: string = ''` (attribute `success-label`) — confirmation name/tooltip text; empty
-  uses localized `copied`.
-- `errorLabel: string = ''` (attribute `error-label`) — failure name/tooltip text; empty uses
-  localized `copyFailed`.
+- `copyLabel?: string` (attribute `copy-label`) — built-in button accessible name and resting
+  tooltip text; omission uses localized `copy`, while an explicit empty string suppresses it.
+- `successLabel?: string` (attribute `success-label`) — confirmation name/tooltip text; omission
+  uses localized `copied`, while an explicit empty string suppresses it.
+- `errorLabel?: string` (attribute `error-label`) — failure name/tooltip text; omission uses
+  localized `copyFailed`, while an explicit empty string suppresses it.
 - `tooltip: 'full' | 'copy' | 'none' = 'full'` (reflected) — `full` shows the resting tooltip on
   hover/focus and feedback after activation, `copy` shows feedback only, and `none` disables it.
 - `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` (attribute
@@ -28153,8 +28153,9 @@ enabled buttons retain pointer feedback.
   constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
-- `label: string = ''` and `hint: string = ''`; an empty `label` leaves the localized dropzone
-  instruction (`fileInputDefaultLabel`) as the visible fallback
+- `label?: string` — form-control label. Omission uses the localized dropzone instruction
+  (`fileInputDefaultLabel`); an explicit empty string suppresses that fallback. `hint: string = ''`
+  remains empty when omitted and can be supplied through the named slot as well
 - `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
   it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
   message appears after the control has been interacted with. Rich `error` slot content replaces
@@ -30802,10 +30803,11 @@ structured points retain their y-value formatting.
     draws side by side with the first on that axis. Omitted series share one implicit group, so
     every chart written before `stack` existed sums exactly as it always did. Only meaningful on an
     axis that is actually stacked — see `stacked`/`stackedAxes` below.
-  `LyraChartPoint { readonly x: number; readonly
-  y: number; readonly r?: number; readonly label?: string }`: `r` is the bubble
-  radius, and the optional per-point `label` is retained by events, CSV export, keyboard
-  announcements, generated summaries, and the accessible table. Point wording is localized as
+  `LyraChartPoint { readonly x: number; readonly y: number; readonly r?: number; readonly id?:
+  string | number; readonly label?: string }`: `r` is the bubble radius, and the optional primitive
+  `id` is retained by activation events for application navigation or selection. Objects, symbols,
+  and non-finite numeric ids are omitted. The optional per-point `label` is retained by events, CSV
+  export, keyboard announcements, generated summaries, and the accessible table. Point wording is localized as
   whole messages: `chartPointCoordinates`, `chartBubblePointCoordinates`, and
   `chartLabeledPoint` own coordinate names, order, separators, and the label wrapper. A caller's
   point label is interpolated verbatim rather than translated or parsed. At runtime, non-record
@@ -31083,7 +31085,8 @@ const series = [
 point/segment, when a generated-table value is activated, or when Enter/Space activates the
 keyboard-current canvas datum; `detail: { datasetIndex: number, index: number, label: string |
 undefined, value: unknown }`). For scatter/bubble points, `label` prefers the per-point label and
-`value` is the complete `LyraChartPoint`, including optional `r` and `label`.
+`value` is the complete `LyraChartPoint`, including optional `r`, `id`, and `label`. A primitive
+`id` survives the same pointer, data-table, and keyboard activation paths; invalid ids are omitted.
 `lr-datum-activate` emits the same activation with `kind: 'bar'|'point'|'segment'|'slice'` for
 family-wide handling; `lr-point-click` remains as a compatibility event. Also
 `lr-before-legend-visibility-change` (cancelable proposal), and
@@ -38719,10 +38722,10 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
 'streaming'`, `lr-chat-composer`'s own union; invalid values read as `idle` without rewriting the
   host attribute
-- `composerPlaceholder: string = ''` (attribute `composer-placeholder`)
+- `composerPlaceholder?: string` (attribute `composer-placeholder`)
 - `composerMinRows: number = 1` (attribute `composer-min-rows`), `composerMaxRows: number = 8`
   (attribute `composer-max-rows`)
-- `label: string = ''` — accessible name and visible heading
+- `label?: string` — accessible name and visible heading; omission uses the localized default and an explicit empty string suppresses it
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host-level accessible-name
   override for the internal `role="region"` root
 
@@ -42630,6 +42633,11 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
 request with exactly one of `{ frameGeneration, result }` or `{ frameGeneration, error }`. Missing,
 stale, or ambiguous correlation fails closed. Both methods are no-ops before a frame exists.
 
+The initial `host-context` message includes a document-bound nonce and transfers a `MessagePort` to
+the executable document. Frame requests and host messages after bootstrap use that port. A same-frame
+navigation closes the port, invalidates the nonce and generation, and mounts a fresh sandbox before
+host data can be delivered.
+
 **Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
 `McpAppToolCallDetail`, `McpAppToolResultOptions`, and `LyraMcpAppEventMap`.
 
@@ -45731,8 +45739,8 @@ at the same size tier, so the toolbar row renders as one flush line.
   Remove any host `role="status"`/`role="alert"` hand-added before this property existed once it
   is set — otherwise the initial state is announced twice, through the native role and again
   through the shared sink
-- `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
-  becomes the field's accessible name
+- `placeholder?: string` — query-field placeholder. Omission uses the localized generic "Search"
+  placeholder; an explicit empty string suppresses that fallback
 - `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized
   retrieval-search label, while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while

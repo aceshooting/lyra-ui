@@ -65,7 +65,7 @@ export function parseISO(s: string): Date | null {
   const month = Number(m[2]);
   const day = Number(m[3]);
   const d = localDate(year, month - 1, day);
-  if (isNaN(d.getTime())) return null;
+  if (!Number.isFinite(d.getTime())) return null;
   // The Date constructor silently rolls invalid components over into the
   // next month/year (e.g. month 13 or Feb 30) instead of producing an
   // invalid date, so a calendar-invalid input must be caught by comparing

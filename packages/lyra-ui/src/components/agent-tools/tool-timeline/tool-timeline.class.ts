@@ -257,7 +257,7 @@ function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActiva
 /** `hour:minute` in the component's effective locale -- identical algorithm to
  *  `<lr-checkpoint>`'s own `defaultFormatTimestamp`, duplicated locally. */
 function defaultFormatTimestamp(date: Date, locale: string): string {
-  return getDateTimeFormat(locale || 'en', { hour: 'numeric', minute: '2-digit' }).format(date);
+  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
 /**

@@ -239,10 +239,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
    *  again through the shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;
 
-  /** Placeholder for the query field. Empty string (the default) falls back to the localized
-   *  generic "Search" placeholder, which also becomes that field's accessible name (mirroring
-   *  `<lr-input>`'s own placeholder-as-label fallback). */
-  @property() placeholder = '';
+  /** Placeholder for the query field. When omitted, the localized generic "Search" placeholder
+   *  is used; an explicit empty string intentionally suppresses that fallback. */
+  @property() placeholder?: string;
 
   /** Accessible name for the inner search landmark when the host has no `aria-label`. Omitting it
    *  falls back to the localized default; an explicit empty string clears it. */
@@ -485,7 +484,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             type="search"
             clearable
             .size=${this.size ?? 'm'}
-            placeholder=${this.placeholder || this.localize('search')}
+            placeholder=${this.placeholder == null ? this.localize('search') : this.placeholder}
             .value=${this.query}
             @lr-input=${this.onQueryInput}
             @keydown=${this.onQueryKeyDown}

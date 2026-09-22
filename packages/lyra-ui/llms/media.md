@@ -1243,8 +1243,9 @@ enabled buttons retain pointer feedback.
   constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
-- `label: string = ''` and `hint: string = ''`; an empty `label` leaves the localized dropzone
-  instruction (`fileInputDefaultLabel`) as the visible fallback
+- `label?: string` — form-control label. Omission uses the localized dropzone instruction
+  (`fileInputDefaultLabel`); an explicit empty string suppresses that fallback. `hint: string = ''`
+  remains empty when omitted and can be supplied through the named slot as well
 - `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
   it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
   message appears after the control has been interacted with. Rich `error` slot content replaces

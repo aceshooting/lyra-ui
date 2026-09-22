@@ -47,6 +47,18 @@ it('renders a formatted timestamp, overridable via formatTimestamp, unset for an
   expect((invalid.shadowRoot!.querySelector('[part="timestamp"]')) == null).to.be.true;
 });
 
+it('formats timestamps with the component locale', async () => {
+  const timestamp = new Date('2024-01-01T13:05:00Z');
+  const el = (await fixture(html`
+    <lr-checkpoint locale="de-DE" .timestamp=${timestamp}></lr-checkpoint>
+  `)) as LyraCheckpoint;
+  const expected = new Intl.DateTimeFormat('de-DE', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(timestamp);
+  expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent).to.equal(expected);
+});
+
 it('renders no restore button when restorable=false, as a plain marker', async () => {
   const el = (await fixture(html`<lr-checkpoint restorable="false"></lr-checkpoint>`)) as LyraCheckpoint;
   expect(el.restorable).to.be.false;

@@ -9,6 +9,7 @@ import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { fileIcon } from '../../../internal/icons.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   DropSessionController,
   type DropSessionState,
@@ -150,7 +151,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
    *  contract as `lr-file-input`'s `multiple`. Unlike `lr-file-input`, this defaults to `true`:
    *  a region wrapper's typical use (dropping several files onto a chat surface) expects more than
    *  one file, and there is no native single-file picker here to keep in sync. */
-  @property({ type: Boolean, reflect: true }) multiple = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) multiple = true;
   /** Native-`accept`-style allowlist (`".csv,.xlsx"`, `"image/*"`, comma-separated mixes) --
    *  identical parsing to `lr-file-input`'s `accept`, via the same `matchesAccept()`. */
   @property() accept = '';

@@ -7242,6 +7242,19 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
 
 const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   [
+    'sl-copy-button',
+    {
+      derivedDefaultEquivalences: [
+        { memberKind: 'attribute', member: 'copy-label', upstream: '', target: 'localized copy label' },
+        { memberKind: 'attribute', member: 'success-label', upstream: '', target: 'localized success label' },
+        { memberKind: 'attribute', member: 'error-label', upstream: '', target: 'localized error label' },
+        { memberKind: 'property', member: 'copyLabel', upstream: '', target: 'localized copy label' },
+        { memberKind: 'property', member: 'successLabel', upstream: '', target: 'localized success label' },
+        { memberKind: 'property', member: 'errorLabel', upstream: '', target: 'localized error label' },
+      ],
+    },
+  ],
+  [
     'sl-button',
     {
       defaultEquivalences: [
@@ -7437,6 +7450,19 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     },
   ],
   [
+    'wa-copy-button',
+    {
+      derivedDefaultEquivalences: [
+        { memberKind: 'attribute', member: 'copy-label', upstream: '', target: 'localized copy label' },
+        { memberKind: 'attribute', member: 'success-label', upstream: '', target: 'localized success label' },
+        { memberKind: 'attribute', member: 'error-label', upstream: '', target: 'localized error label' },
+        { memberKind: 'property', member: 'copyLabel', upstream: '', target: 'localized copy label' },
+        { memberKind: 'property', member: 'successLabel', upstream: '', target: 'localized success label' },
+        { memberKind: 'property', member: 'errorLabel', upstream: '', target: 'localized error label' },
+      ],
+    },
+  ],
+  [
     'wa-date-input',
     {
       cancelabilityEquivalences: [
@@ -7502,6 +7528,20 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   [
     'wa-file-input',
     {
+      derivedDefaultEquivalences: [
+        {
+          memberKind: 'attribute',
+          member: 'label',
+          upstream: '',
+          target: 'localized file picker label',
+        },
+        {
+          memberKind: 'property',
+          member: 'label',
+          upstream: '',
+          target: 'localized file picker label',
+        },
+      ],
       cancelabilityEquivalences: [
         reviewedCancelabilityEquivalence('wa-invalid', 'never', 'always'),
       ],

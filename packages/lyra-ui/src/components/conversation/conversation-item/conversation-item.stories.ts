@@ -3,6 +3,8 @@ import { html } from 'lit';
 import './conversation-item.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
+const storyLocale = (): string => document.documentElement.lang || navigator.language;
+
 const meta: Meta = {
   title: 'ConversationItem',
   component: 'lr-conversation-item',
@@ -246,7 +248,7 @@ export const CustomTimestampFormat: Story = {
         label="Overriding the default formatter"
         excerpt="formatTimestamp swaps the built-in absolute-time rendering for anything a consumer wants."
         .timestamp=${new Date()}
-        .formatTimestamp=${(date: Date) => `${date.toLocaleDateString()} · ${date.toLocaleTimeString()}`}
+        .formatTimestamp=${(date: Date) => `${date.toLocaleDateString(storyLocale())} · ${date.toLocaleTimeString(storyLocale())}`}
       ></lr-conversation-item>
     </nav>
   `,

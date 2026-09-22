@@ -35,12 +35,12 @@ buttons.
   Resolution prefers an element in the button's own root, then falls back to the owner document;
   a duplicate same-root id therefore wins without preventing a shadow-contained button from
   targeting an otherwise valid document-owned source.
-- `copyLabel: string = ''` (attribute `copy-label`) — built-in button accessible name and resting
-  tooltip text; empty uses localized `copy`.
-- `successLabel: string = ''` (attribute `success-label`) — confirmation name/tooltip text; empty
-  uses localized `copied`.
-- `errorLabel: string = ''` (attribute `error-label`) — failure name/tooltip text; empty uses
-  localized `copyFailed`.
+- `copyLabel?: string` (attribute `copy-label`) — built-in button accessible name and resting
+  tooltip text; omission uses localized `copy`, while an explicit empty string suppresses it.
+- `successLabel?: string` (attribute `success-label`) — confirmation name/tooltip text; omission
+  uses localized `copied`, while an explicit empty string suppresses it.
+- `errorLabel?: string` (attribute `error-label`) — failure name/tooltip text; omission uses
+  localized `copyFailed`, while an explicit empty string suppresses it.
 - `tooltip: 'full' | 'copy' | 'none' = 'full'` (reflected) — `full` shows the resting tooltip on
   hover/focus and feedback after activation, `copy` shows feedback only, and `none` disables it.
 - `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` (attribute

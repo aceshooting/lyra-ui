@@ -3698,12 +3698,11 @@
           {
             "name": "composer-placeholder",
             "property": "composerPlaceholder",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "composer-status",
@@ -3747,12 +3746,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -3869,12 +3867,11 @@
           {
             "name": "composerPlaceholder",
             "attribute": "composer-placeholder",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "composerStatus",
@@ -3938,12 +3935,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -33107,12 +33103,11 @@
           {
             "name": "copy-label",
             "property": "copyLabel",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "disabled",
@@ -33127,12 +33122,11 @@
           {
             "name": "error-label",
             "property": "errorLabel",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "feedback-duration",
@@ -33177,12 +33171,11 @@
           {
             "name": "success-label",
             "property": "successLabel",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "tooltip",
@@ -33229,12 +33222,11 @@
           {
             "name": "copyLabel",
             "attribute": "copy-label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "disabled",
@@ -33249,12 +33241,11 @@
           {
             "name": "errorLabel",
             "attribute": "error-label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "feedbackDuration",
@@ -33309,12 +33300,11 @@
           {
             "name": "successLabel",
             "attribute": "success-label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "tooltip",
@@ -51848,12 +51838,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -52194,12 +52183,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "labels",
@@ -106424,12 +106412,11 @@
           {
             "name": "placeholder",
             "property": "placeholder",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "query",
@@ -106543,12 +106530,11 @@
           {
             "name": "placeholder",
             "attribute": "placeholder",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "query",
@@ -192618,7 +192604,44 @@
         "structuralTypeAliases": [],
         "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
-        "derivedDefaultEquivalences": [],
+        "derivedDefaultEquivalences": [
+          {
+            "memberKind": "attribute",
+            "member": "copy-label",
+            "upstream": "",
+            "target": "localized copy label"
+          },
+          {
+            "memberKind": "attribute",
+            "member": "success-label",
+            "upstream": "",
+            "target": "localized success label"
+          },
+          {
+            "memberKind": "attribute",
+            "member": "error-label",
+            "upstream": "",
+            "target": "localized error label"
+          },
+          {
+            "memberKind": "property",
+            "member": "copyLabel",
+            "upstream": "",
+            "target": "localized copy label"
+          },
+          {
+            "memberKind": "property",
+            "member": "successLabel",
+            "upstream": "",
+            "target": "localized success label"
+          },
+          {
+            "memberKind": "property",
+            "member": "errorLabel",
+            "upstream": "",
+            "target": "localized error label"
+          }
+        ],
         "inferredAttributeSuppressions": [],
         "unknownMethodReturnTypes": [],
         "cancelabilityEquivalences": [],
@@ -199456,7 +199479,44 @@
         "structuralTypeAliases": [],
         "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
-        "derivedDefaultEquivalences": [],
+        "derivedDefaultEquivalences": [
+          {
+            "memberKind": "attribute",
+            "member": "copy-label",
+            "upstream": "",
+            "target": "localized copy label"
+          },
+          {
+            "memberKind": "attribute",
+            "member": "success-label",
+            "upstream": "",
+            "target": "localized success label"
+          },
+          {
+            "memberKind": "attribute",
+            "member": "error-label",
+            "upstream": "",
+            "target": "localized error label"
+          },
+          {
+            "memberKind": "property",
+            "member": "copyLabel",
+            "upstream": "",
+            "target": "localized copy label"
+          },
+          {
+            "memberKind": "property",
+            "member": "successLabel",
+            "upstream": "",
+            "target": "localized success label"
+          },
+          {
+            "memberKind": "property",
+            "member": "errorLabel",
+            "upstream": "",
+            "target": "localized error label"
+          }
+        ],
         "inferredAttributeSuppressions": [],
         "unknownMethodReturnTypes": [],
         "cancelabilityEquivalences": [],
@@ -201190,7 +201250,20 @@
         "structuralTypeAliases": [],
         "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
-        "derivedDefaultEquivalences": [],
+        "derivedDefaultEquivalences": [
+          {
+            "memberKind": "attribute",
+            "member": "label",
+            "upstream": "",
+            "target": "localized file picker label"
+          },
+          {
+            "memberKind": "property",
+            "member": "label",
+            "upstream": "",
+            "target": "localized file picker label"
+          }
+        ],
         "inferredAttributeSuppressions": [],
         "unknownMethodReturnTypes": [],
         "cancelabilityEquivalences": [

@@ -2281,8 +2281,8 @@ at the same size tier, so the toolbar row renders as one flush line.
   Remove any host `role="status"`/`role="alert"` hand-added before this property existed once it
   is set — otherwise the initial state is announced twice, through the native role and again
   through the shared sink
-- `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
-  becomes the field's accessible name
+- `placeholder?: string` — query-field placeholder. Omission uses the localized generic "Search"
+  placeholder; an explicit empty string suppresses that fallback
 - `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized
   retrieval-search label, while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while

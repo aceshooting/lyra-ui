@@ -8,6 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { styles } from './pan-zoom.styles.js';
+export type { LyraImageFit } from '../../../internal/image-fit.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings.generated.js';

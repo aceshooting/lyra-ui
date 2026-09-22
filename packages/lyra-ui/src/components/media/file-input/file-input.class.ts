@@ -434,8 +434,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Enables files pasted from the clipboard into the dropzone. `true`-defaulting, so a plain
    *  `paste="false"` attribute (not just a `.paste=${false}` property binding) actually disables it. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) paste = true;
-  /** Form-control label. Empty or removed leaves the localized dropzone instruction as the visible fallback. */
-  @property() label = '';
+  /** Form-control label. When omitted, the localized dropzone instruction is used; an explicit
+   *  empty string intentionally suppresses that fallback. */
+  @property() label?: string;
   /** Optional hint copy. Removing the attribute removes its text and description association. */
   @property() hint = '';
   /** Plain-text validation error. A custom-validity message is shown when this is empty. */
@@ -1417,11 +1418,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return '';
   }
 
-  /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the
-   *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
-   *  override applies without requiring `label` itself to be set. */
+  /** Resolves `label`'s effective text: an explicit override wins verbatim; omission routes
+   *  through `this.localize()` so a locale/`.strings` override applies without requiring
+   *  `label` itself to be set. */
   private get effectiveLabel(): string {
-    return this.label || this.localize('fileInputDefaultLabel');
+    return this.label == null ? this.localize('fileInputDefaultLabel') : this.label;
   }
 
   private removeFile(index: number): void {

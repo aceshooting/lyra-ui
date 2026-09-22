@@ -78,6 +78,11 @@ export interface LyraChartPoint {
   /** Bubble radius. Ignored by chart types that do not consume a radius. */
   readonly r?: number;
   /**
+   * Optional caller-owned primitive identity retained by activation events. Objects, symbols,
+   * and non-finite numbers are ignored so event payloads remain bounded and descriptor-safe.
+   */
+  readonly id?: string | number;
+  /**
    * Caller-owned per-point label retained verbatim by events/export and interpolated into the
    * localized whole-point message used by descriptions, tables, and keyboard announcements.
    */
@@ -608,6 +613,7 @@ function projectChartPoint(value: unknown): LyraChartPoint | null {
   const x = chartRecordValue(value, 'x');
   const y = chartRecordValue(value, 'y');
   const r = chartRecordValue(value, 'r');
+  const id = chartRecordValue(value, 'id');
   const label = chartRecordValue(value, 'label');
   if (
     x === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -615,6 +621,7 @@ function projectChartPoint(value: unknown): LyraChartPoint | null {
     y === MISSING_OWN_DATA_DESCRIPTOR ||
     y === UNSAFE_OWN_DATA_DESCRIPTOR ||
     r === UNSAFE_OWN_DATA_DESCRIPTOR ||
+    id === UNSAFE_OWN_DATA_DESCRIPTOR ||
     label === UNSAFE_OWN_DATA_DESCRIPTOR ||
     typeof x.value !== 'number' ||
     !Number.isFinite(x.value) ||
@@ -631,6 +638,11 @@ function projectChartPoint(value: unknown): LyraChartPoint | null {
     r.value >= 0
       ? { r: r.value }
       : {}),
+    ...(id !== MISSING_OWN_DATA_DESCRIPTOR &&
+    (typeof id.value === 'string' ||
+      (typeof id.value === 'number' && Number.isFinite(id.value)))
+      ? { id: id.value }
+      : {}),
     ...(label !== MISSING_OWN_DATA_DESCRIPTOR && typeof label.value === 'string'
       ? { label: label.value }
       : {}),
@@ -645,6 +657,7 @@ function projectChartDatum(value: unknown): unknown {
   const x = chartRecordValue(value, 'x');
   const y = chartRecordValue(value, 'y');
   const r = chartRecordValue(value, 'r');
+  const id = chartRecordValue(value, 'id');
   const label = chartRecordValue(value, 'label');
   const output: Record<string, number | string> = {};
   let hasValue = false;
@@ -669,6 +682,15 @@ function projectChartDatum(value: unknown): unknown {
     typeof label.value === 'string'
   ) {
     output['label'] = label.value;
+    hasValue = true;
+  }
+  if (
+    id !== MISSING_OWN_DATA_DESCRIPTOR &&
+    id !== UNSAFE_OWN_DATA_DESCRIPTOR &&
+    (typeof id.value === 'string' ||
+      (typeof id.value === 'number' && Number.isFinite(id.value)))
+  ) {
+    output['id'] = id.value;
     hasValue = true;
   }
   return hasValue ? Object.freeze(output) : null;
@@ -1673,7 +1695,9 @@ function chartDatasetStack(dataset: unknown): string | undefined {
  *   data-table value is activated, or when Enter/Space activates the keyboard-current canvas datum.
  *   `detail: { datasetIndex: number, index: number, label: string |
  *   undefined, value: unknown }`. For scatter/bubble data, `label` prefers the per-point label and
- *   `value` is the complete typed `LyraChartPoint` (`x`, `y`, optional `r`, optional `label`).
+ *   `value` is the complete typed `LyraChartPoint` (`x`, `y`, optional `r`, optional `id`, optional
+ *   `label`). A primitive `id` is retained for application navigation and selection; unsafe or
+ *   non-finite values are omitted.
  * @event lr-datum-activate - Family-normalized activation event. Its detail adds `kind`
  *   (`bar`, `point`, `segment`, or `slice`) to the `lr-point-click` detail.
  * @event lr-before-legend-visibility-change - Cancelable proposal emitted before a DOM legend

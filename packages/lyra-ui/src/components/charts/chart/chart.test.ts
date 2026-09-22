@@ -2799,6 +2799,46 @@ it('emits `lr-point-click` with the resolved point detail when the wired onClick
   }
 });
 
+it('retains a safe scatter point id through pointer and keyboard activation', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.config = {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Listings',
+        data: [{ x: 1, y: 2, id: 'listing-7', label: 'Listing 7' }],
+      }],
+    },
+  };
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const chart = (el as any).chart;
+  const original = chart.getElementsAtEventForMode;
+  chart.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 0 }];
+  try {
+    const details: unknown[] = [];
+    el.addEventListener('lr-point-click', (event) => {
+      details.push((event as CustomEvent).detail);
+    });
+    (el as any).buildConfig().options.onClick({} as never, [], chart);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(details).to.have.length(2);
+    for (const detail of details) {
+      expect(detail).to.deep.equal({
+        datasetIndex: 0,
+        index: 0,
+        label: 'Listing 7',
+        value: { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+      });
+    }
+  } finally {
+    chart.getElementsAtEventForMode = original;
+  }
+});
+
 it('does not emit `lr-point-click` when the click misses every point/segment', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';

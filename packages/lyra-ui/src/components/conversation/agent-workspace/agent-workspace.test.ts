@@ -141,6 +141,26 @@ it("uses localized workspace chrome", async () => {
   ).to.equal("Assistant panel");
 });
 
+it("preserves explicitly empty label and composer-placeholder overrides", async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      label=""
+      composer-placeholder=""
+      .strings=${{
+        agentWorkspaceLabel: "Assistant panel",
+        composerPlaceholder: "Write a message",
+      }}
+    ></lr-agent-workspace>
+  `);
+  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as HTMLElement;
+  const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  expect(heading.textContent).to.equal("");
+  expect(base.getAttribute("aria-label")).to.equal("");
+  expect(textarea.getAttribute("placeholder")).to.equal("");
+});
+
 it("composes transcript and agent details from controlled data", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace

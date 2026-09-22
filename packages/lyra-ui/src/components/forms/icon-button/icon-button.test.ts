@@ -256,6 +256,35 @@ it('strips event-handler and href attributes when cloning slotted bare-geometry 
   expect(clonedUse === null || !clonedUse.hasAttribute('xlink:href')).to.be.true;
 });
 
+it('rejects executable and embedded descendants and secondary resource sinks from inert geometry', async () => {
+  const flag = window as unknown as Record<string, unknown>;
+  delete flag['__lrIconButtonSlotXss'];
+  const source = new DOMParser().parseFromString(
+    '<path d="M0 0h1" fill="url(https://tracker.test/paint.svg#x)" ' +
+      'style="stroke: url(https://tracker.test/stroke.svg#x)">' +
+      '<script>window.__lrIconButtonSlotXss = "script";</script>' +
+      '<foreignObject><div>embedded</div></foreignObject>' +
+      '<style>path { stroke: url(https://tracker.test/style.svg#x); }</style>' +
+      '<image href="https://tracker.test/image.svg" />' +
+    '</path>',
+    'text/html',
+  );
+  const el = (await fixture(html`<lr-icon-button aria-label="Custom"></lr-icon-button>`)) as LyraIconButton;
+  const sourcePath = source.body.firstElementChild;
+  if (!sourcePath) throw new Error('The inert geometry fixture did not parse a path.');
+  el.append(document.importNode(sourcePath, true));
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const fallback = el.shadowRoot!.querySelector('[part="fallback"]') as SVGSVGElement;
+  const cloned = fallback.querySelector('path')!;
+  expect(fallback.querySelectorAll('script, foreignObject, style, image')).to.have.length(0);
+  expect(cloned.hasAttribute('fill')).to.be.false;
+  expect(cloned.hasAttribute('style')).to.be.false;
+  expect(flag['__lrIconButtonSlotXss']).to.equal(undefined);
+  expect(fallback.innerHTML.includes('tracker.test')).to.be.false;
+});
+
 it('never runs a slotted custom element through the bare-geometry clone path', async () => {
   const el = await fixture(html`
     <lr-icon-button aria-label="Français">

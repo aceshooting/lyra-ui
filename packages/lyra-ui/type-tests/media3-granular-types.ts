@@ -16,6 +16,9 @@ import type {
 } from '../src/components/media/media-card/media-card.js';
 import type { LyraZoomableFrameLoading } from '../src/components/media/zoomable-frame/zoomable-frame.js';
 import type { VideoState } from '../src/components/media/video/video.js';
+import type { LyraImageFit as ImageViewerFit } from '../src/components/media/image-viewer/image-viewer.js';
+import type { LyraImageFit as LightboxFit } from '../src/components/media/lightbox/lightbox.js';
+import type { LyraImageFit as PanZoomFit } from '../src/components/media/pan-zoom/pan-zoom.js';
 
 declare const canonicalMediaTypes: [
   LyraMapChoroplethLayer,
@@ -31,9 +34,19 @@ declare const canonicalMediaTypes: [
   LyraMediaCardKind,
   LyraMediaCardOpenDetail,
   LyraZoomableFrameLoading,
-  VideoState
+  VideoState,
+  ImageViewerFit,
+  LightboxFit,
+  PanZoomFit,
 ];
 void canonicalMediaTypes;
+
+const granularImageFit: ImageViewerFit = 'contain';
+const lightboxImageFit: LightboxFit = granularImageFit;
+const panZoomImageFit: PanZoomFit = lightboxImageFit;
+void granularImageFit;
+void lightboxImageFit;
+void panZoomImageFit;
 
 const granularMapHeatmapZoomValue: LyraMapHeatmapZoomValue = [
   [0, 12],

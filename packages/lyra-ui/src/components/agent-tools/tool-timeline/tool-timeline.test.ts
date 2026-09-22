@@ -844,6 +844,20 @@ it('renders a retry badge with the localized "Retry" label and formatted count o
   expect((thirdRow.querySelector('[part="entry-retries"]')) == null).to.be.true;
 });
 
+it('formats timestamps with the component locale', async () => {
+  const timestamp = new Date('2024-01-01T13:05:00Z');
+  const el = (await fixture(html`
+    <lr-tool-timeline locale="de-DE" .entries=${[
+      makeEntry({ startedAt: timestamp.getTime() }),
+    ]}></lr-tool-timeline>
+  `)) as LyraToolTimeline;
+  const expected = new Intl.DateTimeFormat('de-DE', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(timestamp);
+  expect(entryAt(el).querySelector('[part="entry-timestamp"]')!.textContent).to.equal(expected);
+});
+
 it('honors a `.strings` override for the reused "retry" key', async () => {
   const entries: ToolTimelineEntry[] = [makeEntry({ retryCount: 1 })];
   const el = (await fixture(

@@ -113,9 +113,9 @@ describe('lr-copy-button', () => {
   it('defaults to an empty value and the resting "Copy" label', async () => {
     const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
     expect(el.value).to.equal('');
-    expect(el.copyLabel).to.equal('');
-    expect(el.successLabel).to.equal('');
-    expect(el.errorLabel).to.equal('');
+    expect(el.copyLabel).to.equal(undefined);
+    expect(el.successLabel).to.equal(undefined);
+    expect(el.errorLabel).to.equal(undefined);
     expect(el.from).to.equal('');
     expect(el.tooltip).to.equal('full');
     expect(el.tooltipPlacement).to.equal('top');
@@ -133,6 +133,39 @@ describe('lr-copy-button', () => {
     expect(tip.open).to.be.false;
     expect(tip.getAttribute('exportparts')).to.equal(
       'base:tooltip__base, base__popup:tooltip__base__popup, base__arrow:tooltip__base__arrow, body:tooltip__body',
+    );
+  });
+
+  it('uses localized copy labels only when omitted and preserves explicit empty labels', async () => {
+    const omitted = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
+    expect(omitted.copyLabel).to.equal(undefined);
+    expect(baseButton(omitted).getAttribute('aria-label')).to.equal('Copy');
+
+    const resting = (await fixture(html`<lr-copy-button copy-label=""></lr-copy-button>`)) as LyraCopyButton;
+    expect(resting.copyLabel).to.equal('');
+    expect(baseButton(resting).getAttribute('aria-label')).to.equal('');
+    expect(tooltip(resting).content).to.equal('');
+
+    const success = (await fixture(
+      html`<lr-copy-button success-label="" value="hello"></lr-copy-button>`,
+    )) as LyraCopyButton;
+    baseButton(success).click();
+    await settle(success);
+    expect(baseButton(success).getAttribute('aria-label')).to.equal('');
+    expect(feedbackText(success)).to.equal('');
+
+    await withClipboard(
+      { writeText: () => Promise.reject(new Error('denied')) },
+      async () => {
+        const failure = (await fixture(
+          html`<lr-copy-button error-label="" value="hello"></lr-copy-button>`,
+        )) as LyraCopyButton;
+        baseButton(failure).click();
+        await settle(failure);
+        expect(failure.errorLabel).to.equal('');
+        expect(baseButton(failure).getAttribute('aria-label')).to.equal('');
+        expect(feedbackText(failure)).to.equal('');
+      },
     );
   });
 
