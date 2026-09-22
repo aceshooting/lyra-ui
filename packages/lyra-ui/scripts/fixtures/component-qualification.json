@@ -27789,14 +27789,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
-              "line": 645,
+              "line": 648,
               "test": "is accessible with an app loaded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
-              "line": 653,
+              "line": 656,
               "test": "keeps a non-empty host name on the host without letting an explicit-empty host name unname the frame",
               "target": "el",
               "state": "populated"
