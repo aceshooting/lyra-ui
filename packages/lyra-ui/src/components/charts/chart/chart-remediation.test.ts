@@ -204,6 +204,7 @@ it('retains a primitive scatter id on real pointer, keyboard, table, and family 
   const el = mountChart('lr-chart') as LyraChart;
   el.type = 'scatter';
   el.showDataTable = true;
+  el.config = { options: { devicePixelRatio: 2 } };
   el.datasets = [{
     label: 'Listings',
     points: [
@@ -215,6 +216,7 @@ it('retains a primitive scatter id on real pointer, keyboard, table, and family 
   const chart = await liveChart(el);
   const canvas = el.shadowRoot!.querySelector('canvas')!;
   const point = chart.getDatasetMeta(0).data[0]! as PointElement;
+  expect(canvas.width, 'the fixture must use a double-density backing store').to.equal(chart.width * 2);
   const center = point.getCenterPoint();
   const rect = canvas.getBoundingClientRect();
   const activations: Array<{ event: string; detail: unknown }> = [];
@@ -231,8 +233,8 @@ it('retains a primitive scatter id on real pointer, keyboard, table, and family 
     await sendMouse({
       type: 'click',
       position: [
-        Math.round(rect.left + center.x * rect.width / canvas.width),
-        Math.round(rect.top + center.y * rect.height / canvas.height),
+        Math.round(rect.left + center.x * rect.width / chart.width),
+        Math.round(rect.top + center.y * rect.height / chart.height),
       ],
     });
     await waitUntil(() => activations.length === 2, 'the native pointer click should activate the point');
