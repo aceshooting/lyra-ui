@@ -146,6 +146,15 @@ async function inspectDoc(context, doc) {
 
     const anySwitch = () => page.locator('button[role="switch"]');
     const showCode = () => anySwitch().filter({ hasText: 'Show code' });
+    const expandedSwitches = () => anySwitch().filter({ hasText: 'Hide code' });
+    const readSourceTexts = () => tolerateNavigation(page, () =>
+      expandedSwitches().evaluateAll((controls) =>
+        controls.map((control) => {
+          const sourceId = control.getAttribute('aria-controls');
+          return sourceId ? (document.getElementById(sourceId)?.textContent ?? '') : '';
+        }),
+      ),
+    );
     const deadline = Date.now() + STABILISE_BUDGET_MS;
     let idlePolls = 0;
     let previousTotal = -1;
@@ -183,22 +192,17 @@ async function inspectDoc(context, doc) {
       // early, empty pass. A freshly mounted docs block changes the tally the same way, so only an
       // unchanged, fully expanded, rendered page several polls running counts as done.
       const rendered = (await tolerateNavigation(page, () => renderedBody().count())) > 0;
-      idlePolls = expanded || !rendered || total !== previousTotal ? 0 : idlePolls + 1;
+      // Source controls can switch to "Hide code" before their asynchronously rendered text is
+      // available. Keep the same bounded settling budget for that content, not just the controls.
+      const sourcesReady = (await readSourceTexts()).every((source) => source.trim().length > 0);
+      idlePolls = expanded || !rendered || !sourcesReady || total !== previousTotal ? 0 : idlePolls + 1;
       previousTotal = total;
       if (idlePolls < QUIET_POLLS) await page.waitForTimeout(POLL_INTERVAL_MS);
     }
 
     const remaining = await tolerateNavigation(page, () => showCode().count());
-    const expandedSwitches = () => anySwitch().filter({ hasText: 'Hide code' });
     const expandedControls = await tolerateNavigation(page, () => expandedSwitches().count());
-    const sourceTexts = await tolerateNavigation(page, () =>
-      expandedSwitches().evaluateAll((controls) =>
-        controls.map((control) => {
-          const sourceId = control.getAttribute('aria-controls');
-          return sourceId ? (document.getElementById(sourceId)?.textContent ?? '') : '';
-        }),
-      ),
-    );
+    const sourceTexts = await readSourceTexts();
     diagnostics.navigations = navigationRequests.slice(1);
     // A page that never stops mounting controls, or one whose control never flips out of the
     // "Show code" state and is therefore clicked forever, is as broken as one left unexpanded.
