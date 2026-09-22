@@ -625,9 +625,12 @@ it('posts host context with the nearest inherited effective locale', async () =>
     </div>
   `);
   const el = wrapper.querySelector('lr-mcp-app') as LyraMcpApp;
+  await el.updateComplete;
   const contexts: unknown[] = [];
   el.postHostContext = (context: unknown) => contexts.push(context);
+  const ready = oneEvent(el, 'lr-mcp-ready');
   el.shadowRoot!.querySelector('iframe')!.dispatchEvent(new Event('load'));
+  await ready;
   expect((contexts[0] as { locale: string }).locale).to.equal('de-DE');
 });
 

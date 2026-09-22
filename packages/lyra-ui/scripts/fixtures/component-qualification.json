@@ -1205,7 +1205,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/agent-workspace/agent-workspace.test.ts",
-              "line": 722,
+              "line": 742,
               "test": "is accessible in a populated state",
               "target": "el",
               "state": "populated"
@@ -1237,7 +1237,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/agent-workspace/agent-workspace.test.ts",
-              "line": 673,
+              "line": 693,
               "kind": "320px allocation test signal"
             }
           ]
@@ -7238,21 +7238,21 @@
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6470,
+              "line": 6510,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6470,
+              "line": 6510,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6951,
+              "line": 6991,
               "test": "fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides",
               "target": "el",
               "state": "populated"
@@ -8375,14 +8375,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.test.ts",
-              "line": 396,
+              "line": 408,
               "test": "is accessible mid-confirm",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/checkpoint/checkpoint.test.ts",
-              "line": 403,
+              "line": 415,
               "test": "is accessible non-restorable",
               "target": "el",
               "state": "populated"
@@ -8396,7 +8396,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.test.ts",
-              "line": 277,
+              "line": 289,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -8477,7 +8477,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.class.ts",
-              "line": 154,
+              "line": 152,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12436,35 +12436,35 @@
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 793,
+              "line": 826,
               "test": "forwards a host aria-label to the internal semantic button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 808,
+              "line": 841,
               "test": "keeps the icon-only button named when the host aria-label is empty or blank",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 808,
+              "line": 841,
               "test": "keeps the icon-only button named when the host aria-label is empty or blank",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 948,
+              "line": 981,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
-              "line": 1170,
+              "line": 1203,
               "test": "signals the error with more than colour, and stays accessible",
               "target": "el",
               "state": "populated"
@@ -12559,7 +12559,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 566,
+              "line": 569,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16137,14 +16137,14 @@
             },
             {
               "file": "src/components/media/drop-zone/drop-zone.test.ts",
-              "line": 276,
+              "line": 287,
               "test": "is accessible with the drag-over overlay showing",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/drop-zone/drop-zone.test.ts",
-              "line": 284,
+              "line": 295,
               "test": "is accessible with the visible rejection region populated",
               "target": "el",
               "state": "populated"
@@ -19029,35 +19029,35 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1029,
+              "line": 1050,
               "test": "renders standard error chrome in the form-control frame and describes the semantic dropzone",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1554,
+              "line": 1575,
               "test": "is accessible with the visible rejection region populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1623,
+              "line": 1644,
               "test": "is accessible while compact",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1630,
+              "line": 1651,
               "test": "keeps arbitrary slotted controls outside the dropzone button and does not open the picker from them",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1949,
+              "line": 1970,
               "test": "uses with-error to render and associate rich slotted error content on the first SSR-hinted render",
               "target": "el",
               "state": "populated"
@@ -19071,7 +19071,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 606,
+              "line": 627,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -19094,7 +19094,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1703,
+              "line": 1724,
               "kind": "320px allocation test signal"
             }
           ]
@@ -23613,7 +23613,7 @@
             },
             {
               "file": "src/components/utility/icon/icon.test.ts",
-              "line": 911,
+              "line": 941,
               "test": "names a fetched icon through label and stays hidden without one",
               "target": "el",
               "state": "populated"
@@ -23633,7 +23633,7 @@
           "evidence": [
             {
               "file": "src/components/utility/icon/icon.test.ts",
-              "line": 1118,
+              "line": 1148,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -23644,7 +23644,7 @@
           "evidence": [
             {
               "file": "src/components/utility/icon/icon.test.ts",
-              "line": 1184,
+              "line": 1214,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -23707,7 +23707,7 @@
           "evidence": [
             {
               "file": "src/components/utility/icon/icon.test.ts",
-              "line": 361,
+              "line": 391,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -23790,42 +23790,42 @@
           "evidence": [
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 595,
+              "line": 624,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 605,
+              "line": 634,
               "test": "is accessible with slotted content instead of a named glyph",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 659,
+              "line": 688,
               "test": "renders safe href/target/download as a real anchor with a derived safe rel",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 682,
+              "line": 711,
               "test": "never forwards aria-pressed onto the anchor, while aria-current (global) still reaches it",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 698,
+              "line": 727,
               "test": "gives a disabled link icon-button an explicit role=\"link\" and keeps its name legal",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 768,
+              "line": 797,
               "test": "makes disabled link mode inert and restores its href when re-enabled",
               "target": "el",
               "state": "populated"
@@ -27789,14 +27789,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
-              "line": 577,
+              "line": 645,
               "test": "is accessible with an app loaded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
-              "line": 585,
+              "line": 653,
               "test": "keeps a non-empty host name on the host without letting an explicit-empty host name unname the frame",
               "target": "el",
               "state": "populated"
@@ -39017,28 +39017,28 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 715,
+              "line": 719,
               "test": "announces the error it already presents on mount when announce is set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 1113,
+              "line": 1133,
               "test": "is accessible in a populated state (query, mode, filters, scope chips)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 1129,
+              "line": 1149,
               "test": "is accessible while loading",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 1140,
+              "line": 1160,
               "test": "is accessible with an error",
               "target": "el",
               "state": "populated"
@@ -39052,7 +39052,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 115,
+              "line": 119,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -39063,7 +39063,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 931,
+              "line": 951,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -39080,7 +39080,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 960,
+              "line": 980,
               "kind": "320px allocation test signal"
             }
           ]
@@ -39143,7 +39143,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.class.ts",
-              "line": 394,
+              "line": 393,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49230,7 +49230,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 999,
+              "line": 1013,
               "test": "is accessible with a populated timeline and the approval dialog open",
               "target": "el",
               "state": "populated"
@@ -49250,7 +49250,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 903,
+              "line": 917,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -49267,7 +49267,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 911,
+              "line": 925,
               "kind": "320px allocation test signal"
             }
           ]
