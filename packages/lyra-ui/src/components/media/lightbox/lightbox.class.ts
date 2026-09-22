@@ -13,12 +13,12 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { styles } from './lightbox.styles.js';
 import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
-export type { LyraImageFit } from '../../../internal/image-fit.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_close, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type { LyraImageFit } from '../../../internal/image-fit.js';
 /** One image in the set `<lr-lightbox>` browses. `alt`/`caption` are caller-supplied data
  *  (like a filename), not routed through `localize()` -- only the component's own chrome
  *  strings are. */
