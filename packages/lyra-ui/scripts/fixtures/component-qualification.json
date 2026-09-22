@@ -13976,56 +13976,63 @@
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 484,
+              "line": 421,
+              "test": "adds an overflowing prose body to sequential Tab order after a narrow resize",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/overlays/dialog/dialog.test.ts",
+              "line": 546,
               "test": "gives mapped property and rich-slot titles the configured heading level with a none opt-out",
               "target": "richTitle",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 707,
+              "line": 769,
               "test": "is accessible with only a host aria-label attribute set (no label/heading props)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 871,
+              "line": 933,
               "test": "is accessible while open with a label prop and footer actions",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 882,
+              "line": 944,
               "test": "is accessible while open with a slotted heading",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 890,
+              "line": 952,
               "test": "is accessible while open with a heading, closable close button, and footer actions",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1550,
+              "line": 1612,
               "test": "is accessible with the label and header-actions slots populated",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1565,
+              "line": 1627,
               "test": "keeps accessible-only naming separate from the visible label",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 866,
+              "line": 928,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -14050,7 +14057,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1097,
+              "line": 1159,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -14067,7 +14074,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1094,
+              "line": 1156,
               "kind": "320px allocation test signal"
             }
           ]
@@ -15787,7 +15794,14 @@
           "evidence": [
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "line": 120,
+              "line": 31,
+              "test": "includes a prose body in the drawer Tab order when narrowing makes it overflow",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/overlays/drawer/drawer.test.ts",
+              "line": 149,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
@@ -15801,7 +15815,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "line": 108,
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -15812,7 +15826,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "line": 140,
+              "line": 169,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15829,7 +15843,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "line": 204,
+              "line": 233,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24653,7 +24667,14 @@
             },
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1046,
+              "line": 842,
+              "test": "keeps the required description visually hidden when a prefilled input is valid",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/input/input.test.ts",
+              "line": 1065,
               "test": "is accessible as type=\"password\" with the toggle rendered",
               "target": "el",
               "state": "populated"
@@ -24667,7 +24688,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1657,
+              "line": 1676,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -24678,7 +24699,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1244,
+              "line": 1263,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -24695,7 +24716,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1243,
+              "line": 1262,
               "kind": "320px allocation test signal"
             }
           ]
@@ -30605,7 +30626,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1657,
+              "line": 1676,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30616,7 +30637,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1244,
+              "line": 1263,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -30633,7 +30654,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1243,
+              "line": 1262,
               "kind": "320px allocation test signal"
             }
           ]
@@ -31340,7 +31361,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1657,
+              "line": 1676,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -31351,7 +31372,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1244,
+              "line": 1263,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31368,7 +31389,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1243,
+              "line": 1262,
               "kind": "320px allocation test signal"
             }
           ]
@@ -46932,7 +46953,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1657,
+              "line": 1676,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -46943,7 +46964,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1244,
+              "line": 1263,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -46960,7 +46981,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1243,
+              "line": 1262,
               "kind": "320px allocation test signal"
             }
           ]

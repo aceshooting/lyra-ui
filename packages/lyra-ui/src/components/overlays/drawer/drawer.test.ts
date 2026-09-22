@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
 import "./drawer.js";
 import type { LyraDrawer } from "./drawer.js";
 import { setAnimation } from "../../../utilities/animation-registry.js";
@@ -25,6 +26,34 @@ it("renders an open drawer with the requested placement and accessible panel", a
   expect(panel.getAttribute("role")).to.equal("dialog");
   expect(panel.getAttribute("aria-modal")).to.equal("true");
   expect(panel.getAttribute("aria-labelledby")).to.match(/^lr-dialog-heading-/);
+});
+
+it('includes a prose body in the drawer Tab order when narrowing makes it overflow', async () => {
+  const prose = Array.from({ length: 18 }, () => 'Long drawer prose wraps across multiple lines at a narrow width.').join(' ');
+  const el = (await fixture(html`
+    <lr-drawer open label="Filters" style="--lr-drawer-width: 70rem">
+      <span>${prose}</span><button slot="footer">Done</button>
+    </lr-drawer>
+  `)) as LyraDrawer;
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const footer = el.querySelector<HTMLButtonElement>('[slot="footer"]')!;
+  const close = el.shadowRoot!.querySelector<HTMLElement>('[part~="close-button"]')!;
+  expect(body.scrollHeight, 'the wide drawer prose should fit without scrolling').to.be.at.most(body.clientHeight);
+
+  close.focus();
+  el.style.setProperty('--lr-drawer-width', '20rem');
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  expect(body.scrollHeight, 'the narrow drawer prose should actually overflow').to.be.greaterThan(body.clientHeight);
+  expect(body.tabIndex, 'an overflowing drawer body must be a native sequential Tab stop').to.equal(0);
+
+  await sendKeys({ press: 'Tab' });
+  expect(el.shadowRoot!.activeElement === body, 'Tab from close should reach the overflowing drawer body').to.be.true;
+  await expect(el).to.be.accessible();
+  await sendKeys({ press: 'Tab' });
+  expect(document.activeElement === footer, 'the next Tab stop should be the footer action').to.be.true;
+  await sendKeys({ press: 'Shift+Tab' });
+  expect(el.shadowRoot!.activeElement === body, 'reverse Tab from the footer should reach the body').to.be.true;
 });
 
 it("reflects the inherited pinned Web Awesome label property", async () => {

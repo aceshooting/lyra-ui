@@ -181,6 +181,39 @@ export const NarrowLongContent: Story = {
   `,
 };
 
+export const KeyboardScrollAfterResize: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Use Resize to narrow or widen the dialog. When the prose overflows, Tab from the close button reaches the body, where arrow keys scroll it; the next Tab reaches Done. Shift+Tab follows the reverse order. A body that fits is skipped.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-dialog
+      .open=${context.viewMode !== 'docs'}
+      heading="Reading view"
+      closable
+      style="--lr-dialog-width: 70rem"
+    >
+      <button
+        type="button"
+        slot="header-actions"
+        @click=${(event: Event) => {
+          const dialog = (event.currentTarget as HTMLElement).closest('lr-dialog') as LyraDialog;
+          const width = dialog.style.getPropertyValue('--lr-dialog-width');
+          dialog.style.setProperty('--lr-dialog-width', width === '20rem' ? '70rem' : '20rem');
+        }}
+      >Resize</button>
+      <span>${Array.from({ length: 25 }, () =>
+        'Long dialog prose wraps across multiple lines at a narrow width.').join(' ')}</span>
+      <button type="button" slot="footer" @click=${(event: Event) =>
+        ((event.currentTarget as HTMLElement).closest('lr-dialog') as LyraDialog).close('ok')}>Done</button>
+    </lr-dialog>
+  `,
+};
+
 export const HeaderSlots: Story = {
   parameters: {
     docs: {

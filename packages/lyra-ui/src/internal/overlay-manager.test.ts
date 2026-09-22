@@ -1679,6 +1679,46 @@ it('keeps a non-scrolling tabindex="-1" element out of the tab order', () => {
   }
 });
 
+it('reaches a dynamically overflowing middle scroll region in both Tab directions', () => {
+  const overlay = createOverlay(document, 'middle-scroll-region');
+  const { root, region } = createScrollRegion('auto', '5px');
+  overlay.panel.insertBefore(region, overlay.last);
+  root.remove();
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+  });
+  const tab = (shiftKey = false): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', {
+      key: 'Tab', shiftKey, bubbles: true, cancelable: true,
+    });
+    document.dispatchEvent(event);
+    return event;
+  };
+  try {
+    overlay.first.focus();
+    expect(tab().defaultPrevented, 'short prose does not interrupt native Tab').to.be.false;
+
+    const filler = region.firstElementChild as HTMLElement;
+    filler.style.blockSize = '400px';
+    expect(region.scrollHeight).to.be.greaterThan(region.clientHeight);
+    expect(tab().defaultPrevented, 'Tab must reach the middle scrolling surface').to.be.true;
+    expect(deepActiveElement(document)?.id).to.equal(region.id);
+
+    overlay.last.focus();
+    expect(tab(true).defaultPrevented, 'Shift+Tab must reach the same surface').to.be.true;
+    expect(deepActiveElement(document)?.id).to.equal(region.id);
+
+    filler.style.blockSize = '5px';
+    overlay.first.focus();
+    expect(tab().defaultPrevented, 'the short surface leaves the managed Tab order again').to.be.false;
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+    overlay.host.remove();
+  }
+});
+
 it('keeps Tab inside a panel whose only stop is an overflowing scroll region', () => {
   const host = document.createElement('section');
   host.dataset['overlay'] = 'scroll-panel';

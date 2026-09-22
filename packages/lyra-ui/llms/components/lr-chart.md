@@ -385,7 +385,12 @@ undefined, value: unknown }`). For scatter/bubble points, `label` prefers the pe
 `value` is the complete `LyraChartPoint`, including optional `r`, `id`, and `label`. A primitive
 `id` survives the same pointer, data-table, and keyboard activation paths; invalid ids are omitted.
 `lr-datum-activate` emits the same activation with `kind: 'bar'|'point'|'segment'|'slice'` for
-family-wide handling; `lr-point-click` remains as a compatibility event. Also
+family-wide handling. For scatter/bubble, both events carry the same `LyraChartPoint` value,
+including a string or finite-number `id` when supplied; invalid ids are omitted. The public
+`LyraChartPoint.id` type is `string | number`, while the activation event's heterogeneous `value`
+is typed `unknown`. Validate or explicitly narrow the value itself before reading point fields;
+checking `detail.kind === 'point'` alone does not narrow `detail.value` in TypeScript.
+`lr-point-click` remains as a compatibility event. Also
 `lr-before-legend-visibility-change` (cancelable proposal), and
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the

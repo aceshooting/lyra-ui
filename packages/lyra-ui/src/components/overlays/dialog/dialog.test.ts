@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './dialog.js';
 import '../../forms/input/input.js';
 import type { LyraDialog } from './dialog.js';
@@ -415,6 +416,67 @@ it('still prefers a control inside an overflowing body over the body scroller it
   expect(body.scrollHeight, 'fixture must actually overflow its body').to.be.greaterThan(body.clientHeight);
 
   expect(document.activeElement?.id).to.equal('inner');
+});
+
+it('adds an overflowing prose body to sequential Tab order after a narrow resize', async () => {
+  const prose = Array.from({ length: 25 }, () => 'Long dialog prose wraps across multiple lines at a narrow width.').join(' ');
+  const el = (await fixture(html`
+    <lr-dialog
+      label="Untitled"
+      open
+      closable
+      style="--lr-dialog-width: 70rem"
+      ><span>${prose}</span><button slot="footer">Done</button></lr-dialog
+    >
+  `)) as LyraDialog;
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const footer = el.querySelector<HTMLButtonElement>('[slot="footer"]')!;
+  const close = el.shadowRoot!.querySelector<HTMLElement>('[part~="close-button"]')!;
+  expect(body.scrollHeight, 'the wide prose body should fit without scrolling').to.be.at.most(body.clientHeight);
+
+  close.focus();
+  el.style.setProperty('--lr-dialog-width', '20rem');
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  expect(body.scrollHeight, 'the narrow prose body should actually overflow').to.be.greaterThan(body.clientHeight);
+  expect(body.tabIndex, 'an overflowing scroll region must be a native sequential Tab stop').to.equal(0);
+
+  await sendKeys({ press: 'Tab' });
+  expect(el.shadowRoot!.activeElement === body, 'Tab from close should reach the newly overflowing prose body').to.be.true;
+  await expect(el).to.be.accessible();
+  await sendKeys({ press: 'Tab' });
+  expect(document.activeElement === footer, 'the next native Tab stop should remain the footer action').to.be.true;
+  await sendKeys({ press: 'Shift+Tab' });
+  expect(el.shadowRoot!.activeElement === body, 'reverse Tab should return from the footer to the overflowing body').to.be.true;
+
+  el.querySelector('span')!.textContent = 'Short prose';
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  expect(body.scrollHeight, 'the short body should no longer overflow').to.be.at.most(body.clientHeight);
+  expect(body.tabIndex, 'a short body must return to programmatic-only focusability').to.equal(-1);
+  close.focus();
+  await sendKeys({ press: 'Tab' });
+  expect(document.activeElement === footer, 'a short body should not remain an unnecessary Tab stop').to.be.true;
+
+  const destination = document.createElement('div');
+  document.body.append(destination);
+  try {
+    destination.append(el);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    el.style.setProperty('--lr-dialog-width', '70rem');
+    el.querySelector('span')!.textContent = prose;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(body.tabIndex, 'the wide body should still fit after reconnect').to.equal(-1);
+    el.style.setProperty('--lr-dialog-width', '20rem');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(body.tabIndex, 'the reconnected observer should include a body that overflows after resize').to.equal(0);
+    el.querySelector('span')!.textContent = 'Short prose';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(body.tabIndex, 'the reconnected observer should remove the stop after content shrinks').to.equal(-1);
+  } finally {
+    await el.close('api');
+    destination.remove();
+  }
 });
 
 it('prevents Tab from doing anything when there is nothing focusable', async () => {

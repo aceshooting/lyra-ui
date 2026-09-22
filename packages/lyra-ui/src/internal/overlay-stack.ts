@@ -217,6 +217,14 @@ function handleTab(state: OverlayDocumentState, entry: OverlayEntry, event: Keyb
   } else if (!event.shiftKey && active === last) {
     event.preventDefault();
     first.focus();
+  } else {
+    const next = focusable[activeIndex + (event.shiftKey ? -1 : 1)];
+    // Overflowing scroll regions join the managed order even with tabindex="-1".
+    // Native sequential navigation would skip these interior stops.
+    if (next && next.tabIndex < 0) {
+      event.preventDefault();
+      next.focus();
+    }
   }
 }
 

@@ -178,10 +178,12 @@ painted surface sits one boundary deeper. `<lr-drawer>` inherits this control an
 `<lr-icon-button>` itself.
 
 **The body is keyboard-reachable while it overflows.** `[part="body"]` is the element that scrolls,
-so it carries `tabindex="-1"` and joins the focus order **only while its content actually
-overflows** — a dialog whose content is nothing but prose, a table, or a rendered document used to
+so it carries `tabindex="0"` **only while its content actually overflows** — a dialog whose
+content is nothing but prose, a table, or a rendered document used to
 be scrollable with a mouse and completely unreachable from the keyboard, because a scroll container
-with no focusable child is not a stop of its own. A short body never becomes a gratuitous stop.
+with no focusable child is not a stop of its own. A short body keeps `tabindex="-1"` and never
+becomes a gratuitous stop. Resize and content changes update the body's tabindex as its overflow
+changes; `<lr-drawer>` uses the same behavior.
 
 It takes focus like any other stop, so it styles like one: `::part(body):focus-visible` draws the
 standard `--lr-focus-ring-*` ring, inset (`outline-offset` is negative) because the body is flush

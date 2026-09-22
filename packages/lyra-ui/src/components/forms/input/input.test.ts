@@ -839,6 +839,25 @@ describe('lr-input', () => {
   });
 
   describe('sr-only required description and the error part', () => {
+    it('keeps the required description visually hidden when a prefilled input is valid', async () => {
+      const el = await fixture<LyraInput>(html`
+        <lr-input label="Name" required value="Ada"></lr-input>
+      `);
+      const required = el.shadowRoot!.querySelector<HTMLElement>('[data-required-description]')!;
+      const input = el.shadowRoot!.querySelector('input')!;
+      const requiredStyles = getComputedStyle(required);
+
+      expect(el.validity.valueMissing).to.be.false;
+      expect(input.getAttribute('aria-invalid')).to.equal('false');
+      expect(required.hidden).to.be.false;
+      expect(required.textContent).to.equal('This field is required.');
+      expect(requiredStyles.position).to.equal('absolute');
+      expect(requiredStyles.clipPath).to.not.equal('none');
+      expect(required.getBoundingClientRect().width).to.be.at.most(1);
+      expect(input.getAttribute('aria-describedby')).to.include(required.id);
+      await expect(el).to.be.accessible();
+    });
+
     it('clips the required-field description to the shared sr-only geometry on a pristine input, keeps the error part hidden, and reveals a real validation error only after a failed submission attempt', async () => {
       // Regression test for the sr-only class rendering as ordinary visible text: composing the
       // shared `srOnly` export into this component's own `static override styles` is what

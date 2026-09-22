@@ -833,6 +833,18 @@ import type {
   MarkdownHeadingItem as GranularHeadingItem,
   ShikiLanguageInput as GranularLanguageInput,
 } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown.js';
+import type { LyraImageFit as LightboxImageFit } from '@aceshooting/lyra-ui/components/lr-lightbox.js';
+import type { LyraImageFit as PanZoomImageFit } from '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
+import type { LyraImageFit as ImageViewerImageFit } from '@aceshooting/lyra-ui/components/lr-image-viewer.js';
+
+type Equal<Left, Right> =
+  (<Value>() => Value extends Left ? 1 : 2) extends
+  (<Value>() => Value extends Right ? 1 : 2)
+    ? true
+    : false;
+type Assert<Value extends true> = Value;
+type LightboxFitMatchesImageViewer = Assert<Equal<LightboxImageFit, ImageViewerImageFit>>;
+type PanZoomFitMatchesImageViewer = Assert<Equal<PanZoomImageFit, ImageViewerImageFit>>;
 
 const name: string = tag('empty');
 const Empty = GranularLyraEmpty satisfies typeof LyraEmpty;
@@ -852,6 +864,12 @@ const conversationTypes: [
 ] | undefined = undefined;
 const localeStrings: LyraLocaleStrings = { close: 'Close' };
 const localeKey: LyraMessageKey = 'close';
+const mediaFit: ImageViewerImageFit = 'contain';
+const lightboxFit: LightboxImageFit = mediaFit;
+const panZoomFit: PanZoomImageFit = lightboxFit;
+// @ts-expect-error The packed image-fit type exposes only the supported fit modes.
+const unsupportedMediaFit: PanZoomImageFit = 'cover';
+declare const sharedMediaFitContract: [LightboxFitMatchesImageViewer, PanZoomFitMatchesImageViewer];
 registerLyraLocale('packed-typecheck', localeStrings);
 defineElement('consumer-empty', Empty);
 void conversationTypes;
@@ -932,6 +950,11 @@ void [
   createLyraThemeBootstrap,
   getRegisteredLyraLocales,
   localeKey,
+  mediaFit,
+  lightboxFit,
+  panZoomFit,
+  unsupportedMediaFit,
+  sharedMediaFitContract,
   DEFAULT_GEMSTONE,
   GEMSTONE_KEYS,
   GEMSTONES,

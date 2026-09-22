@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { Chart } from 'chart.js';
+import type { Chart, PointElement } from 'chart.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './chart.js';
 import './bar-chart.js';
 import './line-chart.js';
@@ -198,6 +199,121 @@ for (const tag of ['lr-chart', 'lr-line-chart']) {
     }
   }
 }
+
+it('retains a primitive scatter id on real pointer, keyboard, table, and family activation paths', async () => {
+  const el = mountChart('lr-chart') as LyraChart;
+  el.type = 'scatter';
+  el.showDataTable = true;
+  el.datasets = [{
+    label: 'Listings',
+    points: [
+      { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+      { x: 3, y: 4, id: 23, label: 'Listing 23' },
+      { x: 5, y: 6, id: { unsafe: true } as never, label: 'Invalid id' },
+    ],
+  }];
+  const chart = await liveChart(el);
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  const point = chart.getDatasetMeta(0).data[0]! as PointElement;
+  const center = point.getCenterPoint();
+  const rect = canvas.getBoundingClientRect();
+  const activations: Array<{ event: string; detail: unknown }> = [];
+  const receive = (event: Event) => {
+    activations.push({
+      event: event.type,
+      detail: (event as CustomEvent).detail,
+    });
+  };
+  el.addEventListener('lr-point-click', receive);
+  el.addEventListener('lr-datum-activate', receive);
+
+  try {
+    await sendMouse({
+      type: 'click',
+      position: [
+        Math.round(rect.left + center.x * rect.width / canvas.width),
+        Math.round(rect.top + center.y * rect.height / canvas.height),
+      ],
+    });
+    await waitUntil(() => activations.length === 2, 'the native pointer click should activate the point');
+    const canvasElement = canvas as HTMLCanvasElement;
+    canvasElement.focus();
+    canvasElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    canvasElement.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    const tableButtons = el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+      '[part="data-table"] tbody button',
+    );
+    tableButtons[0]!.click();
+    tableButtons[1]!.click();
+    tableButtons[2]!.click();
+  } finally {
+    el.removeEventListener('lr-point-click', receive);
+    el.removeEventListener('lr-datum-activate', receive);
+    await resetMouse();
+  }
+
+  expect(activations.map(({ event }) => event)).to.deep.equal([
+    'lr-datum-activate', 'lr-point-click',
+    'lr-datum-activate', 'lr-point-click',
+    'lr-datum-activate', 'lr-point-click',
+    'lr-datum-activate', 'lr-point-click',
+    'lr-datum-activate', 'lr-point-click',
+    'lr-datum-activate', 'lr-point-click',
+  ]);
+  expect(activations.map(({ detail }) => (detail as { value: unknown }).value)).to.deep.equal([
+    { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+    { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+    { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+    { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+    { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+    { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+    { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+    { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
+    { x: 3, y: 4, id: 23, label: 'Listing 23' },
+    { x: 3, y: 4, id: 23, label: 'Listing 23' },
+    { x: 5, y: 6, label: 'Invalid id' },
+    { x: 5, y: 6, label: 'Invalid id' },
+  ]);
+  expect(activations.filter(({ event }) => event === 'lr-datum-activate').every(({ detail }) =>
+    (detail as { kind: unknown }).kind === 'point')).to.be.true;
+});
+
+it('does not evaluate or expose accessor-backed and structured ids from admitted scatter data', async () => {
+  const el = mountChart('lr-chart') as LyraChart;
+  el.type = 'scatter';
+  el.showDataTable = true;
+  let getterCalls = 0;
+  const largeMetadata = Object.fromEntries(
+    Array.from({ length: 100 }, (_, index) => [`field${index}`, `value${index}`]),
+  );
+  const point = { x: 11, y: 12, label: 'Descriptor safe' } as Record<string, unknown>;
+  Object.defineProperty(point, 'id', {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return largeMetadata;
+    },
+  });
+  el.config = {
+    type: 'scatter',
+    data: { datasets: [{ label: 'Listings', data: [point] }] },
+  } as never;
+  const chart = await liveChart(el);
+  expect(getterCalls).to.equal(0);
+
+  const details: unknown[] = [];
+  el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+  el.addEventListener('lr-datum-activate', (event) => details.push((event as CustomEvent).detail));
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="data-table"] tbody button')!.click();
+
+  expect(getterCalls).to.equal(0);
+  expect(details.map((detail) => (detail as { value: unknown }).value)).to.deep.equal([
+    { x: 11, y: 12, label: 'Descriptor safe' },
+    { x: 11, y: 12, label: 'Descriptor safe' },
+  ]);
+  expect(details.some((detail) => JSON.stringify(detail).includes('field99'))).to.be.false;
+  expect(chart.data.datasets[0]!.data).to.deep.equal([{ x: 11, y: 12, label: 'Descriptor safe' }]);
+});
 
 async function liteChart(datasets: LyraLiteChartSeries[], options: { gap?: number; scale?: string; floor?: number; stacked?: boolean } = {}) {
   const el = await fixture<LyraLiteChart>(html`<lr-lite-chart

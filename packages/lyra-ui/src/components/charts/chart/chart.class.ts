@@ -1695,11 +1695,13 @@ function chartDatasetStack(dataset: unknown): string | undefined {
  *   data-table value is activated, or when Enter/Space activates the keyboard-current canvas datum.
  *   `detail: { datasetIndex: number, index: number, label: string |
  *   undefined, value: unknown }`. For scatter/bubble data, `label` prefers the per-point label and
- *   `value` is the complete typed `LyraChartPoint` (`x`, `y`, optional `r`, optional `id`, optional
+ *   `value` contains the complete `LyraChartPoint` (`x`, `y`, optional `r`, optional `id`, optional
  *   `label`). A primitive `id` is retained for application navigation and selection; unsafe or
- *   non-finite values are omitted.
+ *   non-finite values are omitted. The heterogeneous event value is typed `unknown`; consumers
+ *   must narrow the value itself before reading point fields.
  * @event lr-datum-activate - Family-normalized activation event. Its detail adds `kind`
- *   (`bar`, `point`, `segment`, or `slice`) to the `lr-point-click` detail.
+ *   (`bar`, `point`, `segment`, or `slice`) to the `lr-point-click` detail. For scatter/bubble
+ *   points its `value` is the same `LyraChartPoint`, including a safe primitive `id` when present.
  * @event lr-before-legend-visibility-change - Cancelable proposal emitted before a DOM legend
  *   toggle changes state. `detail` contains the target `datasetIndex`, its proposed `visible`
  *   value, and the complete canonical proposed `hiddenDatasets` snapshot.

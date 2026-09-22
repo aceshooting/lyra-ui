@@ -118,11 +118,12 @@ export interface LyraDialogEventMap {
  * no heading text, if neither `heading` nor the `label` slot is set) that closes the dialog via
  * the same `close()` path as Escape/backdrop-dismiss, with reason `'close-button'`.
  *
- * The `body` part is the element that scrolls, so it carries `tabindex="-1"`: a dialog holding
- * only prose, a table, or a rendered document would otherwise have no keyboard stop at all and
- * its content would be readable by mouse alone. It joins the Tab order only while it actually
- * overflows, sorts behind any control inside it for initial focus, and shows the standard focus
- * ring on `::part(body)` when it takes focus.
+ * The `body` part is the element that scrolls, so it carries `tabindex="0"` only while it
+ * actually overflows; a short body keeps `tabindex="-1"`. A dialog holding only prose, a table,
+ * or a rendered document would otherwise have no keyboard stop at all and its content would be
+ * readable by mouse alone. It joins the Tab order only while it actually overflows, sorts behind
+ * any control inside it for initial focus, and shows the standard focus ring on `::part(body)` when
+ * it takes focus.
  *
  * Stacking: opening one `<lr-dialog>` while another is already open (e.g. a
  * `confirm()` launched from within an already-open dialog) is supported --
@@ -370,6 +371,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private headingObserver?: MutationObserver;
   private headingObserverDocument?: Document;
   private headingObserverGeneration = 0;
+  private bodyOverflowObserver?: ResizeObserver;
+  private bodyOverflowObservedBody?: HTMLElement;
   /** Invalidates any in-flight `lr-after-show`/`lr-after-hide` wait, so a lifecycle interrupted by
    *  the opposite transition (or by a disconnect) never announces a completion that never
    *  happened. */
@@ -434,6 +437,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncBodyTabIndex();
+    this.armBodyOverflowObserver();
     if (changed.has('open') && this.open && this.isConnected && this.modalSurface) {
       this.enterTopLayer();
       this.focusInitial();
@@ -443,6 +448,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.armHeadingObserver();
+    this.syncBodyTabIndex();
+    this.armBodyOverflowObserver();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
@@ -462,6 +469,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   override disconnectedCallback(): void {
     this.resetHeadingObserver();
+    this.resetBodyOverflowObserver();
     super.disconnectedCallback();
     this.overlay?.suspend();
     // Transient exit-animation state never survives a detach: a reattached dialog re-runs its
@@ -510,6 +518,12 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.resetHeadingObserver();
+    this.resetBodyOverflowObserver();
+    if (this.isConnected) {
+      this.armHeadingObserver();
+      this.armBodyOverflowObserver();
+      this.syncBodyTabIndex();
+    }
   }
 
   private armHeadingObserver(): void {
@@ -531,6 +545,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
         return;
       }
       this.detectLightDomChrome();
+      this.syncBodyTabIndex();
     });
     this.headingObserver = observer;
     this.headingObserverDocument = ownerDocument;
@@ -550,6 +565,54 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.headingObserverDocument = undefined;
   }
 
+  /** Keep the scroll surface in native sequential focus order only while it has scrollable content.
+   *  The overlay trap also measures live overflow so it can account for browsers' scroll-region
+   *  differences; this reflected DOM state additionally satisfies the platform's accessible
+   *  scroll-region contract and keeps short bodies out of the Tab order. */
+  private syncBodyTabIndex(): void {
+    const body = this.renderRoot?.querySelector<HTMLElement>('[part="body"]');
+    if (!body) return;
+    const overflowing =
+      this.open &&
+      ((body.scrollHeight > body.clientHeight && body.scrollHeight > 0) ||
+        (body.scrollWidth > body.clientWidth && body.scrollWidth > 0));
+    const next = overflowing ? 0 : -1;
+    if (body.tabIndex !== next) body.tabIndex = next;
+  }
+
+  private armBodyOverflowObserver(): void {
+    const body = this.renderRoot?.querySelector<HTMLElement>('[part="body"]');
+    if (!body || !this.isConnected || this.bodyOverflowObservedBody === body) return;
+    this.resetBodyOverflowObserver();
+    const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor) return;
+    const observer = new ResizeObserverCtor(() => {
+      if (
+        this.bodyOverflowObserver !== observer ||
+        this.bodyOverflowObservedBody !== body ||
+        !this.isConnected
+      ) {
+        return;
+      }
+      this.syncBodyTabIndex();
+    });
+    this.bodyOverflowObserver = observer;
+    this.bodyOverflowObservedBody = body;
+    observer.observe(body);
+    for (const element of this.defaultSlotElements()) observer.observe(element);
+  }
+
+  private resetBodyOverflowObserver(): void {
+    this.bodyOverflowObserver?.disconnect();
+    this.bodyOverflowObserver = undefined;
+    this.bodyOverflowObservedBody = undefined;
+  }
+
+  private defaultSlotElements(): Element[] {
+    const slot = this.renderRoot?.querySelector<HTMLSlotElement>('[part="body"] slot:not([name])');
+    return slot?.assignedElements({ flatten: true }) ?? [];
+  }
+
   /** Whether an external-removal hide request can preserve open state for a later reconnect. */
   protected get disconnectHideCancelable(): boolean {
     return false;
@@ -557,6 +620,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   private onDefaultSlotChange = (): void => {
     this.detectLightDomChrome();
+    this.syncBodyTabIndex();
+    this.resetBodyOverflowObserver();
+    this.armBodyOverflowObserver();
   };
 
   // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
@@ -950,11 +1016,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
                 </div>
               `
             : nothing}
-          <!-- tabindex keeps the scrolling body reachable: it is the element that overflows, so a
-               dialog holding only prose, a table, or a rendered document would otherwise be
-               mouse-scrollable with no keyboard way in at all. -1 keeps it out of the page's
-               sequential order; the overlay manager promotes it to a stop only while it actually
-               scrolls (see isOverflowingAndTabbable in internal/overlay-manager.ts). -->
+          <!-- The owner sets tabindex to 0 only while this scrolling surface actually overflows;
+               short bodies stay out of the sequential order. -->
           <div part="body" tabindex="-1">
             <slot @slotchange=${this.onDefaultSlotChange}></slot>
           </div>
