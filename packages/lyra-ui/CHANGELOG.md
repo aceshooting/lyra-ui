@@ -1,5 +1,21 @@
 # Changelog
 
+## 19.0.0
+
+### Major Changes
+
+- 6e31ab9: Distinguish omitted text overrides from explicit empty strings in `lr-agent-workspace` (`label`, `composerPlaceholder`), `lr-copy-button` (`copyLabel`, `successLabel`, `errorLabel`), `lr-file-input` (`label`), and `lr-retrieval-search` (`placeholder`). Omission uses the localized fallback; an explicit empty string suppresses it.
+  
+  These properties now read `undefined` when unset. Code that assumes an unset value is a string must handle the optional value, for example with `value ?? ''`. Remove an empty override to restore the localized fallback.
+
+### Minor Changes
+
+- 27ca436: Export the shared `LyraImageFit` type from granular media entries and preserve safe primitive point ids in chart activation details.
+
+### Patch Changes
+
+- c485895: Keep overflowing dialog and drawer bodies reachable by keyboard after resizing or changing their content. Preserve intermediate scroll-region stops in the shared overlay focus order, and expand coverage for chart point identities, granular image-fit types, and required-input descriptions.
+
 ## 18.4.0
 
 ### Minor Changes
