@@ -4,7 +4,7 @@ import type { LyraPopup } from './popup.class.js';
 
 const popupOf = (el: Element): HTMLElement => el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
 
-/** §26a sibling of the select/combobox fix (commit 0ce9a9817): a settled-inactive `<lr-popup>`
+/** Mirrors lr-select/lr-combobox: a settled-inactive `<lr-popup>`
  *  must leave the scrollable layout entirely, not merely fade to invisible, or a
  *  `position:relative; overflow:auto` ancestor keeps unexplained scroll room. The popup's own live
  *  auto-sizing (`--lr-positioner-available-inline-size`) already keeps it within the container's

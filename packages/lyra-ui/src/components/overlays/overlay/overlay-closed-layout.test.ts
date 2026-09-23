@@ -13,7 +13,7 @@ type AnchoredOverlay = HTMLElement & {
   readonly updateComplete: Promise<unknown>;
 };
 
-/** §26a sibling of the select/combobox fix (commit 0ce9a9817): a settled-closed anchored popup
+/** Mirrors lr-select/lr-combobox: a settled-closed anchored popup
  *  must leave the scrollable layout entirely, not merely fade to invisible, or a
  *  `position:relative; overflow:auto` ancestor keeps unexplained scroll room. The popup's own
  *  live auto-sizing (`--lr-positioner-available-inline-size`) already keeps it within the

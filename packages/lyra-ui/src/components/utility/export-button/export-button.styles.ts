@@ -109,8 +109,8 @@ export const styles = css`
   /* Settled closed (no exit transition playing, gated by JS clearing 'hidden' only once the
      opacity/transform fade has actually finished -- see settleMenuHidden()): out of layout
      entirely, so a stale placed box can no longer inflate whatever ancestor establishes this
-     menu's CSS containing block. Matches lr-select's/lr-combobox's own [part='listbox'] fix
-     (commit 0ce9a9817). */
+     menu's CSS containing block. Matches lr-select's/lr-combobox's own [part='listbox']
+     handling. */
   [part='menu'][hidden] {
     display: none;
   }

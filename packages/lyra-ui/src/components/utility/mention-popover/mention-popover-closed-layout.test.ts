@@ -4,7 +4,7 @@ import type { LyraMentionPopover } from './mention-popover.class.js';
 
 const listboxOf = (el: Element): HTMLElement => el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
 
-/** §26a sibling of the select/combobox fix (commit 0ce9a9817): a settled-closed
+/** Mirrors lr-select/lr-combobox: a settled-closed
  *  `<lr-mention-popover>` listbox must leave the scrollable layout entirely, not merely fade to
  *  invisible, or a `position:relative; overflow:auto` ancestor keeps unexplained scroll room. The
  *  listbox's own live auto-sizing (`--lr-positioner-available-inline-size`) already keeps it

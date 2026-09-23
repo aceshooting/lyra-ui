@@ -380,7 +380,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  before `syncMenuOverlay()`'s deferred placement runs, so the menu is still a real, measurable
    *  box -- and is set back only once the CSS opacity/transform exit transition has actually
    *  finished playing (`settleMenuHidden()`), preserving the existing fade in the meantime. Mirrors
-   *  `LyraSelect`'s `listboxHidden` (commit 0ce9a9817). */
+   *  `LyraSelect`'s `listboxHidden`. */
   @state() private menuHidden = true;
   private menuHideToken = 0;
   /** Handle on the shared light-DOM live region export outcomes announce through -- a region

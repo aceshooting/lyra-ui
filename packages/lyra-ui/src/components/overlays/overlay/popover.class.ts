@@ -468,7 +468,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  layout), clears as soon as `open` becomes true -- before positioning runs, so the popup is
    *  still a real, measurable box -- and is set back only once the close transition has settled
    *  (`lr-after-hide`), preserving the existing visibility/opacity fade in the meantime. Mirrors
-   *  `LyraSelect`'s `listboxHidden` (commit 0ce9a9817). */
+   *  `LyraSelect`'s `listboxHidden`. */
   @state() private popupHidden = true;
   private positionedAnchor?: Element | VirtualAnchor;
   private positioningDirection?: 'ltr' | 'rtl';
