@@ -376,6 +376,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   get source(): LyraXmlViewerSource {
     return resolveViewerSource(this.src, this._xml);
   }
+  /** Intentionally inert -- `source` is always derived live from `src`/`xml`. A getter with no
+   *  setter throws (in strict-mode module code, which every consumer runs) the moment anything
+   *  assigns to it, including a stray `.source=${x}` template binding; this no-op keeps that
+   *  assignment harmless instead of throwing from inside framework internals. */
+  set source(_value: LyraXmlViewerSource) {
+    // Deliberate no-op; see getter doc comment above.
+  }
 
   /** Display name used as the viewer's accessible label. */
   @property() name = '';

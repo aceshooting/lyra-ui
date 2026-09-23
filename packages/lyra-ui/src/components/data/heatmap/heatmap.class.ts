@@ -939,6 +939,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (this.effectiveMode !== 'matrix') return undefined;
     return this.lastPaintedMatrixGeometry;
   }
+  /** Intentionally inert -- `matrixGeometry` always mirrors the last matrix draw's own painted
+   *  geometry. A getter with no setter throws (in strict-mode module code, which every consumer
+   *  runs) the moment anything assigns to it, including a stray `.matrixGeometry=${x}` template
+   *  binding; this no-op keeps that assignment harmless instead of throwing from inside framework
+   *  internals. */
+  set matrixGeometry(_value: Readonly<LyraHeatmapMatrixGeometryChangeDetail> | undefined) {
+    // Deliberate no-op; see getter doc comment above.
+  }
 
   /**
    * Returns a spreadsheet-safe CSV snapshot (`format: 'csv'`) of the underlying matrix/calendar

@@ -277,6 +277,15 @@ describe("lr-pptx-viewer", () => {
     }
   });
 
+  it('does not throw when pageViewerSnapshot is bound as a lit-html property, e.g. `.pageViewerSnapshot=${x}`', async () => {
+    const baseline = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+    const el = (await fixture(
+      html`<lr-pptx-viewer .pageViewerSnapshot=${{ identity: 99, status: 'ready', page: 5, pageCount: 5 }}></lr-pptx-viewer>`,
+    )) as LyraPptxViewer;
+    // The assignment is inert -- pageViewerSnapshot stays live-derived, matching an unbound instance.
+    expect(el.pageViewerSnapshot).to.deep.equal(baseline.pageViewerSnapshot);
+  });
+
   it('contains rejected slide navigation with the localized error state and lr-render-error', async () => {
     const fake = fakeModule();
     const boom = new Error('slide navigation failed');

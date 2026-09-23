@@ -268,6 +268,14 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   get pageViewerSnapshot(): LyraPageViewerSnapshot {
     return this.pageViewerSnapshotValue;
   }
+  /** Intentionally inert -- `pageViewerSnapshot` is always the atomic state the last load/slide
+   *  transaction published. A getter with no setter throws (in strict-mode module code, which
+   *  every consumer runs) the moment anything assigns to it, including a stray
+   *  `.pageViewerSnapshot=${x}` template binding; this no-op keeps that assignment harmless
+   *  instead of throwing from inside framework internals. */
+  set pageViewerSnapshot(_value: LyraPageViewerSnapshot) {
+    // Deliberate no-op; see getter doc comment above.
+  }
 
   protected textContentRoot(): Element | null {
     return this.renderRoot.querySelector('[part="container"]') ?? this.renderRoot.querySelector('[part="base"]');

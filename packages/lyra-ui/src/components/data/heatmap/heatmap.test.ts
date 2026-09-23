@@ -7742,6 +7742,13 @@ describe("matrixGeometry / lr-matrix-geometry-change", () => {
     expect(el.matrixGeometry).to.deep.equal({ padLeft: 60, padTop: 20, cellSize: 22 });
   });
 
+  it('does not throw when matrixGeometry is bound as a lit-html property, e.g. `.matrixGeometry=${x}`', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap .matrixGeometry=${{ padLeft: 999, padTop: 999, cellSize: 999 }}></lr-heatmap>`,
+    )) as LyraHeatmap;
+    expect(el.matrixGeometry).to.deep.equal({ padLeft: 60, padTop: 20, cellSize: 22 });
+  });
+
   it("is undefined in calendar mode", async () => {
     const calendar = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     setCalendarData(calendar, {

@@ -691,6 +691,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   get pageViewerSnapshot(): LyraPageViewerSnapshot {
     return this.pageViewerSnapshotValue;
   }
+  /** Intentionally inert -- `pageViewerSnapshot` is always the atomic state the last load/page
+   *  transaction published. A getter with no setter throws (in strict-mode module code, which
+   *  every consumer runs) the moment anything assigns to it, including a stray
+   *  `.pageViewerSnapshot=${x}` template binding; this no-op keeps that assignment harmless
+   *  instead of throwing from inside framework internals. */
+  set pageViewerSnapshot(_value: LyraPageViewerSnapshot) {
+    // Deliberate no-op; see getter doc comment above.
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)

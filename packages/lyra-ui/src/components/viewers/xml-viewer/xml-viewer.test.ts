@@ -51,6 +51,13 @@ describe('defaults', () => {
     expect(el.copyable).to.be.false;
   });
 
+  it('does not throw when source is bound as a lit-html property, e.g. `.source=${x}`', async () => {
+    const el = (await fixture(
+      html`<lr-xml-viewer src="https://example.test/remote.xml" .source=${{ kind: 'inline', value: 'ignored' }}></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/remote.xml' });
+  });
+
   it('exposes one discriminated source authority as inline content is set and cleared', () => {
     const el = document.createElement('lr-xml-viewer') as LyraXmlViewer;
     el.src = 'https://example.test/remote.xml';

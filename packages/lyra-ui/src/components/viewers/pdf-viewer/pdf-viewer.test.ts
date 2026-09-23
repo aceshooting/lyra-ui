@@ -303,6 +303,15 @@ describe("lr-pdf-viewer", () => {
     }
   });
 
+  it('does not throw when pageViewerSnapshot is bound as a lit-html property, e.g. `.pageViewerSnapshot=${x}`', async () => {
+    const baseline = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const el = (await fixture(
+      html`<lr-pdf-viewer .pageViewerSnapshot=${{ identity: 99, status: 'ready', page: 5, pageCount: 5 }}></lr-pdf-viewer>`,
+    )) as LyraPdfViewer;
+    // The assignment is inert -- pageViewerSnapshot stays live-derived, matching an unbound instance.
+    expect(el.pageViewerSnapshot).to.deep.equal(baseline.pageViewerSnapshot);
+  });
+
   it("exposes the toolbar nav/zoom buttons as individually themeable parts (regression)", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`
