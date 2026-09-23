@@ -2704,6 +2704,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // second update merely by recording the overlay position.
   private resolvedChartArea?: LyraChartArea;
   private chartAreaUpdateQueued = false;
+  private readonly chartAreaPlugin = {
+    id: 'lyra-chart-area',
+    // The peer's onResize callback precedes its layout pass. Observe the completed layout too,
+    // including responsive updates while this element's own drawing is visibility-gated.
+    afterLayout: (chart: RuntimeChart): void => this.updateChartArea(chart),
+  };
   // Tracks the *effective* Chart.js type actually passed to `new Chart()` —
   // i.e. `config.type` post-merge, not `this.type` — since `config.type` (the
   // raw passthrough) can override the generated type in `buildConfig()`. See
@@ -4922,7 +4928,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.discardChart(true);
     this.chart = new this.chartJsModule.Chart(
       this.canvasEl,
-      config as never
+      { ...config, plugins: [...nextPlugins, this.chartAreaPlugin] } as never
     ) as unknown as RuntimeChart;
     this.builtType = effectiveType;
     this.builtPlugins = [...nextPlugins];

@@ -396,6 +396,26 @@ describe('composedAccessibilityText / composedAccessibilityTextResult', () => {
       ).to.equal('Bare label');
     });
 
+    it('projects bare text without reading an unused inherited visibility baseline', async () => {
+      const wrapper = await fixture<HTMLElement>(
+        html`<p style="visibility: hidden">${'Bare label'}</p>`
+      );
+      const original = window.getComputedStyle;
+      let styleReads = 0;
+      window.getComputedStyle = (element, pseudoElement) => {
+        if (element === wrapper) styleReads++;
+        return original.call(window, element, pseudoElement);
+      };
+      try {
+        expect(squashed(composedAccessibilityText(Array.from(wrapper.childNodes), {
+          skipRootAncestorValidation: true,
+        }))).to.equal('Bare label');
+        expect(styleReads).to.equal(0);
+      } finally {
+        window.getComputedStyle = original;
+      }
+    });
+
     it('still honors a descendant visibility:hidden inside a visible container', async () => {
       const el = await fixture<HTMLElement>(
         html`<div><p>Keep <span style="visibility: hidden">Drop</span></p></div>`

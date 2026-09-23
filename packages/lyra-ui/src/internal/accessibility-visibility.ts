@@ -816,7 +816,10 @@ export function composedAccessibilityTextResult(
       resolved.skipRootAncestorValidation === true ||
       resolved.ignoreInheritedVisibility === true;
     context.visibilityBaselineHidden =
-      ignoreInheritedVisibility && inheritedVisibilityHidden(context, root);
+      // Text and comment roots have no descendant visibility to normalize. Reading their
+      // parent's computed style cannot affect their output, but forces style resolution for
+      // every plain label while a large option catalog is being connected.
+      root.nodeType === 1 && ignoreInheritedVisibility && inheritedVisibilityHidden(context, root);
     const ancestorState = context.visibilityBaselineHidden
       ? { available: validated.available, inheritedTextVisible: true }
       : validated;

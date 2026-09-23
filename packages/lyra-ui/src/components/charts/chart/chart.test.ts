@@ -2703,6 +2703,46 @@ it('positions the center slot from chart-area geometry', async () => {
   expect(el.chartArea?.width).to.equal(160);
 });
 
+for (const direction of ['ltr', 'rtl']) {
+  it(`keeps offscreen center content inside a resized allocation in ${direction}`, async () => {
+    const scroller = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="width:600px;height:180px;overflow:auto">
+        <lr-doughnut-chart aria-label="Category totals" style="--lr-chart-height:120px"
+          .labels=${['One', 'Two']} .datasets=${[{ data: [1, 2] }]}>
+          <span slot="center">Total 12345</span>
+        </lr-doughnut-chart>
+        <div style="height:800px"></div>
+      </div>
+    `);
+    const chart = scroller.querySelector('lr-doughnut-chart') as LyraChart;
+    await waitUntil(() => Boolean(chart.chartArea), 'the initial chart layout must complete');
+    let offscreen = false;
+    const observer = new IntersectionObserver(([entry]) => {
+      offscreen = Boolean(entry && !entry.isIntersecting);
+    });
+    observer.observe(chart);
+    try {
+      scroller.scrollTop = 500;
+      await waitUntil(() => offscreen, 'the chart must leave the visible scroll area');
+    } finally {
+      observer.disconnect();
+    }
+    scroller.style.width = '240px';
+    await waitUntil(() => (chart.chart?.chartArea?.width ?? Infinity) < 300,
+      'the peer must finish its responsive layout');
+    await waitUntil(() => chart.chartArea?.width === chart.chart?.chartArea?.width,
+      'public geometry must follow the completed offscreen layout');
+    await chart.updateComplete;
+    expect(scroller.scrollWidth).to.be.at.most(scroller.clientWidth + 1);
+    const center = chart.shadowRoot!.querySelector<HTMLElement>('[part="center"]')!;
+    const plot = chart.shadowRoot!.querySelector<HTMLElement>('[part="plot"]')!;
+    const centerBox = center.getBoundingClientRect();
+    const plotBox = plot.getBoundingClientRect();
+    expect(centerBox.left).to.be.at.least(plotBox.left);
+    expect(centerBox.right).to.be.at.most(plotBox.right);
+  });
+}
+
 it('degrades a .chartArea=${x} Lit binding to a silent no-op instead of throwing', async () => {
   const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   const before = el.chartArea;

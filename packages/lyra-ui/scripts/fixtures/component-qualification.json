@@ -7238,21 +7238,21 @@
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6510,
+              "line": 6550,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6510,
+              "line": 6550,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6991,
+              "line": 7031,
               "test": "fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides",
               "target": "el",
               "state": "populated"
