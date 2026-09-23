@@ -10,24 +10,24 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 8351628,
+    "reviewedMeasurementBytes": 8473147,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928,
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
-      "approvedOn": "2026-09-18",
-      "reason": "Re-measured ON the 18.2.0 release commit, per this file's own rule that a pre-bump measurement always under-counts: `changeset version` writes the release's CHANGELOG section (a shipped file) and the new version and release history in package-metadata.ts. The prior ceiling of 8,349,035 was set on the 18.0.0 release commit; 18.2.0 measured 8,351,628, over by 2,593 bytes (0.03%). The growth is lr-map's legendControlRole (the property, its checkbox render branch, stories and the regenerated manifest/editor-data/llms surfaces) plus the --lr-icon-button-size-scope precedence fix and its regression test. Drift headroom is unchanged at 34,000 packed bytes (0.41%); unpacked and fileCount both stayed within their existing reviewed ceilings and are not re-baselined here.",
-      "approvedMaximumPackedBytes": 8385628
+      "approvedOn": "2026-09-23",
+      "reason": "Re-measured for the 20.0.0 major on a release-shaped tree (changeset version applied, so the shipped CHANGELOG section and package metadata are included), per this file's rule that a pre-bump measurement under-counts. The prior ceiling of 8385628 was set on the 18.2.0 release commit; 20.0.0 measures 8473147 packed and 34396551 unpacked bytes. The growth is the release's full-library remediation (closed popups removed from layout, render caps with localized notices in twelve catalogs, the lr-diff-view search surface, readonly/loading/appearance additions, event renames with deprecated aliases) plus the regenerated manifest, editor data and llms references that describe it, and the 20.0.0 CHANGELOG section. Drift headroom is unchanged at 34000 packed and 140000 unpacked bytes; fileCount stays within its reviewed ceiling.",
+      "approvedMaximumPackedBytes": 8507147
     }
   },
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 33935107,
+    "reviewedMeasurementBytes": 34396551,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563,
-    "reviewedOn": "2026-09-18"
+    "reviewedOn": "2026-09-23"
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
@@ -38,8 +38,8 @@
     "entrypointHeadroom": 480
   },
   "maximum": {
-    "packedBytes": 8385628,
-    "unpackedBytes": 34075107,
+    "packedBytes": 8507147,
+    "unpackedBytes": 34536551,
     "fileCount": 3556
   }
 }
