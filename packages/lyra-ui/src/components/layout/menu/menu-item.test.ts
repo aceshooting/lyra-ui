@@ -2180,6 +2180,63 @@ describe('lr-menu-item name stability inside a hidden container', () => {
       el.querySelector<LyraMenuItem>('#decorated')!.getAttribute('aria-label')
     ).to.equal('Alpha');
   });
+
+  it('still excludes a genuinely display:none ancestor from the name', async () => {
+    // A closed lr-menu submenu surface collapses to display: none the same way this wrapper
+    // does (see the settled-closed regression below) -- so this stays a regression the other
+    // direction: an author's own display:none ancestor is not one of Lyra's own closed-popup
+    // markers and must keep suppressing the name, exactly like the visibility:hidden case above.
+    const el = await fixture<HTMLElement>(html`
+      <div style="display: none" role="menu" aria-label="Actions">
+        <lr-menu-item id="wrapped"><span>Beta</span></lr-menu-item>
+      </div>
+    `);
+    await frames();
+
+    expect(
+      el.querySelector<LyraMenuItem>('#wrapped')!.getAttribute('aria-label')
+    ).to.equal(null);
+  });
+
+  it('names an element-wrapped row inside a settled-closed lr-menu submenu', async () => {
+    // Regression: the closed-popup layout fix settles `<lr-menu>`'s private `.submenu-surface`
+    // to `display: none` once fully closed (menu.styles.ts's `.submenu-surface[hidden]` rule).
+    // Unlike `visibility: hidden` above, `display: none` also fails every descendant's native
+    // `checkVisibility()` -- the render check `readSlottedLabel()` applies on every recompute
+    // after the first -- so an element-wrapped label (a bare text label is unaffected; only an
+    // element-wrapped one crosses that check) went from a real name to `null` the moment the
+    // submenu actually settled closed, even though the row's own name does not depend on
+    // whether its parent's submenu happens to be open right now.
+    const el = await fixture<HTMLElement>(html`
+      <lr-menu>
+        <lr-menu-item id="parent">
+          Parent
+          <lr-menu slot="submenu" id="submenu" style="--lr-transition-fast: 0s">
+            <lr-menu-item id="child"><span id="child-label">Child</span></lr-menu-item>
+          </lr-menu>
+        </lr-menu-item>
+      </lr-menu>
+    `);
+    await frames();
+    const parent = el.querySelector<LyraMenuItem>('#parent')!;
+    const submenu = el.querySelector<LyraMenu>('#submenu')!;
+    const surface = submenu.shadowRoot!.querySelector('.submenu-surface') as HTMLElement;
+    const child = el.querySelector<LyraMenuItem>('#child')!;
+
+    await parent.openSubmenu('none');
+    await waitUntil(() => surface.style.left !== '', 'submenu was never positioned');
+    await parent.closeSubmenu();
+    await waitUntil(() => surface.hidden, 'submenu surface never settled closed');
+    await frames();
+
+    expect(child.getAttribute('aria-label')).to.equal('Child');
+
+    // A later mutation re-triggers the same computation while still settled closed -- proving
+    // the fix holds beyond the one sample taken right after closing, not just at that instant.
+    el.querySelector<HTMLElement>('#child-label')!.textContent = 'Renamed';
+    await frames();
+    expect(child.getAttribute('aria-label')).to.equal('Renamed');
+  });
 });
 
 /**

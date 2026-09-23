@@ -229,8 +229,15 @@ interface AccessibilityTextContext {
   ancestorBoundary: Element | null;
   elementStates: Map<Element, AccessibilityElementState>;
   excludedElements: Map<Element, boolean>;
+  /** Cached verdict for {@link isAncestorBoundaryExternallyUnrendered}. Lazily computed since it
+   *  costs a native `checkVisibility()` call and does not vary per descendant node. */
+  externallyUnrenderedBoundary?: boolean;
   isSubtreeExcluded?: (element: Element) => boolean;
   imageMapImages: Map<Element, HTMLImageElement | null>;
+  /** Whether ancestor-inherited state outside the walk must not suppress the content being named.
+   *  Mirrors the resolved `ignoreInheritedVisibility`/`skipRootAncestorValidation` option; read by
+   *  the bounded external-render check below, which only bypasses `requireRendered` under this. */
+  ignoreInheritedVisibility: boolean;
   labelReferenceRoots: Set<Document | ShadowRoot>;
   maxCharacters: number;
   maxDepth: number;
@@ -565,6 +572,65 @@ function labelledByElements(
   return { authoritative: false, elements: [] };
 }
 
+/** Matches every settled-closed-collapse marker Lyra's own overlay/menu surfaces use: the public
+ *  `[part~="popup"]` popover/tooltip/dropdown/popup panel, and `<lr-menu>`'s private
+ *  `.submenu-surface` (menu.class.ts/menu.styles.ts), which is the same "own floating surface"
+ *  concept but deliberately carries no public part of its own. Both pair with `[hidden]` to
+ *  `display: none` once their exit transition has fully settled. */
+const OWNED_CLOSED_POPUP_SELECTOR = '[part~="popup"], .submenu-surface';
+
+/**
+ * Whether some composed ancestor above `node` is one of Lyra's own settled-closed overlay popups
+ * -- see {@link OWNED_CLOSED_POPUP_SELECTOR}. Scoping to those precise markers means an author's
+ * own `hidden`/`display: none` ancestor is never treated as "just" a collapsed popup: only the
+ * framework's own closed-panel optimization is. Unbounded, like the ancestor walks
+ * `bindAccessibleTextObserver` already performs: the owning popup can sit arbitrarily many
+ * composed ancestors above a light-DOM item projected several components up (e.g. a dropdown item
+ * relative to its owning `<lr-dropdown>`'s shadow-DOM popup, or a nested `<lr-menu-item>` relative
+ * to its owning `<lr-menu>`'s private submenu surface).
+ */
+function hasOwnedClosedPopupAncestor(node: Element): boolean {
+  let current = composedParentElement(node);
+  while (current) {
+    if ((current as HTMLElement).hidden && current.matches(OWNED_CLOSED_POPUP_SELECTOR)) return true;
+    current = composedParentElement(current);
+  }
+  return false;
+}
+
+/**
+ * Whether `context.ancestorBoundary` (when set) is itself unrendered purely because it sits
+ * inside one of Lyra's own settled-closed overlay popups. `checkVisibility()` walks the *whole*
+ * real ancestor chain with no boundary concept of its own, so it fails for every descendant of a
+ * closed popup even once the bounded ancestor walk above has already proven nothing WITHIN the
+ * boundary excludes the content. Requiring {@link hasOwnedClosedPopupAncestor} (rather than
+ * trusting any unexplained `checkVisibility()` failure) keeps a genuine author `hidden`/
+ * `display: none` ancestor fully exclusionary -- only the framework's own closed-panel
+ * optimization is bypassed. Also requires the boundary to pass its own local exclusion check (own
+ * `hidden`/`inert`/`aria-hidden`/`display: none`/`content-visibility: hidden`); a boundary that
+ * fails on its own merits is not "externally" unrendered. Cached on the context because it does
+ * not vary per descendant node.
+ */
+function isAncestorBoundaryExternallyUnrendered(context: AccessibilityTextContext): boolean {
+  if (context.externallyUnrenderedBoundary !== undefined) return context.externallyUnrenderedBoundary;
+  const boundary = context.ancestorBoundary;
+  let result = false;
+  if (boundary && !cachedSubtreeExcluded(context, boundary)) {
+    const candidate = boundary as Element & {
+      checkVisibility?: (options?: { contentVisibilityAuto?: boolean }) => boolean;
+    };
+    if (typeof candidate.checkVisibility === 'function') {
+      try {
+        result = !candidate.checkVisibility({ contentVisibilityAuto: true }) && hasOwnedClosedPopupAncestor(boundary);
+      } catch {
+        result = false;
+      }
+    }
+  }
+  context.externallyUnrenderedBoundary = result;
+  return result;
+}
+
 function isRenderedAccessibilityBranch(
   context: AccessibilityTextContext,
   element: Element,
@@ -584,7 +650,13 @@ function isRenderedAccessibilityBranch(
   };
   if (typeof candidate.checkVisibility !== 'function') return true;
   try {
-    return candidate.checkVisibility({ contentVisibilityAuto: true });
+    if (candidate.checkVisibility({ contentVisibilityAuto: true })) return true;
+    // A row's name comes from its own content, not from whether an outer overlay happens to be
+    // open right now (the same contract `ignoreInheritedVisibility` already states for
+    // `visibility: hidden`). Extend it to a closed popup's `display: none`: a native check that
+    // fails only because of the boundary's own external ancestry is not a locally unrendered
+    // branch.
+    return context.ignoreInheritedVisibility && isAncestorBoundaryExternallyUnrendered(context);
   } catch {
     return false;
   }
@@ -766,6 +838,9 @@ export function composedAccessibilityTextResult(
     excludedElements: new Map<Element, boolean>(),
     imageMapImages: new Map<Element, HTMLImageElement | null>(),
     isSubtreeExcluded: resolved.isSubtreeExcluded,
+    // Skipping ancestor validation outright cannot honor ancestor-inherited visibility either.
+    ignoreInheritedVisibility:
+      resolved.skipRootAncestorValidation === true || resolved.ignoreInheritedVisibility === true,
     labelReferenceRoots: new Set<Document | ShadowRoot>(),
     maxCharacters: resolved.maxCharacters,
     maxDepth: resolved.maxDepth,
@@ -811,16 +886,12 @@ export function composedAccessibilityTextResult(
     const validated = resolved.skipRootAncestorValidation
       ? { available: true, inheritedTextVisible: true }
       : composedAncestorState(context, root);
-    // Skipping ancestor validation outright cannot honor ancestor-inherited visibility either.
-    const ignoreInheritedVisibility =
-      resolved.skipRootAncestorValidation === true ||
-      resolved.ignoreInheritedVisibility === true;
     context.visibilityBaselineHidden =
       // With ancestor validation skipped, text and comment roots already start visible and
       // have no descendant visibility to normalize. Otherwise a text root can inherit a
       // hidden state from validation and still needs that state normalized for stable names.
       (root.nodeType === 1 || !resolved.skipRootAncestorValidation) &&
-      ignoreInheritedVisibility && inheritedVisibilityHidden(context, root);
+      context.ignoreInheritedVisibility && inheritedVisibilityHidden(context, root);
     const ancestorState = context.visibilityBaselineHidden
       ? { available: validated.available, inheritedTextVisible: true }
       : validated;
