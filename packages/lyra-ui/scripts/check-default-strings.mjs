@@ -17,7 +17,12 @@ import { parseSync } from 'oxc-parser';
 // it consistent with `<lr-thinking-panel>` and `<lr-tool-result-dialog>`, which already localize the
 // same way -- but that helper picks its key by magnitude (ms/s/m/h) at runtime, so the call site
 // cannot take a literal shape. One unavoidable runtime key traded for one real localization bug.
-const UNRESOLVED_CEILING = 28;
+// Raised 28 -> 29: `<lr-diff-view>` gained the viewer-family `search()`/`searchNext()`/
+// `searchPrevious()`/`clearSearch()` surface, and its `lr-search-change` announcements route
+// through the shared `internal/viewer-search.ts#announceSearchResult()` helper exactly like
+// `<lr-ebook-viewer>`'s existing occurrence -- that helper takes a `localize` callback parameter,
+// so its call site's key argument is a forwarded parameter, not a literal, by construction.
+const UNRESOLVED_CEILING = 29;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
 const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));

@@ -62,6 +62,29 @@ export const SplitNarrow: Story = {
     </div>`,
 };
 
+export const Highlights: Story = {
+  name: 'Host-supplied highlights and search',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A `line-range` `highlights` entry addresses the 0-based index into the rendered diff\'s own op sequence, not an old/new source line number. The covered line tints by `tone` and gains a focusable `line-highlight-action` button; `activeHighlightId` outlines it. Call `search()`/`searchNext()`/`searchPrevious()`/`scrollToAnchor()` on the element to try the shared viewer-family navigation surface -- both auto-expand any `contextLines` fold hiding the target.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-diff-view
+      .oldText=${oldText}
+      .newText=${newText}
+      active-highlight-id="trimmed"
+      .highlights=${[{ id: 'trimmed', anchor: { kind: 'line-range', start: 1 }, tone: 'success', label: 'Trimmed input' }]}
+      style="max-width: 32rem;"
+      @lr-highlight-activate=${(event: CustomEvent) => console.info('Highlight activated', event.detail)}
+      @lr-search-change=${(event: CustomEvent) => console.info('Search state', event.detail)}
+    ></lr-diff-view>
+  `,
+};
+
 export const EmptyDocument: Story = {
   name: 'Empty document against one added line',
   parameters: {

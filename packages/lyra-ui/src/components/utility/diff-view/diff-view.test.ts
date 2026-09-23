@@ -1838,3 +1838,230 @@ describe('maxHeight', () => {
     expect(base.getBoundingClientRect().height).to.be.lessThan(unclamped);
   });
 });
+
+/** Shrinks `DocumentAnchorTarget`'s retry loop so a permanently-unresolvable `scrollToAnchor()`
+ *  call resolves in milliseconds instead of waiting out the real 5s default timeout. */
+function shrinkAnchorRetry(el: LyraDiffView): void {
+  (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+  (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+}
+
+describe('search and scrollToAnchor', () => {
+  const oldText = ['a', 'b', 'c', 'd', 'e'].join('\n');
+  const newText = ['a', 'b', 'X', 'd', 'e'].join('\n');
+
+  it('exposes the viewer-family search/scrollToAnchor surface as functions', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(typeof el.search).to.equal('function');
+    expect(typeof el.searchNext).to.equal('function');
+    expect(typeof el.searchPrevious).to.equal('function');
+    expect(typeof el.clearSearch).to.equal('function');
+    expect(typeof el.scrollToAnchor).to.equal('function');
+    expect(el.anchorKinds).to.deep.equal(['line-range']);
+  });
+
+  it('search() resolves a match count and reports query/matchCount/matchCountExact/activeIndex', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const listener = oneEvent(el, 'lr-search-change');
+    const count = await el.search('e');
+    expect(count).to.equal(1);
+    const event = await listener;
+    expect(event.detail).to.deep.equal({
+      query: 'e',
+      matchCount: 1,
+      matchCountExact: true,
+      activeIndex: 0,
+    });
+  });
+
+  it('an empty/whitespace query behaves like clearSearch and resolves 0', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    await el.search('e');
+    expect(await el.search('   ')).to.equal(0);
+  });
+
+  it('searchNext()/searchPrevious() wrap around the match list and resolve false with no matches', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nb'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(await el.searchNext()).to.equal(false);
+    expect(await el.searchPrevious()).to.equal(false);
+
+    await el.search('a');
+    // 'a' matches only the first line -- one match, so next/previous both stay put but still
+    // report movement (matching the shared contract: `true` unless there are zero matches).
+    expect(await el.searchNext()).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[data-active-match]')!.textContent!.trim()).to.equal('a');
+    expect(await el.searchPrevious()).to.equal(true);
+  });
+
+  it('clearSearch() clears matches/query and emits a zero-count lr-search-change', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    await el.search('e');
+    const listener = oneEvent(el, 'lr-search-change');
+    el.clearSearch();
+    const event = await listener;
+    expect(event.detail).to.deep.equal({
+      query: '',
+      matchCount: 0,
+      matchCountExact: true,
+      activeIndex: -1,
+    });
+    expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
+  });
+
+  it('resets search state and emits one lr-search-change when the compared text changes', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    await el.search('e');
+    let deliveries = 0;
+    el.addEventListener('lr-search-change', () => deliveries++);
+    el.newText = 'completely different';
+    await el.updateComplete;
+    expect(deliveries).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
+  });
+
+  it('scrolls to a line-range anchor addressing the 0-based rendered op index', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const target = el.shadowRoot!.querySelector('[data-op-index="4"]') as HTMLElement;
+    let scrolled = false;
+    target.scrollIntoView = (() => {
+      scrolled = true;
+    }) as HTMLElement['scrollIntoView'];
+    const listener = oneEvent(el, 'lr-anchor-result');
+    const found = await el.scrollToAnchor({ kind: 'line-range', start: 4 });
+    expect(found).to.equal(true);
+    expect(scrolled).to.equal(true);
+    expect((await listener).detail).to.deep.equal({ found: true });
+  });
+
+  it('reports a definite not-found result for an out-of-range line-range anchor', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    shrinkAnchorRetry(el);
+    const listener = oneEvent(el, 'lr-anchor-result');
+    expect(await el.scrollToAnchor({ kind: 'line-range', start: 999 })).to.equal(false);
+    expect((await listener).detail).to.deep.equal({ found: false });
+  });
+
+  it('auto-expands a contextLines fold hiding the scrollToAnchor target instead of leaving it stranded', async () => {
+    const bigOld = ['a', ...Array.from({ length: 40 }, (_, i) => `same-${i}`), 'z'].join('\n');
+    const bigNew = ['A', ...Array.from({ length: 40 }, (_, i) => `same-${i}`), 'Z'].join('\n');
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${bigOld} .newText=${bigNew} .contextLines=${2}></lr-diff-view>`,
+    )) as LyraDiffView;
+    // A middle op index that is folded away behind the marker by default.
+    const hiddenIndex = 20;
+    expect(el.shadowRoot!.querySelector(`[data-op-index="${hiddenIndex}"]`)).to.equal(null);
+
+    const found = await el.scrollToAnchor({ kind: 'line-range', start: hiddenIndex });
+    expect(found).to.equal(true);
+    expect(el.shadowRoot!.querySelector(`[data-op-index="${hiddenIndex}"]`)).to.exist;
+  });
+
+  it('auto-expands a contextLines fold hiding an active search match while navigating', async () => {
+    const bigOld = ['a', ...Array.from({ length: 40 }, (_, i) => `same-${i}`), 'z'].join('\n');
+    const bigNew = ['A', ...Array.from({ length: 40 }, (_, i) => `same-${i}`), 'Z'].join('\n');
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${bigOld} .newText=${bigNew} .contextLines=${2}></lr-diff-view>`,
+    )) as LyraDiffView;
+    await el.search('same-20');
+    expect(el.shadowRoot!.querySelector('[data-active-match]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[data-active-match]')!.textContent!.trim()).to.equal(
+      'same-20',
+    );
+  });
+});
+
+describe('highlights', () => {
+  const oldText = ['a', 'b', 'c'].join('\n');
+  const newText = ['a', 'b', 'c'].join('\n');
+
+  it('leaves rendering unaffected when highlights/activeHighlightId are left unset', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(el.highlights).to.deep.equal([]);
+    expect(el.activeHighlightId).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[part="line-highlight-action"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[data-highlight]').length).to.equal(0);
+  });
+
+  it('is accessible with a highlighted, active, and search-matched line', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 1 }, tone: 'warning' }];
+    el.activeHighlightId = 'h1';
+    await el.search('c');
+    await expect(el).to.be.accessible();
+  });
+
+  it('paints a line-range highlight with data-highlight and emits lr-highlight-activate on click', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    el.highlights = [
+      { id: 'h1', anchor: { kind: 'line-range', start: 1 }, tone: 'warning' },
+    ];
+    await el.updateComplete;
+    const line = el.shadowRoot!.querySelector('[data-op-index="1"]') as HTMLElement;
+    expect(line.getAttribute('data-highlight')).to.equal('warning');
+    const action = line.querySelector('[part="line-highlight-action"]') as HTMLButtonElement;
+    expect(action).to.exist;
+    const listener = oneEvent(el, 'lr-highlight-activate');
+    action.click();
+    const event = (await listener) as CustomEvent<{ highlightId: string }>;
+    expect(event.detail.highlightId).to.equal('h1');
+  });
+
+  it('paints every op a multi-line highlight range covers, with the action button on the first', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    el.highlights = [
+      { id: 'h1', anchor: { kind: 'line-range', start: 0, end: 2 }, tone: 'danger' },
+    ];
+    await el.updateComplete;
+    const highlighted = [
+      ...el.shadowRoot!.querySelectorAll('[data-highlight="danger"]'),
+    ];
+    expect(highlighted.length).to.equal(3);
+    const actions = el.shadowRoot!.querySelectorAll('[part="line-highlight-action"]');
+    expect(actions.length).to.equal(1);
+  });
+
+  it('marks the highlight matching activeHighlightId with data-active-highlight', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 1 } }];
+    el.activeHighlightId = 'h1';
+    await el.updateComplete;
+    const line = el.shadowRoot!.querySelector('[data-op-index="1"]') as HTMLElement;
+    expect(line.hasAttribute('data-active-highlight')).to.equal(true);
+  });
+
+  it('drops a highlight whose anchor is missing or the wrong kind without losing the diff', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraDiffView['highlights'];
+    await el.updateComplete;
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(3);
+  });
+});

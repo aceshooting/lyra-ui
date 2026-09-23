@@ -92,6 +92,65 @@ export const styles = css`
     );
     text-align: center;
   }
+  /* --lr-diff-view-match-color, not the bare --lr-color-warning, so a consumer can retint a
+     non-active search match without touching every warning-toned surface on the page reading that
+     shared token -- as --lr-diff-view-active-match-color does below for the active match. */
+  [part="line"][data-match] {
+    outline: var(--lr-border-width-thin) dashed var(--lr-diff-view-match-color, var(--lr-color-warning));
+  }
+  [part="line"][data-active-match] {
+    outline: var(--lr-border-width-medium) solid var(--lr-diff-view-active-match-color, var(--lr-color-warning));
+  }
+  /* Host-supplied highlights. Placed after the data-type add/remove rules above so an equal-specificity
+     background tie resolves in the highlight's favor -- a highlighted added/removed line reads as
+     highlighted, not as its change-state color. Each tone resolves into one private carrier so the
+     row tint and the action button read from a single base, on the same quiet fill tokens used
+     elsewhere in this family. Neutral takes --lr-color-surface-raised, not --lr-color-surface:
+     tinting a row with the viewer's own background would render it unhighlighted. */
+  [part="line"][data-highlight] {
+    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-accent-background, var(--lr-color-brand-quiet));
+    background: var(--_lr-diff-view-highlight-background);
+  }
+  [part="line"][data-highlight="success"] {
+    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-success-background, var(--lr-color-success-quiet));
+  }
+  [part="line"][data-highlight="warning"] {
+    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-warning-background, var(--lr-color-warning-quiet));
+  }
+  [part="line"][data-highlight="danger"] {
+    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-danger-background, var(--lr-color-danger-quiet));
+  }
+  [part="line"][data-highlight="neutral"] {
+    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-neutral-background, var(--lr-color-surface-raised));
+  }
+  [part="line"][data-active-highlight] {
+    outline: var(--lr-border-width-medium) solid var(--lr-diff-view-highlight-active-outline, var(--lr-color-brand));
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part="line-highlight-action"] {
+    display: inline-block;
+    margin-inline-start: var(--lr-space-xs);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--lr-font-size-xs);
+    padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+  }
+  [part="line-highlight-action"]:hover {
+    background: var(--_lr-diff-view-highlight-background);
+  }
+  [part="line-highlight-action"]:active {
+    background: color-mix(in oklab, var(--_lr-diff-view-highlight-background), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part="line-highlight-action"]:focus-visible {
+    outline: var(--lr-focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part="copy-button"] {
     position: absolute;
     inset-block-start: var(--lr-space-xs);
