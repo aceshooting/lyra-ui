@@ -1,5 +1,158 @@
 # Changelog
 
+## 20.0.0
+
+### Major Changes
+
+- bb88896: `lr-branch-picker`, `lr-chat-viewport`, `lr-realtime-session`, `lr-selection-toolbar`,
+  `lr-message-actions`, `lr-prompt-queue`, `lr-prompt-input`, `lr-audio-visualizer`, and `lr-map` now
+  declare `label` as `label?: string` instead of `label: string = ''`, matching the copy-override
+  contract already used by `lr-transcript-feed`, `lr-thread-list`, `lr-suggestion-chips`,
+  `lr-agent-workspace`, and `lr-file-input`. Rendered/attribute behavior is unchanged: an omitted
+  `label` still renders the localized default, and `label=""` still suppresses it. Only the read
+  type and readback value of the unset property change.
+  
+  MIGRATION: a TypeScript consumer that reads `el.label` and calls a `String` method on the result
+  without a guard needs a null check. Before:
+  ```ts
+  const trimmed = el.label.trim();
+  ```
+  After:
+  ```ts
+  const trimmed = (el.label ?? '').trim();
+  ```
+  No migration is needed for anyone who only sets `label`, interpolates it, or relies on the
+  `label=""`-suppresses-the-default behavior, which is unchanged on all nine tags.
+  
+  Additionally, `lr-map`'s read-only `legendProjection` accessor now has a documented no-op setter
+  (matching `lr-chart`'s `chartArea`), so an accidental `.legendProjection=${x}` Lit template binding
+  degrades silently instead of throwing from inside lit-html's property-commit machinery. No
+  migration needed for this part of the change.
+- db1294b: `lr-combobox` and `lr-date-input` now support the full shared `LyraAppearance` vocabulary
+  (`accent`/`filled`/`outlined`/`filled-outlined`/`plain`) on their `appearance` property, matching
+  `<lr-select>`'s trigger. `accent` paints the loud brand fill with on-brand text, and `plain` drops
+  both the fill and the border; previously both values parsed and reflected but silently rendered
+  identically to `outlined`, with no warning. A genuinely unsupported value (a typo, or any other
+  string outside the five-member set) still clamps to the documented `'outlined'` default and the
+  reflected attribute is still repaired.
+  
+  MIGRATION: A TypeScript consumer with an exhaustive `switch`/`assertNever` over
+  `lr-combobox`'s or `lr-date-input`'s previously 3-member `appearance` type must add `'accent'`
+  and `'plain'` cases (or a `default` branch). No HTML/attribute migration is needed:
+  `appearance="accent"` and `appearance="plain"` were previously accepted syntactically and
+  silently downgraded to `outlined`; they now render as designed instead of being a documented
+  no-op.
+  
+  Before:
+  ```html
+  <!-- silently rendered identically to appearance="outlined" -->
+  <lr-combobox appearance="accent">…</lr-combobox>
+  <lr-date-input appearance="plain"></lr-date-input>
+  ```
+  
+  After:
+  ```html
+  <!-- renders the loud brand-filled / chromeless treatment, matching lr-select -->
+  <lr-combobox appearance="accent">…</lr-combobox>
+  <lr-date-input appearance="plain"></lr-date-input>
+  ```
+- 81ec7d1: `lr-video-playlist`'s `lr-video-change` event now fires when the playlist goes from an active video to none (the last enabled video removed or made inert), with `detail.video` set to `null` and `detail.currentIndex` set to `-1`. `LyraVideoPlaylistChangeDetail.video`'s type widens from `LyraVideoPlaylistVideo` to `LyraVideoPlaylistVideo | null` to carry this. Every other `lr-video-change` emission is unchanged. Migration: add a null check before reading `detail.video.title`/`.poster`/`.sources`/`.tracks` in an `lr-video-change` listener, e.g. `if (event.detail.video === null) { /* playlist emptied */ }`.
+  
+  `lr-tour` no longer accepts a step object's undocumented, pre-rename `id` field as a fallback for `stepId`. A step supplying only `id` (no `stepId`) is now dropped like any other malformed step, instead of silently being accepted. Migration: rename any tour step's `id` field to `stepId` (`const steps = oldSteps.map(({ id, ...rest }) => ({ stepId: id, ...rest }))`).
+- b7c56bc: `lr-command-palette` now fires `lr-show` (not `lr-open`) as its cancelable pre-open event, matching the `lr-show`/`lr-hide` overlay-lifecycle vocabulary used by `lr-dialog`, `lr-lightbox`, and the rest of the library — `lr-open` collided in name with the unrelated "item activated" `lr-open` fired by `lr-document-library`/`lr-source-card`. `lr-close` is unchanged. `lr-open` keeps firing as a deprecated alias (identical `detail: null`, cancelability, and timing, dispatched at the same call site; either event can veto the open) through the 20.x line and is removed no earlier than 21.0.0.
+  
+  MIGRATION: `el.addEventListener('lr-open', handler)` -> `el.addEventListener('lr-show', handler)` (same handler signature, same cancelability and timing). No action needed for `lr-close` listeners, and no action needed at all until the `lr-open` alias is removed in 21.0.0.
+- dec3a2a: `lr-xml-viewer`'s `source`, `lr-pdf-viewer`'s and `lr-pptx-viewer`'s `pageViewerSnapshot`, and `lr-heatmap`'s `matrixGeometry` now accept a documented no-op setter, matching `lr-chart.chartArea` and `lr-notebook-viewer.source`: a lit-html property binding (`.source=${x}`, `.pageViewerSnapshot=${x}`, `.matrixGeometry=${x}`) on these read-only, derived properties no longer throws from inside lit-html's property-commit machinery. The getter's value and type are unchanged. Migration: no consumer action required; a template that was avoiding these bindings defensively may use them, and the assignment remains a silent no-op.
+- 22c7b90: `lr-chart`, `lr-box-plot`, `lr-graph-legend`, and `lr-graph-query-builder`'s seven `lr-before-*` cancelable veto events are renamed to the library's dominant `*-request` convention, matching the ~17 other components that already use it. Every settled event name, detail shape, and cancelability is unchanged, and each old `lr-before-*` name keeps firing (deprecated, removal not before 21.0.0) with the same detail immediately alongside its new counterpart, so either name may veto the action.
+  
+  MIGRATION:
+  - `lr-before-legend-visibility-change` (`lr-chart`, `lr-box-plot`) -> `lr-legend-visibility-change-request`
+  - `lr-before-datum-visibility-change` (`lr-chart`) -> `lr-datum-visibility-change-request`
+  - `lr-before-visibility-change` (`lr-graph-legend`) -> `lr-visibility-change-request`
+  - `lr-before-query-run` (`lr-graph-query-builder`) -> `lr-query-run-request`
+  - `lr-before-query-save` (`lr-graph-query-builder`) -> `lr-query-save-request`
+  - `lr-before-query-load` (`lr-graph-query-builder`) -> `lr-query-load-request`
+  - `lr-before-query-delete` (`lr-graph-query-builder`) -> `lr-query-delete-request`
+  
+  Existing listeners on the old names keep working unchanged until the alias is removed; rename at your convenience to adopt the canonical spelling.
+- f39e2ff: `lr-checkbox` and `lr-switch`'s `input`/`change`/`lr-input`/`lr-change`/`lr-checkbox-toggle-request`/`lr-switch-toggle-request` events now carry `detail: { checked: boolean, value: string }`, matching `lr-radio`'s shape (previously `{ checked: boolean }` only). MIGRATION: no consumer code needs to change unless it relied on the detail object having exactly one key (for example a strict `deep.equal({ checked: true })` assertion) — before: `{ checked: true }`; after: `{ checked: true, value: 'on' }` (or the control's current `.value`). New code may read `event.detail.value` instead of `event.target.value`.
+- 493465e: `lr-combobox` and `lr-otp-input` now declare `appearance` as a validating accessor: any value outside the documented set (including a raw attribute) is normalized to the `'outlined'` default and the reflected attribute is repaired, instead of silently rendering unstyled. Migration: TypeScript subclasses that redeclared `appearance` as a field must override the accessor (`get`/`set`) instead; reads and writes from consumer code are unchanged.
+
+### Minor Changes
+
+- 2f98d62: `<lr-embedding-explorer>` now caps `points` rendering at 1,000 points and `<lr-mind-map>` now caps its currently-visible topic count at 500 nodes, each keeping a deterministic, distribution-preserving sample of the full input (spread across the whole array/tree rather than a leading run) instead of rendering every item, with a localized "showing N of M" notice exposed as the new `limit` CSS part.
+- 79090a0: Treat an explicitly blank (or whitespace-only) label as absent instead of rendering an unnamed, still-interactive control: lr-locale-picker option rows and lr-data-grid column headers now fall back the same way an omitted label already does, and lr-table column headers gain an optional per-column `ariaLabel` so a blank visible header still gets an accessible name (falling back to the column key when neither is set).
+- 9990701: `lr-combobox` and `lr-otp-input` now clamp an unsupported `appearance` value to their documented default instead of silently reflecting it unstyled. `lr-combobox` gains a public `loading` property, mirroring `lr-select`'s, so a committed value can show a loading placeholder instead of the "not in catalog" badge while its `<lr-option>` catalog is still mounting asynchronously with no `source` involved, and a new `readonly` property that locks the committed value (still focusable, still submitted with the form) while blocking the popup and all typed or picked edits. In `lr-combobox` `multiple` mode, removing one tag for a duplicate-valued selection (including via Backspace) now removes only that occurrence instead of every occurrence sharing the same value. `lr-otp-input`'s horizontally-scrolling segment row now shows a measured edge fade once it actually overflows, matching `lr-tab-group`/`lr-segmented`/`lr-stepper`.
+- 845da8e: `lr-avatar-group`'s overflow badge action surface is now a floor, not a cap: at the default size
+  and at `size="l"`/`"xl"` the "+N" hit area grows to fully contain its own avatar-sized painted
+  disc instead of clipping it, while still keeping its `--lr-icon-button-size` minimum at every
+  tier. `lr-avatar` and `lr-avatar-group` also gain `--lr-avatar-radius` and
+  `--lr-avatar-group-radius` custom properties, so the corner radius is retunable without a
+  `::part()` rule, defaulting to today's exact per-`shape` rendering.
+- aea7b2c: `lr-diff-view` gains the viewer-family search/highlight surface shared with `lr-csv-viewer` and `lr-xml-viewer`: `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, `scrollToAnchor()`, a `highlights` property, and the matching `lr-search-change`/`lr-highlight-activate`/`lr-anchor-result` events, so a diff can be searched or deep-linked to from outside the component just like every other document viewer. Both navigation paths automatically reveal a `contextLines` fold hiding their target instead of leaving it stranded behind a static marker.
+- 142dbcf: `lr-lite-chart` no longer fits axis titles and category labels against stale pre-render geometry inside its `ResizeObserver` callback, removing a redundant, doubled layout pass on every resize. `lr-heatmap.exportData()` gains a `'csv'` format alongside `'png'`, matching `lr-chart`/`lr-lite-chart`/`lr-box-plot`. `lr-chart`, `lr-lite-chart` and `lr-box-plot`'s `[part='base']` now stretches to fill a CSS-Grid- or flex-stretched host instead of leaving blank space below the plot. `lr-box-plot` gains an `xLabel` property for its category axis, mirroring the existing `yLabel`. `lr-heatmap` and `lr-flag` now gate their diagnostic `console.warn` calls behind the shared development-mode signal, so they no longer log in production.
+- 995af6b: `lr-funnel` and `lr-entity-card` now stretch their root `[part="base"]` to fill a CSS-Grid or flex row under the default `align-items: stretch`, instead of shrink-wrapping to their own content and leaving blank space below a taller sibling tile.
+  
+  `lr-community-card`'s `compact` now also tightens `[part="base"]`'s padding and gap (new `--lr-community-card-compact-padding`/`-gap` hooks), matching its sibling `lr-entity-card`/`lr-source-card`. `lr-flow-node`'s `compact` now also tightens the header's own icon-to-heading gap (new `--lr-flow-node-compact-header-gap`). `lr-activity-feed`'s `compact` now also tightens the gap between an entry's icon/dot and its label/timestamp (new `--lr-activity-feed-compact-entry-gap`). `lr-thinking-panel`'s `compact` now also reduces the transcript body's font size (new `--lr-thinking-panel-compact-body-font-size`). `lr-source-list` gains new `compact` and `frame` properties (`'card' | 'plain'`), matching the density/chrome escape hatches its own slotted `lr-source-card` children already had.
+  
+  `lr-activity-feed`'s `renderText` callback can now return a rich anchor that renders in the library's brand color instead of the browser's default link blue, via the new `--lr-activity-feed-entry-text-link-color` custom property, since the returned content lands inside a shadow root that page CSS and `::part()` cannot otherwise reach past the wrapper.
+- baea5b9: Added a `maxHeight`/`max-height` property to `lr-geojson-viewer`/`lr-geojson-view`, matching every other document viewer's ability to cap its rendered content at a bounded scrollable height, and added a `size` property to `lr-drop-zone`, matching `lr-file-input`'s density scale so the two can be sized consistently in the same layout. Contained the fallback `lr-json-viewer`'s `lr-error`/`lr-copy-error` clipboard-failure events inside `lr-geojson-viewer` instead of letting them leak past it under undocumented names.
+- 6be1d6c: `lr-graph-query-builder` now exposes its outer label through the shared `form-control-label` CSS part (the existing `label` part keeps working as a compatibility alias), so a theme rule targeting `::part(form-control-label)` across every lyra-ui form control now reaches it too.
+  
+  `lr-phone-input` gains a `start` slot as an alias for `country-prefix` (matching the leading-adornment slot name every other single-line form field uses) and a new `end` slot for an optional trailing adornment after the telephone input; `country-prefix` keeps working unchanged.
+- 2923b1d: `lr-color-picker` and `lr-token-input` gain a new `readonly` property, mirroring `lr-input`'s: the committed value stays focusable, selectable/copyable, and submitted with the form, while every value-committing affordance (the color picker's popup, palette, sliders and eyedropper; the token input's draft, remove buttons and inline token editor) is blocked. `lr-color-picker`'s `swatches` entries, `lr-rubric-form`'s category options, and `lr-voice-picker`'s `catalog` entries each gain an optional decorative `icon` field, rendered inert and `aria-hidden` alongside the option, matching the same field already supported by `lr-swatch-picker`, `lr-filter-bar`, and `lr-model-select`.
+- 108456b: Fixed `lr-dock-panel`'s collapse-toggle chevron so it mirrors immediately when an ancestor's writing direction changes, instead of staying stale until an unrelated re-render.
+  Added component-scoped custom properties for retinting `lr-context-meter`'s tone bands, `lr-gauge`'s per-variant fill, `lr-sequence-strip`'s selection ring, and `lr-mention-popover`'s active-row text color, independently of the shared color tokens those components previously read directly.
+- 6e334b6: `lr-code-editor`, `lr-segmented`, `lr-checkbox`, `lr-progress-bar`, `lr-export-button` and
+  `lr-combobox` gain dedicated corner-radius (and, for `lr-export-button`, gap) custom properties
+  for their size-tiered chrome — `--lr-code-editor-radius`, `--lr-segmented-segment-radius`,
+  `--lr-checkbox-box-radius`, `--lr-progress-track-radius`, `--lr-export-button-gap`/`-radius` and
+  `--lr-combobox-tag-bg`/`-color`/`-radius` — each defaulting to today's exact rendering, so they are
+  retunable without a `::part()` rule. `lr-widget`'s collapse and fullscreen buttons now expose their
+  own `--lr-widget-collapse-button-hover-bg`/`-hover-color` and
+  `--lr-widget-fullscreen-button-hover-bg`/`-hover-color` hooks, and `lr-select`'s tag remove-button
+  gains `--lr-select-tag-remove-hover-bg`, so retinting the shared brand tokens for one purpose no
+  longer silently repaints these unrelated controls.
+
+### Patch Changes
+
+- cf4d019: Remove settled-closed lr-popover, lr-tooltip, lr-dropdown, lr-popup, lr-mention-popover and lr-export-button panels from layout after their exit transitions, preventing stale popup geometry from creating unexplained scrolling when a container resizes.
+- d559cb2: Fixed `lr-date-input`, `lr-time-input`, and `lr-locale-picker` so their calendar/picker/option popups are fully removed from layout once settled closed, instead of staying present at `visibility: hidden`, so they no longer silently enlarge a scrollable ancestor's scroll area.
+- b27e22f: Remove the closed lr-menu submenu surface, and the closed lr-model-select and lr-voice-picker listboxes, from layout after their exit transitions, preventing stale popup geometry from creating unwanted scrolling in a container that establishes a positioning context for them.
+- 64d3fed: Fixed a hydration mismatch in `lr-locale-picker`, `lr-phone-input`, `lr-token-input`, `lr-code-editor`, `lr-button`, `lr-checkbox-group`, `lr-radio-group`, `lr-slider`, and `lr-time-input`: declaratively slotted label/hint/error/adornment content is now revealed correctly instead of briefly disagreeing with the server-rendered markup on the very first client render.
+- d59eae5: `lr-context-inspector`, `lr-eval-run`, `lr-approval-queue`, and `lr-policy-summary` now cap their rendered rows at 500 and show a localized "only the first N are shown" notice (`part="limit"`) when the host-supplied collection is larger, preventing main-thread jank from very large agent sessions, evaluation batches, approval queues, or policy decision sets. Summary counts, progress bars, and dialog selection still reflect the full collection.
+- 4a402dd: `lr-rag-eval-dashboard`, `lr-grounding-summary`, `lr-claim-evidence`, `lr-memory-panel`, and `lr-funnel` now cap their rendered rows at 500 and show a localized "only the first N are shown" notice (`part="limit"`) when the host-supplied collection is larger, preventing main-thread jank from very large evaluation runs, citation sets, claim sets, memory lists, or funnel stage sets. `lr-calendar` caps event markers at 4 per month-view day cell and at 500 in agenda view, showing a localized "+N more" notice (`part="event-limit"`/`part="agenda-limit"`) rather than mounting an unbounded number of event buttons. Summary counts and computed values (latest metric readings, funnel shares) still reflect the full collection.
+- fa99d3f: Fire `lr-slide-change` when a `slidesPerPage` change or a slide removal clamps the carousel's active slide, `lr-sources-change` when a `sources` reassignment prunes the source picker's selection, and `lr-view-change` when a `views` reassignment drops the widget's active view, so consumers tracking these components purely through their change events no longer go silently out of sync. Restore `lr-entity-dossier` and `lr-source-picker`'s documented JS-only `accessibleLabel` override so it actually reaches the internal tab strip and tree.
+- 7e7b409: Fix `lr-eval-dataset` and `lr-prompt-studio` no longer crashing and blanking their whole display when one record in a host-assigned collection has a malformed nested field (a non-array `tags` value, or missing/null message `content`); the malformed record is tolerated in place and every other record still renders.
+- ebd4289: Fix `lr-heatmap`, `lr-word-cloud`, `lr-voice-picker` and `lr-tool-call-chip` so a host-authored `aria-describedby` now reaches the internal element that owns the accessible role (the canvas/grid in `lr-heatmap`, the SVG in `lr-word-cloud`, the trigger/combobox-input in `lr-voice-picker`, the button in `lr-tool-call-chip`), matching how each component already forwards `aria-label`.
+- ccbf93e: Fixed `lr-emoji-picker`'s built-in emoji dataset to load the `emoji-picker-element-data` locale matching the page's locale (falling back to English, and reloading on a later locale change), so emoji accessible names and search now match the page language instead of always being English. Also anchored the search/command clear-button glyph in `lr-emoji-picker` and `lr-command-palette` to the inherited font size instead of the browser's undersized default button font.
+- d07fae0: Fix `lr-tool-param-form.focus()`/`.blur()` (previously silent no-ops) to move focus into, and blur out of, its first field like `click()` already did. Fix a JSON Schema `const` on a non-enum `string`/`number`/`integer` property to pre-fill the field with the locked value and render its control read-only instead of an ordinary blank, fully-editable input.
+- 4275699: Fix `lr-markdown` and `lr-markdown-core` now force `rel="noopener noreferrer"` (merging any author-supplied `rel` and stripping `opener`) onto a raw HTML `<a target="...">` written directly in Markdown content, closing a reverse-tabnabbing gap that previously affected only that raw-HTML path — markdown-syntax `[text](url)` links with `link-target` set were already guarded.
+- 64e53f0: Fix `lr-map` point icons rasterizing solid black when a data layer's `point.iconColor` was set to a color the browser couldn't parse; it now falls back to the layer's theme-appropriate tone color instead, matching every other color the component resolves.
+- 6d3a386: Fix `lr-branch-picker`, `lr-chat-viewport`, `lr-realtime-session`, `lr-selection-toolbar`, `lr-message-actions`, `lr-prompt-queue`, `lr-prompt-input`, `lr-audio-visualizer`, and `lr-map` so an explicitly empty `label` (`label=""` or `.label = ''`) suppresses their localized default accessible name instead of silently falling back to it, matching how the other conversation-family copy-override properties already behave.
+- c58597a: Fix `lr-checkbox-group`, `lr-reorder-list`, `lr-menu`/`lr-dropdown-item`, `lr-accordion` and `lr-tree`/`lr-file-tree` to coalesce bursts of per-child metadata notifications (bulk value assignment or form reset, framework re-renders re-keying every row, several items changing `disabled` together, staggered descendant attribute mutations) into a single reconciliation pass instead of one full-collection pass per notification, removing a quadratic-cost pattern on moderately sized lists and trees. Fix `lr-reorder-list` to use the same guarded active-element helper as its sibling components, so a move no longer risks an uncaught error under a DOM implementation whose `ShadowRoot.activeElement` getter throws when nothing is focused.
+- 1559f0a: Fix `lr-archive-viewer` so that when a ZIP archive contains two entries sharing the same path, search navigation and its active-row highlighting (`aria-current`) now follow the true active occurrence instead of always landing on the first same-named entry. The public fragment-anchor `id` syntax is unchanged and its documented behavior for a duplicate-named entry (resolving to the first central-directory occurrence) is now explicit in the component's JSDoc and `llms/viewers.md`.
+- 51c1703: `lr-tool-call-chip`'s hover/focus tooltip and `lr-citation-badge`/`lr-entity-chip`'s floating preview popover now register with the shared overlay stack, so Escape correctly defers to a genuinely topmost overlay (e.g. a dialog opened on top) instead of always closing the preview first, and an open preview now also dismisses on Escape while only hovered, not only while focused.
+- ce8dd52: Fix components that reflect a host `aria-controls`/`aria-describedby` relationship onto an internal control (including `lr-button`, `lr-icon-button`, `lr-checkbox`, `lr-menu`, `lr-stepper`, `lr-flow-minimap`, `lr-image-comparer`, `lr-model-select`, `lr-file-input` and `lr-attachment-trigger`) so that changing the host attribute to an id that no longer resolves clears the internal relationship instead of leaving it pointing at the previous target.
+- 2b4ae6e: `lr-subagent-panel` and `lr-json-schema-viewer` now reserve a position inside their 500-item render cap for the controlled selection (`selectedRunId`/`selectedPath`) and its resolvable ancestor chain, so a selection that would otherwise fall outside the rendered window still renders as selected instead of silently disappearing.
+- 18d1e0d: `lr-code-block` and `lr-code-block-core` now share a single header-actions slot-detection
+  implementation, preventing that logic from silently drifting between the two variants in the
+  future. `lr-ebook-viewer` and `lr-graph-legend` resolve their theme-token colors once per repaint
+  instead of once per highlight/legend entry, and `lr-retrieval-compare` computes each comparison
+  set's ranked chunk list once per render instead of redundantly recomputing it for every overlap
+  pair and render usage. `lr-retrieval-compare`'s comparison-set row no longer exposes a
+  sub-pixel-rounding phantom vertical scrollbar.
+- 382b18c: `lr-data-grid`'s per-column menu now closes on Escape exclusively through the shared overlay stack, so it correctly defers to a genuinely topmost overlay instead of always intercepting the key press first. Its ResizeObserver-driven row/gutter measurement pass is also coalesced into a single scheduled read per animation frame instead of running once per observer tick, reducing jank while an ancestor container animates or resizes.
+- e4df70d: Fixed `lr-radio-group` and `lr-slider` so an out-of-vocabulary `orientation` value (whether set as an attribute or directly on the property) now clamps to the documented default instead of being forwarded verbatim into `aria-orientation`.
+- 5a9ff7e: Honored the native `autofocus` attribute on `lr-combobox`, `lr-time-input`, `lr-date-input`, `lr-date-picker`, `lr-locale-picker`, `lr-color-picker`, `lr-emoji-picker`, `lr-swatch-picker`, `lr-time-range`, `lr-token-input`, `lr-rubric-form`, `lr-checkbox`, `lr-checkbox-group`, `lr-radio`, `lr-radio-button`, `lr-radio-group`, `lr-switch`, `lr-button`, and `lr-icon-button`, which previously silently ignored it; `lr-input`, `lr-textarea`, `lr-select`, `lr-slider`, and `lr-otp-input` already supported it and keep working unchanged.
+- e33f74f: Add missing narrow-allocation (320px) and `dir="rtl"` regression coverage for `lr-chat-message`, `lr-command-palette`, `lr-file-icon` (`mode="label"`), `lr-streaming-text`/`lr-streaming-text-core`, and `lr-activity-feed`, so a future logical-CSS or RTL-mirroring regression in any of them is caught automatically instead of shipping silently.
+- 071ebfa: No functional change: added regression coverage confirming `lr-skeleton` stays accessible while `announce` is set (mounting its `role="status"` live region), and that `lr-pagination` and `lr-table` correctly parse `has-next="false"` written as a plain HTML attribute string, not just as a JS property binding.
+- 8fb8a1f: Corrected several shipped doc/JSDoc inaccuracies: `lr-time-range` no longer claims `lr-slider`'s label is invisible text, `lr-context-meter`'s docs no longer claim its ring stroke matches `lr-gauge`'s, `lr-trace-tree`'s active-row contrast note now states a live, palette-tracking ratio instead of a stale one, `lr-icon-button`'s `rel` doc no longer names a nonexistent `wa-icon-button` tag, `lr-tooltip`'s `trigger` slot is now correctly documented as a Lyra-original addition rather than a Web Awesome shape, `lr-page`'s `visiblePixelsInViewport()` now documents its deliberate divergence from `wa-page` for a `null` argument, `lr-dialog`/`lr-callout`/`lr-condition-builder` now warn that resizing their composed close/remove `lr-icon-button` requires `--lr-icon-button-size-scope` rather than the no-op `--lr-icon-button-size`, and `lr-message-parts`' `renderPart` now documents that overriding an interactive part type (error, citation, tool call/result, attachment, data) fully replaces that part's built-in interactive wiring.
+- bcd27b3: Fixed the repository's dependency-upgrade and full-regeneration scripts so they reach every generated artifact contract-policy checks for freshness, and kept the pinned pnpm version they record in sync with the one an upgrade actually installs.
+  Hardened the Web Awesome/Shoelace migration-coverage check so an attribute-polarity comparison that examines zero pairs is treated as a bug instead of a silent pass.
+  Made `sideEffects` discovery for registration- and optional-peer-only modules behavior-based instead of filename-based, so a future side-effect-only module survives production tree-shaking regardless of its name.
+- 72f29ba: Fix `lr-menu-item`/`lr-dropdown-item` losing an element-wrapped row's accessible name (`aria-label`/`getTextLabel()`) once its owning dropdown popup or `lr-menu` submenu settles fully closed, restoring the name regardless of the panel's open/closed state.
+
 ## 19.0.1
 
 ### Patch Changes

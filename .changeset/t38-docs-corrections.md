@@ -1,5 +1,0 @@
----
-'@aceshooting/lyra-ui': patch
----
-
-Corrected several shipped doc/JSDoc inaccuracies: `lr-time-range` no longer claims `lr-slider`'s label is invisible text, `lr-context-meter`'s docs no longer claim its ring stroke matches `lr-gauge`'s, `lr-trace-tree`'s active-row contrast note now states a live, palette-tracking ratio instead of a stale one, `lr-icon-button`'s `rel` doc no longer names a nonexistent `wa-icon-button` tag, `lr-tooltip`'s `trigger` slot is now correctly documented as a Lyra-original addition rather than a Web Awesome shape, `lr-page`'s `visiblePixelsInViewport()` now documents its deliberate divergence from `wa-page` for a `null` argument, `lr-dialog`/`lr-callout`/`lr-condition-builder` now warn that resizing their composed close/remove `lr-icon-button` requires `--lr-icon-button-size-scope` rather than the no-op `--lr-icon-button-size`, and `lr-message-parts`' `renderPart` now documents that overriding an interactive part type (error, citation, tool call/result, attachment, data) fully replaces that part's built-in interactive wiring.
