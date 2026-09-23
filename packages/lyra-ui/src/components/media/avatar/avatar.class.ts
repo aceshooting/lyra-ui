@@ -50,6 +50,10 @@ export interface LyraAvatarEventMap {
  * @cssprop [--lr-avatar-font-size=var(--lr-font-size-m)] - Font size of the initials fallback (and
  *   of any `em`-sized slotted glyph). `size` steps its private default alongside the diameter, so
  *   the initials track the circle instead of staying at one fixed size across every tier.
+ * @cssprop [--lr-avatar-radius=var(--lr-radius-pill)] - Corner radius of the container. `shape`
+ *   steps its private default (`var(--lr-radius-pill)` for `circle`, `var(--lr-radius)` for
+ *   `rounded`, `0` for `square`); an inherited or direct public value overrides uniformly across
+ *   every shape, the same way `--lr-avatar-size` spans every size tier.
  * @status stable
  * @since 4.0.0
  */

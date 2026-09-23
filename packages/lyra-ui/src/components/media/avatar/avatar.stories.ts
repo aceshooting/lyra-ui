@@ -134,6 +134,24 @@ export const Shapes: Story = {
   `,
 };
 
+export const RadiusToken: Story = {
+  name: 'Radius token (--lr-avatar-radius)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-avatar-radius` overrides the corner radius uniformly regardless of `shape` -- unset, each shape keeps its own default (pill/`--lr-radius`/none).',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <lr-avatar initials="AB" shape="square"></lr-avatar>
+      <lr-avatar initials="AB" shape="square" style="--lr-avatar-radius: 0.5rem;"></lr-avatar>
+    </div>
+  `,
+};
+
 export const IconSlotFallback: Story = {
   name: 'Fallback glyph (slot="icon")',
   parameters: {

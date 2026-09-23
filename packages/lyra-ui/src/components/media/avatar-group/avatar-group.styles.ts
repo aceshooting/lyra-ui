@@ -68,7 +68,7 @@ export const styles = css`
 
   ::slotted(lr-avatar) {
     margin-inline-start: var(--lr-avatar-group-overlap, var(--_lr-avatar-group-overlap));
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-avatar-group-radius, var(--lr-radius-pill));
     box-shadow: 0 0 0
       var(--lr-avatar-group-ring-width, var(--_lr-avatar-group-ring-width))
       var(--lr-avatar-group-ring-color, var(--_lr-avatar-group-ring-color));
@@ -83,17 +83,18 @@ export const styles = css`
     border-radius: 0;
   }
   ::slotted(lr-avatar[shape='rounded']) {
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-avatar-group-radius, var(--lr-radius));
   }
 
   [part='overflow-badge'] {
     display: inline-flex;
-    flex: 0 0 var(--lr-icon-button-size);
+    /* auto, not a fixed basis: the box must float up to contain overflow-badge-visual when
+       --lr-avatar-group-avatar-size exceeds --lr-icon-button-size (default size and up at 'l'/
+       'xl') -- min-inline-size/min-block-size below are the WCAG 2.5.8 floor, never a cap. */
+    flex: 0 0 auto;
     align-items: center;
     justify-content: flex-start;
     box-sizing: border-box;
-    inline-size: var(--lr-icon-button-size);
-    block-size: var(--lr-icon-button-size);
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     margin: 0;
@@ -115,7 +116,7 @@ export const styles = css`
     inline-size: var(--lr-avatar-group-avatar-size, var(--_lr-avatar-group-avatar-size));
     block-size: var(--lr-avatar-group-avatar-size, var(--_lr-avatar-group-avatar-size));
     margin-inline-start: var(--lr-avatar-group-overlap, var(--_lr-avatar-group-overlap));
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-avatar-group-radius, var(--lr-radius-pill));
     box-shadow: 0 0 0
       var(--lr-avatar-group-ring-width, var(--_lr-avatar-group-ring-width))
       var(--lr-avatar-group-ring-color, var(--_lr-avatar-group-ring-color));
@@ -135,7 +136,7 @@ export const styles = css`
     border-radius: 0;
   }
   :host([shape='rounded']) [part='overflow-badge-visual'] {
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-avatar-group-radius, var(--lr-radius));
   }
   [part='overflow-badge']:hover [part='overflow-badge-visual'] {
     box-shadow: 0 0 0

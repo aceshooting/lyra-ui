@@ -459,6 +459,27 @@ describe('lr-avatar shape', () => {
     expect(el.shape).to.equal('rounded');
     await expect(el).to.be.accessible();
   });
+
+  it('leaves the per-shape default radius unchanged when --lr-avatar-radius is unset', async () => {
+    const [circle, rounded, square] = [
+      await renderedRadius('circle'),
+      await renderedRadius('rounded'),
+      await renderedRadius('square'),
+    ];
+    expect(circle).to.equal('999px');
+    expect(rounded).to.equal('6px');
+    expect(square).to.equal('0px');
+  });
+
+  it('retunes the corner radius uniformly across every shape with --lr-avatar-radius', async () => {
+    for (const shape of ['circle', 'rounded', 'square'] as const) {
+      const el = (await fixture(html`<lr-avatar initials="AB" shape=${shape}></lr-avatar>`)) as LyraAvatar;
+      el.style.setProperty('--lr-avatar-radius', '3px');
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(base).borderTopLeftRadius, `shape=${shape}`).to.equal('3px');
+    }
+  });
 });
 
 describe('lr-avatar loading', () => {

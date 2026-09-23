@@ -123,6 +123,37 @@ it('normalizes an unsupported size/shape/variant value back to its default inste
   expect(el.getAttribute('variant')).to.equal('neutral');
 });
 
+it('leaves the per-shape default radius unchanged when --lr-avatar-group-radius is unset', async () => {
+  const circleGroup = (await fixture(html`
+    <lr-avatar-group max="0"><lr-avatar></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const roundedGroup = (await fixture(html`
+    <lr-avatar-group shape="rounded" max="0"><lr-avatar></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const circleAvatar = circleGroup.querySelector('lr-avatar') as HTMLElement;
+  const roundedAvatar = roundedGroup.querySelector('lr-avatar') as HTMLElement;
+  expect(getComputedStyle(circleAvatar).borderTopLeftRadius).to.equal('999px');
+  expect(getComputedStyle(roundedAvatar).borderTopLeftRadius).to.equal('6px');
+  const circleVisual = circleGroup.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
+  const roundedVisual = roundedGroup.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
+  expect(getComputedStyle(circleVisual).borderTopLeftRadius).to.equal('999px');
+  expect(getComputedStyle(roundedVisual).borderTopLeftRadius).to.equal('6px');
+});
+
+it('retunes the slotted-avatar ring and overflow-badge-visual radius together with --lr-avatar-group-radius', async () => {
+  for (const shape of ['circle', 'rounded'] as const) {
+    const el = (await fixture(html`
+      <lr-avatar-group shape=${shape} max="0"><lr-avatar></lr-avatar></lr-avatar-group>
+    `)) as LyraAvatarGroup;
+    el.style.setProperty('--lr-avatar-group-radius', '3px');
+    await el.updateComplete;
+    const avatar = el.querySelector('lr-avatar') as HTMLElement;
+    const visual = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
+    expect(getComputedStyle(avatar).borderTopLeftRadius, `avatar shape=${shape}`).to.equal('3px');
+    expect(getComputedStyle(visual).borderTopLeftRadius, `badge shape=${shape}`).to.equal('3px');
+  }
+});
+
 it('exposes no `tone` property at all — `variant` replaced it outright, with no alias', async () => {
   const el = (await fixture(html`<lr-avatar-group><lr-avatar></lr-avatar></lr-avatar-group>`)) as LyraAvatarGroup;
   expect('tone' in el, 'tone is gone from the instance').to.be.false;
@@ -861,6 +892,34 @@ it('keeps a 40px action surface while painting an avatar-sized disc at every sma
     const visual = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
     expect(action.getBoundingClientRect().width).to.be.at.least(40);
     expect(visual.getBoundingClientRect().width).to.equal(paintedSize);
+  }
+});
+
+it('floors the action surface to always contain the disc at default/large/xl tiers, where the disc exceeds 40px', async () => {
+  const defaultEl = (await fixture(html`
+    <lr-avatar-group max="0"><lr-avatar></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const large = (await fixture(html`
+    <lr-avatar-group size="l" max="0"><lr-avatar></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const xlarge = (await fixture(html`
+    <lr-avatar-group size="xl" max="0"><lr-avatar></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const expected = new Map([
+    [defaultEl, 48],
+    [large, 64],
+    [xlarge, 80],
+  ]);
+  for (const [el, paintedSize] of expected) {
+    const action = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
+    const visual = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
+    const actionRect = action.getBoundingClientRect();
+    const visualRect = visual.getBoundingClientRect();
+    // Sanity: confirms the disc genuinely exceeds the historical 40px cap here, so the
+    // containment assertions below are non-vacuous.
+    expect(visualRect.width, `size=${el.size}`).to.equal(paintedSize);
+    expect(actionRect.width, `action width contains visual at size=${el.size}`).to.be.at.least(visualRect.width);
+    expect(actionRect.height, `action height contains visual at size=${el.size}`).to.be.at.least(visualRect.height);
   }
 });
 

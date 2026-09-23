@@ -69,7 +69,8 @@ export interface LyraAvatarGroupEventMap {
  * @csspart base - The outer inline-flex container (holds the slot and the overflow badge).
  * @csspart overflow-badge - The "+N" button. Only rendered while `max` is actively causing an
  * overflow.
- * @csspart overflow-badge-visual - The avatar-sized painted disc inside the 40px action surface.
+ * @csspart overflow-badge-visual - The avatar-sized painted disc inside the 40px-minimum action
+ * surface.
  * @cssprop [--lr-avatar-group-avatar-size=var(--lr-size-3rem)] - Sizes the overflow badge to
  * match the slotted avatars, tier for tier with `<lr-avatar>`'s own `--lr-avatar-size`.
  * @cssprop [--lr-avatar-group-overlap=var(--lr-size-neg-6px)] - Horizontal overlap between
@@ -86,6 +87,12 @@ export interface LyraAvatarGroupEventMap {
  * @cssprop [--lr-avatar-group-badge-font-size=var(--lr-font-size-m)] - Font size of the "+N"
  * badge label. `size` steps its private default across the same six-step ladder as `<lr-avatar>`'s
  * own `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight.
+ * @cssprop [--lr-avatar-group-radius=var(--lr-radius-pill)] - Corner radius of the slotted
+ * avatars' ring and of the overflow badge's painted disc. `shape` steps the private default
+ * (`var(--lr-radius-pill)` for `circle`, `var(--lr-radius)` for `rounded`, `0` for `square`); an
+ * inherited or direct public value overrides both uniformly, mirroring `<lr-avatar>`'s own
+ * `--lr-avatar-radius`. A per-avatar `shape` override still wins for that individual avatar's own
+ * ring, matching the existing mixed-shape-group support.
  * @status stable
  * @since 4.0.0
  */

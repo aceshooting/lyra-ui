@@ -9,6 +9,10 @@ export const styles = css`
     --_lr-avatar-color: var(--lr-color-text);
     /* Keep initials proportional across the complete mirrored size ladder. */
     --_lr-avatar-font-size: var(--lr-font-size-m);
+    /* Shape-driven default; the shape tiers below re-point it. --lr-avatar-radius still
+       overrides uniformly regardless of shape, the same way --lr-avatar-size spans every
+       size tier. */
+    --_lr-avatar-radius: var(--lr-radius-pill);
   }
   /* The canonical LyraSize ladder plus the mirrored long aliases. */
   :host([size='2xs']) {
@@ -61,7 +65,7 @@ export const styles = css`
     inline-size: var(--size, var(--lr-avatar-size, var(--_lr-avatar-size)));
     block-size: var(--size, var(--lr-avatar-size, var(--_lr-avatar-size)));
     overflow: hidden;
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-avatar-radius, var(--_lr-avatar-radius));
     background: var(--lr-avatar-bg, var(--_lr-avatar-bg));
     color: var(--lr-avatar-color, var(--_lr-avatar-color));
     font-size: var(--lr-avatar-font-size, var(--_lr-avatar-font-size));
@@ -69,12 +73,13 @@ export const styles = css`
     flex: 0 0 auto;
   }
   /* Three genuinely distinct corners: 'circle' (the pill radius above), 'rounded' (the shared
-     medium radius), and 'square' (no radius at all). */
-  :host([shape='rounded']) [part='base'] {
-    border-radius: var(--lr-radius);
+     medium radius), and 'square' (no radius at all) -- each re-points --_lr-avatar-radius, so
+     --lr-avatar-radius overrides uniformly regardless of shape. */
+  :host([shape='rounded']) {
+    --_lr-avatar-radius: var(--lr-radius);
   }
-  :host([shape='square']) [part='base'] {
-    border-radius: 0;
+  :host([shape='square']) {
+    --_lr-avatar-radius: 0;
   }
   [part='icon'] {
     display: inline-flex;

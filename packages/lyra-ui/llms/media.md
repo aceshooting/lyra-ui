@@ -2313,7 +2313,11 @@ private default changes for a non-neutral `variant` to that variant's loud color
 and of any `em`-sized slotted glyph. Its private default follows `size` alongside the diameter
 (`--lr-font-size-xs` at `2xs`, `--lr-font-size-sm` at `xs`, `--lr-font-size-md-sm` at `s`,
 `--lr-font-size-m` at `m`, `--lr-font-size-lg` at `l`, and `--lr-font-size-xl` at `xl`), so the
-initials track the circle instead of staying one fixed size across every tier. Every public value
+initials track the circle instead of staying one fixed size across every tier. `--lr-avatar-radius`
+(default `var(--lr-radius-pill)`) — corner radius of the container. Its private default follows
+`shape` (`var(--lr-radius-pill)` for `circle`, `var(--lr-radius)` for `rounded`, `0` for `square`);
+an inherited or direct public value overrides uniformly across every shape, the same way
+`--lr-avatar-size` spans every size tier. Every public value
 above can be inherited from an ancestor or set directly on the avatar and remains authoritative
 across size/variant states. Plus shared tokens
 `--lr-radius`/`-pill`, `--lr-font-weight-semibold`.
@@ -2588,11 +2592,18 @@ that follows `variant`),
 badge label. Its private default follows `size` alongside the badge diameter, matching
 `<lr-avatar>`'s own `--lr-avatar-font-size` scale (`xs`/`sm`/`md-sm`/`m`/`lg`/`xl` font tokens from
 the `2xs` through `xl` size tiers), so the badge and the avatars it caps read at the same optical
-weight. An inherited or direct public value remains authoritative for every hook.
+weight. `--lr-avatar-group-radius` (default `var(--lr-radius-pill)`) — corner radius of the
+slotted avatars' ring and of the overflow badge's painted disc. Its private default follows
+`shape` (`var(--lr-radius-pill)` for `circle`, `var(--lr-radius)` for `rounded`, `0` for `square`);
+an inherited or direct public value overrides both uniformly, mirroring `<lr-avatar>`'s own
+`--lr-avatar-radius` — a per-avatar `shape` override still wins for that individual avatar's own
+ring, matching the existing mixed-shape-group support. An inherited or direct public value remains
+authoritative for every hook.
 
-The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier while
-the nested visual disc stays exactly avatar-sized, so small tiers do not paint as oversized 40px
-circles.
+The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier — a
+floor, not a cap, so the action surface grows past it to always contain the nested visual disc
+once `--lr-avatar-group-avatar-size` exceeds it (the default size and `l`/`xl`) — while small
+tiers still paint an exactly avatar-sized disc instead of an oversized 40px circle.
 
 **Optional peer deps:** none.
 

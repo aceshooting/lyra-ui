@@ -155,3 +155,51 @@ export const BadgeFontSize: Story = {
     </div>
   `,
 };
+
+export const RadiusToken: Story = {
+  name: 'Radius token (--lr-avatar-group-radius)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-avatar-group-radius` retunes the slotted avatars\' ring and the overflow badge\'s painted disc together, mirroring `<lr-avatar>`\'s own `--lr-avatar-radius`. Unset, each `shape` keeps its own default (pill/`--lr-radius`/none).',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:1.5rem;">
+      <lr-avatar-group shape="rounded" max="1">
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+      </lr-avatar-group>
+      <lr-avatar-group shape="rounded" max="1" style="--lr-avatar-group-radius: 0.25rem;">
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+      </lr-avatar-group>
+    </div>
+  `,
+};
+
+export const OverflowBadgeFloor: Story = {
+  name: 'Overflow badge action-surface floor',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The "+N" action surface (`overflow-badge`) is a `--lr-icon-button-size` floor, not a cap: at `size="l"`/`"xl"` the badge grows past 40px to fully contain its own avatar-sized painted disc (`overflow-badge-visual`) instead of clipping it.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:1.5rem;">
+      <lr-avatar-group size="large" max="1">
+        <lr-avatar initials="AB" size="large"></lr-avatar>
+        <lr-avatar initials="CD" size="large"></lr-avatar>
+      </lr-avatar-group>
+      <lr-avatar-group size="xl" max="1">
+        <lr-avatar initials="AB" size="xl"></lr-avatar>
+        <lr-avatar initials="CD" size="xl"></lr-avatar>
+      </lr-avatar-group>
+    </div>
+  `,
+};
