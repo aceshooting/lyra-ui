@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -129,6 +129,8 @@ hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
+`--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
+without a `::part(editor)` rule.
 The `editor` scroll frame also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
 its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one

@@ -4972,10 +4972,13 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   `source` fetch in flight shows. Independent of `source`'s own async lifecycle — either condition
   alone suppresses the unknown-value presentation. Never mutates `value`/`selectedOptions` itself,
   and does not itself disable the trigger
-- `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected) — this
-  trigger-shaped control does not implement the shared vocabulary's `accent`/`plain` tiers (unlike
-  `lr-select`); an unsupported value, including a raw attribute/property write outside this type,
-  clamps to the `'outlined'` default
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
+  (reflected) — the library's shared field-surface vocabulary, matching `lr-select`'s trigger.
+  `outlined` (the default) is a bordered surface; `filled` swaps the border for a raised fill;
+  `filled-outlined` keeps both; `plain` drops both; `accent` paints the loud brand fill with
+  on-brand text (the placeholder, expand icon, adornments and `multiple` tags all ride that
+  on-brand color rather than the quiet-text tokens). An unsupported value, including a raw
+  attribute/property write outside this type, clamps to the `'outlined'` default
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) —
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
@@ -5315,6 +5318,11 @@ standard size supplies an aligned default), plus shared tokens. `--lr-combobox-g
 `--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
 `--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
 the properties above, do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
+`--lr-combobox-tag-bg` (default `var(--lr-color-brand-quiet)`), `--lr-combobox-tag-color` (default
+`var(--lr-color-text)`) and `--lr-combobox-tag-radius` (default `var(--lr-radius)`) retint a
+selected tag's background, text color and corner radius without a `::part(tag)` rule; `-tag-bg` is
+scoped independently of `--lr-combobox-option-active-bg`/`-option-badge-bg` below, which already
+scope the same shared `--lr-color-brand-quiet` token for their own purposes.
 
 The trigger row's own surface became public in 16.0.0, having been a private pair until then:
 `--lr-combobox-fill` (default `var(--lr-color-surface)`) and `--lr-combobox-border-color` (default
@@ -5906,6 +5914,12 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `[part='option-badge']` "not in catalog" badge `show-unknown-option` renders on the synthetic
 listbox row, independent of the unknown-value chip's border above.
 
+`--lr-select-tag-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) retints a hovered
+`[part='tag__remove-button']`'s background without a `::part(tag__remove-button)` rule; the pressed
+state mixes from this same token. Scoped independently of `--lr-select-trigger-hover-bg` and
+`--lr-select-option-active-bg` above, which already scope the identical shared token for their own
+purposes.
+
 **Optional peer deps:** none.
 
 ```html
@@ -6151,7 +6165,13 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 
 **Properties (44):**
 
-- `appearance: 'filled'|'outlined'|'filled-outlined' = 'outlined'` (reflected)
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
+  (reflected) — the library's shared field-surface vocabulary, matching `lr-select`'s trigger and
+  `lr-combobox`'s own `appearance`. `outlined` (the default) is a bordered surface; `filled` swaps
+  the border for a raised fill; `filled-outlined` keeps both; `plain` drops both; `accent` paints
+  the loud brand fill with on-brand text (the placeholder, start/end adornments and clear/expand
+  buttons all ride that on-brand color rather than the quiet-text tokens). An unsupported value,
+  including a raw attribute/property write outside this type, clamps to the `'outlined'` default
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 12.0.0) — the `presets` entry
   whose button produced the current `value`, or `undefined` when the value was picked on the
   calendar, typed into the field, cleared, or reset. Read it inside your own `change`/`input`
@@ -8826,12 +8846,13 @@ Explicit empty text stays empty; later supplied text renders normally.
 
 **Events:** user toggles emit, in order, bubbling/composed `input`, the compatibility `lr-input`
 alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
-`detail: { checked: boolean }`). Programmatic `.checked` assignments are
-silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a
-validity check finds the checkbox invalid.
+`detail: { checked: boolean, value: string }`, matching `lr-radio`'s shape). Programmatic `.checked`
+assignments are silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
+`lr-invalid` (no detail) fires when a validity check finds the checkbox invalid.
 **Refusing a toggle.** `lr-checkbox-toggle-request` is cancelable and fires *before* `checked`
 moves, on every user path (click, Space, and the host `click()` activation it forwards).
-`detail: { checked: boolean }` is the state the control **would** take; `checked` itself still holds
+`detail: { checked: boolean, value: string }` is the state the control **would** take (`value` is
+the current `.value`, unaffected by the toggle); `checked` itself still holds
 the old value while the event dispatches. `preventDefault()` keeps the current state, so the box
 never flips at all rather than flipping and snapping back, and none of
 `input`/`lr-input`/`change`/`lr-change` follow. A listener can instead answer by assigning `checked`
@@ -8906,6 +8927,8 @@ State paint is independently themeable through `--lr-checkbox-hover-border`,
 `--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
 `--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
 corresponding brand/brand-quiet/danger token.
+`--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
+`[part='box']`'s corner radius without a `::part(box)` rule.
 
 **`--lr-checkbox-box-size`** — the edge length of `[part='box']`, defaulting to
 `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the
@@ -9027,7 +9050,7 @@ normally.
 **Events:** a user state change (click, Space, a logical ArrowLeft/ArrowRight change, or the
 programmatic `click()` activation path) emits
 `input`, then `lr-input`, then `change`, then `lr-change` (both aliases carry
-`detail: { checked: boolean }`) — in that order, matching
+`detail: { checked: boolean, value: string }`, matching `lr-radio`'s shape) — in that order, matching
 the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
 control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
 helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
@@ -9039,8 +9062,9 @@ assignment, `form.reset()`, or session-state restoration. The internal control's
 check finds the switch invalid.
 **Refusing a toggle.** `lr-switch-toggle-request` is cancelable and fires *before* `checked` moves,
 on every user path (click, Space, a logical ArrowLeft/ArrowRight change, and the host `click()`
-activation it forwards). `detail: { checked: boolean }` is the state the switch **would** take;
-`checked` itself still holds the old value while the event dispatches. `preventDefault()` keeps the
+activation it forwards). `detail: { checked: boolean, value: string }` is the state the switch
+**would** take (`value` is the current `.value`, unaffected by the toggle); `checked` itself still
+holds the old value while the event dispatches. `preventDefault()` keeps the
 current state, so the switch never slides at all rather than sliding and snapping back, and none of
 `input`/`lr-input`/`change`/`lr-change` follow. A listener can instead answer by assigning `checked`
 itself during the dispatch, which suppresses the built-in write the same way. It does not fire for a
@@ -10073,7 +10097,12 @@ noneditable token layout remains the default.
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,
-`required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
+`required`, `disabled`,
+`readonly: boolean = false` (reflected — forwards native read-only behavior to the draft input and
+the inline token editor, and blocks adding, removing or editing a token while leaving the draft
+input, tokens and remove buttons focusable and the current value submitted with the form, mirroring
+`lr-input`'s `readonly`),
+`accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
 and draft text input; precedence is presence-based, so `aria-label=""` remains an explicit empty
 override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autocorrect` (read: `boolean = true`; write: `boolean | string`, attribute values
 `on`/`off`) — all three native text-entry hints are forwarded to both the draft input and the inline
@@ -10156,6 +10185,15 @@ When a focused token label, editor, or remove action disappears through its own 
 controlled `value`/pristine `defaultValue` shrink, DOM focus moves to the nearest surviving
 equivalent surface at the clamped index. If no token remains it moves to the draft input; a newer
 explicit focus destination outside the component is never reclaimed.
+
+**`readonly` — locking the committed list.** Reflects native read-only behavior onto both the draft
+input and the inline token editor, and blocks every other value-committing affordance: typing (or a
+programmatic `input`/`change` dispatch) into the draft, Enter/delimiter/Tab draft commits,
+Backspace-removes-last-token, clicking a remove button, and opening or committing the inline
+editor (`editable`). Unlike `disabled`, it never removes the draft input, a token label, or a
+remove button from the tab order, never blocks `focus()`, and never excludes the current value from
+`FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
+inline editor is open discards that uncommitted state without moving focus.
 
 **`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
 jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
@@ -10327,6 +10365,8 @@ hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
+`--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
+without a `::part(editor)` rule.
 The `editor` scroll frame also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
 its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
@@ -10407,7 +10447,14 @@ designer-chosen colours; reach for this when it must not.
 **Properties:** the shared
 form properties `name`, `value`, `defaultValue` (canonical content attribute `value`),
 `customError` (`custom-error`), `disabled`, and
-`required`, plus `label`, `hint`, `errorText`
+`required`,
+`readonly: boolean = false` (reflected — forwards native read-only behavior to the panel's value
+field and blocks every other value-committing affordance: the popup panel opening, the
+saturation/hue/opacity handles, palette swatches, the eyedropper, and Enter/blur-driven text
+commits; the trigger, value field and palette stay focusable, and the current value still submits
+with the form -- only `disabled` excludes it. Toggling it on while the panel is open closes it, and
+cancels an in-flight drag without committing, mirroring `disabled`'s own mid-interaction handling),
+plus `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), and `size: LyraSize = 'm'`
 (reflected — the same visual-density scale as `lr-input`, applied to the centered visible swatch;
 accepts `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`; the interactive target
@@ -10423,15 +10470,19 @@ and:
   applies to the whole string, function names included (`RGB(255, 0, 0)`)
 - `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
   `;`-separated string, an array of colour strings, or an array of
-  `{ color: string; label?: string; disabled?: boolean }` objects. Any colour the picker can parse
-  is accepted; blank entries are dropped. An entry that is _not_ parseable is kept in the list and
-  still renders a swatch — it just paints no colour (the bare checkerboard) and clicking it does
-  nothing, so filter the palette yourself if that matters. `label` becomes the swatch's accessible
-  name; a missing, empty, or whitespace-only label falls back to announcing the raw colour string.
+  `{ color: string; label?: string; disabled?: boolean; icon?: unknown }` objects. Any colour the
+  picker can parse is accepted; blank entries are dropped. An entry that is _not_ parseable is kept
+  in the list and still renders a swatch — it just paints no colour (the bare checkerboard) and
+  clicking it does nothing, so filter the palette yourself if that matters. `label` becomes the
+  swatch's accessible name; a missing, empty, or whitespace-only label falls back to announcing the
+  raw colour string.
   `disabled` marks that one swatch non-actionable, independent of the whole control's own
   `disabled`: it renders a genuinely disabled `<button>` (no tab stop, no hover/press affordance)
   and clicking it commits nothing; omitted or `false` renders the swatch exactly as before this
-  field existed. The palette container renders only while the normalized list is non-empty
+  field existed. `icon` is an optional decorative custom shape rendered inside the swatch button
+  behind the `swatch-icon` part -- inert and `aria-hidden`, matching `<lr-swatch-picker>`'s
+  identical `SwatchPickerItem.icon` field. The palette container renders only while the normalized
+  list is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
   that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
   reaches the same behavior; either one wins
@@ -10533,7 +10584,8 @@ absent with either format-toggle suppression property), plus `format-button__bas
 `eyedropper-button` / `eye-dropper-button` (rendered only where the browser exposes the EyeDropper
 API), with the corresponding `eyedropper-button__base|start|label|end|caret` and Shoelace
 `eye-dropper-button__base|prefix|label|suffix|caret` aliases; `swatches` (the palette container, rendered only when the normalized `swatches`
-list is non-empty), `swatch` (one palette entry), `swatch-selected` (a token **added to** the
+list is non-empty), `swatch` (one palette entry), `swatch-icon` (a swatch entry's optional
+decorative icon, inert and `aria-hidden`), `swatch-selected` (a token **added to** the
 swatch matching the current value — state after `::part()` never matches, so write
 `::part(swatch-selected)`), `hint`, `error`.
 
@@ -10866,7 +10918,10 @@ discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. 
 first-wins identity and retained valid spelling is not rewritten. Shared fields are
 `key`, `label?`, `description?`, and `required?`; only scores expose `min?`/`max?`/`step?`, only
 categories expose readonly `RubricKeyOption[]` plus `multiple?`, and only comments expose
-`placeholder?`. Runtime schema normalization retains the first occurrence of each nonempty key and
+`placeholder?`. Each `RubricKeyOption` also accepts an optional `icon?: unknown` -- a decorative
+leading visual rendered into `<lr-option>`'s `start` slot in the single-select branch, or inline
+before the label in the multiple-select `<lr-checkbox>` branch, inert and `aria-hidden` either way,
+matching `LyraFilterBarOption.icon`. Runtime schema normalization retains the first occurrence of each nonempty key and
 rejects malformed rows. `value: RubricValue = {}` is a defensive readonly snapshot and
 `defaultValue: RubricValue = {}` is its explicit form-reset baseline (both attribute: false).
 `itemId: string = ''`
@@ -10913,6 +10968,8 @@ state exposed as `errors.base`, rather than being attributed to one rubric key. 
 clearing it hides that region unless the `error` slot supplies other content.
 `click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
 so the host behaves like a single control under both a `<label>`-driven and a programmatic click.
+`focus(options?)` moves focus to that same active field, matching `click()`'s target; this is also
+what lets the native `autofocus` attribute reach the rubric.
 
 **CSS parts:** `base` (the outer `role="group"` wrapper), `form-control` (aggregate chrome wrapper),
 `aggregate-label` / `form-control-label`, `fields` / `form-control-input`, `aggregate-hint` /
@@ -11185,6 +11242,7 @@ These named interfaces and helper signatures are available to typed integrations
     color: string;
     label?: string;
     disabled?: boolean;
+    icon?: unknown;
   }`
 
 - **`components-forms-combobox-combobox-contracts`** — Supporting data types and helpers for this component family.
@@ -11355,6 +11413,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly value: string;
     readonly label?: string;
     readonly description?: string;
+    readonly icon?: unknown;
   }`
   Import: `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`.
   `ScoreRubricKey extends RubricKeyBase {
@@ -13067,7 +13126,12 @@ true), `label` (rendered only while `label` is non-empty)
 
 **Themeable custom properties:** `--lr-gauge-fill` (fill stroke; overrides `variant`/`thresholds`
 entirely and falls back to the effective variant's shared semantic token —
-`--lr-color-brand` by default).
+`--lr-color-brand` by default). Each variant also has its own scoped fill, read as the innermost
+fallback before the shared token so a consumer can retint one variant without `--lr-gauge-fill`'s
+uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--lr-color-neutral)`),
+`--lr-gauge-brand-fill` (default `var(--lr-color-brand)`), `--lr-gauge-success-fill` (default
+`var(--lr-color-success)`), `--lr-gauge-warning-fill` (default `var(--lr-color-warning)`), and
+`--lr-gauge-danger-fill` (default `var(--lr-color-danger)`).
 
 **Optional peer deps:** none.
 
@@ -14069,8 +14133,12 @@ block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` 
 (default `0.625rem` — a legend swatch's inline- and block-size, category and marker rows alike), and
 `--lr-sequence-strip-legend-marker-bg` (default `var(--lr-color-surface-raised)` — the neutral chip
 background behind the marker legend row's bar; it stands in for "any cell", so it deliberately
-matches no category color), and `--lr-sequence-strip-disabled-opacity` (default `var(--lr-opacity-disabled)` — opacity of
-a cell whose activated item sets `disabled`); the tooltip also consumes shared tokens
+matches no category color), `--lr-sequence-strip-disabled-opacity` (default `var(--lr-opacity-disabled)` — opacity of
+a cell whose activated item sets `disabled`), `--lr-sequence-strip-selected-color` (default
+`var(--lr-color-text)` — colour of the persistent selection ring on a cell whose index is in
+`selectedIndex`), and `--lr-sequence-strip-selected-focus-color` (default
+`var(--lr-focus-ring-color)` — colour of that same ring while the cell also has keyboard focus); the
+tooltip also consumes shared tokens
 `--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
 the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
 `--lr-color-text-quiet`, and `--lr-radius-xs`.
@@ -15100,9 +15168,15 @@ ring stays intact. `--lr-context-meter-selected-arc-stroke` (default `16`, in th
 one bounding box, so a selected arc reports itself by thickening in place rather than by an outline
 that would trace the whole ring identically for every selection.
 `--lr-context-meter-disabled-opacity` (default `var(--lr-opacity-disabled)`) dims a band or legend row whose entry sets
-`disabled`; the band keeps its own colour, since that colour is the datum. Otherwise the component consumes shared tokens
+`disabled`; the band keeps its own colour, since that colour is the datum. Each `data-tone` band
+color is independently retintable, scoped to just this component rather than the shared token
+every other component also reads: `--lr-context-meter-tone-brand-bg` (default
+`var(--lr-color-brand)`), `--lr-context-meter-tone-success-bg` (default `var(--lr-color-success)`),
+`--lr-context-meter-tone-warning-bg` (default `var(--lr-color-warning)`) and
+`--lr-context-meter-tone-danger-bg` (default `var(--lr-color-danger)`) — each read by the bar
+segment, its legend swatch, and (as the `stroke`) the ring shape's arc, so all three surfaces for a
+tone stay in sync. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
-`--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
 `--lr-transition-base`.
 
 **Optional peer deps:** none.
@@ -15137,8 +15211,10 @@ bar/ring either: an over-`total` `segments` array renders as a fully (not over-)
 later segments truncated or squeezed to zero width/arc-length as the budget runs out. `total <= 0`
 (or non-finite) renders zero segments — an empty track/ring — and the announced summary falls back to
 just `"{used} used"` with no `"of {total}"` clause, regardless of what's in `segments`. Ring geometry
-(a 40-radius circle, 12px stroke, centered at 50,50) intentionally matches `lr-gauge`'s own radial
-numbers, so the two circular-meter components in the library share one visual scale.
+(a 40-radius circle centered at 50,50) has its RADIUS/CENTER match `lr-gauge`'s own radial numbers,
+so both components' rings sit on the same circle within their viewBox. The stroke does not match:
+at 12px it is intentionally heavier than `lr-gauge`'s 10px, since tightly-packed multi-tone arcs
+need more width to stay visually distinct than a gauge's single fill arc.
 
 **Known gotchas:**
 
@@ -15546,19 +15622,25 @@ visible label element, so slotted/property/localized label text is also the anno
 effective native validity, including custom errors and own/fieldset validation barring.
 `lr-invalid` is a cancelable bubbling/composed alias; vetoing it suppresses the native invalid
 default. Run, save, load, and delete share one two-phase contract: cancelable
-`lr-before-query-run`, `lr-before-query-save`, `lr-before-query-load`, and
-`lr-before-query-delete` requests precede any local effect; non-cancelable `lr-query-run`,
+`lr-query-run-request`, `lr-query-save-request`, `lr-query-load-request`, and
+`lr-query-delete-request` requests precede any local effect; non-cancelable `lr-query-run`,
 `lr-query-save`, `lr-query-load`, and `lr-query-delete` notifications follow only when accepted.
-The matching before/accepted pair reuses one frozen payload: `{ query }` for run,
+The matching request/accepted pair reuses one frozen payload: `{ query }` for run,
 `{ name, query }` for save, `{ queryId, query }` for load, and `{ queryId }` for delete.
 Run validates before its request. Save veto preserves the draft name. Load requests frozen
 `{ queryId, query }` before changing `value`, so veto preserves the current query; its accepted event
 fires after the new value is applied. Delete remains controlled, so the host removes the accepted
-id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and those
-eight phased action events.
+id from `savedQueries`. Each request also fires a **deprecated** `lr-before-query-run` /
+`lr-before-query-save` / `lr-before-query-load` / `lr-before-query-delete` alias immediately after
+its canonical `-request` counterpart, from the same gesture with the same frozen detail; either
+event may veto. The aliases are slated for removal in 21.0.0 — migrate listeners to the
+`lr-query-*-request` names. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and
+those twelve phased action events (four requests, four deprecated aliases, four accepted
+notifications).
 
-Migration note: veto save in `lr-before-query-save`, not `lr-query-save`; the existing
-`lr-query-*` action events are accepted, non-cancelable notifications. **Slots:** `actions`,
+Migration note: veto save in `lr-query-save-request` (or its deprecated `lr-before-query-save`
+alias), not `lr-query-save`; the existing `lr-query-*` action events are accepted, non-cancelable
+notifications. **Slots:** `actions`,
 `label`, `hint`, `error`. **CSS
 parts:** `base`, `form-control-label` (`label` remains as a compatibility alias on the same node),
 `hint`, `error` (the three form-control chrome parts every
@@ -16955,6 +17037,15 @@ rendering is unchanged.
 _hover_ state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
 `::part(view-toggle):hover` override wins without `!important`.
 
+`--lr-widget-collapse-button-hover-bg` / `-hover-color` and `--lr-widget-fullscreen-button-hover-bg`
+/ `-hover-color` (all four default to `var(--lr-color-brand-quiet)` / `var(--lr-color-brand)`) are
+the same inline-`var()`-fallback shape for `[part="collapse-button"]` and `[part="fullscreen-button"]`
+respectively; each button's pressed fill mixes from its own `-hover-bg` token. Before these existed,
+both buttons read the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens directly, so a
+consumer retinting those tokens upstream to change only the view toggle's hover (the reason the
+view-toggle pair above exists) also silently repainted these two buttons; each now has its own scoped
+escape hatch, independent of the other and of the view toggle.
+
 **Optional peer deps:** none.
 
 ```html
@@ -18185,6 +18276,8 @@ resolves.
 
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
+- `--lr-segmented-segment-radius` — Each segment's own corner radius, independent of the track's.
+  Default: `calc(var(--lr-form-control-radius) * 0.7)`.
 - `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-bg` — Background of the `base` track. Undeclared by default (transparent),
   matching its own current absence of a background.
@@ -20004,11 +20097,14 @@ no-op if already open),
 cycling) at the ends; the active row is scrolled into view. Enter selects. Hovering a non-disabled
 row also makes it active.
 
-**Events:** `lr-open`, `lr-close` (both `detail: null`, cancelable — fired before the
+**Events:** `lr-show`, `lr-close` (both `detail: null`, cancelable — fired before the
 mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
 closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
-gains or loses focus. The `focus`/`blur` bridge is new in 10.0.0: native `focus`/`blur` neither
+gains or loses focus. `lr-open` is a deprecated alias for `lr-show` (same `detail: null`,
+cancelability, and timing, fired at the same call site; either event's `preventDefault()` vetoes
+the open) kept for the 20.x line and removed no earlier than 21.0.0. The `focus`/`blur` bridge is
+new in 10.0.0: native `focus`/`blur` neither
 bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
 never fired at all.
 
@@ -23729,10 +23825,14 @@ Tooltip motion resolves `tooltip.show` / `tooltip.hide` through the public anima
 The same per-element/global precedence, RTL keyframe selection, token-timing fallback,
 reduced-motion flattening, and null-disable lifecycle rules documented for `lr-popover` apply.
 
-**Slots:** both mapped shapes are supported. Web Awesome uses named `trigger` plus default tooltip
-content. Shoelace uses the default slot for the trigger and `slot="content"` (or the `content`
-property) for tooltip content. A named trigger always selects the first shape; without one, an
-explicit content source makes the default slot unambiguously the trigger.
+**Slots:** both mapped shapes are supported, plus a Lyra-original addition. `trigger` (the
+highest-priority interaction/ARIA owner, mirroring `<lr-popover>`'s own `trigger` slot) is not a
+Web Awesome shape: `wa-tooltip` has only its single unnamed default slot for tooltip content, and
+its own anchor mechanism is the `for` attribute plus the unrelated `trigger` activation-mode
+attribute documented above. Shoelace uses the default slot for the trigger and `slot="content"`
+(or the `content` property) for tooltip content. A named `trigger` slot always selects that shape;
+without one, an explicit content source (`slot="content"` or the `content` property) makes the
+default slot unambiguously the trigger, matching Shoelace.
 
 **CSS parts:** `popup base tooltip base__popup` are aliases on the same wrapper; `trigger`; `body`;
 and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
@@ -24046,6 +24146,9 @@ presence-based, so an explicitly empty value remains empty rather than invoking 
 fallback, and the private `--_lr-progress-track-height` is the `size` property's own tier value,
 `1rem` at the `m` default, unchanged),
 `--lr-progress-track-color` (default `var(--lr-color-brand-quiet)`),
+`--lr-progress-track-radius` (default `var(--lr-radius-pill)`; `indicator`'s `border-radius:
+inherit` picks up the same value, so retuning the track retunes both without a
+`::part(track)`/`::part(indicator)` rule),
 `--lr-progress-indicator-color` (default `var(--lr-progress-indicator-variant-color)`), and
 `--lr-progress-label-color` (default `var(--lr-color-text)`). Upstream aliases are `--height` and
 `--track-height`, plus `--track-color`, `--indicator-color`, and `--label-color`.
@@ -24939,7 +25042,10 @@ hover, `--lr-export-button-hover-background`, `--lr-export-button-hover-color` a
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
-opt out. Before 18.4.0 none of these existed and the only lever was `::part(trigger)`. Plus shared
+opt out. Before 18.4.0 none of these existed and the only lever was `::part(trigger)`.
+`--lr-export-button-gap` (default `var(--lr-space-xs)`, constant across the `size` ladder) and
+`--lr-export-button-radius` (default `var(--lr-radius)`) retune the trigger's icon/label gap and
+corner radius without a `::part(trigger)` rule. Plus shared
 tokens, including `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.
@@ -25805,13 +25911,16 @@ renders `open="false"` on first paint)
 `--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
 repainting every other component that reuses the same shared token.
 `--lr-mention-popover-option-disabled-opacity` (default `0.5`) — opacity of a row whose `items`
-entry sets `disabled`. Plus shared tokens —
+entry sets `disabled`. `--lr-mention-popover-option-active-color` (default `var(--lr-color-brand)`)
+— text color of the `aria-selected="true"` (keyboard-highlighted) suggestion row, independent of
+`--lr-mention-popover-option-active-bg`: the same component-scoped indirection over
+`--lr-color-brand`, applied to the row's own sibling text-color rule. Plus shared tokens —
 `--lr-space-xs`/`-s`/`-m` (popup padding,
 row padding/gap), `--lr-radius`
 (row corners — the popup's own corner is the overlay family's, below),
 `--lr-transition-fast` (open/close
-transition), `--lr-color-brand` (selected-row
-text), `--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
+transition),
+`--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
 row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the
 popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
 available space. See `lr-tour` for the shared-clamp note.
@@ -27783,7 +27892,7 @@ large collection is invisible until someone walks the data by hand. Both `chorop
 reduced figure in the feature — a log, a bucket, an index — and keep the exact value in your own
 payload beside the map.
 
-- `label: string = ''` — purpose-specific accessible name for MapLibre's actual focusable canvas.
+- `label?: string` — purpose-specific accessible name for MapLibre's actual focusable canvas.
   A nonempty host `aria-label` remains on the host and is not duplicated onto the canvas; the canvas
   uses `label` or the localized map name. Omitting `label` localizes the default `map` message; an
   explicit empty string suppresses that default and renders an empty canvas name. An explicitly
@@ -30226,14 +30335,13 @@ convenience; every enabled row is independently reachable through ordinary seque
 native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
 `lr-video-change` is bubbling and composed but non-cancelable, with exact
 detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, recursively frozen plain-data snapshot with
-exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
-fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;
-`tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener that needs to
-annotate or reshape the payload must create its own mutable copy; the dispatched detail and every
-nested record/array reject mutation. Not fired when a light-DOM mutation (a video removed, or every
-remaining video made `inert`/disabled) leaves no enabled video to activate: the internal
-active-video/active-index state still resets in that case, but `video` has no non-null value the
-frozen detail shape could carry, so the host-caused clear stays silent.
+exact shape `{ title, poster, sources, tracks }`, not the live child element, or `null`. `sources`
+contains fresh `{ src, type, media }` records for the child's direct `src` and `<source>`
+declarations; `tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener
+that needs to annotate or reshape the payload must create its own mutable copy; the dispatched
+detail and every nested record/array reject mutation. Also fired when a light-DOM mutation (a video
+removed, or every remaining video made `inert`/disabled) leaves no enabled video to replace a
+previously active one: `video` is `null` and `currentIndex` is `-1` in that case.
 
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.
@@ -30760,7 +30868,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraVideoPlaylistChangeDetail {
     readonly previousIndex: number;
     readonly currentIndex: number;
-    readonly video: LyraVideoPlaylistVideo;
+    readonly video: LyraVideoPlaylistVideo | null;
   }`
   Import: `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`.
   `LyraVideoPlaylistItem {
@@ -31210,17 +31318,24 @@ including a string or finite-number `id` when supplied; invalid ids are omitted.
 is typed `unknown`. Validate or explicitly narrow the value itself before reading point fields;
 checking `detail.kind === 'point'` alone does not narrow `detail.value` in TypeScript.
 `lr-point-click` remains as a compatibility event. Also
-`lr-before-legend-visibility-change` (cancelable proposal), and
+`lr-legend-visibility-change-request` (cancelable proposal), and
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
 complete, sorted, valid next snapshot. Call `preventDefault()` on the proposal to veto the toggle;
-then no property change or commit event occurs.
-Category toggles use a separate pair, `lr-before-datum-visibility-change` (cancelable proposal) and
+then no property change or commit event occurs. `lr-before-legend-visibility-change` is a
+**deprecated** alias of `lr-legend-visibility-change-request`, fired immediately after it from the
+same gesture with the same frozen detail; either event may veto. It is slated for removal in
+21.0.0 — migrate listeners to `lr-legend-visibility-change-request`.
+Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
 `lr-datum-visibility-change` (accepted commit), carrying
 `{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
 complete, sorted index snapshots are frozen. `index` is the source category index, including when
 the displayed data is sampled; it applies across all rings. Programmatic assignments emit neither
 pair. `preventDefault()` leaves both controlled state and the chart unchanged.
+`lr-before-datum-visibility-change` is a **deprecated** alias of
+`lr-datum-visibility-change-request`, fired immediately after it from the same gesture with the
+same frozen detail; either event may veto. It is slated for removal in 21.0.0 — migrate listeners
+to `lr-datum-visibility-change-request`.
 
 ```html
 <lr-doughnut-chart
@@ -31768,11 +31883,14 @@ of every entry in these lists.**
 `refreshTheme()`.
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-click` (`detail: { datasetIndex,
-index, label, value }`), `lr-before-legend-visibility-change` (cancelable), and
+index, label, value }`), `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
-complete `hiddenDatasets` snapshot).
-Radial category legends additionally emit `lr-before-datum-visibility-change` (cancelable) and
+complete `hiddenDatasets` snapshot). `lr-before-legend-visibility-change` is a **deprecated** alias
+of `lr-legend-visibility-change-request` (removal not before 21.0.0).
+Radial category legends additionally emit `lr-datum-visibility-change-request` (cancelable) and
 `lr-datum-visibility-change`, carrying `index`, `visible` and the frozen `hiddenDatums` snapshot.
+`lr-before-datum-visibility-change` is a **deprecated** alias of `lr-datum-visibility-change-request`
+(removal not before 21.0.0).
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
@@ -31856,10 +31974,12 @@ maxSamples?)` appends finite raw samples and optionally retains only the newest 
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
 
-**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-datum-visibility-change`
-(cancelable), `lr-datum-visibility-change`, `lr-before-legend-visibility-change` (cancelable), and
+**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-datum-visibility-change-request`
+(cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
+`lr-before-datum-visibility-change`/`lr-before-legend-visibility-change` are deprecated aliases of
+the two `*-request` events above (removal not before 21.0.0).
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 
@@ -31982,11 +32102,14 @@ change. Canvas work remains connected/visible-gated, while a rendered DOM legend
 its computed color swatches.
 
 **Events:** `lr-datum-activate` (canonical detail with `kind: 'box'`), `lr-point-click`
-(compatibility), `lr-before-legend-visibility-change` (cancelable proposed legend
+(compatibility), `lr-legend-visibility-change-request` (cancelable proposed legend
 toggle) and `lr-legend-visibility-change` (accepted commit). The two legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
 `hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
 proposal leaves state untouched and suppresses the commit event.
+`lr-before-legend-visibility-change` is a **deprecated** alias of
+`lr-legend-visibility-change-request`, fired immediately after it from the same gesture with the
+same detail; either event may veto (removal not before 21.0.0).
 
 `lr-point-click` fires when pointer input lands on a box, or when Enter/Space activates the
 keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose. Its
@@ -37471,7 +37594,7 @@ hosts that already have one (e.g. `lr-push-to-talk`'s `lr-level` detail); `state
 animation and per-state coloring; `mode: AudioVisualizerMode = 'bars'` (`'bars' | 'waveform'`,
 reflected); `barCount: number = 5` (attribute `bar-count`, normalized to an integer in `[1, 64]`);
 `gain: number = 1` — multiplier applied to the resolved amplitude, with a non-finite value treated
-as `1`; `label: string = ''` — accessible-name override. Omitting it auto-generates "Voice activity:
+as `1`; `label?: string` — accessible-name override. Omitting it auto-generates "Voice activity:
 {state}"; an explicit empty string suppresses that default and renders an empty accessible name.
 `level` is clamped to `[0, 1]`; after gain,
 waveform and bar values are clamped to `[-1, 1]` and `[0, 1]` respectively. Invalid `state` or
@@ -37511,7 +37634,7 @@ the new `index` back. Renders nothing at all while `count < 2`, so a host can bi
 on every message regardless of whether that message actually has multiple branches yet.
 
 **Properties:** `index: number = 0` (reflected) and `count: number = 1` (reflected) — the current
-0-based branch and the total branch count. `label: string = ''` — accessible name for the group.
+0-based branch and the total branch count. `label?: string` — accessible name for the group.
 Omitting it localizes the default `branchPickerLabel` message; an explicit empty string suppresses
 that default and renders no label.
 
@@ -37562,7 +37685,7 @@ opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only whil
 feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
 `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
 the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus.
-`label: string = ''` — accessible name override for the toolbar. Omitting it localizes the default
+`label?: string` — accessible name override for the toolbar. Omitting it localizes the default
 `messageActionsLabel` message; an explicit empty string suppresses that default and renders no
 label. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — overrides the toolbar's computed accessible name, winning over
@@ -37876,7 +37999,7 @@ index of the first unread item (element-child index in slotted mode, `items` ind
 'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
 remains non-live. Keep `off` for token-by-token streaming and opt in only when complete messages are
 appended as direct children at an announcement-safe cadence.
-`label: string = ''` — accessible name
+`label?: string` — accessible name
 for the log region. Omitting it localizes the default `chatViewportLabel` message; an explicit
 empty string suppresses that default and renders no label. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal `role="log"` element
@@ -38627,8 +38750,10 @@ custom-value editor: they do not navigate options, commit a selection or custom 
 popup. Ordinary keyboard behavior resumes after composition.
 
 **Exported types:** `LyraVoiceCatalogEntry extends LyraCatalogEntry { language?: string;
-description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
-`[part="option-meta"]` second line. Voice catalogs use the shared
+description?: string; previewUrl?: string; icon?: string }` — `language`/`description` render as a
+quiet `[part="option-meta"]` second line; `icon` is an optional literal icon hint (for example, an
+emoji), rendered decoratively as the leading `[part="option-icon"]`, matching
+`lr-model-select`'s identical `LyraModelCatalogEntry.icon` field. Voice catalogs use the shared
 `LyraCatalog<LyraVoiceCatalogEntry>` homogeneous readonly union documented under `lr-model-select`,
 including the shared `disabled` field: a disabled voice row cannot be selected by click or keyboard
 and is stepped over by arrow-key/Home/End navigation, but its own `[part="option-preview"]` stays
@@ -38953,8 +39078,14 @@ are still derived from the full sequence first, in the same linear prepass, so a
 stays stable even once an earlier citation rolls out of the rendered window. Opt in for a message
 that can grow an unusually large number of interleaved parts (e.g. a long agentic run with many
 tool-call/tool-result pairs), where unbounded live DOM can visibly stall the main thread.
-`renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
-part to the built-in renderer; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`renderPart?: MessagePartRenderer` (attribute: false) — returning `undefined` for a part delegates
+it to the built-in renderer, keeping every built-in affordance intact; any other return fully
+replaces that part's built-in rendering, including every interactive affordance the built-in
+renderer would otherwise wire up for it (the `error` part's retry button's `lr-part-retry`, a
+`citation` part's activation `lr-citation-select`, and the composed `<lr-tool-call-chip>`/
+`<lr-tool-result-view>`/`<lr-attachment-chip>`/`<lr-widget-renderer>` children's own events) — a
+host overriding an interactive part type must reimplement whatever of that interaction it still
+wants; `accessibleLabel: string | null = null` (attribute `aria-label`).
 
 Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`.
 
@@ -39047,7 +39178,7 @@ LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: readon
 `voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>`,
 `sources: readonly LyraSourceEntry[] = []`, `selectedSourceIds: readonly string[] = []`, and `queue:
 readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
-`label: string = ''` — accessible name for the prompt section. Omitting it localizes the default
+`label?: string` — accessible name for the prompt section. Omitting it localizes the default
 `promptInputLabel` message; an explicit empty string suppresses that default and renders no label.
 `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and the
 localized default.
@@ -39120,7 +39251,7 @@ receives focus. Removing an unfocused row does not move focus.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
 (reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
-`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 `PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
 
@@ -39158,7 +39289,7 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 **Properties:** `open: boolean = false` (reflected); `text: string = ''`;
 clone-owned `anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
 clone-owned `actions: readonly SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
-`label: string = ''` — accessible name for the toolbar. Omitting it localizes the default
+`label?: string` — accessible name for the toolbar. Omitting it localizes the default
 `selectionToolbarLabel` message; an explicit empty string suppresses that default and renders no
 label. `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and
 the localized default.
@@ -39227,7 +39358,7 @@ clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessi
 entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
 `muted: boolean = false` (reflected);
 `showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
-converter); `label: string = ''` — accessible name for the session shell. Omitting it localizes the
+converter); `label?: string` — accessible name for the session shell. Omitting it localizes the
 default `realtimeSessionLabel` message; an explicit empty string suppresses that default and
 renders no label. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same
@@ -39678,6 +39809,7 @@ These named interfaces and helper signatures are available to typed integrations
     language?: string;
     description?: string;
     previewUrl?: string;
+    icon?: string;
     // Inherited from LyraCatalogEntry.
     id: string;
     label: string;
@@ -41582,13 +41714,16 @@ element or any ancestor, and they exist because `::part(row)[data-active]` is in
 `--lr-trace-tree-max-indent` (default `var(--lr-size-12rem)`) caps visual nesting indentation;
 semantic `aria-level` remains exact at deeper levels.
 
-**Contrast note:** the active row is more than a tint. Its secondary text would sit at ~4.25:1
+**Contrast note:** the active row is more than a tint. Its secondary text would sit at ~4.17:1
 against the default tint if it stayed at `--lr-color-text-quiet`, so it rises to full-strength
 `--lr-color-text` while the row is active, and the semantic `status-text` labels are rendered as
 `color-mix(in srgb, var(--lr-color-<tone>) 75%, var(--lr-color-text))` — keeping the status hue
-(an error row stays red) while clearing the 4.5:1 floor (success 4.46 → 6.18, `denied` 4.28 →
-5.96). Both adjustments are theme-symmetric, because `--lr-color-text` flips with the color
-scheme. `[part='bar']` is deliberately untouched: it is a non-text graphic on a 3:1 floor, and its
+(an error row stays red) while clearing the 4.5:1 floor with a full point of margin or more for
+every currently shipped default tone. The exact ratio moves with every palette ramp revision
+(`src/internal/tokens/palette.styles.ts`), so no specific number is pinned here — recompute against
+the live tokens before quoting one. Both adjustments are theme-symmetric, because `--lr-color-text`
+flips with the color scheme. `[part='bar']` is deliberately untouched: it is a non-text graphic on
+a 3:1 floor, and its
 saturation is the row's primary status signal.
 
 The two properties are a **pair**. The defaults assume the active background stays on the same
@@ -44150,10 +44285,13 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
 
-**Events:** cancelable `lr-before-visibility-change` (`detail: { hiddenTypes }`, a frozen complete
+**Events:** cancelable `lr-visibility-change-request` (`detail: { hiddenTypes }`, a frozen complete
 next array) fires before a toggle changes state or announces it. Preventing it suppresses all three.
 `lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array) fires after an
-accepted assignment and announcement.
+accepted assignment and announcement. `lr-before-visibility-change` is a **deprecated** alias of
+`lr-visibility-change-request`, fired immediately after it from the same gesture with the same
+frozen detail; either event may veto. It is slated for removal in 21.0.0 — migrate listeners to
+`lr-visibility-change-request`.
 
 **Slots:** none.
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -406,6 +406,12 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `--lr-select-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
 `[part='option-badge']` "not in catalog" badge `show-unknown-option` renders on the synthetic
 listbox row, independent of the unknown-value chip's border above.
+
+`--lr-select-tag-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) retints a hovered
+`[part='tag__remove-button']`'s background without a `::part(tag__remove-button)` rule; the pressed
+state mixes from this same token. Scoped independently of `--lr-select-trigger-hover-bg` and
+`--lr-select-option-active-bg` above, which already scope the identical shared token for their own
+purposes.
 
 **Optional peer deps:** none.
 

@@ -57,7 +57,7 @@ normally.
 **Events:** a user state change (click, Space, a logical ArrowLeft/ArrowRight change, or the
 programmatic `click()` activation path) emits
 `input`, then `lr-input`, then `change`, then `lr-change` (both aliases carry
-`detail: { checked: boolean }`) — in that order, matching
+`detail: { checked: boolean, value: string }`, matching `lr-radio`'s shape) — in that order, matching
 the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
 control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
 helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
@@ -69,8 +69,9 @@ assignment, `form.reset()`, or session-state restoration. The internal control's
 check finds the switch invalid.
 **Refusing a toggle.** `lr-switch-toggle-request` is cancelable and fires *before* `checked` moves,
 on every user path (click, Space, a logical ArrowLeft/ArrowRight change, and the host `click()`
-activation it forwards). `detail: { checked: boolean }` is the state the switch **would** take;
-`checked` itself still holds the old value while the event dispatches. `preventDefault()` keeps the
+activation it forwards). `detail: { checked: boolean, value: string }` is the state the switch
+**would** take (`value` is the current `.value`, unaffected by the toggle); `checked` itself still
+holds the old value while the event dispatches. `preventDefault()` keeps the
 current state, so the switch never slides at all rather than sliding and snapping back, and none of
 `input`/`lr-input`/`change`/`lr-change` follow. A listener can instead answer by assigning `checked`
 itself during the dispatch, which suppresses the built-in write the same way. It does not fire for a

@@ -1213,7 +1213,9 @@ export type LyraBarChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -1297,6 +1299,7 @@ export type LyraBoxPlotSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click',
   | '--lr-box-plot-border-color-1'
   | '--lr-box-plot-border-color-2'
@@ -1467,7 +1470,9 @@ export type LyraBubbleChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -1878,7 +1883,9 @@ export type LyraChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -2108,6 +2115,7 @@ export type LyraCheckboxSvelteProps = LyraSvelteElementProps<
   | '--checked-icon-scale'
   | '--lr-checkbox-active-border'
   | '--lr-checkbox-active-ring'
+  | '--lr-checkbox-box-radius'
   | '--lr-checkbox-box-size'
   | '--lr-checkbox-checked-bg'
   | '--lr-checkbox-checked-border'
@@ -2462,6 +2470,7 @@ export type LyraCodeEditorSvelteProps = LyraSvelteElementProps<
   | '--lr-code-editor-line-height'
   | '--lr-code-editor-min-block-size'
   | '--lr-code-editor-padding'
+  | '--lr-code-editor-radius'
   | '--lr-code-editor-tab-size'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
@@ -2500,6 +2509,7 @@ export type LyraColorPickerSvelteProps = LyraSvelteElementProps<
   | 'open'
   | 'placement'
   | 'positioningStrategy'
+  | 'readonly'
   | 'required'
   | 'size'
   | 'strings'
@@ -2662,8 +2672,11 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
   | '--lr-combobox-option-selected-color'
   | '--lr-combobox-option-selected-font-weight'
   | '--lr-combobox-radius'
+  | '--lr-combobox-tag-bg'
+  | '--lr-combobox-tag-color'
   | '--lr-combobox-tag-font-size'
   | '--lr-combobox-tag-padding'
+  | '--lr-combobox-tag-radius'
   | '--lr-combobox-trigger-height'
   | '--lr-combobox-trigger-min-height'
   | '--lr-combobox-trigger-padding'
@@ -2716,7 +2729,8 @@ export type LyraCommandPaletteSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'lr-close'
   | 'lr-open'
-  | 'lr-select',
+  | 'lr-select'
+  | 'lr-show',
   | '--lr-command-palette-active-bg'
   | '--lr-command-palette-group-height'
   | '--lr-command-palette-list-max-block-size'
@@ -2934,6 +2948,10 @@ export type LyraContextMeterSvelteProps = LyraSvelteElementProps<
   | '--lr-context-meter-selected-arc-stroke'
   | '--lr-context-meter-selected-ring-color'
   | '--lr-context-meter-selected-ring-width'
+  | '--lr-context-meter-tone-brand-bg'
+  | '--lr-context-meter-tone-danger-bg'
+  | '--lr-context-meter-tone-success-bg'
+  | '--lr-context-meter-tone-warning-bg'
   | '--lr-context-meter-track-bg'
   | '--lr-context-meter-track-radius'
   | '--lr-context-meter-track-size',
@@ -3863,7 +3881,9 @@ export type LyraDoughnutChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -4539,9 +4559,11 @@ export type LyraExportButtonSvelteProps = LyraSvelteElementProps<
   | '--lr-export-button-background'
   | '--lr-export-button-border'
   | '--lr-export-button-color'
+  | '--lr-export-button-gap'
   | '--lr-export-button-hover-background'
   | '--lr-export-button-hover-border'
   | '--lr-export-button-hover-color'
+  | '--lr-export-button-radius'
   | '--lr-overlay-border'
   | '--lr-overlay-radius'
   | '--lr-overlay-shadow-anchored'
@@ -5007,7 +5029,12 @@ export type LyraGaugeSvelteProps = LyraSvelteElementProps<
   {},
   {},
 never,
-  | '--lr-gauge-fill',
+  | '--lr-gauge-brand-fill'
+  | '--lr-gauge-danger-fill'
+  | '--lr-gauge-fill'
+  | '--lr-gauge-neutral-fill'
+  | '--lr-gauge-success-fill'
+  | '--lr-gauge-warning-fill',
   {
     'show-value'?: LyraGauge['showValue'];
     'value-text'?: LyraGauge['valueText'];
@@ -5166,7 +5193,8 @@ export type LyraGraphLegendSvelteProps = LyraSvelteElementProps<
   {},
   LyraGraphLegendEventMap,
   | 'lr-before-visibility-change'
-  | 'lr-visibility-change',
+  | 'lr-visibility-change'
+  | 'lr-visibility-change-request',
   | '--lr-graph-legend-hidden-color'
   | '--lr-graph-legend-hidden-swatch-opacity',
   {}
@@ -5199,9 +5227,13 @@ export type LyraGraphQueryBuilderSvelteProps = LyraSvelteElementProps<
   | 'lr-input'
   | 'lr-invalid'
   | 'lr-query-delete'
+  | 'lr-query-delete-request'
   | 'lr-query-load'
+  | 'lr-query-load-request'
   | 'lr-query-run'
+  | 'lr-query-run-request'
   | 'lr-query-save'
+  | 'lr-query-save-request'
   | 'lr-validity-change',
   | '--lr-graph-query-builder-run-active-bg'
   | '--lr-graph-query-builder-run-bg'
@@ -5285,6 +5317,7 @@ export type LyraHeatmapSvelteProps = LyraSvelteElementProps<
   | 'fitToWidth'
   | 'legendStops'
   | 'locale'
+  | 'matrixGeometry'
   | 'maxCellSize'
   | 'midpoint'
   | 'minCellSize'
@@ -5413,7 +5446,9 @@ export type LyraHistogramSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -6195,7 +6230,9 @@ export type LyraLineChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -6429,6 +6466,7 @@ export type LyraMapSvelteProps = LyraSvelteElementProps<
   | 'legendGradientLoLabel'
   | 'legendInteractive'
   | 'legendOpen'
+  | 'legendProjection'
   | 'locale'
   | 'mapStyle'
   | 'markers'
@@ -6668,6 +6706,7 @@ export type LyraMentionPopoverSvelteProps = LyraSvelteElementProps<
   | 'lr-mention-close'
   | 'lr-mention-select',
   | '--lr-mention-popover-option-active-bg'
+  | '--lr-mention-popover-option-active-color'
   | '--lr-mention-popover-option-disabled-opacity'
   | '--lr-overlay-border'
   | '--lr-overlay-radius'
@@ -7641,6 +7680,7 @@ export type LyraPdfViewerSvelteProps = LyraSvelteElementProps<
   | 'maxHeight'
   | 'name'
   | 'page'
+  | 'pageViewerSnapshot'
   | 'src'
   | 'strings'
   | 'workerSrc'
@@ -7801,7 +7841,9 @@ export type LyraPieChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -7913,7 +7955,9 @@ export type LyraPolarAreaChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -8125,6 +8169,7 @@ export type LyraPptxViewerSvelteProps = LyraSvelteElementProps<
   | 'maxHeight'
   | 'name'
   | 'page'
+  | 'pageViewerSnapshot'
   | 'src'
   | 'strings',
   {},
@@ -8168,6 +8213,7 @@ never,
   | '--lr-progress-label-color'
   | '--lr-progress-track-color'
   | '--lr-progress-track-height'
+  | '--lr-progress-track-radius'
   | '--track-color'
   | '--track-height',
   {
@@ -8475,7 +8521,9 @@ export type LyraRadarChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -9168,7 +9216,9 @@ export type LyraScatterChartSvelteProps = LyraSvelteElementProps<
   | 'lr-before-legend-visibility-change'
   | 'lr-datum-activate'
   | 'lr-datum-visibility-change'
+  | 'lr-datum-visibility-change-request'
   | 'lr-legend-visibility-change'
+  | 'lr-legend-visibility-change-request'
   | 'lr-point-click'
   | 'lr-zoom',
   | '--border-color-1'
@@ -9278,6 +9328,7 @@ export type LyraSegmentedSvelteProps = LyraSvelteElementProps<
   | '--lr-segmented-hover-color'
   | '--lr-segmented-hover-shadow'
   | '--lr-segmented-segment-padding'
+  | '--lr-segmented-segment-radius'
   | '--lr-segmented-selected-bg'
   | '--lr-segmented-selected-color'
   | '--lr-segmented-selected-font-weight'
@@ -9371,6 +9422,7 @@ export type LyraSelectSvelteProps = LyraSvelteElementProps<
   | '--lr-select-radius'
   | '--lr-select-tag-font-size'
   | '--lr-select-tag-padding'
+  | '--lr-select-tag-remove-hover-bg'
   | '--lr-select-trigger-active-bg'
   | '--lr-select-trigger-border-color'
   | '--lr-select-trigger-fill'
@@ -9470,7 +9522,9 @@ export type LyraSequenceStripSvelteProps = LyraSvelteElementProps<
   | '--lr-sequence-strip-height'
   | '--lr-sequence-strip-legend-marker-bg'
   | '--lr-sequence-strip-legend-swatch-size'
-  | '--lr-sequence-strip-marker-color',
+  | '--lr-sequence-strip-marker-color'
+  | '--lr-sequence-strip-selected-color'
+  | '--lr-sequence-strip-selected-focus-color',
   {
     'accessible-label'?: LyraSequenceStrip['accessibleLabel'];
     'marker-label'?: LyraSequenceStrip['markerLabel'];
@@ -11016,6 +11070,7 @@ export type LyraTokenInputSvelteProps = LyraSvelteElementProps<
   | 'name'
   | 'pill'
   | 'placeholder'
+  | 'readonly'
   | 'required'
   | 'selectionDirection'
   | 'selectionEnd'
@@ -11800,6 +11855,10 @@ export type LyraWidgetSvelteProps = LyraSvelteElementProps<
   | 'lr-view-request',
   | '--lr-scroll-fade-size'
   | '--lr-widget-backdrop-inset'
+  | '--lr-widget-collapse-button-hover-bg'
+  | '--lr-widget-collapse-button-hover-color'
+  | '--lr-widget-fullscreen-button-hover-bg'
+  | '--lr-widget-fullscreen-button-hover-color'
   | '--lr-widget-fullscreen-inset'
   | '--lr-widget-overlay-color'
   | '--lr-widget-view-toggle-active-bg'
@@ -11873,6 +11932,7 @@ export type LyraXmlViewerSvelteProps = LyraSvelteElementProps<
   | 'locale'
   | 'maxHeight'
   | 'name'
+  | 'source'
   | 'src'
   | 'strings'
   | 'xml',

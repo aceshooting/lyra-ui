@@ -72,9 +72,9 @@ set with a warning. Expand or classify them before applying, then rerun to verif
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 34 | 38 | 15 | 0 | 0 | 72 | 15 |
+| Web Awesome | 34 | 37 | 16 | 0 | 0 | 71 | 16 |
 | Shoelace | 18 | 28 | 12 | 0 | 0 | 46 | 12 |
-| **Total** | **52** | **66** | **27** | **0** | **0** | **118** | **27** |
+| **Total** | **52** | **65** | **28** | **0** | **0** | **117** | **28** |
 
 ## Web Awesome (87)
 
@@ -102,11 +102,11 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-checkbox>` | `<lr-checkbox>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-checkbox-group>` | `<lr-checkbox-group>` | `exact` | Automatic: tag and supported side-effect registration import. Form-associated group of checkboxes with array values and group validation. |
 | `<wa-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-combobox>` | `<lr-combobox>` | `warning-required` | Manual: Lyra snapshots each input/change event's value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed. |
+| `<wa-combobox>` | `<lr-combobox>` | `warning-required` | Manual: Lyra snapshots each input/change event's value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review. |
 | `<wa-comparison>` | `<lr-image-comparer>` | `exact` | Automatic: tag and supported side-effect registration import. Before/after slotted surfaces with a keyboard-accessible range divider. |
 | `<wa-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: wa-copy → lr-copy; events: wa-error → lr-error. |
 | `<wa-data-grid>` | `<lr-data-grid>` | `warning-required` | Manual: Lyra snapshots collection inputs and event details synchronously into frozen readonly values, and removes the redundant wa-data-request alias in favor of the typed request event. Migrated code that mutates arrays or event details in place, assigns derived collections, or listens for the removed alias must be reviewed. |
-| `<wa-date-input>` | `<lr-date-input>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
+| `<wa-date-input>` | `<lr-date-input>` | `warning-required` | Manual: Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review. |
 | `<wa-date-picker>` | `<lr-date-picker>` | `rewritten` | Automatic: tag/import plus events: wa-focus-day → lr-focus-day; events: wa-view-change → lr-view-change. |
 | `<wa-details>` | `<lr-details>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |
 | `<wa-dialog>` | `<lr-dialog>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |

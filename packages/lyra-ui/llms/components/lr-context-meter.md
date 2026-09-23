@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -129,9 +129,15 @@ ring stays intact. `--lr-context-meter-selected-arc-stroke` (default `16`, in th
 one bounding box, so a selected arc reports itself by thickening in place rather than by an outline
 that would trace the whole ring identically for every selection.
 `--lr-context-meter-disabled-opacity` (default `var(--lr-opacity-disabled)`) dims a band or legend row whose entry sets
-`disabled`; the band keeps its own colour, since that colour is the datum. Otherwise the component consumes shared tokens
+`disabled`; the band keeps its own colour, since that colour is the datum. Each `data-tone` band
+color is independently retintable, scoped to just this component rather than the shared token
+every other component also reads: `--lr-context-meter-tone-brand-bg` (default
+`var(--lr-color-brand)`), `--lr-context-meter-tone-success-bg` (default `var(--lr-color-success)`),
+`--lr-context-meter-tone-warning-bg` (default `var(--lr-color-warning)`) and
+`--lr-context-meter-tone-danger-bg` (default `var(--lr-color-danger)`) — each read by the bar
+segment, its legend swatch, and (as the `stroke`) the ring shape's arc, so all three surfaces for a
+tone stay in sync. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
-`--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
 `--lr-transition-base`.
 
 **Optional peer deps:** none.
@@ -166,8 +172,10 @@ bar/ring either: an over-`total` `segments` array renders as a fully (not over-)
 later segments truncated or squeezed to zero width/arc-length as the budget runs out. `total <= 0`
 (or non-finite) renders zero segments — an empty track/ring — and the announced summary falls back to
 just `"{used} used"` with no `"of {total}"` clause, regardless of what's in `segments`. Ring geometry
-(a 40-radius circle, 12px stroke, centered at 50,50) intentionally matches `lr-gauge`'s own radial
-numbers, so the two circular-meter components in the library share one visual scale.
+(a 40-radius circle centered at 50,50) has its RADIUS/CENTER match `lr-gauge`'s own radial numbers,
+so both components' rings sit on the same circle within their viewBox. The stroke does not match:
+at 12px it is intentionally heavier than `lr-gauge`'s 10px, since tightly-packed multi-tone arcs
+need more width to stay visually distinct than a gauge's single fill arc.
 
 **Known gotchas:**
 

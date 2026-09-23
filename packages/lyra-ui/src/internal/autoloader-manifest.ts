@@ -378,7 +378,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/retrieval/embedding-explorer/embedding-explorer.class.js').then((module) => module.LyraEmbeddingExplorer),
   },
   'lr-emoji-picker': {
-    optionalPeers: [],
+    optionalPeers: ['emoji-picker-element-data'],
     load: () => import('../components/forms/emoji-picker/emoji-picker.class.js').then((module) => module.LyraEmojiPicker),
   },
   'lr-empty': {

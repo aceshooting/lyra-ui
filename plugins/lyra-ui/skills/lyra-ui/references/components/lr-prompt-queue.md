@@ -25,7 +25,7 @@ receives focus. Removing an unfocused row does not move focus.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
 (reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
-`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 `PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -162,10 +162,13 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   `source` fetch in flight shows. Independent of `source`'s own async lifecycle — either condition
   alone suppresses the unknown-value presentation. Never mutates `value`/`selectedOptions` itself,
   and does not itself disable the trigger
-- `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected) — this
-  trigger-shaped control does not implement the shared vocabulary's `accent`/`plain` tiers (unlike
-  `lr-select`); an unsupported value, including a raw attribute/property write outside this type,
-  clamps to the `'outlined'` default
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
+  (reflected) — the library's shared field-surface vocabulary, matching `lr-select`'s trigger.
+  `outlined` (the default) is a bordered surface; `filled` swaps the border for a raised fill;
+  `filled-outlined` keeps both; `plain` drops both; `accent` paints the loud brand fill with
+  on-brand text (the placeholder, expand icon, adornments and `multiple` tags all ride that
+  on-brand color rather than the quiet-text tokens). An unsupported value, including a raw
+  attribute/property write outside this type, clamps to the `'outlined'` default
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) —
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
@@ -505,6 +508,11 @@ standard size supplies an aligned default), plus shared tokens. `--lr-combobox-g
 `--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
 `--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
 the properties above, do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
+`--lr-combobox-tag-bg` (default `var(--lr-color-brand-quiet)`), `--lr-combobox-tag-color` (default
+`var(--lr-color-text)`) and `--lr-combobox-tag-radius` (default `var(--lr-radius)`) retint a
+selected tag's background, text color and corner radius without a `::part(tag)` rule; `-tag-bg` is
+scoped independently of `--lr-combobox-option-active-bg`/`-option-badge-bg` below, which already
+scope the same shared `--lr-color-brand-quiet` token for their own purposes.
 
 The trigger row's own surface became public in 16.0.0, having been a private pair until then:
 `--lr-combobox-fill` (default `var(--lr-color-surface)`) and `--lr-combobox-border-color` (default

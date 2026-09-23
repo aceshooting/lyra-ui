@@ -2550,8 +2550,15 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Lyra snapshots each input/change event\'s value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed.',
+        'Lyra snapshots each input/change event\'s value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review.',
       expectedDrift: [
+        {
+          code: 'type-mismatch',
+          section: 'attributes',
+          member: 'appearance',
+          expected: '\'filled\' | \'outlined\' | \'filled-outlined\'',
+          actual: 'LyraAppearance',
+        },
         {
           code: 'event-type-mismatch',
           section: 'events',
@@ -2575,6 +2582,23 @@ const DECISION_OVERRIDES = new Map([
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
           actual:
             'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
+        },
+      ],
+    },
+  ],
+  [
+    'wa-date-input',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review.',
+      expectedDrift: [
+        {
+          code: 'type-mismatch',
+          section: 'attributes',
+          member: 'appearance',
+          expected: '\'filled\' | \'outlined\' | \'filled-outlined\'',
+          actual: 'LyraAppearance',
         },
       ],
     },
@@ -5697,12 +5721,6 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-date-input',
     [
-      [
-        'attribute',
-        ['appearance'],
-        "'filled' | 'outlined' | 'filled-outlined'",
-        "Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>",
-      ],
       ['attribute', ['mode'], 'WaDateInputMode', "'single' | 'range'"],
       [
         'property',

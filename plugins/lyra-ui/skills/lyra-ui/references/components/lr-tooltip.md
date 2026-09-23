@@ -102,10 +102,14 @@ Tooltip motion resolves `tooltip.show` / `tooltip.hide` through the public anima
 The same per-element/global precedence, RTL keyframe selection, token-timing fallback,
 reduced-motion flattening, and null-disable lifecycle rules documented for `lr-popover` apply.
 
-**Slots:** both mapped shapes are supported. Web Awesome uses named `trigger` plus default tooltip
-content. Shoelace uses the default slot for the trigger and `slot="content"` (or the `content`
-property) for tooltip content. A named trigger always selects the first shape; without one, an
-explicit content source makes the default slot unambiguously the trigger.
+**Slots:** both mapped shapes are supported, plus a Lyra-original addition. `trigger` (the
+highest-priority interaction/ARIA owner, mirroring `<lr-popover>`'s own `trigger` slot) is not a
+Web Awesome shape: `wa-tooltip` has only its single unnamed default slot for tooltip content, and
+its own anchor mechanism is the `for` attribute plus the unrelated `trigger` activation-mode
+attribute documented above. Shoelace uses the default slot for the trigger and `slot="content"`
+(or the `content` property) for tooltip content. A named `trigger` slot always selects that shape;
+without one, an explicit content source (`slot="content"` or the `content` property) makes the
+default slot unambiguously the trigger, matching Shoelace.
 
 **CSS parts:** `popup base tooltip base__popup` are aliases on the same wrapper; `trigger`; `body`;
 and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the resolved side —

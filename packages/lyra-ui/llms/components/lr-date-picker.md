@@ -180,7 +180,13 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 
 **Properties (44):**
 
-- `appearance: 'filled'|'outlined'|'filled-outlined' = 'outlined'` (reflected)
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
+  (reflected) — the library's shared field-surface vocabulary, matching `lr-select`'s trigger and
+  `lr-combobox`'s own `appearance`. `outlined` (the default) is a bordered surface; `filled` swaps
+  the border for a raised fill; `filled-outlined` keeps both; `plain` drops both; `accent` paints
+  the loud brand fill with on-brand text (the placeholder, start/end adornments and clear/expand
+  buttons all ride that on-brand color rather than the quiet-text tokens). An unsupported value,
+  including a raw attribute/property write outside this type, clamps to the `'outlined'` default
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 12.0.0) — the `presets` entry
   whose button produced the current `value`, or `undefined` when the value was picked on the
   calendar, typed into the field, cleared, or reset. Read it inside your own `change`/`input`

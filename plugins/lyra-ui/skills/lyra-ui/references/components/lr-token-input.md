@@ -38,7 +38,12 @@ noneditable token layout remains the default.
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,
-`required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
+`required`, `disabled`,
+`readonly: boolean = false` (reflected — forwards native read-only behavior to the draft input and
+the inline token editor, and blocks adding, removing or editing a token while leaving the draft
+input, tokens and remove buttons focusable and the current value submitted with the form, mirroring
+`lr-input`'s `readonly`),
+`accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
 and draft text input; precedence is presence-based, so `aria-label=""` remains an explicit empty
 override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autocorrect` (read: `boolean = true`; write: `boolean | string`, attribute values
 `on`/`off`) — all three native text-entry hints are forwarded to both the draft input and the inline
@@ -121,6 +126,15 @@ When a focused token label, editor, or remove action disappears through its own 
 controlled `value`/pristine `defaultValue` shrink, DOM focus moves to the nearest surviving
 equivalent surface at the clamped index. If no token remains it moves to the draft input; a newer
 explicit focus destination outside the component is never reclaimed.
+
+**`readonly` — locking the committed list.** Reflects native read-only behavior onto both the draft
+input and the inline token editor, and blocks every other value-committing affordance: typing (or a
+programmatic `input`/`change` dispatch) into the draft, Enter/delimiter/Tab draft commits,
+Backspace-removes-last-token, clicking a remove button, and opening or committing the inline
+editor (`editable`). Unlike `disabled`, it never removes the draft input, a token label, or a
+remove button from the tab order, never blocks `focus()`, and never excludes the current value from
+`FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
+inline editor is open discards that uncommitted state without moving focus.
 
 **`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
 jobs: it splits a committed draft into several tokens, and — _only when it is exactly one

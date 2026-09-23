@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,12 +50,13 @@ Explicit empty text stays empty; later supplied text renders normally.
 
 **Events:** user toggles emit, in order, bubbling/composed `input`, the compatibility `lr-input`
 alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
-`detail: { checked: boolean }`). Programmatic `.checked` assignments are
-silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a
-validity check finds the checkbox invalid.
+`detail: { checked: boolean, value: string }`, matching `lr-radio`'s shape). Programmatic `.checked`
+assignments are silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
+`lr-invalid` (no detail) fires when a validity check finds the checkbox invalid.
 **Refusing a toggle.** `lr-checkbox-toggle-request` is cancelable and fires *before* `checked`
 moves, on every user path (click, Space, and the host `click()` activation it forwards).
-`detail: { checked: boolean }` is the state the control **would** take; `checked` itself still holds
+`detail: { checked: boolean, value: string }` is the state the control **would** take (`value` is
+the current `.value`, unaffected by the toggle); `checked` itself still holds
 the old value while the event dispatches. `preventDefault()` keeps the current state, so the box
 never flips at all rather than flipping and snapping back, and none of
 `input`/`lr-input`/`change`/`lr-change` follow. A listener can instead answer by assigning `checked`
@@ -130,6 +131,8 @@ State paint is independently themeable through `--lr-checkbox-hover-border`,
 `--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
 `--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
 corresponding brand/brand-quiet/danger token.
+`--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
+`[part='box']`'s corner radius without a `::part(box)` rule.
 
 **`--lr-checkbox-box-size`** — the edge length of `[part='box']`, defaulting to
 `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the

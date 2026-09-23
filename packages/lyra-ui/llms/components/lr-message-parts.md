@@ -34,8 +34,14 @@ are still derived from the full sequence first, in the same linear prepass, so a
 stays stable even once an earlier citation rolls out of the rendered window. Opt in for a message
 that can grow an unusually large number of interleaved parts (e.g. a long agentic run with many
 tool-call/tool-result pairs), where unbounded live DOM can visibly stall the main thread.
-`renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
-part to the built-in renderer; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`renderPart?: MessagePartRenderer` (attribute: false) — returning `undefined` for a part delegates
+it to the built-in renderer, keeping every built-in affordance intact; any other return fully
+replaces that part's built-in rendering, including every interactive affordance the built-in
+renderer would otherwise wire up for it (the `error` part's retry button's `lr-part-retry`, a
+`citation` part's activation `lr-citation-select`, and the composed `<lr-tool-call-chip>`/
+`<lr-tool-result-view>`/`<lr-attachment-chip>`/`<lr-widget-renderer>` children's own events) — a
+host overriding an interactive part type must reimplement whatever of that interaction it still
+wants; `accessibleLabel: string | null = null` (attribute `aria-label`).
 
 Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`.
 

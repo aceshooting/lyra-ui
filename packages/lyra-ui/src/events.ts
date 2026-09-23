@@ -1029,6 +1029,15 @@ export type LyraDatumActivateEvent =
 export type LyraDatumVisibilityChangeEvent = LyraChartEventMap['lr-datum-visibility-change'];
 
 /**
+ * `lr-datum-visibility-change-request` — dispatched by 10 components: `<lr-bar-chart>`,
+ * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`,
+ * `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`.
+ *
+ * Detail type: `LyraChartEventMap['lr-datum-visibility-change-request']`.
+ */
+export type LyraDatumVisibilityChangeRequestEvent = LyraChartEventMap['lr-datum-visibility-change-request'];
+
+/**
  * `lr-decision-settled` — dispatched by `<lr-confirm-bar>`.
  *
  * Detail type: `LyraConfirmBarEventMap['lr-decision-settled']`.
@@ -1782,6 +1791,20 @@ export type LyraLegendVisibilityChangeEvent =
   | LyraChartEventMap['lr-legend-visibility-change'];
 
 /**
+ * `lr-legend-visibility-change-request` — dispatched by 11 components: `<lr-bar-chart>`,
+ * `<lr-box-plot>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`,
+ * `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`,
+ * `<lr-scatter-chart>`.
+ *
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraBoxPlotEventMap['lr-legend-visibility-change-request']`.
+ */
+export type LyraLegendVisibilityChangeRequestEvent =
+  | LyraBoxPlotEventMap['lr-legend-visibility-change-request']
+  | LyraChartEventMap['lr-legend-visibility-change-request'];
+
+/**
  * `lr-level` — dispatched by 2 components: `<lr-push-to-talk>`, `<lr-realtime-session>`.
  *
  * Detail type: `LyraPushToTalkEventMap['lr-level']`.
@@ -2379,11 +2402,25 @@ export type LyraQueryChangeEvent = LyraThreadListEventMap['lr-query-change'];
 export type LyraQueryDeleteEvent = LyraGraphQueryBuilderEventMap['lr-query-delete'];
 
 /**
+ * `lr-query-delete-request` — dispatched by `<lr-graph-query-builder>`.
+ *
+ * Detail type: `LyraGraphQueryBuilderEventMap['lr-query-delete-request']`.
+ */
+export type LyraQueryDeleteRequestEvent = LyraGraphQueryBuilderEventMap['lr-query-delete-request'];
+
+/**
  * `lr-query-load` — dispatched by `<lr-graph-query-builder>`.
  *
  * Detail type: `LyraGraphQueryBuilderEventMap['lr-query-load']`.
  */
 export type LyraQueryLoadEvent = LyraGraphQueryBuilderEventMap['lr-query-load'];
+
+/**
+ * `lr-query-load-request` — dispatched by `<lr-graph-query-builder>`.
+ *
+ * Detail type: `LyraGraphQueryBuilderEventMap['lr-query-load-request']`.
+ */
+export type LyraQueryLoadRequestEvent = LyraGraphQueryBuilderEventMap['lr-query-load-request'];
 
 /**
  * `lr-query-run` — dispatched by `<lr-graph-query-builder>`.
@@ -2393,11 +2430,25 @@ export type LyraQueryLoadEvent = LyraGraphQueryBuilderEventMap['lr-query-load'];
 export type LyraQueryRunEvent = LyraGraphQueryBuilderEventMap['lr-query-run'];
 
 /**
+ * `lr-query-run-request` — dispatched by `<lr-graph-query-builder>`.
+ *
+ * Detail type: `LyraGraphQueryBuilderEventMap['lr-query-run-request']`.
+ */
+export type LyraQueryRunRequestEvent = LyraGraphQueryBuilderEventMap['lr-query-run-request'];
+
+/**
  * `lr-query-save` — dispatched by `<lr-graph-query-builder>`.
  *
  * Detail type: `LyraGraphQueryBuilderEventMap['lr-query-save']`.
  */
 export type LyraQuerySaveEvent = LyraGraphQueryBuilderEventMap['lr-query-save'];
+
+/**
+ * `lr-query-save-request` — dispatched by `<lr-graph-query-builder>`.
+ *
+ * Detail type: `LyraGraphQueryBuilderEventMap['lr-query-save-request']`.
+ */
+export type LyraQuerySaveRequestEvent = LyraGraphQueryBuilderEventMap['lr-query-save-request'];
 
 /**
  * `lr-queue-change` — dispatched by 2 components: `<lr-prompt-input>`, `<lr-prompt-queue>`.
@@ -2947,18 +2998,19 @@ export type LyraSendNowEvent =
 export type LyraSequenceStepEvent = LyraSequencePlaybackEventMap['lr-sequence-step'];
 
 /**
- * `lr-show` — dispatched by 16 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
- * `<lr-context-inspector>`, `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`,
- * `<lr-dropdown>`, `<lr-export-button>`, `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`,
- * `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`.
+ * `lr-show` — dispatched by 17 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
+ * `<lr-command-palette>`, `<lr-context-inspector>`, `<lr-date-input>`, `<lr-details>`,
+ * `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-export-button>`, `<lr-lightbox>`,
+ * `<lr-popover>`, `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`.
  *
- * A union of 13 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 14 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAlertEventMap['lr-show']`.
  */
 export type LyraShowEvent =
   | LyraAlertEventMap['lr-show']
   | LyraColorPickerEventMap['lr-show']
   | LyraComboboxEventMap['lr-show']
+  | LyraCommandPaletteEventMap['lr-show']
   | LyraDateInputEventMap['lr-show']
   | LyraDetailsEventMap['lr-show']
   | LyraDialogEventMap['lr-show']
@@ -3554,6 +3606,13 @@ export type LyraVirtualScrollEvent = LyraVirtualListEventMap['lr-virtual-scroll'
 export type LyraVisibilityChangeEvent = LyraGraphLegendEventMap['lr-visibility-change'];
 
 /**
+ * `lr-visibility-change-request` — dispatched by `<lr-graph-legend>`.
+ *
+ * Detail type: `LyraGraphLegendEventMap['lr-visibility-change-request']`.
+ */
+export type LyraVisibilityChangeRequestEvent = LyraGraphLegendEventMap['lr-visibility-change-request'];
+
+/**
  * `lr-visible-range-change` — dispatched by `<lr-virtual-list>`.
  *
  * Detail type: `LyraVirtualListEventMap['lr-visible-range-change']`.
@@ -3721,6 +3780,7 @@ export interface LyraGlobalEventMap {
   'lr-date-select': LyraDateSelectEvent;
   'lr-datum-activate': LyraDatumActivateEvent;
   'lr-datum-visibility-change': LyraDatumVisibilityChangeEvent;
+  'lr-datum-visibility-change-request': LyraDatumVisibilityChangeRequestEvent;
   'lr-decision-settled': LyraDecisionSettledEvent;
   'lr-deny': LyraDenyEvent;
   'lr-disconnect': LyraDisconnectEvent;
@@ -3797,6 +3857,7 @@ export interface LyraGlobalEventMap {
   'lr-lazy-change': LyraLazyChangeEvent;
   'lr-lazy-load': LyraLazyLoadEvent;
   'lr-legend-visibility-change': LyraLegendVisibilityChangeEvent;
+  'lr-legend-visibility-change-request': LyraLegendVisibilityChangeRequestEvent;
   'lr-level': LyraLevelEvent;
   'lr-lightbox-close': LyraLightboxCloseEvent;
   'lr-line-activate': LyraLineActivateEvent;
@@ -3868,9 +3929,13 @@ export interface LyraGlobalEventMap {
   'lr-priority-columns-visibility-change': LyraPriorityColumnsVisibilityChangeEvent;
   'lr-query-change': LyraQueryChangeEvent;
   'lr-query-delete': LyraQueryDeleteEvent;
+  'lr-query-delete-request': LyraQueryDeleteRequestEvent;
   'lr-query-load': LyraQueryLoadEvent;
+  'lr-query-load-request': LyraQueryLoadRequestEvent;
   'lr-query-run': LyraQueryRunEvent;
+  'lr-query-run-request': LyraQueryRunRequestEvent;
   'lr-query-save': LyraQuerySaveEvent;
+  'lr-query-save-request': LyraQuerySaveRequestEvent;
   'lr-queue-change': LyraQueueChangeEvent;
   'lr-rail-resize': LyraRailResizeEvent;
   'lr-rail-resize-request': LyraRailResizeRequestEvent;
@@ -3991,6 +4056,7 @@ export interface LyraGlobalEventMap {
   'lr-viewport-change': LyraViewportChangeEvent;
   'lr-virtual-scroll': LyraVirtualScrollEvent;
   'lr-visibility-change': LyraVisibilityChangeEvent;
+  'lr-visibility-change-request': LyraVisibilityChangeRequestEvent;
   'lr-visible-range-change': LyraVisibleRangeChangeEvent;
   'lr-voice-change': LyraVoiceChangeEvent;
   'lr-vote': LyraVoteEvent;

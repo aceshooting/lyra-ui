@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -148,8 +148,12 @@ block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` 
 (default `0.625rem` — a legend swatch's inline- and block-size, category and marker rows alike), and
 `--lr-sequence-strip-legend-marker-bg` (default `var(--lr-color-surface-raised)` — the neutral chip
 background behind the marker legend row's bar; it stands in for "any cell", so it deliberately
-matches no category color), and `--lr-sequence-strip-disabled-opacity` (default `var(--lr-opacity-disabled)` — opacity of
-a cell whose activated item sets `disabled`); the tooltip also consumes shared tokens
+matches no category color), `--lr-sequence-strip-disabled-opacity` (default `var(--lr-opacity-disabled)` — opacity of
+a cell whose activated item sets `disabled`), `--lr-sequence-strip-selected-color` (default
+`var(--lr-color-text)` — colour of the persistent selection ring on a cell whose index is in
+`selectedIndex`), and `--lr-sequence-strip-selected-focus-color` (default
+`var(--lr-focus-ring-color)` — colour of that same ring while the cell also has keyboard focus); the
+tooltip also consumes shared tokens
 `--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
 the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
 `--lr-color-text-quiet`, and `--lr-radius-xs`.

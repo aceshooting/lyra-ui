@@ -65,13 +65,16 @@ element or any ancestor, and they exist because `::part(row)[data-active]` is in
 `--lr-trace-tree-max-indent` (default `var(--lr-size-12rem)`) caps visual nesting indentation;
 semantic `aria-level` remains exact at deeper levels.
 
-**Contrast note:** the active row is more than a tint. Its secondary text would sit at ~4.25:1
+**Contrast note:** the active row is more than a tint. Its secondary text would sit at ~4.17:1
 against the default tint if it stayed at `--lr-color-text-quiet`, so it rises to full-strength
 `--lr-color-text` while the row is active, and the semantic `status-text` labels are rendered as
 `color-mix(in srgb, var(--lr-color-<tone>) 75%, var(--lr-color-text))` — keeping the status hue
-(an error row stays red) while clearing the 4.5:1 floor (success 4.46 → 6.18, `denied` 4.28 →
-5.96). Both adjustments are theme-symmetric, because `--lr-color-text` flips with the color
-scheme. `[part='bar']` is deliberately untouched: it is a non-text graphic on a 3:1 floor, and its
+(an error row stays red) while clearing the 4.5:1 floor with a full point of margin or more for
+every currently shipped default tone. The exact ratio moves with every palette ramp revision
+(`src/internal/tokens/palette.styles.ts`), so no specific number is pinned here — recompute against
+the live tokens before quoting one. Both adjustments are theme-symmetric, because `--lr-color-text`
+flips with the color scheme. `[part='bar']` is deliberately untouched: it is a non-text graphic on
+a 3:1 floor, and its
 saturation is the row's primary status signal.
 
 The two properties are a **pair**. The defaults assume the active background stays on the same

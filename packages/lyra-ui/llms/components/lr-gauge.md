@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -69,7 +69,12 @@ true), `label` (rendered only while `label` is non-empty)
 
 **Themeable custom properties:** `--lr-gauge-fill` (fill stroke; overrides `variant`/`thresholds`
 entirely and falls back to the effective variant's shared semantic token —
-`--lr-color-brand` by default).
+`--lr-color-brand` by default). Each variant also has its own scoped fill, read as the innermost
+fallback before the shared token so a consumer can retint one variant without `--lr-gauge-fill`'s
+uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--lr-color-neutral)`),
+`--lr-gauge-brand-fill` (default `var(--lr-color-brand)`), `--lr-gauge-success-fill` (default
+`var(--lr-color-success)`), `--lr-gauge-warning-fill` (default `var(--lr-color-warning)`), and
+`--lr-gauge-danger-fill` (default `var(--lr-color-danger)`).
 
 **Optional peer deps:** none.
 

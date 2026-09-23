@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -159,6 +159,8 @@ resolves.
 
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
+- `--lr-segmented-segment-radius` — Each segment's own corner radius, independent of the track's.
+  Default: `calc(var(--lr-form-control-radius) * 0.7)`.
 - `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-bg` — Background of the `base` track. Undeclared by default (transparent),
   matching its own current absence of a background.

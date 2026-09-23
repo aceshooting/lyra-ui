@@ -41,11 +41,14 @@ of every entry in these lists.**
 `refreshTheme()`.
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-click` (`detail: { datasetIndex,
-index, label, value }`), `lr-before-legend-visibility-change` (cancelable), and
+index, label, value }`), `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
-complete `hiddenDatasets` snapshot).
-Radial category legends additionally emit `lr-before-datum-visibility-change` (cancelable) and
+complete `hiddenDatasets` snapshot). `lr-before-legend-visibility-change` is a **deprecated** alias
+of `lr-legend-visibility-change-request` (removal not before 21.0.0).
+Radial category legends additionally emit `lr-datum-visibility-change-request` (cancelable) and
 `lr-datum-visibility-change`, carrying `index`, `visible` and the frozen `hiddenDatums` snapshot.
+`lr-before-datum-visibility-change` is a **deprecated** alias of `lr-datum-visibility-change-request`
+(removal not before 21.0.0).
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 

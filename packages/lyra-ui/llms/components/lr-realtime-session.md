@@ -27,7 +27,7 @@ clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessi
 entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
 `muted: boolean = false` (reflected);
 `showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
-converter); `label: string = ''` — accessible name for the session shell. Omitting it localizes the
+converter); `label?: string` — accessible name for the session shell. Omitting it localizes the
 default `realtimeSessionLabel` message; an explicit empty string suppresses that default and
 renders no label. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same

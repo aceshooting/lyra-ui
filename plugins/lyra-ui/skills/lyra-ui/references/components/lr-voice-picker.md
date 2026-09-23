@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,8 +41,10 @@ custom-value editor: they do not navigate options, commit a selection or custom 
 popup. Ordinary keyboard behavior resumes after composition.
 
 **Exported types:** `LyraVoiceCatalogEntry extends LyraCatalogEntry { language?: string;
-description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
-`[part="option-meta"]` second line. Voice catalogs use the shared
+description?: string; previewUrl?: string; icon?: string }` — `language`/`description` render as a
+quiet `[part="option-meta"]` second line; `icon` is an optional literal icon hint (for example, an
+emoji), rendered decoratively as the leading `[part="option-icon"]`, matching
+`lr-model-select`'s identical `LyraModelCatalogEntry.icon` field. Voice catalogs use the shared
 `LyraCatalog<LyraVoiceCatalogEntry>` homogeneous readonly union documented under `lr-model-select`,
 including the shared `disabled` field: a disabled voice row cannot be selected by click or keyboard
 and is stepped over by arrow-key/Home/End navigation, but its own `[part="option-preview"]` stays

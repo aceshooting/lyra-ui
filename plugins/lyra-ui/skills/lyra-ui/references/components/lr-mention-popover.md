@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -113,13 +113,16 @@ renders `open="false"` on first paint)
 `--lr-color-brand-quiet` token, so a consumer can retheme just this highlighted/active row without
 repainting every other component that reuses the same shared token.
 `--lr-mention-popover-option-disabled-opacity` (default `0.5`) — opacity of a row whose `items`
-entry sets `disabled`. Plus shared tokens —
+entry sets `disabled`. `--lr-mention-popover-option-active-color` (default `var(--lr-color-brand)`)
+— text color of the `aria-selected="true"` (keyboard-highlighted) suggestion row, independent of
+`--lr-mention-popover-option-active-bg`: the same component-scoped indirection over
+`--lr-color-brand`, applied to the row's own sibling text-color rule. Plus shared tokens —
 `--lr-space-xs`/`-s`/`-m` (popup padding,
 row padding/gap), `--lr-radius`
 (row corners — the popup's own corner is the overlay family's, below),
 `--lr-transition-fast` (open/close
-transition), `--lr-color-brand` (selected-row
-text), `--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
+transition),
+`--lr-color-text-quiet`/`--lr-color-text` (description text, full-contrast on the active
 row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the
 popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
 available space. See `lr-tour` for the shared-clamp note.

@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-before-visibility-change` since `19.0.1`; use event `addEventListener('lr-visibility-change-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -37,10 +37,13 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
 
-**Events:** cancelable `lr-before-visibility-change` (`detail: { hiddenTypes }`, a frozen complete
+**Events:** cancelable `lr-visibility-change-request` (`detail: { hiddenTypes }`, a frozen complete
 next array) fires before a toggle changes state or announces it. Preventing it suppresses all three.
 `lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array) fires after an
-accepted assignment and announcement.
+accepted assignment and announcement. `lr-before-visibility-change` is a **deprecated** alias of
+`lr-visibility-change-request`, fired immediately after it from the same gesture with the same
+frozen detail; either event may veto. It is slated for removal in 21.0.0 — migrate listeners to
+`lr-visibility-change-request`.
 
 **Slots:** none.
 

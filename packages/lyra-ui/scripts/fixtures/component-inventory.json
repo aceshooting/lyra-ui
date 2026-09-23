@@ -8854,7 +8854,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -8923,7 +8923,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -11445,12 +11445,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -11466,9 +11492,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -11817,7 +11855,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-box-plot",
+            "kind": "event",
+            "name": "lr-before-legend-visibility-change",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-legend-visibility-change-request",
+              "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -12117,6 +12169,19 @@
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-box-plot",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -12129,6 +12194,12 @@
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -12488,7 +12559,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -12529,7 +12600,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -14034,12 +14105,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -14055,9 +14152,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -18092,7 +18201,34 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-chart",
+            "kind": "event",
+            "name": "lr-before-datum-visibility-change",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-datum-visibility-change-request",
+              "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+          },
+          {
+            "tag": "lr-chart",
+            "kind": "event",
+            "name": "lr-before-legend-visibility-change",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-legend-visibility-change-request",
+              "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -18861,12 +18997,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -18882,9 +19044,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -20931,7 +21105,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -21002,7 +21176,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -21538,19 +21712,19 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ checked: boolean }>",
+            "type": "CustomEvent<{ checked: boolean; value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-checkbox-toggle-request",
-            "type": "CustomEvent<{ checked: boolean }>",
+            "type": "CustomEvent<{ checked: boolean; value: string }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ checked: boolean }>",
+            "type": "CustomEvent<{ checked: boolean; value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -21647,6 +21821,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-checkbox-box-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "calc(var(--lr-form-control-radius) * 0.6)"
           },
           {
             "name": "--lr-checkbox-box-size",
@@ -26231,6 +26411,12 @@
             "default": "var(--lr-space-s)"
           },
           {
+            "name": "--lr-code-editor-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
             "name": "--lr-code-editor-tab-size",
             "deprecated": null,
             "hasDefault": true,
@@ -26733,6 +26919,16 @@
             "default": "absolute"
           },
           {
+            "name": "readonly",
+            "property": "readonly",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "required",
             "property": "required",
             "type": "boolean",
@@ -27002,6 +27198,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "absolute"
+          },
+          {
+            "name": "readonly",
+            "attribute": "readonly",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "required",
@@ -27858,7 +28064,7 @@
           {
             "name": "appearance",
             "property": "appearance",
-            "type": "'filled' | 'outlined' | 'filled-outlined'",
+            "type": "LyraAppearance",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -28262,7 +28468,7 @@
           {
             "name": "appearance",
             "attribute": "appearance",
-            "type": "'filled' | 'outlined' | 'filled-outlined'",
+            "type": "LyraAppearance",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -29200,6 +29406,18 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-combobox-tag-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-combobox-tag-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
             "name": "--lr-combobox-tag-font-size",
             "deprecated": null,
             "hasDefault": false
@@ -29208,6 +29426,12 @@
             "name": "--lr-combobox-tag-padding",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-combobox-tag-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-combobox-trigger-height",
@@ -29666,7 +29890,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-command-palette",
+            "kind": "event",
+            "name": "lr-open",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-show",
+              "usage": "addEventListener('lr-show', handler)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "lr-open collided in name with an unrelated \"item activated\" lr-open fired by lr-document-library/lr-source-card, and broke the lr-show/lr-hide overlay-lifecycle vocabulary its architectural sibling lr-lightbox already follows. lr-show fires identically (same null detail, cancelability, and timing) at the same call site, and lr-open is kept as a deprecated alias through the 20.x line."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -29800,12 +30038,31 @@
             "name": "lr-open",
             "type": "CustomEvent<null>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-command-palette",
+              "kind": "event",
+              "name": "lr-open",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-show",
+                "usage": "addEventListener('lr-show', handler)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "lr-open collided in name with an unrelated \"item activated\" lr-open fired by lr-document-library/lr-source-card, and broke the lr-show/lr-hide overlay-lifecycle vocabulary its architectural sibling lr-lightbox already follows. lr-show fires identically (same null detail, cancelability, and timing) at the same call site, and lr-open is kept as a deprecated alias through the 20.x line."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-select",
             "type": "CustomEvent<Readonly<{ command: LyraCommand }>>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -32547,6 +32804,30 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-border-width-thick)"
+          },
+          {
+            "name": "--lr-context-meter-tone-brand-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-context-meter-tone-danger-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-context-meter-tone-success-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success)"
+          },
+          {
+            "name": "--lr-context-meter-tone-warning-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-warning)"
           },
           {
             "name": "--lr-context-meter-track-bg",
@@ -36497,7 +36778,7 @@
           "upstream": "webawesome",
           "tag": "wa-date-input",
           "tier": "pro",
-          "classification": "rewritten"
+          "classification": "warning-required"
         }
       ],
       "surface": {
@@ -36505,7 +36786,7 @@
           {
             "name": "appearance",
             "property": "appearance",
-            "type": "Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>",
+            "type": "LyraAppearance",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -36987,7 +37268,7 @@
           {
             "name": "appearance",
             "attribute": "appearance",
-            "type": "Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>",
+            "type": "LyraAppearance",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -44042,12 +44323,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -44063,9 +44370,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -48148,7 +48467,9 @@
       "registrationModule": "src/components/forms/emoji-picker/emoji-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "emoji-picker-element-data"
+      ],
       "maturity": {
         "status": "stable",
         "since": "4.0.0",
@@ -51621,6 +51942,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-export-button-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-export-button-hover-background",
             "deprecated": null,
             "hasDefault": false
@@ -51634,6 +51961,12 @@
             "name": "--lr-export-button-hover-color",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           },
           {
             "name": "--lr-overlay-border",
@@ -57441,10 +57774,40 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-gauge-brand-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-gauge-danger-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
             "name": "--lr-gauge-fill",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-gauge-neutral-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-neutral)"
+          },
+          {
+            "name": "--lr-gauge-success-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success)"
+          },
+          {
+            "name": "--lr-gauge-warning-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-warning)"
           }
         ],
         "cssStates": [],
@@ -59102,7 +59465,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-graph-legend",
+            "kind": "event",
+            "name": "lr-before-visibility-change",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-visibility-change-request",
+              "usage": "addEventListener('lr-visibility-change-request', ...)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -59218,12 +59595,31 @@
             "name": "lr-before-visibility-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail> >",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-graph-legend",
+              "kind": "event",
+              "name": "lr-before-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-visibility-change-request",
+                "usage": "addEventListener('lr-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-visibility-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail> >",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-visibility-change-request",
+            "type": "CustomEvent< LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail> >",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -59298,7 +59694,60 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-graph-query-builder",
+            "kind": "event",
+            "name": "lr-before-query-delete",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-query-delete-request",
+              "usage": "addEventListener('lr-query-delete-request', ...)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+          },
+          {
+            "tag": "lr-graph-query-builder",
+            "kind": "event",
+            "name": "lr-before-query-load",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-query-load-request",
+              "usage": "addEventListener('lr-query-load-request', ...)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+          },
+          {
+            "tag": "lr-graph-query-builder",
+            "kind": "event",
+            "name": "lr-before-query-run",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-query-run-request",
+              "usage": "addEventListener('lr-query-run-request', ...)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+          },
+          {
+            "tag": "lr-graph-query-builder",
+            "kind": "event",
+            "name": "lr-before-query-save",
+            "since": "19.0.1",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-query-save-request",
+              "usage": "addEventListener('lr-query-save-request', ...)"
+            },
+            "removalNotBefore": "21.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -59612,24 +60061,76 @@
             "name": "lr-before-query-delete",
             "type": "CustomEvent<GraphQueryDeleteDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-graph-query-builder",
+              "kind": "event",
+              "name": "lr-before-query-delete",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-query-delete-request",
+                "usage": "addEventListener('lr-query-delete-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-query-load",
             "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-graph-query-builder",
+              "kind": "event",
+              "name": "lr-before-query-load",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-query-load-request",
+                "usage": "addEventListener('lr-query-load-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-query-run",
             "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-graph-query-builder",
+              "kind": "event",
+              "name": "lr-before-query-run",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-query-run-request",
+                "usage": "addEventListener('lr-query-run-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-query-save",
             "type": "CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-graph-query-builder",
+              "kind": "event",
+              "name": "lr-before-query-save",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-query-save-request",
+                "usage": "addEventListener('lr-query-save-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -59651,9 +60152,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-query-delete-request",
+            "type": "CustomEvent<GraphQueryDeleteDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-query-load",
             "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-query-load-request",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -59663,9 +60176,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-query-run-request",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-query-save",
             "type": "CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-query-save-request",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -60893,7 +61418,7 @@
             "name": "matrixGeometry",
             "attribute": null,
             "type": "Readonly<LyraHeatmapMatrixGeometryChangeDetail> | undefined",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -62325,12 +62850,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -62346,9 +62897,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -71728,12 +72291,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -71749,9 +72338,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -73988,7 +74589,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -74116,7 +74717,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -74203,7 +74804,7 @@
             "name": "legendProjection",
             "attribute": null,
             "type": "LyraMapLegendProjection",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -76955,6 +77556,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-mention-popover-option-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-mention-popover-option-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
@@ -77991,7 +78598,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -78071,7 +78678,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -89687,7 +90294,7 @@
             "name": "pageViewerSnapshot",
             "attribute": null,
             "type": "LyraPageViewerSnapshot",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -92039,12 +92646,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -92060,9 +92693,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -93091,12 +93736,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -93112,9 +93783,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -95304,7 +95987,7 @@
             "name": "pageViewerSnapshot",
             "attribute": null,
             "type": "LyraPageViewerSnapshot",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -95879,6 +96562,12 @@
             "default": "var(--lr-progress-height,var(--_lr-progress-track-height))"
           },
           {
+            "name": "--lr-progress-track-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-pill)"
+          },
+          {
             "name": "--track-color",
             "deprecated": null,
             "hasDefault": true,
@@ -96418,7 +97107,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -96653,7 +97342,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -97303,7 +97992,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -97364,7 +98053,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -99690,12 +100379,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -99711,9 +100426,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -104155,7 +104882,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -104244,7 +104971,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -107920,6 +108647,22 @@
             ]
           },
           {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formDisabledCallback",
             "overloads": [
               {
@@ -108027,7 +108770,8 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
-            "click"
+            "click",
+            "focus"
           ]
         }
       }
@@ -108730,12 +109474,38 @@
             "name": "lr-before-datum-visibility-change",
             "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-datum-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-datum-visibility-change-request",
+                "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-chart",
+              "kind": "event",
+              "name": "lr-before-legend-visibility-change",
+              "since": "19.0.1",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-legend-visibility-change-request",
+                "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+              },
+              "removalNotBefore": "21.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -108751,9 +109521,21 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-datum-visibility-change-request",
+            "type": "CustomEvent<LyraChartDatumVisibilityChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-legend-visibility-change",
             "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-legend-visibility-change-request",
+            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -109609,6 +110391,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)"
+          },
+          {
+            "name": "--lr-segmented-segment-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "calc(var(--lr-form-control-radius) * 0.7)"
           },
           {
             "name": "--lr-segmented-selected-bg",
@@ -110910,6 +111698,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-select-tag-remove-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-select-trigger-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -111257,7 +112051,7 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -111328,7 +112122,7 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -112087,6 +112881,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-sequence-strip-selected-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-sequence-strip-selected-focus-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-focus-ring-color)"
           }
         ],
         "cssStates": [],
@@ -112127,7 +112933,7 @@
         "humanReview": "pending",
         "reviewer": null,
         "reviewedAt": null,
-        "accessibility": "reviewed-exemption",
+        "accessibility": "automated",
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
@@ -120134,13 +120940,13 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ checked: boolean }>",
+            "type": "CustomEvent<{ checked: boolean; value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ checked: boolean }>",
+            "type": "CustomEvent<{ checked: boolean; value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -120152,7 +120958,7 @@
           },
           {
             "name": "lr-switch-toggle-request",
-            "type": "CustomEvent<{ checked: boolean }>",
+            "type": "CustomEvent<{ checked: boolean; value: string }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -130485,6 +131291,15 @@
             "default": ""
           },
           {
+            "name": "readonly",
+            "property": "readonly",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "required",
             "property": "required",
             "type": "boolean",
@@ -130705,6 +131520,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "readonly",
+            "attribute": "readonly",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "required",
@@ -139929,6 +140753,10 @@
             "deprecated": null
           },
           {
+            "name": "option-icon",
+            "deprecated": null
+          },
+          {
             "name": "option-label",
             "deprecated": null
           },
@@ -140880,6 +141708,30 @@
             "default": 0
           },
           {
+            "name": "--lr-widget-collapse-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-widget-collapse-button-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-widget-fullscreen-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-widget-fullscreen-button-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-widget-fullscreen-inset",
             "deprecated": null,
             "hasDefault": true,
@@ -141614,7 +142466,7 @@
             "name": "source",
             "attribute": null,
             "type": "LyraXmlViewerSource",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -199594,7 +200446,7 @@
       "upstreamTier": "pro",
       "targetTag": "lr-combobox",
       "classification": "warning-required",
-      "rationale": "Lyra snapshots each input/change event's value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed.",
+      "rationale": "Lyra snapshots each input/change event's value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -199818,6 +200670,13 @@
         ]
       },
       "drift": [
+        {
+          "code": "type-mismatch",
+          "section": "attributes",
+          "member": "appearance",
+          "expected": "'filled' | 'outlined' | 'filled-outlined'",
+          "actual": "LyraAppearance"
+        },
         {
           "code": "event-type-mismatch",
           "section": "events",
@@ -200491,8 +201350,8 @@
       "upstreamTag": "wa-date-input",
       "upstreamTier": "pro",
       "targetTag": "lr-date-input",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -200516,7 +201375,9 @@
           },
           "rationale": "wa-date-input and lr-date-input share the reviewed behavior profile: A labelled segmented field exposes editable date or time groups and validation."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -200578,12 +201439,6 @@
             "member": "weekday-format",
             "upstream": "'narrow' | 'short' | 'long'",
             "target": "WeekdayFormat"
-          },
-          {
-            "memberKind": "attribute",
-            "member": "appearance",
-            "upstream": "'filled' | 'outlined' | 'filled-outlined'",
-            "target": "Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>"
           },
           {
             "memberKind": "attribute",
@@ -200714,7 +201569,15 @@
           }
         ]
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "type-mismatch",
+          "section": "attributes",
+          "member": "appearance",
+          "expected": "'filled' | 'outlined' | 'filled-outlined'",
+          "actual": "LyraAppearance"
+        }
+      ]
     },
     {
       "upstream": "webawesome",

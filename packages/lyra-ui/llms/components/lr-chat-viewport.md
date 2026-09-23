@@ -42,7 +42,7 @@ index of the first unread item (element-child index in slotted mode, `items` ind
 'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
 remains non-live. Keep `off` for token-by-token streaming and opt in only when complete messages are
 appended as direct children at an announcement-safe cadence.
-`label: string = ''` — accessible name
+`label?: string` — accessible name
 for the log region. Omitting it localizes the default `chatViewportLabel` message; an explicit
 empty string suppresses that default and renders no label. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal `role="log"` element

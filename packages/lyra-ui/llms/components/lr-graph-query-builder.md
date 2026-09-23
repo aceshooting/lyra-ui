@@ -7,7 +7,10 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated event** `lr-before-query-delete` since `19.0.1`; use event `addEventListener('lr-query-delete-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
+- **Deprecated event** `lr-before-query-load` since `19.0.1`; use event `addEventListener('lr-query-load-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
+- **Deprecated event** `lr-before-query-run` since `19.0.1`; use event `addEventListener('lr-query-run-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
+- **Deprecated event** `lr-before-query-save` since `19.0.1`; use event `addEventListener('lr-query-save-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
 - **Optional peers** none
 - **Themeable via** 28 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -72,19 +75,25 @@ visible label element, so slotted/property/localized label text is also the anno
 effective native validity, including custom errors and own/fieldset validation barring.
 `lr-invalid` is a cancelable bubbling/composed alias; vetoing it suppresses the native invalid
 default. Run, save, load, and delete share one two-phase contract: cancelable
-`lr-before-query-run`, `lr-before-query-save`, `lr-before-query-load`, and
-`lr-before-query-delete` requests precede any local effect; non-cancelable `lr-query-run`,
+`lr-query-run-request`, `lr-query-save-request`, `lr-query-load-request`, and
+`lr-query-delete-request` requests precede any local effect; non-cancelable `lr-query-run`,
 `lr-query-save`, `lr-query-load`, and `lr-query-delete` notifications follow only when accepted.
-The matching before/accepted pair reuses one frozen payload: `{ query }` for run,
+The matching request/accepted pair reuses one frozen payload: `{ query }` for run,
 `{ name, query }` for save, `{ queryId, query }` for load, and `{ queryId }` for delete.
 Run validates before its request. Save veto preserves the draft name. Load requests frozen
 `{ queryId, query }` before changing `value`, so veto preserves the current query; its accepted event
 fires after the new value is applied. Delete remains controlled, so the host removes the accepted
-id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and those
-eight phased action events.
+id from `savedQueries`. Each request also fires a **deprecated** `lr-before-query-run` /
+`lr-before-query-save` / `lr-before-query-load` / `lr-before-query-delete` alias immediately after
+its canonical `-request` counterpart, from the same gesture with the same frozen detail; either
+event may veto. The aliases are slated for removal in 21.0.0 — migrate listeners to the
+`lr-query-*-request` names. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and
+those twelve phased action events (four requests, four deprecated aliases, four accepted
+notifications).
 
-Migration note: veto save in `lr-before-query-save`, not `lr-query-save`; the existing
-`lr-query-*` action events are accepted, non-cancelable notifications. **Slots:** `actions`,
+Migration note: veto save in `lr-query-save-request` (or its deprecated `lr-before-query-save`
+alias), not `lr-query-save`; the existing `lr-query-*` action events are accepted, non-cancelable
+notifications. **Slots:** `actions`,
 `label`, `hint`, `error`. **CSS
 parts:** `base`, `form-control-label` (`label` remains as a compatibility alias on the same node),
 `hint`, `error` (the three form-control chrome parts every

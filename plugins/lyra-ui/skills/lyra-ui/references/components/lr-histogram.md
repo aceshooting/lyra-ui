@@ -48,10 +48,12 @@ maxSamples?)` appends finite raw samples and optionally retains only the newest 
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
 
-**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-datum-visibility-change`
-(cancelable), `lr-datum-visibility-change`, `lr-before-legend-visibility-change` (cancelable), and
+**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-datum-visibility-change-request`
+(cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
+`lr-before-datum-visibility-change`/`lr-before-legend-visibility-change` are deprecated aliases of
+the two `*-request` events above (removal not before 21.0.0).
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 

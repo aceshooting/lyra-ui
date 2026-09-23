@@ -74,7 +74,14 @@ designer-chosen colours; reach for this when it must not.
 **Properties:** the shared
 form properties `name`, `value`, `defaultValue` (canonical content attribute `value`),
 `customError` (`custom-error`), `disabled`, and
-`required`, plus `label`, `hint`, `errorText`
+`required`,
+`readonly: boolean = false` (reflected — forwards native read-only behavior to the panel's value
+field and blocks every other value-committing affordance: the popup panel opening, the
+saturation/hue/opacity handles, palette swatches, the eyedropper, and Enter/blur-driven text
+commits; the trigger, value field and palette stay focusable, and the current value still submits
+with the form -- only `disabled` excludes it. Toggling it on while the panel is open closes it, and
+cancels an in-flight drag without committing, mirroring `disabled`'s own mid-interaction handling),
+plus `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), and `size: LyraSize = 'm'`
 (reflected — the same visual-density scale as `lr-input`, applied to the centered visible swatch;
 accepts `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`; the interactive target
@@ -90,15 +97,19 @@ and:
   applies to the whole string, function names included (`RGB(255, 0, 0)`)
 - `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
   `;`-separated string, an array of colour strings, or an array of
-  `{ color: string; label?: string; disabled?: boolean }` objects. Any colour the picker can parse
-  is accepted; blank entries are dropped. An entry that is _not_ parseable is kept in the list and
-  still renders a swatch — it just paints no colour (the bare checkerboard) and clicking it does
-  nothing, so filter the palette yourself if that matters. `label` becomes the swatch's accessible
-  name; a missing, empty, or whitespace-only label falls back to announcing the raw colour string.
+  `{ color: string; label?: string; disabled?: boolean; icon?: unknown }` objects. Any colour the
+  picker can parse is accepted; blank entries are dropped. An entry that is _not_ parseable is kept
+  in the list and still renders a swatch — it just paints no colour (the bare checkerboard) and
+  clicking it does nothing, so filter the palette yourself if that matters. `label` becomes the
+  swatch's accessible name; a missing, empty, or whitespace-only label falls back to announcing the
+  raw colour string.
   `disabled` marks that one swatch non-actionable, independent of the whole control's own
   `disabled`: it renders a genuinely disabled `<button>` (no tab stop, no hover/press affordance)
   and clicking it commits nothing; omitted or `false` renders the swatch exactly as before this
-  field existed. The palette container renders only while the normalized list is non-empty
+  field existed. `icon` is an optional decorative custom shape rendered inside the swatch button
+  behind the `swatch-icon` part -- inert and `aria-hidden`, matching `<lr-swatch-picker>`'s
+  identical `SwatchPickerItem.icon` field. The palette container renders only while the normalized
+  list is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
   that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
   reaches the same behavior; either one wins
@@ -200,7 +211,8 @@ absent with either format-toggle suppression property), plus `format-button__bas
 `eyedropper-button` / `eye-dropper-button` (rendered only where the browser exposes the EyeDropper
 API), with the corresponding `eyedropper-button__base|start|label|end|caret` and Shoelace
 `eye-dropper-button__base|prefix|label|suffix|caret` aliases; `swatches` (the palette container, rendered only when the normalized `swatches`
-list is non-empty), `swatch` (one palette entry), `swatch-selected` (a token **added to** the
+list is non-empty), `swatch` (one palette entry), `swatch-icon` (a swatch entry's optional
+decorative icon, inert and `aria-hidden`), `swatch-selected` (a token **added to** the
 swatch matching the current value — state after `::part()` never matches, so write
 `::part(swatch-selected)`), `hint`, `error`.
 

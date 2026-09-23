@@ -43,7 +43,10 @@ discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. 
 first-wins identity and retained valid spelling is not rewritten. Shared fields are
 `key`, `label?`, `description?`, and `required?`; only scores expose `min?`/`max?`/`step?`, only
 categories expose readonly `RubricKeyOption[]` plus `multiple?`, and only comments expose
-`placeholder?`. Runtime schema normalization retains the first occurrence of each nonempty key and
+`placeholder?`. Each `RubricKeyOption` also accepts an optional `icon?: unknown` -- a decorative
+leading visual rendered into `<lr-option>`'s `start` slot in the single-select branch, or inline
+before the label in the multiple-select `<lr-checkbox>` branch, inert and `aria-hidden` either way,
+matching `LyraFilterBarOption.icon`. Runtime schema normalization retains the first occurrence of each nonempty key and
 rejects malformed rows. `value: RubricValue = {}` is a defensive readonly snapshot and
 `defaultValue: RubricValue = {}` is its explicit form-reset baseline (both attribute: false).
 `itemId: string = ''`
@@ -90,6 +93,8 @@ state exposed as `errors.base`, rather than being attributed to one rubric key. 
 clearing it hides that region unless the `error` slot supplies other content.
 `click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
 so the host behaves like a single control under both a `<label>`-driven and a programmatic click.
+`focus(options?)` moves focus to that same active field, matching `click()`'s target; this is also
+what lets the native `autofocus` attribute reach the rubric.
 
 **CSS parts:** `base` (the outer `role="group"` wrapper), `form-control` (aggregate chrome wrapper),
 `aggregate-label` / `form-control-label`, `fields` / `form-control-input`, `aggregate-hint` /

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -106,7 +106,10 @@ hover, `--lr-export-button-hover-background`, `--lr-export-button-hover-color` a
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
-opt out. Before 18.4.0 none of these existed and the only lever was `::part(trigger)`. Plus shared
+opt out. Before 18.4.0 none of these existed and the only lever was `::part(trigger)`.
+`--lr-export-button-gap` (default `var(--lr-space-xs)`, constant across the `size` ladder) and
+`--lr-export-button-radius` (default `var(--lr-radius)`) retune the trigger's icon/label gap and
+corner radius without a `::part(trigger)` rule. Plus shared
 tokens, including `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.

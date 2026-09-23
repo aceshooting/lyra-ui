@@ -48,7 +48,7 @@ opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only whil
 feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
 `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
 the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus.
-`label: string = ''` — accessible name override for the toolbar. Omitting it localizes the default
+`label?: string` — accessible name override for the toolbar. Omitting it localizes the default
 `messageActionsLabel` message; an explicit empty string suppresses that default and renders no
 label. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — overrides the toolbar's computed accessible name, winning over
