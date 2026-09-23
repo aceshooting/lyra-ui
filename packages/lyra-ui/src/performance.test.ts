@@ -466,7 +466,14 @@ it('keeps mind-map topic churn within the large-map budget', async () => {
   const topics = buildMindMapTopics(TOPIC_COUNT, 5);
   host.topics = topics;
   await host.updateComplete;
-  await waitUntil(() => host.shadowRoot!.querySelectorAll('[part="node"]').length === TOPIC_COUNT);
+  // Above its render cap the map draws a decimated 500-node sample plus a "showing N of M" notice;
+  // the churn budget measures that capped render path.
+  const RENDER_CAP = 500;
+  await waitUntil(
+    () =>
+      host.shadowRoot!.querySelectorAll('[part="node"]').length === RENDER_CAP &&
+      host.shadowRoot!.querySelector('[part="limit"]') !== null,
+  );
   const result = await benchmark(
     host,
     (iteration) => {
