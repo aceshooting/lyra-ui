@@ -88,6 +88,10 @@ async function writeFixture(fixtureDir, tarball) {
         },
         devDependencies: {
           '@types/react': '19.2.18',
+          // svelte's esrap dependency ships declarations that import this package unconditionally
+          // while declaring it only as an optional peer; with peer auto-install off and
+          // skipLibCheck disabled, svelte-check cannot resolve it unless it is installed here.
+          '@typescript-eslint/types': '8.70.1',
           'svelte-check': '4.7.4',
           // vue-tsc 3.3 resolves TypeScript's public `lib/tsc` compatibility entry. TypeScript 7
           // removed that package export, so this framework-native check stays on Vue's supported

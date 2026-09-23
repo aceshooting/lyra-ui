@@ -919,7 +919,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `shiki`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 36.9 KiB (37804 bytes; bundle SHA-256 `a4f6aa838a31227366e7f82cd607c06e030d4630a3530e4b98c688a9fe45459c`)
+- Standalone gzip: 36.9 KiB (37805 bytes; bundle SHA-256 `d1946b2578e66966c96fb4668c40476e57e88088e86590924c4d938db3d81eef`)
 
 </details>
 
@@ -955,7 +955,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `shiki`
 - Direct Lyra dependencies: `lr-diff-view`, `lr-document-preview`
 - Transitive Lyra dependencies: `lr-pan-zoom`
-- Standalone gzip: 47 KiB (48151 bytes; bundle SHA-256 `6e65ae125eb9a4b0209e9dba7a3d91af3f483dcbf4b5ac986b43b2b8fc31c953`)
+- Standalone gzip: 47 KiB (48160 bytes; bundle SHA-256 `5e8dc7bf7a8441f7d4d6327b89fc5780829c31a9dc414776d2797efdc8cc2973`)
 
 </details>
 
@@ -1207,7 +1207,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `shiki`
 - Direct Lyra dependencies: `lr-diff-view`, `lr-rubric-form`, `lr-table`
 - Transitive Lyra dependencies: `lr-checkbox`, `lr-checkbox-group`, `lr-empty`, `lr-option`, `lr-pagination`, `lr-segmented`, `lr-select`, `lr-skeleton`, `lr-slider`, `lr-spinner`, `lr-textarea`
-- Standalone gzip: 136.4 KiB (139675 bytes; bundle SHA-256 `c58aa2d476af1b8d4b0b22e11f16fb9148ca9448d9831838ddcbd4cf6c1cfa70`)
+- Standalone gzip: 136.4 KiB (139677 bytes; bundle SHA-256 `16cd3ac92f7e474560f47bc162968401dd9fba9e85cb2eb94d63c99f1f13d51e`)
 
 </details>
 
