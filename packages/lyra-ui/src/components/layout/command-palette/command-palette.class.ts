@@ -230,6 +230,9 @@ function projectCommands(value: unknown): readonly CanonicalCommand[] {
 }
 export interface LyraCommandPaletteEventMap {
   'lr-select': CustomEvent<Readonly<{ command: LyraCommand }>>;
+  'lr-show': CustomEvent<null>;
+  /** @deprecated Use `lr-show` instead; removed no earlier than 21.0.0. Fired identically
+   *  (same `detail`, cancelability, and timing) alongside `lr-show` at the same call site. */
   'lr-open': CustomEvent<null>;
   'lr-close': CustomEvent<null>;
   focus: CustomEvent<null>;
@@ -245,8 +248,11 @@ export interface LyraCommandPaletteEventMap {
  *
  * @customElement lr-command-palette
  * @event lr-select - A command was chosen; detail is `{ command }`.
- * @event lr-open - Emitted before the palette opens. Cancelable: `preventDefault()` keeps it
+ * @event lr-show - Emitted before the palette opens. Cancelable: `preventDefault()` keeps it
  * closed.
+ * @event lr-open - Deprecated alias for `lr-show`, fired identically (same `detail`,
+ * cancelability, and timing) at the same call site; either event's `preventDefault()` vetoes the
+ * open. Removed no earlier than 21.0.0.
  * @event lr-close - Emitted before the palette closes. Cancelable: `preventDefault()` keeps it
  * open.
  * @event focus - Re-dispatched when the search input receives focus. Native `focus` neither
@@ -643,9 +649,16 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private requestOpen(next: boolean): boolean {
     if (next === this._open || this.openRequestTarget === next) return false;
     this.openRequestTarget = next;
-    const prevented = this.emit(next ? 'lr-open' : 'lr-close', null, {
-      cancelable: true,
-    }).defaultPrevented;
+    let prevented: boolean;
+    if (next) {
+      // `lr-open` is a deprecated alias for `lr-show`: both fire, unconditionally, at this same
+      // call site with identical `detail`/cancelability, and either one can veto the open.
+      const showPrevented = this.emit('lr-show', null, { cancelable: true }).defaultPrevented;
+      const openPrevented = this.emit('lr-open', null, { cancelable: true }).defaultPrevented;
+      prevented = showPrevented || openPrevented;
+    } else {
+      prevented = this.emit('lr-close', null, { cancelable: true }).defaultPrevented;
+    }
     this.openRequestTarget = undefined;
     if (prevented) {
       this.toggleAttribute('open', this._open);

@@ -1409,6 +1409,41 @@ it("emits a cancelable lr-open before mutating open, and skips the mutation when
   expect(el.open, "a defaultPrevented lr-open must not open the palette").to.be.false;
 });
 
+it("emits a cancelable lr-show before mutating open, and skips the mutation when it is vetoed", async () => {
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  const seen: boolean[] = [];
+  el.addEventListener("lr-show", (event) => {
+    seen.push(el.open);
+    event.preventDefault();
+  });
+  el.openPalette();
+  expect(seen, "open must still be false while lr-show is being dispatched").to.deep.equal([false]);
+  expect(el.open, "a defaultPrevented lr-show must not open the palette").to.be.false;
+});
+
+it("fires both lr-show and the deprecated lr-open alias with identical null detail when opening", async () => {
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  const seen: string[] = [];
+  el.addEventListener("lr-show", (event) => seen.push(`show:${String((event as CustomEvent).detail)}`));
+  el.addEventListener("lr-open", (event) => seen.push(`open:${String((event as CustomEvent).detail)}`));
+  el.openPalette();
+  expect(seen, "lr-show must fire before the deprecated lr-open alias, both with a null detail").to.deep.equal([
+    "show:null",
+    "open:null",
+  ]);
+  expect(el.open).to.be.true;
+});
+
+it("vetoes opening when only lr-show is prevented, even though the deprecated lr-open alias is not", async () => {
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  el.addEventListener("lr-show", (event) => event.preventDefault());
+  el.openPalette();
+  expect(
+    el.open,
+    "a defaultPrevented lr-show must veto the open even though lr-open was not prevented",
+  ).to.be.false;
+});
+
 it("emits a cancelable lr-close before mutating open, and skips the mutation when it is vetoed", async () => {
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette();

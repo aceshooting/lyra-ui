@@ -370,6 +370,19 @@
       "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
     },
     {
+      "tag": "lr-command-palette",
+      "kind": "event",
+      "name": "lr-open",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-show",
+        "usage": "addEventListener('lr-show', handler)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "lr-open collided in name with an unrelated \"item activated\" lr-open fired by lr-document-library/lr-source-card, and broke the lr-show/lr-hide overlay-lifecycle vocabulary its architectural sibling lr-lightbox already follows. lr-show fires identically (same null detail, cancelability, and timing) at the same call site, and lr-open is kept as a deprecated alias through the 20.x line."
+    },
+    {
       "tag": "lr-file-input",
       "kind": "part",
       "name": "base",
