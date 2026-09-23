@@ -33,6 +33,12 @@ export interface LyraGraphLegendVisibilityDetail {
 }
 
 export interface LyraGraphLegendEventMap {
+  /** Canonical name for the visibility-change veto point. */
+  'lr-visibility-change-request': CustomEvent<
+    LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>
+  >;
+  /** Deprecated alias of `lr-visibility-change-request`, kept firing unchanged for back-compat;
+   *  slated for removal in 21.0.0. */
   'lr-before-visibility-change': CustomEvent<
     LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>
   >;
@@ -70,8 +76,12 @@ const FALLBACK_PALETTE = [
  * untyped payload cannot create an unnamed interactive filter.
  *
  * @customElement lr-graph-legend
- * @event lr-before-visibility-change - Cancelable proposed visibility change. `detail: { hiddenTypes }`
- *   is a frozen complete next array; canceling leaves state, announcements, and the post event unchanged.
+ * @event lr-visibility-change-request - Cancelable proposed visibility change. `detail: { hiddenTypes }`
+ *   is a frozen complete next array; canceling leaves state, announcements, and the post event
+ *   unchanged. Fires before `lr-before-visibility-change`, from the same gesture; either event may
+ *   veto.
+ * @event lr-before-visibility-change - Deprecated cancelable alias of `lr-visibility-change-request`, kept
+ *   firing unchanged for back-compat; slated for removal in 21.0.0. Same frozen detail.
  * @event lr-visibility-change - `detail: { hiddenTypes }` — the complete updated array, fired
  *   after an accepted toggle has assigned and announced it.
  * @csspart base - The legend wrapper. It owns `role="group"` and the fallback name unless a
@@ -112,6 +122,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     srOnly,
   ];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-visibility-change-request',
     'lr-before-visibility-change',
     'lr-visibility-change',
   ]);
@@ -191,11 +202,18 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
       ? [...hiddenTypes, type.id]
       : hiddenTypes.filter((id) => id !== type.id);
     const proposal = this.emit(
+      'lr-visibility-change-request',
+      { hiddenTypes: next },
+      { cancelable: true },
+    );
+    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
+    // still veto, exactly as one bound only to the canonical name can.
+    const deprecatedAlias = this.emit(
       'lr-before-visibility-change',
       { hiddenTypes: next },
       { cancelable: true },
     );
-    if (proposal.defaultPrevented) return;
+    if (proposal.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.hiddenTypes = next;
     this.liveText = this.localize(
       wasVisible ? 'legendTypeHidden' : 'legendTypeShown',

@@ -211,6 +211,60 @@ it('lets only a canceled proposal veto the child mutation, announcement, and pos
   expect(button.getAttribute('aria-pressed')).to.equal('true');
 });
 
+it('fires the canonical lr-visibility-change-request alongside the deprecated before- alias with identical detail, and either can veto', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+  const requests: CustomEvent<{ hiddenTypes: string[] }>[] = [];
+  const deprecatedAliases: CustomEvent<{ hiddenTypes: string[] }>[] = [];
+  let commits = 0;
+  el.addEventListener('lr-visibility-change-request', (event) => {
+    requests.push(event as CustomEvent<{ hiddenTypes: string[] }>);
+  });
+  el.addEventListener('lr-before-visibility-change', (event) => {
+    deprecatedAliases.push(event as CustomEvent<{ hiddenTypes: string[] }>);
+  });
+  el.addEventListener('lr-visibility-change', () => commits += 1);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(requests.length).to.equal(1);
+  expect(deprecatedAliases.length).to.equal(1);
+  expect(requests[0]?.detail.hiddenTypes).to.deep.equal(['person']);
+  expect(deprecatedAliases[0]?.detail.hiddenTypes).to.deep.equal(['person']);
+  expect(requests[0]?.cancelable).to.equal(true);
+  expect(deprecatedAliases[0]?.cancelable).to.equal(true);
+  expect(commits).to.equal(1);
+});
+
+it('vetoes the visibility toggle when only the canonical -request name is canceled', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+  let commits = 0;
+  el.addEventListener('lr-visibility-change-request', (event) => event.preventDefault());
+  el.addEventListener('lr-visibility-change', () => commits += 1);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(commits).to.equal(0);
+  expect(el.hiddenTypes).to.deep.equal([]);
+});
+
+it('vetoes the visibility toggle when only the deprecated lr-before-visibility-change alias is canceled', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+  let commits = 0;
+  el.addEventListener('lr-before-visibility-change', (event) => event.preventDefault());
+  el.addEventListener('lr-visibility-change', () => commits += 1);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(commits).to.equal(0);
+  expect(el.hiddenTypes).to.deep.equal([]);
+});
+
 it('uses the same proposal and commit sequence for native pointer and keyboard activation', async () => {
   const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;

@@ -624,6 +624,72 @@ it('keeps a controlled hidden box series hidden when its show proposal is cancel
   }
 });
 
+it('fires the canonical lr-legend-visibility-change-request alongside the deprecated before- alias with identical detail, and either can veto', async () => {
+  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  const requests: CustomEvent[] = [];
+  const deprecatedAliases: CustomEvent[] = [];
+  let commits = 0;
+  el.addEventListener('lr-legend-visibility-change-request', (event) =>
+    requests.push(event as CustomEvent),
+  );
+  el.addEventListener('lr-before-legend-visibility-change', (event) =>
+    deprecatedAliases.push(event as CustomEvent),
+  );
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(requests.length).to.equal(1);
+  expect(deprecatedAliases.length).to.equal(1);
+  expect(requests[0]?.detail).to.deep.equal({ datasetIndex: 0, visible: false, hiddenDatasets: [0] });
+  expect(deprecatedAliases[0]?.detail).to.deep.equal(requests[0]?.detail);
+  expect(requests[0]?.cancelable).to.equal(true);
+  expect(deprecatedAliases[0]?.cancelable).to.equal(true);
+  expect(commits).to.equal(1);
+});
+
+it('vetoes the box-plot legend toggle when only the canonical -request name is canceled', async () => {
+  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  let commits = 0;
+  el.addEventListener('lr-legend-visibility-change-request', (event) => event.preventDefault());
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(commits).to.equal(0);
+  expect(el.hiddenDatasets).to.equal(undefined);
+});
+
+it('vetoes the box-plot legend toggle when only the deprecated lr-before-legend-visibility-change alias is canceled', async () => {
+  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  let commits = 0;
+  el.addEventListener('lr-before-legend-visibility-change', (event) => event.preventDefault());
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(commits).to.equal(0);
+  expect(el.hiddenDatasets).to.equal(undefined);
+});
+
 it('renders a newly-added box series as pressed in the DOM legend on its first update', async () => {
   const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];

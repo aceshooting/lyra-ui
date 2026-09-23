@@ -99,7 +99,7 @@ export const Populated: Story = {
     docs: {
       description: {
         story:
-          'Run, save, load, and delete each emit a cancelable `lr-before-query-*` request followed by a non-cancelable accepted `lr-query-*` notification. The console logs both phases for every action.',
+          'Run, save, load, and delete each emit a cancelable `lr-query-*-request` followed by a non-cancelable accepted `lr-query-*` notification. The console logs both phases for every action.',
       },
     },
   },
@@ -110,13 +110,13 @@ export const Populated: Story = {
       .nodeTypeOptions=${nodeTypeOptions}
       .savedQueries=${savedQueries}
       .value=${populatedValue}
-      @lr-before-query-run=${(e: CustomEvent<GraphQueryRunDetail>) => console.log('before run', e.detail)}
+      @lr-query-run-request=${(e: CustomEvent<GraphQueryRunDetail>) => console.log('run requested', e.detail)}
       @lr-query-run=${(e: CustomEvent<GraphQueryRunDetail>) => console.log('run accepted', e.detail)}
-      @lr-before-query-save=${(e: CustomEvent<GraphQuerySaveDetail>) => console.log('before save', e.detail)}
+      @lr-query-save-request=${(e: CustomEvent<GraphQuerySaveDetail>) => console.log('save requested', e.detail)}
       @lr-query-save=${(e: CustomEvent<GraphQuerySaveDetail>) => console.log('save accepted', e.detail)}
-      @lr-before-query-load=${(e: CustomEvent<GraphQueryLoadDetail>) => console.log('before load', e.detail)}
+      @lr-query-load-request=${(e: CustomEvent<GraphQueryLoadDetail>) => console.log('load requested', e.detail)}
       @lr-query-load=${(e: CustomEvent<GraphQueryLoadDetail>) => console.log('load accepted', e.detail)}
-      @lr-before-query-delete=${(e: CustomEvent<GraphQueryDeleteDetail>) => console.log('before delete', e.detail)}
+      @lr-query-delete-request=${(e: CustomEvent<GraphQueryDeleteDetail>) => console.log('delete requested', e.detail)}
       @lr-query-delete=${(e: CustomEvent<GraphQueryDeleteDetail>) => console.log('delete accepted', e.detail)}
     ></lr-graph-query-builder>
   `,
@@ -139,14 +139,14 @@ export const FormResetDefault: Story = {
 };
 
 /** Save uses the shared two-phase action contract: this example vetoes the reserved name
- * `Production` in the before phase and leaves that draft in the field for correction; accepted
+ * `Production` in the request phase and leaves that draft in the field for correction; accepted
  * names clear normally and then emit `lr-query-save`. */
 export const CancelableSave: Story = {
   render: () => html`
     <lr-graph-query-builder
       style="max-width: 40rem"
       .value=${populatedValue}
-      @lr-before-query-save=${(event: CustomEvent<GraphQuerySaveDetail>) => {
+      @lr-query-save-request=${(event: CustomEvent<GraphQuerySaveDetail>) => {
         if (event.detail.name === 'Production') event.preventDefault();
       }}
     >

@@ -404,17 +404,24 @@ including a string or finite-number `id` when supplied; invalid ids are omitted.
 is typed `unknown`. Validate or explicitly narrow the value itself before reading point fields;
 checking `detail.kind === 'point'` alone does not narrow `detail.value` in TypeScript.
 `lr-point-click` remains as a compatibility event. Also
-`lr-before-legend-visibility-change` (cancelable proposal), and
+`lr-legend-visibility-change-request` (cancelable proposal), and
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
 complete, sorted, valid next snapshot. Call `preventDefault()` on the proposal to veto the toggle;
-then no property change or commit event occurs.
-Category toggles use a separate pair, `lr-before-datum-visibility-change` (cancelable proposal) and
+then no property change or commit event occurs. `lr-before-legend-visibility-change` is a
+**deprecated** alias of `lr-legend-visibility-change-request`, fired immediately after it from the
+same gesture with the same frozen detail; either event may veto. It is slated for removal in
+21.0.0 — migrate listeners to `lr-legend-visibility-change-request`.
+Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
 `lr-datum-visibility-change` (accepted commit), carrying
 `{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
 complete, sorted index snapshots are frozen. `index` is the source category index, including when
 the displayed data is sampled; it applies across all rings. Programmatic assignments emit neither
 pair. `preventDefault()` leaves both controlled state and the chart unchanged.
+`lr-before-datum-visibility-change` is a **deprecated** alias of
+`lr-datum-visibility-change-request`, fired immediately after it from the same gesture with the
+same frozen detail; either event may veto. It is slated for removal in 21.0.0 — migrate listeners
+to `lr-datum-visibility-change-request`.
 
 ```html
 <lr-doughnut-chart
@@ -962,11 +969,14 @@ of every entry in these lists.**
 `refreshTheme()`.
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-click` (`detail: { datasetIndex,
-index, label, value }`), `lr-before-legend-visibility-change` (cancelable), and
+index, label, value }`), `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
-complete `hiddenDatasets` snapshot).
-Radial category legends additionally emit `lr-before-datum-visibility-change` (cancelable) and
+complete `hiddenDatasets` snapshot). `lr-before-legend-visibility-change` is a **deprecated** alias
+of `lr-legend-visibility-change-request` (removal not before 21.0.0).
+Radial category legends additionally emit `lr-datum-visibility-change-request` (cancelable) and
 `lr-datum-visibility-change`, carrying `index`, `visible` and the frozen `hiddenDatums` snapshot.
+`lr-before-datum-visibility-change` is a **deprecated** alias of `lr-datum-visibility-change-request`
+(removal not before 21.0.0).
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
@@ -1050,10 +1060,12 @@ maxSamples?)` appends finite raw samples and optionally retains only the newest 
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
 
-**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-datum-visibility-change`
-(cancelable), `lr-datum-visibility-change`, `lr-before-legend-visibility-change` (cancelable), and
+**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-datum-visibility-change-request`
+(cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
+`lr-before-datum-visibility-change`/`lr-before-legend-visibility-change` are deprecated aliases of
+the two `*-request` events above (removal not before 21.0.0).
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 
@@ -1176,11 +1188,14 @@ change. Canvas work remains connected/visible-gated, while a rendered DOM legend
 its computed color swatches.
 
 **Events:** `lr-datum-activate` (canonical detail with `kind: 'box'`), `lr-point-click`
-(compatibility), `lr-before-legend-visibility-change` (cancelable proposed legend
+(compatibility), `lr-legend-visibility-change-request` (cancelable proposed legend
 toggle) and `lr-legend-visibility-change` (accepted commit). The two legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
 `hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
 proposal leaves state untouched and suppresses the commit event.
+`lr-before-legend-visibility-change` is a **deprecated** alias of
+`lr-legend-visibility-change-request`, fired immediately after it from the same gesture with the
+same detail; either event may veto (removal not before 21.0.0).
 
 `lr-point-click` fires when pointer input lands on a box, or when Enter/Space activates the
 keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose. Its

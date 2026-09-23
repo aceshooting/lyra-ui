@@ -151,6 +151,10 @@ export interface LyraBoxPlotPointDetail {
 
 export interface LyraBoxPlotEventMap {
   'lr-point-click': CustomEvent<LyraBoxPlotPointDetail>;
+  /** Canonical name for the legend-visibility veto point. */
+  'lr-legend-visibility-change-request': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
+  /** Deprecated alias of `lr-legend-visibility-change-request`, kept firing unchanged for
+   *  back-compat; slated for removal in 21.0.0. */
   'lr-before-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
   'lr-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
   'lr-datum-activate': CustomEvent<
@@ -306,7 +310,12 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  *   peer fails to load; its transition is announced through a shared light-DOM alert.
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
  *   more than 1,000 records.
- * @event lr-before-legend-visibility-change - Cancelable proposed DOM legend visibility change.
+ * @event lr-legend-visibility-change-request - Cancelable proposed DOM legend visibility change.
+ *   Fires before `lr-before-legend-visibility-change`, from the same gesture; either event may
+ *   veto.
+ * @event lr-before-legend-visibility-change - Deprecated cancelable alias of
+ *   `lr-legend-visibility-change-request`, kept firing unchanged for back-compat; slated for
+ *   removal in 21.0.0. Same detail.
  * @event lr-legend-visibility-change - Committed DOM legend visibility change.
  * @event lr-point-click - Fired when pointer input lands on a box, or when Enter/Space activates
  *   the keyboard-current box. `detail: { datasetIndex: number, index: number, label: string |
@@ -380,6 +389,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-legend-visibility-change-request',
     'lr-before-legend-visibility-change',
     'lr-legend-visibility-change',
   ]);
@@ -1413,11 +1423,18 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     // A currently hidden series becomes visible; a currently visible one becomes hidden.
     const visible = wasHidden;
     const proposed = this.emit(
+      'lr-legend-visibility-change-request',
+      legendVisibilityDetail(index, visible, nextHidden),
+      { cancelable: true },
+    );
+    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
+    // still veto, exactly as one bound only to the canonical name can.
+    const deprecatedAlias = this.emit(
       'lr-before-legend-visibility-change',
       legendVisibilityDetail(index, visible, nextHidden),
       { cancelable: true },
     );
-    if (proposed.defaultPrevented) return;
+    if (proposed.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.hiddenDatasets = nextHidden;
     this.applyDatasetVisibility();
     this.chart.update('none');

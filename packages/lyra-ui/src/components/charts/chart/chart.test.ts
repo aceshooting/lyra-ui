@@ -1347,6 +1347,72 @@ it('keeps a controlled hidden dataset hidden when its show proposal is canceled'
   }
 });
 
+it('fires the canonical lr-legend-visibility-change-request alongside the deprecated before- alias with identical detail, and either can veto', async () => {
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  const requests: CustomEvent[] = [];
+  const deprecatedAliases: CustomEvent[] = [];
+  let commits = 0;
+  el.addEventListener('lr-legend-visibility-change-request', (event) =>
+    requests.push(event as CustomEvent),
+  );
+  el.addEventListener('lr-before-legend-visibility-change', (event) =>
+    deprecatedAliases.push(event as CustomEvent),
+  );
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(requests.length).to.equal(1);
+  expect(deprecatedAliases.length).to.equal(1);
+  expect(requests[0]?.detail).to.deep.equal({ datasetIndex: 0, visible: false, hiddenDatasets: [0] });
+  expect(deprecatedAliases[0]?.detail).to.deep.equal(requests[0]?.detail);
+  expect(requests[0]?.cancelable).to.equal(true);
+  expect(deprecatedAliases[0]?.cancelable).to.equal(true);
+  expect(commits).to.equal(1);
+});
+
+it('vetoes the legend toggle when only the canonical -request name is canceled', async () => {
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  let commits = 0;
+  el.addEventListener('lr-legend-visibility-change-request', (event) => event.preventDefault());
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(commits).to.equal(0);
+  expect(el.hiddenDatasets).to.equal(undefined);
+});
+
+it('vetoes the legend toggle when only the deprecated lr-before-legend-visibility-change alias is canceled', async () => {
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  let commits = 0;
+  el.addEventListener('lr-before-legend-visibility-change', (event) => event.preventDefault());
+  el.addEventListener('lr-legend-visibility-change', () => commits++);
+
+  button.click();
+  await el.updateComplete;
+
+  expect(commits).to.equal(0);
+  expect(el.hiddenDatasets).to.equal(undefined);
+});
+
 it('does not preserve configured hidden state as a legend override when replacement data makes it visible', async () => {
   const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.config = {

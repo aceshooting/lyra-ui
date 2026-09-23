@@ -1465,8 +1465,16 @@ export interface LyraChartEventMap {
     value: unknown;
   }>;
   'lr-zoom': CustomEvent<{ zoomed: boolean }>;
+  /** Canonical name for the legend-visibility veto point. */
+  'lr-legend-visibility-change-request': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
+  /** Deprecated alias of `lr-legend-visibility-change-request`, kept firing unchanged for
+   *  back-compat; slated for removal in 21.0.0. */
   'lr-before-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
   'lr-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
+  /** Canonical name for the datum-visibility veto point. */
+  'lr-datum-visibility-change-request': CustomEvent<LyraChartDatumVisibilityChangeDetail>;
+  /** Deprecated alias of `lr-datum-visibility-change-request`, kept firing unchanged for
+   *  back-compat; slated for removal in 21.0.0. */
   'lr-before-datum-visibility-change': CustomEvent<LyraChartDatumVisibilityChangeDetail>;
   'lr-datum-visibility-change': CustomEvent<LyraChartDatumVisibilityChangeDetail>;
   'lr-datum-activate': CustomEvent<
@@ -1702,14 +1710,22 @@ function chartDatasetStack(dataset: unknown): string | undefined {
  * @event lr-datum-activate - Family-normalized activation event. Its detail adds `kind`
  *   (`bar`, `point`, `segment`, or `slice`) to the `lr-point-click` detail. For scatter/bubble
  *   points its `value` is the same `LyraChartPoint`, including a safe primitive `id` when present.
- * @event lr-before-legend-visibility-change - Cancelable proposal emitted before a DOM legend
+ * @event lr-legend-visibility-change-request - Cancelable proposal emitted before a DOM legend
  *   toggle changes state. `detail` contains the target `datasetIndex`, its proposed `visible`
- *   value, and the complete canonical proposed `hiddenDatasets` snapshot.
+ *   value, and the complete canonical proposed `hiddenDatasets` snapshot. Fires before
+ *   `lr-before-legend-visibility-change`, from the same gesture; either event may veto.
+ * @event lr-before-legend-visibility-change - Deprecated cancelable alias of
+ *   `lr-legend-visibility-change-request`, kept firing unchanged for back-compat; slated for
+ *   removal in 21.0.0. Same detail.
  * @event lr-legend-visibility-change - Emitted after an accepted DOM legend toggle commits the
  *   same detail. Programmatic `hiddenDatasets` changes reconcile without either event.
- * @event lr-before-datum-visibility-change - Cancelable category visibility proposal in datum
+ * @event lr-datum-visibility-change-request - Cancelable category visibility proposal in datum
  *   legend mode. `detail: { index: number, visible: boolean, hiddenDatums: readonly number[] }`.
- *   Source category indexes apply to every dataset/ring. The complete detail is frozen.
+ *   Source category indexes apply to every dataset/ring. The complete detail is frozen. Fires
+ *   before `lr-before-datum-visibility-change`, from the same gesture; either event may veto.
+ * @event lr-before-datum-visibility-change - Deprecated cancelable alias of
+ *   `lr-datum-visibility-change-request`, kept firing unchanged for back-compat; slated for
+ *   removal in 21.0.0. Same frozen detail.
  * @event lr-datum-visibility-change - Emitted after an accepted category toggle commits the same
  *   frozen detail. Programmatic `hiddenDatums` assignments are silent.
  * @csspart base - The chart wrapper.
@@ -1868,8 +1884,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-legend-visibility-change-request',
     'lr-before-legend-visibility-change',
     'lr-legend-visibility-change',
+    'lr-datum-visibility-change-request',
     'lr-before-datum-visibility-change',
     'lr-datum-visibility-change',
   ]);
@@ -5398,11 +5416,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // A currently hidden dataset becomes visible; a currently visible one becomes hidden.
     const visible = wasHidden;
     const proposed = this.emit(
+      'lr-legend-visibility-change-request',
+      legendVisibilityDetail(datasetIndex, visible, nextHidden),
+      { cancelable: true }
+    );
+    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
+    // still veto, exactly as one bound only to the canonical name can.
+    const deprecatedAlias = this.emit(
       'lr-before-legend-visibility-change',
       legendVisibilityDetail(datasetIndex, visible, nextHidden),
       { cancelable: true }
     );
-    if (proposed.defaultPrevented) return;
+    if (proposed.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     // Materialize the full effective snapshot, including any configured-hidden peers, so an
     // accepted user choice survives Chart.js reconstruction and can be persisted by a host.
     this.hiddenDatasets = nextHidden;
@@ -5423,7 +5448,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const visible = hidden.includes(index);
     const next = visible ? hidden.filter((item) => item !== index) : [...hidden, index].sort((a, b) => a - b);
     const detail: LyraChartDatumVisibilityChangeDetail = { index, visible, hiddenDatums: next };
-    if (this.emit('lr-before-datum-visibility-change', detail, { cancelable: true }).defaultPrevented) return;
+    const proposed = this.emit('lr-datum-visibility-change-request', detail, { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
+    // still veto, exactly as one bound only to the canonical name can.
+    const deprecatedAlias = this.emit('lr-before-datum-visibility-change', detail, { cancelable: true });
+    if (proposed.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.hiddenDatums = next;
     this.applyDatumVisibility();
     this.chart.update('none');

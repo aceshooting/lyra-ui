@@ -462,6 +462,81 @@ describe('lr-graph-query-builder', () => {
     expect(el.savedQueries.map((item) => item.id)).to.deep.equal(['saved-1']);
   });
 
+  it('also fires the canonical -request name for every query action, with detail identical to the deprecated before- alias', async () => {
+    const saved: GraphQuerySavedItem[] = [
+      { id: 'saved-1', name: 'Saved traversal', query: query({ startId: 'saved-node' }) },
+    ];
+    const el = (await fixture(html`
+      <lr-graph-query-builder
+        .value=${query({ startId: 'current-node' })}
+        .savedQueries=${saved}
+      ></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+
+    const requests = new Map<string, CustomEvent[]>();
+    const deprecatedAliases = new Map<string, CustomEvent[]>();
+    for (const action of ['run', 'save', 'load', 'delete'] as const) {
+      requests.set(action, []);
+      deprecatedAliases.set(action, []);
+      el.addEventListener(`lr-query-${action}-request`, (event) =>
+        requests.get(action)!.push(event as CustomEvent),
+      );
+      el.addEventListener(`lr-before-query-${action}`, (event) =>
+        deprecatedAliases.get(action)!.push(event as CustomEvent),
+      );
+    }
+
+    (el.shadowRoot!.querySelector('[part="run-button"]') as HTMLButtonElement).click();
+    const nameInput = el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement;
+    nameInput.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Snapshot' } }));
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="save-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="saved-load-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="saved-delete-button"]') as HTMLButtonElement).click();
+
+    for (const action of ['run', 'save', 'load', 'delete'] as const) {
+      expect(requests.get(action)!.length, action).to.equal(1);
+      expect(deprecatedAliases.get(action)!.length, action).to.equal(1);
+      expect(requests.get(action)![0]!.detail).to.deep.equal(deprecatedAliases.get(action)![0]!.detail);
+      expect(requests.get(action)![0]!.cancelable, action).to.equal(true);
+      expect(deprecatedAliases.get(action)![0]!.cancelable, action).to.equal(true);
+    }
+  });
+
+  it('lets every canonical -request phase veto its action without an accepted event or local mutation', async () => {
+    const saved: GraphQuerySavedItem[] = [
+      { id: 'saved-1', name: 'Saved traversal', query: query({ startId: 'saved-node' }) },
+    ];
+    const el = (await fixture(html`
+      <lr-graph-query-builder
+        .value=${query({ startId: 'current-node' })}
+        .savedQueries=${saved}
+      ></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+
+    const accepted = new Map<string, number>();
+    for (const action of ['run', 'save', 'load', 'delete'] as const) {
+      el.addEventListener(`lr-query-${action}-request`, (event) => event.preventDefault());
+      el.addEventListener(`lr-query-${action}`, () => accepted.set(action, (accepted.get(action) ?? 0) + 1));
+    }
+
+    (el.shadowRoot!.querySelector('[part="run-button"]') as HTMLButtonElement).click();
+    const nameInput = el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement & { value: string };
+    nameInput.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Needs approval' } }));
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="save-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="saved-load-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="saved-delete-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    expect([...accepted.values()].reduce((sum, count) => sum + count, 0)).to.equal(0);
+    expect(el.value.startId).to.equal('current-node');
+    expect(nameInput.value).to.equal('Needs approval');
+    expect(el.savedQueries.map((item) => item.id)).to.deep.equal(['saved-1']);
+  });
+
   it('disables the save button until a name is entered, then emits lr-query-save and clears the name field', async () => {
     const el = (await fixture(
       html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`

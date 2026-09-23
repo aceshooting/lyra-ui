@@ -76,7 +76,7 @@ export const ControlledLegendVisibility: Story = {
         .hiddenDatasets=${[1]}
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-        @lr-before-legend-visibility-change=${(
+        @lr-legend-visibility-change-request=${(
           event: CustomEvent<{ datasetIndex: number }>,
         ) => {
           if (event.detail.datasetIndex === 0) event.preventDefault();

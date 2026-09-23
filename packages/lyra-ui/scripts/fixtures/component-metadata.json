@@ -370,6 +370,45 @@
       "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
     },
     {
+      "tag": "lr-box-plot",
+      "kind": "event",
+      "name": "lr-before-legend-visibility-change",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-legend-visibility-change-request",
+        "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+    },
+    {
+      "tag": "lr-chart",
+      "kind": "event",
+      "name": "lr-before-datum-visibility-change",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-datum-visibility-change-request",
+        "usage": "addEventListener('lr-datum-visibility-change-request', ...)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+    },
+    {
+      "tag": "lr-chart",
+      "kind": "event",
+      "name": "lr-before-legend-visibility-change",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-legend-visibility-change-request",
+        "usage": "addEventListener('lr-legend-visibility-change-request', ...)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+    },
+    {
       "tag": "lr-command-palette",
       "kind": "event",
       "name": "lr-open",
@@ -407,6 +446,71 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-graph-legend",
+      "kind": "event",
+      "name": "lr-before-visibility-change",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-visibility-change-request",
+        "usage": "addEventListener('lr-visibility-change-request', ...)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+    },
+    {
+      "tag": "lr-graph-query-builder",
+      "kind": "event",
+      "name": "lr-before-query-delete",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-query-delete-request",
+        "usage": "addEventListener('lr-query-delete-request', ...)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+    },
+    {
+      "tag": "lr-graph-query-builder",
+      "kind": "event",
+      "name": "lr-before-query-load",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-query-load-request",
+        "usage": "addEventListener('lr-query-load-request', ...)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+    },
+    {
+      "tag": "lr-graph-query-builder",
+      "kind": "event",
+      "name": "lr-before-query-run",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-query-run-request",
+        "usage": "addEventListener('lr-query-run-request', ...)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
+    },
+    {
+      "tag": "lr-graph-query-builder",
+      "kind": "event",
+      "name": "lr-before-query-save",
+      "since": "19.0.1",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-query-save-request",
+        "usage": "addEventListener('lr-query-save-request', ...)"
+      },
+      "removalNotBefore": "21.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto."
     },
     {
       "tag": "lr-icon",

@@ -67,7 +67,7 @@ export const ControlledLegendVisibility: Story = {
         .hiddenDatasets=${[1]}
         .labels=${['Request latency']}
         .datasets=${boxes}
-        @lr-before-legend-visibility-change=${(
+        @lr-legend-visibility-change-request=${(
           event: CustomEvent<{ datasetIndex: number }>,
         ) => {
           if (event.detail.datasetIndex === 0) event.preventDefault();

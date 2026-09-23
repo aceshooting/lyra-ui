@@ -73,7 +73,7 @@ export const ControlledVisibility: Story = {
         <lr-graph-legend
           .types=${types()}
           .counts=${{ person: 12, org: 4, place: 7 }}
-          @lr-before-visibility-change=${proposeVisibility}
+          @lr-visibility-change-request=${proposeVisibility}
         ></lr-graph-legend>
         <p data-controlled-visibility-feedback>Changes are currently blocked.</p>
       </div>

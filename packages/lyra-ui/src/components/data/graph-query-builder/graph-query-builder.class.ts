@@ -222,12 +222,28 @@ export interface LyraGraphQueryBuilderEventMap {
     readonly valid: boolean;
     readonly errors: Readonly<Record<string, string>>;
   }>;
+  /** Canonical name for the run veto point. */
+  'lr-query-run-request': CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>;
+  /** Deprecated alias of `lr-query-run-request`, kept firing unchanged for back-compat; slated
+   *  for removal in 21.0.0. */
   'lr-before-query-run': CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>;
   'lr-query-run': CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>;
+  /** Canonical name for the save veto point. */
+  'lr-query-save-request': CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>;
+  /** Deprecated alias of `lr-query-save-request`, kept firing unchanged for back-compat; slated
+   *  for removal in 21.0.0. */
   'lr-before-query-save': CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>;
   'lr-query-save': CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>;
+  /** Canonical name for the load veto point. */
+  'lr-query-load-request': CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>;
+  /** Deprecated alias of `lr-query-load-request`, kept firing unchanged for back-compat; slated
+   *  for removal in 21.0.0. */
   'lr-before-query-load': CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>;
   'lr-query-load': CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>;
+  /** Canonical name for the delete veto point. */
+  'lr-query-delete-request': CustomEvent<GraphQueryDeleteDetail>;
+  /** Deprecated alias of `lr-query-delete-request`, kept firing unchanged for back-compat; slated
+   *  for removal in 21.0.0. */
   'lr-before-query-delete': CustomEvent<GraphQueryDeleteDetail>;
   'lr-query-delete': CustomEvent<GraphQueryDeleteDetail>;
 }
@@ -279,9 +295,12 @@ export interface LyraGraphQueryBuilderEventMap {
  * updates. Ordinary focused removal still follows the adjacent control and leaves outside focus alone.
  *
  * Run, save, load, and delete use the same two-phase action contract: a cancelable
- * `lr-before-query-*` request precedes any local effect, followed by a non-cancelable
- * `lr-query-*` accepted notification. Vetoing a request suppresses its accepted notification;
- * for save it also preserves the draft name, and for load it preserves the current `value`.
+ * `lr-query-*-request` request precedes any local effect, followed by a non-cancelable
+ * `lr-query-*` accepted notification. The deprecated `lr-before-query-*` alias of each request
+ * fires immediately after its canonical `lr-query-*-request` counterpart, from the same gesture,
+ * with the same detail; either one vetoes the action. Vetoing a request suppresses its accepted
+ * notification; for save it also preserves the draft name, and for load it preserves the current
+ * `value`.
  *
  * **Accessible name:** a host-level `aria-label` wins. Otherwise the region (`role="group"`) is
  * labelled by the same visible label element that renders the `label` slot/property/localized
@@ -297,19 +316,31 @@ export interface LyraGraphQueryBuilderEventMap {
  *   choices emit it once; child native/prefixed value and listbox lifecycle aliases are contained.
  * @event lr-validity-change - Frozen `detail: { valid, errors }` from effective native validity,
  *   including custom errors and validation barring; fired only on an actual change.
- * @event lr-before-query-run - Cancelable request emitted after `reportValidity()` passes, before
- *   accepting Run. Frozen `detail: { query }`; vetoing it suppresses `lr-query-run`.
+ * @event lr-query-run-request - Cancelable request emitted after `reportValidity()` passes, before
+ *   accepting Run. Frozen `detail: { query }`; vetoing it suppresses `lr-query-run`. Fires before
+ *   `lr-before-query-run`, from the same gesture; either event may veto.
+ * @event lr-before-query-run - Deprecated cancelable alias of `lr-query-run-request`, kept firing unchanged
+ *   for back-compat; slated for removal in 21.0.0. Same frozen detail.
  * @event lr-query-run - Non-cancelable accepted Run notification. Frozen `detail: { query }`.
- * @event lr-before-query-save - Cancelable save request with frozen `detail: { name, query }`.
- *   Vetoing it preserves the draft name and suppresses `lr-query-save`.
+ * @event lr-query-save-request - Cancelable save request with frozen `detail: { name, query }`.
+ *   Vetoing it preserves the draft name and suppresses `lr-query-save`. Fires before
+ *   `lr-before-query-save`, from the same gesture; either event may veto.
+ * @event lr-before-query-save - Deprecated cancelable alias of `lr-query-save-request`, kept firing unchanged
+ *   for back-compat; slated for removal in 21.0.0. Same frozen detail.
  * @event lr-query-save - Non-cancelable accepted Save notification. Frozen
  *   `detail: { name, query }`; the host assigns an id and appends to `savedQueries`.
- * @event lr-before-query-load - Cancelable load request with frozen `detail: { queryId, query }`,
- *   emitted before `value` changes. Vetoing it preserves the current query.
+ * @event lr-query-load-request - Cancelable load request with frozen `detail: { queryId, query }`,
+ *   emitted before `value` changes. Vetoing it preserves the current query. Fires before
+ *   `lr-before-query-load`, from the same gesture; either event may veto.
+ * @event lr-before-query-load - Deprecated cancelable alias of `lr-query-load-request`, kept firing unchanged
+ *   for back-compat; slated for removal in 21.0.0. Same frozen detail.
  * @event lr-query-load - Non-cancelable accepted Load notification emitted after `value` changes.
  *   Frozen `detail: { queryId, query }` contains the accepted query.
- * @event lr-before-query-delete - Cancelable delete request with frozen `detail: { queryId }`.
- *   Vetoing it suppresses `lr-query-delete`.
+ * @event lr-query-delete-request - Cancelable delete request with frozen `detail: { queryId }`.
+ *   Vetoing it suppresses `lr-query-delete`. Fires before `lr-before-query-delete`, from the same
+ *   gesture; either event may veto.
+ * @event lr-before-query-delete - Deprecated cancelable alias of `lr-query-delete-request`, kept firing
+ *   unchanged for back-compat; slated for removal in 21.0.0. Same frozen detail.
  * @event lr-query-delete - Non-cancelable accepted Delete notification. Frozen
  *   `detail: { queryId }`; the host removes the matching entry from `savedQueries`.
  * @event lr-invalid - Cancelable alias when the complete builder fails native validity; vetoing it
@@ -415,10 +446,13 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-input',
+    'lr-query-run-request',
     'lr-before-query-run',
     'lr-query-run',
+    'lr-query-save-request',
     'lr-before-query-save',
     'lr-query-save',
+    'lr-query-load-request',
     'lr-before-query-load',
     'lr-query-load',
   ]);
@@ -926,7 +960,11 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     if (!this.reportValidity()) return;
     const detail = (): GraphQueryRunDetail =>
       Object.freeze({ query: normalizeGraphQuery(this._value) });
-    if (this.emit('lr-before-query-run', detail(), { cancelable: true }).defaultPrevented) return;
+    const request = this.emit('lr-query-run-request', detail(), { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
+    // still veto, exactly as one bound only to the canonical name can.
+    const deprecatedAlias = this.emit('lr-before-query-run', detail(), { cancelable: true });
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.emit('lr-query-run', detail());
   }
 
@@ -936,7 +974,11 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     if (!name) return;
     const detail = (): GraphQuerySaveDetail =>
       Object.freeze({ name, query: normalizeGraphQuery(this._value) });
-    if (this.emit('lr-before-query-save', detail(), { cancelable: true }).defaultPrevented) return;
+    const request = this.emit('lr-query-save-request', detail(), { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
+    // still veto, exactly as one bound only to the canonical name can.
+    const deprecatedAlias = this.emit('lr-before-query-save', detail(), { cancelable: true });
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.saveName = '';
     this.emit('lr-query-save', detail());
   }
@@ -948,7 +990,11 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       queryId: item.id,
       query: normalizeGraphQuery(item.query),
     });
-    if (this.emit('lr-before-query-load', detail(), { cancelable: true }).defaultPrevented) return;
+    const request = this.emit('lr-query-load-request', detail(), { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
+    // still veto, exactly as one bound only to the canonical name can.
+    const deprecatedAlias = this.emit('lr-before-query-load', detail(), { cancelable: true });
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.setValue({ ...EMPTY_VALUE, ...item.query });
     this.emit('lr-query-load', detail());
   }
@@ -956,7 +1002,11 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   private deleteQuery(item: GraphQuerySavedItem): void {
     if (this.effectiveDisabled) return;
     const detail = (): GraphQueryDeleteDetail => Object.freeze({ queryId: item.id });
-    if (this.emit('lr-before-query-delete', detail(), { cancelable: true }).defaultPrevented) return;
+    const request = this.emit('lr-query-delete-request', detail(), { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
+    // still veto, exactly as one bound only to the canonical name can.
+    const deprecatedAlias = this.emit('lr-before-query-delete', detail(), { cancelable: true });
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.emit('lr-query-delete', detail());
   }
 
