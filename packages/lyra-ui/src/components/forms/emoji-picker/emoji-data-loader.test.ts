@@ -137,7 +137,15 @@ describe('resolveEmojiDataLocale()', () => {
 
   it('falls back to the base language when the full tag has no directory of its own', () => {
     expect(resolveEmojiDataLocale('fr-CA')).to.equal('fr');
-    expect(resolveEmojiDataLocale('pt-BR')).to.equal('pt');
+    expect(resolveEmojiDataLocale('zh-Hans-CN')).to.equal('zh');
+  });
+
+  it('falls back to English where the peer ships no emojibase dataset for the language', () => {
+    // pt and de exist in the peer only as CLDR data, which this loader cannot adapt; zh-Hant
+    // falls back to its base language's (Simplified) dataset rather than to English.
+    expect(resolveEmojiDataLocale('pt-BR')).to.equal('en');
+    expect(resolveEmojiDataLocale('de')).to.equal('en');
+    expect(resolveEmojiDataLocale('zh-Hant')).to.equal('zh');
   });
 
   it('falls back to English for a locale the peer does not ship at all', () => {

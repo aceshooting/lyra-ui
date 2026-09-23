@@ -1,13 +1,25 @@
 import type { EmojiPickerGroup, EmojiPickerItem } from './emoji-types.js';
 
 // The locale directories `emoji-picker-element-data` actually ships -- verified against the
-// installed `emoji-picker-element-data@1.8.0` package tree, each holding its own translated
-// `emojibase/data.json`. Not every BCP-47 tag has its own directory (e.g. no `fr-CA`), hence the
-// base-language fallback in `resolveEmojiDataLocale()` below.
-const SUPPORTED_LOCALE_DIRECTORIES: ReadonlySet<string> = new Set([
-  'bn', 'da', 'de', 'en', 'en-gb', 'es', 'es-mx', 'et', 'fi', 'fr', 'hi', 'hu', 'it', 'ja', 'ko',
-  'lt', 'ms', 'nb', 'nl', 'pl', 'pt', 'ru', 'sv', 'th', 'uk', 'vi', 'zh', 'zh-hant',
-]);
+// installed `emoji-picker-element-data@1.8.0` package tree: only the directories that hold an
+// `emojibase/data.json` (zh-hant, for example, ships CLDR data only). Not every BCP-47 tag has its own directory (e.g. no `fr-CA`), hence the
+// base-language fallback in `resolveEmojiDataLocale()` below. Every specifier is a literal so
+// consumer bundlers can resolve and split each locale's dataset; a template-literal specifier is
+// not statically analyzable and fails to resolve in bundled builds.
+const LOCALE_DATA_IMPORTERS: Readonly<Record<string, () => Promise<unknown>>> = Object.freeze({
+  'en': () => import('emoji-picker-element-data/en/emojibase/data.json', { with: { type: 'json' } }),
+  'en-gb': () => import('emoji-picker-element-data/en-gb/emojibase/data.json', { with: { type: 'json' } }),
+  'fr': () => import('emoji-picker-element-data/fr/emojibase/data.json', { with: { type: 'json' } }),
+  'ja': () => import('emoji-picker-element-data/ja/emojibase/data.json', { with: { type: 'json' } }),
+  'ru': () => import('emoji-picker-element-data/ru/emojibase/data.json', { with: { type: 'json' } }),
+  'sv': () => import('emoji-picker-element-data/sv/emojibase/data.json', { with: { type: 'json' } }),
+  'zh': () => import('emoji-picker-element-data/zh/emojibase/data.json', { with: { type: 'json' } }),
+});
+
+const importEnglishData = (): Promise<unknown> =>
+  import('emoji-picker-element-data/en/emojibase/data.json', { with: { type: 'json' } });
+
+const SUPPORTED_LOCALE_DIRECTORIES: ReadonlySet<string> = new Set(Object.keys(LOCALE_DATA_IMPORTERS));
 
 /**
  * Maps an effective locale tag (e.g. `'fr-CA'`, `'zh-Hant'`, `'pt-BR'`) to the closest
@@ -41,7 +53,7 @@ const cached = new Map<string, Promise<EmojiPickerGroup[] | null>>();
 export async function loadEmojiData(
   locale = 'en',
   importData: (resolvedLocale: string) => Promise<unknown> = (resolvedLocale) =>
-    import(`emoji-picker-element-data/${resolvedLocale}/emojibase/data.json`, { with: { type: 'json' } }),
+    (LOCALE_DATA_IMPORTERS[resolvedLocale] ?? importEnglishData)(),
 ): Promise<EmojiPickerGroup[] | null> {
   try {
     const raw = await importData(resolveEmojiDataLocale(locale));

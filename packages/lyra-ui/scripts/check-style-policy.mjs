@@ -94,6 +94,7 @@ const classCssPropertyDeclarationExemptions = new Set([
   'viewers/docx-viewer/docx-viewer.class.ts:--lr-docx-viewer-max-height',
   'viewers/ebook-viewer/ebook-viewer.class.ts:--lr-ebook-viewer-max-height',
   'viewers/email-viewer/email-viewer.class.ts:--lr-email-viewer-max-height',
+  'viewers/geojson-view/geojson-viewer.class.ts:--lr-geojson-viewer-max-height',
   'viewers/html-viewer/html-viewer.class.ts:--lr-html-viewer-max-height',
   'viewers/notebook-viewer/notebook-viewer.class.ts:--lr-notebook-viewer-max-height',
   'viewers/pdf-viewer/pdf-viewer.class.ts:--lr-pdf-viewer-height',
