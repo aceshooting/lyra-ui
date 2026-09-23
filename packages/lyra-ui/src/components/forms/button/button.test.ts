@@ -3246,5 +3246,5 @@ it('drops the internal aria-controls relationship once the host idref stops reso
   el.setAttribute('aria-controls', 'panel-missing');
   await el.updateComplete;
 
-  expect(base.ariaControlsElements ?? []).to.deep.equal([]);
+  expect((base.ariaControlsElements ?? []).length).to.equal(0);
 });

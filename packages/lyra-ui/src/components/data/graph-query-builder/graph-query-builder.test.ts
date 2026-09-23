@@ -1015,7 +1015,7 @@ describe('lr-graph-query-builder', () => {
     const alias = el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement | null;
     expect(shared, 'form-control-label part').to.exist;
     expect(alias, 'label part').to.exist;
-    expect(shared).to.equal(alias);
+    expect(shared === alias, 'one element carries both part tokens').to.be.true;
     expect(shared!.textContent).to.contain('Graph path');
     // The stylesheet's own `[part~='label']` font-weight rule must still resolve against the
     // now-two-token part value -- a stale exact-match `[part='label']` selector would silently
