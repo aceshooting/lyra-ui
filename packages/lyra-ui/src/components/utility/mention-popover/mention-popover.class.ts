@@ -17,12 +17,26 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styles } from './mention-popover.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions, LYRA_DEFAULT_noMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+function parseCssTime(value: string): number {
+  const trimmed = value.trim();
+  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
+  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
+  return 0;
+}
+
+/** The longest of a possibly comma-separated `transition-duration`/`-delay` list, mirroring
+ *  `<lr-toast>`'s own `maxCssTime`. */
+function maxCssTransitionTime(value: string): number {
+  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
+}
 
 /** One candidate row — an `@`-mentionable person/entity, or a `/`-command. */
 export interface LyraMentionItem {
@@ -421,6 +435,16 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // typed text can itself already equal a full, deliberately-typed value.
   @state() private activeIndex = 0;
 
+  /** Removes the settled-closed listbox from layout (`[hidden]` -> `display:none`) so its stale
+   *  placed coordinates and full-content box stop contributing to whatever ancestor establishes
+   *  its CSS containing block. Starts `true`, clears as soon as `open` becomes true -- before
+   *  `reposition()`'s deferred placement runs, so the listbox is still a real, measurable box --
+   *  and is set back only once the CSS opacity/visibility exit transition has actually finished
+   *  playing (`settleListboxHidden()`), preserving the existing fade in the meantime. Mirrors
+   *  `LyraSelect`'s `listboxHidden` (commit 0ce9a9817). */
+  @state() private listboxHidden = true;
+  private listboxHideToken = 0;
+
   private readonly _listId = nextId('mention-popover-listbox');
   private cleanup?: DeferredOperationHandle;
   // A synthetic zero-size point element, positioned at the measured caret
@@ -455,6 +479,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
+    // `listboxHidden` gates the settled-closed `[hidden]` attribute. Clearing it here, before
+    // render, rather than from `updated()` (where select.class.ts's own equivalent `listboxHidden`
+    // clear lives) avoids scheduling a second render and Lit's change-in-update warning -- which
+    // `WTR_STRICT_CONSOLE=1` turns into a test failure.
+    if (changed.has('open') && this.open) this.listboxHidden = false;
     // Focus may have moved outside the input/popover composite since the previous update. Never
     // let a later candidate render reclaim it merely because this component used to own focus
     // within its popup.
@@ -506,6 +535,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         this.cleanup?.();
         this.cleanup = undefined;
         this.virtualAnchor?.remove();
+        void this.settleListboxHidden();
         // A close listener can synchronously author new textarea semantics and reopen. Restore
         // the old session before that listener runs, so the reopen snapshots those fresh values.
         const relationshipControl = this.anchorRelationship?.control;
@@ -563,6 +593,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.cleanup?.();
     this.cleanup = undefined;
     this.virtualAnchor?.remove();
+    // A pending settle must not outlive the detached element; cut straight to hidden rather than
+    // waiting on a transition a disconnected element may never finish painting.
+    this.listboxHideToken++;
+    this.listboxHidden = true;
     // Reset so a reconnect (e.g. a drag-drop reparent of the composer, or a
     // virtualized/reordering message list moving this element) re-triggers
     // updated()'s open-driven branch -- without this, `open` stays `true`
@@ -1149,6 +1183,48 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     }
   }
 
+  /** Removes the listbox from layout only once its CSS opacity/visibility exit transition has
+   *  actually finished playing -- or immediately when there is none to wait for (reduced motion,
+   *  or a `--lr-transition-fast` override of `0s`), matching this component's own
+   *  transition-duration custom property rather than a hardcoded guess. A safety timeout covers a
+   *  browser that never dispatches the end event. Superseded by a fresh close (a new token) or a
+   *  reopen (`this.open` true again) at either await point. */
+  private async settleListboxHidden(): Promise<void> {
+    const token = ++this.listboxHideToken;
+    await this.updateComplete;
+    if (token !== this.listboxHideToken || this.open) return;
+    const listbox = this.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
+    const view = this.ownerDocument.defaultView;
+    if (listbox && view && !prefersReducedMotion(view)) {
+      const computed = view.getComputedStyle(listbox);
+      const durationMs =
+        maxCssTransitionTime(computed.transitionDuration) +
+        maxCssTransitionTime(computed.transitionDelay);
+      if (durationMs > 0) {
+        await new Promise<void>((resolve) => {
+          let settled = false;
+          let timeout: number | undefined;
+          const finish = (): void => {
+            if (settled) return;
+            settled = true;
+            if (timeout !== undefined) view.clearTimeout(timeout);
+            listbox.removeEventListener('transitionend', onEnd);
+            listbox.removeEventListener('transitioncancel', onEnd);
+            resolve();
+          };
+          const onEnd = (event: Event): void => {
+            if (event.target === listbox) finish();
+          };
+          listbox.addEventListener('transitionend', onEnd);
+          listbox.addEventListener('transitioncancel', onEnd);
+          timeout = view.setTimeout(finish, durationMs + 50);
+        });
+        if (token !== this.listboxHideToken || this.open) return;
+      }
+    }
+    this.listboxHidden = true;
+  }
+
   /** Resolves what to actually hand `place()` -- a caret-precise virtual
    *  point for a measurable text control, `anchor` itself otherwise. See the
    *  class doc's "Positioning" section. */
@@ -1251,6 +1327,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     return html`
       <div
         part="listbox"
+        ?hidden=${this.listboxHidden}
         id=${this._listId}
         role="listbox"
         tabindex=${this._ownsFocus && rows.length === 0 ? '0' : '-1'}

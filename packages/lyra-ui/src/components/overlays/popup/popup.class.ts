@@ -14,6 +14,7 @@ import { deferredPlace as place } from '../../../internal/anchored-overlay-runti
 import { virtualAnchorFromRect } from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from '../overlay/overlay-arrow.js';
 import { observeOverlayAnchorIdentity } from '../overlay/overlay-shared.js';
 import { styles } from './popup.styles.js';
@@ -57,6 +58,19 @@ const PLACEMENTS: ReadonlySet<string> = new Set([
  *  directly to the popup's box, so guessing at a typo would resize it for the wrong reason. */
 const AUTO_SIZE_AXES: ReadonlySet<string> = new Set(['horizontal', 'vertical', 'both']);
 const SYNC_AXES: ReadonlySet<string> = new Set(['width', 'height', 'both']);
+
+function parseCssTime(value: string): number {
+  const trimmed = value.trim();
+  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
+  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
+  return 0;
+}
+
+/** The longest of a possibly comma-separated `transition-duration`/`-delay` list, mirroring
+ *  `<lr-toast>`'s own `maxCssTime`. */
+function maxCssTransitionTime(value: string): number {
+  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
+}
 
 interface ResolvedPopupAnchor {
   /** The reference passed to Floating UI. Plain rects are normalized into a virtual element. */
@@ -243,6 +257,14 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   private stopPlacing?: () => void;
   private stopAnchorIdentityObservation?: () => void;
   @state() private anchorPositioned = false;
+  /** Removes the settled-inactive popup from layout (`[hidden]` -> `display:none`) so its stale
+   *  placed coordinates and full slotted-content box stop contributing to whatever ancestor
+   *  establishes its CSS containing block. Starts `true`, clears as soon as `active` becomes true
+   *  -- before `reposition()`'s deferred placement runs, so the popup is still a real, measurable
+   *  box -- and is set back only once the CSS opacity/visibility exit transition has actually
+   *  finished playing (`settlePopupHidden()`), preserving the existing fade in the meantime. */
+  @state() private popupHidden = true;
+  private popupHideToken = 0;
   private placingAnchorIdentity?: object;
   private positionedAnchorIdentity?: object;
   private resolvedPlacement: Placement = 'top';
@@ -253,7 +275,10 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     this.syncAnchorIdentityObservation();
     // Reparenting the same active instance does not schedule a Lit update, but it changes both
     // same-root id resolution and Floating UI's containing-block/scroll-ancestor subscriptions.
-    if (this.hasUpdated && this.active) this.reposition();
+    if (this.hasUpdated && this.active) {
+      this.popupHidden = false;
+      this.reposition();
+    }
   }
 
   override disconnectedCallback(): void {
@@ -265,6 +290,8 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     this.teardown();
     this.positionedAnchorIdentity = undefined;
     this.setPositioned(false);
+    this.popupHideToken++;
+    this.popupHidden = true;
     super.disconnectedCallback();
   }
 
@@ -277,6 +304,11 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     // it here, before render; `reposition()` then finds the value already settled and schedules
     // nothing. `reposition()` is public, so its imperative path is untouched.
     if (changed.has('active') && !this.active) this.setPositioned(false);
+    // Unhide before `reposition()`'s deferred placement runs below, so the very first measurement
+    // still sees a real box instead of a zero rect. `deferredPlace()` itself loads the positioner
+    // runtime asynchronously and conceals the popup meanwhile, so this state write's own re-render
+    // always lands before the actual measurement -- see anchored-overlay-runtime.ts.
+    if (changed.has('active') && this.active) this.popupHidden = false;
     // A new anchor is likewise knowable before render: `position()`/`reposition()` runs from
     // `updated()` and clears this the moment it sees the anchor differs from the one it last placed
     // against, which flips the state after the update completed and buys a second render. Deriving
@@ -296,7 +328,50 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     super.updated(changed);
     // Any of these changes the anchor, the geometry or whether there is anything to position.
     this.reposition();
+    if (changed.has('active') && !this.active) void this.settlePopupHidden();
     void changed;
+  }
+
+  /** Removes the popup from layout only once its CSS opacity/visibility exit transition has
+   *  actually finished playing -- or immediately when there is none to wait for (reduced motion,
+   *  or a `--hide-duration`/`--show-duration` override of `0s`), matching this component's own
+   *  transition-duration custom properties rather than a hardcoded guess. A safety timeout covers
+   *  a browser that never dispatches the end event. Superseded by a fresh close (a new token) or a
+   *  reopen (`this.active` true again) at either await point. */
+  private async settlePopupHidden(): Promise<void> {
+    const token = ++this.popupHideToken;
+    await this.updateComplete;
+    if (token !== this.popupHideToken || this.active) return;
+    const popup = this.popup;
+    const view = this.ownerDocument.defaultView;
+    if (popup && view && !prefersReducedMotion(view)) {
+      const computed = view.getComputedStyle(popup);
+      const durationMs =
+        maxCssTransitionTime(computed.transitionDuration) +
+        maxCssTransitionTime(computed.transitionDelay);
+      if (durationMs > 0) {
+        await new Promise<void>((resolve) => {
+          let settled = false;
+          let timeout: number | undefined;
+          const finish = (): void => {
+            if (settled) return;
+            settled = true;
+            if (timeout !== undefined) view.clearTimeout(timeout);
+            popup.removeEventListener('transitionend', onEnd);
+            popup.removeEventListener('transitioncancel', onEnd);
+            resolve();
+          };
+          const onEnd = (event: Event): void => {
+            if (event.target === popup) finish();
+          };
+          popup.addEventListener('transitionend', onEnd);
+          popup.addEventListener('transitioncancel', onEnd);
+          timeout = view.setTimeout(finish, durationMs + 50);
+        });
+        if (token !== this.popupHideToken || this.active) return;
+      }
+    }
+    this.popupHidden = true;
   }
 
   /** Recomputes the position now. Rarely needed — the popup already tracks scroll, resize and
@@ -514,7 +589,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     return html`
       ${this.hoverBridge ? html`<span part="hover-bridge" ?data-active=${paints}></span>` : nothing}
       <span part="anchor"><slot name="anchor" @slotchange=${this.onAnchorSlotChange}></slot></span>
-      <div part="popup ${side}" ?data-active=${paints} ?data-awaits-position=${awaitsPosition}>
+      <div part="popup ${side}" ?hidden=${this.popupHidden} ?data-active=${paints} ?data-awaits-position=${awaitsPosition}>
         <slot></slot>
         ${this.arrow ? html`<span part="arrow arrow-${side}"></span>` : nothing}
       </div>

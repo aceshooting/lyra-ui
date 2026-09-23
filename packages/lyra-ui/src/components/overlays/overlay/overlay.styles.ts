@@ -57,6 +57,10 @@ export const styles = css`
       var(--lr-positioner-hover-bridge-bottom-left-x, 0) var(--lr-positioner-hover-bridge-bottom-left-y, 0)
     );
   }
+  /* Settled closed (no exit transition playing, gated by JS clearing 'hidden' only once
+     'lr-after-hide' fires): out of layout entirely, so a stale placed box can no longer inflate
+     whatever ancestor establishes this popup's CSS containing block. */
+  [part~='popup'][hidden] { display: none; }
   [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
   [part~='popup'] { opacity: 1; transform: translateY(0); }
   :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
@@ -91,6 +95,9 @@ export const tooltipStyles = css`
      here too, for the same RTL over-constraint reason as the popover above. */
   /* policy-allow(physical-css): same physical property positioner.ts's place() writes; see above. */
   [part~='popup'] { position: absolute; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; max-inline-size: min(var(--max-width, var(--lr-tooltip-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-background, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow-m); }
+  /* Settled closed (gated by JS clearing 'hidden' only once 'lr-after-hide' fires): out of layout
+     entirely, so a stale placed box can no longer inflate this popup's CSS containing block. */
+  [part~='popup'][hidden] { display: none; }
   [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
   [part~='popup'] { opacity: 1; }
   :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }

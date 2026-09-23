@@ -7,11 +7,19 @@ export const styles = css`
   [part='anchor'] {
     display: contents;
   }
+  /* Settled inactive (no exit transition playing, gated by JS clearing 'hidden' only once the
+     opacity/visibility fade has actually finished -- see settlePopupHidden()): out of layout
+     entirely, so a stale placed box can no longer inflate whatever ancestor establishes this
+     popup's CSS containing block. The live fade below is untouched: 'hidden' only ever lands
+     after it settles, never during it, so the first measurement still reads a real box. */
+  [part~='popup'][hidden] {
+    display: none;
+  }
   [part~='popup'] {
     /* Positioned by internal/positioner.ts, which writes physical position/left/top itself, so the
        baseline must use those same physical properties: inset-inline-start becomes right under RTL
        and would stay active beside the JS-written left, stretching or pinning the popup. Inactive
-       is expressed by hiding, never display:none, or the first measurement reads a zero rect. */
+       is expressed by hiding (visibility/opacity), not 'hidden', while the fade plays. */
     position: absolute;
     top: 0;
     /* policy-allow(physical-css): positioner.ts overwrites this exact physical property; a

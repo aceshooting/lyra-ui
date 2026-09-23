@@ -106,14 +106,23 @@ export const styles = css`
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
   }
+  /* Settled closed (no exit transition playing, gated by JS clearing 'hidden' only once the
+     opacity/transform fade has actually finished -- see settleMenuHidden()): out of layout
+     entirely, so a stale placed box can no longer inflate whatever ancestor establishes this
+     menu's CSS containing block. Matches lr-select's/lr-combobox's own [part='listbox'] fix
+     (commit 0ce9a9817). */
+  [part='menu'][hidden] {
+    display: none;
+  }
   [part='menu'] {
     /* Closed state: invisible and slightly raised. visibility, not display:none, so opacity and
-       transform can transition; hit-testing and a11y exposure stay off, and this part is already
-       position:fixed. visibility is deliberately untransitioned: a transitioned property only
-       settles at its target after the UA runs a style-change/rendering pass, which lags a same-tick
-       attribute write -- updated() focusing the first menu item straight after flipping open would
-       find it still visibility: hidden and silently fail. Untransitioned, it applies in the same
-       synchronous style pass as the open attribute write. */
+       transform can transition; hit-testing and a11y exposure stay off. visibility is
+       deliberately untransitioned: a transitioned property only settles at its target after the
+       UA runs a style-change/rendering pass, which lags a same-tick attribute write -- updated()
+       focusing the first menu item straight after flipping open would find it still
+       visibility: hidden and silently fail. Untransitioned, it applies in the same synchronous
+       style pass as the open attribute write. The settled-closed [hidden] rule above is orthogonal
+       -- it only ever lands after the fade settles, never during it. */
     visibility: hidden;
     position: fixed;
     z-index: var(--lr-layer-dropdown);
@@ -143,8 +152,17 @@ export const styles = css`
       opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast);
   }
+  /* 'visibility' alone, unconditional on 'open' -- updated() focuses the first menu item
+     synchronously right after 'open' flips, which needs 'visibility: visible' already true in
+     that same synchronous pass (see the comment above). 'opacity'/'transform' wait one more
+     render, for [data-positioned] (set once placement actually lands), so a menu that was just
+     unhidden from [hidden] gets a real "closed" frame to transition away from instead of
+     snapping straight to open -- the same reason data-positioned exists on every other anchored
+     surface in this library. */
   :host([open]) [part='menu'] {
     visibility: visible;
+  }
+  :host([open]) [part='menu'][data-positioned] {
     opacity: 1;
     transform: none;
   }

@@ -462,6 +462,14 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private pendingDirection?: 'show' | 'hide';
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
   @state() private anchorPositioned = false;
+  /** Removes the settled-closed popup from layout (`[hidden]` -> `display:none`) so its stale
+   *  placed coordinates and full slotted-content box stop contributing to whatever ancestor
+   *  establishes its CSS containing block. Starts `true` (never-opened popups stay out of
+   *  layout), clears as soon as `open` becomes true -- before positioning runs, so the popup is
+   *  still a real, measurable box -- and is set back only once the close transition has settled
+   *  (`lr-after-hide`), preserving the existing visibility/opacity fade in the meantime. Mirrors
+   *  `LyraSelect`'s `listboxHidden` (commit 0ce9a9817). */
+  @state() private popupHidden = true;
   private positionedAnchor?: Element | VirtualAnchor;
   private positioningDirection?: 'ltr' | 'rtl';
   private directionChanged = false;
@@ -618,6 +626,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     // change-in-update warning. On close it is a pure derivation of `open`, so it belongs here,
     // before render: the same render already hides the popup via `!this.open`.
     if (changed.has('open') && !this.open) this.anchorPositioned = false;
+    // `popupHidden` gates the settled-closed `[hidden]` attribute. Clearing it here too, before
+    // render, rather than from `updated()` (where select.class.ts's own equivalent `listboxHidden`
+    // clear lives) avoids scheduling a second render and Lit's change-in-update warning for this
+    // component specifically: unlike select's plain reactive `open`, this class routes every open
+    // through `setOpen()` while a lifecycle promise is already in flight, and a same-render
+    // derivation reveals the popup for positioning exactly as promptly.
+    if (changed.has('open') && this.open) this.popupHidden = false;
     // A new anchor is likewise knowable before render: `position()`/`reposition()` runs from
     // `updated()` and clears this the moment it sees the anchor differs from the one it last placed
     // against, which flips the state after the update completed and buys a second render. Deriving
@@ -748,6 +763,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       this.startLightDismiss();
       if (wasPreviouslyActivated) this.overlayHandle!.resume();
       else this.activatePopoverOverlay();
+      this.popupHidden = false;
       this.positionPopup();
     }
   }
@@ -774,6 +790,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.transitionToken++;
     this.cancelTransitionAnimation();
     this.removeAttribute('data-closing');
+    this.popupHidden = true;
     super.disconnectedCallback();
   }
 
@@ -1541,7 +1558,14 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       if (this.transitionToken !== token) return;
       this.cancelTransitionAnimation();
     }
-    if (event === 'lr-after-hide') this.removeAttribute('data-closing');
+    if (event === 'lr-after-hide') {
+      this.removeAttribute('data-closing');
+      // Settled closed: remove the popup from layout now that its exit transition has finished
+      // playing, so a stale placed box can no longer inflate an ancestor's scrollable overflow.
+      this.popupHidden = true;
+      await this.updateComplete;
+      if (this.transitionToken !== token) return;
+    }
     this.emitSettledLifecycle(event);
   }
 
@@ -1556,6 +1580,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
         : nothing}
       <div id=${this.popupId} part=${this.popupPartNames} role=${popupRole ?? nothing}
         aria-label=${popupRole ? this.effectivePopupLabel : nothing}
+        ?hidden=${this.popupHidden}
         ?data-hidden=${!this.open || !this.anchorPositioned} ?data-has-arrow=${this.rendersArrow}
         @mouseenter=${this.onPopupPointerEnter} @mouseleave=${this.onPopupPointerLeave}
         @click=${this.onPopupClick}>

@@ -6,6 +6,14 @@ export const styles = css`
     display: contents;
   }
 
+  /* Settled closed (no exit transition playing, gated by JS clearing 'hidden' only once the
+     opacity/visibility fade has actually finished -- see settleListboxHidden()): out of layout
+     entirely, so a stale placed box can no longer inflate whatever ancestor establishes this
+     listbox's CSS containing block. Matches lr-select's/lr-combobox's own [part='listbox'] fix
+     (commit 0ce9a9817). */
+  [part='listbox'][hidden] {
+    display: none;
+  }
   /* Positioned by internal/positioner.js's place(); same fixed/z-index shape and closed state
      (invisible, slightly raised, transitioning in on :host([open])) as lr-combobox's/lr-select's
      own [part='listbox']. */

@@ -28,7 +28,7 @@ import {
   type VirtualAnchor,
 } from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, composedParentElement } from '../../../internal/active-element.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
   omittedEmptyStringConverter,
@@ -349,6 +349,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @state() private interactiveContent = false;
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'top';
   @state() private anchorPositioned = false;
+  /** Removes the settled-closed popup from layout (`[hidden]` -> `display:none`) so its stale
+   *  placed coordinates and full content box stop contributing to whatever ancestor establishes
+   *  its CSS containing block. Starts `true`, clears as soon as `open` becomes true -- before
+   *  positioning runs, so the popup is still a real, measurable box -- and is set back only once
+   *  the close transition has settled (`lr-after-hide`), preserving the existing visibility/
+   *  opacity fade in the meantime. Mirrors `LyraSelect`'s `listboxHidden` (commit 0ce9a9817). */
+  @state() private popupHidden = true;
   private positionedAnchor?: Element | VirtualAnchor;
   private positioningDirection?: 'ltr' | 'rtl';
   private directionChanged = false;
@@ -469,6 +476,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     // failure. It is a pure derivation of `open`, so it belongs here, before render. Nothing
     // visible changes: the same render already hides the popup via `!this.open`.
     if (changed.has('open') && !this.open) this.anchorPositioned = false;
+    // `popupHidden` gates the settled-closed `[hidden]` attribute -- same reasoning as
+    // `anchorPositioned` just above: derive it here, before render, rather than from `updated()`
+    // (where select.class.ts's own equivalent `listboxHidden` clear lives), so unhiding a
+    // newly-opened popup does not itself trip the change-in-update warning.
+    if (changed.has('open') && this.open) this.popupHidden = false;
     // A new anchor is likewise knowable before render: `position()`/`reposition()` runs from
     // `updated()` and clears this the moment it sees the anchor differs from the one it last placed
     // against, which flips the state after the update completed and buys a second render. Deriving
@@ -576,6 +588,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     // (dis)connect since they live on a light-DOM element the reconnect
     // doesn't move independently of this host.
     if (this.hasUpdated && this.open) {
+      this.popupHidden = false;
       this.position();
       if (this.requiresOverlayManager) {
         if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
@@ -606,6 +619,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.transitionToken++;
     this.cancelTransitionAnimation();
     this.removeAttribute('data-closing');
+    this.popupHidden = true;
     super.disconnectedCallback();
   }
 
@@ -862,7 +876,14 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       if (this.transitionToken !== token) return;
       this.cancelTransitionAnimation();
     }
-    if (event === 'lr-after-hide') this.removeAttribute('data-closing');
+    if (event === 'lr-after-hide') {
+      this.removeAttribute('data-closing');
+      // Settled closed: remove the popup from layout now that its exit transition has finished
+      // playing, so a stale placed box can no longer inflate an ancestor's scrollable overflow.
+      this.popupHidden = true;
+      await this.updateComplete;
+      if (this.transitionToken !== token) return;
+    }
     this.emit(event);
   }
 
@@ -1157,6 +1178,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
 
   private inspectContent(): TooltipContentSnapshot {
+
     const snapshot: TooltipContentSnapshot = {
       actionable: false,
       assigned: false,
@@ -1182,9 +1204,19 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       popup?.hasAttribute('data-hidden') === true || this.placementPending;
     const previousVisibility = popup?.style.getPropertyValue('visibility') ?? '';
     const previousVisibilityPriority = popup?.style.getPropertyPriority('visibility') ?? '';
+    // A settled-closed (or never-opened) popup also carries `hidden` -> `display: none`, which
+    // -- unlike `visibility` -- generates no boxes for its whole subtree at all, so the
+    // `visibility` bypass above alone can no longer make slotted content measurable. Bypass it
+    // too, under the same condition: `popupHidden` is only ever true in the same closed/
+    // not-yet-positioned states `bypassClosedVisibility` already covers. WebKit's UA stylesheet
+    // marks its own `[hidden] { display: none }` rule `!important`, which no inline override (even
+    // `!important`, itself only ever an *author*-level declaration) can beat -- the `hidden`
+    // property itself must come off.
+    const previousHidden = popup?.hidden ?? false;
     if (popup && bypassClosedVisibility) {
       const hostVisibility = this.ownerDocument.defaultView?.getComputedStyle(this).visibility ?? 'visible';
       popup.style.setProperty('visibility', hostVisibility);
+      popup.hidden = false;
     }
     try {
       const visitedContentElements = new Set<Element>();
@@ -1232,6 +1264,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         } else {
           popup.style.removeProperty('visibility');
         }
+        popup.hidden = previousHidden;
       }
     }
     return snapshot;
@@ -1279,17 +1312,41 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       };
     }
     if (!this.contentObserver) return;
+    // `disconnect()` silently drops any record it already queued but has not yet delivered --
+    // normally harmless (the observed node's up-to-date state is what the *next* mutation would
+    // report anyway), but inspectContent()'s own settled-closed `hidden` bypass just above writes
+    // to the popup around every call, which can shift exactly when the browser queues/delivers an
+    // unrelated ancestor mutation closely enough that a genuine consumer mutation (e.g. reverting
+    // an ancestor's `display: none`) queues and then gets discarded right here before its callback
+    // ever runs -- reproducible on WebKit. Draining first and scheduling one more pass for any
+    // record that was about to be lost keeps that mutation from going unobserved.
+    const pendingRecords = this.contentObserver.takeRecords();
     this.contentObserver.disconnect();
+    if (pendingRecords.length > 0) queueMicrotask(() => this.updateInteractiveContent());
+    const ancestorFilter = {
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
+    };
     for (const ancestor of snapshot.composedAncestors) {
       if (
         ancestor === this
         || ancestor.getRootNode() === this.renderRoot
         || snapshot.externalRoots.has(ancestor)
       ) continue;
-      this.contentObserver.observe(ancestor, {
-        attributes: true,
-        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
-      });
+      this.contentObserver.observe(ancestor, ancestorFilter);
+    }
+    // Additive, independent of the accessible-text walk's own `composedAncestors` above (which can
+    // stop climbing once it has found the nearest exclusion, so a *further* composed ancestor --
+    // this host's own light-DOM ancestry outside its shadow root -- can go unobserved on some
+    // engines while another engine's walk keeps climbing; observed on WebKit for
+    // tooltip.test.ts's forwarded-content coverage). Re-observing an already-observed node with
+    // the same options is a harmless no-op, so this only ever adds coverage.
+    for (
+      let ancestor = composedParentElement(this), hops = 0;
+      ancestor && hops < 64;
+      ancestor = composedParentElement(ancestor), hops++
+    ) {
+      this.contentObserver.observe(ancestor, ancestorFilter);
     }
     this.observeContentNode(this);
     for (const root of snapshot.externalRoots) this.observeContentNode(root);
@@ -1379,6 +1436,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       <slot name="__lr-tooltip-description" hidden></slot>
       <div id=${this.tooltipId} part="popup base tooltip base__popup" role=${this.interactiveContent ? 'dialog' : 'tooltip'}
         aria-label=${popupLabel}
+        ?hidden=${this.popupHidden}
         ?data-hidden=${!this.open || !this.anchorPositioned}
         ?data-has-arrow=${this.rendersArrow}
         @mouseenter=${this.onPopupEnter} @mouseleave=${this.onPopupLeave}

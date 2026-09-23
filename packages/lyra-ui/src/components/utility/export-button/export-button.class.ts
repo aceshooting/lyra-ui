@@ -16,6 +16,7 @@ import {
 } from '../../../internal/anchored-overlay-runtime.js';
 import { nextId } from '../../../internal/a11y.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { buildCsv, downloadBlob, type LyraCsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -34,6 +35,19 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
+function parseCssTime(value: string): number {
+  const trimmed = value.trim();
+  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
+  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
+  return 0;
+}
+
+/** The longest of a possibly comma-separated `transition-duration`/`-delay` list, mirroring
+ *  `<lr-toast>`'s own `maxCssTime`. */
+function maxCssTransitionTime(value: string): number {
+  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
+}
 
 export type LyraExportFormat = 'csv' | 'json';
 
@@ -356,6 +370,15 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   /** True from a failed built-in CSV/JSON export until the next export attempt starts; drives
    *  the visible `trigger-error` part token. */
   @state() private exportFailed = false;
+  /** Removes the settled-closed format menu from layout (`[hidden]` -> `display:none`) so its
+   *  stale placed coordinates and full-content box stop contributing to whatever ancestor
+   *  establishes its CSS containing block. Starts `true`, clears as soon as `open` becomes true --
+   *  before `syncMenuOverlay()`'s deferred placement runs, so the menu is still a real, measurable
+   *  box -- and is set back only once the CSS opacity/transform exit transition has actually
+   *  finished playing (`settleMenuHidden()`), preserving the existing fade in the meantime. Mirrors
+   *  `LyraSelect`'s `listboxHidden` (commit 0ce9a9817). */
+  @state() private menuHidden = true;
+  private menuHideToken = 0;
   /** Handle on the shared light-DOM live region export outcomes announce through -- a region
    *  rendered inside this shadow root is not reliably announced. Acquired on connect, not on the
    *  first failure, so assistive tech is already observing before any text arrives. */
@@ -364,7 +387,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   private readonly menuId = nextId('export-menu');
   private cleanup?: DeferredOperationHandle;
   private overlay?: OverlayHandle;
-  private menuPositioned = false;
+  /** Reactive so the CSS `[data-positioned]` gate (export-button.styles.ts) can defer the
+   *  opacity/transform open transition one render past the `hidden` -> unhidden one -- see that
+   *  rule's own comment. */
+  @state() private menuPositioned = false;
   private pointerDocument?: Document;
   private connectionGeneration = 0;
   private connectedDocument?: Document;
@@ -396,12 +422,16 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         this.open = false;
         return;
       }
-      if (this.hasUpdated && this.open)
+      if (this.hasUpdated && this.open) {
+        this.menuHidden = false;
         this.scheduleAfterUpdate(this.syncMenuOverlay, 'export-button-menu-overlay');
+      }
       return;
     }
-    if (this.hasUpdated && this.open)
+    if (this.hasUpdated && this.open) {
+      this.menuHidden = false;
       this.scheduleAfterUpdate(this.syncMenuOverlay, 'export-button-menu-overlay');
+    }
   }
 
   override disconnectedCallback(): void {
@@ -418,6 +448,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.restoreFocusOnMenuClose = false;
     this.sink?.release();
     this.sink = undefined;
+    // A pending settle must not outlive the detached element; cut straight to hidden rather than
+    // waiting on a transition a disconnected element may never finish painting.
+    this.menuHideToken++;
+    this.menuHidden = true;
     queueDocumentMicrotask(disconnectDocument, () => {
       if (
         this.connectionGeneration !== generation ||
@@ -504,6 +538,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       const restoreFocus = this.restoreFocusOnMenuClose;
       this.restoreFocusOnMenuClose = false;
       this.deactivateMenuOverlay(restoreFocus);
+      void this.settleMenuHidden();
       return;
     }
     this.activateMenuOverlay();
@@ -534,6 +569,49 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       this.pendingMenuFocusIndex = 0;
     });
   };
+
+  /** Removes the menu from layout only once its CSS opacity/transform exit transition has
+   *  actually finished playing -- or immediately when there is none to wait for (reduced motion,
+   *  a collapsed `formats` list with no menu element at all, or a `--lr-transition-fast` override
+   *  of `0s`), matching this component's own transition-duration custom property rather than a
+   *  hardcoded guess. A safety timeout covers a browser that never dispatches the end event.
+   *  Superseded by a fresh close (a new token) or a reopen (`this.open` true again) at either
+   *  await point. */
+  private async settleMenuHidden(): Promise<void> {
+    const token = ++this.menuHideToken;
+    await this.updateComplete;
+    if (token !== this.menuHideToken || this.open) return;
+    const menu = this.menuEl;
+    const view = this.ownerDocument.defaultView;
+    if (menu && view && !prefersReducedMotion(view)) {
+      const computed = view.getComputedStyle(menu);
+      const durationMs =
+        maxCssTransitionTime(computed.transitionDuration) +
+        maxCssTransitionTime(computed.transitionDelay);
+      if (durationMs > 0) {
+        await new Promise<void>((resolve) => {
+          let settled = false;
+          let timeout: number | undefined;
+          const finish = (): void => {
+            if (settled) return;
+            settled = true;
+            if (timeout !== undefined) view.clearTimeout(timeout);
+            menu.removeEventListener('transitionend', onEnd);
+            menu.removeEventListener('transitioncancel', onEnd);
+            resolve();
+          };
+          const onEnd = (event: Event): void => {
+            if (event.target === menu) finish();
+          };
+          menu.addEventListener('transitionend', onEnd);
+          menu.addEventListener('transitioncancel', onEnd);
+          timeout = view.setTimeout(finish, durationMs + 50);
+        });
+        if (token !== this.menuHideToken || this.open) return;
+      }
+    }
+    this.menuHidden = true;
+  }
 
   private menuItemEls(): HTMLButtonElement[] {
     return Array.from(this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="menu-item"]'));
@@ -647,6 +725,18 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       this.open = false;
     }
     this.announceMenuTransition(changed);
+    // `menuHidden` gates the settled-closed `[hidden]` attribute. Cleared here, after
+    // `announceMenuTransition()` has settled this update's final `open` value (a veto flips it
+    // back), rather than from `updated()` (where select.class.ts's own equivalent `listboxHidden`
+    // clear lives) -- avoids scheduling a second render and Lit's change-in-update warning, which
+    // `WTR_STRICT_CONSOLE=1` turns into a test failure.
+    if (this.open) this.menuHidden = false;
+    // `menuPositioned` gates the CSS `[data-positioned]` opacity/transform transition (see
+    // export-button.styles.ts). `syncMenuOverlay()` (called from `updated()`, synchronously for
+    // this same open/close transition) also resets it, but only that call ever runs from inside
+    // `updated()` -- resetting it here first, same as `menuHidden` just above, means that later
+    // write is already a same-value no-op and never itself trips the change-in-update warning.
+    if (!this.open) this.menuPositioned = false;
   }
 
   /**
@@ -842,6 +932,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         ? html`<div
             id=${this.menuId}
             part="menu"
+            ?hidden=${this.menuHidden}
+            ?data-positioned=${this.menuPositioned}
             role="menu"
             aria-label=${this.localize('exportFormatMenuLabel', undefined, {
               label: accessibleLabel,
