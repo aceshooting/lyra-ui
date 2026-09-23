@@ -21,9 +21,9 @@ it('normalizes an omitted detail to null, matching LyraElement.emit()', () => {
 });
 
 it('looks the cancelable flag up per tag, not per event name -- lr-switch-toggle-request is a different tag with its own detail shape', () => {
-  const event = createLyraEvent('lr-switch', 'lr-switch-toggle-request', { checked: true });
+  const event = createLyraEvent('lr-switch', 'lr-switch-toggle-request', { checked: true, value: 'on' });
   expect(event.cancelable).to.be.true;
-  expect(event.detail).to.deep.equal({ checked: true });
+  expect(event.detail).to.deep.equal({ checked: true, value: 'on' });
 });
 
 it('produces a real CustomEvent whose flags let a preventDefault-based handler actually run -- the exact bug the hand-rolled alternative silently missed', () => {

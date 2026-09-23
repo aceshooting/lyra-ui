@@ -84,15 +84,15 @@ function indeterminateGlyph(): SVGTemplateResult {
 export interface LyraCheckboxEventMap {
   input: Event;
   change: Event;
-  'lr-input': CustomEvent<{ checked: boolean }>;
-  'lr-change': CustomEvent<{ checked: boolean }>;
+  'lr-input': CustomEvent<{ checked: boolean; value: string }>;
+  'lr-change': CustomEvent<{ checked: boolean; value: string }>;
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-invalid': CustomEvent<null>;
   // The proposal, not the outcome: `checked` still holds the old value while this dispatches, so
   // `detail.checked` is what the control would become. Same request/commit shape `<lr-details>`
   // uses, with the direction in the detail rather than in two direction-named events.
-  'lr-checkbox-toggle-request': CustomEvent<{ checked: boolean }>;
+  'lr-checkbox-toggle-request': CustomEvent<{ checked: boolean; value: string }>;
 }
 /**
  * `<lr-checkbox>` — a boolean form control. Structurally the same idea as
@@ -136,16 +136,17 @@ export interface LyraCheckboxEventMap {
  * `ariaDescribedByElements` so externally-owned descriptions remain valid across the shadow
  * boundary.
  * @event input - The user toggled the checkbox; bubbling and composed like a native form event.
- * @event lr-input - Prefixed compatibility alias for `input`; `detail: { checked }`.
+ * @event lr-input - Prefixed compatibility alias for `input`; `detail: { checked, value }`.
  * @event change - Fired immediately after `input` for the same user toggle.
  * @event lr-change - Compatibility alias fired after `input` and `change` (click or Space).
- * `detail: { checked }`. Not fired for a programmatic `.checked` assignment, nor for a user toggle
- * a listener refused through `lr-checkbox-toggle-request`.
+ * `detail: { checked, value }`. Not fired for a programmatic `.checked` assignment, nor for a user
+ * toggle a listener refused through `lr-checkbox-toggle-request`.
  * @event lr-checkbox-toggle-request - A user toggle (click or Space) is about to change `checked`;
- * `detail: { checked }` carries the state the control *would* take, and `checked` itself still
- * holds the old value while this dispatches. Cancelable: calling `preventDefault()` keeps the
- * current state, so the control never flips at all rather than flipping and snapping back, and
- * none of `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request
+ * `detail: { checked, value }` carries the state the control *would* take (`value` is the current
+ * `.value`, unaffected by the toggle), and `checked` itself still holds the old value while this
+ * dispatches. Cancelable: calling `preventDefault()` keeps the current state, so the control never
+ * flips at all rather than flipping and snapping back, and none of
+ * `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request
  * by assigning `checked` itself during the dispatch, which suppresses the built-in write the same
  * way. Not fired for a programmatic `.checked` assignment, nor while the control is disabled. An
  * `<lr-checkbox-group>` owner consumes this event and republishes it as its own
@@ -739,7 +740,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     // snapping it back a frame later. `requestThenCommit()` also suppresses the commit when a
     // listener resolved the request by writing `checked` itself.
     requestThenCommit({
-      requestDetail: { checked: proposed },
+      requestDetail: { checked: proposed, value: this.value },
       emitRequest: (detail, init: { cancelable: true }) =>
         this.emit('lr-checkbox-toggle-request', detail, init),
       guard: this.toggleGuard,
@@ -757,9 +758,9 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
         this.checked = proposed;
         this.indeterminate = false;
         dispatchNativeEvent(this, 'input');
-        this.emit('lr-input', { checked: this.checked });
+        this.emit('lr-input', { checked: this.checked, value: this.value });
         dispatchNativeEvent(this, 'change');
-        this.emit('lr-change', { checked: this.checked });
+        this.emit('lr-change', { checked: this.checked, value: this.value });
       },
     });
   }

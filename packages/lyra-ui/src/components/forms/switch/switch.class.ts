@@ -42,15 +42,15 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_switchRequired } from '../../.
 export interface LyraSwitchEventMap {
   input: InputEvent;
   change: Event;
-  'lr-input': CustomEvent<{ checked: boolean }>;
-  'lr-change': CustomEvent<{ checked: boolean }>;
+  'lr-input': CustomEvent<{ checked: boolean; value: string }>;
+  'lr-change': CustomEvent<{ checked: boolean; value: string }>;
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-invalid': CustomEvent<null>;
   // The proposal, not the outcome: `checked` still holds the old value while this dispatches, so
   // `detail.checked` is what the control would become. Same request/commit shape `<lr-details>`
   // uses, with the direction in the detail rather than in two direction-named events.
-  'lr-switch-toggle-request': CustomEvent<{ checked: boolean }>;
+  'lr-switch-toggle-request': CustomEvent<{ checked: boolean; value: string }>;
 }
 /**
  * `<lr-switch>` — a boolean toggle-switch form control. Structurally the
@@ -87,17 +87,18 @@ export interface LyraSwitchEventMap {
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
  * @event {InputEvent} input - The user toggled the switch; bubbling and composed like a native form event.
- * @event lr-input - Prefixed compatibility alias for `input`; `detail: { checked }`.
+ * @event lr-input - Prefixed compatibility alias for `input`; `detail: { checked, value }`.
  * @event {Event} change - Fired immediately after `input` for the same user toggle, matching the native
  * checkbox/radio contract a form library expects from a boolean control.
  * @event lr-change - Compatibility alias fired after `input` and `change` (click, Space, logical
  * ArrowLeft/ArrowRight, or
- * the programmatic `click()` activation path). `detail: { checked }`. Not fired for a plain
+ * the programmatic `click()` activation path). `detail: { checked, value }`. Not fired for a plain
  * `.checked` property assignment, `form.reset()`, session-state restoration, or a user toggle a
  * listener refused through `lr-switch-toggle-request`.
  * @event lr-switch-toggle-request - A user toggle (click, Space, the logical arrow keys, or the
- * programmatic `click()` activation path) is about to change `checked`; `detail: { checked }`
- * carries the state the control *would* take, and `checked` itself still holds the old value while
+ * programmatic `click()` activation path) is about to change `checked`; `detail: { checked, value }`
+ * carries the state the control *would* take (`value` is the current `.value`, unaffected by the
+ * toggle), and `checked` itself still holds the old value while
  * this dispatches. Cancelable: calling `preventDefault()` keeps the current state, so the switch
  * never slides at all rather than sliding and snapping back, and none of
  * `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request by
@@ -623,7 +624,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     // back a frame later. `requestThenCommit()` also suppresses the commit when a listener
     // resolved the request by writing `checked` itself. Mirrors `<lr-checkbox>`'s `toggle()`.
     requestThenCommit({
-      requestDetail: { checked: next },
+      requestDetail: { checked: next, value: this.value },
       emitRequest: (detail, init: { cancelable: true }) =>
         this.emit('lr-switch-toggle-request', detail, init),
       guard: this.toggleGuard,
@@ -641,9 +642,9 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
         // `<form>`-level `change` listener that binds the native names, which is the ordinary way
         // a consumer observes a control they did not write.
         dispatchNativeInputEvent(this);
-        this.emit('lr-input', { checked: this.checked });
+        this.emit('lr-input', { checked: this.checked, value: this.value });
         dispatchNativeEvent(this, 'change');
-        this.emit('lr-change', { checked: this.checked });
+        this.emit('lr-change', { checked: this.checked, value: this.value });
       },
     });
   }

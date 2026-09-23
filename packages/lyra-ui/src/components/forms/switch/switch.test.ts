@@ -513,6 +513,7 @@ describe("native form event contract", () => {
     expect(aliasInput.event instanceof CustomEvent).to.be.true;
     expect((aliasInput.event as CustomEvent).detail).to.deep.equal({
       checked: true,
+      value: "on",
     });
     expect(el.checked).to.be.true;
   });
@@ -2314,6 +2315,27 @@ describe('lr-switch-toggle-request', () => {
       'lr-change',
     ]);
     expect(el.checked).to.be.true;
+  });
+
+  it('carries the current value in lr-switch-toggle-request, lr-input and lr-change detail, including a custom value', async () => {
+    const el = (await fixture(
+      html`<lr-switch value="custom-value">Label</lr-switch>`
+    )) as LyraSwitch;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const seen: Record<string, string> = {};
+    for (const name of ['lr-switch-toggle-request', 'lr-input', 'lr-change'] as const) {
+      el.addEventListener(name, (event) => {
+        seen[name] = (event as CustomEvent<{ checked: boolean; value: string }>).detail.value;
+      });
+    }
+
+    base.click();
+    await el.updateComplete;
+
+    expect(seen['lr-switch-toggle-request']).to.equal('custom-value');
+    expect(seen['lr-input']).to.equal('custom-value');
+    expect(seen['lr-change']).to.equal('custom-value');
+    expect(el.value).to.equal('custom-value');
   });
 
   it('never flips checked or aria-checked when a listener vetoes the request', async () => {
