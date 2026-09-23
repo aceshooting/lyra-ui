@@ -327,6 +327,12 @@ test('keeps the checked-in profile authority on the canonical fixture contract',
       manifest.devDependencies[name].replace(/^[~^]/u, ''),
     ]),
   );
+  const rootManifest = JSON.parse(
+    await readFile(new URL('../package.json', import.meta.url), 'utf8'),
+  );
+  // The package-manager authority follows the root packageManager pin that upgrades move; the
+  // checker separately enforces that the two agree.
+  expected.packageManagers.pnpm = String(rootManifest.packageManager).replace(/^pnpm@/u, '');
   assert.deepEqual(checkedIn, expected);
 });
 
