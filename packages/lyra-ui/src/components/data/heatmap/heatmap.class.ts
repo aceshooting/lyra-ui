@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
@@ -1650,6 +1651,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private authorAriaLabel: string | null = null;
   private generatedAriaLabel = '';
   private syncingGeneratedSemantics = false;
+  /** Whether a host `aria-describedby` was last reflected onto the active role owner -- see
+   *  `checkbox.class.ts`'s identically-named field for why the sync call must stay guarded. */
+  private hasSyncedDescribedByElements = false;
 
   override attributeChangedCallback(
     name: string,
@@ -2229,8 +2233,22 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return getNumberFormat(this.effectiveLocale || undefined).format(value);
   }
 
+  // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never reaches
+  // whichever internal element currently owns the role (`[part="canvas"]`'s `role="application"`,
+  // or `[part="cells"]`'s `role="grid"` under `accessibleCells`) unless it is explicitly reflected
+  // there. Mirrors `flow-minimap.class.ts`'s identical `syncAriaDescribedByElements` use.
+  private syncExternalDescription(): void {
+    const describedBy = this.getAttribute('aria-describedby');
+    if (!describedBy && !this.hasSyncedDescribedByElements) return;
+    const control = this.accessibleCells
+      ? this.renderRoot.querySelector<HTMLElement>('[part="cells"]')
+      : this.canvas;
+    this.hasSyncedDescribedByElements = syncAriaDescribedByElements(this, control ?? undefined, describedBy);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     // Both halves matter: the unfrozen default has nothing that can clip the tooltip, so it never
     // pays for the measurement (or its forced layout) at all. See measureTooltip().
     if (this.hoverCell && this.effectiveStickyLabels !== 'none')
@@ -4709,9 +4727,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         aria-rowcount=${rowCount}
         aria-colcount=${colCount}
         aria-multiselectable=${this.multiple ? 'true' : nothing}
-        aria-describedby=${this.projectionTruncated
-          ? 'projection-limit'
-          : nothing}
+        aria-describedby=${[
+          this.getAttribute('aria-describedby') ?? '',
+          this.projectionTruncated ? 'projection-limit' : '',
+        ]
+          .filter(Boolean)
+          .join(' ') || nothing}
       >
         ${[...renderedRows].map(
           ([rowIndex, rowPositions]) => html`
@@ -4817,8 +4838,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         aria-label=${this.accessibleCells
           ? nothing
           : this.authorAriaLabel ?? this.generatedAriaLabel}
-        aria-describedby=${!this.accessibleCells && projectionDescription
-          ? 'projection-limit'
+        aria-describedby=${!this.accessibleCells
+          ? [
+              this.getAttribute('aria-describedby') ?? '',
+              projectionDescription ? 'projection-limit' : '',
+            ]
+              .filter(Boolean)
+              .join(' ') || nothing
           : nothing}
         @pointermove=${this.onPointerMove}
         @pointerleave=${this.onPointerLeave}

@@ -1835,6 +1835,50 @@ describe("per-cell hover/focus/click + accessible values", () => {
     expect(canvas.getAttribute("aria-describedby")).to.equal(null);
   });
 
+  it("resolves a host-authored aria-describedby onto the canvas role owner (regression)", async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="external-heatmap-note">External note</span>
+        <lr-heatmap aria-describedby="external-heatmap-note"></lr-heatmap>
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector("lr-heatmap") as LyraHeatmap;
+    await el.updateComplete;
+    const external = wrapper.querySelector("#external-heatmap-note")!;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+    if (Reflect.has(canvas, "ariaDescribedByElements")) {
+      const ids = (canvas.ariaDescribedByElements ?? []).map((element) => element.id);
+      expect(ids).to.include("external-heatmap-note");
+      expect(canvas.ariaDescribedByElements?.includes(external)).to.equal(true);
+    } else {
+      expect(canvas.getAttribute("aria-describedby") ?? "").to.contain("external-heatmap-note");
+    }
+  });
+
+  it("resolves a host-authored aria-describedby onto the accessible-cells grid role owner (regression)", async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="external-heatmap-note-2">External note</span>
+        <lr-heatmap accessible-cells aria-describedby="external-heatmap-note-2"></lr-heatmap>
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector("lr-heatmap") as LyraHeatmap;
+    await el.updateComplete;
+    const external = wrapper.querySelector("#external-heatmap-note-2")!;
+    const grid = el.shadowRoot!.querySelector('[part="cells"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+    if (Reflect.has(grid, "ariaDescribedByElements")) {
+      const ids = (grid.ariaDescribedByElements ?? []).map((element) => element.id);
+      expect(ids).to.include("external-heatmap-note-2");
+      expect(grid.ariaDescribedByElements?.includes(external)).to.equal(true);
+    } else {
+      expect(grid.getAttribute("aria-describedby") ?? "").to.contain("external-heatmap-note-2");
+    }
+  });
+
   it("routes keyboard feedback through a light-DOM sink and repeats identical edge announcements", async () => {
     const el = (await fixture(html`
       <lr-heatmap

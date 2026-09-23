@@ -7,6 +7,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import {
@@ -406,6 +407,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   declare customError: string | null;
   private listId = nextId('voice-picker-list');
   private controlId = nextId('voice-picker-control');
+  /** Whether a host `aria-describedby` was last reflected onto the active control -- see
+   *  `checkbox.class.ts`'s identically-named field for why the sync call must stay guarded. */
+  private hasSyncedDescribedByElements = false;
   private audioEl?: HTMLAudioElement;
   /** The target whose `play()` promise has not fulfilled yet. It never drives public playing
    *  state; it exists solely to cancel/supersede stale async completions. */
@@ -832,6 +836,26 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Reflects the host's own `aria-describedby` (e.g. a form-wide instructions block living
+    // outside this component) onto the active semantic control, alongside the trigger/input's own
+    // hint/error ids already rendered into its literal `aria-describedby` string above -- idrefs
+    // authored on the host never resolve across the shadow boundary on their own, mirroring
+    // `checkbox.class.ts`'s `syncAriaDescribedByElements` usage. Guarded exactly like that
+    // reference: assigning `ariaDescribedByElements = null` unconditionally on every update -- even
+    // when there was never anything to sync -- makes the browser drop the literal hint/error
+    // `aria-describedby` string this same render already set.
+    const hostDescribedBy = this.getAttribute('aria-describedby');
+    if (hostDescribedBy || this.hasSyncedDescribedByElements) {
+      // `querySelector`, not `getElementById`: `renderRoot` is typed `HTMLElement | ShadowRoot`,
+      // and `getElementById` exists only on the `DocumentFragment` half. Matches how
+      // `checkbox.class.ts` resolves its own control for the same helper.
+      const control = this.renderRoot.querySelector<HTMLElement>(`#${CSS.escape(this.controlId)}`);
+      this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+        this,
+        control ?? undefined,
+        hostDescribedBy,
+      );
+    }
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     this.catalogPicker.updated(reposition);
     if (
@@ -1180,7 +1204,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const hasLabel = this.hasVisibleLabel;
     const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
     const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
+    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
       .filter(Boolean)
       .join(' ');
     return html`
@@ -1225,7 +1249,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const hasLabel = this.hasVisibleLabel;
     const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
     const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
+    const describedBy = [this.getAttribute('aria-describedby') ?? '', hasError ? 'voice-picker-error' : '', hasHint ? 'voice-picker-hint' : '']
       .filter(Boolean)
       .join(' ');
     return html`

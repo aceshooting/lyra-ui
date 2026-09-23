@@ -118,6 +118,26 @@ it('renders one labeled [part="word"] per word, as a single tab stop on [part="s
   expect(el.getAttribute('aria-label')).to.be.null;
 });
 
+it('resolves a host-authored aria-describedby onto the svg role owner (regression)', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <span id="external-word-cloud-note">External note</span>
+      <lr-word-cloud aria-describedby="external-word-cloud-note" .words=${WORDS}></lr-word-cloud>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-word-cloud') as LyraWordCloud;
+  await el.updateComplete;
+  const external = wrapper.querySelector('#external-word-cloud-note')!;
+  const svg = svgEl(el) as SVGSVGElement & { ariaDescribedByElements?: Element[] | null };
+  if (Reflect.has(svg, 'ariaDescribedByElements')) {
+    const ids = (svg.ariaDescribedByElements ?? []).map((element) => element.id);
+    expect(ids).to.include('external-word-cloud-note');
+    expect(svg.ariaDescribedByElements?.includes(external)).to.equal(true);
+  } else {
+    expect(svg.getAttribute('aria-describedby') ?? '').to.contain('external-word-cloud-note');
+  }
+});
+
 it('shows a tokenized hover outline on the interactive SVG surface', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   const svg = svgEl(el);

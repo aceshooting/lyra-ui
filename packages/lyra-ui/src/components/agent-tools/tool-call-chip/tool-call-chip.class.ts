@@ -13,6 +13,7 @@ import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
@@ -163,7 +164,9 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * `<lr-citation-badge>`'s popover), so releasing one modality while the
  * other is still active doesn't close it, and the trigger button's
  * `aria-describedby` points at the tooltip's id whenever it's open and has
- * content, so the association reaches assistive tech too. The tooltip is an
+ * content, so the association reaches assistive tech too; a host-authored `aria-describedby` is
+ * projected onto the same button and merged with that id, since idrefs never cross the shadow
+ * boundary on their own. The tooltip is an
  * explicitly noninteractive preview: its flattened subtree is inert, so a
  * consumer must put actions in the detail surface opened from
  * `lr-tool-call-chip-select`, not links or controls in this description slot.
@@ -282,6 +285,13 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   @state() private tooltipOpen = false;
 
   private readonly tooltipId = nextId('tool-call-chip-tooltip');
+  /** Projects a host `aria-describedby` onto the internal `[part="base"]` role owner, merged with
+   *  whatever that element's own `aria-describedby` (the open tooltip's id, or nothing) currently
+   *  is -- IDREFs are scoped per shadow root, so the host's own attribute cannot reach across the
+   *  boundary on its own, and re-deriving the baseline on every update (rather than a one-shot
+   *  merge) keeps the tooltip id included as `tooltipOpen` toggles. Mirrors
+   *  `graph-query-builder.class.ts`'s identically-shaped `externalDescriptionLease`. */
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private cleanupPositioner?: () => void;
   // Hover and focus are tracked as independent "keep it open" reasons --
   // mirrors lr-citation-badge's identical hovering/focused pair for the
@@ -307,8 +317,29 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     }
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
+  private syncExternalDescription(): void {
+    const target = this.isConnected ? (this.baseEl ?? null) : null;
+    if (!target) {
+      this.releaseExternalDescription();
+      return;
+    }
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncExternalDescription();
     if (changed.has('tooltipOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
@@ -330,6 +361,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.releaseExternalDescription();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
     // Reset so a reconnect (e.g. a drag-drop reparent or a list re-render

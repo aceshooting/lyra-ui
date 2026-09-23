@@ -586,6 +586,58 @@ describe('detail tooltip', () => {
     expect(base.hasAttribute('aria-describedby')).to.be.false;
   });
 
+  it('resolves a host-authored aria-describedby onto the internal button (regression)', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="external-chip-note">External note</span>
+        <lr-tool-call-chip aria-describedby="external-chip-note" name="web_search"></lr-tool-call-chip>
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector('lr-tool-call-chip') as LyraToolCallChip;
+    await el.updateComplete;
+    const external = wrapper.querySelector('#external-chip-note')!;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+    if (Reflect.has(base, 'ariaDescribedByElements')) {
+      const ids = (base.ariaDescribedByElements ?? []).map((element) => element.id);
+      expect(ids).to.include('external-chip-note');
+      expect(base.ariaDescribedByElements?.includes(external)).to.equal(true);
+    } else {
+      expect(base.getAttribute('aria-describedby') ?? '').to.contain('external-chip-note');
+    }
+  });
+
+  it('keeps the host-authored aria-describedby merged alongside the open tooltip id (regression)', async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <span id="external-chip-note-2">External note</span>
+        <lr-tool-call-chip aria-describedby="external-chip-note-2" name="web_search"
+          ><p>Query: solar panel efficiency</p></lr-tool-call-chip
+        >
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector('lr-tool-call-chip') as LyraToolCallChip;
+    await el.updateComplete;
+    const external = wrapper.querySelector('#external-chip-note-2')!;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[] | null;
+    };
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    base.focus();
+    await el.updateComplete;
+    if (Reflect.has(base, 'ariaDescribedByElements')) {
+      const described = base.ariaDescribedByElements ?? [];
+      expect(described.includes(external)).to.equal(true);
+      expect(described.includes(tooltip)).to.equal(true);
+    } else {
+      const describedBy = base.getAttribute('aria-describedby') ?? '';
+      expect(describedBy).to.contain('external-chip-note-2');
+      expect(describedBy).to.contain(tooltip.id);
+    }
+  });
+
   it('contains unbroken and tall preview content within positioner-published available space', async () => {
     const unbroken = 'PreviewValue'.repeat(500);
     const el = (await fixture(html`

@@ -4,6 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -403,6 +404,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   private readonly warnedSkipCounts = new Set<number>();
   private typographyThemeSignature = '';
   private paletteThemeSignature = '';
+  /** Whether a host `aria-describedby` was last reflected onto `[part="svg"]` -- see
+   *  `checkbox.class.ts`'s identically-named field for why the sync call must stay guarded. */
+  private hasSyncedDescribedByElements = false;
 
   constructor() {
     super();
@@ -421,6 +425,24 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     this.liveText = '';
     this.pressedOriginalIndex = null;
     this.hoveredOriginalIndex = null;
+  }
+
+  // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never reaches
+  // `[part="svg"]`'s own `role="application"` (which owns the accessible description) unless it is
+  // explicitly reflected there. Mirrors `flow-minimap.class.ts`'s identical
+  // `syncAriaDescribedByElements` use.
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const describedBy = this.getAttribute('aria-describedby');
+    if (!describedBy && !this.hasSyncedDescribedByElements) return;
+    // `ariaDescribedByElements` is part of `ARIAMixin`, which every `Element` (SVG included)
+    // implements at runtime -- the cast only works around `syncAriaDescribedByElements()`'s
+    // `HTMLElement`-shaped parameter, which every other caller happens to satisfy natively.
+    this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+      this,
+      this.svgEl as unknown as HTMLElement | undefined,
+      describedBy,
+    );
   }
 
   private releaseAnnouncementSink(): void {
@@ -821,7 +843,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
           part="svg"
           role="application"
           aria-label=${accessibleLabel}
-          aria-describedby=${hasWordLimit ? 'word-limit' : nothing}
+          aria-describedby=${[this.getAttribute('aria-describedby') ?? '', hasWordLimit ? 'word-limit' : '']
+            .filter(Boolean)
+            .join(' ') || nothing}
           tabindex="0"
           viewBox="0 0 ${layout.width} ${layout.height}"
           @focus=${this.onSvgFocus}

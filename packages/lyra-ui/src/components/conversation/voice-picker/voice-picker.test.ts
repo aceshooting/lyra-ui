@@ -2334,6 +2334,50 @@ it('wires aria-describedby on the free-text combobox input to the rendered hint/
   expect(describedBy).to.contain('hint');
 });
 
+it('resolves a host-authored aria-describedby onto the closed trigger (regression)', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <span id="external-voice-note">External guidance</span>
+      <lr-voice-picker aria-describedby="external-voice-note" hint="Pick a voice" .catalog=${CATALOG}></lr-voice-picker>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-voice-picker') as LyraVoicePicker;
+  await el.updateComplete;
+  const external = wrapper.querySelector('#external-voice-note')!;
+  const control = trigger(el) as HTMLButtonElement & { ariaDescribedByElements?: Element[] };
+  if (Reflect.has(control, 'ariaDescribedByElements')) {
+    const ids = (control.ariaDescribedByElements ?? []).map((element) => element.id);
+    expect(ids).to.include('external-voice-note');
+    expect(control.ariaDescribedByElements?.includes(external)).to.equal(true);
+  } else {
+    expect(control.getAttribute('aria-describedby') ?? '').to.contain('external-voice-note');
+  }
+  // The trigger's own hint chrome stays reachable either way -- it's rendered as a literal id
+  // in the control's `aria-describedby` string, independent of the host-reflection branch.
+  expect(el.shadowRoot!.querySelector('#voice-picker-hint')).to.exist;
+});
+
+it('resolves a host-authored aria-describedby onto the free-text combobox input (regression)', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <span id="external-voice-note-2">External guidance</span>
+      <lr-voice-picker allow-custom aria-describedby="external-voice-note-2" error-text="Required"></lr-voice-picker>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-voice-picker') as LyraVoicePicker;
+  await el.updateComplete;
+  const external = wrapper.querySelector('#external-voice-note-2')!;
+  const control = input(el) as HTMLInputElement & { ariaDescribedByElements?: Element[] };
+  if (Reflect.has(control, 'ariaDescribedByElements')) {
+    const ids = (control.ariaDescribedByElements ?? []).map((element) => element.id);
+    expect(ids).to.include('external-voice-note-2');
+    expect(control.ariaDescribedByElements?.includes(external)).to.equal(true);
+  } else {
+    expect(control.getAttribute('aria-describedby') ?? '').to.contain('external-voice-note-2');
+  }
+  expect(el.shadowRoot!.querySelector('#voice-picker-error')).to.exist;
+});
+
 it('marks the closed trigger aria-invalid once a required, empty picker is touched (blurred)', async () => {
   const el = (await fixture(html`<lr-voice-picker required .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   expect(trigger(el).getAttribute('aria-invalid')).to.equal('false');
