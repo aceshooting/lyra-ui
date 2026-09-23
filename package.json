@@ -75,6 +75,6 @@
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.0"
   },
-  "packageManager": "pnpm@12.5.1",
+  "packageManager": "pnpm@12.6.0",
   "customElements": "packages/lyra-ui/custom-elements.json"
 }

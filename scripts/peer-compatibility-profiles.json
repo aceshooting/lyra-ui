@@ -20,8 +20,8 @@
     "chartjs-plugin-annotation": "3.1.0",
     "chartjs-plugin-datalabels": "2.2.0",
     "chartjs-plugin-zoom": "2.2.0",
-    "dompurify": "3.4.15",
-    "katex": "0.18.7",
+    "dompurify": "3.4.16",
+    "katex": "0.18.9",
     "mammoth": "1.12.3",
     "marked": "18.0.14",
     "pdfjs-dist": "6.3.289"
@@ -33,7 +33,7 @@
   },
   "packageManagers": {
     "npm": "10.9.8",
-    "pnpm": "12.5.1"
+    "pnpm": "12.6.0"
   },
   "profiles": [
     {
