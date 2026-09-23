@@ -410,6 +410,15 @@ it('is role="toolbar" with a localized default label, or a custom label override
   ).to.equal("Assistant reply actions");
 });
 
+it('suppresses the localized default label when label is explicitly empty', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions label=""></lr-message-actions>`
+  )) as LyraMessageActions;
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+  ).to.equal("");
+});
+
 it("forwards a host aria-label to the toolbar, winning over label", async () => {
   const el = (await fixture(
     html`<lr-message-actions

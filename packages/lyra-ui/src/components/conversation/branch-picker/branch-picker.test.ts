@@ -105,6 +105,22 @@ it('preserves an explicitly empty host aria-label on the semantic group', async 
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
 });
 
+it('uses the localized default label when label is omitted', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker index="0" count="2"></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Response versions',
+  );
+});
+
+it('suppresses the localized default label when label is explicitly empty', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker index="0" count="2" label=""></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it('focus() delegates to the enabled chevron button', async () => {
   const el = (await fixture(
     html`<lr-branch-picker index="0" count="3"></lr-branch-picker>`,

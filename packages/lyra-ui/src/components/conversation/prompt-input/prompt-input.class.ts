@@ -302,7 +302,21 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   /** Queued prompts keyed by unique nonblank `id`; malformed and later duplicate rows are omitted
    * before section gating or forwarding. */
   @property({ attribute: false }) queue: readonly PromptQueueItem[] = [];
-  @property() label = '';
+  private _label = '';
+  private _labelExplicit = false;
+  /** Accessible name for the prompt section. Defaults to the localized `promptInputLabel`; an
+   *  explicit empty string (`label=""` or `.label = ''`) suppresses that default and renders no
+   *  label. `accessibleLabel` wins over both. */
+  @property()
+  get label(): string {
+    return this._label;
+  }
+  set label(value: string) {
+    const old = this._label;
+    this._label = value;
+    this._labelExplicit = true;
+    this.requestUpdate('label', old);
+  }
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private activeSuggestion: ActiveSuggestion | null = null;
@@ -830,7 +844,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   override render(): TemplateResult {
     const label =
-      this.accessibleLabel ?? (this.label || this.localize('promptInputLabel'));
+      this.accessibleLabel ??
+      (this._labelExplicit ? this.label : this.localize('promptInputLabel'));
     const attachments = this.effectiveAttachments;
     const queue = this.effectiveQueue;
     const hasChips = attachments.length > 0 || this.slotPresence.has('chips');

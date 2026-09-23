@@ -1520,6 +1520,22 @@ it("applies per-instance strings to the prompt label", async () => {
   ).to.equal("Invite IA");
 });
 
+it('uses the localized default label when label is omitted', async () => {
+  const el = (await fixture(html`<lr-prompt-input></lr-prompt-input>`)) as LyraPromptInput;
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label'),
+  ).to.equal('AI prompt');
+});
+
+it('suppresses the localized default label when label is explicitly empty', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-input label=""></lr-prompt-input>`,
+  )) as LyraPromptInput;
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label'),
+  ).to.equal('');
+});
+
 it("preserves an explicitly empty host aria-label and restores the prompt fallback when removed", async () => {
   const el = (await fixture(
     html`<lr-prompt-input

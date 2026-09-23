@@ -146,6 +146,20 @@ it('preserves an explicitly empty host aria-label instead of replacing it with f
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
 });
 
+it('uses the localized default label when label is omitted', async () => {
+  const el = (await fixture(html`<lr-realtime-session></lr-realtime-session>`)) as LyraRealtimeSession;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Realtime session',
+  );
+});
+
+it('suppresses the localized default label when label is explicitly empty', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session label=""></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it('contains undocumented native input/change events from auxiliary children', async () => {
   const el = (await fixture(
     html`<lr-realtime-session state="connected"></lr-realtime-session>`

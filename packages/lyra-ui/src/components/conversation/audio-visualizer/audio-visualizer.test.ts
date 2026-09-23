@@ -185,6 +185,21 @@ it('lets an author-supplied role/aria-label win, and lets the label prop overrid
   expect(withLabelProp.getAttribute('aria-label')).to.equal('On air');
 });
 
+it('uses the localized default label when label is omitted', async () => {
+  const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  expect(el.getAttribute('aria-label')).to.equal('Voice activity: Idle');
+});
+
+it('suppresses the localized default label when label is explicitly empty', async () => {
+  const el = (await fixture(
+    html`<lr-audio-visualizer label=""></lr-audio-visualizer>`,
+  )) as LyraAudioVisualizer;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  el.state = 'speaking';
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
+});
+
 it('preserves an explicitly empty aria-label across state changes', async () => {
   const el = (await fixture(
     html`<lr-audio-visualizer aria-label=""></lr-audio-visualizer>`,

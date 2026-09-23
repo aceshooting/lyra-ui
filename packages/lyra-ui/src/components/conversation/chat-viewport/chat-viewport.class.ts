@@ -135,9 +135,21 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    *  mode. Host-owned unread bookkeeping in, divider/pill count out. `null` disables both. */
   @property({ type: Number, attribute: 'unread-start-index' }) unreadStartIndex: number | null = null;
 
-  /** Accessible name for the log region. Defaults to the localized `chatViewportLabel`;
-   *  a host `aria-label` (see `accessibleLabel`) wins over both. */
-  @property() label = '';
+  private _label = '';
+  private _labelExplicit = false;
+  /** Accessible name for the log region. Defaults to the localized `chatViewportLabel`; an
+   *  explicit empty string (`label=""` or `.label = ''`) suppresses that default and renders no
+   *  label. A host `aria-label` (see `accessibleLabel`) wins over both. */
+  @property()
+  get label(): string {
+    return this._label;
+  }
+  set label(value: string) {
+    const old = this._label;
+    this._label = value;
+    this._labelExplicit = true;
+    this.requestUpdate('label', old);
+  }
 
   /** Host `aria-label`, forwarded to the internal `role="log"` element -- an `aria-label` left
    *  on the custom-element host itself names nothing, because the log role lives inside the
@@ -822,7 +834,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel ?? (this.label || this.localize('chatViewportLabel'));
+    const label =
+      this.accessibleLabel ??
+      (this._labelExplicit ? this.label : this.localize('chatViewportLabel'));
     // Virtual mode's own layout rules key off this marker rather than `:host(:has(> lr-virtual-list))`:
     // `:has()` is not supported inside `:host()` (Chromium reports
     // `CSS.supports('selector(:host(:has(> em)))')` as false and drops the whole rule), so every

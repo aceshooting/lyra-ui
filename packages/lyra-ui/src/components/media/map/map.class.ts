@@ -3004,11 +3004,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._canonicalMarkers;
   }
 
+  private _label = '';
+  private _labelExplicit = false;
   /** Accessible name for MapLibre's focusable canvas. A nonempty host `aria-label` remains the
    *  overall component name and is not cloned onto the nested focus owner; the canvas uses this
-   *  purpose-specific label or the localized `map` message. An explicit empty host name is
+   *  purpose-specific label or the localized `map` message. An explicit empty string (`label=""`
+   *  or `.label = ''`) suppresses that localized default. An explicit empty host name is
    *  preserved on the canvas for deliberately decorative embeddings. */
-  @property() label = '';
+  @property()
+  get label(): string {
+    return this._label;
+  }
+  set label(value: string) {
+    const old = this._label;
+    this._label = value;
+    this._labelExplicit = true;
+    this.requestUpdate('label', old);
+  }
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
   @state() private loading = true;
@@ -4490,7 +4502,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private get effectiveMapLabel(): string {
-    return this.getAttribute('aria-label') === '' ? '' : (this.label || this.localize('map'));
+    if (this.getAttribute('aria-label') === '') return '';
+    return this._labelExplicit ? this.label : this.localize('map');
   }
 
   private popupId(key: string): string {

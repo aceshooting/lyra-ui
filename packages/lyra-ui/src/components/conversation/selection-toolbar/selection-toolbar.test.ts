@@ -120,6 +120,24 @@ it("preserves an explicitly empty accessible label", async () => {
   ).to.equal("");
 });
 
+it('uses the localized default label when label is omitted', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  expect(
+    el.shadowRoot!.querySelector('[part="toolbar"]')!.getAttribute('aria-label'),
+  ).to.equal('Selection actions');
+});
+
+it('suppresses the localized default label when label is explicitly empty', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected" label=""></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  expect(
+    el.shadowRoot!.querySelector('[part="toolbar"]')!.getAttribute('aria-label'),
+  ).to.equal('');
+});
+
 it("emits the selected text and document anchor for an action", async () => {
   const anchor = { kind: "text-quote" as const, quote: "selected passage" };
   const el = (await fixture(html`<lr-selection-toolbar

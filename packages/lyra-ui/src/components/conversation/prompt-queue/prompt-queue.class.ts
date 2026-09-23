@@ -300,7 +300,22 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   @property({ attribute: false }) items: readonly PromptQueueItem[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
-  @property() label = '';
+  private _label = '';
+  private _labelExplicit = false;
+  /** Visible queue heading and accessible-name fallback. Defaults to the localized
+   *  `promptQueueLabel`; an explicit empty string (`label=""` or `.label = ''`) suppresses that
+   *  default, rendering no visible heading (`accessibleLabel` still overrides the region's own
+   *  accessible name independently). */
+  @property()
+  get label(): string {
+    return this._label;
+  }
+  set label(value: string) {
+    const old = this._label;
+    this._label = value;
+    this._labelExplicit = true;
+    this.requestUpdate('label', old);
+  }
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private pendingRemovalFocus?: {
@@ -543,7 +558,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   }
 
   override render(): TemplateResult {
-    const visibleLabel = this.label || this.localize('promptQueueLabel');
+    const visibleLabel = this._labelExplicit ? this.label : this.localize('promptQueueLabel');
     const accessibleLabel = this.accessibleLabel ?? visibleLabel;
     const items = this.effectiveItems;
     return html`<section

@@ -77,6 +77,28 @@ it("keeps the visible heading separate from an assistive-only region name", asyn
   expect(base.getAttribute("aria-label")).to.equal("Visible queue");
 });
 
+it('uses the localized default label when label is omitted', async () => {
+  const el = (await fixture(html`<lr-prompt-queue></lr-prompt-queue>`)) as LyraPromptQueue;
+  expect(
+    el.shadowRoot!.querySelector('[part="heading"]')?.textContent?.trim(),
+  ).to.equal('Queued prompts');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label'),
+  ).to.equal('Queued prompts');
+});
+
+it('suppresses the localized default label when label is explicitly empty', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-queue label=""></lr-prompt-queue>`,
+  )) as LyraPromptQueue;
+  expect(
+    el.shadowRoot!.querySelector('[part="heading"]')?.textContent?.trim(),
+  ).to.equal('');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label'),
+  ).to.equal('');
+});
+
 it("renders queued attachment names and retains them in send-now detail", async () => {
   const queued: PromptQueueItem[] = [
     {

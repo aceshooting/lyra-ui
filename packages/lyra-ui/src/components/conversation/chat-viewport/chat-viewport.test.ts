@@ -125,6 +125,24 @@ it('is role="log" with aria-live="off" and tabindex="0", labeled by the default 
   ).to.equal("Support thread");
 });
 
+it('uses the localized default label when label is omitted', async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport></lr-chat-viewport>`
+  )) as LyraChatViewport;
+  expect(
+    el.shadowRoot!.querySelector('[part="scroll"]')!.getAttribute('aria-label'),
+  ).to.equal('Conversation');
+});
+
+it('suppresses the localized default label when label is explicitly empty', async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport label=""></lr-chat-viewport>`
+  )) as LyraChatViewport;
+  expect(
+    el.shadowRoot!.querySelector('[part="scroll"]')!.getAttribute('aria-label'),
+  ).to.equal('');
+});
+
 it("pins overflow-x explicitly alongside overflow-y so the transcript never grows a phantom horizontal scrollbar", async () => {
   // Per the CSS overflow spec, pinning only overflow-y to a non-'visible' value still forces the
   // other axis's *used* value to 'auto' (never 'visible') -- so a sub-pixel-wide inline code span

@@ -163,7 +163,21 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     'cite',
     'copy',
   ];
-  @property() label = '';
+  private _label = '';
+  private _labelExplicit = false;
+  /** Accessible name for the toolbar. Defaults to the localized `selectionToolbarLabel`; an
+   *  explicit empty string (`label=""` or `.label = ''`) suppresses that default and renders no
+   *  label. `accessibleLabel` wins over both. */
+  @property()
+  get label(): string {
+    return this._label;
+  }
+  set label(value: string) {
+    const old = this._label;
+    this._label = value;
+    this._labelExplicit = true;
+    this.requestUpdate('label', old);
+  }
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private copyFailed = false;
 
@@ -1009,7 +1023,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     if (!this.open || !this.text) return html`${nothing}`;
     const label =
       this.accessibleLabel ??
-      (this.label || this.localize('selectionToolbarLabel'));
+      (this._labelExplicit ? this.label : this.localize('selectionToolbarLabel'));
     return html`<div
       part="toolbar"
       role="toolbar"

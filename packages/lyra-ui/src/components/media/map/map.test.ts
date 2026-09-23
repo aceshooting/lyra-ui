@@ -2149,6 +2149,15 @@ describe('aria-label forwarding', () => {
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Delivery regions');
   });
 
+  it('suppresses the localized default label on the canvas when label is explicitly empty', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = (await fixture(html`
+      <lr-map label="" .mapStyle=${LOCAL_STYLE}></lr-map>
+    `)) as LyraMap;
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('');
+  });
+
   it('keeps a nonempty host aria-label on the host and gives the canvas a purpose name', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`

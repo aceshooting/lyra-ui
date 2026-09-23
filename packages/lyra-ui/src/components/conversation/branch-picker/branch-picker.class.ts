@@ -65,8 +65,20 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
   /** Total number of branches. While `count < 2` the component renders nothing at all. */
   @property({ type: Number, reflect: true }) count = 1;
 
-  /** Accessible name for the group. Defaults to the localized `branchPickerLabel`. */
-  @property() label = '';
+  private _label = '';
+  private _labelExplicit = false;
+  /** Accessible name for the group. Defaults to the localized `branchPickerLabel`; an explicit
+   *  empty string (`label=""` or `.label = ''`) suppresses that default and renders no label. */
+  @property()
+  get label(): string {
+    return this._label;
+  }
+  set label(value: string) {
+    const old = this._label;
+    this._label = value;
+    this._labelExplicit = true;
+    this.requestUpdate('label', old);
+  }
 
   @query('[part="previous-button"]') private previousButtonEl?: HTMLButtonElement;
   @query('[part="next-button"]') private nextButtonEl?: HTMLButtonElement;
@@ -238,7 +250,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     const count = this.normalizedCount;
     if (count < 2) return html``;
     const index = this.normalizedIndex;
-    const label = this.label || this.localize('branchPickerLabel');
+    const label = this._labelExplicit ? this.label : this.localize('branchPickerLabel');
     const ariaLabel = this.getAttribute('aria-label') ?? label;
     const formatter = getNumberFormat(this.effectiveLocale);
     return html`

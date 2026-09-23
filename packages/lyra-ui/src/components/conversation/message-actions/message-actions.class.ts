@@ -391,8 +391,21 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   })
   revealOnInteraction = false;
 
-  /** Accessible name for the toolbar. Defaults to the localized `messageActionsLabel`. */
-  @property() label = '';
+  private _label = '';
+  private _labelExplicit = false;
+  /** Accessible name for the toolbar. Defaults to the localized `messageActionsLabel`; an
+   *  explicit empty string (`label=""` or `.label = ''`) suppresses that default and renders no
+   *  label. */
+  @property()
+  get label(): string {
+    return this._label;
+  }
+  set label(value: string) {
+    const old = this._label;
+    this._label = value;
+    this._labelExplicit = true;
+    this.requestUpdate('label', old);
+  }
 
   /** Overrides the toolbar's computed accessible name. Wins over `label` and the localized
    *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets
@@ -956,7 +969,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   override render(): TemplateResult {
     const label =
       this.accessibleLabel ??
-      (this.label || this.localize('messageActionsLabel'));
+      (this._labelExplicit ? this.label : this.localize('messageActionsLabel'));
     return html`
       <div
         part="base"
