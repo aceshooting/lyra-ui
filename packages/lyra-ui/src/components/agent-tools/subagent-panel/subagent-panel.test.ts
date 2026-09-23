@@ -258,6 +258,24 @@ it('iteratively bounds a deeply nested hierarchy without overflowing the stack',
   expect(sinkTexts(), 'a hierarchy that mounts already truncated is not a live change').to.deep.equal([]);
 });
 
+it('still renders a controlled selection outside the render cap as selected (regression)', async () => {
+  const flat: SubagentRun[] = Array.from({ length: 600 }, (_, index) => ({
+    id: `run-${index}`,
+    label: `Run ${index}`,
+    status: 'done' as const,
+  }));
+  const el = (await fixture(
+    html`<lr-subagent-panel .runs=${flat} selected-run-id="run-599"></lr-subagent-panel>`,
+  )) as LyraSubagentPanel;
+  const selected = el.shadowRoot!.querySelector('[part~="run-selected"]');
+  expect(selected, 'the selected run must render even past the first 500 array-order entries').to.not.equal(null);
+  expect(selected!.getAttribute('data-run-id')).to.equal('run-599');
+  expect(selected!.querySelector('[part="run-trigger"]')!.getAttribute('aria-pressed')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 subagent runs are shown.',
+  );
+});
+
 it('keeps depth-12 status actions reachable at the inclusive 320px compact boundary in LTR and RTL', async () => {
   const originalRootSize = document.documentElement.style.fontSize;
   document.documentElement.style.fontSize = '16px';

@@ -48,6 +48,13 @@ export interface LyraJsonSchemaViewerEventMap {
 interface SchemaRenderBudget {
   remaining: number;
   truncated: boolean;
+  /**
+   * Every node path along the chain from the schema root to a resolvable `selectedPath`
+   * (inclusive), reserved ahead of the ordinary depth-first walk so a controlled selection
+   * landing outside the first `MAX_RENDERED_SCHEMA_NODES` DFS-visited nodes still renders. Empty
+   * when there is no selection, or it doesn't resolve to a real, in-bounds node.
+   */
+  reservedPaths: ReadonlySet<string>;
 }
 
 const MAX_RENDERED_SCHEMA_NODES = 500;
@@ -796,6 +803,89 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     return value.replace(/~/g, '~0').replace(/\//g, '~1');
   }
 
+  private decodePointerSegment(segment: string): string {
+    return segment.replace(/~1/g, '/').replace(/~0/g, '~');
+  }
+
+  /**
+   * Walks `this.selectedPath`'s JSON Pointer segments through `this.schema`, following the same
+   * `properties`/`allOf`/`anyOf`/`oneOf`/`items` traversal `renderNode()`'s child collection uses
+   * and the same `maxDepth` bound, to resolve the full ancestor chain from the schema root down to
+   * the selected node. Returns every path along that chain (root first) when the selection
+   * resolves to a real, in-bounds node; an empty set when there is no selection, it doesn't
+   * resolve, or it lies past `maxDepth` -- nothing to reserve, matching prior behavior.
+   */
+  private resolvedSelectionPathChain(): ReadonlySet<string> {
+    const selectedPath = this.selectedPath;
+    const root = this.schema;
+    if (selectedPath == null || !root || typeof root !== 'object') return new Set();
+    if (selectedPath === '') return new Set(['']);
+    if (!selectedPath.startsWith('/')) return new Set();
+
+    const segments = selectedPath.split('/').slice(1);
+    const maxDepth = finiteCount(this.maxDepth, 20, MAX_SCHEMA_DEPTH);
+    const chain = new Set<string>(['']);
+    const visited = new Set<object>([root]);
+    let node: JsonSchemaNode = root;
+    let path = '';
+    let depth = 0;
+    let index = 0;
+
+    while (index < segments.length) {
+      if (depth >= maxDepth) return new Set();
+      const kind = segments[index];
+      let next: JsonSchemaNode | undefined;
+      let nextPath: string | undefined;
+      let consumed = 0;
+      if (kind === 'properties') {
+        const keySegment = segments[index + 1];
+        if (keySegment !== undefined) {
+          const candidate = node.properties?.[this.decodePointerSegment(keySegment)];
+          if (candidate) {
+            next = candidate;
+            nextPath = `${path}/properties/${keySegment}`;
+            consumed = 2;
+          }
+        }
+      } else if (kind === 'allOf' || kind === 'anyOf' || kind === 'oneOf') {
+        const idxSegment = segments[index + 1];
+        if (idxSegment !== undefined && isArrayIndex(idxSegment)) {
+          const list = node[kind];
+          const candidate = Array.isArray(list) ? list[Number(idxSegment)] : undefined;
+          if (candidate) {
+            next = candidate;
+            nextPath = `${path}/${kind}/${idxSegment}`;
+            consumed = 2;
+          }
+        }
+      } else if (kind === 'items') {
+        if (isReadonlyArray(node.items)) {
+          const idxSegment = segments[index + 1];
+          if (idxSegment !== undefined && isArrayIndex(idxSegment)) {
+            const candidate = node.items[Number(idxSegment)];
+            if (candidate) {
+              next = candidate;
+              nextPath = `${path}/items/${idxSegment}`;
+              consumed = 2;
+            }
+          }
+        } else if (node.items) {
+          next = node.items;
+          nextPath = `${path}/items`;
+          consumed = 1;
+        }
+      }
+      if (!next || nextPath === undefined || visited.has(next)) return new Set();
+      visited.add(next);
+      node = next;
+      path = nextPath;
+      chain.add(path);
+      depth += 1;
+      index += consumed;
+    }
+    return path === selectedPath ? chain : new Set();
+  }
+
   private constraints(schema: JsonSchemaNode): string[] {
     const keys = [
       'format',
@@ -853,11 +943,18 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     budget: SchemaRenderBudget,
     issuesByPath: ReadonlyMap<string, readonly SchemaValidationIssue[]>
   ): TemplateResult | typeof nothing {
-    if (budget.remaining <= 0) {
-      budget.truncated = true;
-      return nothing;
+    // A node reserved by `budget.reservedPaths` (the selected node and its ancestor chain, see
+    // `resolvedSelectionPathChain()`) always renders, bypassing the shared budget entirely --
+    // `render()` already subtracted the reservation from `budget.remaining` up front, so the total
+    // rendered node count stays within MAX_RENDERED_SCHEMA_NODES.
+    const reserved = budget.reservedPaths.has(path);
+    if (!reserved) {
+      if (budget.remaining <= 0) {
+        budget.truncated = true;
+        return nothing;
+      }
+      budget.remaining--;
     }
-    budget.remaining--;
     const selected = path === this.selectedPath;
     if (ancestors.has(schema)) {
       return html`<li part="node">
@@ -876,15 +973,25 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
       path: string;
       required: boolean;
     }> = [];
+    // When this node itself sits on the reserved selection chain but isn't the selected leaf, one
+    // of its children continues that chain and must be admitted regardless of the shared budget --
+    // keep scanning past an exhausted budget until that reserved child is found (or the candidate
+    // list runs out), instead of breaking on the first budget-exceeded child like the ordinary case.
+    let pendingReservedChild = budget.reservedPaths.has(path) && path !== this.selectedPath;
     const addChild = (child: {
       name: string;
       node: JsonSchemaNode;
       path: string;
       required: boolean;
     }): boolean => {
+      if (pendingReservedChild && budget.reservedPaths.has(child.path)) {
+        pendingReservedChild = false;
+        children.push(child);
+        return true;
+      }
       if (children.length >= budget.remaining) {
         budget.truncated = true;
-        return false;
+        return pendingReservedChild;
       }
       children.push(child);
       return true;
@@ -1021,9 +1128,11 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
         ></lr-empty>
       </section>`;
     }
+    const reservedPaths = this.resolvedSelectionPathChain();
     const budget: SchemaRenderBudget = {
-      remaining: MAX_RENDERED_SCHEMA_NODES,
+      remaining: Math.max(0, MAX_RENDERED_SCHEMA_NODES - reservedPaths.size),
       truncated: false,
+      reservedPaths,
     };
     const issuesByPath = new Map<string, SchemaValidationIssue[]>();
     const visibleIssueCount = Math.min(

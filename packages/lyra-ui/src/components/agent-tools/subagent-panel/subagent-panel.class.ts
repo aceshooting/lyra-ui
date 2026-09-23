@@ -217,14 +217,35 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   }
 
   private ordered(): OrderedRuns {
-    const normalized: SubagentRun[] = [];
-    const byId = new Map<string, SubagentRun>();
     const runs = firstByIdentity(
       Array.isArray(this.runs) ? this.runs : [],
       (run) => run.id,
     );
     const truncated = runs.length > MAX_RENDERED_RUNS;
-    for (const run of runs.slice(0, MAX_RENDERED_RUNS)) {
+
+    // `selectedRunId` and as much of its nearest-ancestor chain as fits reserve positions inside
+    // the render cap before ordinary input-order runs fill the rest -- mirrors
+    // normalizeLyraSpans()'s activeSpanId reservation (trace-tree/span.ts), so a controlled
+    // selection landing outside the first MAX_RENDERED_RUNS array-order entries still renders.
+    const allById = new Map<string, SubagentRun>();
+    for (const run of runs) allById.set(run.id, run);
+    const chosenIds = new Set<string>();
+    const visitedPath = new Set<string>();
+    let current = this.selectedRunId ? allById.get(this.selectedRunId) : undefined;
+    while (current && chosenIds.size < MAX_RENDERED_RUNS && !visitedPath.has(current.id)) {
+      chosenIds.add(current.id);
+      visitedPath.add(current.id);
+      current = current.parentId ? allById.get(current.parentId) : undefined;
+    }
+    for (const run of runs) {
+      if (chosenIds.size >= MAX_RENDERED_RUNS) break;
+      chosenIds.add(run.id);
+    }
+
+    const normalized: SubagentRun[] = [];
+    const byId = new Map<string, SubagentRun>();
+    for (const run of runs) {
+      if (!chosenIds.has(run.id)) continue;
       normalized.push(run);
       byId.set(run.id, run);
     }

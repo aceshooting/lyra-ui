@@ -718,6 +718,33 @@ it('bounds broad schemas and exposes a localized truncation status', async () =>
   ).to.deep.equal([]);
 });
 
+it('still renders a controlled selection outside the render cap as selected (regression)', async () => {
+  const properties = Object.fromEntries(
+    Array.from({ length: 5_000 }, (_, index) => [
+      `property-${index}`,
+      { type: 'string' },
+    ])
+  );
+  const el = (await fixture(html`<lr-json-schema-viewer
+    .schema=${{ type: 'object', properties }}
+    selected-path="/properties/property-4999"
+  ></lr-json-schema-viewer>`)) as LyraJsonSchemaViewer;
+  const selected = el.shadowRoot!.querySelector('[part~="node-selected"]');
+  expect(
+    selected,
+    'the selected node must render even past the first 500 DFS-visited nodes'
+  ).to.not.equal(null);
+  expect(
+    selected!.querySelector('[data-path]')!.getAttribute('data-path')
+  ).to.equal('/properties/property-4999');
+  expect(
+    selected!.querySelector('[part="node-trigger"]')!.getAttribute('aria-pressed')
+  ).to.equal('true');
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 schema nodes are shown.'
+  );
+});
+
 it('marks the limit when nested composition exhausts the remaining render budget during traversal', async () => {
   const branches: JsonSchemaNode[] = Array.from({ length: 498 }, (_, index) =>
     index === 0

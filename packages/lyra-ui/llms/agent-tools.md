@@ -3282,11 +3282,13 @@ caps visual nesting indentation while preserving complete JSON Pointer paths;
 only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
-`issue-limit` show their respective truncation as ordinary, non-live status text. Newly reaching or
-changing either ceiling after the initial baseline appends the localized message to the shared
-polite light-DOM announcement sink; initial and reconnect renders stay silent. Issues are indexed by
-path once before recursive rendering instead of rescanning the full input for every node. Cycles stop
-at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
+`issue-limit` show their respective truncation as ordinary, non-live status text. When `selectedPath`
+resolves beyond the 500-node ceiling, that node and its resolvable ancestor chain reserve positions
+inside the cap ahead of ordinary traversal order, so the controlled selection remains visible. Newly
+reaching or changing either ceiling after the initial baseline appends the localized message to the
+shared polite light-DOM announcement sink; initial and reconnect renders stay silent. Issues are
+indexed by path once before recursive rendering instead of rescanning the full input for every node.
+Cycles stop at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
@@ -3333,9 +3335,12 @@ counts, selection, and events.
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
 
 At most 500 runs render, and visual indentation is capped at 12 levels while ARIA hierarchy keeps
-the logical depth. The visible `limit` text is ordinary and non-live; newly reaching or changing the
-run ceiling after the initial baseline appends the localized message to the shared polite light-DOM
-announcement sink, while initial and reconnect renders stay silent. The roving treeitem accepts
+the logical depth. When `selectedRunId` names a run beyond the 500-run ceiling, that run and its
+resolvable ancestor chain reserve positions inside the cap ahead of ordinary array order, so the
+controlled selection remains visible. The visible `limit` text is ordinary and non-live; newly
+reaching or changing the run ceiling after the initial baseline appends the localized message to the
+shared polite light-DOM announcement sink, while initial and reconnect renders stay silent. The
+roving treeitem accepts
 Enter/Space as well as pointer activation for `lr-run-activate`; cancel/retry action names include the
 run label so repeated row actions remain distinguishable to assistive technology. Progress is finite
 and clamped. **Slots:** none.
