@@ -582,6 +582,10 @@ export type LyraComboboxSourceErrorEvent =
  *   shared form-control size ladder.
  * @cssprop --lr-combobox-tag-padding - Selected-tag padding.
  * @cssprop --lr-combobox-tag-font-size - Selected-tag text size.
+ * @cssprop [--lr-combobox-tag-bg=var(--lr-color-brand-quiet)] - Selected-tag background. Scoped
+ *   independently of every other use of the shared `--lr-color-brand-quiet` token in this file.
+ * @cssprop [--lr-combobox-tag-color=var(--lr-color-text)] - Selected-tag text color.
+ * @cssprop [--lr-combobox-tag-radius=var(--lr-radius)] - Selected-tag corner radius.
  * @cssprop [--lr-combobox-unknown-value-border-style=dashed] - Border style of a `multiple`-mode
  *   tag whose committed value matches no current option/row.
  * @cssprop [--lr-combobox-unknown-value-border-color=var(--lr-color-border)] - Border color of the

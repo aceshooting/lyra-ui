@@ -41,6 +41,8 @@ export type LyraProgressVariant = LyraVariant;
  * ladder (`0.25rem` at `2xs` up to `1.5rem` at `xl`, `1rem` unchanged at the `m` default); an
  * inherited or direct value here still wins outright over every tier.
  * @cssprop [--lr-progress-track-color=var(--lr-color-brand-quiet)] - Track color.
+ * @cssprop [--lr-progress-track-radius=var(--lr-radius-pill)] - Track corner radius. The indicator
+ * inherits it, so retuning one retunes both without a `::part(track)`/`::part(indicator)` rule.
  * @cssprop [--lr-progress-indicator-color=var(--lr-progress-indicator-variant-color)] - Indicator
  * color, overriding the variant palette below.
  * @cssprop [--lr-progress-indicator-variant-color=var(--lr-color-fill-loud,var(--lr-color-brand))] -

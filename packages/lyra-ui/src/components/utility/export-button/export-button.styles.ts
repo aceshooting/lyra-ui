@@ -41,11 +41,11 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-export-button-gap, var(--lr-space-xs));
     padding: var(--lr-space-xs) var(--lr-space-m);
     border: var(--lr-border-width-thin) solid
       var(--lr-export-button-border, var(--_lr-export-button-border));
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-export-button-radius, var(--lr-radius));
     background: var(--lr-export-button-background, var(--_lr-export-button-background));
     color: var(--lr-export-button-color, var(--_lr-export-button-color));
     font: inherit;

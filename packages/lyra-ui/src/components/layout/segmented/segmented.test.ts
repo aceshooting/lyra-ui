@@ -953,6 +953,25 @@ it("exposes component-scoped track gap, radius, and padding hooks", async () => 
   expect(computed.padding).to.equal("5px");
 });
 
+it("exposes --lr-segmented-segment-radius, defaulting to the pre-existing calc()", async () => {
+  const el = (await fixture(html`
+    <lr-segmented .items=${items()}></lr-segmented>
+  `)) as LyraSegmented;
+  const segment = el.shadowRoot!.querySelector('[part="segment"]') as HTMLElement;
+  expect(getComputedStyle(segment).borderRadius).to.equal("4.2px");
+});
+
+it("lets a consumer retune the segment corner radius with no ::part(segment) rule", async () => {
+  const el = (await fixture(html`
+    <lr-segmented
+      style="--lr-segmented-segment-radius: 9px"
+      .items=${items()}
+    ></lr-segmented>
+  `)) as LyraSegmented;
+  const segment = el.shadowRoot!.querySelector('[part="segment"]') as HTMLElement;
+  expect(getComputedStyle(segment).borderRadius).to.equal("9px");
+});
+
 describe("segment hover specificity", () => {
   it("keeps the internal hover rule :where()-wrapped so a ::part(segment):hover override wins without !important", async () => {
     const wrapper = await fixture<HTMLElement>(html`

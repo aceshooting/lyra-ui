@@ -156,6 +156,8 @@ function snapshotSegmentedItems(
  *   taken from the `size` tier's shared control font size.
  * @cssprop [--lr-segmented-track-gap=var(--lr-size-0-125rem)] - Gap between segments.
  * @cssprop [--lr-segmented-track-radius=var(--lr-radius)] - Track corner radius.
+ * @cssprop [--lr-segmented-segment-radius=calc(var(--lr-form-control-radius) * 0.7)] - Each
+ *   segment's own corner radius, independent of the track's.
  * @cssprop [--lr-segmented-track-padding=var(--lr-size-0-125rem)] - Track inset padding.
  * @cssprop [--lr-segmented-track-bg=transparent] - Background of the `base` track. Undeclared by
  *   default, matching its own current absence of a background.

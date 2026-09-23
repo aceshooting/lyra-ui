@@ -361,12 +361,12 @@ export const styles = css`
   }
   [part~="tag__remove-button"]:hover {
     color: var(--lr-color-text);
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-select-tag-remove-hover-bg, var(--lr-color-brand-quiet));
   }
   [part~="tag__remove-button"]:active {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-select-tag-remove-hover-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

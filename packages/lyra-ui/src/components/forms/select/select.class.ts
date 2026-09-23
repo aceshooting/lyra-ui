@@ -384,6 +384,10 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  *   same unknown-value chip.
  * @cssprop [--lr-select-option-badge-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part='option-badge']` "not in catalog" badge.
+ * @cssprop [--lr-select-tag-remove-hover-bg=var(--lr-color-brand-quiet)] - Background of a
+ *   hovered `[part='tag__remove-button']`. The pressed state mixes from this same token. Scoped
+ *   independently of `--lr-select-trigger-hover-bg`/`--lr-select-option-active-bg`, which already
+ *   scope the same shared `--lr-color-brand-quiet` token for their own purposes.
  * @cssprop [--tag-max-size=var(--lr-size-12rem)] - Maximum inline size of one selected-value tag.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Listbox enter-transition timing.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Listbox exit-transition timing.

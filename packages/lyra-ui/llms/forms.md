@@ -609,6 +609,11 @@ standard size supplies an aligned default), plus shared tokens. `--lr-combobox-g
 `--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
 `--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
 the properties above, do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
+`--lr-combobox-tag-bg` (default `var(--lr-color-brand-quiet)`), `--lr-combobox-tag-color` (default
+`var(--lr-color-text)`) and `--lr-combobox-tag-radius` (default `var(--lr-radius)`) retint a
+selected tag's background, text color and corner radius without a `::part(tag)` rule; `-tag-bg` is
+scoped independently of `--lr-combobox-option-active-bg`/`-option-badge-bg` below, which already
+scope the same shared `--lr-color-brand-quiet` token for their own purposes.
 
 The trigger row's own surface became public in 16.0.0, having been a private pair until then:
 `--lr-combobox-fill` (default `var(--lr-color-surface)`) and `--lr-combobox-border-color` (default
@@ -1199,6 +1204,12 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `--lr-select-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
 `[part='option-badge']` "not in catalog" badge `show-unknown-option` renders on the synthetic
 listbox row, independent of the unknown-value chip's border above.
+
+`--lr-select-tag-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) retints a hovered
+`[part='tag__remove-button']`'s background without a `::part(tag__remove-button)` rule; the pressed
+state mixes from this same token. Scoped independently of `--lr-select-trigger-hover-bg` and
+`--lr-select-option-active-bg` above, which already scope the identical shared token for their own
+purposes.
 
 **Optional peer deps:** none.
 
@@ -4200,6 +4211,8 @@ State paint is independently themeable through `--lr-checkbox-hover-border`,
 `--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
 `--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
 corresponding brand/brand-quiet/danger token.
+`--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
+`[part='box']`'s corner radius without a `::part(box)` rule.
 
 **`--lr-checkbox-box-size`** — the edge length of `[part='box']`, defaulting to
 `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the
@@ -5635,6 +5648,8 @@ hover and invalid states below.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
 without changing brand/danger paint in sibling components.
+`--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
+without a `::part(editor)` rule.
 The `editor` scroll frame also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
 its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one

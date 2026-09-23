@@ -191,9 +191,9 @@ export const styles = css`
       --lr-combobox-tag-font-size,
       var(--_lr-combobox-tag-font-size)
     );
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-text);
-    border-radius: var(--lr-radius);
+    background: var(--lr-combobox-tag-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-combobox-tag-color, var(--lr-color-text));
+    border-radius: var(--lr-combobox-tag-radius, var(--lr-radius));
   }
   /* text-overflow only fires on inline overflow, so a label left at white-space: normal wraps
      instead of overflowing and the ellipsis is unreachable -- with overflow-wrap: anywhere the wrap

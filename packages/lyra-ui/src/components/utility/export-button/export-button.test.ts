@@ -1820,4 +1820,26 @@ describe('trigger paint custom properties', () => {
     expect(getComputedStyle(trigger(plain)).color)
       .to.not.equal(getComputedStyle(trigger(outlined)).color);
   });
+
+  it('exposes --lr-export-button-gap and --lr-export-button-radius, defaulting to the pre-existing literals', async () => {
+    const el = (await fixture(html`
+      <lr-export-button .rows=${rows} .columns=${columns}></lr-export-button>
+    `)) as LyraExportButton;
+    const styles = getComputedStyle(trigger(el));
+    expect(styles.gap).to.equal('4px');
+    expect(styles.borderRadius).to.equal('6px');
+  });
+
+  it('retunes the trigger gap and corner radius with no ::part(trigger) rule', async () => {
+    const el = (await fixture(html`
+      <lr-export-button
+        .rows=${rows}
+        .columns=${columns}
+        style="--lr-export-button-gap: 10px; --lr-export-button-radius: 3px;"
+      ></lr-export-button>
+    `)) as LyraExportButton;
+    const styles = getComputedStyle(trigger(el));
+    expect(styles.gap).to.equal('10px');
+    expect(styles.borderRadius).to.equal('3px');
+  });
 });

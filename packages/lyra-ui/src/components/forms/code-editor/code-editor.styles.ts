@@ -90,7 +90,7 @@ export const styles = css`
        own hooks; the resting state it spends most of its life in did not. */
     border: var(--lr-border-width-thin) solid
       var(--lr-code-editor-border, var(--lr-color-border));
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-code-editor-radius, var(--lr-radius));
     background: var(--lr-code-editor-fill, var(--lr-color-surface));
     /* Hover below only repaints border-color, so that is all this needs; without it this frame's
        edge snaps while lr-button/lr-icon-button ease. */

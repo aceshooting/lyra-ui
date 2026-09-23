@@ -1462,6 +1462,22 @@ describe("checked-state cssprop escape hatch", () => {
   });
 });
 
+it("exposes --lr-checkbox-box-radius, defaulting to the pre-existing calc()", async () => {
+  const el = (await fixture(
+    html`<lr-checkbox>Label</lr-checkbox>`
+  )) as LyraCheckbox;
+  const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
+  expect(getComputedStyle(box).borderRadius).to.equal("3.6px");
+});
+
+it("lets a consumer retune the box corner radius with no ::part(box) rule", async () => {
+  const el = (await fixture(
+    html`<lr-checkbox style="--lr-checkbox-box-radius: 2px">Label</lr-checkbox>`
+  )) as LyraCheckbox;
+  const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
+  expect(getComputedStyle(box).borderRadius).to.equal("2px");
+});
+
 it("is accessible in the default (unchecked, unlabeled) state", async () => {
   const el = (await fixture(
     html`<lr-checkbox aria-label="Subscribe to updates"></lr-checkbox>`

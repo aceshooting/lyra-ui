@@ -63,6 +63,27 @@ it('lets a consumer retint the resting editor border and fill through component 
   expect(getComputedStyle(editor).backgroundColor).to.equal('rgb(4, 5, 6)');
 });
 
+it('exposes --lr-code-editor-radius, defaulting to the shared radius token', async () => {
+  const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  const sharedRadius = getComputedStyle(el).getPropertyValue('--lr-radius').trim();
+  const radiusProbe = document.createElement('div');
+  radiusProbe.style.marginTop = sharedRadius;
+  el.shadowRoot!.append(radiusProbe);
+  const resolvedRadius = getComputedStyle(radiusProbe).marginTop;
+  radiusProbe.remove();
+
+  expect(getComputedStyle(editor).borderTopLeftRadius).to.equal(resolvedRadius);
+});
+
+it('lets a consumer retune the editor frame corner radius with no ::part(editor) rule', async () => {
+  const el = (await fixture(html`
+    <lr-code-editor style="--lr-code-editor-radius: 3px"></lr-code-editor>
+  `)) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  expect(getComputedStyle(editor).borderTopLeftRadius).to.equal('3px');
+});
+
 it('reads the theme-level scrollbar hook on the editor scrollport, defaulting to auto', async () => {
   const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
   const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;

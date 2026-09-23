@@ -5556,6 +5556,45 @@ describe("lr-select hover and press feedback", () => {
       await resetMouse();
     }
   });
+
+  it("lets a consumer retint the tag remove-button hover/pressed background through --lr-select-tag-remove-hover-bg with no ::part(tag__remove-button) rule", async () => {
+    const el = (await fixture(html`
+      <lr-select
+        multiple
+        style="--lr-transition-fast: 0s; --lr-select-tag-remove-hover-bg: rgb(1, 2, 3);"
+      >
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.value = ["a"];
+    await el.updateComplete;
+    const removeButton = el.shadowRoot!.querySelector(
+      '[part~="tag__remove-button"]'
+    ) as HTMLElement;
+    try {
+      await sendMouse({ type: "move", position: centerOf(removeButton) });
+      await waitUntil(
+        () =>
+          removeButton.matches(":hover") &&
+          getComputedStyle(removeButton).backgroundColor === "rgb(1, 2, 3)",
+        "the tag remove-button never painted its themed hover background"
+      );
+      expect(getComputedStyle(removeButton).backgroundColor).to.equal(
+        "rgb(1, 2, 3)"
+      );
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () =>
+          removeButton.matches(":active") &&
+          getComputedStyle(removeButton).backgroundColor !== "rgb(1, 2, 3)",
+        "the tag remove-button pressed background never mixed away from the flat hover cssprop"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
 });
 
 describe("lr-select mapped Select parity surface", () => {

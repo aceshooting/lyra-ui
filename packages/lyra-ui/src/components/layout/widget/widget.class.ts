@@ -234,6 +234,18 @@ export interface LyraWidgetEventMap {
  *   view toggle.
  * @cssprop [--lr-widget-view-toggle-active-border-color=transparent] - Border color of the pressed
  *   view toggle. Like the active background and text hooks, it is an inline inherited fallback.
+ * @cssprop [--lr-widget-collapse-button-hover-bg=var(--lr-color-brand-quiet)] - Background of a
+ *   hovered `[part="collapse-button"]`. The pressed state mixes from this same token, mirroring
+ *   `--lr-widget-view-toggle-hover-bg`, so retinting it alone does not hijack the library-wide
+ *   `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-widget-collapse-button-hover-color=var(--lr-color-brand)] - Text color of a
+ *   hovered or pressed `[part="collapse-button"]`.
+ * @cssprop [--lr-widget-fullscreen-button-hover-bg=var(--lr-color-brand-quiet)] - Background of a
+ *   hovered `[part="fullscreen-button"]`. The pressed state mixes from this same token, mirroring
+ *   `--lr-widget-view-toggle-hover-bg`, so retinting it alone does not hijack the library-wide
+ *   `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-widget-fullscreen-button-hover-color=var(--lr-color-brand)] - Text color of a
+ *   hovered or pressed `[part="fullscreen-button"]`.
  * @cssprop [--lr-widget-fullscreen-inset=max(var(--lr-space-l), var(--lr-safe-area-top)) max(var(--lr-space-l), var(--lr-safe-area-inline-end)) max(var(--lr-space-l), var(--lr-safe-area-bottom)) max(var(--lr-space-l), var(--lr-safe-area-inline-start))] - The `inset` applied to `[part="base"]` while `fullscreen`. Also set inline from the `fullscreen-inset` attribute.
  * @cssprop [--lr-widget-backdrop-inset=0] - The `inset` applied to
  *   `[part="backdrop"]`, so the scrim can be pulled back independently of the panel. Also set

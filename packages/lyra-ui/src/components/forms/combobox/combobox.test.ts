@@ -1505,6 +1505,37 @@ it("keeps gap/radius defaults private and consumes inherited public hooks first"
   );
 });
 
+it("exposes --lr-combobox-tag-bg/-color/-radius, defaulting to the pre-existing shared tokens", async () => {
+  const el = (await fixture(html`
+    <lr-combobox multiple>
+      <lr-option value="a" selected>Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const tag = el.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
+  const probe = document.createElement("span");
+  probe.style.color = "var(--lr-color-brand-quiet)";
+  el.shadowRoot!.append(probe);
+  const sharedBrandQuiet = getComputedStyle(probe).color;
+  probe.remove();
+  expect(getComputedStyle(tag).backgroundColor).to.equal(sharedBrandQuiet);
+  expect(getComputedStyle(tag).borderRadius).to.equal("6px");
+});
+
+it("lets a consumer retint the tag background/text/radius with no ::part(tag) rule", async () => {
+  const el = (await fixture(html`
+    <lr-combobox
+      multiple
+      style="--lr-combobox-tag-bg: rgb(1, 2, 3); --lr-combobox-tag-color: rgb(4, 5, 6); --lr-combobox-tag-radius: 3px;"
+    >
+      <lr-option value="a" selected>Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const tag = el.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
+  expect(getComputedStyle(tag).backgroundColor).to.equal("rgb(1, 2, 3)");
+  expect(getComputedStyle(tag).color).to.equal("rgb(4, 5, 6)");
+  expect(getComputedStyle(tag).borderRadius).to.equal("3px");
+});
+
 it("gives the clear button and expand icon a real touch target instead of collapsing to bare glyph height", async () => {
   const css = styles.cssText;
   // [part='clear-button'] and [part='expand-icon'] used to share one rule for their sizing; they

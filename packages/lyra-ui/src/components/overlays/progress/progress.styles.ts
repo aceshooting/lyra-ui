@@ -54,7 +54,7 @@ export const styles = css`
         var(--track-height, var(--height, var(--_lr-progress-track-height)))
       )
     );
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-progress-track-radius, var(--lr-radius-pill));
     background: var(
       --lr-progress-track-color,
       var(--track-color, var(--lr-color-brand-quiet))

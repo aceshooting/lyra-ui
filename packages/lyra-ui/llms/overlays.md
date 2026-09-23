@@ -2198,6 +2198,9 @@ presence-based, so an explicitly empty value remains empty rather than invoking 
 fallback, and the private `--_lr-progress-track-height` is the `size` property's own tier value,
 `1rem` at the `m` default, unchanged),
 `--lr-progress-track-color` (default `var(--lr-color-brand-quiet)`),
+`--lr-progress-track-radius` (default `var(--lr-radius-pill)`; `indicator`'s `border-radius:
+inherit` picks up the same value, so retuning the track retunes both without a
+`::part(track)`/`::part(indicator)` rule),
 `--lr-progress-indicator-color` (default `var(--lr-progress-indicator-variant-color)`), and
 `--lr-progress-label-color` (default `var(--lr-color-text)`). Upstream aliases are `--height` and
 `--track-height`, plus `--track-color`, `--indicator-color`, and `--label-color`.

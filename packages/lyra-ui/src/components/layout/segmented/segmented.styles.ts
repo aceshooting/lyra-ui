@@ -139,7 +139,10 @@ export const styles = css`
   [part="segment"] {
     min-inline-size: 0;
     border: none;
-    border-radius: calc(var(--lr-form-control-radius) * 0.7);
+    border-radius: var(
+      --lr-segmented-segment-radius,
+      calc(var(--lr-form-control-radius) * 0.7)
+    );
     background: transparent;
     color: var(--lr-color-text-quiet);
     font: inherit;

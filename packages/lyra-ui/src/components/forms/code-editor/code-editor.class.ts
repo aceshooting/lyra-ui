@@ -115,6 +115,8 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * enabled surface is hovered.
  * @cssprop [--lr-code-editor-invalid-border=var(--lr-color-danger)] - Editor-frame border while
  * invalid chrome is visible.
+ * @cssprop [--lr-code-editor-radius=var(--lr-radius)] - Corner radius of the editor frame. Retune
+ * it without a `::part(editor)` rule.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.

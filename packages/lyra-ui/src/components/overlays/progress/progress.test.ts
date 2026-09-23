@@ -347,6 +347,24 @@ it('applies mapped progress color, size, and transition aliases to rendered part
   expect(getComputedStyle(ringIndicator).transitionDuration).to.equal('2s');
 });
 
+it('exposes --lr-progress-track-radius, defaulting to the pill radius and inherited by the indicator', async () => {
+  const bar = (await fixture(html`<lr-progress-bar value="50"></lr-progress-bar>`)) as LyraProgressBar;
+  const track = bar.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const indicator = bar.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  expect(getComputedStyle(track).borderRadius).to.equal('999px');
+  expect(getComputedStyle(indicator).borderRadius).to.equal('999px');
+});
+
+it('lets a consumer retune the track (and inherited indicator) corner radius with no ::part(track) rule', async () => {
+  const bar = (await fixture(html`
+    <lr-progress-bar value="50" style="--lr-progress-track-radius: 4px"></lr-progress-bar>
+  `)) as LyraProgressBar;
+  const track = bar.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const indicator = bar.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  expect(getComputedStyle(track).borderRadius).to.equal('4px');
+  expect(getComputedStyle(indicator).borderRadius).to.equal('4px');
+});
+
 it('recolors the bar indicator per variant instead of always rendering brand regardless of the attribute', async () => {
   const brand = (await fixture(html`<lr-progress-bar value="50"></lr-progress-bar>`)) as LyraProgressBar;
   const neutral = (await fixture(

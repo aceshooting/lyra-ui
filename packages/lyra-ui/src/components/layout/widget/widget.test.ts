@@ -1359,6 +1359,117 @@ it("animates the collapse-button rotation via the CSS transition, not an instant
   expect(getComputedStyle(btn).transitionProperty).to.include("transform");
 });
 
+it("lets a consumer retint just the collapse-button hover fill without repainting the fullscreen-button (regression)", async () => {
+  const el = (await fixture(html`
+    <lr-widget
+      label="x"
+      collapsible
+      expandable
+      style="--lr-widget-collapse-button-hover-bg: rgb(0, 51, 102); --lr-widget-collapse-button-hover-color: rgb(255, 255, 255);"
+      >content</lr-widget
+    >
+  `)) as LyraWidget;
+  const collapseButton = el.shadowRoot!.querySelector(
+    '[part="collapse-button"]'
+  ) as HTMLElement;
+  const fullscreenButton = el.shadowRoot!.querySelector(
+    '[part="fullscreen-button"]'
+  ) as HTMLElement;
+  const fullscreenRestingBg = getComputedStyle(fullscreenButton).backgroundColor;
+  try {
+    await hoverUntilMatched(
+      collapseButton,
+      "collapse-button never reported :hover"
+    );
+    await waitUntil(
+      () => getComputedStyle(collapseButton).backgroundColor === "rgb(0, 51, 102)",
+      "collapse-button hover background never picked up the scoped cssprop"
+    );
+    expect(getComputedStyle(collapseButton).color).to.equal("rgb(255, 255, 255)");
+  } finally {
+    await resetMouse();
+  }
+  // The scoped token is per-button: hovering the collapse-button must not bleed into the
+  // fullscreen-button's own (unset, still shared-token) resting paint.
+  expect(getComputedStyle(fullscreenButton).backgroundColor).to.equal(
+    fullscreenRestingBg
+  );
+});
+
+it("lets a consumer retint the fullscreen-button hover fill, and mixes the pressed fill from that same scoped token, the same way view-toggle mixes its hover token", async () => {
+  const el = (await fixture(html`
+    <lr-widget
+      label="x"
+      collapsible
+      expandable
+      style="--lr-widget-fullscreen-button-hover-bg: rgb(0, 51, 102);"
+      >content</lr-widget
+    >
+  `)) as LyraWidget;
+  const fullscreenButton = el.shadowRoot!.querySelector(
+    '[part="fullscreen-button"]'
+  ) as HTMLElement;
+  try {
+    await hoverUntilMatched(
+      fullscreenButton,
+      "fullscreen-button never reported :hover"
+    );
+    await waitUntil(
+      () => getComputedStyle(fullscreenButton).backgroundColor === "rgb(0, 51, 102)",
+      "fullscreen-button hover background never picked up the scoped cssprop"
+    );
+    await sendMouse({ type: "down" });
+    await waitUntil(
+      () => getComputedStyle(fullscreenButton).backgroundColor !== "rgb(0, 51, 102)",
+      "fullscreen-button pressed background never mixed away from the flat hover cssprop"
+    );
+  } finally {
+    await sendMouse({ type: "up" });
+    await resetMouse();
+  }
+});
+
+it("exposes --lr-widget-collapse-button-hover-bg/-hover-color and --lr-widget-fullscreen-button-hover-bg/-hover-color, defaulting to the shared brand-quiet/brand tokens", async () => {
+  const el = (await fixture(html`
+    <lr-widget label="x" collapsible expandable>content</lr-widget>
+  `)) as LyraWidget;
+  const collapseButton = el.shadowRoot!.querySelector(
+    '[part="collapse-button"]'
+  ) as HTMLElement;
+  const fullscreenButton = el.shadowRoot!.querySelector(
+    '[part="fullscreen-button"]'
+  ) as HTMLElement;
+  const probe = document.createElement("span");
+  probe.style.color = "var(--lr-color-brand-quiet)";
+  el.shadowRoot!.append(probe);
+  const sharedBrandQuiet = getComputedStyle(probe).color;
+  probe.remove();
+  try {
+    await hoverUntilMatched(
+      collapseButton,
+      "collapse-button never reported :hover"
+    );
+    await waitUntil(
+      () => getComputedStyle(collapseButton).backgroundColor === sharedBrandQuiet,
+      "collapse-button hover background did not default to the shared brand-quiet token"
+    );
+  } finally {
+    await resetMouse();
+  }
+  try {
+    await hoverUntilMatched(
+      fullscreenButton,
+      "fullscreen-button never reported :hover"
+    );
+    await waitUntil(
+      () => getComputedStyle(fullscreenButton).backgroundColor === sharedBrandQuiet,
+      "fullscreen-button hover background did not default to the shared brand-quiet token"
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
 it("toggles fullscreen on fullscreen-button click, locking scroll and adding a backdrop", async () => {
   const el = (await fixture(
     html`<lr-widget label="x" expandable>content</lr-widget>`

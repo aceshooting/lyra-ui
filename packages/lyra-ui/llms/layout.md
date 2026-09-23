@@ -635,6 +635,15 @@ rendering is unchanged.
 _hover_ state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
 `::part(view-toggle):hover` override wins without `!important`.
 
+`--lr-widget-collapse-button-hover-bg` / `-hover-color` and `--lr-widget-fullscreen-button-hover-bg`
+/ `-hover-color` (all four default to `var(--lr-color-brand-quiet)` / `var(--lr-color-brand)`) are
+the same inline-`var()`-fallback shape for `[part="collapse-button"]` and `[part="fullscreen-button"]`
+respectively; each button's pressed fill mixes from its own `-hover-bg` token. Before these existed,
+both buttons read the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens directly, so a
+consumer retinting those tokens upstream to change only the view toggle's hover (the reason the
+view-toggle pair above exists) also silently repainted these two buttons; each now has its own scoped
+escape hatch, independent of the other and of the view toggle.
+
 **Optional peer deps:** none.
 
 ```html
@@ -1865,6 +1874,8 @@ resolves.
 
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
+- `--lr-segmented-segment-radius` — Each segment's own corner radius, independent of the track's.
+  Default: `calc(var(--lr-form-control-radius) * 0.7)`.
 - `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-bg` — Background of the `base` track. Undeclared by default (transparent),
   matching its own current absence of a background.

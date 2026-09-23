@@ -64,7 +64,10 @@ export const styles = css`
        resolves to the same 1rem the surrounding text carries by default. */
     font-size: var(--lr-form-control-font-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: calc(var(--lr-form-control-radius) * 0.6);
+    border-radius: var(
+      --lr-checkbox-box-radius,
+      calc(var(--lr-form-control-radius) * 0.6)
+    );
     background: var(--lr-color-surface);
     color: var(--lr-color-on-brand);
     transition: background-color var(--lr-transition-fast),

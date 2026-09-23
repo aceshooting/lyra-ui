@@ -210,6 +210,8 @@ export interface LyraCheckboxEventMap {
  * @cssprop [--lr-checkbox-active-ring=var(--lr-color-brand-quiet)] - Outer box ring while pressed.
  * @cssprop [--lr-checkbox-invalid-border=var(--lr-color-danger)] - Box border while invalid chrome
  * is visible.
+ * @cssprop [--lr-checkbox-box-radius=calc(var(--lr-form-control-radius) * 0.6)] - Corner radius of
+ * `[part='box']`. Retune it without a `::part(box)` rule.
  * @cssprop [--checked-icon-color=currentColor] - WA-compatible color of the checked or
  * indeterminate glyph.
  * @cssprop [--checked-icon-scale=1] - WA-compatible scale of the checked or indeterminate glyph.

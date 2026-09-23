@@ -303,19 +303,35 @@ export const styles = css`
     cursor: pointer;
     transition: transform var(--lr-transition-fast);
   }
-  [part="collapse-button"]:hover,
-  [part="fullscreen-button"]:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+  /* Each button's hover/active fill is scoped to its OWN --lr-widget-<part>-hover-* pair, mirroring
+     the --lr-widget-view-toggle-hover-* pair above: a consumer retinting the shared
+     --lr-color-brand-quiet/--lr-color-brand tokens upstream (e.g. to retint the view-toggle hover
+     alone, which is the whole point of that pair existing) no longer silently repaints these two
+     buttons as a side effect -- each one now has its own escape hatch, defaulting to the same
+     shared tokens so an unset control renders byte-identically. */
+  [part="collapse-button"]:hover {
+    background: var(--lr-widget-collapse-button-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-widget-collapse-button-hover-color, var(--lr-color-brand));
   }
-  [part="collapse-button"]:active,
+  [part="fullscreen-button"]:hover {
+    background: var(--lr-widget-fullscreen-button-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-widget-fullscreen-button-hover-color, var(--lr-color-brand));
+  }
+  [part="collapse-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-widget-collapse-button-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-widget-collapse-button-hover-color, var(--lr-color-brand));
+  }
   [part="fullscreen-button"]:active {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-widget-fullscreen-button-hover-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
-    color: var(--lr-color-brand);
+    color: var(--lr-widget-fullscreen-button-hover-color, var(--lr-color-brand));
   }
   [part="collapse-button"]:focus-visible,
   [part="fullscreen-button"]:focus-visible {
