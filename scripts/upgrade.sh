@@ -147,10 +147,17 @@ pnpm build
 # output for a later, unrelated commit to trip over. Every step here is idempotent (a no-op diff
 # when nothing actually shifted), so this is safe to run unconditionally.
 echo
-echo "==> Regenerating manifest, framework types, and design tokens"
+echo "==> Regenerating manifest, event surfaces, framework types, and palette/design tokens"
+pnpm --filter @aceshooting/lyra-ui run package-metadata
 pnpm manifest
+pnpm --filter @aceshooting/lyra-ui run events
+pnpm --filter @aceshooting/lyra-ui run testing-event-registry
 pnpm --filter @aceshooting/lyra-ui run framework-types
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-palette.mjs
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-chart-palette.mjs
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.mjs
 pnpm --filter @aceshooting/lyra-ui run design-tokens
+pnpm --filter @aceshooting/lyra-ui run generate-reservation-styles
 
 echo
 echo "==> Regenerating upstream inventory, editor data, component metadata, and component quality"
@@ -163,9 +170,15 @@ node packages/lyra-ui/scripts/generate-component-metadata.mjs --write
 node packages/lyra-ui/scripts/generate-component-quality.mjs --write --measure-gzip
 
 echo
-echo "==> Regenerating default-string slices and registration artifacts"
+echo "==> Regenerating default-string slices and translation slices"
 node packages/lyra-ui/scripts/generate-default-string-slices.mjs --write
+pnpm --filter @aceshooting/lyra-ui run translation-slices
+
+echo
+echo "==> Regenerating registration, autoloader, and registration-graph artifacts"
 pnpm registrations
+pnpm --filter @aceshooting/lyra-ui run autoloader-manifest
+pnpm --filter @aceshooting/lyra-ui run registration-graph
 
 echo
 echo "==> Regenerating llms/ reference docs and the packaged plugin/skill archives"

@@ -45,6 +45,13 @@ function migrationCoverageFixture() {
   coverageInventory.upstreams.webawesome.commit = 'wa-test';
   coverageInventory.upstreams.shoelace.version = '2.0.0-test';
   coverageInventory.upstreams.shoelace.commit = 'sl-test';
+  // A preserved (non-inverted) polarity-bearing attribute, so this fixture's own polarity-check
+  // coverage is never zero (the exact vacuous shape check-migration-coverage.mjs now fails
+  // closed on): `analyzeMigrationCoverage` must have at least one real pair to examine, the same
+  // way the checked-in production inventory always does.
+  coverageInventory.upstreams.webawesome.components
+    .find((component) => component.tag === 'wa-widget')
+    .surface.attributes.push({ name: 'with-icon', property: 'withIcon' });
   const upstreamTags = {
     webawesome: {
       version: '8.0.0-test',
@@ -350,9 +357,10 @@ test('inventory-v1 migration coverage classifies every pinned tag without claimi
   assert.equal(result.summary.automatic, 3);
   assert.equal(result.summary.manual, 3);
   assert.equal(result.summary.relationships, 5);
+  assert.equal(result.summary.polarityCheckable, 1);
   assert.match(
     formatMigrationCoverageSummary(result.summary, inputs.upstreamTags),
-    /3 automatic, 3 manual, 5 README relationships\./,
+    /3 automatic, 3 manual, 5 README relationships, 1 polarity-checkable pair\(s\) examined\./,
   );
 });
 

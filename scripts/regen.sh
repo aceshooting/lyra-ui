@@ -68,6 +68,9 @@ pnpm --filter @aceshooting/lyra-ui package-metadata
 step "default-string component slices"
 pnpm --filter @aceshooting/lyra-ui default-string-slices
 
+step "per-family translation slices"
+pnpm --filter @aceshooting/lyra-ui translation-slices
+
 step "initial manifest (custom-elements.json)"
 pnpm manifest
 
@@ -89,8 +92,14 @@ pnpm registrations
 step "autoloader manifest"
 pnpm --filter @aceshooting/lyra-ui autoloader-manifest
 
+step "registration graph (registrations.json)"
+pnpm --filter @aceshooting/lyra-ui registration-graph
+
 step "typed global event surface"
 pnpm --filter @aceshooting/lyra-ui events
+
+step "tag-keyed testing event registry (src/testing/lyra-tag-event-map.ts)"
+pnpm --filter @aceshooting/lyra-ui testing-event-registry
 
 step "framework type surfaces"
 pnpm --filter @aceshooting/lyra-ui framework-types
@@ -102,6 +111,9 @@ pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.m
 
 step "design-token artifacts"
 pnpm --filter @aceshooting/lyra-ui design-tokens
+
+step "adoptable reservation stylesheet (src/styles/reservations.styles.ts)"
+pnpm --filter @aceshooting/lyra-ui generate-reservation-styles
 
 step "editor data (vscode-html-data.json / vscode-css-data.json / web-types.json)"
 pnpm --filter @aceshooting/lyra-ui generate-editor-data
@@ -153,9 +165,11 @@ CHANGED_PATHS=(
   packages/lyra-ui/src/components/
   packages/lyra-ui/src/internal/autoloader-tags.ts
   packages/lyra-ui/src/internal/autoloader-manifest.ts
+  packages/lyra-ui/registrations.json
   packages/lyra-ui/src/internal/tokens/palette.styles.ts
   packages/lyra-ui/src/internal/specialist-tokens.styles.ts
   packages/lyra-ui/src/events.ts
+  packages/lyra-ui/src/testing/lyra-tag-event-map.ts
   packages/lyra-ui/src/custom-elements-jsx.ts
   packages/lyra-ui/src/vue.ts
   packages/lyra-ui/src/svelte.ts
@@ -164,7 +178,9 @@ CHANGED_PATHS=(
   packages/lyra-ui/src/ssr/all.ts
   packages/lyra-ui/src/components/lr-*.ts
   packages/lyra-ui/src/internal/root-registration-allowlist.ts
+  packages/lyra-ui/src/translations/
   packages/lyra-ui/src/styles/design-tokens.css
+  packages/lyra-ui/src/styles/reservations.styles.ts
   packages/lyra-ui/design-tokens.json
   packages/lyra-ui/tokens/
   .storybook/token-preview.generated.js

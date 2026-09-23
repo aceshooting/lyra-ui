@@ -4,8 +4,9 @@ import { isMainModule } from './is-main-module.mjs';
 // scripts/check-side-effects.mjs verifies against, so the array is a generated artifact instead
 // of 500+ hand-maintained lines. Run after any component add/move/remove, then commit the diff.
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { basename, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseSync } from 'oxc-parser';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -25,6 +26,108 @@ function walk(directory) {
     else files.push(entryPath);
   }
   return files;
+}
+
+/** Unwraps `void x()` / `await x()` down to the call it wraps, the two shapes a bare top-level
+ * side-effecting statement is written in across this package (`void registerLyraFlagPeer();`,
+ * `await someAsyncInstall();`). */
+function unwrapVoidAndAwait(expression) {
+  let current = expression;
+  while (current && (current.type === 'UnaryExpression' || current.type === 'AwaitExpression')) {
+    current = current.argument;
+  }
+  return current;
+}
+
+/** A bare top-level `foo();` (or `void foo();` / `await foo();`) -- a statement whose entire
+ * reason to exist is the call's own effect, not a value anything reads. */
+function isBareTopLevelCallStatement(statement) {
+  if (statement.type !== 'ExpressionStatement') return false;
+  const expression = unwrapVoidAndAwait(statement.expression);
+  return expression?.type === 'CallExpression' || expression?.type === 'NewExpression';
+}
+
+/** A same-package relative `export * from '<specifier>'` / `export { x } from '<specifier>'`
+ * (never a type-only one), resolved from `<file>.js` back to the `<file>.ts` source path it
+ * forwards to -- so a barrel that only re-exports a side-effecting sibling is still discovered as
+ * side-effecting itself, without hand-naming that barrel shape (`index.ts` and the stable
+ * `lr-*.ts` tag aliases both work this way). */
+function reexportSourceTargets(program, file) {
+  const targets = [];
+  for (const statement of program.body) {
+    if (
+      (statement.type !== 'ExportAllDeclaration' && statement.type !== 'ExportNamedDeclaration') ||
+      typeof statement.source?.value !== 'string' ||
+      statement.exportKind === 'type'
+    ) continue;
+    const specifier = statement.source.value;
+    if (!specifier.startsWith('.')) continue;
+    const resolved = join(file, '..', specifier);
+    targets.push(resolved.endsWith('.js') ? `${resolved.slice(0, -3)}.ts` : resolved);
+  }
+  return targets;
+}
+
+/**
+ * Behavior-based replacement for the three filename shapes (`*-register.ts`, `*-peer(-*).ts`,
+ * `index.ts`, a top-level `lr-*.ts` alias) this used to hand-match: a component-tree `.ts` module
+ * requires a `package.json#sideEffects` entry when either (a) it has its own top-level
+ * side-effecting call -- `flag-peer.ts`'s `setFlagUrlResolver(...)`, an `-register.ts`'s
+ * `registerDocumentRenderer(...)` -- or (b) it re-exports (`export ... from`) another module that
+ * does, directly or transitively (an `index.ts` barrel, a stable `lr-*.ts` alias). Neither
+ * condition names a file; a future side-effect-only module survives discovery under any name.
+ *
+ * `.class.ts` (and `-core.class.ts`) modules are the one deliberate exception: their whole
+ * contract is a plain class export, always referenced (and so always evaluated) by their sibling
+ * registration entry's `defineElement()` call, and the codebase leans on exactly that property to
+ * keep them independently tree-shakeable (see `installFormControlLabelSupport`'s doc comment in
+ * `src/internal/form-control-labels.ts`) -- a handful legitimately also make a top-level call of
+ * their own (a shared-hook installer) that must not, by itself, force the file into this array.
+ *
+ * @param {string} componentsRoot
+ * @returns {string[]} `.ts` files, relative to `componentsRoot`, POSIX-separated
+ */
+export function discoverComponentSideEffectModules(componentsRoot) {
+  const files = walk(componentsRoot).filter(
+    (file) => file.endsWith('.ts') && !file.endsWith('.d.ts') && !file.endsWith('.test.ts') && !file.endsWith('.stories.ts'),
+  );
+  const directlySideEffecting = new Set();
+  const reexportTargets = new Map();
+
+  for (const file of files) {
+    const source = readFileSync(file, 'utf8');
+    const result = parseSync(file, source);
+    if (result.errors.length > 0) {
+      const detail = result.errors.slice(0, 3).map((error) => error.message).join('; ');
+      throw new Error(`${relative(componentsRoot, file)}: sideEffects discovery parser failed: ${detail}`);
+    }
+    const eligibleForDirectCall = !file.endsWith('.class.ts');
+    let direct = false;
+    for (const statement of result.program.body) {
+      if (eligibleForDirectCall && isBareTopLevelCallStatement(statement)) direct = true;
+    }
+    if (direct) directlySideEffecting.add(file);
+    reexportTargets.set(file, reexportSourceTargets(result.program, file));
+  }
+
+  // Fixed-point closure: a re-export barrel picks up requiredness from whatever it forwards to,
+  // which may itself only be required because IT forwards further (a family `index.ts` re-
+  // exporting a component's `lr-*.ts`-shaped registration entry one level down).
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [file, targets] of reexportTargets) {
+      if (directlySideEffecting.has(file)) continue;
+      if (targets.some((target) => directlySideEffecting.has(target))) {
+        directlySideEffecting.add(file);
+        changed = true;
+      }
+    }
+  }
+
+  return [...directlySideEffecting]
+    .map((file) => relative(componentsRoot, file).replaceAll('\\', '/'))
+    .sort();
 }
 
 export function deriveSideEffects(packageDir = defaultPackageDir) {
@@ -80,32 +183,19 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
   }
 
 // Side-effect-only modules with no inventory registration of their own have to be derived from
-// the file tree directly:
-//   *-register.ts  archive-viewer / ebook-viewer -- register a document-viewer renderer rather
-//                  than a custom element.
-//   *-peer.ts      flag-peer -- installs an optional-peer resolver (`setFlagUrlResolver()`) for a
-//                  component whose own class module deliberately keeps the optional peer out of
-//                  its import graph. A QUALIFIED variant (`flag-peer-bulk.ts`) is the same kind of
-//                  module and matters just as much: 11.2.0 shipped `flag-peer-bulk.js` as its
-//                  headline <lr-flag> entry point and the bare-suffix pattern here could not see
-//                  it, so a bundler honouring `sideEffects` dropped the module outright. That
-//                  failure is quieter than the missing export route it shipped alongside -- the
-//                  import compiles, and then simply does nothing at runtime.
-// Both categories exist purely for their import-time side effect: a consumer writes a bare
-// `import '.../flag-peer.js'` and never reads an export, so a bundler honoring `sideEffects`
-// drops the module outright unless it is declared here. Derived from the walk (not carried over
-// from the previous package.json) so a rename or family move can't silently strand an entry.
-// Per-family barrels (`components/<family>/index.ts`) and the stable one-tag alias entries
-// (`components/lr-*.ts`) belong here for the same reason: their documented contract is an import-
-// time registration, so a bare consumer import must survive production tree shaking.
-  for (const file of walk(componentsRoot)) {
-    const relPath = relative(componentsRoot, file).replaceAll('\\', '/');
-    const topLevelAlias = !relPath.includes('/') && /^lr-[a-z0-9-]+\.ts$/.test(relPath);
-    if (
-      !/-(?:register|peer)(?:-[a-z0-9]+)*\.ts$/.test(file)
-      && basename(file) !== 'index.ts'
-      && !topLevelAlias
-    ) continue;
+// the file tree directly. This used to hand-match three filename shapes (a `*-register.ts` --
+// archive-viewer / ebook-viewer register a document-viewer renderer rather than a custom element;
+// a `*-peer(-*).ts` -- flag-peer installs an optional-peer resolver via `setFlagUrlResolver()`,
+// and a QUALIFIED variant like `flag-peer-bulk.ts` is the same kind of module; a per-family
+// `index.ts` barrel; a stable one-tag `lr-*.ts` alias). A name is not a behavior, though: 11.2.0
+// shipped `flag-peer-bulk.js` as its headline <lr-flag> entry point and the bare-suffix pattern
+// here could not see it, so a bundler honouring `sideEffects` dropped the module outright --
+// quieter than the missing export route it shipped alongside, since the import still compiled and
+// then simply did nothing at runtime. `discoverComponentSideEffectModules` replaces the name match
+// with the actual behavior every one of those shapes shares: a top-level side-effecting call, or a
+// re-export chain that reaches one, so a future side-effect-only module survives discovery under
+// any name.
+  for (const relPath of discoverComponentSideEffectModules(componentsRoot)) {
     required.add(`./src/components/${relPath}`);
     required.add(`./dist/components/${relPath.replace(/\.ts$/, '.js')}`);
   }

@@ -464,6 +464,41 @@ test('synchronizes reviewed current pins from dev bases and lock without moving 
   assert.equal(profiles[3].versions['chart.js'], '4.6.0');
 });
 
+test('synchronizes the pnpm package-manager authority from a bumped root packageManager', async () => {
+  const { synchronizeAuthorityCurrentVersions } = await loadChecker();
+  const authority = authorityFixture();
+  const packageManifest = packageManifestFixture();
+  const lockfileText = lockfileFixture();
+
+  const synchronized = synchronizeAuthorityCurrentVersions({
+    authority,
+    packageManifest,
+    lockfileText,
+    rootManifest: { packageManager: 'pnpm@12.5.1' },
+  });
+
+  assert.deepEqual(authority, authorityFixture(), 'the input authority remains immutable');
+  assert.equal(synchronized.packageManagers.pnpm, '12.5.1');
+  assert.equal(synchronized.packageManagers.npm, authority.packageManagers.npm, 'npm authority is untouched');
+
+  const unchanged = synchronizeAuthorityCurrentVersions({ authority, packageManifest, lockfileText });
+  assert.equal(
+    unchanged.packageManagers.pnpm,
+    authority.packageManagers.pnpm,
+    'omitting rootManifest leaves the existing pnpm authority untouched',
+  );
+
+  assert.throws(
+    () => synchronizeAuthorityCurrentVersions({
+      authority,
+      packageManifest,
+      lockfileText,
+      rootManifest: { packageManager: 'npm@12.5.1' },
+    }),
+    /pnpm@/iu,
+  );
+});
+
 test('reads workspace peer versions from single-document and split pnpm lockfiles', async () => {
   const { synchronizeAuthorityCurrentVersions, validatePeerCompatibilityDocuments } = await loadChecker();
   const updatedVersions = { ...CURRENT_VERSIONS, 'chart.js': '4.6.0' };
@@ -2469,6 +2504,34 @@ test('validates synchronized authority completely and replaces it atomically wit
     assert.ok(temporarySync >= 0, 'temporary authority bytes must be fsynced');
     assert.ok(durableRename > temporarySync, 'rename must follow the temporary-file fsync');
     assert.ok(directorySync > durableRename, 'parent directory must be fsynced after rename');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('writes a bumped root packageManager into the on-disk pnpm authority', async () => {
+  const { writeSynchronizedAuthority } = await loadChecker();
+  const root = await mkdtemp(join(tmpdir(), 'lyra-peer-authority-pnpm-sync-'));
+  const authorityPath = join(root, 'peer-compatibility-profiles.json');
+  const authority = authorityFixture();
+  const authorityText = `${JSON.stringify(authority, null, 2)}\n`;
+  const request = {
+    authority,
+    authorityPath,
+    authorityText,
+    lockfileText: lockfileFixture(),
+    packageManifest: packageManifestFixture(),
+    rootManifest: { packageManager: 'pnpm@12.5.1' },
+  };
+  try {
+    await writeFile(authorityPath, authorityText);
+    const synchronized = await writeSynchronizedAuthority(request);
+    assert.equal(synchronized.packageManagers.pnpm, '12.5.1');
+    assert.equal(
+      JSON.parse(await readFile(authorityPath, 'utf8')).packageManagers.pnpm,
+      '12.5.1',
+      'a bumped root packageManager must land in the checked-in authority file, not just the return value',
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

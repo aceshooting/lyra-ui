@@ -362,6 +362,21 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
     }
   }
 
+  // The three loops above are this gate's ENTIRE ability to catch an inverted rename -- the exact
+  // defect that made it vacuous once already (see isPolarityCheckable's doc comment): they ran
+  // over fixtures that held zero polarity-bearing pairs, reported success, and could not have
+  // rejected anything. Surfacing the combined count on `summary` (and printing it) is necessary
+  // but not sufficient on its own -- a silent read of a JSON field a human never opens is exactly
+  // as easy to stop noticing as the pass/fail line already was. So the count is also asserted here,
+  // in the same function that already fails closed on every other structural gap: zero examined
+  // pairs is itself a defect to report, not a clean run.
+  if (polarityCheckablePairs.length === 0) {
+    errors.push(
+      'attribute-polarity check examined zero pairs across rewrites/attributeRenames/upstream ' +
+        'surfaces -- the gate cannot detect a polarity flip this way; see isPolarityCheckable',
+    );
+  }
+
   const classificationCounts = Object.fromEntries(
     CLASSIFICATIONS.map((classification) => [
       classification,
@@ -380,6 +395,7 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
         classificationCounts['warning-required'] +
         classificationCounts['conceptual-only'] +
         classificationCounts.unsupported,
+      polarityCheckable: polarityCheckablePairs.length,
     },
   };
 }
@@ -389,7 +405,8 @@ export function formatMigrationCoverageSummary(summary, upstreamTags) {
     `Migration coverage contract passed: Web Awesome ${summary.webawesome}/${summary.webawesome} ` +
     `(${upstreamTags.webawesome.version}) and Shoelace ${summary.shoelace}/${summary.shoelace} ` +
     `(${upstreamTags.shoelace.version}) tags classified; ${summary.automatic} automatic, ` +
-    `${summary.manual} manual, ${summary.relationships} README relationships.`
+    `${summary.manual} manual, ${summary.relationships} README relationships, ` +
+    `${summary.polarityCheckable} polarity-checkable pair(s) examined.`
   );
 }
 

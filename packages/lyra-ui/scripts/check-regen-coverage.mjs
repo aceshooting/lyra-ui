@@ -226,6 +226,85 @@ export function computeCoverage({
   };
 }
 
+/** Every non-gate `package.json` script name whose own expansion invokes `file` with one of the
+ * exact argument strings in `targetArgs` -- not just the terminal leaf alias `regen` happens to use
+ * (`registrations`, which never itself names `generate-tag-aliases.mjs`, still genuinely
+ * regenerates it via its own nested `tag-aliases` alias, so a root script hand-invoking
+ * `registrations` must count as reaching it too). `check:*`/`test:*`/`contract-policy`/`lint`
+ * names are excluded by construction: this checker's job is proving a WRITE step is reachable, and
+ * nothing here should treat a maintainer hand-invoking a CHECK name as regenerating anything, even
+ * in the (never true today) case that name happened to expand to the same file and args. */
+function scriptNamesReachingFile(file, scripts, targetArgs) {
+  const names = new Set();
+  for (const name of Object.keys(scripts)) {
+    if (isGateName(name)) continue;
+    const reached = expandScript(name, scripts).files.get(file);
+    if (!reached) continue;
+    for (const args of targetArgs) {
+      if (reached.has(args)) {
+        names.add(name);
+        break;
+      }
+    }
+  }
+  return names;
+}
+
+/** Matches `token` only as a whole identifier -- never as a bare substring of a longer word,
+ * filename, or prose sentence (`gen` inside `regeneration`, `llms` inside `llms-full.txt`). `.`
+ * joins the disallowed boundary characters alongside `\w`, `:`, and `-` so a script alias
+ * (`translation-slices`) and a generator filename (`generate-widget.mjs`) are both matched as one
+ * token, without also matching a truncated prefix of either. */
+function wholeTokenPattern(token) {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+  return new RegExp(`(?<![\\w.:-])${escaped}(?![\\w.:-])`, 'u');
+}
+
+/**
+ * Checks that each of a set of ROOT (repository-level, outside this package's own `package.json`)
+ * shell entry points -- `scripts/regen.sh`, `scripts/upgrade.sh` -- reaches every required
+ * generator `computeCoverage` already proves `pnpm run regen` reaches. Those two scripts hand-list
+ * individual `pnpm --filter @aceshooting/lyra-ui <name>` / `... exec node scripts/<file>.mjs` /
+ * `node packages/lyra-ui/scripts/<file>.mjs` steps instead of delegating to `regen` wholesale, so a
+ * generator this file already proves `regen` reaches can still silently go missing from one of
+ * THOSE hand-kept lists -- invisible to `computeCoverage`, which never reads outside this package's
+ * own `package.json` and `scripts/`. This is the SAME derivation (ground truth from the gate side,
+ * not a hand-kept table): a generator counts as reached in a root script's source when either its
+ * own `<file>.mjs` basename or any non-gate script alias name that would invoke it with matching
+ * arguments (see `scriptNamesReachingFile`) appears as a whole token in that script's source. A
+ * root entry point that itself only delegates to a further script (`./package.sh`) should be
+ * checked against that further script's source folded in too -- the caller decides what belongs in
+ * each entry's `rootScripts` value; this function only scans whatever text it is given.
+ *
+ * @param {{ scripts: Record<string, string>, readScriptSource: (file: string) => string | null,
+ *   exemptions: Record<string, string>, rootScripts: Record<string, string | null | undefined>,
+ *   regenEntry?: string, contractPolicyEntry?: string }} options
+ */
+export function computeRootScriptCoverage({
+  scripts,
+  readScriptSource,
+  exemptions,
+  rootScripts,
+  regenEntry = 'regen',
+  contractPolicyEntry = 'contract-policy',
+}) {
+  const required = computeRequiredGenerators({ scripts, readScriptSource, contractPolicyEntry });
+  const regenReach = expandScript(regenEntry, scripts);
+
+  const violations = [];
+  for (const [file, reasons] of required) {
+    if (exemptions[file]) continue;
+    const targetArgs = regenReach.files.get(file) ?? new Set(['']);
+    const tokens = [file, ...scriptNamesReachingFile(file, scripts, targetArgs)];
+    for (const [script, source] of Object.entries(rootScripts)) {
+      const reached = tokens.some((token) => wholeTokenPattern(token).test(source ?? ''));
+      if (!reached) violations.push({ file, script, reasons: [...reasons] });
+    }
+  }
+
+  return { ok: violations.length === 0, violations };
+}
+
 // Deliberate exclusions, each with the one-line reason a bare glob or a --write/--refresh flag
 // cannot express on its own. A suppression that stops matching anything real is harmless (it just
 // never fires) -- unlike the gate this file itself guards, going quiet is not this map's failure
@@ -278,6 +357,33 @@ export const EXEMPTIONS = Object.freeze({
     'contract-policy for the same reason (docs/agents/ci-and-gates.md\'s "Coverage floors" section).',
 });
 
+// Root (repository-level) entry points that separately hand-list individual regeneration steps
+// instead of delegating to this package's own `regen` script -- see `computeRootScriptCoverage`'s
+// own doc comment. Each maps to the OTHER script source(s) folded into its check, for an entry
+// that itself only delegates further (`scripts/regen.sh`/`scripts/upgrade.sh` both end by running
+// `./package.sh`, which is what actually reaches the `llms` generator on their behalf).
+const ROOT_SCRIPT_DELEGATES = Object.freeze({
+  'scripts/regen.sh': Object.freeze(['package.sh']),
+  'scripts/upgrade.sh': Object.freeze(['package.sh']),
+});
+const repositoryRoot = path.join(packageDir, '..', '..');
+
+function readRootScriptCoverageSources() {
+  const readRootFile = (relativePath) => {
+    try {
+      return fs.readFileSync(path.join(repositoryRoot, relativePath), 'utf8');
+    } catch {
+      return null;
+    }
+  };
+  return Object.fromEntries(
+    Object.entries(ROOT_SCRIPT_DELEGATES).map(([relativePath, delegates]) => [
+      relativePath,
+      [readRootFile(relativePath), ...delegates.map(readRootFile)].filter((text) => text != null).join('\n'),
+    ]),
+  );
+}
+
 if (isMainModule(import.meta.url)) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
   const readScriptSource = (file) => {
@@ -289,6 +395,12 @@ if (isMainModule(import.meta.url)) {
   };
 
   const result = computeCoverage({ scripts: packageJson.scripts, readScriptSource, exemptions: EXEMPTIONS });
+  const rootResult = computeRootScriptCoverage({
+    scripts: packageJson.scripts,
+    readScriptSource,
+    exemptions: EXEMPTIONS,
+    rootScripts: readRootScriptCoverageSources(),
+  });
 
   if (result.invalidExemptions.length > 0) {
     console.error(
@@ -309,13 +421,29 @@ if (isMainModule(import.meta.url)) {
         'scripts/check-regen-coverage.mjs.',
     );
   }
+  if (rootResult.violations.length > 0) {
+    console.error(
+      `${rootResult.violations.length} root-script generator gap(s) -- a generator \`pnpm run regen\` ` +
+        'reaches, but that a repo-root regeneration entry point does not:',
+    );
+    for (const { file, script, reasons } of rootResult.violations) {
+      console.error(`- ${file} (missing from ${script})`);
+      for (const reason of reasons) console.error(`    ${reason}`);
+    }
+    console.error(
+      '\nAdd the missing generator step to the named root script (../../scripts/regen.sh or ' +
+        '../../scripts/upgrade.sh), or add a reasoned exemption to EXEMPTIONS in ' +
+        'scripts/check-regen-coverage.mjs.',
+    );
+  }
 
-  if (!result.ok) {
+  if (!result.ok || !rootResult.ok) {
     process.exitCode = 1;
   } else {
     console.log(
       `regen coverage verified: ${result.requiredCount} gate-required generator(s) reachable from ` +
-        `\`pnpm run regen\` (${result.exemptedCount} exempted).`,
+        `\`pnpm run regen\` (${result.exemptedCount} exempted), and from every root regeneration entry ` +
+        'point (scripts/regen.sh, scripts/upgrade.sh).',
     );
   }
 }

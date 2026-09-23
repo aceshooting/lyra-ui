@@ -1152,9 +1152,34 @@ function deriveCurrentVersions({ authority, packageManifest, lockfileText }) {
   return currentVersions;
 }
 
-export function synchronizeAuthorityCurrentVersions({ authority, packageManifest, lockfileText }) {
+const ROOT_PACKAGE_MANAGER_PATTERN = /^pnpm@((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/u;
+
+/**
+ * Extracts the exact pnpm patch a root `package.json#packageManager` pins. `upgrade.sh` bumps that
+ * field (via `npm-check-updates --dep packageManager`) in the same run it later calls
+ * `synchronizeAuthorityCurrentVersions`/`writeSynchronizedAuthority` with, so this is the one place
+ * that keeps `scripts/peer-compatibility-profiles.json`'s `packageManagers.pnpm` authority from
+ * drifting behind the bump that produced it.
+ */
+function pnpmVersionFromRootManifest(rootManifest) {
+  const match = ROOT_PACKAGE_MANAGER_PATTERN.exec(String(rootManifest?.packageManager ?? ''));
+  if (!match) {
+    throw new Error(
+      `Root packageManager must be one exact pnpm@x.y.z pin; found ${JSON.stringify(rootManifest?.packageManager)}.`,
+    );
+  }
+  return match[1];
+}
+
+export function synchronizeAuthorityCurrentVersions({ authority, packageManifest, lockfileText, rootManifest }) {
   const synchronized = structuredClone(authority);
   synchronized.currentVersions = deriveCurrentVersions({ authority, packageManifest, lockfileText });
+  if (rootManifest !== undefined) {
+    synchronized.packageManagers = {
+      ...synchronized.packageManagers,
+      pnpm: pnpmVersionFromRootManifest(rootManifest),
+    };
+  }
   resolvePeerProfiles(synchronized);
   return synchronized;
 }
@@ -1383,7 +1408,7 @@ async function readBoundAuthorityText(
 }
 
 export async function writeSynchronizedAuthority(
-  { authority, authorityPath: targetPath, authorityText, packageManifest, lockfileText },
+  { authority, authorityPath: targetPath, authorityText, packageManifest, lockfileText, rootManifest },
   {
     openImpl = open,
     removeImpl = rm,
@@ -1393,7 +1418,12 @@ export async function writeSynchronizedAuthority(
   if (!isAbsolute(targetPath)) throw new Error('Peer-compatibility authority path must be absolute.');
   return serializeAuthorityTransaction(targetPath, async () => {
     const parentIdentity = await bindAuthorityParent(targetPath);
-    const synchronized = synchronizeAuthorityCurrentVersions({ authority, packageManifest, lockfileText });
+    const synchronized = synchronizeAuthorityCurrentVersions({
+      authority,
+      packageManifest,
+      lockfileText,
+      rootManifest,
+    });
     validatePeerCompatibilityDocuments({ authority: synchronized, packageManifest, lockfileText });
     const output = `${JSON.stringify(synchronized, null, 2)}\n`;
     const initialLive = await readBoundAuthorityText(
@@ -4703,6 +4733,7 @@ async function main() {
       authorityText: documents.authorityText,
       lockfileText: documents.lockfileText,
       packageManifest: documents.packageManifest,
+      rootManifest: documents.rootManifest,
     });
     console.log('Peer-compatibility current versions now match dev-range bases and lock resolutions.');
     return;

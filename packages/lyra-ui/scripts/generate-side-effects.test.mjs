@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,12 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const fixtureRoot = mkdtempSync(join(tmpdir(), 'lyra-side-effects-'));
 
 try {
+  // The fixture tree lives outside this package (a mkdtemp'd /tmp directory), so a bare-specifier
+  // import inside the COPIED generate-side-effects.mjs below (it now parses with `oxc-parser` for
+  // behavior-based discovery) would otherwise fail to resolve: Node's ESM resolver walks up from
+  // the importing file's own location, which is nowhere near this repo's node_modules once copied.
+  // Symlinking this package's own node_modules into the fixture root puts it back on that walk.
+  symlinkSync(join(scriptDir, '..', 'node_modules'), join(fixtureRoot, 'node_modules'), 'dir');
   const fixtureScripts = join(fixtureRoot, 'scripts');
   const fixtureInventory = join(fixtureScripts, 'fixtures');
   const componentDir = join(fixtureRoot, 'src', 'components', 'forms', 'test-control');
@@ -29,7 +35,15 @@ try {
     join(fixtureScripts, 'is-main-module.mjs'),
     readFileSync(join(scriptDir, 'is-main-module.mjs'), 'utf8'),
   );
-  writeFileSync(join(componentDir, 'test-control.class.ts'), 'export class TestControl {}\n');
+  // A bare top-level call in a `.class.ts` module must NOT, by itself, pull the file into
+  // discovery: its class export is always referenced by its sibling registration entry's
+  // `defineElement()` call, so it is never independently tree-shaken away in practice -- the
+  // codebase deliberately keeps such modules OUT of sideEffects (see
+  // `installFormControlLabelSupport`'s own doc comment in src/internal/form-control-labels.ts).
+  writeFileSync(
+    join(componentDir, 'test-control.class.ts'),
+    'installInternalHook();\nexport class TestControl {}\n',
+  );
   writeFileSync(join(componentDir, 'test-control.ts'), 'defineElement();\n');
   writeFileSync(
     join(fixtureRoot, 'src', 'components', 'lr-test-control.ts'),
@@ -65,6 +79,14 @@ try {
   writeFileSync(
     join(familyDir, 'test-control', 'test-control-peer-bulk.ts'),
     "setResolver(loadBulk());\n",
+  );
+  // A side-effect-only module whose filename matches NONE of the three old shape tests (no
+  // `-register`/`-peer` suffix, not literally `index.ts`, not a top-level `lr-*.ts` alias) -- the
+  // exact shape a hypothetical `flag-loader.ts` / `flag-bootstrap.ts` would be. Discovery must find
+  // it from its actual top-level side-effecting call, not its name.
+  writeFileSync(
+    join(familyDir, 'test-control', 'test-control-bootstrap.ts'),
+    'bootstrapTestControl();\n',
   );
   writeFileSync(join(fixtureRoot, 'src', 'lyra.ts'), "export * from './components/forms/test-control/test-control.class.js';\n");
   writeFileSync(join(fixtureRoot, 'src', 'all.ts'), "import './components/forms/index.js';\n");
@@ -116,6 +138,7 @@ try {
     './dist/all.js',
     './dist/autoloader-cdn.js',
     './dist/components/forms/index.js',
+    './dist/components/forms/test-control/test-control-bootstrap.js',
     './dist/components/forms/test-control/test-control-peer-bulk.js',
     './dist/components/forms/test-control/test-control-peer.js',
     './dist/components/forms/test-control/test-control.js',
@@ -130,6 +153,7 @@ try {
     './src/all.ts',
     './src/autoloader-cdn.ts',
     './src/components/forms/index.ts',
+    './src/components/forms/test-control/test-control-bootstrap.ts',
     './src/components/forms/test-control/test-control-peer-bulk.ts',
     './src/components/forms/test-control/test-control-peer.ts',
     './src/components/forms/test-control/test-control.ts',
@@ -154,6 +178,16 @@ try {
   );
   assert.equal(generated.includes('./src/autoloader.ts'), false, 'manual autoloader must stay tree-shakeable');
   assert.equal(generated.includes('./dist/autoloader.js'), false, 'compiled manual autoloader must stay tree-shakeable');
+  assert.equal(
+    generated.includes('./src/components/forms/test-control/test-control.class.ts'),
+    false,
+    'a bare top-level call inside a .class.ts module must not pull it into discovery',
+  );
+  assert.equal(
+    generated.includes('./dist/components/forms/test-control/test-control.class.js'),
+    false,
+    'the compiled .class.ts module must stay tree-shakeable too',
+  );
 
   execFileSync(process.execPath, [join(fixtureScripts, 'generate-side-effects.mjs')], {
     cwd: fixtureRoot,

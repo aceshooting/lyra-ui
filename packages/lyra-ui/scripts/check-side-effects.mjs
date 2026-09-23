@@ -8,9 +8,9 @@
 // side effects, in both the published `./dist/...` form and the in-repo `./src/...` form.
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { basename, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { deriveSideEffects } from './generate-side-effects.mjs';
+import { deriveSideEffects, discoverComponentSideEffectModules } from './generate-side-effects.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 const componentsRoot = join(packageDir, 'src', 'components');
@@ -110,11 +110,13 @@ for (const component of inventory.components) {
 // by any bundler honoring `sideEffects`. That is exactly how `flag-peer.js` shipped undeclared
 // through 7.8.0: every `<lr-flag country|language>` in a production build silently lost its
 // resolver and rendered the "flag unavailable" alert instead of an image.
-// Per-family barrels (`components/<family>/index.ts`) are covered by the same loop: they
+// Per-family barrels (`components/<family>/index.ts`) are covered by the same discovery: they
 // `export *` from every registration module in the family, so importing one registers those tags.
-for (const file of walk(componentsRoot)) {
-  if (!/-(?:register|peer)\.ts$/.test(file) && basename(file) !== 'index.ts') continue;
-  const relPath = relative(componentsRoot, file).replaceAll('\\', '/');
+// This calls the SAME behavior-based `discoverComponentSideEffectModules` the generator uses
+// (rather than a second, independently hand-kept filename pattern) so the two can never drift back
+// into the exact blind spot this whole check exists to close: a filename shape this loop's own
+// prior regex did not recognize was invisible to it in exactly the way it was to the generator.
+for (const relPath of discoverComponentSideEffectModules(componentsRoot)) {
   const srcEntry = `./src/components/${relPath}`;
   const distEntry = `./dist/components/${relPath.replace(/\.ts$/, '.js')}`;
   if (!sideEffects.has(srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);

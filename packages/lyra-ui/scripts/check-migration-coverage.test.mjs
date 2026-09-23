@@ -15,6 +15,7 @@
 import assert from 'node:assert/strict';
 import {
   analyzeMigrationCoverage,
+  formatMigrationCoverageSummary,
   hasInvertedPolarity,
   invertedName,
   isPolarityCheckable,
@@ -96,8 +97,11 @@ function inputs({ upstreamAttributes, lyraAttributes, rewrites = [] }) {
   };
 }
 
+// Matches only an INVERSION VERDICT on one examined pair -- never the separate, additive
+// zero-examined-pairs error (case 6 below), which is a distinct failure mode with its own
+// assertion and must not be swallowed by this filter.
 const polarityErrors = (result) =>
-  result.errors.filter((error) => /polarity|inverted/.test(error));
+  result.errors.filter((error) => /inverts attribute polarity|declare the inverted/.test(error));
 
 // 1. An explicit rewrite that flips polarity is caught.
 {
@@ -147,6 +151,40 @@ const polarityErrors = (result) =>
     inputs({ upstreamAttributes: ['size'], lyraAttributes: ['scale'] }),
   );
   assert.deepEqual(polarityErrors(result), [], 'polarity-neutral names produce no polarity verdict');
+}
+
+// 5. The examined-pair count is surfaced on the summary, not silently discarded: a run that
+//    actually examines pairs reports how many, so `formatMigrationCoverageSummary` -- and any
+//    future reader of `result.summary` -- can see the gate did real work rather than trusting a
+//    bare pass/fail.
+{
+  const result = analyzeMigrationCoverage(
+    inputs({ upstreamAttributes: ['with-legend'], lyraAttributes: ['with-legend'] }),
+  );
+  assert.equal(
+    result.summary.polarityCheckable,
+    1,
+    'the one polarity-bearing pair examined above must be counted in the summary',
+  );
+  assert.match(
+    formatMigrationCoverageSummary(result.summary, inputs({ upstreamAttributes: [], lyraAttributes: [] }).upstreamTags),
+    /1 polarity-checkable pair/i,
+    'the printed summary line must surface the examined-pair count',
+  );
+}
+
+// 6. The exact regression this check exists to prevent: the polarity loops examine ZERO pairs (no
+//    upstream attributes, no attributeRenames fixture entries) -- the gate must fail closed rather
+//    than report success while checking nothing, the same way it silently did before this fix.
+{
+  const result = analyzeMigrationCoverage(
+    inputs({ upstreamAttributes: [], lyraAttributes: [] }),
+  );
+  assert.equal(result.summary.polarityCheckable, 0);
+  assert.ok(
+    result.errors.some((error) => /polarity/i.test(error) && /zero|no pairs|0 pairs/i.test(error)),
+    `a zero-examined-pair run must fail closed with a polarity-specific error, got: ${JSON.stringify(result.errors)}`,
+  );
 }
 
 console.log('migration-coverage attribute-polarity tests passed.');
