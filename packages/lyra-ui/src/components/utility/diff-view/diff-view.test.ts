@@ -1965,7 +1965,7 @@ describe('search and scrollToAnchor', () => {
     )) as LyraDiffView;
     // A middle op index that is folded away behind the marker by default.
     const hiddenIndex = 20;
-    expect(el.shadowRoot!.querySelector(`[data-op-index="${hiddenIndex}"]`)).to.equal(null);
+    expect(el.shadowRoot!.querySelector(`[data-op-index="${hiddenIndex}"]`) === null).to.be.true;
 
     const found = await el.scrollToAnchor({ kind: 'line-range', start: hiddenIndex });
     expect(found).to.equal(true);
