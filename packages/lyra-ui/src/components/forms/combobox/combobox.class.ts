@@ -23,7 +23,7 @@ import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './combobox.styles.js';
 import type { LyraOption } from './option.class.js';
@@ -109,11 +109,11 @@ export type LyraComboboxPlacement = 'top' | 'bottom';
  *  default rather than to a member baked into the converter. */
 const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>(['absolute', 'fixed']);
 
-/** Unsupported values clamp to the documented `'outlined'` default -- this trigger-shaped control
- *  does not (yet) implement the shared vocabulary's `accent`/`plain` tiers; see `appearance`'s own
- *  doc comment. Mirrors `<lr-date-input>`'s own narrowed appearance converter. */
-const APPEARANCE = literalSetConverter(
-  ['filled', 'outlined', 'filled-outlined'] as const,
+/** The full shared `LyraAppearance` vocabulary, matching `<lr-select>`'s trigger. A value outside
+ *  this set -- a typo, or any other unsupported string -- clamps to the documented `'outlined'`
+ *  default; see `appearance`'s own doc comment. */
+const APPEARANCE = literalSetConverter<LyraAppearance>(
+  ['accent', 'filled', 'outlined', 'filled-outlined', 'plain'],
   'outlined'
 );
 export type LyraComboboxTagRenderer = (
@@ -811,20 +811,19 @@ export class LyraCombobox<
    */
   @property({ type: Boolean, reflect: true }) loading = false;
 
-  private _appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined';
+  private _appearance: LyraAppearance = 'outlined';
   /**
-   * Visual treatment shared with other Lyra form controls. This trigger-shaped control supports
-   * only `filled`/`outlined`/`filled-outlined` of the library's shared five-value `LyraAppearance`
-   * vocabulary -- `accent` and `plain` have no stylesheet rule here (unlike `<lr-select>`, which
-   * implements the full set) -- so an unsupported value, including a raw attribute/property write
-   * outside this type, clamps to the `'outlined'` default rather than silently rendering unstyled.
+   * Visual treatment shared with other Lyra form controls -- the full five-value `LyraAppearance`
+   * vocabulary, matching `<lr-select>`'s trigger (its nearest sibling, sharing `<lr-option>`
+   * children). A raw attribute/property write outside this set, including a typo, clamps to the
+   * `'outlined'` default rather than silently rendering unstyled.
    * @default 'outlined'
    */
   @property({ converter: APPEARANCE, reflect: true })
-  get appearance(): 'filled' | 'outlined' | 'filled-outlined' {
+  get appearance(): LyraAppearance {
     return this._appearance;
   }
-  set appearance(next: 'filled' | 'outlined' | 'filled-outlined') {
+  set appearance(next: LyraAppearance) {
     const normalized = APPEARANCE.normalizeReflected(this, 'appearance', next);
     const old = this._appearance;
     this._appearance = normalized;

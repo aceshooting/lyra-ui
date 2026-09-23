@@ -5451,6 +5451,8 @@ describe("focus indicator per appearance", () => {
     "outlined",
     "filled",
     "filled-outlined",
+    "accent",
+    "plain",
   ] as const) {
     it(`retints the ${appearance} combobox border while focus is inside it (WCAG 2.4.7)`, async () => {
       const el = (await fixture(html`
@@ -5483,10 +5485,64 @@ describe("focus indicator per appearance", () => {
   }
 });
 
-describe("appearance clamps to the documented subset", () => {
-  it("clamps an unsupported attribute set at first parse to the default", async () => {
-    const el = (await fixture(html`
+describe("appearance renders the full shared vocabulary", () => {
+  it("renders accent distinctly from the outlined default", async () => {
+    const outlined = (await fixture(html`
+      <lr-combobox appearance="outlined">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    const accent = (await fixture(html`
       <lr-combobox appearance="accent">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await outlined.updateComplete;
+    await accent.updateComplete;
+    expect(accent.appearance).to.equal("accent");
+    expect(accent.getAttribute("appearance")).to.equal("accent");
+    const outlinedBox = outlined.shadowRoot!.querySelector<HTMLElement>(
+      '[part="combobox"]'
+    )!;
+    const accentBox = accent.shadowRoot!.querySelector<HTMLElement>(
+      '[part="combobox"]'
+    )!;
+    expect(
+      getComputedStyle(accentBox).backgroundColor,
+      "accent vs outlined background"
+    ).to.not.equal(getComputedStyle(outlinedBox).backgroundColor);
+  });
+
+  it("renders plain distinctly from the outlined default", async () => {
+    const outlined = (await fixture(html`
+      <lr-combobox appearance="outlined">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    const plain = (await fixture(html`
+      <lr-combobox appearance="plain">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await outlined.updateComplete;
+    await plain.updateComplete;
+    expect(plain.appearance).to.equal("plain");
+    expect(plain.getAttribute("appearance")).to.equal("plain");
+    const outlinedBox = outlined.shadowRoot!.querySelector<HTMLElement>(
+      '[part="combobox"]'
+    )!;
+    const plainBox = plain.shadowRoot!.querySelector<HTMLElement>(
+      '[part="combobox"]'
+    )!;
+    expect(
+      getComputedStyle(plainBox).borderTopColor,
+      "plain vs outlined border"
+    ).to.not.equal(getComputedStyle(outlinedBox).borderTopColor);
+  });
+
+  it("clamps a genuinely unknown attribute set at first parse to the default", async () => {
+    const el = (await fixture(html`
+      <lr-combobox appearance="bogus">
         <lr-option value="a">Apple</lr-option>
       </lr-combobox>
     `)) as LyraCombobox;
@@ -5495,16 +5551,22 @@ describe("appearance clamps to the documented subset", () => {
     expect(el.getAttribute("appearance")).to.equal("outlined");
   });
 
-  it("clamps an unsupported attribute written later, repairing the raw attribute", async () => {
+  it("clamps a genuinely unknown attribute written later, repairing the raw attribute", async () => {
     const el = (await fixture(basic())) as LyraCombobox;
-    el.setAttribute("appearance", "plain");
+    el.setAttribute("appearance", "bogus");
     await el.updateComplete;
     expect(el.appearance).to.equal("outlined");
     expect(el.getAttribute("appearance")).to.equal("outlined");
   });
 
   it("keeps every documented value unchanged", async () => {
-    for (const appearance of ["outlined", "filled", "filled-outlined"] as const) {
+    for (const appearance of [
+      "outlined",
+      "filled",
+      "filled-outlined",
+      "accent",
+      "plain",
+    ] as const) {
       const el = (await fixture(basic())) as LyraCombobox;
       el.setAttribute("appearance", appearance);
       await el.updateComplete;

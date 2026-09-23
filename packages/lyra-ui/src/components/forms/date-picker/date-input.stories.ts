@@ -3,6 +3,7 @@ import { html } from 'lit';
 import './date-input.js';
 import '../input/input.js';
 import type { LyraDateInputValidator } from './date-input.class.js';
+import type { LyraAppearance } from '../../../internal/variants.js';
 
 const meta: Meta = {
   title: 'DatePicker/WithInput',
@@ -36,6 +37,29 @@ export const Sizes: Story = {
       )}
     </div>
   `,
+};
+
+/** `appearance` retunes the input row surface; `pill` rounds its corners. */
+export const Appearances: Story = {
+  render: () => {
+    const appearances: LyraAppearance[] = [
+      'accent',
+      'filled',
+      'outlined',
+      'filled-outlined',
+      'plain',
+    ];
+    return html`
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+        ${appearances.map(
+          (appearance) => html`
+            <lr-date-input appearance=${appearance} placeholder=${appearance}></lr-date-input>
+          `,
+        )}
+        <lr-date-input pill placeholder="pill"></lr-date-input>
+      </div>
+    `;
+  },
 };
 
 /**

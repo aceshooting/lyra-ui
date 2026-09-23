@@ -37,6 +37,9 @@ export const styles = css`
        Re-pointing a property cannot regress that way -- no [part] rule out-ranks another. */
     --_lr-combobox-fill: var(--lr-color-surface);
     --_lr-combobox-border-color: var(--lr-color-border);
+    /* Same re-pointing pattern for the text color: only the accent tier below overrides it, so
+       every other appearance keeps the ambient inherited color exactly as before. */
+    --_lr-combobox-text-color: inherit;
     /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
        reaches this row. */
@@ -55,6 +58,32 @@ export const styles = css`
   }
   :host([appearance="filled-outlined"]) {
     --_lr-combobox-fill: var(--lr-color-surface-raised);
+  }
+  /* Ported from lr-select's own [appearance='plain']/[appearance='accent'] trigger rules
+     (select.styles.ts), adapted to this component's private-custom-property-on-:host pattern
+     rather than a [part='combobox'] rule -- see the comment above for why that form is required
+     here. */
+  :host([appearance="plain"]) {
+    --_lr-combobox-fill: transparent;
+    --_lr-combobox-border-color: transparent;
+  }
+  :host([appearance="accent"]) {
+    --_lr-combobox-fill: var(--lr-color-brand);
+    --_lr-combobox-border-color: transparent;
+    --_lr-combobox-text-color: var(--lr-color-on-brand);
+  }
+  /* The quiet-text tokens below are too low-contrast on the loud brand fill, so placeholder,
+     expand icon, start/end adornments and tags ride the trigger's own on-brand text color instead
+     -- the same treatment lr-select applies to its own trigger children. */
+  :host([appearance="accent"]) [part="start"],
+  :host([appearance="accent"]) [part="end"],
+  :host([appearance="accent"]) [part="expand-icon"],
+  :host([appearance="accent"]) [part="combobox-input"]::placeholder {
+    color: inherit;
+  }
+  :host([appearance="accent"]) [part="tag"] {
+    background: color-mix(in srgb, currentColor 20%, transparent);
+    color: inherit;
   }
   /* What remains per tier is this component's own geometry -- the selected-tag chip and the
      decorative expand glyph -- not a form-control height/text ladder, so not part of the shared
@@ -144,6 +173,7 @@ export const styles = css`
       var(--lr-combobox-border-color, var(--_lr-combobox-border-color));
     border-radius: var(--lr-combobox-radius, var(--_lr-combobox-radius));
     background: var(--lr-combobox-fill, var(--_lr-combobox-fill));
+    color: var(--lr-combobox-text-color, var(--_lr-combobox-text-color));
     font-size: var(--lr-combobox-font-size, var(--_lr-combobox-font-size));
     cursor: text;
   }

@@ -63,7 +63,10 @@ import {
   type LyraDateRangePreset,
 } from './date-picker.class.js';
 import './date-picker.class.js';
-import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
+import {
+  literalSetConverter,
+  spellcheckFromAttributeConverter as spellcheckConverter,
+} from '../../../internal/converters.js';
 import {
   isImplicitSubmission,
   submitOnEnter,
@@ -135,18 +138,13 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
   toAttribute: normalizeWeekdayFormat,
 };
 
-function normalizeDateInputAppearance(
-  value: unknown
-): Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'> {
-  return value === 'filled' || value === 'filled-outlined' ? value : 'outlined';
-}
-
-const appearanceConverter: ComplexAttributeConverter<
-  Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>
-> = {
-  fromAttribute: normalizeDateInputAppearance,
-  toAttribute: normalizeDateInputAppearance,
-};
+/** The full shared `LyraAppearance` vocabulary, matching `<lr-select>`'s trigger and
+ *  `<lr-combobox>`'s own converter. A value outside this set -- a typo, or any other unsupported
+ *  string -- clamps to the documented `'outlined'` default; see `appearance`'s own doc comment. */
+const APPEARANCE = literalSetConverter<LyraAppearance>(
+  ['accent', 'filled', 'outlined', 'filled-outlined', 'plain'],
+  'outlined'
+);
 
 const placements: ReadonlySet<string> = new Set([
   'top',
@@ -429,8 +427,25 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     },
   };
 
-  @property({ converter: appearanceConverter, reflect: true })
-  appearance: Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'> = 'outlined';
+  private _appearance: LyraAppearance = 'outlined';
+  /**
+   * Visual treatment shared with other Lyra form controls -- the full five-value `LyraAppearance`
+   * vocabulary, matching `<lr-select>`'s trigger and `<lr-combobox>`'s own `appearance`. A raw
+   * attribute/property write outside this set, including a typo, clamps to the `'outlined'`
+   * default rather than silently rendering unstyled.
+   * @default 'outlined'
+   */
+  @property({ converter: APPEARANCE, reflect: true })
+  get appearance(): LyraAppearance {
+    return this._appearance;
+  }
+  set appearance(next: LyraAppearance) {
+    const normalized = APPEARANCE.normalizeReflected(this, 'appearance', next);
+    const old = this._appearance;
+    this._appearance = normalized;
+    if (normalized === old) return;
+    this.requestUpdate('appearance', old);
+  }
   /** Whether the calendar popup is open. Disabled or readonly controls reject direct reopen
    * attempts, including the synchronous fieldset cascade before its callback runs. */
   @property({ type: Boolean, reflect: true })

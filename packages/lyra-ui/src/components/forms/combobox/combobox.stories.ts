@@ -8,6 +8,7 @@ import type {
   LyraComboboxValidator,
   OptionFilter,
 } from "./combobox.js";
+import type { LyraAppearance } from "../../../internal/variants.js";
 import "../color-picker/color-picker.js";
 
 const meta: Meta = {
@@ -227,6 +228,34 @@ export const Narrow: Story = {
       </lr-combobox>
     </div>
   `,
+};
+
+/** `appearance` retunes the trigger surface; `pill` rounds its corners. */
+export const Appearances: Story = {
+  render: () => {
+    const appearances: LyraAppearance[] = [
+      "accent",
+      "filled",
+      "outlined",
+      "filled-outlined",
+      "plain",
+    ];
+    return html`
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+        ${appearances.map(
+          (appearance) => html`
+            <lr-combobox appearance=${appearance} placeholder=${appearance}>
+              <lr-option value="a">Apple</lr-option>
+              <lr-option value="b">Banana</lr-option>
+            </lr-combobox>
+          `,
+        )}
+        <lr-combobox pill placeholder="pill">
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      </div>
+    `;
+  },
 };
 
 export const Sizes: Story = {

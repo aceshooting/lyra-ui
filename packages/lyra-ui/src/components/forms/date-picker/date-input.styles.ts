@@ -19,6 +19,9 @@ export const styles = css`
        has no outline, [part='input'] sets outline: none). No [part] rule out-ranks another. */
     --_lr-date-input-fill: var(--lr-color-surface);
     --_lr-date-input-border-color: var(--lr-color-border);
+    /* Same re-pointing pattern for the text color: only the accent tier below overrides it, so
+       every other appearance keeps the ambient inherited color exactly as before. */
+    --_lr-date-input-text-color: inherit;
     /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
        reaches this row. */
@@ -50,6 +53,29 @@ export const styles = css`
   }
   :host([appearance="filled-outlined"]) {
     --_lr-date-input-fill: var(--lr-color-surface-raised);
+  }
+  /* Ported from lr-select's own [appearance='plain']/[appearance='accent'] trigger rules
+     (select.styles.ts), adapted to this component's private-custom-property-on-:host pattern
+     rather than a [part='input-wrapper'] rule -- see the comment above for why that form is
+     required here. */
+  :host([appearance="plain"]) {
+    --_lr-date-input-border-color: transparent;
+    --_lr-date-input-fill: transparent;
+  }
+  :host([appearance="accent"]) {
+    --_lr-date-input-border-color: transparent;
+    --_lr-date-input-fill: var(--lr-color-brand);
+    --_lr-date-input-text-color: var(--lr-color-on-brand);
+  }
+  /* The quiet-text tokens below are too low-contrast on the loud brand fill, so the placeholder,
+     start/end adornments and action buttons ride the row's own on-brand text color instead -- the
+     same treatment lr-select applies to its own trigger children. */
+  :host([appearance="accent"]) [part="start"],
+  :host([appearance="accent"]) [part="end"],
+  :host([appearance="accent"]) [part="clear-button"],
+  :host([appearance="accent"]) [part="expand-button"],
+  :host([appearance="accent"]) [part="input"]::placeholder {
+    color: inherit;
   }
   [part="form-control-label"] {
     display: block;
@@ -92,6 +118,7 @@ export const styles = css`
       var(--lr-date-input-border-color, var(--_lr-date-input-border-color));
     border-radius: var(--lr-date-input-radius, var(--_lr-date-input-radius));
     background: var(--lr-date-input-fill, var(--_lr-date-input-fill));
+    color: var(--lr-date-input-text-color, var(--_lr-date-input-text-color));
   }
   [part="input-wrapper"]:focus-within {
     border-color: var(

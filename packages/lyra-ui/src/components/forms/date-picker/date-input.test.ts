@@ -2998,7 +2998,13 @@ describe("lr-date-input implicit form submission", () => {
 });
 
 describe("focus indicator per appearance", () => {
-  for (const appearance of ["outlined", "filled", "filled-outlined"] as const) {
+  for (const appearance of [
+    "outlined",
+    "filled",
+    "filled-outlined",
+    "accent",
+    "plain",
+  ] as const) {
     it(`retints the ${appearance} input row's border while focus is inside it (WCAG 2.4.7)`, async () => {
       const el = (await fixture(html`
         <lr-date-input
@@ -3026,6 +3032,91 @@ describe("focus indicator per appearance", () => {
       field.blur();
     });
   }
+});
+
+describe("appearance renders the full shared vocabulary", () => {
+  it("renders accent distinctly from the outlined default", async () => {
+    const outlined = (await fixture(
+      html`<lr-date-input appearance="outlined"></lr-date-input>`
+    )) as LyraDateInput;
+    const accent = (await fixture(
+      html`<lr-date-input appearance="accent"></lr-date-input>`
+    )) as LyraDateInput;
+    await outlined.updateComplete;
+    await accent.updateComplete;
+    expect(accent.appearance).to.equal("accent");
+    expect(accent.getAttribute("appearance")).to.equal("accent");
+    const outlinedWrapper = outlined.shadowRoot!.querySelector<HTMLElement>(
+      '[part="input-wrapper"]'
+    )!;
+    const accentWrapper = accent.shadowRoot!.querySelector<HTMLElement>(
+      '[part="input-wrapper"]'
+    )!;
+    expect(
+      getComputedStyle(accentWrapper).backgroundColor,
+      "accent vs outlined background"
+    ).to.not.equal(getComputedStyle(outlinedWrapper).backgroundColor);
+  });
+
+  it("renders plain distinctly from the outlined default", async () => {
+    const outlined = (await fixture(
+      html`<lr-date-input appearance="outlined"></lr-date-input>`
+    )) as LyraDateInput;
+    const plain = (await fixture(
+      html`<lr-date-input appearance="plain"></lr-date-input>`
+    )) as LyraDateInput;
+    await outlined.updateComplete;
+    await plain.updateComplete;
+    expect(plain.appearance).to.equal("plain");
+    expect(plain.getAttribute("appearance")).to.equal("plain");
+    const outlinedWrapper = outlined.shadowRoot!.querySelector<HTMLElement>(
+      '[part="input-wrapper"]'
+    )!;
+    const plainWrapper = plain.shadowRoot!.querySelector<HTMLElement>(
+      '[part="input-wrapper"]'
+    )!;
+    expect(
+      getComputedStyle(plainWrapper).borderTopColor,
+      "plain vs outlined border"
+    ).to.not.equal(getComputedStyle(outlinedWrapper).borderTopColor);
+  });
+
+  it("clamps a genuinely unknown attribute set at first parse to the default", async () => {
+    const el = (await fixture(
+      html`<lr-date-input appearance="bogus"></lr-date-input>`
+    )) as LyraDateInput;
+    await el.updateComplete;
+    expect(el.appearance).to.equal("outlined");
+    expect(el.getAttribute("appearance")).to.equal("outlined");
+  });
+
+  it("clamps a genuinely unknown attribute written later, repairing the raw attribute", async () => {
+    const el = (await fixture(
+      html`<lr-date-input></lr-date-input>`
+    )) as LyraDateInput;
+    el.setAttribute("appearance", "bogus");
+    await el.updateComplete;
+    expect(el.appearance).to.equal("outlined");
+    expect(el.getAttribute("appearance")).to.equal("outlined");
+  });
+
+  it("keeps every documented value unchanged", async () => {
+    for (const appearance of [
+      "outlined",
+      "filled",
+      "filled-outlined",
+      "accent",
+      "plain",
+    ] as const) {
+      const el = (await fixture(
+        html`<lr-date-input></lr-date-input>`
+      )) as LyraDateInput;
+      el.setAttribute("appearance", appearance);
+      await el.updateComplete;
+      expect(el.appearance).to.equal(appearance);
+      expect(el.getAttribute("appearance")).to.equal(appearance);
+    }
+  });
 });
 
 describe("reviewed date-input parity surface", () => {
