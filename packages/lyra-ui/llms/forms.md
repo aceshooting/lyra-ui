@@ -5954,7 +5954,11 @@ A searchable, keyboard-navigable, form-associated emoji picker. `groups` is full
 — the component ships no emoji data of its own — in the same "zero/optional-peer dependency" spirit
 as `<lr-lite-chart>`/`<lr-heatmap>`; an optional convenience auto-loader fetches a default set on
 connect from the `emoji-picker-element-data` peer, but only when `groups` hasn't already been
-supplied (an explicit empty array still counts as supplied and skips the auto-load).
+supplied (an explicit empty array still counts as supplied and skips the auto-load). The auto-loader
+picks the peer's locale directory closest to `effectiveLocale` (an exact match, then the base
+language, else English), so each emoji's name — and therefore both its accessible name and the
+search index, not just the group headings — follows the page's locale; a later locale change
+reloads it. This only applies to the built-in dataset, never to a consumer-supplied `groups`.
 When the filtered set reaches 200 items, the grid automatically windows its visible rows while
 preserving the full option count through `aria-setsize`/`aria-posinset`.
 

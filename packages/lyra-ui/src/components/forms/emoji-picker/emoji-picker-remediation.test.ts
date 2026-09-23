@@ -258,6 +258,56 @@ it('refreshes reused source contents on groups reassignment while preserving fro
 });
 
 
+it('threads effectiveLocale into the built-in auto-loader and reloads it when locale changes', async () => {
+  const calls: string[] = [];
+  const el = document.createElement('lr-emoji-picker');
+  (el as unknown as { loadGroups: (locale: string) => Promise<EmojiPickerGroup[] | null> }).loadGroups =
+    (locale: string) => {
+      calls.push(locale);
+      return Promise.resolve([
+        { key: '0', label: 'Group', emojis: [{ emoji: '😀', name: `name-${locale}` }] },
+      ]);
+    };
+  mounted.push(el);
+  document.body.append(el);
+  await el.updateComplete;
+  await waitUntil(() => calls.length === 1);
+  expect(calls).to.deep.equal(['en']);
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('[part="emoji"]')?.getAttribute('aria-label') === 'name-en',
+  );
+
+  el.locale = 'fr';
+  await el.updateComplete;
+  await waitUntil(() => calls.length === 2);
+  expect(calls).to.deep.equal(['en', 'fr']);
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('[part="emoji"]')?.getAttribute('aria-label') === 'name-fr',
+  );
+});
+
+it('never reloads the built-in dataset once the consumer explicitly assigns groups', async () => {
+  const calls: string[] = [];
+  const el = document.createElement('lr-emoji-picker');
+  (el as unknown as { loadGroups: (locale: string) => Promise<EmojiPickerGroup[] | null> }).loadGroups =
+    (locale: string) => {
+      calls.push(locale);
+      return Promise.resolve([
+        { key: '0', label: 'Group', emojis: [{ emoji: '😀', name: `name-${locale}` }] },
+      ]);
+    };
+  mounted.push(el);
+  document.body.append(el);
+  await el.updateComplete;
+  await waitUntil(() => calls.length === 1);
+
+  el.groups = samples;
+  el.locale = 'fr';
+  await el.updateComplete;
+  expect(calls).to.deep.equal(['en']);
+  expect(el.groups).to.deep.equal(samples);
+});
+
 it('does not reacquire external-description observers from a queued update after disconnect', async () => {
   const Original = window.MutationObserver;
   const active = new Map<MutationObserver, Node>();

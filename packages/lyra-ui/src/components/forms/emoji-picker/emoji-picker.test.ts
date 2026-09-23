@@ -885,6 +885,21 @@ describe('keyboard navigation', () => {
     expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.equal(true);
   });
 
+  it('anchors the search-clear glyph to the inherited font size instead of the UA button default', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    el.style.fontSize = '40px';
+    await el.updateComplete;
+
+    const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    search.value = 'dog';
+    search.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    const clearButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]');
+    expect(getComputedStyle(clearButton!).fontSize).to.equal('40px');
+  });
+
   it('navigates the grid from the search input via the combobox contract', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;

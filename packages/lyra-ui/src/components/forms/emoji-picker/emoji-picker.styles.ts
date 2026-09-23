@@ -145,6 +145,9 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text-quiet);
     padding: var(--lr-space-xs);
+    /* Anchors the 1em close-icon SVG to the ambient/inherited font size -- without it, a <button>'s
+       UA stylesheet default font size (not the icon scale) wins, undersizing the glyph. */
+    font: inherit;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='search-clear']:not(:disabled):hover {

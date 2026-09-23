@@ -181,7 +181,11 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * the ordinary `[part="empty"]` message, so a skipped install is distinguishable at a glance from a
  * genuine zero-match search or a deliberate `groups = []` opt-out, and announces the same message
  * once through the document's shared assertive live region. Assigning `groups` afterwards clears
- * it.
+ * it. The auto-loader also picks the `emoji-picker-element-data` locale directory closest to
+ * `effectiveLocale` (falling back to English for any locale the peer doesn't ship), so both each
+ * emoji's accessible name and the search index follow the page's locale, not just the group
+ * headings; a later locale change reloads it. This only applies to the built-in dataset -- a
+ * consumer-supplied `groups` is never re-fetched or re-localized by this component.
  *
  * Keyboard model: the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji
  * is tabbable). Arrow keys move the active option (Left/Right follow reading direction and swap
@@ -353,6 +357,14 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private readonly itemSnapshots = new WeakMap<object, EmojiPickerItem>();
   private builtInGroups = new WeakSet<EmojiPickerGroup>();
   private groupsWereSet = false;
+  // Set around the auto-loader's own `this.groups = loaded` assignment below so the setter can
+  // tell "the built-in loader just applied a result" apart from a genuine consumer assignment --
+  // only the latter should ever set `groupsWereSet` and permanently retire the auto-loader.
+  private applyingBuiltInGroups = false;
+  // The resolved `effectiveLocale` the built-in auto-loaded dataset currently reflects (or is
+  // in flight for), so a later locale change can trigger exactly one reload of the built-in data
+  // without re-fetching on every unrelated re-render or reconnect at the same locale.
+  private builtInGroupsLocale?: string;
   /** The third state `groups` alone cannot express: the optional `emoji-picker-element-data` peer
    *  was consulted and did not resolve, as opposed to "not loaded yet" or "loaded, and empty". */
   @state() private peerLoadFailed = false;
@@ -378,7 +390,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       focused.getAttribute('part')?.split(/\s+/).includes('emoji') && Number.isInteger(focusedIndex)
         ? { item: this.focusedGridItem ?? this.flatItems[focusedIndex], index: focusedIndex }
         : undefined;
-    this.groupsWereSet = true;
+    if (!this.applyingBuiltInGroups) this.groupsWereSet = true;
     // A consumer assignment always supersedes a failed auto-load, including a deliberate `[]`
     // opt-out: from here on the empty grid is the consumer's decision, not a missing install.
     this.peerLoadFailed = false;
@@ -424,8 +436,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   /** Injectable loader seam -- overridden directly by tests with a synchronous fake instead of
    *  needing the real `emoji-picker-element-data` package to load in the test browser (mirrors
-   *  `LyraPdfViewer`'s `loadLibrary` field / `LyraQrCode`'s `loadLibrary` field). */
-  private loadGroups: () => Promise<EmojiPickerGroup[] | null> = loadEmojiDataCached;
+   *  `LyraPdfViewer`'s `loadLibrary` field / `LyraQrCode`'s `loadLibrary` field). Receives the
+   *  picker's current `effectiveLocale` so the default (`loadEmojiDataCached`) can load the
+   *  matching locale directory of the optional peer. */
+  private loadGroups: (locale: string) => Promise<EmojiPickerGroup[] | null> = loadEmojiDataCached;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -437,19 +451,32 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // disconnect, so the first delivery here still re-renders if the tokens moved while detached.
     this.observeGeometryProbe();
     this.syncGridObserver();
-    // Only auto-loads when the consumer hasn't already supplied groups directly -- an explicit
-    // `groups` (even an empty array set intentionally) always wins, matching the "consumer-supplied
-    // data takes precedence over any built-in default" convention this library uses elsewhere (e.g.
-    // <lr-lite-chart>'s pointText falling back to a built-in template only when unset).
+    this.loadBuiltInGroups();
+  }
+
+  /** Auto-loads the built-in dataset for the current `effectiveLocale` -- only while the consumer
+   *  hasn't already supplied `groups` directly (an explicit `groups`, even an empty array set
+   *  intentionally, always wins, matching the "consumer-supplied data takes precedence over any
+   *  built-in default" convention this library uses elsewhere, e.g. `<lr-lite-chart>`'s
+   *  `pointText`), and only while it hasn't already loaded (or isn't already loading) that same
+   *  locale, so this is safe to call from both `connectedCallback()` and every `updated()` cycle:
+   *  a later `effectiveLocale` change re-triggers exactly one reload of the built-in data. */
+  private loadBuiltInGroups(): void {
     if (this.groupsWereSet) return;
+    const locale = this.effectiveLocale;
+    if (this.builtInGroupsLocale === locale) return;
+    this.builtInGroupsLocale = locale;
     const ownerDocument = this.ownerDocument;
     const generation = this.ownerRealmGeneration;
-    void this.loadGroups().then((loaded) => {
+    void this.loadGroups(locale).then((loaded) => {
       if (
         this.ownerRealmGeneration !== generation ||
         !this.isConnected ||
         this.ownerDocument !== ownerDocument ||
-        this.groupsWereSet
+        this.groupsWereSet ||
+        // Superseded by a later locale change already tracked under a different key -- discard
+        // this now-stale result rather than flashing an older locale's data back in.
+        this.builtInGroupsLocale !== locale
       ) {
         return;
       }
@@ -464,7 +491,12 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
         this.announcePeerLoadFailure();
         return;
       }
-      this.groups = loaded;
+      this.applyingBuiltInGroups = true;
+      try {
+        this.groups = loaded;
+      } finally {
+        this.applyingBuiltInGroups = false;
+      }
       this.builtInGroups = new WeakSet(this._groups);
     });
   }
@@ -1111,6 +1143,11 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.bindRenderedGeometryProbe();
     this.syncGridObserver();
     this.syncExternalDescription();
+    // Catches a locale change after the first mount -- effectiveLocale can change through the
+    // `locale` property (in `changed`) or an inherited document/ancestor subscription (not), so
+    // this runs unconditionally every cycle; loadBuiltInGroups() itself is a cheap no-op once the
+    // built-in dataset already reflects the current locale.
+    this.loadBuiltInGroups();
     if (!changed.has('queryText') && !changed.has('groups')) {
       this.restorePendingGridFocus();
       return;

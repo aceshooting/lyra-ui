@@ -1,6 +1,28 @@
 import type { EmojiPickerGroup, EmojiPickerItem } from './emoji-types.js';
 
-let cached: Promise<EmojiPickerGroup[] | null> | undefined;
+// The locale directories `emoji-picker-element-data` actually ships -- verified against the
+// installed `emoji-picker-element-data@1.8.0` package tree, each holding its own translated
+// `emojibase/data.json`. Not every BCP-47 tag has its own directory (e.g. no `fr-CA`), hence the
+// base-language fallback in `resolveEmojiDataLocale()` below.
+const SUPPORTED_LOCALE_DIRECTORIES: ReadonlySet<string> = new Set([
+  'bn', 'da', 'de', 'en', 'en-gb', 'es', 'es-mx', 'et', 'fi', 'fr', 'hi', 'hu', 'it', 'ja', 'ko',
+  'lt', 'ms', 'nb', 'nl', 'pl', 'pt', 'ru', 'sv', 'th', 'uk', 'vi', 'zh', 'zh-hant',
+]);
+
+/**
+ * Maps an effective locale tag (e.g. `'fr-CA'`, `'zh-Hant'`, `'pt-BR'`) to the closest
+ * `emoji-picker-element-data` locale directory: an exact match (case-insensitive), then the bare
+ * base language, else `'en'` -- the peer's own default and this loader's original, locale-blind
+ * behavior for anything it doesn't recognize.
+ */
+export function resolveEmojiDataLocale(locale: string): string {
+  const lower = locale.toLowerCase();
+  if (SUPPORTED_LOCALE_DIRECTORIES.has(lower)) return lower;
+  const base = lower.split('-')[0];
+  return base && SUPPORTED_LOCALE_DIRECTORIES.has(base) ? base : 'en';
+}
+
+const cached = new Map<string, Promise<EmojiPickerGroup[] | null>>();
 
 /**
  * Loads the optional peer dependency `emoji-picker-element-data` and adapts its JSON export into
@@ -10,14 +32,19 @@ let cached: Promise<EmojiPickerGroup[] | null> | undefined;
  * `{ default: [...] }` namespace shape (a broken or spoofed peer) — that last case fails closed
  * rather than silently folding into `[]`, which would be indistinguishable from a well-formed peer
  * that legitimately produced zero groups. Mirrors `pdf-loader.ts`'s `loadPdfJsDeps()` exact shape.
- * `importData` is an injectable seam for tests (see `emoji-data-loader.test.ts`).
+ *
+ * `locale` selects which of the peer's shipped locale directories to load, resolved through
+ * `resolveEmojiDataLocale()` (falling back to English for any locale the peer doesn't ship).
+ * `importData` is an injectable seam for tests (see `emoji-data-loader.test.ts`), receiving the
+ * already-resolved locale directory name rather than the raw `locale` argument.
  */
 export async function loadEmojiData(
-  importData: () => Promise<unknown> = () =>
-    import('emoji-picker-element-data/en/emojibase/data.json', { with: { type: 'json' } }),
+  locale = 'en',
+  importData: (resolvedLocale: string) => Promise<unknown> = (resolvedLocale) =>
+    import(`emoji-picker-element-data/${resolvedLocale}/emojibase/data.json`, { with: { type: 'json' } }),
 ): Promise<EmojiPickerGroup[] | null> {
   try {
-    const raw = await importData();
+    const raw = await importData(resolveEmojiDataLocale(locale));
     const adapted = adaptEmojiPickerElementData(raw);
     if (adapted === null) {
       // Neither a bare array nor a `{ default: [...] }` namespace -- a broken or spoofed peer,
@@ -41,15 +68,23 @@ export async function loadEmojiData(
   }
 }
 
-/** Cached per page, mirroring `pdf-loader.ts`'s `loadPdfJs()` single-flight shape. */
-export function loadEmojiDataCached(): Promise<EmojiPickerGroup[] | null> {
-  if (!cached) cached = loadEmojiData();
-  return cached;
+/** Cached per page **and per resolved locale**, mirroring `pdf-loader.ts`'s `loadPdfJs()`
+ *  single-flight shape: a concurrent or repeated call for the same resolved locale shares one
+ *  in-flight/settled promise instead of re-fetching, while a different locale gets its own cache
+ *  slot instead of reusing whichever locale happened to load first. */
+export function loadEmojiDataCached(locale = 'en'): Promise<EmojiPickerGroup[] | null> {
+  const key = resolveEmojiDataLocale(locale);
+  let entry = cached.get(key);
+  if (!entry) {
+    entry = loadEmojiData(key);
+    cached.set(key, entry);
+  }
+  return entry;
 }
 
 /** @internal Test-only cache reset. */
 export function clearEmojiDataCache(): void {
-  cached = undefined;
+  cached.clear();
 }
 
 // Group id -> label, mirroring emojibase's own canonical grouping (verified 2026-07-17 against

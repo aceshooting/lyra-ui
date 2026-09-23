@@ -246,6 +246,23 @@ it("renders a localized, keyboard-reachable clear button once the search field h
   expect(el.shadowRoot!.querySelector('[part="clear-button"]') === null).to.be.true;
 });
 
+it("anchors the clear-button glyph to the inherited font size instead of the UA button default", async () => {
+  const el = (await fixture(html`<lr-command-palette
+    .commands=${[{ commandId: "save", label: "Save" }]}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  el.style.fontSize = "40px";
+  el.openPalette();
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  input.value = "save";
+  input.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  const clearButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]');
+  expect(getComputedStyle(clearButton!).fontSize).to.equal("40px");
+});
+
 it("is accessible while open", async () => {
   const el = (await fixture(
     html`<lr-command-palette
