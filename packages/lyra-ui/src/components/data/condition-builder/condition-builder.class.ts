@@ -360,7 +360,11 @@ function normalizeConditionBuilderValue(value: unknown): ConditionBuilderValue {
  * @csspart operator-select - A row's operator `lr-select`.
  * @csspart value - A row's value control (whichever of `lr-input`/`lr-select`/`lr-date-input`/
  *   `lr-combobox` applies, or an empty placeholder for a unary operator or an incomplete row).
- * @csspart remove-button - A row's remove `lr-icon-button`.
+ * @csspart remove-button - A row's remove `lr-icon-button`. Its hit-area floor comes from the
+ *   shared `--lr-icon-button-*` tokens; to resize it, set `--lr-icon-button-size-scope` (or the
+ *   application-wide `--lr-theme-icon-button-size`) on this element or an ancestor -- NOT
+ *   `--lr-icon-button-size` itself, which every `LyraElement` re-declares on its own `:host` and
+ *   so never reaches this composed child.
  * @csspart add-button - The "Add condition" `lr-button`.
  * @csspart empty - The message shown when there are no fields, or no conditions yet.
  * @status stable

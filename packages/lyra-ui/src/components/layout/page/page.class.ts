@@ -642,7 +642,13 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.requestNavOpen(!this.navOpen);
   }
 
-  /** Number of vertically visible CSS pixels for `element`, clamped to the current viewport. */
+  /** Number of vertically visible CSS pixels for `element`, clamped to the current viewport. A
+   *  deliberate owner-realm safety divergence from Web Awesome 3.11's `wa-page` equivalent: this
+   *  always returns a finite `number` -- `0` for a `null` element, invalid geometry, no
+   *  intersection, or an element in a detached document with no viewport -- where `wa-page`
+   *  returns `null` for a `null` argument and measures detached-document geometry against the
+   *  ambient page viewport. Code migrating from `wa-page` should treat this always-finite result
+   *  as canonical. */
   visiblePixelsInViewport(element: HTMLElement | null): number {
     if (!element) return 0;
     const rect = element.getBoundingClientRect();

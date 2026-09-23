@@ -214,7 +214,10 @@ export interface LyraDialogEventMap {
  *   because the painted surface now sits one shadow boundary deeper than `close-button`. As of
  *   16.0.0 the close button IS an `<lr-icon-button>`, so its background, radius, hover/press mixes,
  *   focus ring and hit-area floor come from `--lr-icon-button-*`; a rule that painted through
- *   `::part(close-button)` moves here or onto the token.
+ *   `::part(close-button)` moves here or onto the token. To resize it, set
+ *   `--lr-icon-button-size-scope` (or the application-wide `--lr-theme-icon-button-size`) on this
+ *   element or an ancestor -- NOT `--lr-icon-button-size` itself, which every `LyraElement`
+ *   re-declares on its own `:host` and so never reaches this composed child.
  * @csspart label - Mapped alias on the visible title.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.

@@ -164,9 +164,12 @@ export interface LyraTooltipEventMap {
  * Open popovers, dropdowns and tooltips reposition when their effective host or inherited text direction changes, preserving open state and lifecycle events. Removing content safely omits tooltip fallback text.
  *
  * @customElement lr-tooltip
- * @slot trigger - Web Awesome shape: the highest-priority interaction/ARIA owner.
- * @slot - Web Awesome shape: tooltip content; Shoelace shape: the trigger when no named trigger
- *   is present.
+ * @slot trigger - The highest-priority interaction/ARIA owner; a Lyra-original addition, mirroring
+ *   `<lr-popover>`'s own `@slot trigger` -- `wa-tooltip` has no trigger slot of its own (its real
+ *   anchor mechanism is the `for` attribute plus the unrelated `trigger` activation-mode
+ *   attribute, both implemented below).
+ * @slot - Web Awesome shape: tooltip content, its only slot; Shoelace shape: the trigger when no
+ *   named trigger is present.
  * @slot content - Shoelace shape: tooltip content when the default slot owns the trigger.
  * @event lr-show - The tooltip is about to open. Cancelable — `preventDefault()` keeps it closed.
  * @event lr-after-show - The tooltip is open and its transition has finished.

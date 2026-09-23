@@ -3744,8 +3744,10 @@ bar/ring either: an over-`total` `segments` array renders as a fully (not over-)
 later segments truncated or squeezed to zero width/arc-length as the budget runs out. `total <= 0`
 (or non-finite) renders zero segments — an empty track/ring — and the announced summary falls back to
 just `"{used} used"` with no `"of {total}"` clause, regardless of what's in `segments`. Ring geometry
-(a 40-radius circle, 12px stroke, centered at 50,50) intentionally matches `lr-gauge`'s own radial
-numbers, so the two circular-meter components in the library share one visual scale.
+(a 40-radius circle centered at 50,50) has its RADIUS/CENTER match `lr-gauge`'s own radial numbers,
+so both components' rings sit on the same circle within their viewBox. The stroke does not match:
+at 12px it is intentionally heavier than `lr-gauge`'s 10px, since tightly-packed multi-tone arcs
+need more width to stay visually distinct than a gauge's single fill arc.
 
 **Known gotchas:**
 

@@ -342,6 +342,18 @@ it("supports host rendering overrides without changing the ordered data model", 
   expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(1);
 });
 
+it("a renderPart override for an interactive part type fully replaces its built-in affordance, per its documented contract", async () => {
+  const el = (await fixture(html`<lr-message-parts
+    .parts=${[parts[8]!]}
+    .renderPart=${(part: MessagePart) =>
+      part.type === "error" ? html`<em>Custom error</em>` : undefined}
+  ></lr-message-parts>`)) as LyraMessageParts;
+  // The built-in `error` renderer would have produced a retry `lr-button` (part="retry") wired to
+  // emit `lr-part-retry`; a defined renderPart return replaces it entirely, so neither exists.
+  expect(el.shadowRoot!.querySelectorAll("em")).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-button")).to.have.lengthOf(0);
+});
+
 it("honors false literals for true-default rendering options", async () => {
   const el = (await fixture(
     html`<lr-message-parts

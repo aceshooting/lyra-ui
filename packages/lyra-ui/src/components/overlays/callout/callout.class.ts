@@ -157,7 +157,10 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  *   (`--lr-icon-button-size`) in both the default panel and the compact `inline` variant. As of
  *   16.0.0 this is a composed `<lr-icon-button>` host, not a native `<button>`: it still owns the
  *   grid placement, but the painted surface moved one shadow boundary deeper -- style it through
- *   `close-button__control` or the `--lr-icon-button-*` tokens.
+ *   `close-button__control` or the `--lr-icon-button-*` tokens. To resize it, set
+ *   `--lr-icon-button-size-scope` (or the application-wide `--lr-theme-icon-button-size`) on this
+ *   element or an ancestor -- NOT `--lr-icon-button-size` itself, which every `LyraElement`
+ *   re-declares on its own `:host` and so never reaches this composed child.
  * @csspart close-button__control - The composed `<lr-icon-button>`'s own native control, forwarded
  *   because the painted surface (background, radius, hover/press fill, focus ring and hit-area
  *   floor) now sits one shadow boundary deeper than `close-button`.

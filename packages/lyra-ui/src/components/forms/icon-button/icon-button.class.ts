@@ -262,7 +262,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   /** Native anchor target. A non-empty target always derives a safe `rel`. */
   @property() target?: string;
   /** Author relationship tokens for the rendered anchor, e.g. `nofollow me license` -- mirrors
-   *  `wa-icon-button`/`sl-icon-button`'s own `rel`, so values a migrating consumer already relies
+   *  `sl-icon-button`'s own `rel`, so values a migrating consumer already relies
    *  on survive a `wa-`/`sl-` -> `lr-` rename instead of being silently dropped. Two rules are
    *  enforced regardless of what an author writes: `opener` is always stripped (the one token that
    *  re-opens the reverse-tabnabbing vector), and `noopener noreferrer` is force-added whenever

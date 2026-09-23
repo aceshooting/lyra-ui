@@ -23,6 +23,18 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+/**
+ * Host override for how one message part renders. Returning `undefined` delegates that part
+ * entirely to the built-in renderer, keeping every built-in affordance intact. Returning any other
+ * value fully REPLACES the built-in rendering for that part -- not just its visual content but
+ * every interactive affordance and event the built-in renderer would otherwise wire up for that
+ * part type: the `error` part's retry button (`lr-part-retry`), a `citation` part's activation
+ * (`lr-citation-select`), and the composed children's own events for `tool-call`
+ * (`<lr-tool-call-chip>`'s `lr-tool-call-chip-select`), `tool-result`/`attachment`
+ * (`<lr-tool-result-view>`/`<lr-attachment-chip>`'s preview surface) and `data`
+ * (`<lr-widget-renderer>`'s `lr-widget-action`/`lr-widget-state-change`). A host overriding an
+ * interactive part type must reimplement whatever of that interaction it still wants.
+ */
 export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 
 /** Rendering mode for text and reasoning message parts. */
@@ -171,7 +183,9 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   })
   showReasoning = true;
 
-  /** Optional host renderer. Returning `undefined` delegates to the built-in renderer. */
+  /** Optional host renderer; see `MessagePartRenderer` for the full contract. Returning `undefined`
+   *  delegates to the built-in renderer -- any other return fully replaces it, including that
+   *  part's own interactive wiring (retry/citation/tool-call/widget events). */
   @property({ attribute: false }) renderPart?: MessagePartRenderer;
 
   /** `0` (the default) renders every part -- unbounded, matching every prior release. A positive

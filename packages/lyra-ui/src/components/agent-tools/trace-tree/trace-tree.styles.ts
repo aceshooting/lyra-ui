@@ -95,13 +95,15 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 
-  /* text-quiet against brand-quiet lands at ~4.25:1, just under the WCAG AA 4.5:1 floor for
-     normal-size text, though it passes against the plain non-active row background. Darkening the
-     active tint would make it worse -- every failing foreground here is dark text -- so raise the
-     foreground to full strength once the row is active, as lr-conversation-item does.
-     --lr-color-text flips with the color scheme, so contrast rises in both.
-     [data-status='pending'] is included because its color *is* --lr-color-text-quiet; the other
-     statuses keep their semantic hue -- see the mix below. */
+  /* text-quiet against brand-quiet lands at ~4.17:1 against the currently shipped default tokens,
+     just under the WCAG AA 4.5:1 floor for normal-size text (recompute from
+     internal/tokens/palette.styles.ts's ramp hexes if retheming -- this ratio moves with every
+     ramp revision, most recently the 2026-08-01 OKLCH rewrite), though it passes against the plain
+     non-active row background. Darkening the active tint would make it worse -- every failing
+     foreground here is dark text -- so raise the foreground to full strength once the row is
+     active, as lr-conversation-item does. --lr-color-text flips with the color scheme, so contrast
+     rises in both. [data-status='pending'] is included because its color *is*
+     --lr-color-text-quiet; the other statuses keep their semantic hue -- see the mix below. */
   [part='row'][data-active]
     :is([part='detail'], [part='duration'], [part='tokens-in'], [part='tokens-out'], [part='cost']),
   [part='row'][data-active] [part='status-text'][data-status='pending'] {
@@ -109,13 +111,16 @@ export const styles = css`
   }
 
   /* The semantic status labels keep their hue on the active row -- hue is the fastest scan signal in
-     a trace list -- but are pulled 25% toward the text color to clear the same AA floor (success
-     4.46 -> 6.18, denied/warning 4.28 -> 5.96 against the default tint). Applied to every tone, not
-     just the two failing at the shipped defaults: retheming one --lr-color-* moves that ratio, so a
-     per-status carve-out would silently re-break. --lr-color-text flips with the scheme, so one
-     declaration darkens in light mode and lightens in dark. Scoped to [part='status-text'] rather
-     than redefining the tokens inside the active row, which would re-point a consumer's own token
-     override and drag [part='bar'] along with it. */
+     a trace list -- but are pulled 25% toward the text color to clear the same AA floor. Against
+     the currently shipped default tokens every tone already clears 4.5:1 unmixed and the mix pushes
+     it a further full point or more above the floor in both color schemes (recompute from
+     internal/tokens/palette.styles.ts's ramp hexes if retheming -- the exact ratio moves with every
+     ramp revision, so no specific number is pinned here). Applied to every tone, not just whichever
+     is nearest the floor at any given palette revision: retheming one --lr-color-* moves that
+     ratio, so a per-status carve-out would silently re-break. --lr-color-text flips with the
+     scheme, so one declaration darkens in light mode and lightens in dark. Scoped to
+     [part='status-text'] rather than redefining the tokens inside the active row, which would
+     re-point a consumer's own token override and drag [part='bar'] along with it. */
   [part='row'][data-active] [part='status-text'][data-status='success'] {
     color: color-mix(
       in srgb,
