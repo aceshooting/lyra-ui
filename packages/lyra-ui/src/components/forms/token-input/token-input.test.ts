@@ -3169,8 +3169,7 @@ describe("readonly", () => {
     await el.updateComplete;
     press(tokenLabel(el, 0), "Enter");
     await el.updateComplete;
-    expect(editor(el), "F2/Enter must not open the editor while readonly").to
-      .equal(null);
+    expect(editor(el) === null, "F2/Enter must not open the editor while readonly").to.be.true;
   });
 
   it("keeps the control focusable, unlike disabled", async () => {

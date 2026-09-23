@@ -3018,7 +3018,7 @@ describe("category option icon", () => {
     const option = el.shadowRoot!.querySelector(
       '[data-key="category"] lr-option'
     ) as HTMLElement;
-    expect(option.querySelector('[slot="start"]')).to.equal(null);
+    expect(option.querySelector('[slot="start"]') === null).to.be.true;
   });
 
   it("renders an option's icon into lr-option's start slot in the single-select branch", async () => {

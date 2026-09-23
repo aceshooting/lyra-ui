@@ -3464,7 +3464,7 @@ describe('catalog entry icon', () => {
     )) as LyraVoicePicker;
     el.open = true;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="option-icon"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="option-icon"]') === null).to.be.true;
   });
 
   it('renders an inert, aria-hidden option-icon before the label for an entry with an icon', async () => {
