@@ -17,6 +17,13 @@ import type { LyraPageRail } from "../page-rail/page-rail.js";
 import type { LyraPdfViewer } from "./pdf-viewer.js";
 import { TEXT_QUOTE_LIMITS } from "../../../internal/text-quote.js";
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
+
+// These fixtures test locale-sensitive search, not missing translations. Supply their UI
+// messages explicitly so strict-console checks do not interrupt an asynchronous render.
+for (const locale of ['el', 'lt', 'zz', 'fr']) {
+  registerLyraLocale(locale, LYRA_DEFAULT_STRINGS);
+}
 
 function response(ok = true): Response {
   return {

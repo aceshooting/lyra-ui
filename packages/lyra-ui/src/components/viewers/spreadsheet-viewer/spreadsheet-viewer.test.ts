@@ -10,6 +10,12 @@ import * as XLSX from 'xlsx';
 import './spreadsheet-viewer.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
+
+// Numeric formatting and case-folding need these locales; their UI text is fixture data.
+for (const locale of ['ar', 'tr']) {
+  registerLyraLocale(locale, LYRA_DEFAULT_STRINGS);
+}
 
 function buffer(workbook: Record<string, unknown[][]>): ArrayBuffer {
   const book = XLSX.utils.book_new();

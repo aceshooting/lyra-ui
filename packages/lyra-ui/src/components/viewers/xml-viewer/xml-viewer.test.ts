@@ -1,10 +1,13 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './xml-viewer.js';
 import type { LyraXmlViewer } from './xml-viewer.js';
-import { registerLyraLocale } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
+
+// Search locale changes use explicit UI messages rather than triggering fallback warnings.
+registerLyraLocale('fr', LYRA_DEFAULT_STRINGS);
 
 const SIMPLE_XML = '<root><item id="1">First</item><item id="2">Second</item></root>';
 const RSS_XML = '<rss><channel><title>Feed</title><item><link href="https://a.test">A</link></item></channel></rss>';
@@ -1180,7 +1183,10 @@ describe('localization coverage', () => {
   });
 
   it('a registered locale supplies xmlViewerLabel without an explicit .strings override', async () => {
-    registerLyraLocale('fr-test-xml-viewer', { xmlViewerLabel: 'Visionneuse XML' });
+    registerLyraLocale('fr-test-xml-viewer', {
+      ...LYRA_DEFAULT_STRINGS,
+      xmlViewerLabel: 'Visionneuse XML',
+    });
     const el = (await fixture(html`<lr-xml-viewer locale="fr-test-xml-viewer"></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse XML');
