@@ -166,6 +166,18 @@ body {
   color: var(--lr-theme-color-brand-fill-loud, #0969da);
 }
 
+/*
+ * Storybook places each heading's permalink icon with a physical `left: -36px`, i.e. in the gutter
+ * at the heading's inline start in LTR. Under `dir="rtl"` that gutter is on the right, and the
+ * physical offset instead pushes the icon past the left edge -- which, unlike in LTR, widens the
+ * scrollable document (406px on a 390px viewport once the wrapper's narrow padding shrank). Mirror
+ * it so the icon stays in the inline-start gutter in both directions.
+ */
+[dir='rtl'] .sbdocs-content span:has(> a[href^='#'][target='_self']) {
+  left: auto;
+  right: -36px;
+}
+
 /* Below this width the TOC would squeeze the content more than it helps. */
 @media (max-width: 1100px) {
   .sbdocs.sbdocs-toc--custom { display: none; }
