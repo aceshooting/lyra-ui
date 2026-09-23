@@ -416,6 +416,24 @@ describe('composedAccessibilityText / composedAccessibilityTextResult', () => {
       }
     });
 
+    it('normalizes bare text visibility while retaining authored ancestor exclusions', async () => {
+      const wrapper = await fixture<HTMLElement>(
+        html`<div style="visibility: hidden"><p>${'Bare label'}</p></div>`
+      );
+      const label = wrapper.querySelector('p')!;
+      const options = { ignoreInheritedVisibility: true };
+      const roots = Array.from(label.childNodes);
+      expect(squashed(composedAccessibilityText(roots, options))).to.equal('Bare label');
+
+      for (const attribute of ['aria-hidden', 'inert', 'hidden']) {
+        wrapper.setAttribute(attribute, 'true');
+        expect(squashed(composedAccessibilityText(roots, options))).to.equal('');
+        wrapper.removeAttribute(attribute);
+      }
+      wrapper.style.display = 'none';
+      expect(squashed(composedAccessibilityText(roots, options))).to.equal('');
+    });
+
     it('still honors a descendant visibility:hidden inside a visible container', async () => {
       const el = await fixture<HTMLElement>(
         html`<div><p>Keep <span style="visibility: hidden">Drop</span></p></div>`
