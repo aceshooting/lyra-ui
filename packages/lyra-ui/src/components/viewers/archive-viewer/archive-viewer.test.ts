@@ -39,6 +39,36 @@ function withDeclaredZipEntryCount(source: ArrayBuffer, count: number): ArrayBuf
   throw new Error('ZIP end-of-central-directory record not found');
 }
 
+// The ZIP format legally permits two central-directory entries to share one filename, but
+// JSZip's own authoring API (`zip.file(name, ...)`) is keyed on that name, so `buildZip()`'s
+// `Record<string, string>` shape cannot construct one directly. Instead, build a ZIP with two
+// distinct, equal-length names, then rewrite every occurrence of the second name's UTF-8 bytes
+// (its local file header AND its central-directory record) to the first name's bytes. An
+// equal-length replacement changes no size/offset field anywhere else in the archive, so this is
+// a pure byte substitution -- the same "manipulate raw central-directory bytes directly" approach
+// `withDeclaredZipEntryCount()` above already uses for a different fixture shape.
+function withDuplicateZipEntryName(source: ArrayBuffer, fromName: string, toName: string): ArrayBuffer {
+  if (fromName.length !== toName.length) {
+    throw new Error('duplicate-name fixture requires equal-length names to preserve ZIP offsets');
+  }
+  const bytes = new Uint8Array(source.slice(0));
+  const from = new TextEncoder().encode(fromName);
+  const to = new TextEncoder().encode(toName);
+  let replaced = 0;
+  for (let i = 0; i <= bytes.length - from.length; i++) {
+    let matches = true;
+    for (let j = 0; j < from.length; j++) {
+      if (bytes[i + j] !== from[j]) { matches = false; break; }
+    }
+    if (!matches) continue;
+    bytes.set(to, i);
+    replaced++;
+    i += from.length - 1;
+  }
+  if (replaced === 0) throw new Error(`entry name "${fromName}" not found in ZIP bytes`);
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
 function stubFetch(buffer: ArrayBuffer, ok = true): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve({ ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(buffer) } as Response)) as typeof window.fetch; return () => { window.fetch = original; }; }
 
 async function listingWithEntries(names: string[]): Promise<{
@@ -170,9 +200,76 @@ describe('lr-archive-viewer', () => {
         matchCountExact: true,
         activeIndex: 0,
       });
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: string };
-      expect(list.activeItemId).to.equal('src/index.js');
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        activeItemId: string;
+        items: readonly { name: string }[];
+      };
+      // The virtual-list row identity is occurrence-disambiguated (name + index), not the bare
+      // name, so a duplicate-named entry elsewhere in the archive can never steal this row's
+      // active/aria-current state -- see the duplicate-filename tests below.
+      const expectedIndex = list.items.findIndex((item) => item.name === 'src/index.js');
+      expect(list.activeItemId).to.equal(`src/index.js\u0000${expectedIndex}`);
       expect(await el.searchNext()).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+  it('follows the true occurrence of a duplicate-named entry through search navigation and aria-current, not the first same-named row', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const buffer = withDuplicateZipEntryName(
+      await buildZip({ 'dup/entry-1.txt': 'first', 'dup/entry-2.txt': 'second' }, false),
+      'dup/entry-2.txt',
+      'dup/entry-1.txt',
+    );
+    const restore = stubFetch(buffer);
+    try {
+      el.src = 'https://example.test/duplicate.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
+        items: { name: string }[];
+        updateComplete: Promise<boolean>;
+        shadowRoot: ShadowRoot;
+      };
+      await waitUntil(() => list.items?.length === 2);
+      // Two distinct central-directory entries collapsed to one shared name -- the reachability
+      // precondition for the whole test.
+      expect(list.items.map((item) => item.name)).to.deep.equal(['dup/entry-1.txt', 'dup/entry-1.txt']);
+
+      expect(await el.search('dup/entry-1.txt')).to.equal(2);
+      expect(await el.searchNext()).to.be.true;
+      await list.updateComplete;
+      await settleVirtualList();
+
+      const rows = Array.from(list.shadowRoot.querySelectorAll<HTMLElement>('[part="row"]'));
+      const activeRows = rows.filter((row) => row.getAttribute('aria-current') === 'true');
+      expect(activeRows.length).to.equal(1);
+      // The active match after one `searchNext()` is the SECOND occurrence (array index 1) --
+      // aria-current must land there, not on the first same-named row (index 0).
+      expect(activeRows[0]?.getAttribute('data-row-index')).to.equal('1');
+    } finally {
+      restore();
+    }
+  });
+  it('resolves a fragment anchor for a duplicate-named entry to its first central-directory occurrence', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const buffer = withDuplicateZipEntryName(
+      await buildZip({ 'dup/entry-1.txt': 'first', 'dup/entry-2.txt': 'second' }, false),
+      'dup/entry-2.txt',
+      'dup/entry-1.txt',
+    );
+    const restore = stubFetch(buffer);
+    try {
+      el.src = 'https://example.test/duplicate.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
+        items: { name: string }[];
+        shadowRoot: ShadowRoot;
+      };
+      await waitUntil(() => list.items?.length === 2);
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: 'dup/entry-1.txt' })).to.be.true;
+      const target = Array.from(list.shadowRoot.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
+        .find((node) => node.textContent === 'dup/entry-1.txt')!;
+      expect(target.closest('[data-row-index]')?.getAttribute('data-row-index')).to.equal('0');
     } finally {
       restore();
     }

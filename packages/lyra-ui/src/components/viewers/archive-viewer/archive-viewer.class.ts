@@ -84,7 +84,13 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  * header bounds and supported compression methods, and never inflates entry bodies.
  * Fragment anchors use the exact ZIP entry path as their `id`; rendered rows do not expose that
  * path as a DOM `id`, so the viewer resolves entry metadata before mounting and scrolling the
- * matching virtual row. Text-quote anchors resolve against each complete entry path. Text
+ * matching virtual row. A ZIP central directory may legally repeat an entry path across multiple
+ * entries; because a fragment id names only the path, resolution always targets that path's
+ * first central-directory occurrence -- a later duplicate is not independently addressable
+ * through the fragment/anchor API. In-component search treats duplicate-named entries as
+ * distinct matches and correctly follows the true active occurrence (including its virtualized
+ * `aria-current` row), since each match is tracked by object identity and row position rather
+ * than by name alone. Text-quote anchors resolve against each complete entry path. Text
  * selections and painted highlights are likewise scoped to entry paths in the nested virtual list.
  *
  * @customElement lr-archive-viewer
@@ -215,7 +221,17 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   private archiveSelectionCleanup?: () => void;
   private styledVirtualListRoot: ShadowRoot | null = null;
   private archiveNestedUpdatePending = false;
-  private readonly archiveEntryKey = (item: unknown): string => (item as ArchiveEntry).name;
+  // A ZIP central directory may legally repeat a filename across two distinct entries (the
+  // component's own zip-resource-guard.ts performs no name-uniqueness check). The bare name alone
+  // is therefore not a safe <lr-virtual-list> row identity: two rows sharing one `keyFunction`
+  // result would collapse to the same `activeItemId`/`aria-current` target. Appending the row's
+  // own array index -- delimited by U+0000, which zip-resource-guard.ts already rejects from
+  // every loaded entry name, so it can never appear inside `name` itself -- makes the key
+  // occurrence-safe without touching the public fragment-anchor id syntax, which still addresses
+  // entries by bare path alone (see applyAnchor()'s class-level JSDoc note on duplicate names).
+  private readonly archiveEntryKey = (item: unknown, index: number): string => (
+    `${(item as ArchiveEntry).name}\u0000${index}`
+  );
   private readonly announcements = new ViewerAnnouncementController(this);
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -283,6 +299,12 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     return this.archiveVirtualList()?.shadowRoot?.querySelector('[part="spacer"]') ?? null;
   }
 
+  /** Resolves a `fragment` anchor's `id` against the exact ZIP entry path (see the class-level
+   *  JSDoc) via `Array.prototype.findIndex`, so a duplicate-named entry's `id` always resolves to
+   *  its first central-directory occurrence -- the same first-occurrence precedent as
+   *  `document.getElementById()`/`:target` for a duplicated DOM `id`. A `text-quote` anchor is
+   *  unaffected: it resolves by quote content, not by name, so it can reach any occurrence whose
+   *  rendered text actually contains the quote. */
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (this.fetchState.kind !== 'loaded') return false;
     // Captured before any await so the post-wait checks below can tell a completed jump apart from
@@ -541,9 +563,20 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     if (index >= 0) list?.scrollToIndex(index, { behavior: 'auto' });
   }
 
+  /** The active search match's row identity, keyed the same occurrence-safe way as
+   *  `archiveEntryKey` so it addresses the true active occurrence -- not a duplicate-named
+   *  entry's first occurrence -- for `<lr-virtual-list>`'s `activeItemId`/`aria-current`. */
+  private activeArchiveMatchKey(): string {
+    if (this.fetchState.kind !== 'loaded') return '';
+    const match = this.archiveSearchMatches[this.archiveSearchActiveIndex];
+    if (!match) return '';
+    const index = this.fetchState.entries.indexOf(match);
+    return index >= 0 ? this.archiveEntryKey(match, index) : '';
+  }
+
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeItemId=${this.archiveSearchMatches[this.archiveSearchActiveIndex]?.name ?? ''} @lr-visible-range-change=${this.stopVirtualListEvent} @lr-virtual-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
+      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeItemId=${this.activeArchiveMatchKey()} @lr-visible-range-change=${this.stopVirtualListEvent} @lr-virtual-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;

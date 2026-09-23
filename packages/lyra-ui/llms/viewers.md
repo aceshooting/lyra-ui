@@ -715,7 +715,14 @@ complete entry path; both forms first mount the absolute virtualized row and onl
 shared DOM-level anchor resolution. Rendered rows intentionally do not expose entry paths as DOM
 ids; the fragment mapping is resolved against archive metadata. A jump whose archive is replaced
 by a concurrent `src` reassignment mid-flight, or whose row cannot be located after the wait,
-reports `found: false` rather than a phantom success.
+reports `found: false` rather than a phantom success. A ZIP central directory may legally repeat
+an entry path across multiple entries; since a fragment id names only the path, it always
+resolves to that path's first central-directory occurrence (the same first-match precedent as
+`document.getElementById()`/`:target` for a duplicated DOM id) — a later duplicate is not
+independently addressable through the fragment/anchor API. `search()`/`searchNext()`/
+`searchPrevious()` are unaffected: they track each occurrence by its true row position, so
+navigating search matches (and the resulting active-row highlight) correctly reaches every
+duplicate-named entry, not just the first.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
