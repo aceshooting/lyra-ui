@@ -15,6 +15,7 @@ import {
   type DropSessionState,
 } from '../../../internal/drop-session-controller.js';
 import { matchesAccept } from '../file-input/accept.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -101,9 +102,11 @@ export interface LyraDropZoneEventMap {
  * @cssprop [--lr-drop-zone-overlay-bg=color-mix(in srgb, var(--lr-color-brand) 8%, transparent)] -
  *   Fill of `[part="overlay"]` in that same neutral drag state.
  * @cssprop [--lr-drop-zone-overlay-font-size=var(--lr-font-size-md-sm)] - Overlay instructional
- * text size.
+ * text size. Retuned per `size` tier; the documented default is the `m`/`medium` tier.
  * @cssprop [--lr-drop-zone-overlay-icon-size=var(--lr-font-size-xl)] - `[part="overlay-icon"]`
- * glyph size.
+ * glyph size. Retuned per `size` tier.
+ * @cssprop [--lr-drop-zone-overlay-padding=var(--lr-space-l)] - `[part="overlay"]` padding.
+ * Retuned per `size` tier; the documented default is the `m`/`medium` tier.
  * @cssprop [--lr-drop-zone-overlay-gap=var(--lr-space-xs)] - Gap between the overlay icon and text.
  * @cssprop [--lr-drop-zone-accept-border-color=var(--lr-color-success)] - Border color of
  * `[part="overlay"][data-drag-state="accept"]`.
@@ -177,6 +180,10 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   /** Externally held byte total added to the running size `maxTotalSize` evaluates against --
    *  identical contract to `lr-file-input`'s `heldTotalSize`. */
   @property({ type: Number, attribute: 'held-total-size' }) heldTotalSize = 0;
+  /** Density tier for the overlay's padding, icon and instructional text -- identical contract and
+   *  scale to `lr-file-input`'s own `size`, so a compact drop-zone can match a neighboring compact
+   *  `lr-file-input` in the same dense layout. */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   @state() private dragState: DropSessionState = 'default';
   @state() private rejectedFiles: readonly LyraDropZoneRejectedFile[] = Object.freeze([]);

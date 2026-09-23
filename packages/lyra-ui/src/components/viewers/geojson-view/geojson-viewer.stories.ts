@@ -36,3 +36,12 @@ export const Empty: Story = { render: () => html`<lr-geojson-viewer></lr-geojson
 export const Narrow320: Story = {
   render: () => html`<div style="inline-size:320px;max-inline-size:100%"><lr-geojson-viewer src=${narrowSrc} name="International analytical-engine research observation zones.geojson"></lr-geojson-viewer></div>`,
 };
+
+export const MaxHeight: Story = {
+  render: () => html`<lr-geojson-viewer
+    style="max-inline-size: 28rem;"
+    max-height="14rem"
+    src=${src}
+    name="zones.geojson"
+  ></lr-geojson-viewer>`,
+};

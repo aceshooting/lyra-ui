@@ -409,11 +409,22 @@ describe('missing maplibre-gl peer', () => {
     el.addEventListener('lr-search-change', () =>
       leaked.push('lr-search-change')
     );
+    el.addEventListener('lr-error', () => leaked.push('lr-error'));
+    el.addEventListener('lr-copy-error', () => leaked.push('lr-copy-error'));
     child.dispatchEvent(
       new CustomEvent('lr-copy', { bubbles: true, composed: true })
     );
     child.dispatchEvent(
       new CustomEvent('lr-search-change', { bubbles: true, composed: true })
+    );
+    // The fallback lr-json-viewer's own clipboard-failure events (lr-error/lr-copy-error) are
+    // undocumented on lr-geojson-viewer and must be contained the same way lr-copy/lr-search-change
+    // are, even though the copy button is currently unreachable (copyable defaults to false).
+    child.dispatchEvent(
+      new CustomEvent('lr-error', { bubbles: true, composed: true })
+    );
+    child.dispatchEvent(
+      new CustomEvent('lr-copy-error', { bubbles: true, composed: true })
     );
     expect(leaked).to.deep.equal([]);
   });
@@ -729,6 +740,68 @@ describe('aria-label forwarding', () => {
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
     ).to.equal('region');
+  });
+});
+
+describe('max-height', () => {
+  it('applies no inline max-height custom property when unset (default)', async () => {
+    const el = (await fixture(
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
+    expect(
+      (
+        el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+      ).style.getPropertyValue('--lr-geojson-viewer-max-height')
+    ).to.equal('');
+  });
+
+  it('applies max-height as a custom property on the base part', async () => {
+    const el = (await fixture(
+      html`<lr-geojson-view max-height="20rem"></lr-geojson-view>`
+    )) as LyraGeojsonView;
+    expect(
+      (
+        el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+      ).style.getPropertyValue('--lr-geojson-viewer-max-height')
+    ).to.equal('20rem');
+  });
+
+  it('caps the base part in the loaded map branch too', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = (await fixture(
+      html`<lr-geojson-view
+        max-height="20rem"
+        src=${GEOJSON_URL}
+      ></lr-geojson-view>`
+    )) as LyraGeojsonView;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-map') !== null,
+      'map branch never rendered',
+      { timeout: 2000 }
+    );
+    expect(
+      (
+        el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+      ).style.getPropertyValue('--lr-geojson-viewer-max-height')
+    ).to.equal('20rem');
+  });
+
+  it('validates maxHeight before assigning the base custom property', async () => {
+    const el = (await fixture(
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
+    el.maxHeight = '10rem;position:fixed';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.position).to.equal('');
+    expect(
+      base.style.getPropertyValue('--lr-geojson-viewer-max-height')
+    ).to.equal('');
+    el.maxHeight = 'calc(10rem + 2px)';
+    await el.updateComplete;
+    expect(
+      base.style.getPropertyValue('--lr-geojson-viewer-max-height')
+    ).to.equal('calc(10rem + 2px)');
   });
 });
 

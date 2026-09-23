@@ -1102,6 +1102,9 @@ reimplemented.
   behavior exactly, and a negative, `NaN`, or `Infinity` override is normalized to `0` via
   `finiteCount` rather than corrupting every later comparison.
 - `readonly dragging: boolean` — `true` during an active drag session
+- `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
+  instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
+  can match a neighboring compact `lr-file-input` in the same dense layout.
 
 **Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
 `rejected` arrays and frozen rejected-file records, plus `remainingFiles`/`remainingTotalSize`
@@ -1128,8 +1131,9 @@ while one exists).
 `--lr-drop-zone-overlay-border-color` (default `var(--lr-color-brand)`, the dashed overlay border in
 its neutral drag state, before an accept/reject verdict) and `--lr-drop-zone-overlay-bg` (default
 `color-mix(in srgb, var(--lr-color-brand) 8%, transparent)`, that same neutral state's fill),
-`--lr-drop-zone-overlay-font-size` (default `var(--lr-font-size-md-sm)`),
-`--lr-drop-zone-overlay-icon-size` (default `var(--lr-font-size-xl)`),
+`--lr-drop-zone-overlay-font-size` (default `var(--lr-font-size-md-sm)`, retuned per `size` tier),
+`--lr-drop-zone-overlay-icon-size` (default `var(--lr-font-size-xl)`, retuned per `size` tier),
+`--lr-drop-zone-overlay-padding` (default `var(--lr-space-l)`, retuned per `size` tier),
 `--lr-drop-zone-overlay-gap` (default `var(--lr-space-xs)`), and the drag accept/reject highlight —
 `--lr-drop-zone-accept-border-color`/`--lr-drop-zone-accept-bg` (defaults `var(--lr-color-success)`/
 `color-mix(in srgb, var(--lr-color-success) 12%, transparent)`) and

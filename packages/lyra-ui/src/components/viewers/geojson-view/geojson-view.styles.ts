@@ -7,7 +7,11 @@ export const styles = css`
   }
 
   [part='base'] {
+    display: block;
     min-inline-size: 0;
+    max-block-size: var(--lr-geojson-viewer-max-height, none);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* The danger tone every sibling document viewer gives its own failure text (lr-docx-viewer,

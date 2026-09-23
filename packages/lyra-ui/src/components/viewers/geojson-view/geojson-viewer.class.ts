@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   TextViewerTarget,
@@ -16,6 +17,7 @@ import {
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { loadMaplibre } from '../../media/map/map-loader.js';
 import {
@@ -489,6 +491,9 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  *   document-level assertive region.
  * @csspart spinner - The decorative loading placeholder and its ordinary visually-hidden label;
  *   transitions announce through the shared document-level polite region.
+ * @cssprop [--lr-geojson-viewer-max-height=none] - Maximum block size of `[part="base"]`, covering
+ *   the loaded map, the serialized metadata, and the missing-peer fallback alike. Also settable via
+ *   the `maxHeight` property.
  * @status stable
  * @since 9.0.0
  */
@@ -518,6 +523,8 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   /** Accessible-name fallback for the current region owner: the root in non-map states, or the
    * loaded map canvas when the optional peer is available. */
   @property() name = '';
+  /** A CSS `max-height` capping `[part="base"]`; invalid values are ignored. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shared search/anchor surface for the ordinary-DOM serialized feature metadata and status
    * text, independent of whether the optional map peer is available. */
   override async search(query: string): Promise<number> {
@@ -743,6 +750,8 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
               collapsed-depth="2"
               @lr-copy=${this.stopChildEvent}
               @lr-search-change=${this.stopChildEvent}
+              @lr-error=${this.stopChildEvent}
+              @lr-copy-error=${this.stopChildEvent}
             ></lr-json-viewer>
           `;
         }
@@ -785,9 +794,13 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       this.loadState.kind === 'loaded' &&
       this.loadState.peerAvailable &&
       this.mapReady;
+    const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`<div
       part="base"
       role=${mapOwnsLandmark ? nothing : 'region'}
+      style=${maxHeight
+        ? styleMap({ '--lr-geojson-viewer-max-height': maxHeight })
+        : nothing}
       aria-label=${mapOwnsLandmark ? nothing : this.effectiveLabel}
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
     >

@@ -305,3 +305,54 @@ it('is accessible with the visible rejection region populated', async () => {
   expect(rejection!.textContent).to.include('bad.txt');
   await expect(el).to.be.accessible();
 });
+
+const overlayChrome = (el: LyraDropZone) => {
+  const overlay = el.shadowRoot!.querySelector('[part="overlay"]') as HTMLElement;
+  const s = getComputedStyle(overlay);
+  return { paddingTop: s.paddingTop, fontSize: s.fontSize };
+};
+
+it('defaults to size="m", matching lr-file-input\'s own default tier', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone><div>region</div></lr-drop-zone>`);
+  expect(el.size).to.equal('m');
+  expect(el.hasAttribute('size')).to.equal(true);
+  dragEnterWith(base(el), [makeFile('a.txt')]);
+  await el.updateComplete;
+  const chrome = overlayChrome(el);
+  expect(chrome.paddingTop).to.equal('16px'); // --lr-space-l, unchanged from the pre-size-property default
+  expect(chrome.fontSize).to.equal('14px'); // --lr-font-size-md-sm, unchanged from the pre-size-property default
+});
+
+it('shrinks the overlay padding and font under size="s", matching lr-file-input\'s scale', async () => {
+  const el = await fixture<LyraDropZone>(
+    html`<lr-drop-zone size="s"><div>region</div></lr-drop-zone>`
+  );
+  dragEnterWith(base(el), [makeFile('a.txt')]);
+  await el.updateComplete;
+  const chrome = overlayChrome(el);
+  expect(chrome.paddingTop).to.equal('12px'); // --lr-space-m
+  expect(chrome.fontSize).to.equal('13px'); // --lr-font-size-sm
+});
+
+it('grows the overlay padding and font under size="l"', async () => {
+  const el = await fixture<LyraDropZone>(
+    html`<lr-drop-zone size="l"><div>region</div></lr-drop-zone>`
+  );
+  dragEnterWith(base(el), [makeFile('a.txt')]);
+  await el.updateComplete;
+  const chrome = overlayChrome(el);
+  expect(chrome.paddingTop).to.equal('32px'); // --lr-space-2xl
+  expect(chrome.fontSize).to.equal('18px'); // --lr-font-size-lg
+});
+
+it('lets a public --lr-drop-zone-overlay-font-size/-icon-size override win over the size tier', async () => {
+  const el = await fixture<LyraDropZone>(
+    html`<lr-drop-zone
+      size="s"
+      style="--lr-drop-zone-overlay-font-size: 22px"
+    ><div>region</div></lr-drop-zone>`
+  );
+  dragEnterWith(base(el), [makeFile('a.txt')]);
+  await el.updateComplete;
+  expect(overlayChrome(el).fontSize).to.equal('22px');
+});
