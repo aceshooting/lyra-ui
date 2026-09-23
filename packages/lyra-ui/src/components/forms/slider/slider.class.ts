@@ -804,11 +804,16 @@ export class LyraSlider extends LyraSliderBase {
     if (!this._minValueDirty) this._minValue = this.clampValue(this._defaultMinValue);
     if (!this._maxValueDirty) this._maxValue = this.clampValue(this._defaultMaxValue);
     this.sanitizeHandles();
-    const slots = Array.from(this.children ?? [], (child) => child.getAttribute('slot'));
-    this.hasHintSlot = slots.some((slot) => slot === 'hint' || slot === 'help-text');
-    this.hasErrorSlot = slots.includes('error');
-    this.hasLabelSlot = slots.includes('label');
-    this.hasReferenceSlot = slots.includes('reference');
+    if (this.hasUpdated) {
+      // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
+      this.syncSupportSlotFlags();
+    } else {
+      // Browser-only mounts still seed before their first paint. During hydration the base
+      // helper defers this browser-only light-DOM sample until the server render (which is
+      // handed no children at all) has been reproduced, so the hydrating client's first render
+      // matches the server's markup instead of tearing it down.
+      this.seedFirstRenderState(() => this.syncSupportSlotFlags());
+    }
     this.syncFormValue();
     this.updateValidity();
     this.syncInteractionStates();
@@ -1542,6 +1547,17 @@ export class LyraSlider extends LyraSliderBase {
     if (slot.name === 'label') this.hasLabelSlot = this.slotsHaveContent(['label']);
     if (slot.name === 'reference') this.hasReferenceSlot = this.slotsHaveContent(['reference']);
   };
+
+  /** The one-time connect-time light-DOM sample `connectedCallback()` seeds (directly on a
+   *  reconnect, deferred through `seedFirstRenderState()` on a hydrating first connect); ongoing
+   *  changes are handled by {@link onSlotChange}. */
+  private syncSupportSlotFlags(): void {
+    const slots = Array.from(this.children ?? [], (child) => child.getAttribute('slot'));
+    this.hasHintSlot = slots.some((slot) => slot === 'hint' || slot === 'help-text');
+    this.hasErrorSlot = slots.includes('error');
+    this.hasLabelSlot = slots.includes('label');
+    this.hasReferenceSlot = slots.includes('reference');
+  }
 
   private slotsHaveContent(names: readonly string[]): boolean {
     return names.some((name) => {

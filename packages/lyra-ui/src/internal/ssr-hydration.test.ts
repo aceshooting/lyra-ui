@@ -6,7 +6,16 @@ import '../components/conversation/chat-composer/chat-composer.js';
 import '../components/conversation/thread-list/thread-list.js';
 import '../components/conversation/usage-badge/usage-badge.js';
 import '../components/data/tree/tree-item.js';
+import '../components/forms/button/button.js';
+import '../components/forms/checkbox-group/checkbox-group.js';
+import '../components/forms/code-editor/code-editor.js';
 import '../components/forms/color-picker/color-picker.js';
+import '../components/forms/locale-picker/locale-picker.js';
+import '../components/forms/input/time-input.js';
+import '../components/forms/phone-input/phone-input.js';
+import '../components/forms/radio/radio-group.js';
+import '../components/forms/slider/slider.js';
+import '../components/forms/token-input/token-input.js';
 import '../components/media/avatar/avatar.js';
 import '../components/overlays/kbd/kbd.js';
 import '../components/utility/icon/icon.js';
@@ -191,6 +200,123 @@ it('renders lr-chat-composer without adornment slots first and adopts them after
     () => !el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden'),
   );
   expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-button start adornment collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-button>${SERVER_SHADOW}<span slot="start">S</span>Save</lr-button>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part~="start"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part~="start"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part~="start"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-checkbox-group hint collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-checkbox-group name="topics">${SERVER_SHADOW}<span slot="hint">Pick one</span></lr-checkbox-group>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-radio-group hint collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-radio-group>${SERVER_SHADOW}<span slot="hint">Pick one</span></lr-radio-group>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part~="hint"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part~="hint"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part~="hint"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-slider hint collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-slider>${SERVER_SHADOW}<span slot="hint">Range</span></lr-slider>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part~="hint"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part~="hint"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part~="hint"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-time-input start adornment collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-time-input>${SERVER_SHADOW}<span slot="start">S</span></lr-time-input>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-locale-picker hint collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-locale-picker>${SERVER_SHADOW}<span slot="hint">Pick a locale</span></lr-locale-picker>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-phone-input country-prefix collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-phone-input>${SERVER_SHADOW}<span slot="country-prefix">+1</span></lr-phone-input>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part="country-prefix"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part="country-prefix"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part="country-prefix"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-token-input start adornment collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-token-input>${SERVER_SHADOW}<span slot="start">S</span></lr-token-input>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.false;
+});
+
+it('renders lr-code-editor hint collapsed first and reveals it after hydration', async () => {
+  const el = await mountServerRendered(
+    `<lr-code-editor>${SERVER_SHADOW}<span slot="hint">Type code</span></lr-code-editor>`,
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden')).to.be.true;
+
+  await waitUntil(
+    () => !el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden'),
+  );
+  expect(el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden')).to.be.false;
 });
 
 it('keeps lr-icon custom-content slot outside the svg so it survives HTML parsing', async () => {

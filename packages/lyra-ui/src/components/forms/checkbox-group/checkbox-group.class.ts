@@ -576,10 +576,14 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     return Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === name);
   }
 
-  private onSlotChange = (): void => {
+  private syncSupportSlotFlags(): void {
     this.hasLabelSlot = this.hasDirectSupportSlot('label');
     this.hasHintSlot = this.hasDirectSupportSlot('hint');
     this.hasErrorSlot = this.hasDirectSupportSlot('error');
+  }
+
+  private onSlotChange = (): void => {
+    this.syncSupportSlotFlags();
     this.reconcileChildControllers();
     if (!this.applyPendingRestore() && !this.applyPendingValues()) this.sync();
     this.propagateDisabled();
@@ -640,7 +644,21 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     });
     // Initialize light-DOM-derived state before the first render. Doing this in firstUpdated()
     // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
-    this.onSlotChange();
+    if (this.hasUpdated) {
+      // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
+      this.onSlotChange();
+    } else {
+      // Browser-only mounts still seed before their first paint. During hydration the base
+      // helper defers only the light-DOM slot-presence flags until the server render (which is
+      // handed no children at all) has been reproduced, so the hydrating client's first render
+      // matches the server's markup instead of tearing it down. The rest of onSlotChange()'s
+      // work is not render-gating state, so it still runs synchronously either way.
+      this.seedFirstRenderState(() => this.syncSupportSlotFlags());
+      this.reconcileChildControllers();
+      if (!this.applyPendingRestore() && !this.applyPendingValues()) this.sync();
+      this.propagateDisabled();
+      this.propagateSize();
+    }
     this.armChildObserver();
     if (this.hasUpdated) {
       this.syncRequiredDescription();

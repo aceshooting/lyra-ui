@@ -562,9 +562,15 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       this.queueActiveScroll();
     }
     if (!this.hasUpdated) {
-      this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
-      this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
+      // Browser-only mounts still seed before their first paint. During hydration the base
+      // helper defers this browser-only light-DOM sample until the server render (which is
+      // handed no children at all) has been reproduced, so the hydrating client's first render
+      // matches the server's markup instead of tearing it down.
+      this.seedFirstRenderState(() => {
+        this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
+        this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
+        this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
+      });
     }
     if (this.open) this.listboxHidden = false;
   }

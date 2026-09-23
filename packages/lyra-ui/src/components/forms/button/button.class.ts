@@ -892,8 +892,14 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     // frame until the first `slotchange` fires. Refreshed thereafter by `onStartSlotChange`/
     // `onEndSlotChange`.
     if (!this.hasUpdated) {
-      this.syncAdornmentSlots();
-      this.isIconButton = this.hasIconOnlyDefaultContent();
+      // Browser-only mounts still seed before their first paint. During hydration the base
+      // helper defers this browser-only light-DOM sample until the server render (which is
+      // handed no children at all) has been reproduced, so the hydrating client's first render
+      // matches the server's markup instead of tearing it down.
+      this.seedFirstRenderState(() => {
+        this.syncAdornmentSlots();
+        this.isIconButton = this.hasIconOnlyDefaultContent();
+      });
     }
   }
 

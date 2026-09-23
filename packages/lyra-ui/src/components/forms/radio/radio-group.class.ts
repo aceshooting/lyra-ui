@@ -348,8 +348,17 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
-    this.syncSupportSlots();
+    if (this.hasUpdated) {
+      this.syncExternalDescription();
+      // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
+      this.syncSupportSlots();
+    } else {
+      // Browser-only mounts still seed before their first paint. During hydration the base
+      // helper defers this browser-only light-DOM sample until the server render (which is
+      // handed no children at all) has been reproduced, so the hydrating client's first render
+      // matches the server's markup instead of tearing it down.
+      this.seedFirstRenderState(() => this.syncSupportSlots());
+    }
     this.syncRadios();
     this.armMembershipObserver();
     this.armRunResizeObserver();

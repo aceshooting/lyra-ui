@@ -634,15 +634,21 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'label',
-      );
-      this.hasHintSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'hint',
-      );
-      this.hasErrorSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'error',
-      );
+      // Browser-only mounts still seed before their first paint. During hydration the base
+      // helper defers this browser-only light-DOM sample until the server render (which is
+      // handed no children at all) has been reproduced, so the hydrating client's first render
+      // matches the server's markup instead of tearing it down.
+      this.seedFirstRenderState(() => {
+        this.hasLabelSlot = Array.from(this.children ?? []).some(
+          (el) => el.getAttribute('slot') === 'label',
+        );
+        this.hasHintSlot = Array.from(this.children ?? []).some(
+          (el) => el.getAttribute('slot') === 'hint',
+        );
+        this.hasErrorSlot = Array.from(this.children ?? []).some(
+          (el) => el.getAttribute('slot') === 'error',
+        );
+      });
     }
   }
   protected override updated(changed: PropertyValues): void {

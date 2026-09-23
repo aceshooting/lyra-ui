@@ -1253,13 +1253,19 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      const slots = Array.from(this.children ?? []).map((element) => element.getAttribute('slot'));
-      this.hasLabelSlot = slots.includes('label');
-      this.hasHintSlot = slots.includes('hint');
-      this.hasErrorSlot = slots.includes('error');
-      this.hasStartSlot = slots.includes('start');
-      this.hasEndSlot = slots.includes('end');
-      this.hasFooterSlot = slots.includes('footer');
+      // Browser-only mounts still seed before their first paint. During hydration the base
+      // helper defers this browser-only light-DOM sample until the server render (which is
+      // handed no children at all) has been reproduced, so the hydrating client's first render
+      // matches the server's markup instead of tearing it down.
+      this.seedFirstRenderState(() => {
+        const slots = Array.from(this.children ?? []).map((element) => element.getAttribute('slot'));
+        this.hasLabelSlot = slots.includes('label');
+        this.hasHintSlot = slots.includes('hint');
+        this.hasErrorSlot = slots.includes('error');
+        this.hasStartSlot = slots.includes('start');
+        this.hasEndSlot = slots.includes('end');
+        this.hasFooterSlot = slots.includes('footer');
+      });
     }
     if (this.open && this.effectiveDisabled) this.forceClose(false);
     const order = this.segmentOrder;
