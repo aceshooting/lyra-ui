@@ -6236,6 +6236,8 @@ state exposed as `errors.base`, rather than being attributed to one rubric key. 
 clearing it hides that region unless the `error` slot supplies other content.
 `click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
 so the host behaves like a single control under both a `<label>`-driven and a programmatic click.
+`focus(options?)` moves focus to that same active field, matching `click()`'s target; this is also
+what lets the native `autofocus` attribute reach the rubric.
 
 **CSS parts:** `base` (the outer `role="group"` wrapper), `form-control` (aggregate chrome wrapper),
 `aggregate-label` / `form-control-label`, `fields` / `form-control-input`, `aggregate-hint` /

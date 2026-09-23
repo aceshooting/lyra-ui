@@ -73,7 +73,9 @@ export function registerFormControlLabelSupport(
  */
 interface KnownUnobservedAttributeHost {
   knownUnobservedAttributes: readonly string[];
-}import {
+}
+
+import {
   observeInheritedContext,
   beginInheritedContextUpdate,
   finishInheritedContextUpdate,
@@ -1199,6 +1201,23 @@ function isCrossDocumentStyleSheetRejection(error: unknown): boolean {
 }
 
 /**
+ * True when some prototype between `host`'s own class and `HTMLElement.prototype` already declares
+ * its own `autofocus` accessor -- i.e. the component already manages the attribute itself (a
+ * `@property() override autofocus` forwarded onto an internal native control, or a bespoke
+ * scheduling mechanism such as `<lr-slider>`'s) rather than relying on {@link LyraElement}'s
+ * central handling. Walking the chain, instead of a fixed list of component classes, means a
+ * future component that adds its own handling is recognized automatically with no change here.
+ */
+function hasOwnAutofocusAccessor(host: HTMLElement): boolean {
+  let prototype: object | null = Object.getPrototypeOf(host);
+  while (prototype && prototype !== HTMLElement.prototype) {
+    if (Object.getOwnPropertyDescriptor(prototype, 'autofocus')) return true;
+    prototype = Object.getPrototypeOf(prototype);
+  }
+  return false;
+}
+
+/**
  * Shared base for every Lyra component. Supplies the design-token layer
  * (`--lr-theme-*` theme-input properties with hardcoded `--lr-*` fallbacks).
  * RTL is handled by components using CSS logical properties rather than a forced `dir`.
@@ -1440,6 +1459,34 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     invalidateLyraLocaleCache(this);
     if (this.isConnected && this.localeSubscriptionNeeded)
       this.ensureLocaleSubscription();
+  }
+
+  /**
+   * Honors the native `autofocus` attribute/property once, after the first render, for every
+   * component whose own `override focus()` already forwards to an internal target. `LyraElement`
+   * never sets `shadowRootOptions.delegatesFocus`, so the custom-element host itself is never a
+   * native autofocus candidate and the browser's autofocus processing model silently skips it --
+   * a component's existing `focus()` forwarding (written for programmatic and label-driven focus)
+   * never runs either, because nothing ever calls it. Centralizing that one call here means no
+   * individual component has to repeat `<lr-otp-input>`'s own equivalent `firstUpdated()` block.
+   *
+   * Deliberately skipped for a component that already declares its own `autofocus` accessor
+   * somewhere between its prototype and `HTMLElement.prototype` (`<lr-input>`, `<lr-textarea>`,
+   * `<lr-select>`, `<lr-slider>`, `<lr-otp-input>`) -- those forward `?autofocus` onto their own
+   * internal native control (or, for `<lr-slider>`, schedule their own focus themselves), so the
+   * browser's native autofocus algorithm -- or the component's own bespoke handling -- already
+   * covers it; nothing here should race a mechanism that already works.
+   */
+  protected override firstUpdated(changedProperties: PropertyValues): void {
+    super.firstUpdated(changedProperties);
+    if (typeof Node === 'undefined') return; // pure SSR string generation: no browser focus concept
+    if (hasOwnAutofocusAccessor(this)) return;
+    if (!this.autofocus) return;
+    if (this.focus === HTMLElement.prototype.focus) return; // no component-owned forwarding target
+    // Deferred exactly like `<lr-otp-input>`'s own identical block: focusing synchronously here
+    // relays the native `focus` event and changes reactive `focused` state, which Lit correctly
+    // diagnoses as an update scheduled from inside the update that just completed.
+    this.scheduleAfterUpdate(() => this.focus(), 'lr-global-autofocus');
   }
 
   /**

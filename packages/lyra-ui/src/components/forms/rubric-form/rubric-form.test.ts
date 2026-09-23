@@ -2632,6 +2632,38 @@ describe("lr-rubric-form remaining public accessors and interaction paths", () =
     expect(el.shadowRoot!.activeElement === segmented).to.be.true;
   });
 
+  it("focus() moves focus to the first control, matching click()'s target", async () => {
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    const segmented = el.shadowRoot!.querySelector(
+      '[data-key="accuracy"] lr-segmented'
+    );
+    el.focus();
+    expect(el.shadowRoot!.activeElement === segmented).to.be.true;
+  });
+
+  it("focus() no-ops while disabled (host focus forwarding guard)", async () => {
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS} disabled></lr-rubric-form>`
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    el.focus();
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+  });
+
+  it("honours the global autofocus attribute, focusing the first control after first render", async () => {
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS} autofocus></lr-rubric-form>`
+    )) as LyraRubricForm;
+    const segmented = el.shadowRoot!.querySelector(
+      '[data-key="accuracy"] lr-segmented'
+    );
+    await waitUntil(() => el.shadowRoot!.activeElement === segmented);
+    expect(el.shadowRoot!.activeElement === segmented).to.be.true;
+  });
+
   it("click() no-ops while disabled (host click forwarding guard)", async () => {
     const el = (await fixture(
       html`<lr-rubric-form .keys=${KEYS} disabled></lr-rubric-form>`

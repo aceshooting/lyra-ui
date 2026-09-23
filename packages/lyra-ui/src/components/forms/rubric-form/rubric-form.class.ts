@@ -1048,7 +1048,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this.emit('lr-skip', { itemId: this.itemId });
   }
 
-  private focusFirstControl(): void {
+  private focusFirstControl(options?: FocusOptions): void {
     const firstKey = this._keys[0];
     if (!firstKey) return;
     const field = this.fieldElement(firstKey.key);
@@ -1056,14 +1056,21 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       | (HTMLElement & { shadowRoot?: ShadowRoot | null }) | null;
     if (!control) return;
     if (firstKey.type === 'score' && this.isSegmentedScore(firstKey)) {
-      (control.shadowRoot?.querySelector('[part="segment"][tabindex="0"]') as HTMLElement | null)?.focus();
+      (control.shadowRoot?.querySelector('[part="segment"][tabindex="0"]') as HTMLElement | null)?.focus(options);
     } else if (firstKey.type === 'score') {
-      (control.shadowRoot?.querySelector('[part="thumb"]') as HTMLElement | null)?.focus();
+      (control.shadowRoot?.querySelector('[part="thumb"]') as HTMLElement | null)?.focus(options);
     } else if (firstKey.type === 'category' && firstKey.multiple) {
-      (control.querySelector('lr-checkbox') as HTMLElement | null)?.focus();
+      (control.querySelector('lr-checkbox') as HTMLElement | null)?.focus(options);
     } else {
-      control.focus();
+      control.focus(options);
     }
+  }
+
+  /** Moves focus to the first rendered field, matching {@link click}'s target -- the same forwarder
+   *  every other Lyra form control uses so the global `autofocus` attribute reaches it too. */
+  override focus(options?: FocusOptions): void {
+    if (this.effectiveDisabled) return;
+    this.focusFirstControl(options);
   }
 
   /** Forwards host clicks to the first rendered field, so programmatic and `<label>`-driven
