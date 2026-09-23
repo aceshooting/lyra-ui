@@ -1466,7 +1466,7 @@ it('focus() and blur() forward to the first enabled control like click(), and fo
   expect(el.shadowRoot!.activeElement === unitsSelect, 'focus() must skip a force-disabled control').to.be.true;
 
   el.blur();
-  expect(el.shadowRoot!.activeElement, 'blur() must clear the shadow root active element').to.equal(null);
+  expect(el.shadowRoot!.activeElement === null, 'blur() must clear the shadow root active element').to.be.true;
 
   cityInput.disabled = false;
   el.focus();

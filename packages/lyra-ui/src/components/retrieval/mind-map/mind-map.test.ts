@@ -1568,7 +1568,7 @@ describe('lr-mind-map topic count past the render cap', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(
       500
     );
-    expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.be.true;
   });
 });
 

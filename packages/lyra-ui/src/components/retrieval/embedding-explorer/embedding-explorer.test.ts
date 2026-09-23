@@ -813,6 +813,6 @@ describe('lr-embedding-explorer point count past the render cap', () => {
     )) as LyraEmbeddingExplorer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(1000);
-    expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.be.true;
   });
 });
