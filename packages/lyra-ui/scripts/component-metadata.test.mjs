@@ -82,7 +82,18 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   // records outright: both properties' `removalNotBefore: '13.0.0'` had long passed, and unlike the
   // upstream-mirrored aliases below, nothing ties their removal to an upstream Web Awesome/Shoelace
   // release. Back to 8.
-  assert.equal(state.metadata.deprecations.length, 8);
+  //
+  // 17 as of 19.0.1: nine records were added in the same release. lr-command-palette's `lr-open`
+  // was deprecated in favour of `lr-show`, matching the lr-show/lr-hide overlay-lifecycle
+  // vocabulary lr-lightbox already follows (lr-open collided in name with the unrelated "item
+  // activated" lr-open fired by lr-document-library/lr-source-card). The other eight are the
+  // *-before-* veto events on lr-chart, lr-box-plot, lr-graph-legend, and lr-graph-query-builder
+  // renamed to the library's dominant `*-request` veto-event convention (`lr-before-datum-
+  // visibility-change`, `lr-before-legend-visibility-change` on both lr-chart and lr-box-plot,
+  // `lr-before-visibility-change` on lr-graph-legend, and lr-graph-query-builder's `lr-before-
+  // query-delete`/`-load`/`-run`/`-save`); each renamed pair fires identically during the
+  // compatibility window and either may veto.
+  assert.equal(state.metadata.deprecations.length, 17);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {

@@ -627,7 +627,10 @@ here wins over every treatment. `--lr-combobox-open-border-color` (default
 border before. Read the name as the state the listbox opens in rather than as a synonym for `open`:
 it is bound to `:focus-within`, so it also paints on a focused row whose listbox is closed — after
 an Escape dismissal, say. It is named for symmetry with `lr-select`'s
-`--lr-select-open-border-color`, which really is gated on `open`.
+`--lr-select-open-border-color`, which really is gated on `open`. `--lr-combobox-text-color`
+(default `inherit`) recolors the trigger's own text the same way; `appearance="accent"` defaults it
+instead to `var(--lr-color-on-brand)`, keeping placeholder, adornments and tag text readable on the
+loud brand fill.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
 while this control is focused — one name for every field-shaped control in the library, so a
@@ -1604,7 +1607,10 @@ With no label text the part is hidden and no glyph is painted.
 `--lr-form-control-height`. All four defaults follow the shared size ladder, including
 `small`/`medium`/`large` aliases and inherited `--lr-theme-form-control-height-*` overrides.
 Inherited or direct public values win. `pill` changes the private radius default to
-`--lr-radius-pill`; a public `--lr-date-input-radius` still wins.
+`--lr-radius-pill`; a public `--lr-date-input-radius` still wins. `--lr-date-input-text-color`
+(default `inherit`) recolors the row's own text; `appearance="accent"` defaults it instead to
+`var(--lr-color-on-brand)`, keeping the placeholder and clear/calendar actions readable on the loud
+brand fill.
 
 Calendar and clear actions fit inside the selected row height while retaining at least 24×24
 CSS-pixel targets. At the default root size, rows measure 30/40/48/56px for s/m/l/xl; 2xs and xs

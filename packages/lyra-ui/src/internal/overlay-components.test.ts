@@ -28,7 +28,7 @@ interface ReactiveOverlay extends HTMLElement {
   commands?: Array<{ commandId: string; label: string }>;
   collapse?: string;
   collapseState?: string;
-  steps?: Array<{ id: string; target: string; heading: string; content: string }>;
+  steps?: Array<{ stepId: string; target: string; heading: string; content: string }>;
 }
 
 const lightboxImage: LyraLightboxImage = {
@@ -127,7 +127,7 @@ const adapters: OverlayAdapter[] = [
   {
     tag: 'lr-tour',
     setup: (element) =>
-      (element.steps = [{ id: 'step', target: '#missing-tour-target', heading: 'Tour', content: 'Step' }]),
+      (element.steps = [{ stepId: 'step', target: '#missing-tour-target', heading: 'Tour', content: 'Step' }]),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },

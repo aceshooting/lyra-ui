@@ -568,6 +568,8 @@ export type LyraComboboxSourceErrorEvent =
  * @csspart retry-button - The retry control inside the failed-load state.
  * @csspart hint - The hint message.
  * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
+ * @cssprop [--lr-combobox-text-color=inherit] - Trigger text color. Defaults to the inherited text
+ *   color, and to `--lr-color-on-brand` under `appearance="accent"`.
  * @cssprop [--lr-combobox-trigger-min-height=var(--lr-form-control-height)] - Minimum
  *   input-container block size. Reads the shared form-control height ladder, so retuning
  *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.

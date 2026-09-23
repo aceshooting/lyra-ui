@@ -6687,7 +6687,7 @@ test('the raw CEM projects complete effective wrapper and source-only mixin surf
     }
   }
 
-  assert.equal(DOCUMENT_ANCHOR_TARGET_TAGS.length, 22);
+  assert.equal(DOCUMENT_ANCHOR_TARGET_TAGS.length, 23);
   assert.deepEqual(DOCUMENT_ANCHOR_TARGET_CONTRACT.cssParts, [
     {
       name: 'anchor-live-region',

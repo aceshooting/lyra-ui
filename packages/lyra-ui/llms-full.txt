@@ -5333,7 +5333,10 @@ here wins over every treatment. `--lr-combobox-open-border-color` (default
 border before. Read the name as the state the listbox opens in rather than as a synonym for `open`:
 it is bound to `:focus-within`, so it also paints on a focused row whose listbox is closed — after
 an Escape dismissal, say. It is named for symmetry with `lr-select`'s
-`--lr-select-open-border-color`, which really is gated on `open`.
+`--lr-select-open-border-color`, which really is gated on `open`. `--lr-combobox-text-color`
+(default `inherit`) recolors the trigger's own text the same way; `appearance="accent"` defaults it
+instead to `var(--lr-color-on-brand)`, keeping placeholder, adornments and tag text readable on the
+loud brand fill.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
 while this control is focused — one name for every field-shaped control in the library, so a
@@ -6310,7 +6313,10 @@ With no label text the part is hidden and no glyph is painted.
 `--lr-form-control-height`. All four defaults follow the shared size ladder, including
 `small`/`medium`/`large` aliases and inherited `--lr-theme-form-control-height-*` overrides.
 Inherited or direct public values win. `pill` changes the private radius default to
-`--lr-radius-pill`; a public `--lr-date-input-radius` still wins.
+`--lr-radius-pill`; a public `--lr-date-input-radius` still wins. `--lr-date-input-text-color`
+(default `inherit`) recolors the row's own text; `appearance="accent"` defaults it instead to
+`var(--lr-color-on-brand)`, keeping the placeholder and clear/calendar actions readable on the loud
+brand fill.
 
 Calendar and clear actions fit inside the selected row height while retaining at least 24×24
 CSS-pixel targets. At the default root size, rows measure 30/40/48/56px for s/m/l/xl; 2xs and xs
@@ -17037,8 +17043,10 @@ rendering is unchanged.
 _hover_ state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
 `::part(view-toggle):hover` override wins without `!important`.
 
-`--lr-widget-collapse-button-hover-bg` / `-hover-color` and `--lr-widget-fullscreen-button-hover-bg`
-/ `-hover-color` (all four default to `var(--lr-color-brand-quiet)` / `var(--lr-color-brand)`) are
+`--lr-widget-collapse-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-widget-collapse-button-hover-color` (default `var(--lr-color-brand)`), plus
+`--lr-widget-fullscreen-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-widget-fullscreen-button-hover-color` (default `var(--lr-color-brand)`), are
 the same inline-`var()`-fallback shape for `[part="collapse-button"]` and `[part="fullscreen-button"]`
 respectively; each button's pressed fill mixes from its own `-hover-bg` token. Before these existed,
 both buttons read the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens directly, so a
@@ -26147,10 +26155,12 @@ settable scroll cap on `[part="base"]`; the `maxHeight` property writes the same
 inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`),
 `--lr-diff-view-match-color`/`--lr-diff-view-active-match-color` (default
 `var(--lr-color-warning)` for both — outline of a line carrying a non-active/active search match),
-`--lr-diff-view-highlight-accent-background`/`-success-background`/`-warning-background`/
-`-danger-background`/`-neutral-background` (default `var(--lr-color-brand-quiet)`/
-`var(--lr-color-success-quiet)`/`var(--lr-color-warning-quiet)`/`var(--lr-color-danger-quiet)`/
-`var(--lr-color-surface-raised)` — background of a `highlights` line by tone),
+`--lr-diff-view-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-diff-view-highlight-success-background` (default `var(--lr-color-success-quiet)`),
+`--lr-diff-view-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
+`--lr-diff-view-highlight-danger-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-diff-view-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) —
+background of a `highlights` line by tone,
 `--lr-diff-view-highlight-active-outline` (default `var(--lr-color-brand)` — outline of the line
 whose covering highlight is `activeHighlightId`), plus
 shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
@@ -38844,7 +38854,8 @@ reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`.
 
 **CSS parts:** `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
-(free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet
+(free-text mode), `provider-badge`, `listbox`, `option`, `option-icon` (an object-shaped catalog
+row's optional decorative leading icon), `option-label`, `option-meta` (the quiet
 `language · description` second line), `option-badge` (the "not in catalog" badge on a synthetic
 stale-value row), `option-preview` (a pointer-only per-row preview icon, `tabindex="-1"`,
 `aria-hidden`), `preview-button` (the standalone, keyboard-reachable preview toggle beside the

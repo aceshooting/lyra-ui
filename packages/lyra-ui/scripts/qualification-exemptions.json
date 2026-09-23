@@ -3,22 +3,6 @@
   "schemaVersion": 2,
   "exemptions": [
     {
-      "tag": "lr-skeleton",
-      "dimension": "accessibility",
-      "scope": "populated/open-state evidence",
-      "reason": "The component is itself an intrinsic loading placeholder and has no populated or open state; its rendered default is the complete semantic surface.",
-      "reviewer": {
-        "kind": "automated-agent",
-        "name": "Lyra automated source-evidence review"
-      },
-      "recordedAt": "2026-08-02",
-      "evidence": [
-        "src/components/overlays/skeleton/skeleton.test.ts#is accessible",
-        "src/components/overlays/skeleton/skeleton.class.ts"
-      ],
-      "humanReview": "not-claimed"
-    },
-    {
       "tag": "lr-spinner",
       "dimension": "accessibility",
       "scope": "populated/open-state evidence",

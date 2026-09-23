@@ -635,8 +635,10 @@ rendering is unchanged.
 _hover_ state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
 `::part(view-toggle):hover` override wins without `!important`.
 
-`--lr-widget-collapse-button-hover-bg` / `-hover-color` and `--lr-widget-fullscreen-button-hover-bg`
-/ `-hover-color` (all four default to `var(--lr-color-brand-quiet)` / `var(--lr-color-brand)`) are
+`--lr-widget-collapse-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-widget-collapse-button-hover-color` (default `var(--lr-color-brand)`), plus
+`--lr-widget-fullscreen-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-widget-fullscreen-button-hover-color` (default `var(--lr-color-brand)`), are
 the same inline-`var()`-fallback shape for `[part="collapse-button"]` and `[part="fullscreen-button"]`
 respectively; each button's pressed fill mixes from its own `-hover-bg` token. Before these existed,
 both buttons read the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens directly, so a

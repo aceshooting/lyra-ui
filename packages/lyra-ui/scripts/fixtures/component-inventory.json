@@ -29434,6 +29434,12 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-combobox-text-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-combobox-trigger-height",
             "deprecated": null,
             "hasDefault": false
@@ -38203,6 +38209,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-date-input-text-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-form-control-focus-shadow",

@@ -3536,7 +3536,8 @@ reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`.
 
 **CSS parts:** `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
-(free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet
+(free-text mode), `provider-badge`, `listbox`, `option`, `option-icon` (an object-shaped catalog
+row's optional decorative leading icon), `option-label`, `option-meta` (the quiet
 `language · description` second line), `option-badge` (the "not in catalog" badge on a synthetic
 stale-value row), `option-preview` (a pointer-only per-row preview icon, `tabindex="-1"`,
 `aria-hidden`), `preview-button` (the standalone, keyboard-reachable preview toggle beside the

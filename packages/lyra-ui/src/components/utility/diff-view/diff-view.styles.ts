@@ -140,6 +140,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    transition: var(--lr-transition-interactive);
   }
   [part="line-highlight-action"]:hover {
     background: var(--_lr-diff-view-highlight-background);

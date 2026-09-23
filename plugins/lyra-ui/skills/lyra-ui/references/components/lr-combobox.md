@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -523,7 +523,10 @@ here wins over every treatment. `--lr-combobox-open-border-color` (default
 border before. Read the name as the state the listbox opens in rather than as a synonym for `open`:
 it is bound to `:focus-within`, so it also paints on a focused row whose listbox is closed — after
 an Escape dismissal, say. It is named for symmetry with `lr-select`'s
-`--lr-select-open-border-color`, which really is gated on `open`.
+`--lr-select-open-border-color`, which really is gated on `open`. `--lr-combobox-text-color`
+(default `inherit`) recolors the trigger's own text the same way; `appearance="accent"` defaults it
+instead to `var(--lr-color-on-brand)`, keeping placeholder, adornments and tag text readable on the
+loud brand fill.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
 while this control is focused — one name for every field-shaped control in the library, so a

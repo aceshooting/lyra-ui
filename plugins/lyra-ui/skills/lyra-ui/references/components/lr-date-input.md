@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-picker` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -325,7 +325,10 @@ With no label text the part is hidden and no glyph is painted.
 `--lr-form-control-height`. All four defaults follow the shared size ladder, including
 `small`/`medium`/`large` aliases and inherited `--lr-theme-form-control-height-*` overrides.
 Inherited or direct public values win. `pill` changes the private radius default to
-`--lr-radius-pill`; a public `--lr-date-input-radius` still wins.
+`--lr-radius-pill`; a public `--lr-date-input-radius` still wins. `--lr-date-input-text-color`
+(default `inherit`) recolors the row's own text; `appearance="accent"` defaults it instead to
+`var(--lr-color-on-brand)`, keeping the placeholder and clear/calendar actions readable on the loud
+brand fill.
 
 Calendar and clear actions fit inside the selected row height while retaining at least 24×24
 CSS-pixel targets. At the default root size, rows measure 30/40/48/56px for s/m/l/xl; 2xs and xs

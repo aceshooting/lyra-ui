@@ -1206,10 +1206,12 @@ settable scroll cap on `[part="base"]`; the `maxHeight` property writes the same
 inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`),
 `--lr-diff-view-match-color`/`--lr-diff-view-active-match-color` (default
 `var(--lr-color-warning)` for both — outline of a line carrying a non-active/active search match),
-`--lr-diff-view-highlight-accent-background`/`-success-background`/`-warning-background`/
-`-danger-background`/`-neutral-background` (default `var(--lr-color-brand-quiet)`/
-`var(--lr-color-success-quiet)`/`var(--lr-color-warning-quiet)`/`var(--lr-color-danger-quiet)`/
-`var(--lr-color-surface-raised)` — background of a `highlights` line by tone),
+`--lr-diff-view-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-diff-view-highlight-success-background` (default `var(--lr-color-success-quiet)`),
+`--lr-diff-view-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
+`--lr-diff-view-highlight-danger-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-diff-view-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) —
+background of a `highlights` line by tone,
 `--lr-diff-view-highlight-active-outline` (default `var(--lr-color-brand)` — outline of the line
 whose covering highlight is `activeHighlightId`), plus
 shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
