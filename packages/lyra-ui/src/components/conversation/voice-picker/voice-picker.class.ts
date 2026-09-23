@@ -56,6 +56,8 @@ export interface LyraVoiceCatalogEntry extends LyraCatalogEntry {
   description?: string;
   /** A sample-audio URL; validated via `safeMediaSrc()` before ever reaching an `<audio src>`. */
   previewUrl?: string;
+  /** Optional literal icon hint (for example, an emoji), rendered decoratively before `label`. */
+  icon?: string;
 }
 
 export type { LyraCatalog, LyraCatalogEntry } from '../../../internal/catalog-picker.js';
@@ -134,6 +136,7 @@ function snapshotVoiceCatalog(
     const language = ownString(candidate, 'language');
     const description = ownString(candidate, 'description');
     const previewUrl = ownString(candidate, 'previewUrl');
+    const icon = ownString(candidate, 'icon');
     const disabled = ownBoolean(candidate, 'disabled');
     entrySnapshot.push(Object.freeze({
       id,
@@ -141,6 +144,7 @@ function snapshotVoiceCatalog(
       ...(language === undefined ? {} : { language }),
       ...(description === undefined ? {} : { description }),
       ...(previewUrl === undefined ? {} : { previewUrl }),
+      ...(icon === undefined ? {} : { icon }),
       ...(disabled === undefined ? {} : { disabled }),
     }));
   }
@@ -197,6 +201,11 @@ export interface LyraVoicePickerEventMap {
  * previewable so a listener can hear why it is excluded. Omitted or `false` renders the row exactly
  * as before this field existed.
  *
+ * A catalog row can also include a literal `icon` (for example, an emoji), rendered decoratively
+ * as the leading `[part="option-icon"]`, matching `lr-model-select`'s identical
+ * `LyraModelCatalogEntry.icon` field. It is presentation only: the row's accessible name remains
+ * its `label`.
+ *
  * @customElement lr-voice-picker
  * @slot label - Custom visible label content.
  * @slot hint - Custom hint content.
@@ -241,6 +250,7 @@ export interface LyraVoicePickerEventMap {
  * @csspart provider-badge - The optional leading `provider` label.
  * @csspart listbox - The options popover.
  * @csspart option - An option row.
+ * @csspart option-icon - An option row's optional decorative leading icon.
  * @csspart option-label - An option row's label/meta wrapper.
  * @csspart option-meta - An option row's quiet `language · description` second line.
  * @csspart option-badge - The "not in catalog" badge on a synthetic stale-value row.
@@ -1121,6 +1131,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
         aria-disabled=${entry.disabled === true ? 'true' : nothing}
         ?data-active=${id === activeId}
       >
+        ${entry.icon ? html`<span part="option-icon" aria-hidden="true" inert>${entry.icon}</span>` : nothing}
         <span part="option-label">
           <span>${entry.label}</span>
           ${meta ? html`<span part="option-meta">${meta}</span>` : nothing}

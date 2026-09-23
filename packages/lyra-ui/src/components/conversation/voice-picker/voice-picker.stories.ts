@@ -66,6 +66,24 @@ export const DisabledOption: Story = {
   `,
 };
 
+/** A catalog row can carry an optional literal `icon` (for example, an emoji), rendered
+ *  decoratively before the label, matching `lr-model-select`'s identical
+ *  `LyraModelCatalogEntry.icon` field. */
+export const CatalogWithIcons: Story = {
+  name: 'Catalog with icons',
+  render: () => html`
+    <lr-voice-picker
+      provider="elevenlabs"
+      label="Voice"
+      .catalog=${[
+        { ...catalog[0]!, icon: '🎙️' },
+        { ...catalog[1]!, icon: '🗣️' },
+        catalog[2]!,
+      ]}
+    ></lr-voice-picker>
+  `,
+};
+
 /** `allow-custom` keeps the catalog's suggestions but switches to the free-text combobox shape so a
  *  voice id outside the list can still be typed and committed. */
 export const AllowCustom: Story = {

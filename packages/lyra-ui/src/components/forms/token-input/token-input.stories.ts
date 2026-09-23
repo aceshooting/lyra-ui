@@ -169,6 +169,30 @@ export const DisabledEditableTokens: Story = {
   `,
 };
 
+/** `readonly` locks the committed token list: the draft input, tokens and remove buttons stay
+ *  focusable and the value still submits with the form, but typing, adding, removing and (with
+ *  `editable`) editing a token are all blocked. Unlike `disabled`, it never removes anything from
+ *  the tab order or from `FormData`. */
+export const ReadonlyTokens: Story = {
+  name: 'Readonly tokens',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The tokens, draft input and remove buttons stay focusable and the value still submits with the form, but no affordance can add, remove or edit a token.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-token-input
+      editable
+      readonly
+      label="Locked rules"
+      .value=${['Read(src/**)', 'Bash(git status:*)']}
+    ></lr-token-input>
+  `,
+};
+
 /** Edit and remove actions expose separate hover and pressed hooks while the older aggregate hover
  * hook remains the backwards-compatible fallback. */
 export const IndependentPointerStates: Story = {

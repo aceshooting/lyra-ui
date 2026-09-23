@@ -6,6 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { nextId } from '../../../internal/a11y.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
@@ -47,6 +48,11 @@ export interface RubricKeyOption {
   readonly value: string;
   readonly label?: string;
   readonly description?: string;
+  /** Optional decorative leading visual, rendered into `<lr-option>`'s `start` slot (single-select)
+   *  or inline before the label (multiple-select). Deliberately general Lit content rather than an
+   *  icon-name string, matching `LyraFilterBarOption.icon`/`LyraSegmentedItem.icon`. Rendered
+   *  inert and `aria-hidden`, so it never contributes to the option's accessible name. */
+  readonly icon?: unknown;
 }
 
 interface RubricKeyBase {
@@ -140,6 +146,7 @@ function projectRubricOptions(value: unknown): readonly RubricKeyOption[] {
       const optionValue = getOwnDataDescriptor(candidate.value, 'value');
       const label = getOwnDataDescriptor(candidate.value, 'label');
       const description = getOwnDataDescriptor(candidate.value, 'description');
+      const icon = getOwnDataDescriptor(candidate.value, 'icon');
       if (
         optionValue === MISSING_OWN_DATA_DESCRIPTOR ||
         optionValue === UNSAFE_OWN_DATA_DESCRIPTOR ||
@@ -156,10 +163,18 @@ function projectRubricOptions(value: unknown): readonly RubricKeyOption[] {
         : typeof description.value === 'string'
           ? description.value
           : undefined;
+      // `icon` is deliberately general Lit content (like `LyraFilterBarOption.icon`), so unlike
+      // `label`/`description` above it carries no type filter -- only the same
+      // accessor-rejecting own-data-descriptor guard the other fields use.
+      const iconValue =
+        icon === MISSING_OWN_DATA_DESCRIPTOR || icon === UNSAFE_OWN_DATA_DESCRIPTOR
+          ? undefined
+          : icon.value;
       options.push(Object.freeze({
         value: optionValue.value,
         ...(labelValue === undefined ? {} : { label: labelValue }),
         ...(descriptionValue === undefined ? {} : { description: descriptionValue }),
+        ...(iconValue === undefined ? {} : { icon: iconValue }),
       }));
     }
     return Object.freeze(options);
@@ -1209,7 +1224,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         ${options.map(
           (opt) =>
             html`<lr-checkbox value=${opt.value} .checked=${live(selected.includes(opt.value))} ?disabled=${disabled}
-              ><span
+              >${opt.icon == null ? nothing : renderInertPresentation(opt.icon)}<span
                 >${opt.label ?? opt.value}${opt.description
                   ? html`<small class="option-description">${opt.description}</small>`
                   : nothing}</span
@@ -1238,7 +1253,9 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       <span slot="label" part="label">${label}</span>
       ${description} ${error}
       ${options.map(
-        (opt) => html`<lr-option value=${opt.value} .sub=${opt.description ?? ''}>${opt.label ?? opt.value}</lr-option>`
+        (opt) => html`<lr-option value=${opt.value} .sub=${opt.description ?? ''}
+          >${opt.icon == null ? nothing : html`<span slot="start" aria-hidden="true" inert>${opt.icon}</span>`}${opt.label ?? opt.value}</lr-option
+        >`
       )}
     </lr-select>`;
   }

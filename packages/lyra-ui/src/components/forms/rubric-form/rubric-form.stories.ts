@@ -50,6 +50,39 @@ export const Default: Story = {
   render: () => html`<lr-rubric-form style="max-width: 28rem" .keys=${keys}></lr-rubric-form>`,
 };
 
+/** A category option can carry an optional decorative `icon`, rendered inert and `aria-hidden` --
+ *  into `<lr-option>`'s `start` slot for a single-select category, or inline before the label for a
+ *  multiple-select one -- matching `LyraFilterBarOption.icon`. */
+export const CategoryOptionIcons: Story = {
+  name: 'Category option icons',
+  render: () => html`
+    <lr-rubric-form
+      style="max-width: 28rem"
+      .keys=${[
+        {
+          key: 'priority',
+          type: 'category',
+          label: 'Priority',
+          options: [
+            { value: 'low', label: 'Low', icon: html`<span aria-hidden="true">▽</span>` },
+            { value: 'high', label: 'High', icon: html`<span aria-hidden="true">▲</span>` },
+          ],
+        },
+        {
+          key: 'issue',
+          type: 'category',
+          label: 'Issue category',
+          multiple: true,
+          options: [
+            { value: 'hallucination', label: 'Hallucination', icon: html`<span aria-hidden="true">✦</span>` },
+            { value: 'tone', label: 'Tone' },
+          ],
+        },
+      ] satisfies RubricKey[]}
+    ></lr-rubric-form>
+  `,
+};
+
 export const ControlledCategories: Story = {
   parameters: {
     docs: { description: { story: 'A replacement value updates the live category checkboxes and submitted review after user edits. The whole-form description belongs to the aggregate group; each field retains its own guidance.' } },

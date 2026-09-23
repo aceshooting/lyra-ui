@@ -127,6 +127,11 @@ const stringArrayConverter = {
  * emitting user events, so a later delimiter/Enter/Tab/blur commit consumes the edited text.
  * `focus()` and `click()` are synchronous no-ops under own or fieldset-cascaded disablement,
  * including the same task that begins the disabled transition before Lit updates the draft input.
+ * `readonly` keeps the draft input, the remove buttons and (with `editable`) every token label
+ * focusable and browseable while blocking every value-committing affordance -- typing a new draft,
+ * committing it, removing a token, and opening or committing the inline token editor; selection/
+ * copy, form submission/reset, and programmatic writes remain available, mirroring `lr-input`'s
+ * `readonly`.
  * If a focused token surface disappears through its own remove action or a controlled
  * `value`/`defaultValue` shrink, focus moves to the nearest surviving equivalent surface, or to
  * the draft input when no token remains. A newer external focus destination always wins.
@@ -252,6 +257,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
+    readonly: { type: Boolean, reflect: true, noAccessor: true },
     defaultValue: {
       attribute: 'value',
       reflect: true,
@@ -381,6 +387,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private _name = '';
   private _required = false;
   private _disabled = false;
+  private _readonly = false;
 
   @property({ attribute: false })
   get value(): readonly string[] {
@@ -463,6 +470,30 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // left raised on a control the browser will never enforce.
     this.syncValidity();
     this.requestUpdate('disabled', old);
+  }
+
+  /** Forwards native read-only behavior to the draft input and the inline token editor, and
+   *  blocks every other value-committing affordance (adding, removing, or editing a token) while
+   *  leaving the control, its tokens, and its remove buttons focusable and its current value
+   *  submitted with the form -- mirroring `lr-input`'s `readonly`. */
+  get readonly(): boolean {
+    return this._readonly;
+  }
+  set readonly(next: boolean) {
+    const old = this._readonly;
+    const nextValue = Boolean(next);
+    // Entering readonly discards any uncommitted draft and closes an open inline editor, exactly
+    // like disablement retires them -- but without disablement's forced blur, since readonly must
+    // leave every existing focus target reachable (unlike `disabled`, it never removes the
+    // control from the tab order).
+    if (!old && nextValue) this.discardTransientState(true);
+    this._readonly = nextValue;
+    this.toggleAttribute('readonly', this._readonly);
+    // Readonly bars constraint validation exactly like disabled (see `isBarredFromValidation()`),
+    // so the violation itself is recomputed here rather than left raised on a control the browser
+    // will never enforce.
+    this.syncValidity();
+    this.requestUpdate('readonly', old);
   }
 
   constructor() {
@@ -753,7 +784,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     );
   }
   private addDraft(): void {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || this.readonly) return;
     // A null/empty delimiter means the whole draft is one token -- `''.split('')` would otherwise
     // explode the draft into one token per character.
     const parts = this.delimiter
@@ -843,7 +874,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
 
   private removeToken(index: number): void {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || this.readonly) return;
     const removed = this.value[index];
     // The roving/edit index can outlive the token it pointed at, and `lr-remove` promises a
     // `string` value -- a stale index has nothing to remove rather than a token named `undefined`.
@@ -873,7 +904,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   /** Open the inline editor for a token, seeded with that token's full current text. */
   private startEdit(index: number): void {
-    if (this.liveDisabled || !this.editable) return;
+    if (this.liveDisabled || this.readonly || !this.editable) return;
     if (index < 0 || index >= this.value.length) return;
     this.editingIndex = index;
     this.editDraft = this.value[index]!; // safe: index bounds-checked above
@@ -906,7 +937,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * re-enters this method as a no-op rather than committing (and emitting `change`) a second time.
    */
   private commitEdit(restoreFocus: boolean): void {
-    if (this.liveDisabled) {
+    if (this.liveDisabled || this.readonly) {
       this.discardTransientState(false);
       return;
     }
@@ -980,7 +1011,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   private onEditInput = (event: Event): void => {
     event.stopPropagation();
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || this.readonly) return;
     this.editDraft = (event.target as HTMLInputElement).value;
   };
   private onEditFocus = (event: FocusEvent): void => {
@@ -1027,7 +1058,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   private onInput = (event: Event): void => {
     event.stopPropagation();
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || this.readonly) return;
     this.draft = (event.target as HTMLInputElement).value;
   };
   private onKeyDown = (event: KeyboardEvent): void => {
@@ -1200,6 +1231,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
             label: token,
           })}
           ?disabled=${this.effectiveDisabled}
+          ?readonly=${this.readonly}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize || nothing}
           autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
@@ -1293,6 +1325,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
           .value=${this.draft}
           placeholder=${this.placeholder}
           ?disabled=${this.effectiveDisabled}
+          ?readonly=${this.readonly}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize || nothing}
           autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect

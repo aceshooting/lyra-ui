@@ -2907,6 +2907,124 @@ it("does not let a listener hold a disabled picker open", async () => {
     .false;
 });
 
+describe('readonly', () => {
+  it('defaults to false and leaves the value field editable (unset-regression)', async () => {
+    const el = (await fixture(
+      html`<lr-color-picker label="Accent"></lr-color-picker>`
+    )) as LyraColorPicker;
+    expect(el.readonly).to.be.false;
+    el.open = true;
+    await el.updateComplete;
+    const field = part(el, 'input') as HTMLInputElement;
+    expect(field.readOnly).to.be.false;
+  });
+
+  it('reflects to the value field, blocks committing an edit, and keeps the control focusable', async () => {
+    const el = (await fixture(
+      html`<lr-color-picker label="Accent" value="#ff0000" readonly></lr-color-picker>`
+    )) as LyraColorPicker;
+    expect(el.readonly).to.be.true;
+    expect(el.hasAttribute('readonly')).to.be.true;
+    el.inline = true;
+    await el.updateComplete;
+    const field = part(el, 'input') as HTMLInputElement;
+    expect(field.readOnly, 'native input carries readonly').to.be.true;
+    expect(field.disabled, 'readonly must not also disable the field').to.be.false;
+
+    field.value = '#00ff00';
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.value, 'a field change must not commit while readonly').to.equal('#ff0000');
+
+    el.focus();
+    expect(
+      el.shadowRoot!.activeElement,
+      'readonly must not remove the control from focus'
+    ).to.not.equal(null);
+  });
+
+  it('blocks a swatch click from committing a new value', async () => {
+    const el = (await fixture(html`
+      <lr-color-picker
+        label="Accent"
+        value="#ff0000"
+        readonly
+        inline
+        .swatches=${['#00ff00']}
+      ></lr-color-picker>
+    `)) as LyraColorPicker;
+    await el.updateComplete;
+    const swatch = part(el, 'swatch') as HTMLButtonElement;
+    swatch.click();
+    await el.updateComplete;
+    expect(el.value, 'clicking a swatch must not commit while readonly').to.equal('#ff0000');
+  });
+
+  it('never opens the popup panel while readonly, matching disabled', async () => {
+    const el = (await fixture(
+      html`<lr-color-picker label="Accent" readonly></lr-color-picker>`
+    )) as LyraColorPicker;
+    el.show();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it('still submits the current value with the form', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-color-picker name="accent" label="Accent" value="#ff0000" readonly></lr-color-picker>
+      </form>
+    `)) as HTMLFormElement;
+    const data = new FormData(form);
+    expect(data.get('accent')).to.equal('#ff0000');
+  });
+
+  it('bars constraint validation exactly like disabled, and republishes it once unset', async () => {
+    const el = (await fixture(
+      html`<lr-color-picker required label="Accent"></lr-color-picker>`
+    )) as LyraColorPicker;
+    expect(el.validity.valueMissing, 'required and empty').to.be.true;
+    expect(el.matches(':state(invalid)')).to.be.true;
+
+    el.readonly = true;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 'readonly + required must not report valueMissing').to.be
+      .false;
+    expect(el.matches(':state(invalid)'), 'readonly must not be :state(invalid)').to.be.false;
+
+    el.readonly = false;
+    await el.updateComplete;
+    expect(el.validity.valueMissing, 're-enabled').to.be.true;
+    expect(el.matches(':state(invalid)')).to.be.true;
+  });
+});
+
+describe('swatch icon', () => {
+  it('renders no swatch-icon part when a swatch carries no icon (unset-regression)', async () => {
+    const el = (await fixture(html`
+      <lr-color-picker label="Accent" inline .swatches=${['#ff0000']}></lr-color-picker>
+    `)) as LyraColorPicker;
+    await el.updateComplete;
+    expect(count(el, 'swatch-icon')).to.equal(0);
+  });
+
+  it('renders an inert, aria-hidden swatch-icon for a swatch entry with an icon', async () => {
+    const el = (await fixture(html`
+      <lr-color-picker
+        label="Accent"
+        inline
+        .swatches=${[{ color: '#ff0000', label: 'Red', icon: '★' }]}
+      ></lr-color-picker>
+    `)) as LyraColorPicker;
+    await el.updateComplete;
+    const icon = part(el, 'swatch-icon');
+    expect(icon, 'swatch-icon part renders').to.exist;
+    expect(icon.getAttribute('aria-hidden')).to.equal('true');
+    expect(icon.hasAttribute('inert')).to.be.true;
+    expect(icon.textContent).to.equal('★');
+  });
+});
+
 it("makes lr-show/lr-hide cancelable and the after-events not", async () => {
   const el = (await fixture(
     html`<lr-color-picker label="Accent"></lr-color-picker>`

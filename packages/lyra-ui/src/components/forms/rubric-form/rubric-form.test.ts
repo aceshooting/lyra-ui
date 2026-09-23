@@ -2969,3 +2969,70 @@ describe("collecting an already-slotted aggregate label/hint/error without relyi
     }
   });
 });
+
+describe("category option icon", () => {
+  it("renders no start-slotted content for an option with no icon (unset-regression)", async () => {
+    const keys: RubricKey[] = [
+      {
+        key: "category",
+        type: "category",
+        options: [{ value: "a", label: "A" }],
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    const option = el.shadowRoot!.querySelector(
+      '[data-key="category"] lr-option'
+    ) as HTMLElement;
+    expect(option.querySelector('[slot="start"]')).to.equal(null);
+  });
+
+  it("renders an option's icon into lr-option's start slot in the single-select branch", async () => {
+    const keys: RubricKey[] = [
+      {
+        key: "category",
+        type: "category",
+        options: [{ value: "a", label: "A", icon: "★" }],
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    const option = el.shadowRoot!.querySelector(
+      '[data-key="category"] lr-option'
+    ) as HTMLElement;
+    const icon = option.querySelector('[slot="start"]') as HTMLElement;
+    expect(icon, "start-slotted icon renders").to.exist;
+    expect(icon.getAttribute("aria-hidden")).to.equal("true");
+    expect(icon.hasAttribute("inert")).to.be.true;
+    expect(icon.textContent).to.equal("★");
+  });
+
+  it("renders an option's icon inline before the label in the multiple-select checkbox branch", async () => {
+    const keys: RubricKey[] = [
+      {
+        key: "tags",
+        type: "category",
+        multiple: true,
+        options: [{ value: "a", label: "A", icon: "★" }],
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    const checkbox = el.shadowRoot!.querySelector(
+      '[data-key="tags"] lr-checkbox'
+    ) as HTMLElement;
+    const icon = checkbox.querySelector(
+      'span[aria-hidden="true"]'
+    ) as HTMLElement;
+    expect(icon, "an inert aria-hidden icon span renders inside the checkbox").to
+      .exist;
+    expect(icon.hasAttribute("inert")).to.be.true;
+    expect(icon.textContent).to.equal("★");
+  });
+});

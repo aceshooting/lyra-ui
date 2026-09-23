@@ -5367,7 +5367,12 @@ noneditable token layout remains the default.
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,
-`required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
+`required`, `disabled`,
+`readonly: boolean = false` (reflected — forwards native read-only behavior to the draft input and
+the inline token editor, and blocks adding, removing or editing a token while leaving the draft
+input, tokens and remove buttons focusable and the current value submitted with the form, mirroring
+`lr-input`'s `readonly`),
+`accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
 and draft text input; precedence is presence-based, so `aria-label=""` remains an explicit empty
 override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autocorrect` (read: `boolean = true`; write: `boolean | string`, attribute values
 `on`/`off`) — all three native text-entry hints are forwarded to both the draft input and the inline
@@ -5450,6 +5455,15 @@ When a focused token label, editor, or remove action disappears through its own 
 controlled `value`/pristine `defaultValue` shrink, DOM focus moves to the nearest surviving
 equivalent surface at the clamped index. If no token remains it moves to the draft input; a newer
 explicit focus destination outside the component is never reclaimed.
+
+**`readonly` — locking the committed list.** Reflects native read-only behavior onto both the draft
+input and the inline token editor, and blocks every other value-committing affordance: typing (or a
+programmatic `input`/`change` dispatch) into the draft, Enter/delimiter/Tab draft commits,
+Backspace-removes-last-token, clicking a remove button, and opening or committing the inline
+editor (`editable`). Unlike `disabled`, it never removes the draft input, a token label, or a
+remove button from the tab order, never blocks `focus()`, and never excludes the current value from
+`FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
+inline editor is open discards that uncommitted state without moving focus.
 
 **`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
 jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
@@ -5701,7 +5715,14 @@ designer-chosen colours; reach for this when it must not.
 **Properties:** the shared
 form properties `name`, `value`, `defaultValue` (canonical content attribute `value`),
 `customError` (`custom-error`), `disabled`, and
-`required`, plus `label`, `hint`, `errorText`
+`required`,
+`readonly: boolean = false` (reflected — forwards native read-only behavior to the panel's value
+field and blocks every other value-committing affordance: the popup panel opening, the
+saturation/hue/opacity handles, palette swatches, the eyedropper, and Enter/blur-driven text
+commits; the trigger, value field and palette stay focusable, and the current value still submits
+with the form -- only `disabled` excludes it. Toggling it on while the panel is open closes it, and
+cancels an in-flight drag without committing, mirroring `disabled`'s own mid-interaction handling),
+plus `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), and `size: LyraSize = 'm'`
 (reflected — the same visual-density scale as `lr-input`, applied to the centered visible swatch;
 accepts `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`; the interactive target
@@ -5717,15 +5738,19 @@ and:
   applies to the whole string, function names included (`RGB(255, 0, 0)`)
 - `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
   `;`-separated string, an array of colour strings, or an array of
-  `{ color: string; label?: string; disabled?: boolean }` objects. Any colour the picker can parse
-  is accepted; blank entries are dropped. An entry that is _not_ parseable is kept in the list and
-  still renders a swatch — it just paints no colour (the bare checkerboard) and clicking it does
-  nothing, so filter the palette yourself if that matters. `label` becomes the swatch's accessible
-  name; a missing, empty, or whitespace-only label falls back to announcing the raw colour string.
+  `{ color: string; label?: string; disabled?: boolean; icon?: unknown }` objects. Any colour the
+  picker can parse is accepted; blank entries are dropped. An entry that is _not_ parseable is kept
+  in the list and still renders a swatch — it just paints no colour (the bare checkerboard) and
+  clicking it does nothing, so filter the palette yourself if that matters. `label` becomes the
+  swatch's accessible name; a missing, empty, or whitespace-only label falls back to announcing the
+  raw colour string.
   `disabled` marks that one swatch non-actionable, independent of the whole control's own
   `disabled`: it renders a genuinely disabled `<button>` (no tab stop, no hover/press affordance)
   and clicking it commits nothing; omitted or `false` renders the swatch exactly as before this
-  field existed. The palette container renders only while the normalized list is non-empty
+  field existed. `icon` is an optional decorative custom shape rendered inside the swatch button
+  behind the `swatch-icon` part -- inert and `aria-hidden`, matching `<lr-swatch-picker>`'s
+  identical `SwatchPickerItem.icon` field. The palette container renders only while the normalized
+  list is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
   that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
   reaches the same behavior; either one wins
@@ -5827,7 +5852,8 @@ absent with either format-toggle suppression property), plus `format-button__bas
 `eyedropper-button` / `eye-dropper-button` (rendered only where the browser exposes the EyeDropper
 API), with the corresponding `eyedropper-button__base|start|label|end|caret` and Shoelace
 `eye-dropper-button__base|prefix|label|suffix|caret` aliases; `swatches` (the palette container, rendered only when the normalized `swatches`
-list is non-empty), `swatch` (one palette entry), `swatch-selected` (a token **added to** the
+list is non-empty), `swatch` (one palette entry), `swatch-icon` (a swatch entry's optional
+decorative icon, inert and `aria-hidden`), `swatch-selected` (a token **added to** the
 swatch matching the current value — state after `::part()` never matches, so write
 `::part(swatch-selected)`), `hint`, `error`.
 
@@ -6160,7 +6186,10 @@ discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. 
 first-wins identity and retained valid spelling is not rewritten. Shared fields are
 `key`, `label?`, `description?`, and `required?`; only scores expose `min?`/`max?`/`step?`, only
 categories expose readonly `RubricKeyOption[]` plus `multiple?`, and only comments expose
-`placeholder?`. Runtime schema normalization retains the first occurrence of each nonempty key and
+`placeholder?`. Each `RubricKeyOption` also accepts an optional `icon?: unknown` -- a decorative
+leading visual rendered into `<lr-option>`'s `start` slot in the single-select branch, or inline
+before the label in the multiple-select `<lr-checkbox>` branch, inert and `aria-hidden` either way,
+matching `LyraFilterBarOption.icon`. Runtime schema normalization retains the first occurrence of each nonempty key and
 rejects malformed rows. `value: RubricValue = {}` is a defensive readonly snapshot and
 `defaultValue: RubricValue = {}` is its explicit form-reset baseline (both attribute: false).
 `itemId: string = ''`
@@ -6479,6 +6508,7 @@ These named interfaces and helper signatures are available to typed integrations
     color: string;
     label?: string;
     disabled?: boolean;
+    icon?: unknown;
   }`
 
 - **`components-forms-combobox-combobox-contracts`** — Supporting data types and helpers for this component family.
@@ -6649,6 +6679,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly value: string;
     readonly label?: string;
     readonly description?: string;
+    readonly icon?: unknown;
   }`
   Import: `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`.
   `ScoreRubricKey extends RubricKeyBase {

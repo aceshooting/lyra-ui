@@ -3120,3 +3120,93 @@ describe("start/end adornment slots", () => {
     expect(part(el, "start").hasAttribute("hidden")).to.be.false;
   });
 });
+
+describe("readonly", () => {
+  it("defaults to false and leaves the draft input editable (unset-regression)", async () => {
+    const el = (await fixture(
+      html`<lr-token-input></lr-token-input>`
+    )) as LyraTokenInput;
+    expect(el.readonly).to.be.false;
+    const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
+    expect(input.readOnly).to.be.false;
+  });
+
+  it("reflects to the draft input and blocks committing a typed draft on Enter", async () => {
+    const el = (await fixture(
+      html`<lr-token-input readonly></lr-token-input>`
+    )) as LyraTokenInput;
+    expect(el.hasAttribute("readonly")).to.be.true;
+    const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
+    expect(input.readOnly, "native draft input carries readonly").to.be.true;
+    expect(input.disabled, "readonly must not also disable the draft input").to
+      .be.false;
+    typeInto(input, "alpha");
+    press(input, "Enter");
+    await el.updateComplete;
+    expect(
+      el.value,
+      "a readonly control must not commit a draft on Enter"
+    ).to.deep.equal([]);
+  });
+
+  it("blocks removing a token through the remove button", async () => {
+    const el = (await fixture(
+      html`<lr-token-input readonly .value=${["alpha"]}></lr-token-input>`
+    )) as LyraTokenInput;
+    await el.updateComplete;
+    removeButtons(el)[0]!.click();
+    await el.updateComplete;
+    expect(
+      el.value,
+      "clicking remove must not mutate value while readonly"
+    ).to.deep.equal(["alpha"]);
+  });
+
+  it("blocks opening the inline token editor", async () => {
+    const el = (await fixture(
+      html`<lr-token-input readonly editable .value=${["alpha"]}></lr-token-input>`
+    )) as LyraTokenInput;
+    await el.updateComplete;
+    press(tokenLabel(el, 0), "Enter");
+    await el.updateComplete;
+    expect(editor(el), "F2/Enter must not open the editor while readonly").to
+      .equal(null);
+  });
+
+  it("keeps the control focusable, unlike disabled", async () => {
+    const el = (await fixture(
+      html`<lr-token-input readonly></lr-token-input>`
+    )) as LyraTokenInput;
+    el.focus();
+    expect(el.shadowRoot!.activeElement).to.not.equal(null);
+  });
+
+  it("still submits the current value with the form", async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-token-input name="tags" readonly .value=${["alpha"]}></lr-token-input>
+      </form>
+    `)) as HTMLFormElement;
+    expect(new FormData(form).getAll("tags")).to.deep.equal(["alpha"]);
+  });
+
+  it("bars constraint validation exactly like disabled, and republishes it once unset", async () => {
+    const el = (await fixture(
+      html`<lr-token-input required aria-label="Tags"></lr-token-input>`
+    )) as LyraTokenInput;
+    expect(el.validity.valueMissing, "required and empty").to.be.true;
+    expect(el.matches(":state(invalid)")).to.be.true;
+
+    el.readonly = true;
+    expect(
+      el.validity.valueMissing,
+      "readonly + required must not report valueMissing"
+    ).to.be.false;
+    expect(el.matches(":state(invalid)"), "readonly must not be :state(invalid)").to.be
+      .false;
+
+    el.readonly = false;
+    expect(el.validity.valueMissing, "re-enabled").to.be.true;
+    expect(el.matches(":state(invalid)")).to.be.true;
+  });
+});

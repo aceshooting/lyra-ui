@@ -3456,3 +3456,32 @@ describe('disabled catalog entries', () => {
     ).to.deep.equal([null, null]);
   });
 });
+
+describe('catalog entry icon', () => {
+  it('renders no option-icon part for an entry with no icon (unset-regression)', async () => {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${[{ id: 'alloy', label: 'Alloy' }]}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    el.open = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="option-icon"]')).to.equal(null);
+  });
+
+  it('renders an inert, aria-hidden option-icon before the label for an entry with an icon', async () => {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${[{ id: 'alloy', label: 'Alloy', icon: '★' }]}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    el.open = true;
+    await el.updateComplete;
+    const icon = el.shadowRoot!.querySelector('[part="option-icon"]') as HTMLElement;
+    expect(icon, 'option-icon part renders').to.exist;
+    expect(icon.getAttribute('aria-hidden')).to.equal('true');
+    expect(icon.hasAttribute('inert')).to.be.true;
+    expect(icon.textContent).to.equal('★');
+    const label = el.shadowRoot!.querySelector('[part="option-label"]') as HTMLElement;
+    expect(
+      icon.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'the icon precedes the label',
+    ).to.be.greaterThan(0);
+  });
+});

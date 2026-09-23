@@ -36,6 +36,30 @@ export const DisabledDraft: StoryObj = {
   `,
 };
 
+/** `readonly` locks the committed value: the trigger, value field and palette stay focusable and
+ *  the value still submits with the form, but the popup panel will not open and every
+ *  value-committing affordance -- palette clicks, drag, keyboard, the eyedropper, and text-field
+ *  edits -- is blocked. Unlike `disabled`, it never removes the control from the tab order or from
+ *  `FormData`. */
+export const ReadonlyValue: StoryObj = {
+  name: 'Readonly value',
+  parameters: {
+    docs: { description: { story: 'The value stays focusable, selectable and submitted with the form, but the panel never opens and no affordance can commit a new color.' } },
+  },
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m); max-inline-size:var(--lr-size-28rem);">
+      <lr-color-picker label="Locked color" value=${ACCENT} readonly></lr-color-picker>
+      <button type="button" @pointerdown=${(event: PointerEvent) => event.preventDefault()} @click=${(event: Event) => {
+        const picker = (event.currentTarget as HTMLElement).previousElementSibling;
+        if (picker?.localName === 'lr-color-picker') {
+          const control = picker as HTMLElement & { readonly: boolean };
+          control.readonly = !control.readonly;
+        }
+      }}>Toggle readonly</button>
+    </div>
+  `,
+};
+
 /** The panel carries the saturation/brightness grid, the hue slider, the value field, the format
  *  toggle, and — where the browser exposes the EyeDropper API — a screen picker. */
 export const Open: StoryObj = {
@@ -153,6 +177,27 @@ export const DisabledSwatch: StoryObj = {
           { color: ACCENT, label: 'Accent' },
           { color: SUCCESS, label: 'Success' },
           { color: DANGER, label: 'Danger (retired)', disabled: true },
+        ]}
+        open
+      ></lr-color-picker>
+    </div>
+  `,
+};
+
+/** A swatch entry can carry an optional decorative `icon`, rendered inert and `aria-hidden` inside
+ *  the swatch button behind the `swatch-icon` part, matching `<lr-swatch-picker>`'s identical
+ *  `SwatchPickerItem.icon` field. */
+export const SwatchWithIcon: StoryObj = {
+  name: 'Swatch with icon',
+  render: () => html`
+    <div style="block-size: 24rem">
+      <lr-color-picker
+        label="Brand palette"
+        value=${ACCENT}
+        .swatches=${[
+          { color: ACCENT, label: 'Accent', icon: html`<span aria-hidden="true">★</span>` },
+          { color: SUCCESS, label: 'Success', icon: html`<span aria-hidden="true">✓</span>` },
+          { color: DANGER, label: 'Danger' },
         ]}
         open
       ></lr-color-picker>

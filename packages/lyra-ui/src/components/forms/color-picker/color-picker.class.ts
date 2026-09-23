@@ -6,6 +6,7 @@ import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import {
   deferredPlaceReady as place,
   type DeferredOperationHandle,
@@ -78,6 +79,10 @@ export interface LyraColorPickerSwatch {
    * remains pickable. Omitted or `false` renders the swatch exactly as before this field existed.
    */
   disabled?: boolean;
+  /** Optional decorative custom shape rendered in place of the plain filled circle -- e.g. a gem
+   *  or a status glyph. Its rendered subtree is inert and aria-hidden, matching
+   *  `<lr-swatch-picker>`'s identical `SwatchPickerItem.icon` field. */
+  icon?: unknown;
 }
 
 /** Arrow-key step, in percent/degrees. Shift multiplies it by {@link LARGE_STEP_MULTIPLIER}. */
@@ -125,6 +130,7 @@ function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwa
       const color = getOwnDataDescriptor(entry.value, 'color');
       const label = getOwnDataDescriptor(entry.value, 'label');
       const disabled = getOwnDataDescriptor(entry.value, 'disabled');
+      const icon = getOwnDataDescriptor(entry.value, 'icon');
       if (
         color === MISSING_OWN_DATA_DESCRIPTOR ||
         color === UNSAFE_OWN_DATA_DESCRIPTOR ||
@@ -147,10 +153,18 @@ function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwa
         typeof disabled.value !== 'boolean'
           ? undefined
           : disabled.value;
+      // `icon` is deliberately general Lit content (like `LyraFilterBarOption.icon`/
+      // `SwatchPickerItem.icon`), so unlike `label`/`disabled` above it carries no type filter --
+      // only the same accessor-rejecting own-data-descriptor guard the other fields use.
+      const iconValue =
+        icon === MISSING_OWN_DATA_DESCRIPTOR || icon === UNSAFE_OWN_DATA_DESCRIPTOR
+          ? undefined
+          : icon.value;
       swatches.push(Object.freeze({
         color: color.value.trim(),
         ...(labelValue === undefined ? {} : { label: labelValue }),
         ...(disabledValue === undefined ? {} : { disabled: disabledValue as boolean }),
+        ...(iconValue === undefined ? {} : { icon: iconValue }),
       }));
     }
     return Object.freeze(swatches);
@@ -400,7 +414,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraColorPicker>[] {
-    return [currentValidityValidator('required', 'disabled', 'value')];
+    return [currentValidityValidator('required', 'disabled', 'readonly', 'value')];
   }
   static override styles = [LyraElement.styles, srOnly, sizes, styles];
 
@@ -412,6 +426,12 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   @property({ type: Boolean, attribute: 'with-hint', reflect: true }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  /** Forwards native read-only behavior to the internal value field and blocks every other
+   *  value-committing affordance (the popup panel opening, the saturation/hue/opacity handles,
+   *  palette swatches, the eyedropper, and Enter/blur-driven text commits) while leaving the
+   *  control focusable, its value selectable/copyable, and its current value submitted with the
+   *  form -- mirroring `lr-input`'s `readonly`. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
   /** Visible-swatch size — the library-wide `2xs`–`xl` ladder shared with `lr-input`/`lr-select`.
    *  The interactive trigger retains the shared `--lr-icon-button-size` minimum target even when
    *  the visible swatch is denser. The Web Awesome / Shoelace spellings `small`/`medium`/`large`
@@ -495,7 +515,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     return this._open;
   }
   set open(next: boolean) {
-    const normalized = Boolean(next) && !this.effectiveDisabled;
+    const normalized = Boolean(next) && !this.effectiveDisabled && !this.readonly;
     if (normalized === this._open) return;
     // The veto point sits in the setter because the setter is the one funnel every path uses --
     // `show()`/`hide()`, the trigger toggle, a direct `el.open = true`, and the reflected
@@ -652,9 +672,9 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const formatChanged =
       changed.has('format') || changed.has('opacity') || changed.has('uppercase');
     if (formatChanged) this.cancelDrag();
-    // `disabled` can flip (directly, or through an ancestor fieldset) while the panel is already
-    // showing; the open-guard in the setter only covers the opening direction.
-    if (this.liveDisabled) {
+    // `disabled`/`readonly` can flip (directly, or through an ancestor fieldset) while the panel
+    // is already showing; the open-guard in the setter only covers the opening direction.
+    if (this.liveDisabled || this.readonly) {
       if (this.open) this.applyOpenState(false);
       this.pendingInput = undefined;
       this.keyboardChanged = false;
@@ -679,6 +699,15 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncExternalDescription();
+    // `readonly` is a plain subclass property, not one of the mixin's own accessor setters
+    // (`required`/`disabled`/`value`), so nothing else re-runs the mixin's own `updateValidity()`/
+    // `syncValidityStates()` for it -- `isBarredFromValidation()` already reads `this.readonly`
+    // generically, this just re-triggers the recomputation it feeds. `checkValidity()` is the
+    // public surface that reaches those two mixin-internal steps (its own `updateValidity()` call
+    // ends in `[SET_ANCHORED_VALIDITY]`, which republishes the six validity custom states);
+    // `withStaticValidityCheck` inside it keeps this silent re-check from ever being mistaken for
+    // user interaction.
+    if (changed.has('readonly')) this.checkValidity();
     if (changed.has('open')) {
       const suppressClose = !this.open && this.suppressDisconnectedClose;
       this.suppressDisconnectedClose = false;
@@ -955,6 +984,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       !this.isConnected ||
       !dragWindow ||
       this.effectiveDisabled ||
+      this.readonly ||
       this.drag !== undefined ||
       (event.pointerType === 'mouse' && event.button !== 0)
     ) return;
@@ -1003,9 +1033,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   private onPointerMove = (event: PointerEvent): void => {
     if (this.drag?.pointerId !== event.pointerId) return;
-    if (this.effectiveDisabled) {
+    if (this.effectiveDisabled || this.readonly) {
       // These window-level listeners keep firing for a captured pointer regardless of the
-      // `disabled` reflection, so an in-flight drag would otherwise keep mutating `value`.
+      // `disabled`/`readonly` reflection, so an in-flight drag would otherwise keep mutating
+      // `value`.
       this.cancelDrag();
       return;
     }
@@ -1014,7 +1045,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   private onPointerUp = (event: PointerEvent): void => {
     if (this.drag?.pointerId !== event.pointerId) return;
-    if (this.effectiveDisabled) {
+    if (this.effectiveDisabled || this.readonly) {
       this.cancelDrag();
       return;
     }
@@ -1067,7 +1098,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   private onGridKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.effectiveDisabled || this.readonly) return;
     const step = SMALL_STEP * (event.shiftKey ? LARGE_STEP_MULTIPLIER : 1);
     const inline = this.inlineStep(event);
     let next: LyraColorHsva | undefined;
@@ -1082,7 +1113,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   };
 
   private onHueKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.effectiveDisabled || this.readonly) return;
     const step = SMALL_STEP * (event.shiftKey ? LARGE_STEP_MULTIPLIER : 1);
     const inline = this.inlineStep(event);
     let hue: number | undefined;
@@ -1099,7 +1130,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   };
 
   private onAlphaKeyDown = (event: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.effectiveDisabled || this.readonly) return;
     const step = (SMALL_STEP * (event.shiftKey ? LARGE_STEP_MULTIPLIER : 1)) / 100;
     const inline = this.inlineStep(event);
     let alpha: number | undefined;
@@ -1139,7 +1170,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // color-picker's serialized public value changed; commitColor() emits the one public input
     // after parsing succeeds.
     event.stopPropagation();
-    if (this.liveDisabled) {
+    if (this.liveDisabled || this.readonly) {
       this.pendingInput = undefined;
       this.requestUpdate();
       return;
@@ -1150,7 +1181,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private onFieldChange = (event: Event): void => {
     event.stopPropagation();
     const field = event.target as HTMLInputElement;
-    if (this.liveDisabled) {
+    if (this.liveDisabled || this.readonly) {
       this.pendingInput = undefined;
       this.requestUpdate();
       return;
@@ -1162,14 +1193,14 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   };
 
   private onFieldKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || this.readonly) return;
     if (event.key !== 'Enter') return;
     event.preventDefault();
     this.onFieldChange(event);
   };
 
   private onSwatchClick(swatch: LyraColorPickerSwatch): void {
-    if (this.liveDisabled || swatch.disabled) return;
+    if (this.liveDisabled || this.readonly || swatch.disabled) return;
     const parsed = parseColor(swatch.color);
     if (!parsed) return;
     this.commitColor(this.opacity ? parsed : hsva(parsed.h, parsed.s, parsed.v, 1));
@@ -1185,7 +1216,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const ownerWindow = this.ownerDocument.defaultView;
     if (!this.isConnected || !ownerWindow) return;
     const Constructor = eyeDropperConstructor(ownerWindow);
-    if (!Constructor || this.effectiveDisabled) return;
+    if (!Constructor || this.effectiveDisabled || this.readonly) return;
     this.cancelEyeDropper();
     const generation = this.eyeDropperGeneration;
     const controller = new ownerWindow.AbortController();
@@ -1198,7 +1229,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           generation !== this.eyeDropperGeneration ||
           !this.isConnected ||
           this.ownerDocument.defaultView !== ownerWindow ||
-          this.effectiveDisabled
+          this.effectiveDisabled ||
+          this.readonly
         ) return;
         const parsed = parseColor(result?.sRGBHex ?? '');
         if (parsed) this.commitColor(this.opacity ? hsva(parsed.h, parsed.s, parsed.v, this.color.a) : parsed);
@@ -1379,7 +1411,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
             ?disabled=${this.effectiveDisabled || entry.disabled === true}
             style=${styleMap(parsed ? { '--lr-color-picker-swatch-color': cssColor(parsed) } : {})}
             @click=${() => this.onSwatchClick(entry)}
-          ></button>
+          >${entry.icon == null ? nothing : renderInertPresentation(entry.icon, { part: 'swatch-icon' })}</button>
         `;
       })}
     </div>`;
@@ -1423,6 +1455,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${invalid ? 'true' : 'false'}
           ?disabled=${this.effectiveDisabled}
+          ?readonly=${this.readonly}
           @input=${this.onFieldInput}
           @change=${this.onFieldChange}
           @keydown=${this.onFieldKeyDown}
