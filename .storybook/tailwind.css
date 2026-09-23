@@ -99,3 +99,74 @@ body {
 @media (max-width: 600px) {
   #storybook-root { padding: 1rem; }
 }
+
+/*
+ * Docs page layout. Storybook centres a 1000px content column next to a
+ * fixed 10rem table of contents, which leaves most of a wide screen empty
+ * while long story names wrap over three or four lines in the TOC. Let the
+ * column grow with the viewport (up to a ceiling) so live previews and the
+ * API table get the room, but keep running prose at a readable line length.
+ * The doubled class selectors outrank Storybook's single-class emotion rules.
+ */
+.sbdocs.sbdocs-wrapper {
+  gap: clamp(2rem, 3vw, 3.5rem);
+  padding-inline: clamp(1.25rem, 3vw, 3rem);
+}
+
+.sbdocs.sbdocs-content {
+  max-width: 90rem;
+}
+
+.sbdocs-content :where(p, ul, ol, blockquote):not(.docs-story *, .docblock-argstable *) {
+  max-inline-size: 100ch;
+}
+
+.sbdocs.sbdocs-toc--custom,
+.sbdocs.sbdocs-toc--custom > nav {
+  width: 15rem;
+}
+
+.sbdocs.sbdocs-toc--custom > nav {
+  padding-inline-end: 1rem;
+  font-size: .8125rem;
+  line-height: 1.4;
+}
+
+.sbdocs.sbdocs-toc--custom #table-of-contents {
+  color: var(--lr-theme-color-text-quiet, #656d76);
+  font-size: .75rem;
+  letter-spacing: .08em;
+}
+
+.sbdocs.sbdocs-toc--custom .toc-list-item {
+  margin-inline-start: .875rem;
+  padding-block: .25rem;
+}
+
+.sbdocs.sbdocs-toc--custom .toc-list-item::before {
+  transform: translateX(calc(-2px - .875rem));
+}
+
+/* One line per entry; the full name comes back on hover or keyboard focus. */
+.sbdocs.sbdocs-toc--custom .toc-list-item > a {
+  display: block;
+  overflow: hidden;
+  color: var(--lr-theme-color-text-quiet, #656d76);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sbdocs.sbdocs-toc--custom .toc-list-item > a:hover,
+.sbdocs.sbdocs-toc--custom .toc-list-item > a:focus-visible {
+  color: var(--lr-theme-color-text-normal, #1f2328);
+  white-space: normal;
+}
+
+.sbdocs.sbdocs-toc--custom .toc-list-item.is-active-li > a {
+  color: var(--lr-theme-color-brand-fill-loud, #0969da);
+}
+
+/* Below this width the TOC would squeeze the content more than it helps. */
+@media (max-width: 1100px) {
+  .sbdocs.sbdocs-toc--custom { display: none; }
+}
