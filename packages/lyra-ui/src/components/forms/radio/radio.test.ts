@@ -2419,6 +2419,36 @@ describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
     ).to.equal("horizontal");
   });
 
+  it("clamps an out-of-vocabulary orientation attribute to the declared default instead of forwarding it to aria-orientation", async () => {
+    const group = (await fixture(html`
+      <lr-radio-group orientation="diagonal" label="Choice">
+        <lr-radio value="a" checked>A</lr-radio>
+        <lr-radio value="b">B</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const radiogroup = group.shadowRoot!.querySelector(
+      '[role="radiogroup"]'
+    ) as HTMLElement;
+    expect(group.orientation).to.equal("vertical");
+    expect(group.getAttribute("orientation")).to.equal("vertical");
+    expect(radiogroup.getAttribute("aria-orientation")).to.equal("vertical");
+  });
+
+  it("clamps an out-of-vocabulary orientation set directly on the property instead of forwarding it to aria-orientation", async () => {
+    const group = (await fixture(html`
+      <lr-radio-group label="Choice">
+        <lr-radio value="a" checked>A</lr-radio>
+        <lr-radio value="b">B</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    (group as unknown as { orientation: string }).orientation = "diagonal";
+    await group.updateComplete;
+    const radiogroup = group.shadowRoot!.querySelector(
+      '[role="radiogroup"]'
+    ) as HTMLElement;
+    expect(radiogroup.getAttribute("aria-orientation")).to.equal("vertical");
+  });
+
   it("focuses the selected option, or the first enabled option when empty", async () => {
     const group = (await fixture(html`
       <lr-radio-group label="Choice">

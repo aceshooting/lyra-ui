@@ -2943,6 +2943,30 @@ it("announces aria-orientation on every handle in both orientations", async () =
   }
 });
 
+it("clamps an out-of-vocabulary orientation attribute to the declared default instead of forwarding it to aria-orientation", async () => {
+  const el = (await fixture(
+    html`<lr-slider orientation="diagonal"></lr-slider>`
+  )) as LyraSlider;
+  expect(el.orientation).to.equal("horizontal");
+  expect(el.getAttribute("orientation")).to.equal("horizontal");
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement
+    ).getAttribute("aria-orientation")
+  ).to.equal("horizontal");
+});
+
+it("clamps an out-of-vocabulary orientation set directly on the property instead of forwarding it to aria-orientation", async () => {
+  const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
+  (el as unknown as { orientation: string }).orientation = "diagonal";
+  await el.updateComplete;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement
+    ).getAttribute("aria-orientation")
+  ).to.equal("horizontal");
+});
+
 it("positions a vertical slider along the block axis with the domain floor at the bottom", async () => {
   const el = (await fixture(html`
     <lr-slider orientation="vertical" min="0" max="100" value="25"></lr-slider>

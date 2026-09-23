@@ -29,6 +29,7 @@ import {
 } from '../../../internal/form-associated.js';
 import {
   declaredDefaultConverter,
+  literalSetConverter,
   omittedEmptyStringConverter } from '../../../internal/converters.js';
 import {
   isAccessibilitySubtreeExcluded,
@@ -58,6 +59,11 @@ export type RadioGroupOrientation = LyraOrientation;
 // uses plain radios), so both names have to be listed. Computed rather than frozen at module scope
 // so the prefix stays the single source of truth.
 const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
+
+const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
+  ['horizontal', 'vertical'],
+  'vertical',
+);
 
 /**
  * `<lr-radio-group>` — a labeled, keyboard-navigable group of radios.
@@ -151,7 +157,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     orientation: { reflect: true,
-      converter: declaredDefaultConverter<RadioGroupOrientation>('vertical'),
+      converter: RADIO_GROUP_ORIENTATION,
     },
     form: { noAccessor: true },
   };
@@ -889,6 +895,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText) || this.withHint;
     const hasError = this.hasErrorSlot || Boolean(this.errorText);
     const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
+    // A direct JS property write bypasses the reflected-attribute converter, so re-normalize here
+    // too -- an out-of-vocabulary orientation must never reach aria-orientation.
+    const ariaOrientation = RADIO_GROUP_ORIENTATION.normalize(this.orientation);
     return html`
       <div part="base" role="radiogroup"
         aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
@@ -896,7 +905,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         aria-describedby=${described}
         aria-required=${this.required ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-        aria-orientation=${this.orientation}
+        aria-orientation=${ariaOrientation}
         aria-invalid=${hasError || (this.hasInteracted && !this.internals.validity.valid) ? 'true' : 'false'}
         @keydown=${this.onKeyDown}>
         <div part="form-control">

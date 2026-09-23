@@ -13,6 +13,7 @@ import {
 } from '../../../internal/form-associated.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import {
   installInteractionOnInvalid,
   installInvalidEventAlias,
@@ -75,6 +76,11 @@ const LABEL_ID = 'slider-label';
  *  under RTL), `'vertical'` to the block axis with the domain minimum at the
  *  block end. */
 export type SliderOrientation = LyraOrientation;
+
+const SLIDER_ORIENTATION = literalSetConverter<SliderOrientation>(
+  ['horizontal', 'vertical'],
+  'horizontal',
+);
 
 /** Side of a handle used for its focus/drag tooltip. */
 export type SliderTooltipPlacement = 'top' | 'right' | 'bottom' | 'left';
@@ -674,7 +680,7 @@ export class LyraSlider extends LyraSliderBase {
 
   /** Which axis carries the value. `'vertical'` also switches the primary keys to
    *  ArrowUp/ArrowDown and exposes `aria-orientation="vertical"`. */
-  @property({ reflect: true }) orientation: SliderOrientation = 'horizontal';
+  @property({ reflect: true, converter: SLIDER_ORIENTATION }) orientation: SliderOrientation = 'horizontal';
 
   /** Whether the value is displayed but not changeable. Unlike `disabled`, a read-only slider
    *  stays focusable and fully legible, and still submits its value.
@@ -1626,6 +1632,9 @@ export class LyraSlider extends LyraSliderBase {
     const value = this.valueForHandle(handle);
     const bounds = this.reachableBounds(handle);
     const percent = this.percentOf(value);
+    // A direct JS property write bypasses the reflected-attribute converter, so re-normalize here
+    // too -- an out-of-vocabulary orientation must never reach aria-orientation.
+    const ariaOrientation = SLIDER_ORIENTATION.normalize(this.orientation);
     const numeric = this.formatValue(value);
     const valueText = this.valueFormatter
       ? this.valueFormatter(value, handle)
@@ -1656,7 +1665,7 @@ export class LyraSlider extends LyraSliderBase {
         part=${partName}
         role="slider"
         tabindex=${this.effectiveDisabled ? '-1' : '0'}
-        aria-orientation=${this.orientation}
+        aria-orientation=${ariaOrientation}
         aria-valuemin=${bounds.min}
         aria-valuemax=${bounds.max}
         aria-valuenow=${value}
