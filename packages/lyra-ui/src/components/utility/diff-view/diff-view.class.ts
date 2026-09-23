@@ -190,9 +190,6 @@ class LyraDiffViewBase extends LyraElement<LyraDiffViewEventMap> {}
  * @csspart copy-button - The copy affordance, only rendered while `copyable`.
  * @csspart limit - The localized fallback rendered when either input exceeds `maxLines`.
  * @csspart side - One column in `layout="split"` (`data-side="old"|"new"`).
- * @csspart anchor-live-region - An aria-hidden, non-live shadow mirror of the latest anchor-jump
- *   message; the spoken copy is appended to the shared document-level polite sink only while this
- *   viewer and its composed ancestors are exposed to the accessibility tree.
  * @cssprop [--lr-diff-view-max-height=none] - Cap on `[part="base"]`'s block size, past which the
  *   view scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @cssprop [--lr-diff-view-font=var(--lr-font-mono)] - Font family used for the diff lines.
