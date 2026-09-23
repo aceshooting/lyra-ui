@@ -792,6 +792,57 @@ function restoreMarkdownHighlightStyles(markup: string): string {
   });
 }
 
+/** Matches one HTML attribute (double-quoted, single-quoted, or an unquoted `name=value`) wherever
+ *  it starts in an opening tag's source -- used to locate `target`/`rel` without false-matching a
+ *  lookalike substring inside another attribute's already-quoted value, since a global regex's
+ *  `lastIndex` advances past each full match before the next `exec()`. Quote and backtick
+ *  characters are hex-escaped rather than typed literally so this regex literal itself can't be
+ *  mistaken for a quoted string or template literal by naive text tooling. */
+const MARKDOWN_ANCHOR_ATTR = /([a-zA-Z][\w-]*)\s*=\s*(\x22([^\x22]*)\x22|\x27([^\x27]*)\x27|[^\s\x22\x27=<>\x60]+)/g;
+
+/**
+ * Force-adds `rel="noopener noreferrer"` onto every rendered `<a>` carrying a `target` attribute,
+ * merging any author-supplied `rel` tokens and stripping `opener` -- the same
+ * merge-author-tokens/strip-opener/force-add semantics as `resolvedRel` in
+ * `button.class.ts`/`breadcrumb-item.class.ts`.
+ *
+ * The `link()` renderer override above already forces this for markdown-syntax `[text](url)`
+ * links (gated on the `link-target` property), but marked routes an author-written raw HTML
+ * anchor -- literal `<a ...>` typed directly into the Markdown source -- through the separate
+ * `html(token)` renderer instead, which the `link()` override never sees. This closes that gap by
+ * post-processing the final markup string, the same technique `restoreMarkdownHighlightStyles`
+ * above already uses for Shiki palette data. Applied in both the `sanitize` branch (after
+ * DOMPurify, which itself has no notion of `rel`/`target` policy) and the non-`sanitize` branch
+ * (covering the `trusted` bypass, where this is the only guard reached at all -- `escape` mode's
+ * raw HTML is rendered as escaped text, never a real `<a>` element, so this is a no-op there). */
+function enforceMarkdownAnchorRelGuard(markup: string): string {
+  return markup.replace(/<a\b[^<>]*>/gi, (tag) => {
+    MARKDOWN_ANCHOR_ATTR.lastIndex = 0;
+    let hasTarget = false;
+    let relMatch: RegExpExecArray | null = null;
+    let match: RegExpExecArray | null;
+    while ((match = MARKDOWN_ANCHOR_ATTR.exec(tag))) {
+      const name = match[1]!.toLowerCase();
+      if (name === 'target') hasTarget = true;
+      else if (name === 'rel') relMatch = match;
+    }
+    if (!hasTarget) return tag;
+    const authoredValue = relMatch ? (relMatch[3] ?? relMatch[4] ?? relMatch[2])! : '';
+    const tokens = new Set(
+      authoredValue.split(/\s+/).filter((token) => token !== '' && token.toLowerCase() !== 'opener'),
+    );
+    tokens.add('noopener');
+    tokens.add('noreferrer');
+    const relValue = [...tokens].join(' ');
+    if (relMatch) {
+      const start = relMatch.index;
+      const end = start + relMatch[0]!.length;
+      return `${tag.slice(0, start)}rel='${relValue}'${tag.slice(end)}`;
+    }
+    return `${tag.slice(0, -1)} rel='${relValue}'>`;
+  });
+}
+
 /**
  * Tokenizes one pending fenced block with an already-resolved highlighter and returns the exact
  * string to cache (trailing newline included, matching the plain `code()` renderer's own output).
@@ -957,9 +1008,11 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
   if (options.htmlMode !== 'sanitize') {
     // Shiki palette data is trusted output from Lyra's highlighter, not authored HTML. Restore its
     // strict color-only declarations in both escape and trusted modes as well as after DOMPurify.
+    // `enforceMarkdownAnchorRelGuard` is this branch's only `rel`/`target` guard: it is the sole
+    // pass a raw-HTML anchor authored under the `trusted` bypass ever reaches.
     return {
       status: 'rendered',
-      html: restoreMarkdownHighlightStyles(rawHtml),
+      html: enforceMarkdownAnchorRelGuard(restoreMarkdownHighlightStyles(rawHtml)),
       headingTree,
       mathFailed,
       pendingKeys,
@@ -995,7 +1048,11 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
     if (typeof result !== 'string') {
       throw new TypeError('The HTML sanitizer returned non-string markup.');
     }
-    sanitized = restoreMarkdownHighlightStyles(result);
+    // DOMPurify itself has no `rel`/`target` policy -- `ADD_ATTR: ['target']` above only stops
+    // `target` from being stripped; it never adds a missing `rel`. `enforceMarkdownAnchorRelGuard`
+    // is what forces the guard onto a raw-HTML anchor that reached this pass via the `html(token)`
+    // renderer, which the `link()` override's own forced `rel` never sees.
+    sanitized = enforceMarkdownAnchorRelGuard(restoreMarkdownHighlightStyles(result));
   } catch (error) {
     warnMarkdownSanitizerUnavailable();
     return { status: 'fallback', error, headingTree };

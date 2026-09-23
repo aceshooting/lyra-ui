@@ -536,6 +536,36 @@ it('applies link-target and forces rel="noopener noreferrer" on every rendered l
   expect(a.getAttribute("part")).to.equal("link");
 });
 
+it('forces rel="noopener noreferrer" onto a raw HTML anchor carrying target, merging a hostile authored rel, in the default sanitize html mode', async () => {
+  const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  el.content =
+    'click <a href="https://evil.example" target="_blank" rel="opener">here</a>';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector("a") !== null);
+
+  const a = el.shadowRoot!.querySelector("a")!;
+  expect(a.getAttribute("target")).to.equal("_blank");
+  const relTokens = (a.getAttribute("rel") ?? "").split(/\s+/).filter(Boolean);
+  expect(relTokens).to.include("noopener");
+  expect(relTokens).to.include("noreferrer");
+  expect(relTokens).to.not.include("opener");
+});
+
+it('forces rel="noopener noreferrer" onto a raw HTML anchor carrying target, with no authored rel, in html-mode="trusted"', async () => {
+  const el = (await fixture(
+    html`<lr-markdown html-mode="trusted"></lr-markdown>`
+  )) as LyraMarkdown;
+  el.content = 'click <a href="https://evil.example" target="_blank">here</a>';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector("a") !== null);
+
+  const a = el.shadowRoot!.querySelector("a")!;
+  expect(a.getAttribute("target")).to.equal("_blank");
+  const relTokens = (a.getAttribute("rel") ?? "").split(/\s+/).filter(Boolean);
+  expect(relTokens).to.include("noopener");
+  expect(relTokens).to.include("noreferrer");
+});
+
 it('defaults link-target to "_blank"', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   expect(el.linkTarget).to.equal("_blank");
