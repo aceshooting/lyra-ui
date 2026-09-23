@@ -30,7 +30,7 @@ import {
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunStatusCancelled, LYRA_DEFAULT_evaluationRunStatusIdle, LYRA_DEFAULT_evaluationRunStatusWaitingApproval, LYRA_DEFAULT_evaluationRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_noData, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleLimit, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunStatusCancelled, LYRA_DEFAULT_evaluationRunStatusIdle, LYRA_DEFAULT_evaluationRunStatusWaitingApproval, LYRA_DEFAULT_evaluationRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_noData, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -121,6 +121,14 @@ export interface LyraEvalRunEventMap {
 const RUNNING_ERROR_KINDS = ['running', 'error'] as const;
 type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
 
+/** Ceiling on example rows actually mounted into the DOM, matching this family's established
+ *  `MAX_RENDERED_*` convention (`trace-tree`/`span-waterfall`'s `MAX_RENDERED_LYRA_SPANS`,
+ *  `subagent-panel`'s `MAX_RENDERED_RUNS`, `tool-timeline`'s `MAX_RENDERED_ENTRIES` -- the latter
+ *  already caps each example's own nested tool trace). The batch progress bar, counts, and status
+ *  announcements still derive from every example in `examples`, not just the rendered subset --
+ *  only the example row DOM is capped. */
+const MAX_RENDERED_EXAMPLES = 500;
+
 /**
  * `<lr-eval-run>` — an evaluation batch's live progress: an overall `<lr-progress-bar>`
  * counting terminal (done/error/cancelled) examples against the batch total, plus one
@@ -182,6 +190,7 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
  *   assessment.
  * @csspart tool-trace - The nested `<lr-tool-timeline>` for an example's tool calls.
  * @csspart empty - The empty-state message shown when `examples` is empty.
+ * @csspart limit - Localized notice shown when `examples` exceeds the 500-row render ceiling.
  * @csspart live-region - The internal status-announcement live region.
  * @status stable
  * @since 9.0.0
@@ -197,6 +206,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     evaluationRunExampleCompletedAnnounce: LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce,
     evaluationRunExampleFailedAnnounce: LYRA_DEFAULT_evaluationRunExampleFailedAnnounce,
     evaluationRunExampleLabel: LYRA_DEFAULT_evaluationRunExampleLabel,
+    evaluationRunExampleLimit: LYRA_DEFAULT_evaluationRunExampleLimit,
     evaluationRunExampleStartedAnnounce: LYRA_DEFAULT_evaluationRunExampleStartedAnnounce,
     evaluationRunExampleWaitingApprovalAnnounce: LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce,
     evaluationRunExampleWaitingInputAnnounce: LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce,
@@ -529,6 +539,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     const visibleLabel = this.label || this.localize('evaluationRunLabel');
     const headerLabel = overallSemanticLabel(this, visibleLabel);
     const number = getNumberFormat(this.effectiveLocale);
+    const truncated = examples.length > MAX_RENDERED_EXAMPLES;
 
     return html`
       <div
@@ -567,7 +578,14 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
         </div>
         ${examples.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
-          : html`<div part="examples">${examples.map((example, index) => this.renderExample(example, index))}</div>`}
+          : html`<div part="examples">${examples
+              .slice(0, MAX_RENDERED_EXAMPLES)
+              .map((example, index) => this.renderExample(example, index))}</div>`}
+        ${truncated
+          ? html`<p part="limit">${this.localize('evaluationRunExampleLimit', undefined, {
+                count: number.format(MAX_RENDERED_EXAMPLES),
+              })}</p>`
+          : nothing}
       </div>
       <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;

@@ -122,6 +122,12 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
 
+  [part='limit'] {
+    margin: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
+
   @container (max-inline-size: 319.98px) {
     [part='request'] {
       grid-template-columns: 1fr;

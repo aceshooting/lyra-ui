@@ -21,7 +21,7 @@ import { firstByIdentity } from '../collection-identity.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorLimit, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -100,6 +100,13 @@ function formatCount(n: number, locale: string): string {
   return Math.round(finiteCount(n)).toLocaleString(resolveIntlLocale(locale));
 }
 
+/** Ceiling on segment rows actually mounted into the DOM, matching this family's established
+ *  `MAX_RENDERED_*` convention (`trace-tree`/`span-waterfall`'s `MAX_RENDERED_LYRA_SPANS`,
+ *  `subagent-panel`'s `MAX_RENDERED_RUNS`, `tool-timeline`'s `MAX_RENDERED_ENTRIES`). The embedded
+ *  `lr-context-meter`, the copy/export payloads, and the citation index still derive from every
+ *  segment in `segments`, not just the rendered subset -- only the segment row DOM is capped. */
+const MAX_RENDERED_SEGMENTS = 500;
+
 export interface LyraContextInspectorEventMap
   extends LyraCitationBadgeEventMap,
     LyraCopyButtonEventMap,
@@ -159,6 +166,7 @@ export interface LyraContextInspectorEventMap
  * @csspart redaction - One redacted range within a segment's text (a `<mark>`).
  * @csspart truncation-boundary - The marker appended after a `truncated` segment's text.
  * @csspart empty - The empty state, shown when `segments` is empty.
+ * @csspart limit - Localized notice shown when `segments` exceeds the 500-row render ceiling.
  * @status stable
  * @since 4.1.0
  */
@@ -171,6 +179,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     contextInspectorCopyLabel: LYRA_DEFAULT_contextInspectorCopyLabel,
     contextInspectorEmpty: LYRA_DEFAULT_contextInspectorEmpty,
     contextInspectorLabel: LYRA_DEFAULT_contextInspectorLabel,
+    contextInspectorLimit: LYRA_DEFAULT_contextInspectorLimit,
     contextInspectorRedacted: LYRA_DEFAULT_contextInspectorRedacted,
     contextInspectorSegmentTokens: LYRA_DEFAULT_contextInspectorSegmentTokens,
     contextInspectorTruncated: LYRA_DEFAULT_contextInspectorTruncated,
@@ -314,6 +323,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     }
 
     let citationIndex = 0;
+    const truncated = segments.length > MAX_RENDERED_SEGMENTS;
     return html`
       <div part="base" role=${groupRole ?? nothing} aria-label=${groupLabel ?? nothing}>
         <lr-context-meter part="meter" .segments=${this.meterSegments} .total=${this.safeTotal} label=${this.label}></lr-context-meter>
@@ -331,11 +341,16 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
           ></lr-export-button>
         </div>
         <div part="segments" role="list">
-          ${segments.map((segment) => {
+          ${segments.slice(0, MAX_RENDERED_SEGMENTS).map((segment) => {
             if (segment.citation) citationIndex += 1;
             return this.renderSegment(segment, citationIndex);
           })}
         </div>
+        ${truncated
+          ? html`<p part="limit">${this.localize('contextInspectorLimit', undefined, {
+                count: formatCount(MAX_RENDERED_SEGMENTS, this.effectiveLocale),
+              })}</p>`
+          : nothing}
       </div>
     `;
   }

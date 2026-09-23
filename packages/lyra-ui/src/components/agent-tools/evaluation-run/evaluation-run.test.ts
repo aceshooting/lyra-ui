@@ -631,3 +631,25 @@ it('normalizes duplicate example ids first-wins before progress and disclosures'
   expect(rows[0]!.textContent).to.contain('First example');
   expect(rows[0]!.textContent).not.to.contain('Later example');
 });
+
+it('caps rendered example rows at the render ceiling and shows a localized limit notice', async () => {
+  const many: EvalExampleResult[] = Array.from({ length: 600 }, (_, index) => ({
+    id: `ex-${index}`,
+    status: { kind: 'done' as const },
+    input: { text: `in ${index}` },
+    output: { text: `out ${index}` },
+  }));
+  const el = (await fixture(html`<lr-eval-run .examples=${many}></lr-eval-run>`)) as LyraEvalRun;
+  const rows = el.shadowRoot!.querySelectorAll('[part="example"]');
+  expect(rows).to.have.lengthOf(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 examples are shown.',
+  );
+  // The batch progress summary still counts every example, not just the rendered subset.
+  expect(el.shadowRoot!.querySelector('[part="summary"]')?.textContent).to.equal('600 of 600 examples complete');
+});
+
+it('renders no limit notice when examples stays within the render ceiling', async () => {
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
+  expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
+});

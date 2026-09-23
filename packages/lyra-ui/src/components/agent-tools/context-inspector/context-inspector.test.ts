@@ -364,3 +364,26 @@ it('normalizes duplicate segment ids first-wins before metering and rendering', 
   expect(meter.segments).to.have.length(1);
   expect(meter.segments[0]!.value).to.equal(10);
 });
+
+it('caps rendered segment rows at the render ceiling and shows a localized limit notice', async () => {
+  const many: ContextInspectorSegment[] = Array.from({ length: 600 }, (_, index) => ({
+    id: `segment-${index}`,
+    label: `Segment ${index}`,
+    text: `Text ${index}`,
+    tokens: 10,
+  }));
+  const el = await fixture<LyraContextInspector>(html`<lr-context-inspector .segments=${many}></lr-context-inspector>`);
+  const rows = el.shadowRoot!.querySelectorAll('[part="segment"]');
+  expect(rows).to.have.lengthOf(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 segments are shown.',
+  );
+  // The embedded meter and copy payload still reflect every segment, not just the rendered subset.
+  const meter = el.shadowRoot!.querySelector('lr-context-meter') as LyraContextMeter;
+  expect(meter.segments).to.have.lengthOf(600);
+});
+
+it('renders no limit notice when segments stays within the render ceiling', async () => {
+  const el = await fixture<LyraContextInspector>(html`<lr-context-inspector .segments=${segments}></lr-context-inspector>`);
+  expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
+});

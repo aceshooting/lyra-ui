@@ -70,6 +70,33 @@ it('drops decisions with unknown category or state while retaining valid neighbo
   expect(rows[0]!.textContent).to.include('Kept');
 });
 
+it('caps rendered decision rows at the render ceiling and shows a localized limit notice', async () => {
+  const many: PolicyDecision[] = Array.from({ length: 600 }, (_, index) => ({
+    id: `d-${index}`,
+    category: 'tool',
+    label: `Decision ${index}`,
+    state: 'allow',
+    explanation: 'Allowed by policy.',
+  }));
+  const el = (await fixture(html`<lr-policy-summary .decisions=${many}></lr-policy-summary>`)) as LyraPolicySummary;
+  const rows = el.shadowRoot!.querySelectorAll('[part="decision"]');
+  expect(rows).to.have.lengthOf(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 decisions are shown.',
+  );
+  // The allow/deny/needs-review summary counts still count every decision, not just the rendered subset.
+  expect(el.shadowRoot!.querySelector('[part="count"][data-state="allow"]')?.textContent).to.equal('600 allowed');
+});
+
+it('renders no limit notice when decisions stays within the render ceiling', async () => {
+  const el = (await fixture(
+    html`<lr-policy-summary .decisions=${[
+      { id: 'd1', category: 'tool', label: 'Decision', state: 'allow', explanation: 'Allowed.' },
+    ]}></lr-policy-summary>`,
+  )) as LyraPolicySummary;
+  expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
+});
+
 describe('lr-policy-summary', () => {
   it('renders lr-empty when decisions is empty', async () => {
     const el = (await fixture(html`<lr-policy-summary></lr-policy-summary>`)) as LyraPolicySummary;

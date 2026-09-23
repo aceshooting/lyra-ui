@@ -2680,7 +2680,8 @@ menu. These composed child events surface unchanged; the inspector does not emit
 **CSS parts:** `base`, `toolbar`,
 `segments`, `segment`, `segment-header`, `segment-label`, `segment-text`, `segment-tokens`,
 `meter` (the embedded `lr-context-meter`), `citation`, `redaction` (one redaction placeholder
-marker), `truncation-boundary`, `copy-button`, `export-button`, `empty`.
+marker), `truncation-boundary`, `copy-button`, `export-button`, `empty`, `limit` (localized notice
+shown when `segments` exceeds the 500-row render ceiling).
 
 ## `lr-eval-dataset`
 
@@ -2844,7 +2845,8 @@ child events as `lr-example-claim-select` (`{ exampleId, claim }`),
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,
 `example-label`, `example-status`, `example-status-message`, `input-section`, `input`, `output-section`, `output`,
 `grounding-section`, `grounding-summary`, `tool-trace-section`, `tool-trace`, `section-heading`,
-`live-region`, `empty`.
+`live-region`, `empty`, `limit` (localized notice shown when `examples` exceeds the 500-row render
+ceiling).
 
 ## `lr-policy-summary`
 
@@ -2869,7 +2871,8 @@ resolve/acknowledge action — see `lr-tool-approval-dialog`/`lr-confirm-bar` fo
 gate.
 
 **CSS parts:** `base`, `empty`, `summary`, `count`, `state-badge`,
-`list`, `decision`, `decision-header`, `category`, `label`, `detail`, `explanation`.
+`list`, `decision`, `decision-header`, `category`, `label`, `detail`, `explanation`, `limit`
+(localized notice shown when `decisions` exceeds the 500-row render ceiling).
 
 **Themeable custom properties:** `--lr-policy-summary-count-allow-color` (default
 `var(--lr-color-success)`), `--lr-policy-summary-count-deny-color` (default
@@ -3050,7 +3053,8 @@ resolved while open closes the dialog, and reentrant host updates during selecti
 stale request.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
-`tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching
+`tool-name`, `request-id`, `status`, `empty`, `limit` (localized notice shown when `requests`
+exceeds the 500-row render ceiling). The `[part='request']` row matching
 `selectedInvocationId`
 carries both `data-selected="true"` (the styling hook) and `aria-current="true"` (the semantic
 state), so the selection is announced, not merely painted. Other request rows explicitly render

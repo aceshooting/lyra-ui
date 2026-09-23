@@ -10,7 +10,7 @@ import { styles } from './policy-summary.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryLimit, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -65,6 +65,13 @@ const CATEGORY_LABEL_KEY: Record<PolicyDecisionCategory, string> = {
   tool: 'policySummaryCategoryTool',
 };
 
+/** Ceiling on decision rows actually mounted into the DOM, matching this family's established
+ *  `MAX_RENDERED_*` convention (`trace-tree`/`span-waterfall`'s `MAX_RENDERED_LYRA_SPANS`,
+ *  `subagent-panel`'s `MAX_RENDERED_RUNS`, `tool-timeline`'s `MAX_RENDERED_ENTRIES`). The
+ *  allow/deny/needs-review summary counts still derive from every decision in `decisions`, not
+ *  just the rendered subset -- only the decision row DOM is capped. */
+const MAX_RENDERED_DECISIONS = 500;
+
 const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
 const STATE_SET = new Set<PolicyDecisionState>(STATES);
 const CATEGORY_SET = new Set<PolicyDecisionCategory>([
@@ -109,6 +116,7 @@ const CATEGORY_SET = new Set<PolicyDecisionCategory>([
  * @csspart detail - The `<lr-details>` progressive-disclosure panel for `detail`, only rendered
  *   when a decision defines one.
  * @csspart empty - The `<lr-empty>` shown when `decisions` is empty.
+ * @csspart limit - Localized notice shown when `decisions` exceeds the 500-row render ceiling.
  * @cssprop [--lr-policy-summary-count-allow-color=var(--lr-color-success)] - Text color of the
  *   `allow` count.
  * @cssprop [--lr-policy-summary-count-deny-color=var(--lr-color-danger)] - Text color of the `deny`
@@ -140,6 +148,7 @@ export class LyraPolicySummary extends LyraElement {
     policySummaryDenyCount: LYRA_DEFAULT_policySummaryDenyCount,
     policySummaryDetailLabel: LYRA_DEFAULT_policySummaryDetailLabel,
     policySummaryLabel: LYRA_DEFAULT_policySummaryLabel,
+    policySummaryLimit: LYRA_DEFAULT_policySummaryLimit,
     policySummaryNeedsReviewCount: LYRA_DEFAULT_policySummaryNeedsReviewCount,
     policySummaryStateAllow: LYRA_DEFAULT_policySummaryStateAllow,
     policySummaryStateDeny: LYRA_DEFAULT_policySummaryStateDeny,
@@ -210,6 +219,7 @@ export class LyraPolicySummary extends LyraElement {
     if (decisions.length === 0) {
       return html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`;
     }
+    const truncated = decisions.length > MAX_RENDERED_DECISIONS;
     return html`
       <div part="base">
         <div part="summary">
@@ -226,8 +236,13 @@ export class LyraPolicySummary extends LyraElement {
           role="list"
           aria-label=${this.localize('policySummaryLabel')}
         >
-          ${decisions.map((decision) => this.renderDecision(decision))}
+          ${decisions.slice(0, MAX_RENDERED_DECISIONS).map((decision) => this.renderDecision(decision))}
         </div>
+        ${truncated
+          ? html`<p part="limit">${this.localize('policySummaryLimit', undefined, {
+                count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_DECISIONS),
+              })}</p>`
+          : nothing}
       </div>
     `;
   }

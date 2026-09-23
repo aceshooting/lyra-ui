@@ -12,11 +12,19 @@ import type { ApprovalDecision } from '../approval-state.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approvalQueueEmpty, LYRA_DEFAULT_approvalQueueLabel, LYRA_DEFAULT_approvalQueueOpen, LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_approvalQueuePendingCount, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approvalQueueEmpty, LYRA_DEFAULT_approvalQueueLabel, LYRA_DEFAULT_approvalQueueLimit, LYRA_DEFAULT_approvalQueueOpen, LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_approvalQueuePendingCount, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 export type ApprovalRequestStatus = 'pending' | ApprovalDecision;
+
+/** Ceiling on request rows actually mounted into the DOM, matching this family's established
+ *  `MAX_RENDERED_*` convention (`trace-tree`/`span-waterfall`'s `MAX_RENDERED_LYRA_SPANS`,
+ *  `subagent-panel`'s `MAX_RENDERED_RUNS`, `tool-timeline`'s `MAX_RENDERED_ENTRIES`). The pending
+ *  count in the heading row still derives from every request in `requests`, not just the rendered
+ *  subset -- only the request row DOM is capped, and `selectedRequest` lookup still searches the
+ *  full normalized list so a selection beyond the render ceiling still opens its dialog. */
+const MAX_RENDERED_REQUESTS = 500;
 
 /** A host-owned tool call waiting for or carrying a human approval decision. */
 export interface ToolApprovalRequest {
@@ -60,6 +68,7 @@ export interface LyraApprovalQueueEventMap {
  * @csspart request-id - The stable request id.
  * @csspart status - The request status badge.
  * @csspart empty - The empty state.
+ * @csspart limit - Localized notice shown when `requests` exceeds the 500-row render ceiling.
  * @cssprop [--lr-approval-queue-selected-border=var(--lr-color-brand)] - Selected request border.
  * @status stable
  * @since 6.2.0
@@ -71,6 +80,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     ...super.defaultStrings,
     approvalQueueEmpty: LYRA_DEFAULT_approvalQueueEmpty,
     approvalQueueLabel: LYRA_DEFAULT_approvalQueueLabel,
+    approvalQueueLimit: LYRA_DEFAULT_approvalQueueLimit,
     approvalQueueOpen: LYRA_DEFAULT_approvalQueueOpen,
     approvalQueuePending: LYRA_DEFAULT_approvalQueuePending,
     approvalQueuePendingCount: LYRA_DEFAULT_approvalQueuePendingCount,
@@ -242,14 +252,20 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     const request = this.selectedRequest;
     const requests = this.normalizedRequests;
     const pendingCount = this.pendingCount();
+    const truncated = requests.length > MAX_RENDERED_REQUESTS;
     return html`<section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
       <div part="heading-row">
         <h2 part="heading">${label}</h2>
         <span part="count">${this.localize('approvalQueuePendingCount', undefined, { count: this.formatCount(pendingCount) })}</span>
       </div>
       ${requests.length > 0
-        ? html`<div part="list" role="list">${requests.map((item) => this.renderRequest(item))}</div>`
+        ? html`<div part="list" role="list">${requests.slice(0, MAX_RENDERED_REQUESTS).map((item) => this.renderRequest(item))}</div>`
         : html`<p part="empty">${this.localize('approvalQueueEmpty')}</p>`}
+      ${truncated
+        ? html`<p part="limit">${this.localize('approvalQueueLimit', undefined, {
+              count: this.formatCount(MAX_RENDERED_REQUESTS),
+            })}</p>`
+        : nothing}
       ${request
         ? keyed(
             request.id,

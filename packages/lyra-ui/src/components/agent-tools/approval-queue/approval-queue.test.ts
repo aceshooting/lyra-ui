@@ -588,3 +588,24 @@ it("exposes a resolved request's decision to assistive tech via aria-describedby
   const describedText = described.map((node) => node.textContent ?? '').join(' ');
   expect(describedText).to.contain('Approved');
 });
+
+it('caps rendered request rows at the render ceiling and shows a localized limit notice', async () => {
+  const many: ToolApprovalRequest[] = Array.from({ length: 600 }, (_, index) => ({
+    id: `call-${index}`,
+    toolName: 'web_search',
+    args: { query: `q${index}` },
+  }));
+  const el = (await fixture(html`<lr-approval-queue .requests=${many}></lr-approval-queue>`)) as LyraApprovalQueue;
+  const rows = el.shadowRoot!.querySelectorAll('[part="request"]');
+  expect(rows).to.have.lengthOf(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 requests are shown.',
+  );
+  // The pending count in the heading row still counts every request, not just the rendered subset.
+  expect(el.shadowRoot!.querySelector('[part="count"]')?.textContent).to.equal('600 pending approvals');
+});
+
+it('renders no limit notice when requests stays within the render ceiling', async () => {
+  const el = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
+  expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
+});
