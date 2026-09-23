@@ -914,6 +914,18 @@ describe("indeterminate mode (total=\"-1\")", () => {
     expect(el.page).to.equal(4);
   });
 
+  it("accepts has-next=\"false\" as a plain-HTML attribute string, not just a property binding", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="-1" page="4" has-next="false"></lr-pagination>`
+    );
+
+    expect(el.hasNext).to.equal(false);
+    const nextButton = el.shadowRoot!.querySelector(
+      '[part~="next-button"]'
+    ) as HTMLButtonElement;
+    expect(nextButton.disabled).to.equal(true);
+  });
+
   it("does not strand focus when a page request is accepted with an unknown total", async () => {
     const el = await pagination(
       html`<lr-pagination total="-1" page="4"></lr-pagination>`

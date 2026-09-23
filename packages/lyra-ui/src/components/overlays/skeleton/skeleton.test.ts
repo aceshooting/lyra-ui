@@ -262,6 +262,11 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('is accessible with announce set', async () => {
+  const el = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
+  await expect(el).to.be.accessible();
+});
+
 it('renders a visible, nonzero box -- [part=base] uses display:block, not inline', async () => {
   const el = (await fixture(html`<lr-skeleton width="120px" height="40px"></lr-skeleton>`)) as LyraSkeleton;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;

@@ -2086,6 +2086,22 @@ it('disables next once has-next is false under unknown-total server pagination',
   expect(nextButton.disabled).to.equal(true);
 });
 
+it('accepts has-next="false" as a plain-HTML attribute string, not just a property binding', async () => {
+  const el = (await fixture(
+    html`<lr-table pagination-mode="server" unknown-total has-next="false" page-size="1" total-items="-1"></lr-table>`
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = [rows[0]!];
+  el.rowKey = (r) => r.id;
+  el.page = 2;
+  await el.updateComplete;
+
+  expect(el.hasNext).to.equal(false);
+  const nested = el.shadowRoot!.querySelector('lr-pagination')!;
+  const nextButton = nested.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
+  expect(nextButton.disabled).to.equal(true);
+});
+
 it('re-emits lr-page-change with the same { page } contract under unknown-total server pagination', async () => {
   const el = (await fixture(
     html`<lr-table pagination-mode="server" unknown-total page-size="1" total-items="-1"></lr-table>`
