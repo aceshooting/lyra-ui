@@ -190,6 +190,11 @@ it('uses the localized default label when label is omitted', async () => {
   expect(el.getAttribute('aria-label')).to.equal('Voice activity: Idle');
 });
 
+it('reads back an omitted label as undefined, not the empty string', async () => {
+  const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  expect(el.label).to.equal(undefined);
+});
+
 it('suppresses the localized default label when label is explicitly empty', async () => {
   const el = (await fixture(
     html`<lr-audio-visualizer label=""></lr-audio-visualizer>`,

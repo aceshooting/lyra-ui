@@ -114,6 +114,13 @@ it('uses the localized default label when label is omitted', async () => {
   );
 });
 
+it('reads back an omitted label as undefined, not the empty string', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker index="0" count="2"></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  expect(el.label).to.equal(undefined);
+});
+
 it('suppresses the localized default label when label is explicitly empty', async () => {
   const el = (await fixture(
     html`<lr-branch-picker index="0" count="2" label=""></lr-branch-picker>`,

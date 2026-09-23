@@ -2286,7 +2286,7 @@ hosts that already have one (e.g. `lr-push-to-talk`'s `lr-level` detail); `state
 animation and per-state coloring; `mode: AudioVisualizerMode = 'bars'` (`'bars' | 'waveform'`,
 reflected); `barCount: number = 5` (attribute `bar-count`, normalized to an integer in `[1, 64]`);
 `gain: number = 1` — multiplier applied to the resolved amplitude, with a non-finite value treated
-as `1`; `label: string = ''` — accessible-name override. Omitting it auto-generates "Voice activity:
+as `1`; `label?: string` — accessible-name override. Omitting it auto-generates "Voice activity:
 {state}"; an explicit empty string suppresses that default and renders an empty accessible name.
 `level` is clamped to `[0, 1]`; after gain,
 waveform and bar values are clamped to `[-1, 1]` and `[0, 1]` respectively. Invalid `state` or
@@ -2326,7 +2326,7 @@ the new `index` back. Renders nothing at all while `count < 2`, so a host can bi
 on every message regardless of whether that message actually has multiple branches yet.
 
 **Properties:** `index: number = 0` (reflected) and `count: number = 1` (reflected) — the current
-0-based branch and the total branch count. `label: string = ''` — accessible name for the group.
+0-based branch and the total branch count. `label?: string` — accessible name for the group.
 Omitting it localizes the default `branchPickerLabel` message; an explicit empty string suppresses
 that default and renders no label.
 
@@ -2377,7 +2377,7 @@ opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only whil
 feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
 `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
 the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus.
-`label: string = ''` — accessible name override for the toolbar. Omitting it localizes the default
+`label?: string` — accessible name override for the toolbar. Omitting it localizes the default
 `messageActionsLabel` message; an explicit empty string suppresses that default and renders no
 label. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — overrides the toolbar's computed accessible name, winning over
@@ -2691,7 +2691,7 @@ index of the first unread item (element-child index in slotted mode, `items` ind
 'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
 remains non-live. Keep `off` for token-by-token streaming and opt in only when complete messages are
 appended as direct children at an announcement-safe cadence.
-`label: string = ''` — accessible name
+`label?: string` — accessible name
 for the log region. Omitting it localizes the default `chatViewportLabel` message; an explicit
 empty string suppresses that default and renders no label. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal `role="log"` element
@@ -3870,7 +3870,7 @@ LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: readon
 `voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>`,
 `sources: readonly LyraSourceEntry[] = []`, `selectedSourceIds: readonly string[] = []`, and `queue:
 readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
-`label: string = ''` — accessible name for the prompt section. Omitting it localizes the default
+`label?: string` — accessible name for the prompt section. Omitting it localizes the default
 `promptInputLabel` message; an explicit empty string suppresses that default and renders no label.
 `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and the
 localized default.
@@ -3943,7 +3943,7 @@ receives focus. Removing an unfocused row does not move focus.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
 (reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
-`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 `PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
 
@@ -3981,7 +3981,7 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 **Properties:** `open: boolean = false` (reflected); `text: string = ''`;
 clone-owned `anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
 clone-owned `actions: readonly SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
-`label: string = ''` — accessible name for the toolbar. Omitting it localizes the default
+`label?: string` — accessible name for the toolbar. Omitting it localizes the default
 `selectionToolbarLabel` message; an explicit empty string suppresses that default and renders no
 label. `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and
 the localized default.
@@ -4050,7 +4050,7 @@ clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessi
 entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
 `muted: boolean = false` (reflected);
 `showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
-converter); `label: string = ''` — accessible name for the session shell. Omitting it localizes the
+converter); `label?: string` — accessible name for the session shell. Omitting it localizes the
 default `realtimeSessionLabel` message; an explicit empty string suppresses that default and
 renders no label. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same

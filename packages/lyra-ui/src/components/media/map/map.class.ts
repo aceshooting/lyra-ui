@@ -2808,9 +2808,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: 'legend-gradient-hi-label' }) legendGradientHiLabel: string | null = null;
 
   /** Counts from the latest bounded legend normalization. `truncated` covers omitted rows or
-   * shortened labels; the returned record is frozen and never aliases caller input. */
+   * shortened labels; the returned record is frozen and never aliases caller input. Read-only --
+   * derived from the live `legend` normalization, never assignable. The setter is a documented
+   * no-op (matching `LyraChart.chartArea`'s pattern) so an accidental `.legendProjection=${x}`
+   * Lit template binding degrades silently instead of throwing from inside lit-html's
+   * property-commit. */
   get legendProjection(): LyraMapLegendProjection {
     return this._legendProjection;
+  }
+  set legendProjection(_value: LyraMapLegendProjection) {
+    /* read-only, derived from the latest `legend` normalization; direct writes are silently ignored */
   }
 
   /**
@@ -3004,23 +3011,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._canonicalMarkers;
   }
 
-  private _label = '';
-  private _labelExplicit = false;
   /** Accessible name for MapLibre's focusable canvas. A nonempty host `aria-label` remains the
    *  overall component name and is not cloned onto the nested focus owner; the canvas uses this
    *  purpose-specific label or the localized `map` message. An explicit empty string (`label=""`
    *  or `.label = ''`) suppresses that localized default. An explicit empty host name is
    *  preserved on the canvas for deliberately decorative embeddings. */
-  @property()
-  get label(): string {
-    return this._label;
-  }
-  set label(value: string) {
-    const old = this._label;
-    this._label = value;
-    this._labelExplicit = true;
-    this.requestUpdate('label', old);
-  }
+  @property() label?: string;
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
   @state() private loading = true;
@@ -4503,7 +4499,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private get effectiveMapLabel(): string {
     if (this.getAttribute('aria-label') === '') return '';
-    return this._labelExplicit ? this.label : this.localize('map');
+    return this.label == null ? this.localize('map') : this.label;
   }
 
   private popupId(key: string): string {

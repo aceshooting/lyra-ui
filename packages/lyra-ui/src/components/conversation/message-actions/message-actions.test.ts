@@ -419,6 +419,13 @@ it('suppresses the localized default label when label is explicitly empty', asyn
   ).to.equal("");
 });
 
+it('reads back an omitted label as undefined, not the empty string', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions></lr-message-actions>`
+  )) as LyraMessageActions;
+  expect(el.label).to.equal(undefined);
+});
+
 it("forwards a host aria-label to the toolbar, winning over label", async () => {
   const el = (await fixture(
     html`<lr-message-actions

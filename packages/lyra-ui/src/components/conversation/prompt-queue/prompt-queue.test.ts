@@ -87,6 +87,11 @@ it('uses the localized default label when label is omitted', async () => {
   ).to.equal('Queued prompts');
 });
 
+it('reads back an omitted label as undefined, not the empty string', async () => {
+  const el = (await fixture(html`<lr-prompt-queue></lr-prompt-queue>`)) as LyraPromptQueue;
+  expect(el.label).to.equal(undefined);
+});
+
 it('suppresses the localized default label when label is explicitly empty', async () => {
   const el = (await fixture(
     html`<lr-prompt-queue label=""></lr-prompt-queue>`,

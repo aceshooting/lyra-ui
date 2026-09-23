@@ -777,7 +777,7 @@ large collection is invisible until someone walks the data by hand. Both `chorop
 reduced figure in the feature — a log, a bucket, an index — and keep the exact value in your own
 payload beside the map.
 
-- `label: string = ''` — purpose-specific accessible name for MapLibre's actual focusable canvas.
+- `label?: string` — purpose-specific accessible name for MapLibre's actual focusable canvas.
   A nonempty host `aria-label` remains on the host and is not duplicated onto the canvas; the canvas
   uses `label` or the localized map name. Omitting `label` localizes the default `map` message; an
   explicit empty string suppresses that default and renders an empty canvas name. An explicitly

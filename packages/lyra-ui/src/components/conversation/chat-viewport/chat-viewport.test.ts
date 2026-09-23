@@ -134,6 +134,13 @@ it('uses the localized default label when label is omitted', async () => {
   ).to.equal('Conversation');
 });
 
+it('reads back an omitted label as undefined, not the empty string', async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport></lr-chat-viewport>`
+  )) as LyraChatViewport;
+  expect(el.label).to.equal(undefined);
+});
+
 it('suppresses the localized default label when label is explicitly empty', async () => {
   const el = (await fixture(
     html`<lr-chat-viewport label=""></lr-chat-viewport>`

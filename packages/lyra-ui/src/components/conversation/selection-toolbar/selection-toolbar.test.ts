@@ -129,6 +129,13 @@ it('uses the localized default label when label is omitted', async () => {
   ).to.equal('Selection actions');
 });
 
+it('reads back an omitted label as undefined, not the empty string', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  expect(el.label).to.equal(undefined);
+});
+
 it('suppresses the localized default label when label is explicitly empty', async () => {
   const el = (await fixture(html`
     <lr-selection-toolbar open text="selected" label=""></lr-selection-toolbar>

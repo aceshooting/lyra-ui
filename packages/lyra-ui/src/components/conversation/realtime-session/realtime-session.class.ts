@@ -143,21 +143,10 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     converter: trueDefaultBooleanConverter,
   })
   showCapture = true;
-  private _label = '';
-  private _labelExplicit = false;
-  /** Accessible name for the session shell. Defaults to the localized `realtimeSessionLabel`; an
-   *  explicit empty string (`label=""` or `.label = ''`) suppresses that default and renders no
-   *  label. A host `aria-label` wins over both. */
-  @property()
-  get label(): string {
-    return this._label;
-  }
-  set label(value: string) {
-    const old = this._label;
-    this._label = value;
-    this._labelExplicit = true;
-    this.requestUpdate('label', old);
-  }
+  /** Accessible name for the session shell. Omitting it localizes the default
+   *  `realtimeSessionLabel` message; an explicit empty string (`label=""` or `.label = ''`)
+   *  suppresses that default and renders no label. A host `aria-label` wins over both. */
+  @property() label?: string;
   private transferActionFocus?: {
     target: 'connection' | 'mute';
     origin: Element;
@@ -289,7 +278,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   override render(): TemplateResult {
     const label =
       this.getAttribute('aria-label') ??
-      (this._labelExplicit ? this.label : this.localize('realtimeSessionLabel'));
+      (this.label == null ? this.localize('realtimeSessionLabel') : this.label);
     const active = this.state === 'connected';
     const safeLevel = this.level == null ? null : finiteRange(this.level, 0, 0, 1);
     return html`

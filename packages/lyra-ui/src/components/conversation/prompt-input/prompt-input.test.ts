@@ -1527,6 +1527,11 @@ it('uses the localized default label when label is omitted', async () => {
   ).to.equal('AI prompt');
 });
 
+it('reads back an omitted label as undefined, not the empty string', async () => {
+  const el = (await fixture(html`<lr-prompt-input></lr-prompt-input>`)) as LyraPromptInput;
+  expect(el.label).to.equal(undefined);
+});
+
 it('suppresses the localized default label when label is explicitly empty', async () => {
   const el = (await fixture(
     html`<lr-prompt-input label=""></lr-prompt-input>`,

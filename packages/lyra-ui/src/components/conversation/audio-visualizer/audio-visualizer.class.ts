@@ -162,21 +162,10 @@ export class LyraAudioVisualizer extends LyraElement {
   @property({ type: Number, attribute: 'bar-count' }) barCount = 5;
   /** Amplitude multiplier applied in `draw()`. NaN/non-finite falls back to `1` via `effectiveGain`. */
   @property({ type: Number }) gain = 1;
-  private _label = '';
-  private _labelExplicit = false;
   /** Accessible-name override. Unset (the default) auto-generates "Voice activity: {state}"; an
    *  explicit empty string (`label=""` or `.label = ''`) suppresses that default and renders an
    *  empty accessible name. */
-  @property()
-  get label(): string {
-    return this._label;
-  }
-  set label(value: string) {
-    const old = this._label;
-    this._label = value;
-    this._labelExplicit = true;
-    this.requestUpdate('label', old);
-  }
+  @property() label?: string;
 
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
@@ -533,9 +522,9 @@ export class LyraAudioVisualizer extends LyraElement {
     if (consumerSuppliedAriaLabel) {
       this.generatedAriaLabel = undefined;
     } else {
-      const generated = this._labelExplicit
-        ? this.label
-        : this.localize('audioVisualizerLabel', undefined, { state: this.stateLabel() });
+      const generated = this.label == null
+        ? this.localize('audioVisualizerLabel', undefined, { state: this.stateLabel() })
+        : this.label;
       if (currentAriaLabel !== generated) this.setAttribute('aria-label', generated);
       this.generatedAriaLabel = generated;
     }

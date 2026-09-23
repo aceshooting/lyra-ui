@@ -153,6 +153,11 @@ it('uses the localized default label when label is omitted', async () => {
   );
 });
 
+it('reads back an omitted label as undefined, not the empty string', async () => {
+  const el = (await fixture(html`<lr-realtime-session></lr-realtime-session>`)) as LyraRealtimeSession;
+  expect(el.label).to.equal(undefined);
+});
+
 it('suppresses the localized default label when label is explicitly empty', async () => {
   const el = (await fixture(
     html`<lr-realtime-session label=""></lr-realtime-session>`,

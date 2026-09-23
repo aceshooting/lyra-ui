@@ -1270,6 +1270,22 @@ it('owns a bounded frozen legend snapshot and exposes an exact truncation result
   );
 });
 
+it('does not throw when legendProjection is assigned, e.g. from a lit-html property binding', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const before = el.legendProjection;
+  expect(() => {
+    (el as unknown as { legendProjection: unknown }).legendProjection = {
+      inputCount: 1,
+      renderedCount: 1,
+      omittedCount: 0,
+      truncatedLabelCount: 0,
+      truncated: false,
+    };
+  }).to.not.throw();
+  // The assignment is inert -- legendProjection stays live-derived from the latest `legend`.
+  expect(el.legendProjection).to.equal(before);
+});
+
 it('bounds labels and contains malformed or hostile legend records', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   const hostile = new Proxy({}, {
@@ -2128,6 +2144,11 @@ describe('aria-label forwarding', () => {
     expect(base.getAttribute('role')).to.equal(null);
     expect(base.getAttribute('aria-label')).to.equal(null);
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Map');
+  });
+
+  it('reads back an omitted label as undefined, not the empty string', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    expect(el.label).to.equal(undefined);
   });
 
   it('uses a .strings override for the localized default when neither label nor a host aria-label is set', async function () {
