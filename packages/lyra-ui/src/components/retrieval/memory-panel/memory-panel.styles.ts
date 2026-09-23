@@ -161,4 +161,9 @@ export const styles = css`
     color: var(--lr-color-danger);
     border-color: var(--lr-color-danger);
   }
+  [part='limit'] {
+    margin: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
 `;

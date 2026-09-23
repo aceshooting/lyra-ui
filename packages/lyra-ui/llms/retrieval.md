@@ -1634,6 +1634,11 @@ rendering, or events. Usable display fields are captured once while emitted sele
 objects retain their original identity. Malformed rows and later duplicate ids are omitted; the
 first valid occurrence wins.
 
+At most 500 citations render as `evidence-item` rows; a `citations` array past that length still
+reports its true count in `evidence-count` but renders a localized `limit` notice after the list
+rather than mounting an unbounded number of rows. The full citation set is still forwarded to the
+composed `lr-claim-evidence` for claim-to-citation lookup, which applies its own render cap.
+
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
 The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
@@ -1650,7 +1655,8 @@ row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-co
 its semantics survive list-style resets),
 `evidence-item` (one `<li>` containing a badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
-`Citation.span` range, omitted when unset), `claims` (the claim/evidence region), `empty`
+`Citation.span` range, omitted when unset), `limit` (localized notice shown when `citations` exceeds
+the 500-citation render ceiling), `claims` (the claim/evidence region), `empty`
 (shown when `assessment` is `null`).
 
 **Themeable custom properties:** shared tokens only.
@@ -2037,6 +2043,9 @@ duplicates are omitted first-wins before empty state, focus/disclosure state, co
 rendering, or actions. Rows whose `text` is missing, nonstring, blank, or whitespace-only are also
 omitted without hiding later valid memories.
 
+At most 500 items per section render as `item` rows; a section's list past that length renders a
+localized `limit` notice after that section's list rather than mounting an unbounded number of rows.
+
 **Events:**
 
 - `lr-add` (`detail: LyraMemoryAddDetail` = `{ memory: LyraMemoryItem }`) — a pending "promote to
@@ -2058,7 +2067,8 @@ somewhere to land after a confirmation resolves), `item-row`, `item-text`, `conf
 `data-tone`; omitted when `confidence` is unset), `expand-toggle` / `item-body` (both omitted when
 `provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
 `remove-button`, `forget-all-button`, `forget-all-confirm` (the `lr-confirm-bar` that replaces
-`forget-all-button` while the bulk confirmation is pending).
+`forget-all-button` while the bulk confirmation is pending), `limit` (localized notice shown when a
+section's items exceed the 500-item render ceiling).
 
 **Keyboard/focus contract:** activating an action from the keyboard replaces that control with an
 `lr-confirm-bar`, and focus moves into the bar (landing on Deny, the safe action) rather than
@@ -2553,6 +2563,9 @@ duplicates are omitted first-wins before empty state, controlled selection, evid
 rendering, or events. An unrecognized runtime claim status renders as localized “Unsupported” with
 the danger treatment instead of producing an empty or misleading badge.
 
+At most 500 claims render as `claim` rows; a `claims` array past that length renders a localized
+`limit` notice after the list rather than mounting an unbounded number of rows.
+
 - `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
   evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
   density knob: each claim's border and background stay. `false` (the default) keeps the full
@@ -2569,7 +2582,8 @@ composed `lr-citation-open` event intentionally crosses `lr-claim-evidence` unch
 `{ sourceId, index, href }` detail.
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
-`confidence`, `explanation`, `evidence`, `empty`.
+`confidence`, `explanation`, `evidence`, `limit` (localized notice shown when `claims` exceeds the
+500-claim render ceiling), `empty`.
 
 **Themeable custom properties:** `--lr-claim-evidence-compact-padding` (default
 `var(--lr-space-xs)`) — `[part='claim-trigger']`'s padding while `compact`;
@@ -2642,13 +2656,18 @@ Metrics and runs are canonicalized independently by nonblank `id`. Malformed row
 duplicates are omitted first-wins before metric fallback, slice derivation/filtering, cards, charts,
 history, counts, rendering, or actions.
 
+At most 500 of the currently filtered runs render as `run` buttons and feed the trend chart; a
+filtered set past that length renders a localized `limit` notice after the run history rather than
+mounting an unbounded number of rows.
+
 **Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
 `lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
 corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
-`chart`, `runs`, `runs-heading`, `run`, `empty`.
+`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice shown when the filtered runs
+exceed the 500-run render ceiling), `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
 `var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.

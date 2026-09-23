@@ -25,7 +25,7 @@ export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -50,6 +50,13 @@ export interface LyraMemoryItem {
 type MemoryScope = 'short-term' | 'long-term';
 
 const MAX_PROJECTED_MEMORY_ITEMS = 10_000;
+
+/** Caps how many memory items mount as `[part="item"]` rows PER SECTION (short-term, long-term).
+ *  This is a rendering budget, distinct from and much smaller than `MAX_PROJECTED_MEMORY_ITEMS` (a
+ *  DoS-safety descriptor-read ceiling on the raw input, not a UI cap) -- matches the 500-row
+ *  ceiling used by every other bounded list in this library (e.g. `lr-task-list`'s
+ *  `MAX_RENDERED_TASKS`). */
+const MAX_RENDERED_MEMORY_ITEMS = 500;
 
 interface CanonicalMemoryItem {
   /** The admitted input is retained only for the public add-event identity. */
@@ -262,6 +269,10 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * rendering, counts, focus recovery, confirmation state, or actions. The first item for an id
  * wins in that scope.
  *
+ * At most 500 items per section render as `[part="item"]` rows; a section's list past that length
+ * renders a localized `[part="limit"]` notice after that section's list rather than mounting an
+ * unbounded number of rows.
+ *
  * @customElement lr-memory-panel
  * @event lr-add - A pending "add to long-term memory" action was approved. `detail: { memory }` --
  * the short-term item as-is; the host decides how/whether to persist it.
@@ -276,6 +287,8 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @csspart heading - A section's visible heading text.
  * @csspart section-empty - A section's "no items" text, shown when that section's own list is empty.
  * @csspart list - A section's `role="list"` wrapper, omitted while that section is empty.
+ * @csspart limit - Localized notice shown when a section's items exceed the 500-item render
+ * ceiling.
  * @csspart item - One memory item row (`role="listitem"`); carries `data-id`/`data-scope` and a
  * stable `tabindex="-1"` so focus has somewhere to land after a pending confirmation on this row
  * resolves.
@@ -323,6 +336,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     memoryPanelConfirmForgetHeading: LYRA_DEFAULT_memoryPanelConfirmForgetHeading,
     memoryPanelConfirmRemoveHeading: LYRA_DEFAULT_memoryPanelConfirmRemoveHeading,
     memoryPanelForgetAll: LYRA_DEFAULT_memoryPanelForgetAll,
+    memoryPanelItemsLimit: LYRA_DEFAULT_memoryPanelItemsLimit,
     memoryPanelLabel: LYRA_DEFAULT_memoryPanelLabel,
     memoryPanelLongTermHeading: LYRA_DEFAULT_memoryPanelLongTermHeading,
     memoryPanelShortTermHeading: LYRA_DEFAULT_memoryPanelShortTermHeading,
@@ -845,8 +859,21 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
         ${items.length === 0
           ? html`<p part="section-empty">${this.localize('noData')}</p>`
           : html`<div part="list" role="list" aria-labelledby=${headingId}>
-              ${items.map((item, index) => this.renderItem(item, scope, index))}
-            </div>`}
+              ${items
+                .slice(0, MAX_RENDERED_MEMORY_ITEMS)
+                .map((item, index) => this.renderItem(item, scope, index))}
+            </div>
+            ${items.length > MAX_RENDERED_MEMORY_ITEMS
+              ? html`<p part="limit" role="note">${this.localize(
+                  'memoryPanelItemsLimit',
+                  undefined,
+                  {
+                    count: getNumberFormat(this.effectiveLocale).format(
+                      MAX_RENDERED_MEMORY_ITEMS
+                    ),
+                  }
+                )}</p>`
+              : nothing}`}
       </section>
     `;
   }

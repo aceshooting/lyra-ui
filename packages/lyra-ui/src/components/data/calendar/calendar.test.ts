@@ -1025,3 +1025,63 @@ it("renders the focus ring, not the today outline, on a focused today cell", asy
   );
   expect(getComputedStyle(today).outlineColor).to.equal('rgb(10, 11, 12)');
 });
+
+describe('lr-calendar render cap', () => {
+  it('caps rendered event buttons at 4 per day cell and shows a localized "+N more" notice', async () => {
+    const manyEventsOneDay = Array.from({ length: 10 }, (_unused, index) => ({
+      id: `e-${index}`,
+      date: '2026-07-15',
+      title: `Event ${index}`,
+    }));
+    const el = (await fixture(
+      html`<lr-calendar view-date="2026-07-01" .events=${manyEventsOneDay}></lr-calendar>`,
+    )) as LyraCalendar;
+    const day = el.shadowRoot!.querySelector('[data-date="2026-07-15"]')!;
+    expect(
+      day.querySelectorAll('[part="event"]').length,
+      'the day-cell event projection stays capped',
+    ).to.equal(4);
+    const limit = day.querySelector('[part="event-limit"]');
+    expect(limit, 'a localized "+N more" notice is shown').to.exist;
+    expect(limit!.textContent).to.contain('6');
+  });
+
+  it('renders no per-day-cell overflow notice at or under the per-cell render cap', async () => {
+    const el = (await fixture(
+      html`<lr-calendar
+        view-date="2026-07-01"
+        .events=${[{ id: 'e1', date: '2026-07-15', title: 'Standup' }]}
+      ></lr-calendar>`,
+    )) as LyraCalendar;
+    expect(el.shadowRoot!.querySelector('[part="event-limit"]') === null).to.equal(true);
+  });
+
+  it('caps rendered agenda events at 500 and shows a localized "+N more" notice', async () => {
+    const manyEvents = Array.from({ length: 520 }, (_unused, index) => ({
+      id: `e-${index}`,
+      date: `2026-07-${String((index % 28) + 1).padStart(2, '0')}`,
+      title: `Event ${index}`,
+    }));
+    const el = (await fixture(
+      html`<lr-calendar view="agenda" view-date="2026-07-01" .events=${manyEvents}></lr-calendar>`,
+    )) as LyraCalendar;
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="agenda-event"]').length,
+      'the agenda projection stays capped',
+    ).to.equal(500);
+    const limit = el.shadowRoot!.querySelector('[part="agenda-limit"]');
+    expect(limit, 'a localized "+N more" notice is shown').to.exist;
+    expect(limit!.textContent).to.contain('20');
+  });
+
+  it('renders no agenda overflow notice at or under the agenda render cap', async () => {
+    const el = (await fixture(
+      html`<lr-calendar
+        view="agenda"
+        view-date="2026-07-01"
+        .events=${[{ id: 'e1', date: '2026-07-15', title: 'Standup' }]}
+      ></lr-calendar>`,
+    )) as LyraCalendar;
+    expect(el.shadowRoot!.querySelector('[part="agenda-limit"]') === null).to.equal(true);
+  });
+});

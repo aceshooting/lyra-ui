@@ -10,7 +10,7 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_noData, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_funnelStagesLimit, LYRA_DEFAULT_noData, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -26,6 +26,11 @@ export interface LyraFunnelStage {
 
 /** The largest fraction-digit count Intl.NumberFormat accepts. */
 const MAX_SHARE_PRECISION = 20;
+
+/** Caps the rendered stage count so an unbounded host-supplied `stages`/`comparison` array can
+ *  never mount an unbounded number of bar rows. Matches the 500-row ceiling used by every other
+ *  bounded list in this library (e.g. `lr-task-list`'s `MAX_RENDERED_TASKS`). */
+const MAX_RENDERED_STAGES = 500;
 
 interface ResolvedStage {
   readonly stage: LyraFunnelStage;
@@ -65,6 +70,10 @@ interface ResolvedStage {
  *   ignored, and stages past its end simply get no comparison bar.
  * - Malformed/non-record entries and records without a string `label` are omitted while later
  *   valid neighbors remain in either series; caller-owned arrays are never rewritten.
+ * - At most 500 valid stages render, each as its own bar row; a `stages` array past that length
+ *   renders a localized `[part="limit"]` notice after the list rather than mounting an unbounded
+ *   number of bars. Every stage's share is still measured against the true first stage regardless
+ *   of truncation.
  *
  * @customElement lr-funnel
  * @csspart base - The container element.
@@ -81,6 +90,7 @@ interface ResolvedStage {
  * @csspart bar-overflow - Added to bar when the stage exceeds the first stage.
  * @csspart comparison-bar - The comparison series' outline drawn behind a stage's bar.
  * @csspart empty - The empty state shown when there are no stages.
+ * @csspart limit - Localized notice shown when `stages` exceeds the 500-stage render ceiling.
  * @cssprop [--lr-funnel-bar-color=var(--lr-color-brand)] - Fill of every stage bar that has no own color.
  * @cssprop [--lr-funnel-comparison-color=var(--lr-color-border-strong)] - Outline of the comparison bars.
  * @cssprop [--lr-funnel-track-color=var(--lr-color-surface-raised)] - Background of the bar track.
@@ -96,6 +106,7 @@ export class LyraFunnel extends LyraElement {
     chart: LYRA_DEFAULT_chart,
     comparePanel: LYRA_DEFAULT_comparePanel,
     contextMeterLabeledSummary: LYRA_DEFAULT_contextMeterLabeledSummary,
+    funnelStagesLimit: LYRA_DEFAULT_funnelStagesLimit,
     noData: LYRA_DEFAULT_noData,
     statTrendDecreased: LYRA_DEFAULT_statTrendDecreased,
     statTrendIncreased: LYRA_DEFAULT_statTrendIncreased,
@@ -270,11 +281,20 @@ export class LyraFunnel extends LyraElement {
     if (resolved.length === 0) {
       return html`<div part="base"><p part="empty">${this.localize('noData')}</p></div>`;
     }
+    const truncated = resolved.length > MAX_RENDERED_STAGES;
+    // Every stage's share/change was already resolved against the full, untruncated series above --
+    // slicing here only bounds the rendered DOM node count, it never changes what a surviving bar reports.
+    const renderedStages = resolved.slice(0, MAX_RENDERED_STAGES);
     const name = hostAriaLabel(this) ?? (this.label || this.localize('chart'));
     return html`<div part="base">
       <ol part="stages" aria-label=${name}>
-        ${resolved.map((entry) => this.renderStage(entry))}
+        ${renderedStages.map((entry) => this.renderStage(entry))}
       </ol>
+      ${truncated
+        ? html`<p part="limit" role="note">${this.localize('funnelStagesLimit', undefined, {
+            count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_STAGES),
+          })}</p>`
+        : nothing}
     </div>`;
   }
 }

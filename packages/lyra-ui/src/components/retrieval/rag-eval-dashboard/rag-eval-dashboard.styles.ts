@@ -113,4 +113,9 @@ export const styles = css`
       flex-direction: column;
     }
   }
+  [part='limit'] {
+    margin: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
 `;

@@ -27,7 +27,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_claimEvidenceClaimsLimit, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraClaimEvidenceEventMap {
@@ -47,6 +47,12 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
 };
 
 const MAX_PROJECTED_CLAIM_EVIDENCE_ROWS = 10_000;
+
+/** Caps how many claims mount as `[part="claim"]` rows. This is a rendering budget, distinct from
+ *  and much smaller than `MAX_PROJECTED_CLAIM_EVIDENCE_ROWS` (a DoS-safety descriptor-read ceiling
+ *  on the raw input, not a UI cap) -- matches the 500-row ceiling used by every other bounded list
+ *  in this library (e.g. `lr-task-list`'s `MAX_RENDERED_TASKS`). */
+const MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS = 500;
 
 interface CanonicalClaim {
   /** The admitted input is retained only for its public selection-event identity. */
@@ -282,6 +288,9 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
  * and reassign it after changes; mutating the assigned array does not update the view. Blank
  * claim/citation ids and later duplicates are ignored before lookup, rendering, counts, or
  * activation. The first record for an id wins.
+ *
+ * At most 500 claims render as `[part="claim"]` rows; a `claims` array past that length renders a
+ * localized `[part="limit"]` notice after the list rather than mounting an unbounded number of rows.
  * A nested badge's `lr-citation-activate` is contained and translated to `lr-citation-select` with
  * the complete citation record. Its distinct `lr-citation-open` signal intentionally remains a
  * composed child event and crosses this host unchanged, preserving its `{ sourceId, index, href }`
@@ -300,6 +309,7 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
  * @csspart confidence - The optional localized confidence.
  * @csspart explanation - Caller-supplied assessment explanation.
  * @csspart evidence - Resolved evidence citations for one claim.
+ * @csspart limit - Localized notice shown when `claims` exceeds the 500-claim render ceiling.
  * @csspart empty - The empty state.
  * @cssprop [--lr-claim-evidence-compact-padding=var(--lr-space-xs)] - `[part="claim-trigger"]`
  * padding while `compact`.
@@ -314,6 +324,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     citation: LYRA_DEFAULT_citation,
+    claimEvidenceClaimsLimit: LYRA_DEFAULT_claimEvidenceClaimsLimit,
     claimEvidenceConfidence: LYRA_DEFAULT_claimEvidenceConfidence,
     claimEvidenceContradicted: LYRA_DEFAULT_claimEvidenceContradicted,
     claimEvidenceEmpty: LYRA_DEFAULT_claimEvidenceEmpty,
@@ -514,8 +525,21 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
       >
         ${claims.length
           ? html`<ol part="list">
-              ${claims.map((claim) => this.renderClaim(claim, citations))}
-            </ol>`
+              ${claims
+                .slice(0, MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS)
+                .map((claim) => this.renderClaim(claim, citations))}
+            </ol>
+            ${claims.length > MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS
+              ? html`<p part="limit" role="note">${this.localize(
+                  'claimEvidenceClaimsLimit',
+                  undefined,
+                  {
+                    count: getNumberFormat(this.effectiveLocale).format(
+                      MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS
+                    ),
+                  }
+                )}</p>`
+              : nothing}`
           : html`<lr-empty
               part="empty"
               heading=${this.localize('claimEvidenceEmpty')}

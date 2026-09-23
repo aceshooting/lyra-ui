@@ -22,7 +22,7 @@ import {
 } from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_calendarEmpty, LYRA_DEFAULT_calendarLabel, LYRA_DEFAULT_calendarNextMonth, LYRA_DEFAULT_calendarPreviousMonth } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_calendarEmpty, LYRA_DEFAULT_calendarEventsOverflow, LYRA_DEFAULT_calendarLabel, LYRA_DEFAULT_calendarNextMonth, LYRA_DEFAULT_calendarPreviousMonth } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -35,6 +35,17 @@ export interface CalendarEvent {
 }
 export interface LyraCalendarEventMap { 'lr-date-select': CustomEvent<{ date: string }>; 'lr-event-select': CustomEvent<{ event: CalendarEvent }>; 'lr-view-change': CustomEvent<{ viewDate: string }>; }
 const monthStart = (date: Date): Date => localDate(date.getFullYear(), date.getMonth(), 1);
+
+/** Caps how many event buttons mount inside one day cell of the month grid before the rest
+ *  collapse behind a localized "+N more" notice. A day cell has little vertical room (see
+ *  `--lr-calendar-day-min-block-size`), so unlike this library's list-shaped 500-row render
+ *  ceilings this stays small on purpose. */
+const MAX_DAY_CELL_EVENTS = 4;
+/** Caps how many event buttons mount in agenda view for the visible month before the rest
+ *  collapse behind a localized "+N more" notice. Agenda view has no per-cell space constraint, so
+ *  this matches the 500-row ceiling used by every other bounded list in this library (e.g.
+ *  `lr-task-list`'s `MAX_RENDERED_TASKS`). */
+const MAX_AGENDA_EVENTS = 500;
 
 interface CanonicalCalendarEvent {
   readonly color?: string;
@@ -144,6 +155,11 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * caller's original event identity. Create a new collection and reassign it after changes;
  * mutating the assigned array does not update the view.
  *
+ * At most 4 events render as `[part="event"]` buttons inside a single month-view day cell, and at
+ * most 500 events render as `[part="agenda-event"]` buttons in agenda view; either ceiling past
+ * that count renders a localized `[part="event-limit"]`/`[part="agenda-limit"]` "+N more" notice
+ * rather than mounting an unbounded number of buttons.
+ *
  * `firstDayOfWeek` defaults to `'auto'`, deriving the week start from `effectiveLocale` (via the
  * shared `resolveFirstDayOfWeek()` contract also used by `lr-date-picker`/`lr-date-input`), and
  * also accepts one of the shared weekday-name tokens (`'sun'` through `'sat'`) for an explicit,
@@ -167,8 +183,12 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * @csspart day - Day cell.
  * @csspart date - The day-of-month number inside a day cell.
  * @csspart event - Event marker.
+ * @csspart event-limit - Localized "+N more" notice shown in a day cell whose events exceed the
+ *   4-event per-cell render ceiling.
  * @csspart agenda - Agenda list.
  * @csspart agenda-event - One focusable event button in agenda view (`view="agenda"` only).
+ * @csspart agenda-limit - Localized "+N more" notice shown in agenda view when the visible month's
+ *   events exceed the 500-event render ceiling.
  * @cssprop [--lr-calendar-nav-hover-bg=var(--lr-color-brand-quiet)] - Month-navigation hover background.
  * @cssprop [--lr-calendar-nav-active-bg=color-mix(in oklab, var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Month-navigation pressed background.
  * @cssprop [--lr-calendar-day-hover-bg=var(--lr-color-brand-quiet)] - Day hover background.
@@ -190,6 +210,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     calendarEmpty: LYRA_DEFAULT_calendarEmpty,
+    calendarEventsOverflow: LYRA_DEFAULT_calendarEventsOverflow,
     calendarLabel: LYRA_DEFAULT_calendarLabel,
     calendarNextMonth: LYRA_DEFAULT_calendarNextMonth,
     calendarPreviousMonth: LYRA_DEFAULT_calendarPreviousMonth,
@@ -268,6 +289,8 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     const agenda = events
       .filter((event) => event.date.startsWith(formatISO(start).slice(0, 7)))
       .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const agendaTruncated = agenda.length > MAX_AGENDA_EVENTS;
+    const renderedAgenda = agenda.slice(0, MAX_AGENDA_EVENTS);
     const eventsByDate = this.view === 'month' ? this.bucketEventsByDate(events) : undefined;
     // The roving tab stop prefers focusedDate/value/today, in that order, but
     // any of those can point outside the currently visible 6-week grid (e.g.
@@ -279,7 +302,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     const rawAnchorDate = parseISO(rawAnchor);
     const anchor = rawAnchorDate && rawAnchorDate >= gridFirst && rawAnchorDate <= gridLast ? rawAnchor : formatISO(start);
     return html`<section aria-label=${label}><header part="header navigation"><button part="nav previous-button" type="button" aria-label=${this.localize('calendarPreviousMonth')} @click=${() => this.changeMonth(-1)}><span part="nav-glyph" aria-hidden="true">‹</span></button><span part="title">${monthTitle}</span><button part="nav next-button" type="button" aria-label=${this.localize('calendarNextMonth')} @click=${() => this.changeMonth(1)}><span part="nav-glyph" aria-hidden="true">›</span></button></header>
-      ${this.view === 'agenda' ? html`<div part="agenda">${agenda.length ? agenda.map((event) => { const date = parseISO(event.date); const bg = event.color ? sanitizeCssColor(event.color) : undefined; return html`<button part="agenda-event" type="button" style=${styleMap(bg ? { '--_lr-calendar-agenda-event-background': bg, '--_lr-calendar-agenda-event-foreground': 'var(--lr-color-on-brand)' } : {})} @click=${() => this.emit('lr-event-select', { event: event.source })}><strong>${date ? agendaDateFmt.format(date) : event.date}</strong> ${event.title}</button>`; }) : html`<p>${this.localize('calendarEmpty')}</p>`}</div>` : html`<div part="weekdays">${this.weekdays().map((day) => html`<span part="weekday">${day}</span>`)}</div><div part="grid" role="grid" aria-label=${monthTitle}>${weeks.map((week) => html`<div part="week" role="row">${week.map((date) => { const dateIso = formatISO(date); const dayEvents = eventsByDate?.get(dateIso) ?? []; return html`<div part="day" role="gridcell" data-date=${dateIso} data-outside=${date.getMonth() !== start.getMonth() ? 'true' : 'false'} data-today=${dateIso === today ? 'true' : 'false'} data-selected=${dateIso === this.value ? 'true' : 'false'} aria-selected=${dateIso === this.value ? 'true' : 'false'} aria-current=${dateIso === today ? 'date' : nothing} aria-label=${dayLabelFmt.format(date)} tabindex=${dateIso === anchor ? '0' : '-1'} @click=${(event: MouseEvent) => { if (event.target === event.currentTarget || (event.target as HTMLElement).getAttribute('part') === 'date') this.selectDate(dateIso); }} @keydown=${(event: KeyboardEvent) => { if (event.target === event.currentTarget) this.onDayKeyDown(event, date); }}><span part="date">${dayNumberFmt.format(date.getDate())}</span>${dayEvents.map((item) => { const bg = item.color ? sanitizeCssColor(item.color) : undefined; return html`<button part="event" type="button" style=${styleMap(bg ? { backgroundColor: bg } : {})} @click=${(event: Event) => { event.stopPropagation(); this.emit('lr-event-select', { event: item.source }); }}>${item.title}</button>`; })}</div>`; })}</div>`)}</div>`}</section>`;
+      ${this.view === 'agenda' ? html`<div part="agenda">${agenda.length ? html`${renderedAgenda.map((event) => { const date = parseISO(event.date); const bg = event.color ? sanitizeCssColor(event.color) : undefined; return html`<button part="agenda-event" type="button" style=${styleMap(bg ? { '--_lr-calendar-agenda-event-background': bg, '--_lr-calendar-agenda-event-foreground': 'var(--lr-color-on-brand)' } : {})} @click=${() => this.emit('lr-event-select', { event: event.source })}><strong>${date ? agendaDateFmt.format(date) : event.date}</strong> ${event.title}</button>`; })}${agendaTruncated ? html`<span part="agenda-limit">${this.localize('calendarEventsOverflow', undefined, { n: getNumberFormat(this.effectiveLocale).format(agenda.length - MAX_AGENDA_EVENTS) })}</span>` : nothing}` : html`<p>${this.localize('calendarEmpty')}</p>`}</div>` : html`<div part="weekdays">${this.weekdays().map((day) => html`<span part="weekday">${day}</span>`)}</div><div part="grid" role="grid" aria-label=${monthTitle}>${weeks.map((week) => html`<div part="week" role="row">${week.map((date) => { const dateIso = formatISO(date); const dayEvents = eventsByDate?.get(dateIso) ?? []; const dayTruncated = dayEvents.length > MAX_DAY_CELL_EVENTS; return html`<div part="day" role="gridcell" data-date=${dateIso} data-outside=${date.getMonth() !== start.getMonth() ? 'true' : 'false'} data-today=${dateIso === today ? 'true' : 'false'} data-selected=${dateIso === this.value ? 'true' : 'false'} aria-selected=${dateIso === this.value ? 'true' : 'false'} aria-current=${dateIso === today ? 'date' : nothing} aria-label=${dayLabelFmt.format(date)} tabindex=${dateIso === anchor ? '0' : '-1'} @click=${(event: MouseEvent) => { if (event.target === event.currentTarget || (event.target as HTMLElement).getAttribute('part') === 'date') this.selectDate(dateIso); }} @keydown=${(event: KeyboardEvent) => { if (event.target === event.currentTarget) this.onDayKeyDown(event, date); }}><span part="date">${dayNumberFmt.format(date.getDate())}</span>${dayEvents.slice(0, MAX_DAY_CELL_EVENTS).map((item) => { const bg = item.color ? sanitizeCssColor(item.color) : undefined; return html`<button part="event" type="button" style=${styleMap(bg ? { backgroundColor: bg } : {})} @click=${(event: Event) => { event.stopPropagation(); this.emit('lr-event-select', { event: item.source }); }}>${item.title}</button>`; })}${dayTruncated ? html`<span part="event-limit">${this.localize('calendarEventsOverflow', undefined, { n: getNumberFormat(this.effectiveLocale).format(dayEvents.length - MAX_DAY_CELL_EVENTS) })}</span>` : nothing}</div>`; })}</div>`)}</div>`}</section>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-calendar': LyraCalendar; } }

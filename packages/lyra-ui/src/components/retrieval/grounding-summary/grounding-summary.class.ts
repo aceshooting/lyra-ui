@@ -33,7 +33,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryCitationsLimit, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraGroundingSummaryEventMap {
@@ -42,6 +42,12 @@ export interface LyraGroundingSummaryEventMap {
 }
 
 const MAX_PROJECTED_GROUNDING_ROWS = 10_000;
+
+/** Caps how many evidence citations mount as `[part="evidence-item"]` rows. This is a rendering
+ *  budget, distinct from and much smaller than `MAX_PROJECTED_GROUNDING_ROWS` (a DoS-safety
+ *  descriptor-read ceiling on the raw input, not a UI cap) -- matches the 500-row ceiling used by
+ *  every other bounded list in this library (e.g. `lr-task-list`'s `MAX_RENDERED_TASKS`). */
+const MAX_RENDERED_GROUNDING_CITATIONS = 500;
 
 interface CanonicalRange {
   readonly start: number;
@@ -390,6 +396,12 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
  * array does not update the view. Blank claim/citation ids and later duplicates are ignored before
  * counts, lookup, rendering, or activation. The first record for an id wins.
  *
+ * At most 500 citations render as `[part="evidence-item"]` rows; a `citations` array past that
+ * length still reports its true count in `[part="evidence-count"]` but renders a localized
+ * `[part="limit"]` notice after the list rather than mounting an unbounded number of rows. The
+ * full citation set is still forwarded to a composed `<lr-claim-evidence>` for claim-to-citation
+ * lookup, which applies its own render cap on the claims it lists.
+ *
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
  * @event lr-claim-select - A composed claim-evidence row was activated. `detail: { claim }`.
@@ -409,6 +421,7 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
  * @csspart evidence-span - A citation's formatted `span` range, shown next to its badge (omitted
  *   when `span` is unset).
  * @csspart evidence-list - The semantic list containing the evidence citations.
+ * @csspart limit - Localized notice shown when `citations` exceeds the 500-citation render ceiling.
  * @csspart claims - Claim-level evidence, when present and enabled.
  * @csspart empty - The empty-state message, shown when `assessment` is `null`.
  * @status stable
@@ -422,6 +435,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     citation: LYRA_DEFAULT_citation,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    groundingSummaryCitationsLimit: LYRA_DEFAULT_groundingSummaryCitationsLimit,
     groundingSummaryConfidenceLabel: LYRA_DEFAULT_groundingSummaryConfidenceLabel,
     groundingSummaryCoverageLabel: LYRA_DEFAULT_groundingSummaryCoverageLabel,
     groundingSummaryEmpty: LYRA_DEFAULT_groundingSummaryEmpty,
@@ -736,10 +750,19 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
                   >${numberFormat.format(citations.length)}</span
                 >
                 <ul part="evidence-list" role="list">
-                  ${citations.map((citation, index) =>
-                    this.renderEvidenceItem(citation, index)
-                  )}
+                  ${citations
+                    .slice(0, MAX_RENDERED_GROUNDING_CITATIONS)
+                    .map((citation, index) =>
+                      this.renderEvidenceItem(citation, index)
+                    )}
                 </ul>
+                ${citations.length > MAX_RENDERED_GROUNDING_CITATIONS
+                  ? html`<p part="limit" role="note">${this.localize(
+                      'groundingSummaryCitationsLimit',
+                      undefined,
+                      { count: numberFormat.format(MAX_RENDERED_GROUNDING_CITATIONS) }
+                    )}</p>`
+                  : nothing}
               </div>
             `
           : nothing}

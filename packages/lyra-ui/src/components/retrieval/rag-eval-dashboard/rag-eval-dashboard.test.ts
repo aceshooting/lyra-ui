@@ -420,3 +420,33 @@ it('never falsely marks metrics[0] selected for an unmatched controlled metricId
   // No chart is fabricated from the wrong metric's data either.
   expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.be.true;
 });
+
+describe('lr-rag-eval-dashboard render cap', () => {
+  it('caps rendered run rows at 500 and shows a localized truncation notice', async () => {
+    const manyRuns: LyraRagEvaluationRun[] = Array.from(
+      { length: 520 },
+      (_unused, index) => ({
+        id: `run-${index}`,
+        label: `Run ${index}`,
+        metrics: { mrr: 0.5 },
+      })
+    );
+    const el = (await fixture(html`
+      <lr-rag-eval-dashboard .metrics=${metrics} .runs=${manyRuns}></lr-rag-eval-dashboard>
+    `)) as LyraRagEvalDashboard;
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="run"]').length,
+      'the run-history projection stays capped'
+    ).to.equal(500);
+    const limit = el.shadowRoot!.querySelector('[part="limit"]');
+    expect(limit, 'a localized truncation notice is shown').to.exist;
+    expect(limit!.textContent).to.contain('500');
+  });
+
+  it('renders no truncation notice at or under the render cap', async () => {
+    const el = (await fixture(html`
+      <lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>
+    `)) as LyraRagEvalDashboard;
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+});

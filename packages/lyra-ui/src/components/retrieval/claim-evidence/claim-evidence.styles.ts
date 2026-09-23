@@ -102,4 +102,9 @@ export const styles = css`
       grid-template-columns: 1fr;
     }
   }
+  [part='limit'] {
+    margin: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
 `;

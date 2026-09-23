@@ -243,6 +243,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   codeEditorLabel: 'Code editor',
   calendarLabel: 'Calendar',
   calendarEmpty: 'No events this month.',
+  calendarEventsOverflow: '+{n} more',
   switchRequired: 'Please turn this on.',
   citationHighConfidence: 'High confidence',
   citationMediumConfidence: 'Medium confidence',
@@ -474,6 +475,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   heatmapProjectionLimit: 'Only the first {count} heatmap cells are shown.',
   heatmapDecorationLimit:
     'Only the first {count} heatmap colors, legend stops, and annotations are shown.',
+  funnelStagesLimit: 'Only the first {count} stages are shown.',
   inputLabel: 'Text',
   showPassword: 'Show password',
   hidePassword: 'Hide password',
@@ -1143,6 +1145,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   memoryPanelConfirmForgetHeading: 'Forget all long-term memories?',
   memoryPanelConfirmForgetBody:
     'This permanently forgets all {count} long-term memories.',
+  memoryPanelItemsLimit: 'Only the first {count} memory items are shown.',
   graphExplorerLabel: 'Knowledge graph explorer',
   graphExplorerSearchPlaceholder: 'Search entities…',
   graphExplorerSearchResultsLabel: 'Search results',
@@ -1166,6 +1169,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   groundingSummaryConfidenceLabel: 'Confidence',
   groundingSummaryWarningsHeading: 'Warnings',
   groundingSummaryEvidenceHeading: 'Evidence',
+  groundingSummaryCitationsLimit: 'Only the first {count} citations are shown.',
   claimEvidenceLabel: 'Claim evidence',
   claimEvidenceEmpty: 'No claim-level evidence available',
   claimEvidenceSupported: 'Supported',
@@ -1173,6 +1177,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   claimEvidenceUnsupported: 'Unsupported',
   claimEvidenceContradicted: 'Contradicted',
   claimEvidenceConfidence: '{percent} confidence',
+  claimEvidenceClaimsLimit: 'Only the first {count} claims are shown.',
   retrievalCompareLabel: 'Retrieval comparison',
   retrievalCompareEmpty: 'No retrieval result sets to compare',
   retrievalCompareOverlap:
@@ -1189,6 +1194,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   ragEvalDashboardAllSlices: 'All',
   ragEvalDashboardSliceUnavailable:
     'No evaluation runs are available for {slice}.',
+  ragEvalDashboardRunsLimit: 'Only the first {count} evaluation runs are shown.',
   promptStudioLabel: 'Prompt studio',
   promptStudioMessages: 'Prompt messages',
   promptStudioVariables: 'Variables',

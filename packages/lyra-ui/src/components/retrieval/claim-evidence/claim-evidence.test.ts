@@ -425,3 +425,31 @@ it('rejects accessor rows before duplicate reservation and never rereads admitte
     'The valid later claim remains visible.'
   );
 });
+
+describe('lr-claim-evidence render cap', () => {
+  it('caps rendered claim rows at 500 and shows a localized truncation notice', async () => {
+    const manyClaims: GroundedClaim[] = Array.from({ length: 520 }, (_unused, index) => ({
+      id: `claim-${index}`,
+      text: `Claim ${index}`,
+      status: 'supported',
+      citationIds: [],
+    }));
+    const el = (await fixture(
+      html`<lr-claim-evidence .claims=${manyClaims}></lr-claim-evidence>`
+    )) as LyraClaimEvidence;
+    expect(
+      el.shadowRoot!.querySelectorAll('[part~="claim"]').length,
+      'the claim-list projection stays capped'
+    ).to.equal(500);
+    const limit = el.shadowRoot!.querySelector('[part="limit"]');
+    expect(limit, 'a localized truncation notice is shown').to.exist;
+    expect(limit!.textContent).to.contain('500');
+  });
+
+  it('renders no truncation notice at or under the render cap', async () => {
+    const el = (await fixture(
+      html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`
+    )) as LyraClaimEvidence;
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+});

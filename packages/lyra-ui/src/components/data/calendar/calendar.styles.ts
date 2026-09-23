@@ -65,6 +65,7 @@ export const styles = css`
   [part='day'] { display: flex; flex-direction: column; align-items: stretch; min-block-size: var(--lr-calendar-day-min-block-size, var(--lr-size-6rem)); padding: var(--lr-space-xs); border-block-start: 0; border-inline-start: 0; text-align: start; }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
   [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  [part='event-limit'] { display: block; margin-block-start: var(--lr-space-2xs); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-xs); }
   /* An event chip's fill is per-event data (CalendarEvent.color) written inline as
      background-color by calendar.class.ts, and an inline declaration beats every stylesheet rule
      -- so pointer feedback is a background-IMAGE overlay. It composites over whatever fill the
@@ -117,5 +118,11 @@ export const styles = css`
       background: ButtonFace !important;
       color: ButtonText;
     }
+  }
+
+  [part='agenda-limit'] {
+    margin: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
   }
 `;

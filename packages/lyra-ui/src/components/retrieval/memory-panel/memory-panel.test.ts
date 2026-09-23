@@ -1720,3 +1720,41 @@ it('contains lr-decision-settled even when the confirm bar settles while still m
   expect(confirmBar.decision).to.equal('approved');
   expect(leaked).to.deep.equal([]);
 });
+
+describe('lr-memory-panel render cap', () => {
+  it('caps rendered item rows at 500 PER SECTION and shows a localized truncation notice', async () => {
+    const manyShortTerm: LyraMemoryItem[] = Array.from({ length: 520 }, (_unused, index) => ({
+      id: `s-${index}`,
+      text: `Short-term memory ${index}`,
+    }));
+    const el = (await fixture(html`<lr-memory-panel></lr-memory-panel>`)) as LyraMemoryPanel;
+    el.shortTerm = manyShortTerm;
+    el.longTerm = longTermItems;
+    await el.updateComplete;
+
+    const shortTermSection = [...el.shadowRoot!.querySelectorAll('[part="section"]')].find(
+      (section) => section.getAttribute('data-scope') === 'short-term'
+    )!;
+    expect(
+      shortTermSection.querySelectorAll('[part="item"]').length,
+      'the short-term projection stays capped'
+    ).to.equal(500);
+    const limit = shortTermSection.querySelector('[part="limit"]');
+    expect(limit, 'a localized truncation notice is shown').to.exist;
+    expect(limit!.textContent).to.contain('500');
+
+    // The unaffected long-term section renders every item and shows no truncation notice.
+    const longTermSection = [...el.shadowRoot!.querySelectorAll('[part="section"]')].find(
+      (section) => section.getAttribute('data-scope') === 'long-term'
+    )!;
+    expect(longTermSection.querySelectorAll('[part="item"]').length).to.equal(
+      longTermItems.length
+    );
+    expect(longTermSection.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+
+  it('renders no truncation notice at or under the render cap', async () => {
+    const el = await populated();
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+});

@@ -1773,13 +1773,18 @@ interface LyraFunnelStage {
 }
 ```
 
+At most 500 valid stages render, each as its own bar row; a `stages` array past that length renders
+a localized `limit` notice after the list rather than mounting an unbounded number of bars. Every
+stage's share is still measured against the true first stage regardless of truncation.
+
 **Events:** none.
 
 **Slots:** none.
 
 **CSS parts:** `base`, `stages` (the `<ol>`), `stage`, `dropoff`, `stage-header`, `stage-label`,
 `stage-value`, `stage-share`, `comparison-value`, `track`, `bar`, `bar-overflow` (a second token on
-`bar` when the stage exceeds the first stage), `comparison-bar`, `empty`
+`bar` when the stage exceeds the first stage), `comparison-bar`, `empty`, `limit` (localized notice
+shown when `stages` exceeds the 500-stage render ceiling)
 
 **Themeable custom properties:** `--lr-funnel-bar-color` (default `var(--lr-color-brand)`),
 `--lr-funnel-comparison-color` (default `var(--lr-color-border-strong)`), `--lr-funnel-track-color`
@@ -3770,6 +3775,11 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   section retains the localized purpose name rather than duplicating an authored host name; when
   set programmatically without a host attribute, this value names the section
 
+At most 4 events render as `event` buttons inside a single month-view day cell, and at most 500
+events render as `agenda-event` buttons in agenda view; either ceiling past that count renders a
+localized `event-limit`/`agenda-limit` "+N more" notice rather than mounting an unbounded number of
+buttons.
+
 **Keyboard:** the month grid is a fixed 6×7 matrix (leading/trailing days of adjacent months fill it
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
 Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rendered grid rolls
@@ -3783,8 +3793,10 @@ Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rend
 **CSS parts:** `header` and `navigation` are aliases on the header wrapper; `nav` is shared by both
 month-navigation buttons; `previous-button` and `next-button` identify each direct button;
 `nav-glyph` is the chevron (`scaleX(-1)`-mirrored under RTL); `title`, `weekdays`, `weekday`,
-`grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `agenda`, and
-`agenda-event`.
+`grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `event-limit`
+(localized "+N more" notice shown in a day cell whose events exceed the 4-event per-cell render
+ceiling), `agenda`, `agenda-event`, and `agenda-limit` (localized "+N more" notice shown in agenda
+view when the visible month's events exceed the 500-event render ceiling).
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size

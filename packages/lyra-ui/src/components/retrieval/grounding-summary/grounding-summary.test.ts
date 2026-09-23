@@ -792,3 +792,39 @@ it('contains malformed nested selection details without invoking their accessors
   );
   expect(selections).to.equal(0);
 });
+
+describe('lr-grounding-summary render cap', () => {
+  it('caps rendered evidence-item rows at 500 and shows a localized truncation notice', async () => {
+    const manyCitations: Citation[] = Array.from({ length: 520 }, (_unused, index) => ({
+      id: `cite-${index}`,
+      sourceId: `doc-${index}`,
+    }));
+    const el = (await fixture(
+      html`<lr-grounding-summary
+        .assessment=${ASSESSMENT}
+        .citations=${manyCitations}
+        show-claims="false"
+      ></lr-grounding-summary>`
+    )) as LyraGroundingSummary;
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="evidence-item"]').length,
+      'the evidence-list projection stays capped'
+    ).to.equal(500);
+    // The true count still reports in evidence-count, only the rendered rows are bounded.
+    expect(el.shadowRoot!.querySelector('[part="evidence-count"]')!.textContent).to.equal('520');
+    const limit = el.shadowRoot!.querySelector('[part="limit"]');
+    expect(limit, 'a localized truncation notice is shown').to.exist;
+    expect(limit!.textContent).to.contain('500');
+  });
+
+  it('renders no truncation notice at or under the render cap', async () => {
+    const el = (await fixture(
+      html`<lr-grounding-summary
+        .assessment=${ASSESSMENT}
+        .citations=${CITATIONS}
+        show-claims="false"
+      ></lr-grounding-summary>`
+    )) as LyraGroundingSummary;
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+});

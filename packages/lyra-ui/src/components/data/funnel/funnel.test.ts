@@ -329,3 +329,30 @@ describe('<lr-funnel>', () => {
     expect(narrowValue.top).to.be.greaterThan(narrowLabel.top);
   });
 });
+
+describe('<lr-funnel> render cap', () => {
+  it('caps rendered stage bars at 500 and shows a localized truncation notice', async () => {
+    const manyStages: LyraFunnelStage[] = Array.from({ length: 520 }, (_unused, index) => ({
+      label: `Stage ${index}`,
+      value: 520 - index,
+    }));
+    const el = await fixture<LyraFunnel>(html`<lr-funnel .stages=${manyStages}></lr-funnel>`);
+    await el.updateComplete;
+
+    expect(parts(el, 'stage').length, 'the stage-list projection stays capped').to.equal(500);
+    const limit = part(el, 'limit');
+    expect(limit, 'a localized truncation notice is shown').to.exist;
+    expect(text(limit)).to.contain('500');
+    // Every surviving stage's share is still measured against the TRUE first stage (520), not
+    // recomputed against whatever happens to be the last rendered stage.
+    expect(parts(el, 'stage-share').map(text)[0]).to.equal('100%');
+  });
+
+  it('renders no truncation notice at or under the render cap', async () => {
+    const el = await fixture<LyraFunnel>(
+      html`<lr-funnel .stages=${SIGNUP_FUNNEL}></lr-funnel>`,
+    );
+    await el.updateComplete;
+    expect(part(el, 'limit') === null).to.equal(true);
+  });
+});

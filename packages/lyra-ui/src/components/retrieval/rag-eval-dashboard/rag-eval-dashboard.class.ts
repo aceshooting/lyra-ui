@@ -18,7 +18,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_ragEvalDashboardAllSlices, LYRA_DEFAULT_ragEvalDashboardEmpty, LYRA_DEFAULT_ragEvalDashboardLabel, LYRA_DEFAULT_ragEvalDashboardRuns, LYRA_DEFAULT_ragEvalDashboardSliceUnavailable, LYRA_DEFAULT_ragEvalDashboardSlices } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_ragEvalDashboardAllSlices, LYRA_DEFAULT_ragEvalDashboardEmpty, LYRA_DEFAULT_ragEvalDashboardLabel, LYRA_DEFAULT_ragEvalDashboardRuns, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_ragEvalDashboardSliceUnavailable, LYRA_DEFAULT_ragEvalDashboardSlices } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraRagEvaluationMetricCategory =
@@ -51,6 +51,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Caps how many evaluation runs mount as `[part="run"]` buttons (and feed the trend chart), so a
+ *  host-supplied `runs` array from a large benchmark sweep can never mount an unbounded number of
+ *  interactive rows. Matches the 500-row ceiling used by every other bounded list in this library
+ *  (e.g. `lr-task-list`'s `MAX_RENDERED_TASKS`). */
+const MAX_RENDERED_RUNS = 500;
+
 /**
  * `<lr-rag-eval-dashboard>` — a controlled RAG quality overview with current metric cards,
  * per-metric trends, evaluation slices, and run history. It displays host-computed metrics and
@@ -62,6 +68,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  * Blank metric/run ids and later duplicates are ignored before fallback selection, filters,
  * counts, rendering, or actions. The first record for an id wins.
+ *
+ * At most 500 of the currently filtered runs render as `[part="run"]` buttons and feed the trend
+ * chart; a filtered set past that length renders a localized `[part="limit"]` notice after the run
+ * history rather than mounting an unbounded number of rows.
  *
  * @customElement lr-rag-eval-dashboard
  * @event lr-metric-change - A metric was activated. `detail: { metricId }`.
@@ -80,6 +90,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * @csspart runs - Evaluation run history.
  * @csspart runs-heading - Run-history heading.
  * @csspart run - One evaluation run.
+ * @csspart limit - Localized notice shown when the filtered runs exceed the 500-run render ceiling.
  * @csspart empty - The no-runs or unavailable-controlled-slice state.
  * @cssprop [--lr-rag-eval-dashboard-selected-border-color=var(--lr-color-brand)] - Border color
  *   shared by the controlled active slice and metric.
@@ -95,6 +106,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     ragEvalDashboardEmpty: LYRA_DEFAULT_ragEvalDashboardEmpty,
     ragEvalDashboardLabel: LYRA_DEFAULT_ragEvalDashboardLabel,
     ragEvalDashboardRuns: LYRA_DEFAULT_ragEvalDashboardRuns,
+    ragEvalDashboardRunsLimit: LYRA_DEFAULT_ragEvalDashboardRunsLimit,
     ragEvalDashboardSliceUnavailable: LYRA_DEFAULT_ragEvalDashboardSliceUnavailable,
     ragEvalDashboardSlices: LYRA_DEFAULT_ragEvalDashboardSlices,
   };
@@ -296,7 +308,11 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
         </section>
       `;
     }
-    const values = filtered.map((run) => {
+    // Business values (the metric cards' `latestValue`) are always computed from the full
+    // `filtered` set below; only the chart/run-history DOM node count is bounded here.
+    const runsTruncated = filtered.length > MAX_RENDERED_RUNS;
+    const renderedRuns = filtered.slice(0, MAX_RENDERED_RUNS);
+    const values = renderedRuns.map((run) => {
       const value = active ? run.metrics[active.id] : undefined;
       return Number.isFinite(value) ? (value as number) : null;
     });
@@ -334,13 +350,13 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
             `;
           })}
         </div>
-        ${this.showChart && active && filtered.length
+        ${this.showChart && active && renderedRuns.length
           ? html`
               <div part="chart">
                 <lr-lite-chart
                   type="line"
                   .height=${this.chartHeight}
-                  .labels=${filtered.map((run) => run.label)}
+                  .labels=${renderedRuns.map((run) => run.label)}
                   .datasets=${[{ label: active.label, data: values }]}
                   accessible-label=${active.label}
                 ></lr-lite-chart>
@@ -352,7 +368,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           aria-label=${this.localize('ragEvalDashboardRuns')}
         >
           <h3 part="runs-heading">${this.localize('ragEvalDashboardRuns')}</h3>
-          ${filtered.map(
+          ${renderedRuns.map(
             (run) => html`
               <button
                 part="run"
@@ -371,6 +387,13 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
               </button>
             `
           )}
+          ${runsTruncated
+            ? html`<p part="limit" role="note">${this.localize(
+                'ragEvalDashboardRunsLimit',
+                undefined,
+                { count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RUNS) }
+              )}</p>`
+            : nothing}
         </section>
       </section>
     `;
