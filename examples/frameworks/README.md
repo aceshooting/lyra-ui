@@ -29,3 +29,7 @@ node scripts/check-framework-recipes.mjs
 
 Use `node scripts/check-framework-recipes.mjs --validate-only` for the fast, install-free source
 contract check.
+
+The Svelte recipe declares `@typescript-eslint/types` explicitly: Svelte's `esrap` dependency
+ships type declarations that import it while listing it only as an optional peer, so `svelte-check`
+with `skipLibCheck` disabled and peer auto-install off cannot resolve it otherwise.
