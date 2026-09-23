@@ -76,6 +76,7 @@ export const styles = css`
 
   [part='form-control-label'][hidden],
   [part='country-prefix'][hidden],
+  [part='end'][hidden],
   [part='hint'][hidden],
   [part='error'][hidden] {
     display: none;
@@ -256,6 +257,13 @@ export const styles = css`
 
   [part='input']::placeholder {
     color: var(--lr-color-text-quiet);
+  }
+
+  [part='end'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    padding-inline-end: var(--lr-space-s);
   }
 
   [part='hint'],

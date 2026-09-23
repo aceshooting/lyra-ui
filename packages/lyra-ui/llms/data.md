@@ -4152,7 +4152,8 @@ eight phased action events.
 Migration note: veto save in `lr-before-query-save`, not `lr-query-save`; the existing
 `lr-query-*` action events are accepted, non-cancelable notifications. **Slots:** `actions`,
 `label`, `hint`, `error`. **CSS
-parts:** `base`, `label`, `hint`, `error` (the three form-control chrome parts every
+parts:** `base`, `form-control-label` (`label` remains as a compatibility alias on the same node),
+`hint`, `error` (the three form-control chrome parts every
 form-associated control in this library exposes — see `lr-select`), `path-fields`, `start-input`,
 `end-input`, `relationship-picker`, `relationship-chips`, `node-type-picker`, `node-type-chips`,
 `direction`, `filter-group`, `min-hops`, `max-hops`, `footer`, `run-button`, `save-button`,

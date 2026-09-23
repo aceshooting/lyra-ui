@@ -195,6 +195,21 @@ export const OptionalCountryAdornment: Story = {
   `,
 };
 
+export const StartAliasAndEndAdornment: Story = {
+  name: 'start alias and end adornment',
+  render: () => html`
+    <lr-phone-input
+      label="Support line"
+      default-country="LU"
+      .adapter=${demoAdapter}
+      style="max-width: 24rem"
+    >
+      <span slot="start" aria-hidden="true">🌍</span>
+      <kbd slot="end">⌘K</kbd>
+    </lr-phone-input>
+  `,
+};
+
 export const E164WithoutMetadata: Story = {
   render: () => html`
     <lr-phone-input

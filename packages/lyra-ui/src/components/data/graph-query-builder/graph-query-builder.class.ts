@@ -315,7 +315,9 @@ export interface LyraGraphQueryBuilderEventMap {
  * @event lr-invalid - Cancelable alias when the complete builder fails native validity; vetoing it
  *   also suppresses the native invalid default.
  * @csspart base - The outer wrapper around every section.
- * @csspart label - Visible label for the complete form control.
+ * @csspart form-control-label - Visible label for the complete form control; shares the same
+ *   node as the `label` compatibility alias.
+ * @csspart label - Compatibility alias for `form-control-label`.
  * @csspart hint - Supporting text for the complete form control.
  * @csspart error - Error text for the complete form control.
  * @csspart path-fields - The row wrapping the start/end entity inputs and hop-count selects.
@@ -1150,7 +1152,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
         aria-describedby=${describedBy || nothing}
         aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
       >
-        <div part="label" id=${this.labelId}>
+        <div part="form-control-label label" id=${this.labelId}>
           <slot name="label" @slotchange=${this.onChromeSlotChange}
             >${this.label || this.localize('graphQueryBuilderLabel')}</slot
           >

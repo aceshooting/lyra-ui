@@ -367,6 +367,11 @@ function normalizeCountryCatalog(source: unknown): readonly LyraPhoneCountry[] {
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @slot country-prefix - Optional visual displayed before the country selector, such as a flag.
+ * @slot start - Alias for `country-prefix`, matching the leading-adornment slot name every other
+ *   forms/ single-line field (`lr-input`, `lr-select`, `lr-combobox`, ...) uses. Content projected
+ *   into either slot renders in the same wrapper before the country selector.
+ * @slot end - Optional trailing adornment after the telephone input, such as a paste or copy
+ *   action, matching the trailing-adornment slot name every other forms/ single-line field uses.
  * @event input - Native `InputEvent` fired for user edits and country changes.
  * @event change - Native `Event` fired when the telephone input commits or the country changes.
  * @event lr-input - Lyra input alias; detail contains the canonical and display values.
@@ -379,7 +384,9 @@ function normalizeCountryCatalog(source: unknown): readonly LyraPhoneCountry[] {
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-label - The visible label.
  * @csspart input-wrapper - The country selector and telephone input wrapper.
- * @csspart country-prefix - Optional country adornment slot wrapper.
+ * @csspart country-prefix - Optional country adornment slot wrapper; also receives the `start`
+ *   alias slot's projected content.
+ * @csspart end - Optional trailing adornment slot wrapper, after the telephone input.
  * @csspart country - The country selector region (invisible native select over the visual trigger).
  * @csspart country-select - The native country selector, stretched invisibly over the trigger.
  * @csspart country-trigger - The visible, decorative closed-state trigger.
@@ -553,6 +560,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasCountryPrefixSlot = false;
+  @state() private hasEndSlot = false;
 
   private inputId = nextId('phone-input');
   private hintId = nextId('phone-hint');
@@ -852,8 +860,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
         this.hasHintSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'hint');
         this.hasErrorSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'error');
         this.hasCountryPrefixSlot = Array.from(this.children ?? []).some(
-          (child) => child.getAttribute('slot') === 'country-prefix',
+          (child) => child.getAttribute('slot') === 'country-prefix' || child.getAttribute('slot') === 'start',
         );
+        this.hasEndSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'end');
       });
     }
     if (
@@ -978,8 +987,12 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   private onCountryPrefixSlotChange = (): void => {
     this.hasCountryPrefixSlot = Array.from(this.children ?? []).some(
-      (child) => child.getAttribute('slot') === 'country-prefix',
+      (child) => child.getAttribute('slot') === 'country-prefix' || child.getAttribute('slot') === 'start',
     );
+  };
+
+  private onEndSlotChange = (): void => {
+    this.hasEndSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'end');
   };
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
@@ -1057,6 +1070,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
         <div part="input-wrapper">
           <span part="country-prefix" ?hidden=${!this.hasCountryPrefixSlot}>
             <slot name="country-prefix" @slotchange=${this.onCountryPrefixSlotChange}></slot>
+            <slot name="start" @slotchange=${this.onCountryPrefixSlotChange}></slot>
           </span>
           <span part="country">
             <select
@@ -1113,6 +1127,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             @focus=${this.onFocus}
             @blur=${this.onBlur}
           />
+          <span part="end" ?hidden=${!this.hasEndSlot}>
+            <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+          </span>
         </div>
         <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
           <slot name="hint" @slotchange=${this.onHintSlotChange}>${this.hint}</slot>

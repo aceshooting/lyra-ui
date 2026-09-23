@@ -1500,6 +1500,53 @@ it('reacts to label, hint, and country-prefix slot content added after first ren
   expect(prefixPart.hidden).to.be.false;
 });
 
+it('accepts slot="start" as an alias into the country-prefix wrapper, alongside country-prefix', async () => {
+  const el = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
+  await el.updateComplete;
+  const prefixPart = el.shadowRoot!.querySelector('[part="country-prefix"]') as HTMLElement;
+  expect(prefixPart.hidden).to.be.true;
+
+  const startSlot = el.shadowRoot!.querySelector('slot[name="start"]') as HTMLSlotElement;
+  const startChange = oneEvent(startSlot, 'slotchange');
+  const startSpan = document.createElement('span');
+  startSpan.slot = 'start';
+  startSpan.textContent = 'flag';
+  el.append(startSpan);
+  await startChange;
+  await el.updateComplete;
+  expect(prefixPart.hidden).to.be.false;
+  expect(startSlot.assignedNodes({ flatten: true })).to.include(startSpan);
+
+  // country-prefix keeps working unchanged alongside the new alias.
+  el.removeChild(startSpan);
+  const prefixSlot = el.shadowRoot!.querySelector('slot[name="country-prefix"]') as HTMLSlotElement;
+  const prefixChange = oneEvent(prefixSlot, 'slotchange');
+  const prefixSpan = document.createElement('span');
+  prefixSpan.slot = 'country-prefix';
+  prefixSpan.textContent = 'flag';
+  el.append(prefixSpan);
+  await prefixChange;
+  await el.updateComplete;
+  expect(prefixPart.hidden).to.be.false;
+});
+
+it('reacts to end slot content added after first render, and stays unset with no content', async () => {
+  const el = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
+  await el.updateComplete;
+  const endPart = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+  expect(endPart.hidden).to.be.true;
+
+  const endSlot = el.shadowRoot!.querySelector('slot[name="end"]') as HTMLSlotElement;
+  const endChange = oneEvent(endSlot, 'slotchange');
+  const endSpan = document.createElement('span');
+  endSpan.slot = 'end';
+  endSpan.textContent = 'copy';
+  el.append(endSpan);
+  await endChange;
+  await el.updateComplete;
+  expect(endPart.hidden).to.be.false;
+});
+
 it('exposes focus() and blur() methods that delegate to the internal telephone input', async () => {
   const el = (await fixture(html`<lr-phone-input label="Phone number"></lr-phone-input>`)) as LyraPhoneInput;
   await el.updateComplete;

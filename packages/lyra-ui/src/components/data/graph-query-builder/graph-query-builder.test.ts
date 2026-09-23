@@ -993,7 +993,7 @@ describe('lr-graph-query-builder', () => {
       </lr-graph-query-builder>
     `)) as LyraGraphQueryBuilder;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement;
     const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
 
@@ -1005,6 +1005,25 @@ describe('lr-graph-query-builder', () => {
     expect(el.shadowRoot!.querySelector('slot[name="label"]')).to.exist;
     expect(el.shadowRoot!.querySelector('slot[name="hint"]')).to.exist;
     expect(el.shadowRoot!.querySelector('slot[name="error"]')).to.exist;
+  });
+
+  it('exposes the shared form-control-label part alongside the compatibility label part', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder label="Graph path"></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    const shared = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement | null;
+    const alias = el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement | null;
+    expect(shared, 'form-control-label part').to.exist;
+    expect(alias, 'label part').to.exist;
+    expect(shared).to.equal(alias);
+    expect(shared!.textContent).to.contain('Graph path');
+    // The stylesheet's own `[part~='label']` font-weight rule must still resolve against the
+    // now-two-token part value -- a stale exact-match `[part='label']` selector would silently
+    // stop applying, leaving the label at the ordinary (non-semibold) weight the hint uses.
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    expect(Number(getComputedStyle(shared!).fontWeight)).to.be.greaterThan(
+      Number(getComputedStyle(hint).fontWeight),
+    );
   });
 
   it('projects a host aria-describedby onto the internal role="group" owner', async () => {
@@ -1369,7 +1388,7 @@ describe('lr-graph-query-builder', () => {
     const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('group');
     expect(base.hasAttribute('aria-label')).to.equal(false);
     expect(base.getAttribute('aria-labelledby')).to.equal(label.id);
@@ -1382,7 +1401,7 @@ describe('lr-graph-query-builder', () => {
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement;
     expect(base.hasAttribute('aria-label')).to.equal(false);
     expect(base.getAttribute('aria-labelledby')).to.equal(label.id);
     expect(label.textContent!.trim()).to.equal('Path filter');
@@ -1393,7 +1412,7 @@ describe('lr-graph-query-builder', () => {
       <lr-graph-query-builder><span slot="label">Find related accounts</span></lr-graph-query-builder>
     `)) as LyraGraphQueryBuilder;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement;
     const slot = label.querySelector('slot') as HTMLSlotElement;
     expect(base.hasAttribute('aria-label')).to.equal(false);
     expect(base.getAttribute('aria-labelledby')).to.equal(label.id);

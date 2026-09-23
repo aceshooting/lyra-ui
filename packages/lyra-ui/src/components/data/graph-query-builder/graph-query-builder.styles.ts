@@ -12,7 +12,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);
   }
-  [part='label'] {
+  [part~='label'] {
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='hint'],
