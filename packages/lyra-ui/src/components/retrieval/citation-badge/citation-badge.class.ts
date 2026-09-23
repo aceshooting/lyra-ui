@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -78,7 +79,9 @@ const HIDE_DELAY_MS = 200;
  * hover. When preview content exists, the button keeps a stable
  * `aria-describedby` relationship to the `role="tooltip"` panel while it is
  * both hidden and visible, so assistive technology can resolve the preview
- * as soon as focus causes it to open.
+ * as soon as focus causes it to open. An open popover participates in shared
+ * Escape ordering even while only hovered, deferring to a genuinely topmost
+ * overlay opened on top of it.
  *
  * An authored host `aria-label` deliberately names only the custom-element boundary; it is not
  * copied onto the internal button. Host naming does not cross the shadow boundary, so the button
@@ -206,6 +209,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   // the shared controller also counts bare, non-whitespace text content.
   private readonly slotPresence = new SlotPresenceController(this);
   private cleanupPositioner?: () => void;
+  private overlayHandle?: OverlayHandle;
   private hideTimer?: number;
   private hideTimerOwner?: Window;
   // Hover and focus are tracked as independent "keep it open" reasons —
@@ -232,10 +236,23 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     if (changed.has('popoverOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
+      this.overlayHandle?.deactivate({ restoreFocus: false });
+      this.overlayHandle = undefined;
       if (this.popoverOpen && this.buttonEl && this.popoverEl) {
         this.cleanupPositioner = place(this.buttonEl, this.popoverEl, {
           placement: 'top-start',
           strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+        });
+        // Registers with the shared topmost-overlay stack (internal/overlay-manager.ts) so
+        // Escape defers to a genuinely topmost overlay opened above this popover, instead of
+        // this preview always winning regardless of stacking order -- mirrors
+        // <lr-tooltip>'s activateTooltipOverlay(). Nonmodal/non-trapping: this popover is
+        // always `inert` and never owns focus of its own.
+        this.overlayHandle = activateNonmodalOverlay({
+          host: this,
+          panel: () => this.popoverEl ?? null,
+          onEscape: () => this.hidePreviewNow(),
+          restoreFocusTo: null,
         });
       }
     }
@@ -245,6 +262,8 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
     this.clearHideTimer();
     // Reset transient state so reconnecting a reparented or virtualized element re-arms its
     // positioner and does not preserve stale hover/focus ownership.
@@ -351,10 +370,13 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   // "while the popover has focus-within" per the component's contract,
   // without needing to track focus targets explicitly here.
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && this.popoverOpen) {
+    if (e.key === 'Escape' && this.popoverOpen && this.overlayHandle?.isTopmost()) {
       // Swallow it here rather than letting it bubble to e.g. a containing
       // lr-dialog's own Escape-to-close handler — dismissing this
-      // lightweight preview shouldn't also close a surrounding modal.
+      // lightweight preview shouldn't also close a surrounding modal. Gated
+      // on isTopmost() so a genuinely topmost overlay stacked above this one
+      // gets the keypress instead (the shared document-level listener still
+      // routes it there when this branch defers).
       e.stopPropagation();
       this.hidePreviewNow();
       return;

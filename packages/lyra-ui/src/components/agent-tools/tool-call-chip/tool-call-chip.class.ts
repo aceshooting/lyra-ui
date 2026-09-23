@@ -11,6 +11,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
@@ -182,7 +183,9 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * @customElement lr-tool-call-chip
  * @slot - Noninteractive tooltip preview text or formatting, shown on hover/focus. Interactive
  * descendants are inert; put actions in the detail surface opened from
- * `lr-tool-call-chip-select`. Nothing renders when this slot is empty.
+ * `lr-tool-call-chip-select`. Nothing renders when this slot is empty. An open tooltip
+ * participates in shared Escape ordering even while only hovered, deferring to a genuinely
+ * topmost overlay opened on top of it.
  * @slot icon - Overrides the built-in status glyph entirely.
  * @event lr-tool-call-chip-select - The chip was activated (click or
  * Enter/Space while focused). `detail: { name, callId }`. The `lr-tool-chip-select`
@@ -293,6 +296,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
    *  `graph-query-builder.class.ts`'s identically-shaped `externalDescriptionLease`. */
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private cleanupPositioner?: () => void;
+  private tooltipOverlay?: OverlayHandle;
   // Hover and focus are tracked as independent "keep it open" reasons --
   // mirrors lr-citation-badge's identical hovering/focused pair for the
   // same hover/focus preview-popover pattern -- so releasing one (e.g. the
@@ -343,6 +347,8 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     if (changed.has('tooltipOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
+      this.tooltipOverlay?.deactivate({ restoreFocus: false });
+      this.tooltipOverlay = undefined;
       if (this.tooltipOpen) {
         const anchor = this.renderRoot.querySelector(
           '[part="base"]'
@@ -350,11 +356,25 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         const tooltip = this.renderRoot.querySelector(
           '[part="tooltip"]'
         ) as HTMLElement | null;
-        if (anchor && tooltip)
+        if (anchor && tooltip) {
           this.cleanupPositioner = place(anchor, tooltip, {
             placement: 'top-start',
             strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
           });
+          // Registers with the shared topmost-overlay stack (internal/overlay-manager.ts) so
+          // Escape defers to a genuinely topmost overlay opened above this tooltip, instead of
+          // this preview always winning regardless of stacking order -- mirrors
+          // <lr-tooltip>'s activateTooltipOverlay() and <lr-usage-badge>'s
+          // activateUsageBadgeOverlay(), which reuses this same tooltip contract wholesale.
+          // Nonmodal/non-trapping: this tooltip is always `inert` and never owns focus of its
+          // own.
+          this.tooltipOverlay = activateNonmodalOverlay({
+            host: this,
+            panel: () => tooltip,
+            onEscape: () => this.hideTooltip(),
+            restoreFocusTo: null,
+          });
+        }
       }
     }
   }
@@ -364,6 +384,8 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     this.releaseExternalDescription();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
+    this.tooltipOverlay?.deactivate({ restoreFocus: false });
+    this.tooltipOverlay = undefined;
     // Reset so a reconnect (e.g. a drag-drop reparent or a list re-render
     // that detaches and reattaches this node) re-triggers `updated()`'s
     // `tooltipOpen`-driven branch -- without this, `tooltipOpen` stays
@@ -430,10 +452,13 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     // The native <button> already handles Enter/Space activation on its
     // own -- this only needs to cover dismissing the (non-native) tooltip,
     // the same Escape-to-close convention every other popup in this library
-    // follows (see lr-combobox's onKeyDown). Unconditional close (not
-    // gated on hovering/focused) since Escape is a deliberate dismissal, not
-    // transient pointer/focus travel.
-    if (e.key === 'Escape' && this.tooltipOpen) {
+    // follows (see lr-combobox's onKeyDown). Not gated on hovering/focused
+    // (Escape is a deliberate dismissal, not transient pointer/focus
+    // travel), but gated on tooltipOverlay.isTopmost() so a genuinely
+    // topmost overlay stacked above this tooltip gets the keypress instead
+    // -- the shared document-level listener still routes it there when this
+    // branch defers.
+    if (e.key === 'Escape' && this.tooltipOpen && this.tooltipOverlay?.isTopmost()) {
       e.stopPropagation();
       this.hideTooltip();
     }

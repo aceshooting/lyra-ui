@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -32,7 +33,9 @@ const HIDE_DELAY_MS = 200;
  *
  * @customElement lr-entity-chip
  * @slot - Rich preview content (typically a compact `lr-entity-card`), shown in a floating
- * popover on hover/focus. No content -> no popover and no hover affordance at all.
+ * popover on hover/focus. No content -> no popover and no hover affordance at all. An open
+ * popover participates in shared Escape ordering even while only hovered, deferring to a
+ * genuinely topmost overlay opened on top of it.
  * @event lr-entity-select - Click, or Enter while focused. `detail: { entityId }`.
  * @event lr-entity-open - Dblclick, or Space while focused. `detail: { entityId }`.
  * @csspart base - The clickable chip (`<button>`).
@@ -93,6 +96,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
    *  component asks, seeded before the first render and kept live afterwards. */
   private readonly slotPresence = new SlotPresenceController(this);
   private cleanupPositioner?: () => void;
+  private overlayHandle?: OverlayHandle;
   private hideTimer?: number;
   private hideTimerOwner?: Window;
   private hovering = false;
@@ -115,10 +119,23 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     if (changed.has('popoverOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
+      this.overlayHandle?.deactivate({ restoreFocus: false });
+      this.overlayHandle = undefined;
       if (this.popoverOpen && this.buttonEl && this.popoverEl) {
         this.cleanupPositioner = place(this.buttonEl, this.popoverEl, {
           placement: 'top-start',
           strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+        });
+        // Registers with the shared topmost-overlay stack (internal/overlay-manager.ts) so
+        // Escape defers to a genuinely topmost overlay opened above this popover, instead of
+        // this preview always winning regardless of stacking order -- mirrors
+        // <lr-tooltip>'s activateTooltipOverlay(). Nonmodal/non-trapping: this popover is
+        // always `inert` and never owns focus of its own.
+        this.overlayHandle = activateNonmodalOverlay({
+          host: this,
+          panel: () => this.popoverEl ?? null,
+          onEscape: () => this.hidePreviewNow(),
+          restoreFocusTo: null,
         });
       }
     }
@@ -128,6 +145,8 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
+    this.overlayHandle?.deactivate({ restoreFocus: false });
+    this.overlayHandle = undefined;
     this.clearHideTimer();
     // Reset so a reconnect (e.g. a drag-drop reparent, or a virtualized/reordering
     // message list moving this element) re-triggers updated()'s open-driven branch --
@@ -204,7 +223,11 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && this.popoverOpen) {
+    if (e.key === 'Escape' && this.popoverOpen && this.overlayHandle?.isTopmost()) {
+      // Swallow it here rather than letting it bubble to e.g. a containing lr-dialog's own
+      // Escape-to-close handler. Gated on isTopmost() so a genuinely topmost overlay stacked
+      // above this one gets the keypress instead (the shared document-level listener still
+      // routes it there when this branch defers).
       e.stopPropagation();
       this.hidePreviewNow();
       return;

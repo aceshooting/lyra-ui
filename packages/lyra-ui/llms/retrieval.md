@@ -695,6 +695,8 @@ ancestor to change every unset entity chip beneath it.
   `lr-entity-card` as shown above, and handle the chip's own `lr-entity-select`/`lr-entity-open`
   events for navigation.
 - A blank `entityId` disables the chip and cannot produce an activation/open event.
+- An open popover participates in shared Escape ordering even while only hovered, deferring to a
+  genuinely topmost overlay opened on top of it.
 
 ---
 
@@ -1361,6 +1363,8 @@ no background tint, for citations that carry no confidence/verification signal a
   `lr-citation-open` instead of triggering a second `lr-citation-activate`.
 - Escape closes the popover but calls `stopPropagation()`, so it won't also close a surrounding
   `<lr-dialog>` that has its own Escape-to-close handler.
+- An open popover participates in shared Escape ordering even while only hovered, deferring to a
+  genuinely topmost overlay opened on top of it.
 - The preview slot's presence is tracked in JS (`hasPreviewSlot`), not via CSS `:empty` — the
   `[part="popover"]` always contains a literal `<slot>` child, so `:empty` would never match even
   with nothing assigned.
