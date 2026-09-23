@@ -1,5 +1,15 @@
 # Changelog
 
+## 19.0.1
+
+### Patch Changes
+
+- 0ce9a98: Batch select and combobox option metadata refreshes so mounting or updating a large catalog no longer rescans every option for each individual notification. Explicit selection writes retain their immediate behavior.
+- 0ce9a98: Remove closed select and combobox option panels from layout after their exit transitions, preventing stale popup geometry from creating horizontal scrolling when a container resizes.
+- 8753686: Keep chart-area geometry and center-slot content synchronized after responsive Chart.js layouts, including charts outside the visible scroll area.
+- 8753686: Avoid unnecessary style calculations when reading plain-text option labels, improving large select and combobox catalog mounting without changing accessible text.
+- d49abfc: Fix a table rendering loop near responsive column-hiding thresholds when expansion controls or row totals are present. Include those columns in the measured grid width so priority columns remain stable during loading, resizing, and reveal toggles.
+
 ## 19.0.0
 
 ### Major Changes
