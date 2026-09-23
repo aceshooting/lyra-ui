@@ -1112,3 +1112,72 @@ export class CodeBlockInteractionController {
     this.options.emitToggle(host.collapsed);
   };
 }
+
+/** The reactive write {@linkcode CodeBlockHeaderActionsController} cannot perform itself: each
+ *  component keeps `hasHeaderActions` as its own `@state()` (it reaches the shared render
+ *  options this module's `renderCodeBlockShell()` accepts) and hands the setter in as a
+ *  callback, the same shape `CodeBlockInteractionOptions` uses for `focusedLine`/`justCopied`/
+ *  etc. */
+export interface CodeBlockHeaderActionsOptions {
+  host: HTMLElement;
+  setHasHeaderActions: (value: boolean) => void;
+}
+
+/** Whether a light-DOM child of `host` claims the `header-actions` slot. Read from `children`
+ *  rather than a `slotchange`, because the slot only exists once the header renders -- and
+ *  whether the header renders at all is exactly what this answers for a code block with no
+ *  filename, language, copy control or collapse toggle. */
+function codeBlockHasHeaderActions(host: HTMLElement): boolean {
+  return Array.from(host.children).some(
+    (child) => child.getAttribute('slot') === 'header-actions'
+  );
+}
+
+/**
+ * Watches a code-block host's own light DOM so appending (or removing) a `slot="header-actions"`
+ * child brings the header into existence -- or retires it -- without the consumer touching a
+ * property.
+ *
+ * `<lr-code-block>` and `<lr-code-block-core>` previously each defined their own byte-identical
+ * `syncHeaderActions()`/`observeHeaderActions()` private methods plus the backing
+ * `headerActionsObserver` field -- exactly the drift class this module exists to prevent, and
+ * already caught once before for `renderPlainCode()`. Both components now instantiate this
+ * single controller instead.
+ */
+export class CodeBlockHeaderActionsController {
+  private observer?: MutationObserver;
+
+  constructor(private readonly options: CodeBlockHeaderActionsOptions) {}
+
+  /** Re-reads the host's light DOM and reports the result through `setHasHeaderActions`. Safe to
+   *  call on every update pass -- it does its own light-DOM read, not a diff against `observe()`'s
+   *  MutationObserver state. */
+  sync(): void {
+    this.options.setHasHeaderActions(codeBlockHasHeaderActions(this.options.host));
+  }
+
+  /** Starts (once) watching the host's light DOM for a `header-actions` slot claim, syncing
+   *  immediately so a child already present at call time is picked up. A no-op on a second call
+   *  or when `MutationObserver` is unavailable. */
+  observe(): void {
+    if (this.observer || typeof MutationObserver === 'undefined') return;
+    this.sync();
+    // childList covers append/remove. The slot-attribute filter covers a child that is already
+    // here and only later claims the slot, and needs subtree to see the CHILD's attribute rather
+    // than the host's -- cheap here, because `header-actions` is this component's only slot, so
+    // the light DOM carries nothing else (the code itself arrives on the `code` property).
+    this.observer = new MutationObserver(() => this.sync());
+    this.observer.observe(this.options.host, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ['slot'],
+      subtree: true,
+    });
+  }
+
+  /** Retires the observer, e.g. on host disconnect. */
+  disconnect(): void {
+    this.observer?.disconnect();
+    this.observer = undefined;
+  }
+}

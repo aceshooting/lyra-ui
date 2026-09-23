@@ -143,12 +143,15 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     }).format(finiteRange(value, 0, 0, 1));
   }
 
-  private overlaps(sets: readonly RetrievalComparisonSet[]): string[] {
+  private overlaps(
+    sets: readonly RetrievalComparisonSet[],
+    ordered: ReadonlyMap<string, RetrievalChunk[]>
+  ): string[] {
     const summaries: string[] = [];
     for (let leftIndex = 0; leftIndex < sets.length; leftIndex += 1) {
       const leftSet = sets[leftIndex]!;
       const left = new Set(
-        this.orderedChunks(leftSet).map((chunk) => chunk.id)
+        (ordered.get(leftSet.id) ?? []).map((chunk) => chunk.id)
       );
       for (
         let rightIndex = leftIndex + 1;
@@ -157,7 +160,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
       ) {
         const rightSet = sets[rightIndex]!;
         const right = new Set(
-          this.orderedChunks(rightSet).map((chunk) => chunk.id)
+          (ordered.get(rightSet.id) ?? []).map((chunk) => chunk.id)
         );
         const intersection = [...left].filter((id) => right.has(id)).length;
         const union = new Set([...left, ...right]).size;
@@ -190,14 +193,15 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
 
   private renderSet = (
     set: RetrievalComparisonSet,
-    setIndex: number
+    setIndex: number,
+    chunks: readonly RetrievalChunk[]
   ): TemplateResult => {
     const headingId = `${this.headingIdPrefix}-set-${setIndex}`;
     return html`
       <section part="set" aria-labelledby=${headingId}>
         <h3 part="set-heading" id=${headingId}>${set.label}</h3>
         <ol part="chunks">
-          ${this.orderedChunks(set).map((chunk, index) => {
+          ${chunks.map((chunk, index) => {
             const selected = chunk.id === this.selectedChunkId;
             const rank = this.rank(chunk, index);
             const chunkPart = selected ? 'chunk chunk-selected' : 'chunk';
@@ -255,7 +259,15 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
         ></lr-empty>
       </section>`;
     }
-    const overlaps = this.overlaps(sets);
+    // Computed once per render and threaded into both overlaps() and renderSet() -- each set's
+    // ranked top-k chunk list is a pure function of `set` and instance fields that don't change
+    // within one synchronous render pass, so recomputing it per set (rather than per set per
+    // *usage*) keeps this render O(N) instead of the O(N^2) redundant filter/sort/slice passes a
+    // naive per-callsite `orderedChunks(set)` call would repeat.
+    const ordered = new Map(
+      sets.map((set) => [set.id, this.orderedChunks(set)] as const)
+    );
+    const overlaps = this.overlaps(sets, ordered);
     return html`
       <section
         part="base"
@@ -264,7 +276,9 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
       >
         ${overlaps.map((summary) => html`<p part="overlap">${summary}</p>`)}
         <div part="sets">
-          ${sets.map((set, index) => this.renderSet(set, index))}
+          ${sets.map((set, index) =>
+            this.renderSet(set, index, ordered.get(set.id) ?? [])
+          )}
         </div>
       </section>
     `;

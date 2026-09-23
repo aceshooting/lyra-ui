@@ -162,8 +162,21 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     return varValue || FALLBACK_PALETTE[index % PALETTE_SIZE]!;
   }
 
-  private swatchColor(type: LyraNodeTypeStyle, index: number): string {
-    return sanitizeCssColor(type.color) ?? this.paletteColor(index);
+  /** Builds a `paletteColor()` resolver that reads `getComputedStyle(this)` at most once per
+   *  distinct `index % PALETTE_SIZE` slot, reused across the rest of one `render()` pass, instead
+   *  of once per legend entry -- the underlying `--lr-graph-cat-N` value cannot change between two
+   *  entries in the same synchronous render. */
+  private paletteColorResolver(): (index: number) => string {
+    const cache = new Map<number, string>();
+    return (index: number) => {
+      const slot = index % PALETTE_SIZE;
+      let color = cache.get(slot);
+      if (color === undefined) {
+        color = this.paletteColor(index);
+        cache.set(slot, color);
+      }
+      return color;
+    };
   }
 
   private isVisible(id: string): boolean {
@@ -218,6 +231,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
       this.label || this.localize('graphLegendLabel')
     );
     const groupRole = retrievalSemanticRole(this, 'group');
+    const resolvePaletteColor = this.paletteColorResolver();
     return html`
       <div
         part="base"
@@ -226,7 +240,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
       >
         ${types.map((type, index) => {
           const visible = this.isVisible(type.id);
-          const color = this.swatchColor(type, index);
+          const color = sanitizeCssColor(type.color) ?? resolvePaletteColor(index);
           const count = this.counts?.[type.id];
           const content = html`
             <svg

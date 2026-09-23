@@ -1,6 +1,7 @@
 import { render } from "lit";
-import { expect } from "@open-wc/testing";
+import { expect, waitUntil } from "@open-wc/testing";
 import {
+  CodeBlockHeaderActionsController,
   CodeBlockInteractionController,
   codeBlockActiveHighlightLineSet,
   codeBlockEventLine,
@@ -567,6 +568,118 @@ describe("owner-realm line interactions", () => {
       expect(root.activeElement === second).to.equal(true);
     } finally {
       host.remove();
+    }
+  });
+});
+
+describe('CodeBlockHeaderActionsController', () => {
+  function makeHost(): HTMLElement {
+    const host = document.createElement('div');
+    document.body.append(host);
+    return host;
+  }
+
+  function makeController(
+    host: HTMLElement,
+    reported: boolean[]
+  ): CodeBlockHeaderActionsController {
+    return new CodeBlockHeaderActionsController({
+      host,
+      setHasHeaderActions: (value) => reported.push(value),
+    });
+  }
+
+  it('reports the current header-actions slot claim on sync()', () => {
+    const host = makeHost();
+    const reported: boolean[] = [];
+    const controller = makeController(host, reported);
+    try {
+      controller.sync();
+      expect(reported).to.deep.equal([false]);
+
+      const action = document.createElement('button');
+      action.slot = 'header-actions';
+      host.append(action);
+      controller.sync();
+      expect(reported).to.deep.equal([false, true]);
+    } finally {
+      host.remove();
+    }
+  });
+
+  it('observes light-DOM mutations so a later append/remove is reported without a manual sync()', async () => {
+    const host = makeHost();
+    const reported: boolean[] = [];
+    const controller = makeController(host, reported);
+    try {
+      controller.observe();
+      expect(reported, 'observe() syncs immediately').to.deep.equal([false]);
+
+      const action = document.createElement('button');
+      action.slot = 'header-actions';
+      host.append(action);
+      await waitUntil(() => reported.length >= 2, 'the append is reported');
+      expect(reported).to.deep.equal([false, true]);
+
+      host.removeChild(action);
+      await waitUntil(() => reported.length >= 3, 'the removal is reported');
+      expect(reported).to.deep.equal([false, true, false]);
+    } finally {
+      controller.disconnect();
+      host.remove();
+    }
+  });
+
+  it('stops reporting mutations once disconnected', async () => {
+    const host = makeHost();
+    const reported: boolean[] = [];
+    const controller = makeController(host, reported);
+    try {
+      controller.observe();
+      controller.disconnect();
+
+      const action = document.createElement('button');
+      action.slot = 'header-actions';
+      host.append(action);
+      // Give any (unexpected) queued MutationObserver microtask a chance to run.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(reported, 'no further report after disconnect()').to.deep.equal([false]);
+    } finally {
+      host.remove();
+    }
+  });
+
+  it('drives two independent hosts identically from the same shared implementation', () => {
+    // Regression for R54: <lr-code-block> and <lr-code-block-core> previously each carried their
+    // own hand-copied syncHeaderActions()/observeHeaderActions() pair, free to drift apart. Both
+    // now delegate to this single controller -- exercising it against two separate hosts proves
+    // one shared implementation keeps both variants in sync by construction, not by two copies
+    // someone remembered to keep matching.
+    const leanHost = makeHost();
+    const fullHost = makeHost();
+    const leanReported: boolean[] = [];
+    const fullReported: boolean[] = [];
+    const lean = makeController(leanHost, leanReported);
+    const full = makeController(fullHost, fullReported);
+    try {
+      lean.sync();
+      full.sync();
+      expect(leanReported).to.deep.equal([false]);
+      expect(fullReported).to.deep.equal([false]);
+
+      for (const host of [leanHost, fullHost]) {
+        const action = document.createElement('button');
+        action.slot = 'header-actions';
+        host.append(action);
+      }
+      lean.sync();
+      full.sync();
+      expect(leanReported).to.deep.equal(fullReported);
+      expect(leanReported).to.deep.equal([false, true]);
+    } finally {
+      leanHost.remove();
+      fullHost.remove();
     }
   });
 });

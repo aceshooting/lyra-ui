@@ -513,3 +513,34 @@ it('normalizes non-finite public counts to a finite non-negative fallback', asyn
     )
   ).to.deep.equal(['0', '0']);
 });
+
+it('resolves each distinct palette slot once per render, not once per legend entry', async () => {
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
+  // 10 types with no explicit color, so every swatch falls back to the --lr-graph-cat-N palette.
+  // PALETTE_SIZE is 8, so indices 8 and 9 land back on the same slots as 0 and 1 -- the fill space
+  // one render actually needs is 8 distinct {slot} lookups, not 10.
+  el.types = Array.from({ length: 10 }, (_unused, index) => ({
+    id: `type-${index}`,
+    label: `Type ${index}`,
+  }));
+  await el.updateComplete;
+
+  const original = window.getComputedStyle;
+  let calls = 0;
+  window.getComputedStyle = ((target: Element, pseudo?: string | null) => {
+    if (target === el) calls++;
+    return original.call(window, target, pseudo ?? undefined);
+  }) as typeof window.getComputedStyle;
+  try {
+    el.types = [...el.types];
+    await el.updateComplete;
+    expect(
+      calls,
+      'one getComputedStyle call per distinct palette slot this render needed, not per legend entry'
+    ).to.equal(8);
+  } finally {
+    window.getComputedStyle = original;
+  }
+});

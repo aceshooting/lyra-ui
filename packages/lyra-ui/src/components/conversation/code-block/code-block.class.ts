@@ -21,6 +21,7 @@ import {
 } from './code-loader.js';
 import { styles } from './code-block.styles.js';
 import {
+  CodeBlockHeaderActionsController,
   CodeBlockInteractionController,
   applyCodeBlockAriaBusy,
   clampCodeBlockFocusedLine,
@@ -265,17 +266,11 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   @property({ attribute: 'copy-appearance', reflect: true })
   copyAppearance: LyraCodeBlockCopyAppearance = 'text';
 
-  /** Whether a light-DOM child is assigned to `header-actions`. Read from `children` rather than a
-   *  `slotchange`, because the slot only exists once the header renders -- and whether the header
-   *  renders at all is exactly what this answers for a code block with no filename, language,
-   *  copy control or collapse toggle. `headerActionsObserver` closes that loop for a child appended
-   *  after first render, which no `slotchange` could ever report for a header that isn't there. */
+  /** Whether a light-DOM child is assigned to `header-actions`. Set from `headerActions`
+   *  (`CodeBlockHeaderActionsController` in code-block-shared.ts), which closes the loop for a
+   *  child appended after first render, which no `slotchange` could ever report for a header
+   *  that isn't there. */
   @state() private hasHeaderActions = false;
-
-  /** Watches the host's own light DOM so appending (or removing) a `slot="header-actions"` child
-   *  brings the header into existence -- or retires it -- without the consumer touching a
-   *  property. */
-  private headerActionsObserver?: MutationObserver;
 
   /** A CSS length (e.g. `"20rem"`); once set, the code scrolls internally
    *  past this height instead of growing the page. */
@@ -386,6 +381,15 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     emitTextSelect: (selection) => this.emit('lr-text-select', selection),
   });
 
+  // Shared with <lr-code-block-core> via code-block-shared.ts so a fix to the header-actions
+  // slot-detection logic lands once instead of needing to be applied to both class files.
+  private readonly headerActions = new CodeBlockHeaderActionsController({
+    host: this,
+    setHasHeaderActions: (value) => {
+      this.hasHeaderActions = value;
+    },
+  });
+
   // Guards the async per-language load in syncHighlight() against a
   // `code`/`language` change that arrives before a previous load resolves --
   // only the result matching the *current* token is ever applied.
@@ -403,7 +407,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.refreshTheme();
-    this.observeHeaderActions();
+    this.headerActions.observe();
     this.ensureDefaultHighlighter();
     if (this.preSuppliedGrammar() || this.highlighter) this.syncHighlight();
   }
@@ -434,8 +438,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   override disconnectedCallback(): void {
     this.highlightToken++;
     super.disconnectedCallback();
-    this.headerActionsObserver?.disconnect();
-    this.headerActionsObserver = undefined;
+    this.headerActions.disconnect();
     this.interactions.disconnect();
     this.highlightedHtml = null;
   }
@@ -498,7 +501,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     // Derived here, not in updated(): assigning the @state after an update has completed schedules
     // a whole second render pass (and trips Lit's dev-mode "scheduled an update after an update
     // completed" warning) the first time a consumer slots header actions.
-    this.syncHeaderActions();
+    this.headerActions.sync();
     this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
     if (changed.has('code')) {
       this.focusedLine = clampCodeBlockFocusedLine(
@@ -530,31 +533,6 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
       restoreCodeBlockLineFocus(this, this.focusedLine);
       this.restoreFocusedLineAfterUpdate = false;
     }
-  }
-
-  private syncHeaderActions(): void {
-    const children = (this as unknown as { children?: HTMLCollection }).children;
-    this.hasHeaderActions = (children ? Array.from(children) : []).some(
-      (child) => child.getAttribute('slot') === 'header-actions',
-    );
-  }
-
-  private observeHeaderActions(): void {
-    if (this.headerActionsObserver || typeof MutationObserver === 'undefined') return;
-    this.syncHeaderActions();
-    // childList covers append/remove; the slot attribute filter covers a child that is already
-    // here and only later claims the slot.
-    this.headerActionsObserver = new MutationObserver(() => this.syncHeaderActions());
-    // childList covers append/remove. The slot-attribute filter covers a child that is already
-    // here and only later claims the slot, and needs subtree to see the CHILD's attribute rather
-    // than the host's -- cheap here, because `header-actions` is this component's only slot, so
-    // the light DOM carries nothing else (the code itself arrives on the `code` property).
-    this.headerActionsObserver.observe(this, {
-      childList: true,
-      attributes: true,
-      attributeFilter: ['slot'],
-      subtree: true,
-    });
   }
 
   /** Whether this render shows the loading skeleton instead of the code. */

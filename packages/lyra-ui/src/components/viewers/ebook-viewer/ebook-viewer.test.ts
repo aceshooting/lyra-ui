@@ -2886,6 +2886,48 @@ describe("scrollToAnchor (ebook)", () => {
     }
   });
 
+  it("resolves each distinct highlight fill token once per repaint, not once per painted highlight", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "hello world" });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    const originalGetComputedStyle = window.getComputedStyle;
+    let calls = 0;
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer
+          src="https://example.test/book.epub"
+        ></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await aTimeout(20);
+
+      window.getComputedStyle = ((target: Element, pseudo?: string | null) => {
+        if (target === el) calls++;
+        return originalGetComputedStyle.call(window, target, pseudo ?? undefined);
+      }) as typeof window.getComputedStyle;
+
+      // Four paintable highlights sharing only two tones (three 'accent', default when omitted,
+      // one 'success'), one of them active -- so the fill space this repaint actually needs is
+      // just 3 distinct {token, fallback} pairs: the 'accent' tone, the 'success' tone, and the
+      // active highlight's stroke token.
+      el.highlights = [
+        { id: "h1", anchor: { kind: "cfi", cfi: "epubcfi(/6/2!)" } },
+        { id: "h2", anchor: { kind: "cfi", cfi: "epubcfi(/6/4!)" } },
+        { id: "h3", anchor: { kind: "cfi", cfi: "epubcfi(/6/6!)" }, tone: "success" },
+        { id: "h4", anchor: { kind: "cfi", cfi: "epubcfi(/6/8!)" } },
+      ];
+      el.activeHighlightId = "h4";
+      await el.updateComplete;
+
+      expect(
+        calls,
+        "one getComputedStyle call per distinct {token, fallback} pair this repaint needed, not per painted highlight"
+      ).to.equal(3);
+    } finally {
+      window.getComputedStyle = originalGetComputedStyle;
+      restore();
+    }
+  });
+
   it("re-resolves highlight and search colors after a scoped theme-token change", async () => {
     const fake = fakeBookWithFeatures({ "ch1.xhtml": "hello world" });
     __setEpubJsForTesting(fake.factory as never);

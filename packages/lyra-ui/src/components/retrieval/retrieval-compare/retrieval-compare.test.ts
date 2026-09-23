@@ -191,20 +191,82 @@ it('renders a labeled overlap summary for every pair of result sets', async () =
   ]);
 });
 
-it('scrolls the sets row only on the inline axis and never clips a taller comparison-set column', async () => {
+it("computes each set's ranked chunk list once per render, not once per overlap pair or per usage", async () => {
+  const threeSets: RetrievalComparisonSet[] = [
+    ...sets,
+    { id: 'hybrid', label: 'Hybrid', chunks: [chunk('a', 0.9), chunk('d', 0.6)] },
+  ];
+  const el = (await fixture(
+    html`<lr-retrieval-compare .sets=${threeSets}></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+
+  let calls = 0;
+  const instrumented = el as unknown as {
+    orderedChunks: (set: RetrievalComparisonSet) => RetrievalChunk[];
+  };
+  const original = instrumented.orderedChunks.bind(el);
+  instrumented.orderedChunks = (set) => {
+    calls++;
+    return original(set);
+  };
+
+  el.requestUpdate();
+  await el.updateComplete;
+
+  // With 3 sets (3 pairwise overlaps + 3 rendered columns), a naive per-callsite orderedChunks(set)
+  // call recomputes it O(N^2) times -- 2N + N(N-1)/2 = 9 for N=3. A single per-render cache built
+  // once and shared by overlaps() and renderSet() needs exactly one call per set.
+  expect(calls).to.equal(3);
+});
+
+it('scrolls the sets row only on the inline axis, with no forced-auto phantom vertical scrollbar', async () => {
   const el = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
   const setsRow = el.shadowRoot!.querySelector('[part="sets"]') as HTMLElement;
   const style = getComputedStyle(setsRow);
   expect(style.overflowX).to.equal('auto');
-  // `overflow-y` is authored as `visible` (never `hidden`/`clip`) so a "set" column with extra
-  // chunks is never clipped at the row boundary. The CSS Overflow spec's cross-axis rule then
-  // force-computes that `visible` to `auto` because `overflow-x` is a scrolling value on the same
-  // box (https://www.w3.org/TR/css-overflow-3/#overflow-control) -- `auto` still never clips
-  // content, it only becomes technically scrollable if the row's intrinsic block size is ever
-  // exceeded, which is the same non-clipping guarantee `visible` gives.
-  expect(style.overflowY).to.equal('auto');
-  expect(style.overflowY).not.to.equal('hidden');
-  expect(style.overflowY).not.to.equal('clip');
+  // An explicit `overflow-y: visible` paired with `overflow-x: auto` never survives: the CSS
+  // Overflow spec's cross-axis rule force-computes the other axis to `auto` the instant one axis
+  // is a non-'visible' scrolling value (https://www.w3.org/TR/css-overflow-3/#overflow-control),
+  // exposing the row to a sub-pixel-rounding phantom vertical scrollbar -- the same trap
+  // lr-tab-group's `[part~="tablist"]` was fixed for. `hidden` here computes as authored and
+  // carries the same "nothing is ever clipped" guarantee (below), without the forced-`auto` risk.
+  expect(style.overflowY).to.equal('hidden');
+});
+
+it('never clips a comparison-set column whose chunk count differs from its neighbors', async () => {
+  const uneven: RetrievalComparisonSet[] = [
+    { id: 'short', label: 'Short', chunks: [chunk('s1', 0.9)] },
+    {
+      id: 'tall',
+      label: 'Tall',
+      chunks: Array.from({ length: 8 }, (_unused, index) =>
+        chunk(`t${index}`, 0.9 - index * 0.01)
+      ),
+    },
+  ];
+  const el = (await fixture(
+    html`<lr-retrieval-compare .sets=${uneven}></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+  const setsRow = el.shadowRoot!.querySelector('[part="sets"]') as HTMLElement;
+  const [shortSection, tallSection] = [
+    ...el.shadowRoot!.querySelectorAll('[part="set"]'),
+  ] as HTMLElement[];
+  // Grid's default stretch alignment sizes the implicit row to the tallest column and stretches
+  // the shorter one to match -- so the row's own content-box block size already accommodates the
+  // tall column, and `overflow-y: hidden` clips nothing here (it only ever clips genuine
+  // overflow, which this layout never produces).
+  expect(tallSection!.getBoundingClientRect().bottom).to.be.closeTo(
+    setsRow.getBoundingClientRect().bottom,
+    1,
+  );
+  expect(shortSection!.getBoundingClientRect().bottom).to.be.closeTo(
+    setsRow.getBoundingClientRect().bottom,
+    1,
+  );
+  expect(
+    tallSection!.querySelectorAll('[part~="chunk"]').length,
+    'every chunk in the taller column is still present in the DOM (none dropped to avoid overflow)',
+  ).to.equal(8);
 });
 
 it('omits blank and later duplicate set and nested chunk ids before overlap, rendering, and actions', async () => {

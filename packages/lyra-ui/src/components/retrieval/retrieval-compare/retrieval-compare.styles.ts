@@ -20,7 +20,7 @@ export const styles = css`
     grid-auto-flow: column;
     gap: var(--lr-space-m);
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: hidden;
     overscroll-behavior-inline: contain;
   }
   [part='set'] {

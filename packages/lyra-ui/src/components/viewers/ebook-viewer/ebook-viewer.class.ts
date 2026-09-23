@@ -1170,6 +1170,19 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
     this.paintedHighlightCfis = [];
     let painted = 0;
+    // The fill space a repaint can possibly need is bounded by TONE_FILL_TOKEN's handful of tones
+    // plus the active-stroke token -- resolve each distinct {token, fallback} pair's concrete value
+    // (via getComputedStyle) at most once per pass and reuse it across every highlight that shares
+    // it, instead of re-querying it once per painted highlight.
+    const fillCache = new Map<string, string>();
+    const resolveFill = (pair: { token: string; fallback: string }): string => {
+      let value = fillCache.get(pair.token);
+      if (value === undefined) {
+        value = this.resolveHighlightFill(pair).fill;
+        fillCache.set(pair.token, value);
+      }
+      return value;
+    };
     for (const highlight of prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)) {
       if (highlight.anchor.kind !== 'cfi') continue;
       if (painted >= MAX_PAINTED_HIGHLIGHTS) break;
@@ -1177,13 +1190,13 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       if (!cfi || cfi.length > VIEWER_SEARCH_QUERY_LIMIT || !work.consume(cfi)) continue;
       const tone = highlight.tone ?? 'accent';
       const active = highlight.id === this.activeHighlightId;
-      const styles: Record<string, string> = this.resolveHighlightFill(TONE_FILL_TOKEN[tone]);
+      const styles: Record<string, string> = { fill: resolveFill(TONE_FILL_TOKEN[tone]) };
       if (active) {
         const forcedColors = this.ownerDocument.defaultView
           ?.matchMedia?.('(forced-colors: active)').matches ?? false;
         styles['stroke'] = forcedColors
           ? 'CanvasText'
-          : this.resolveHighlightFill(ACTIVE_HIGHLIGHT_STROKE_TOKEN).fill;
+          : resolveFill(ACTIVE_HIGHLIGHT_STROKE_TOKEN);
         // Width/dash are unitless SVG presentation attributes. Together they preserve an active
         // distinction without depending on color, including under forced-colors substitution.
         styles['stroke-width'] = '3';
