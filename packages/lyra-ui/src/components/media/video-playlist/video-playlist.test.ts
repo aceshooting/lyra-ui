@@ -294,7 +294,7 @@ describe('lr-video-playlist public contract', () => {
     expect(Object.keys(event.detail)).to.deep.equal(['previousIndex', 'currentIndex', 'video']);
     expect(event.detail.previousIndex).to.equal(0);
     expect(event.detail.currentIndex).to.equal(1);
-    expect(Object.keys(event.detail.video)).to.deep.equal(['title', 'poster', 'sources', 'tracks']);
+    expect(Object.keys(event.detail.video!)).to.deep.equal(['title', 'poster', 'sources', 'tracks']);
     expect(event.detail.video).to.deep.equal({
       title: 'Second',
       poster: 'https://example.test/second.jpg',
@@ -308,18 +308,18 @@ describe('lr-video-playlist public contract', () => {
     });
     expect(Object.isFrozen(event.detail)).to.be.true;
     expect(Object.isFrozen(event.detail.video)).to.be.true;
-    expect(Object.isFrozen(event.detail.video.sources)).to.be.true;
-    expect(Object.isFrozen(event.detail.video.sources[0]!)).to.be.true;
-    expect(Object.isFrozen(event.detail.video.tracks[0]!)).to.be.true;
+    expect(Object.isFrozen(event.detail.video!.sources)).to.be.true;
+    expect(Object.isFrozen(event.detail.video!.sources[0]!)).to.be.true;
+    expect(Object.isFrozen(event.detail.video!.tracks[0]!)).to.be.true;
 
     const again = oneEvent(el, 'lr-video-change');
     el.goTo(1);
     const secondEvent = await again as CustomEvent<LyraVideoPlaylistChangeDetail>;
     expect(secondEvent.detail.video === event.detail.video).to.be.false;
-    expect(secondEvent.detail.video.sources === event.detail.video.sources).to.be.false;
-    expect(secondEvent.detail.video.title).to.equal('Second');
-    expect(secondEvent.detail.video.sources[0]!.src).to.equal('https://example.test/direct.mp4');
-    expect(secondEvent.detail.video.tracks[0]!.label).to.equal('English');
+    expect(secondEvent.detail.video!.sources === event.detail.video!.sources).to.be.false;
+    expect(secondEvent.detail.video!.title).to.equal('Second');
+    expect(secondEvent.detail.video!.sources[0]!.src).to.equal('https://example.test/direct.mp4');
+    expect(secondEvent.detail.video!.tracks[0]!.label).to.equal('English');
   });
 
   it('emits for goTo(current), while invalid and boundary navigation are inert', async () => {
@@ -362,10 +362,10 @@ describe('lr-video-playlist public contract', () => {
     const pending = oneEvent(el, 'lr-video-change');
     el.goTo(1);
     const event = await pending as CustomEvent<LyraVideoPlaylistChangeDetail>;
-    expect(event.detail.video.sources).to.deep.equal([
+    expect(event.detail.video!.sources).to.deep.equal([
       { src: 'https://example.test/second.mp4', type: '', media: '' },
     ]);
-    expect(event.detail.video.tracks).to.deep.equal([
+    expect(event.detail.video!.tracks).to.deep.equal([
       { src: 'data:text/vtt,WEBVTT', kind: '', srclang: '', label: '', default: false },
     ]);
   });
@@ -835,25 +835,27 @@ describe('lr-video-playlist public contract', () => {
     expect(childVideos(el)[2]!.hidden).to.be.true;
   });
 
-  it('clears the active video when every remaining item becomes inert at once', async () => {
+  it('emits lr-video-change with a null video and index -1 when every remaining item becomes inert at once', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
     `);
     await settle(el);
     el.goTo(1);
     await settle(el);
-    let changes = 0;
-    el.addEventListener('lr-video-change', () => changes++);
+    const details: LyraVideoPlaylistChangeDetail[] = [];
+    el.addEventListener('lr-video-change', (event) => details.push(event.detail));
     childVideos(el)[0]!.inert = true;
     childVideos(el)[1]!.inert = true;
     await settle(el);
     expect(items(el).every((button) => button.getAttribute('aria-current') === 'false')).to.be.true;
     expect(childVideos(el)[0]!.hidden).to.be.true;
     expect(childVideos(el)[1]!.hidden).to.be.true;
-    // Documented, deliberate silence (see the class's `@event lr-video-change` JSDoc): clearing
-    // to "no active video" has no non-null video to carry in the frozen detail shape, so this
-    // host-caused clear emits nothing rather than widen the event's type.
-    expect(changes).to.equal(0);
+    // The playlist went from an active video (index 1) to no enabled video at all -- that
+    // transition is now observable: a single lr-video-change with a null video and index -1.
+    expect(details.length).to.equal(1);
+    expect(details[0]!.previousIndex).to.equal(1);
+    expect(details[0]!.currentIndex).to.equal(-1);
+    expect(details[0]!.video).to.equal(null);
   });
 
   it('does not wrap arrow-navigation focus past either end of the list', async () => {

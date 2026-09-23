@@ -61,7 +61,7 @@ export interface LyraVideoPlaylistItem {
 export interface LyraVideoPlaylistChangeDetail {
   readonly previousIndex: number;
   readonly currentIndex: number;
-  readonly video: LyraVideoPlaylistVideo;
+  readonly video: LyraVideoPlaylistVideo | null;
 }
 
 export interface LyraVideoPlaylistEventMap {
@@ -177,12 +177,11 @@ function trackSnapshot(
  * @customElement lr-video-playlist
  * @slot - Direct `<lr-video>` children. Other elements are not playlist items.
  * @event lr-video-change - Emitted when `goTo()`, `next()`, `previous()`, or ended advancement
- *   selects a video. Detail is `{ previousIndex, currentIndex, video }`; `video` is a fresh,
- *   detached, recursively frozen `{ title, poster, sources, tracks }` data snapshot with no live DOM nodes.
- *   Not fired when a light-DOM mutation (a video removed, or every remaining video made
- *   `inert`/disabled) leaves no enabled video to activate: the internal active-video/active-index
- *   state is still reset in that case, but `video` has no non-null value the frozen detail shape
- *   could carry, so the host-caused clear stays silent rather than widen the event's type.
+ *   selects a video, and when a light-DOM mutation (a video removed, or every remaining video made
+ *   `inert`/disabled) leaves no enabled video to replace a previously active one. Detail is
+ *   `{ previousIndex, currentIndex, video }`; `video` is a fresh, detached, recursively frozen
+ *   `{ title, poster, sources, tracks }` data snapshot with no live DOM nodes, or `null` when the
+ *   playlist has no active video after this change -- `currentIndex` is `-1` in that case.
  * @event {FocusEvent} focus - Relayed once from a playlist row as a bubbling, composed native
  *   event.
  * @event {FocusEvent} blur - Relayed once from a playlist row as a bubbling, composed native
@@ -454,8 +453,8 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       this.focusItem(this.navigationIndex);
     }
 
-    if (activeChanged && previousActive && active) {
-      this.emitChange(previousIndex, nextIndex, active);
+    if (activeChanged && previousActive) {
+      this.emitChange(previousIndex, nextIndex, active ?? null);
     }
 
     this.scheduleChildrenReady(videos);
@@ -725,11 +724,11 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     };
   }
 
-  private emitChange(previousIndex: number, currentIndex: number, video: LyraVideo): void {
+  private emitChange(previousIndex: number, currentIndex: number, video: LyraVideo | null): void {
     this.emit('lr-video-change', {
       previousIndex,
       currentIndex,
-      video: this.snapshotVideo(video),
+      video: video ? this.snapshotVideo(video) : null,
     });
   }
 

@@ -367,6 +367,18 @@ describe('lr-tour', () => {
     expect(tour.steps[0]!.placement).to.equal('top');
   });
 
+  it('drops a step carrying only the pre-rename `id` field like any other malformed step', async () => {
+    const tour = await fixture<LyraTour>(html`<lr-tour></lr-tour>`);
+
+    expect(() => {
+      tour.steps = [
+        { id: 'legacy', target: '#tour-target-0', heading: 'Legacy id only' } as unknown as LyraTourStep,
+        { stepId: 'safe', target: '#tour-target-1', heading: 'Safe heading' },
+      ];
+    }).to.not.throw();
+    expect(tour.steps.map((step) => step.stepId)).to.deep.equal(['safe']);
+  });
+
   it('silently drops a step entry whose own Array.isArray/prototype reflection throws (a revoked proxy)', async () => {
     const { proxy: revokedStep, revoke } = Proxy.revocable({}, {});
     revoke();
