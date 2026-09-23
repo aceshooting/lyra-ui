@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,7 +29,8 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
 - `members: LyraEntity[] = []` (attribute: false) — rendered as chips, up to `maxMembers`
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
-- `compact: boolean = false` (reflected) — omits the summary excerpt and member chips
+- `compact: boolean = false` (reflected) — omits the summary excerpt and member chips, and tightens
+  `[part='base']`'s padding/gap — same convention as the sibling `lr-entity-card`'s `compact`
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property this component's sibling `lr-entity-card`
   carries. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the
@@ -50,8 +51,10 @@ activated).
 
 **Themeable custom properties:** `--lr-community-card-bg` (default `var(--lr-color-surface)`) —
 `[part='base']`'s RESTING background, so a panel retinting its `lr-entity-card`/`lr-source-card`
-siblings can retint this card with it; `frame='plain'` still drops the fill entirely. Otherwise
-shared tokens.
+siblings can retint this card with it; `frame='plain'` still drops the fill entirely.
+`--lr-community-card-compact-padding` (default `var(--lr-space-s)`) and
+`--lr-community-card-compact-gap` (default `var(--lr-space-xs)`) — `[part='base']` padding/gap
+while `compact`. Otherwise shared tokens.
 
 **Optional peer deps:** none.
 

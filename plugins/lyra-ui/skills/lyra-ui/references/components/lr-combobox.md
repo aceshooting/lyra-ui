@@ -153,7 +153,19 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   none. A blank return falls back to the raw value. Not consulted while an async `source` fetch has
   never yet resolved for this element — see "Unknown committed values" below; `loadingText` covers
   that window instead, since the value is not yet known to be unmatched at all
-- `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected)
+- `loading: boolean = false` (reflected) — mirrors `lr-select`'s own `loading`: whether a
+  committed value's real label may still be pending because its `<lr-option>` catalog hasn't
+  arrived yet (e.g. mounted asynchronously with no `source` involved). While `true`, a committed
+  value that currently matches no option/row renders the localized `loadingText` placeholder in the
+  trigger label or the relevant `multiple` tag instead of the raw value, with no
+  `notInCatalog`/`[part='unknown-value']` badge, and the open listbox shows the same loading row a
+  `source` fetch in flight shows. Independent of `source`'s own async lifecycle — either condition
+  alone suppresses the unknown-value presentation. Never mutates `value`/`selectedOptions` itself,
+  and does not itself disable the trigger
+- `appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined'` (reflected) — this
+  trigger-shaped control does not implement the shared vocabulary's `accent`/`plain` tiers (unlike
+  `lr-select`); an unsupported value, including a raw attribute/property write outside this type,
+  clamps to the `'outlined'` default
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
 - `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) —
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,

@@ -23,7 +23,9 @@ the new `index` back. Renders nothing at all while `count < 2`, so a host can bi
 on every message regardless of whether that message actually has multiple branches yet.
 
 **Properties:** `index: number = 0` (reflected) and `count: number = 1` (reflected) — the current
-0-based branch and the total branch count. `label: string = ''`.
+0-based branch and the total branch count. `label: string = ''` — accessible name for the group.
+Omitting it localizes the default `branchPickerLabel` message; an explicit empty string suppresses
+that default and renders no label.
 
 **Methods:** `focus(options?)` forwards to the currently enabled chevron (falling back to the first
 rendered chevron), `blur()` blurs both chevrons, `click()` activates that same enabled target, and

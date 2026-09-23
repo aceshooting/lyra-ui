@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-geojson-view` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -41,7 +41,11 @@ unbroken values from widening a 320px allocation.
 
 **Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
-`geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`. The shared
+`geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`.
+`maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps `[part="base"]` —
+covering the loaded map, the serialized metadata, and the missing-peer fallback alike — by writing
+`--lr-geojson-viewer-max-height` inline on it; invalid CSS `max-height` values, declaration breaks,
+and `url()` are ignored. The shared
 text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`), plus `search()`, `searchNext()`, `searchPrevious()`,
 `clearSearch()`, and `scrollToAnchor()` for the ordinary-DOM serialized feature metadata and status
@@ -82,6 +86,10 @@ body text: `error` is `--lr-color-danger` (matching `lr-docx-viewer`/`lr-email-v
 `lr-html-viewer`), `missing-library` is `--lr-color-warning` -- a missing optional peer is a degraded
 but working state, since the `lr-json-viewer` fallback below it still renders the data, not a failure
 -- and `status` is the quiet `--lr-color-text-quiet` metadata tone.
+
+**Themeable custom properties:** `--lr-geojson-viewer-max-height` (default `none`) — maximum block
+size of `[part="base"]`, matching every other viewer in this family. It is also settable via the
+`maxHeight` property, which writes this token inline on `[part="base"]`.
 
 The canonical tag is registered by importing `geojson-viewer/geojson-viewer.js`; the permanent
 compatibility tag and old deep route remain available through `geojson-view/geojson-view.js`.

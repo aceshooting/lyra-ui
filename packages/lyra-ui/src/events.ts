@@ -341,15 +341,15 @@ export type LyraAfterShowEvent =
   | LyraTooltipEventMap['lr-after-show'];
 
 /**
- * `lr-anchor-result` — dispatched by 24 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-anchor-result` — dispatched by 25 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
- * `<lr-document-viewer>`, `<lr-docx-viewer>`, `<lr-ebook-viewer>`, `<lr-email-viewer>`,
- * `<lr-geojson-view>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`, `<lr-image-viewer>`,
- * `<lr-include>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`,
- * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
- * `<lr-svg-viewer>`, `<lr-xml-viewer>`.
+ * `<lr-diff-view>`, `<lr-document-viewer>`, `<lr-docx-viewer>`, `<lr-ebook-viewer>`,
+ * `<lr-email-viewer>`, `<lr-geojson-view>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`,
+ * `<lr-image-viewer>`, `<lr-include>`, `<lr-markdown-core>`, `<lr-markdown>`,
+ * `<lr-message-parts>`, `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`,
+ * `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`, `<lr-xml-viewer>`.
  *
- * A union of 12 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 13 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraAnchorTargetEventMap['lr-anchor-result']`.
  */
@@ -358,6 +358,7 @@ export type LyraAnchorResultEvent =
   | LyraAvPlayerEventMap['lr-anchor-result']
   | LyraCalendarViewerEventMap['lr-anchor-result']
   | LyraContactViewerEventMap['lr-anchor-result']
+  | LyraDiffViewEventMap['lr-anchor-result']
   | LyraDocumentViewerEventMap['lr-anchor-result']
   | LyraEmailViewerEventMap['lr-anchor-result']
   | LyraGeoJsonViewerEventMap['lr-anchor-result']
@@ -1544,19 +1545,20 @@ export type LyraHideEvent =
   | LyraTooltipEventMap['lr-hide'];
 
 /**
- * `lr-highlight-activate` — dispatched by 17 components: `<lr-av-player>`, `<lr-csv-viewer>`,
- * `<lr-dataset-viewer>`, `<lr-document-compare>`, `<lr-document-preview>`, `<lr-docx-viewer>`,
- * `<lr-ebook-viewer>`, `<lr-highlight-layer>`, `<lr-image-viewer>`, `<lr-markdown-core>`,
- * `<lr-markdown>`, `<lr-message-parts>`, `<lr-pdf-viewer>`, `<lr-spreadsheet-viewer>`,
- * `<lr-svg-viewer>`, `<lr-terminal>`, `<lr-xml-viewer>`.
+ * `lr-highlight-activate` — dispatched by 18 components: `<lr-av-player>`, `<lr-csv-viewer>`,
+ * `<lr-dataset-viewer>`, `<lr-diff-view>`, `<lr-document-compare>`, `<lr-document-preview>`,
+ * `<lr-docx-viewer>`, `<lr-ebook-viewer>`, `<lr-highlight-layer>`, `<lr-image-viewer>`,
+ * `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`, `<lr-pdf-viewer>`,
+ * `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`, `<lr-terminal>`, `<lr-xml-viewer>`.
  *
- * A union of 8 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 9 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraAnchorTargetEventMap['lr-highlight-activate']`.
  */
 export type LyraHighlightActivateEvent =
   | LyraAnchorTargetEventMap['lr-highlight-activate']
   | LyraAvPlayerEventMap['lr-highlight-activate']
+  | LyraDiffViewEventMap['lr-highlight-activate']
   | LyraDocumentCompareEventMap['lr-highlight-activate']
   | LyraDocumentPreviewEventMap['lr-highlight-activate']
   | LyraHighlightLayerEventMap['lr-highlight-activate']
@@ -2837,15 +2839,15 @@ export type LyraScrollEvent = LyraScrollerEventMap['lr-scroll'];
 export type LyraSearchEvent = LyraRetrievalSearchEventMap['lr-search'];
 
 /**
- * `lr-search-change` — dispatched by 22 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-search-change` — dispatched by 23 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
- * `<lr-docx-viewer>`, `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-view>`,
- * `<lr-geojson-viewer>`, `<lr-html-viewer>`, `<lr-include>`, `<lr-json-viewer>`,
- * `<lr-knowledge-graph-explorer>`, `<lr-message-parts>`, `<lr-notebook-viewer>`,
- * `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`, `<lr-terminal>`,
- * `<lr-xml-viewer>`.
+ * `<lr-diff-view>`, `<lr-docx-viewer>`, `<lr-ebook-viewer>`, `<lr-email-viewer>`,
+ * `<lr-geojson-view>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`, `<lr-include>`,
+ * `<lr-json-viewer>`, `<lr-knowledge-graph-explorer>`, `<lr-message-parts>`,
+ * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
+ * `<lr-terminal>`, `<lr-xml-viewer>`.
  *
- * A union of 20 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 21 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraAvPlayerEventMap['lr-search-change']`.
  */
@@ -2855,6 +2857,7 @@ export type LyraSearchChangeEvent =
   | LyraContactViewerEventMap['lr-search-change']
   | LyraCsvViewerEventMap['lr-search-change']
   | LyraDatasetViewerEventMap['lr-search-change']
+  | LyraDiffViewEventMap['lr-search-change']
   | LyraDocxViewerEventMap['lr-search-change']
   | LyraEbookViewerEventMap['lr-search-change']
   | LyraEmailViewerEventMap['lr-search-change']

@@ -22,7 +22,10 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 **Properties:** `open: boolean = false` (reflected); `text: string = ''`;
 clone-owned `anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
 clone-owned `actions: readonly SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
-`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`label: string = ''` — accessible name for the toolbar. Omitting it localizes the default
+`selectionToolbarLabel` message; an explicit empty string suppresses that default and renders no
+label. `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and
+the localized default.
 `SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`. Duplicate built-in names are omitted
 first-wins before rendering, roving focus, and action events. The anchor (including any path) and
 actions are bounded frozen snapshots; reassign a new record or array after changes.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,6 +21,14 @@ implementation), rendered as interleaved unified-diff output — not diff-flavor
 over an already-formatted string (`<lr-code-block>`'s `language="diff"` only lexically colors a
 string the consumer already unified-diffed; it has no two-string-compare entry point of its own).
 First-party invention (no Web Awesome equivalent).
+
+Adopts `DocumentAnchorTarget`: a `line-range` anchor's `start` (and, for `highlights`, the optional
+`end`) addresses the 0-based index into the rendered diff's own op sequence — not an old-file/
+new-file source line number, since those diverge on any insertion or deletion. `scrollToAnchor()`
+resolves it, and both it and search navigation transparently expand (and, for a `highlights` range,
+paint through) any `contextLines` fold currently hiding the target run instead of leaving it
+inaccessible behind a static marker. `search()` is a locale-aware case-insensitive substring match
+over each rendered line's own text, one match per line ordered by that same op index.
 
 **Properties:**
 
@@ -49,12 +57,21 @@ First-party invention (no Web Awesome equivalent).
   side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
   highlighting the diff. `Infinity` relaxes this line-count ceiling, but the fixed aggregate
   character and comparison-work ceilings remain in force.
+- `anchorKinds: readonly LyraAnchorKind[] = ['line-range']` (this viewer's supported
+  `LyraAnchor.kind` values for the shared anchor-target contract).
 
 Grammar entries are read from own enumerable data fields into a bounded frozen map. A getter,
 unreadable field, non-enumerable field, or malformed proxy branch is skipped without preventing a
 later valid grammar from being used; grammar values themselves remain opaque to the component.
 Non-enumerable names do not consume language slots, but every inspected name counts toward the
 20,000 structural ceiling.
+
+**Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
+each rendered line's own text, ordered by `line-range` op index (empty/whitespace query behaves like
+`clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
+resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted
+marks. `scrollToAnchor(target)` (inherited from `DocumentAnchorTarget`) resolves a `line-range`
+anchor or a `highlights` id string.
 
 **Events:**
 
@@ -64,6 +81,14 @@ Non-enumerable names do not consume language slots, but every inspected name cou
 - `lr-copy-error` (`detail: LyraClipboardWriteFailure`) — the frozen failure outcome contains
   `ok: false`, the text, a `LyraCopyErrorReason`, and the original error. The reason is
   `'unsupported' | 'denied' | 'failed'`.
+- `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
+  search/navigation/clear, and effective-locale re-evaluation. Search accepts at most 4,096 query
+  code units, scans at most 4,000,000 line code units, and retains at most 10,000 matches;
+  `matchCountExact=false` identifies a ceiling-truncated lower bound.
+- `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` entry's
+  `[part="line-highlight-action"]` button was clicked or activated via Enter/Space.
+- `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
+  `scrollToAnchor()` call.
 
 The copy button stays in its resting state until `writeText()` resolves. Success renders and
 announces localized `copied`; failure renders and announces localized `copyFailed`. A newer
@@ -75,13 +100,27 @@ retires an older pending outcome, so stale writes cannot confirm or fail a hidde
 **CSS parts:** `base` (the root wrapper), `line` (a single line; carries
 `data-type="equal"|"add"|"remove"|"empty"|"fold"` — `"empty"` is an unbalanced-replace placeholder cell in
 `layout="split"` and never carries a `+`/`-` prefix; `"fold"` is the localized unchanged-lines
-marker), `copy-button` (the copy affordance, only
-rendered while `copyable`), `limit` (the localized over-`maxLines` fallback), `side` (one column in
-`layout="split"`, `data-side="old"|"new"`).
+marker — plus `data-match`/`data-active-match` while a search result covers it, and
+`data-highlight` (the resolved tone, default `accent`) with `data-active-highlight` while a
+`highlights` entry covers it), `line-highlight-action` (the focusable button a resolved
+`highlights` entry adds to the line it first covers; emits `lr-highlight-activate`), `copy-button`
+(the copy affordance, only rendered while `copyable`), `limit` (the localized over-`maxLines`
+fallback), `side` (one column in `layout="split"`, `data-side="old"|"new"`), `anchor-live-region`
+(an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is
+appended to the shared document-level polite sink only while the viewer and its composed ancestors
+are exposed to the accessibility tree).
 
 **Themeable custom properties:** `--lr-diff-view-max-height` (default `none` — an independently
 settable scroll cap on `[part="base"]`; the `maxHeight` property writes the same custom property
-inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
+inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`),
+`--lr-diff-view-match-color`/`--lr-diff-view-active-match-color` (default
+`var(--lr-color-warning)` for both — outline of a line carrying a non-active/active search match),
+`--lr-diff-view-highlight-accent-background`/`-success-background`/`-warning-background`/
+`-danger-background`/`-neutral-background` (default `var(--lr-color-brand-quiet)`/
+`var(--lr-color-success-quiet)`/`var(--lr-color-warning-quiet)`/`var(--lr-color-danger-quiet)`/
+`var(--lr-color-surface-raised)` — background of a `highlights` line by tone),
+`--lr-diff-view-highlight-active-outline` (default `var(--lr-color-brand)` — outline of the line
+whose covering highlight is `activeHighlightId`), plus
 shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.

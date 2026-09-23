@@ -30,7 +30,9 @@ hosts that already have one (e.g. `lr-push-to-talk`'s `lr-level` detail); `state
 animation and per-state coloring; `mode: AudioVisualizerMode = 'bars'` (`'bars' | 'waveform'`,
 reflected); `barCount: number = 5` (attribute `bar-count`, normalized to an integer in `[1, 64]`);
 `gain: number = 1` — multiplier applied to the resolved amplitude, with a non-finite value treated
-as `1`; `label: string = ''` — accessible-name override. `level` is clamped to `[0, 1]`; after gain,
+as `1`; `label: string = ''` — accessible-name override. Omitting it auto-generates "Voice activity:
+{state}"; an explicit empty string suppresses that default and renders an empty accessible name.
+`level` is clamped to `[0, 1]`; after gain,
 waveform and bar values are clamped to `[-1, 1]` and `[0, 1]` respectively. Invalid `state` or
 `mode` attribute/property writes normalize to `idle` and `bars` respectively.
 

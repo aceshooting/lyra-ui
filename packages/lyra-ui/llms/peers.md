@@ -49,7 +49,7 @@ for the page.
 | `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-zoom` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `dompurify` | `^3.4.14` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-docx-viewer`, `lr-email-viewer`, `lr-eval-run`, `lr-html-viewer`, `lr-icon`, `lr-icon-button`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-svg-viewer`, `lr-video`, `lr-video-playlist`, `lr-widget-renderer` |
-| `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
+| `emoji-picker-element-data` | `^1.8.0` | _(not referenced by any component)_ |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
 | `katex` | `^0.18.4` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |

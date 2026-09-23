@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -187,9 +187,13 @@ the reset default, or prior interaction state.
 `form.reset()` restores the original declarative `value` and the default country.
 
 **Slots:** `label`, `hint`, `error`, `country-prefix` (optional visual before the country selector,
-such as a consumer-owned `<lr-flag>`; no flag package is imported automatically).
+such as a consumer-owned `<lr-flag>`; no flag package is imported automatically), `start` (alias
+for `country-prefix`, matching the leading-adornment slot name every other forms/ single-line
+field uses — both feed the same wrapper), `end` (optional trailing adornment after the telephone
+input, matching the trailing-adornment slot name every other forms/ single-line field uses).
 
-**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `country-prefix`, `country`
+**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `country-prefix` (also
+receives the `start` alias slot's content), `end`, `country`
 (the selector region: invisible native select layered over the visual trigger), `country-select`,
 `country-trigger` (visible, `aria-hidden` closed-state box), `flag` (the `<lr-flag>`, only with
 `flags`), `country-code` (selected alpha-2 code, `data-placeholder` when no country exists),
@@ -268,8 +272,8 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - The component never imports `@aceshooting/lyra-flags` itself, with `flags` or without. `flags`
   lazily registers only the `<lr-flag>` element; the artwork resolver comes from the consumer's own
   `flag-peer.js` import (plus the installed peer package), so forgetting either shows a flagless
-  trigger rather than erroring. `country-prefix` remains available for a fully consumer-owned
-  adornment instead.
+  trigger rather than erroring. `country-prefix` (or its `start` alias) remains available for a
+  fully consumer-owned adornment instead.
 - The visible trigger (`country-trigger` and everything inside it) is `aria-hidden` by design; the
   layered native select is the accessible control. Don't move interactive content into those parts
   via `::part` styling tricks, and don't expect the flag inside the open popup list — a native

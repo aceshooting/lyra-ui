@@ -44,7 +44,10 @@ LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: readon
 `voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>`,
 `sources: readonly LyraSourceEntry[] = []`, `selectedSourceIds: readonly string[] = []`, and `queue:
 readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
-`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`label: string = ''` — accessible name for the prompt section. Omitting it localizes the default
+`promptInputLabel` message; an explicit empty string suppresses that default and renders no label.
+`accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and the
+localized default.
 Source roots and queued prompts require unique nonblank `id` values; malformed rows and later
 duplicates are omitted first-wins before section gating and child forwarding. Controlled selected
 source ids use the same unique nonblank projection.

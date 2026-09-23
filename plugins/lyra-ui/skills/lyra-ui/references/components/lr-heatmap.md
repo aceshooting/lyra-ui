@@ -348,8 +348,11 @@ color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key r
   "no data" color next to an N-step ramp) to exclude just that stop from the comparison; defaults to
   `true`. A caption-only stop (no `color`) is already excluded regardless of this flag.
 
-**Getters/methods:** `exportData('png')` returns a PNG data URL for the most recently completed
-canvas paint. It includes the painted axes, cells, focus/selection/annotation overlays, and frozen
+**Getters/methods:** `exportData('csv'|'png')` returns a spreadsheet-safe CSV snapshot of the
+underlying matrix/calendar values or a PNG data URL for the most recently completed canvas paint.
+The CSV form reads `data` directly (not any bounded render cache) and omits no-data cells — one
+`row,column,value` row per real matrix cell, or `date,value` per real calendar day. The PNG form
+includes the painted axes, cells, focus/selection/annotation overlays, and frozen
 label bands while `stickyLabels` is enabled; the DOM legend, tooltip, and accessible-cell buttons
 are deliberately excluded. It returns `''` before a completed paint, while rendering is deferred or
 zero-sized, after disconnect, or when the browser cannot encode the snapshot. `refreshTheme()` —

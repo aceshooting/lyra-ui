@@ -45,9 +45,12 @@ counts, selection, and events.
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
 
 At most 500 runs render, and visual indentation is capped at 12 levels while ARIA hierarchy keeps
-the logical depth. The visible `limit` text is ordinary and non-live; newly reaching or changing the
-run ceiling after the initial baseline appends the localized message to the shared polite light-DOM
-announcement sink, while initial and reconnect renders stay silent. The roving treeitem accepts
+the logical depth. When `selectedRunId` names a run beyond the 500-run ceiling, that run and its
+resolvable ancestor chain reserve positions inside the cap ahead of ordinary array order, so the
+controlled selection remains visible. The visible `limit` text is ordinary and non-live; newly
+reaching or changing the run ceiling after the initial baseline appends the localized message to the
+shared polite light-DOM announcement sink, while initial and reconnect renders stay silent. The
+roving treeitem accepts
 Enter/Space as well as pointer activation for `lr-run-activate`; cancel/retry action names include the
 run label so repeated row actions remain distinguishable to assistive technology. Progress is finite
 and clamped. **Slots:** none.

@@ -54,11 +54,13 @@ caps visual nesting indentation while preserving complete JSON Pointer paths;
 only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
-`issue-limit` show their respective truncation as ordinary, non-live status text. Newly reaching or
-changing either ceiling after the initial baseline appends the localized message to the shared
-polite light-DOM announcement sink; initial and reconnect renders stay silent. Issues are indexed by
-path once before recursive rendering instead of rescanning the full input for every node. Cycles stop
-at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
+`issue-limit` show their respective truncation as ordinary, non-live status text. When `selectedPath`
+resolves beyond the 500-node ceiling, that node and its resolvable ancestor chain reserve positions
+inside the cap ahead of ordinary traversal order, so the controlled selection remains visible. Newly
+reaching or changing either ceiling after the initial baseline appends the localized message to the
+shared polite light-DOM announcement sink; initial and reconnect renders stay silent. Issues are
+indexed by path once before recursive rendering instead of rescanning the full input for every node.
+Cycles stop at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';

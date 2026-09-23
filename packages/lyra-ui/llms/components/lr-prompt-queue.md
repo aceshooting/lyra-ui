@@ -31,7 +31,10 @@ metadata?: Record<string, unknown> }`.
 
 Item ids are occurrence identities. Empty ids and later duplicates are ignored before rendering or
 proposing a mutation, preserving one unambiguous `itemId`. Attachment names render visibly for both
-editable and read-only rows; the host `label` is also the visible queue heading.
+editable and read-only rows; the host `label` is also the visible queue heading. Omitting `label`
+localizes the default `promptQueueLabel` message; an explicit empty string suppresses that default
+and renders no visible heading (`accessibleLabel` still overrides the region's accessible name
+independently).
 
 Supported item and attachment fields are read once when `items` is assigned; create and reassign a
 new collection after changes, because changing an assigned record or reassigning the same mutated

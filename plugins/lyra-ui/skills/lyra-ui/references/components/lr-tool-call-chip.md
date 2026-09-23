@@ -133,5 +133,7 @@ duration"`). A host `aria-label` remains on the host and is not cloned onto that
   not place links, buttons, or other controls there; use the chip activation or detail slot instead
 - Escape only dismisses the tooltip when it's open; it does not fire any event or otherwise affect
   `status`/`open` state, since the chip has no "open" state of its own beyond the tooltip
+- An open tooltip participates in shared Escape ordering even while only hovered, deferring to a
+  genuinely topmost overlay opened on top of it
 
 ---

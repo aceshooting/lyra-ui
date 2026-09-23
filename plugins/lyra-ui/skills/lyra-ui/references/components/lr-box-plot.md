@@ -47,6 +47,7 @@ apply when the component reconnects.
 - `height: string = '280px'` — valid CSS height used as a private fallback only. A consumer-set
   `--lr-chart-height` always wins; invalid values remove the fallback and leave the public
   token/default in control.
+- `xLabel: string = ''` (attribute `x-label`) — category axis title, mirroring `yLabel`
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -69,11 +69,18 @@ that follows `variant`),
 badge label. Its private default follows `size` alongside the badge diameter, matching
 `<lr-avatar>`'s own `--lr-avatar-font-size` scale (`xs`/`sm`/`md-sm`/`m`/`lg`/`xl` font tokens from
 the `2xs` through `xl` size tiers), so the badge and the avatars it caps read at the same optical
-weight. An inherited or direct public value remains authoritative for every hook.
+weight. `--lr-avatar-group-radius` (default `var(--lr-radius-pill)`) — corner radius of the
+slotted avatars' ring and of the overflow badge's painted disc. Its private default follows
+`shape` (`var(--lr-radius-pill)` for `circle`, `var(--lr-radius)` for `rounded`, `0` for `square`);
+an inherited or direct public value overrides both uniformly, mirroring `<lr-avatar>`'s own
+`--lr-avatar-radius` — a per-avatar `shape` override still wins for that individual avatar's own
+ring, matching the existing mixed-shape-group support. An inherited or direct public value remains
+authoritative for every hook.
 
-The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier while
-the nested visual disc stays exactly avatar-sized, so small tiers do not paint as oversized 40px
-circles.
+The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier — a
+floor, not a cap, so the action surface grows past it to always contain the nested visual disc
+once `--lr-avatar-group-avatar-size` exceeds it (the default size and `l`/`xl`) — while small
+tiers still paint an exactly avatar-sized disc instead of an oversized 40px circle.
 
 **Optional peer deps:** none.
 

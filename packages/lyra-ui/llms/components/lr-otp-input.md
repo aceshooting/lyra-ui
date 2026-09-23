@@ -45,7 +45,9 @@ Public `--lr-otp-input-*` theme inputs stay undeclared on the host, so an ancest
 can override appearance fallbacks; a value set directly on the element still wins.
 
 **Properties:** `label`, `hint`, `errorText` (`error-text`);
-`appearance: 'outlined' | 'filled' | 'filled-outlined' | 'contained' = 'outlined'` (reflected);
+`appearance: 'outlined' | 'filled' | 'filled-outlined' | 'contained' = 'outlined'` (reflected) —
+does not implement the shared vocabulary's `accent`/`plain` tiers; an unsupported value, including
+a raw attribute/property write outside this type, clamps to the `'outlined'` default;
 `autofocus: boolean = false`; `autosubmit: boolean = false` (reflected);
 `size: LyraSize = 'm'` (reflected after an explicit property/attribute write, accepting
 `2xs`/`xs`/`s`/`m`/`l`/`xl` and the shared aliases). While unset, its generic font/radius/height

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -84,7 +84,11 @@ private default changes for a non-neutral `variant` to that variant's loud color
 and of any `em`-sized slotted glyph. Its private default follows `size` alongside the diameter
 (`--lr-font-size-xs` at `2xs`, `--lr-font-size-sm` at `xs`, `--lr-font-size-md-sm` at `s`,
 `--lr-font-size-m` at `m`, `--lr-font-size-lg` at `l`, and `--lr-font-size-xl` at `xl`), so the
-initials track the circle instead of staying one fixed size across every tier. Every public value
+initials track the circle instead of staying one fixed size across every tier. `--lr-avatar-radius`
+(default `var(--lr-radius-pill)`) — corner radius of the container. Its private default follows
+`shape` (`var(--lr-radius-pill)` for `circle`, `var(--lr-radius)` for `rounded`, `0` for `square`);
+an inherited or direct public value overrides uniformly across every shape, the same way
+`--lr-avatar-size` spans every size tier. Every public value
 above can be inherited from an ancestor or set directly on the avatar and remains authoritative
 across size/variant states. Plus shared tokens
 `--lr-radius`/`-pill`, `--lr-font-weight-semibold`.

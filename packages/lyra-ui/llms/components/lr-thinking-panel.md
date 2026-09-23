@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,9 +27,10 @@ plain text) — this component has no dependency on either.
 - `label?: string` — omitted localizes `thinkingPanelLabel` (`'Thinking'` in the built-in English
   catalog). Any supplied string is an explicit override and renders verbatim, including
   `label="Thinking"` under a non-English `.strings` catalog and `label=""`.
-- `compact: boolean = false` (reflected) — tightens the header/body padding and the header's
-  internal gap for dense transcript rows. This is only a density control: its card border and
-  surface remain, so use `frame="plain"` when surrounding message chrome already supplies them.
+- `compact: boolean = false` (reflected) — tightens the header/body padding, the header's internal
+  gap, and the header/body font size for dense transcript rows. This is only a density control: its
+  card border and surface remain, so use `frame="plain"` when surrounding message chrome already
+  supplies them.
 - `frame: LyraFrame = 'card'` (reflected) — the library-wide container-frame vocabulary
   (`'card' | 'plain'`). `'card'` keeps the bordered, filled outer container. `'plain'` removes its
   border, background, and corner radius so a nested panel does not double an existing frame;
@@ -82,7 +83,9 @@ pending duration/toggle accent without changing the shared brand token;
 `--lr-thinking-panel-compact-header-font-size` (default `var(--lr-font-size-sm)`) — font size of
 `[part="header"]` while `compact`; and
 `--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
-padding while `compact`. `--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
+padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
+`var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
+`--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
 `--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that

@@ -57,7 +57,7 @@ unchanged.
 
 - `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
   bounded to the first 10,000 source positions; blank keys and later duplicates are omitted first-wins
-  before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label,
+  before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label, ariaLabel?,
 headerCell?, width?, minWidth?, maxWidth?,
 resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
 priority?: 'medium'|'low',
@@ -66,6 +66,11 @@ editType?: 'text'|'number'|'select',
 editOptions?: { value: string; label: string }[], footer?, cellStyle?, heatValue?,
 cell: (row) => unknown }` — `cell` is required for every `editTrigger` except `'always'`, whose
   persistent editor renders unconditionally so the table's render path never falls back to it —
+  `ariaLabel` overrides that column header's accessible name (applied as the `<th>`'s `aria-label`
+  whenever set) — e.g. an icon-only `headerCell` with no plain-text `label` to fall back on; when
+  `label` is blank (or whitespace-only) and `ariaLabel` is also omitted, the header's accessible
+  name falls back to `key` while the visible header itself stays blank, matching a deliberate
+  icon-only column —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
   client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
   `Intl.Collator` built from the component's effective locale with `numeric: true` (so `item2`

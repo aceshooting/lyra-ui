@@ -127,6 +127,8 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 `filterType`, `filterFn`, `hidden`, `hideable`, `resizable`, `movable`, `pinnable`, `pinned`,
 `footer`, `aggregation`, and `aggregatedFormatter`. A column with neither `field` nor `value` is an
 action column: its formatter receives `undefined`, and it is not sorted or searched by default.
+An omitted or explicitly blank (or whitespace-only) `label` both render the same humanized
+`field`/`id` fallback for the header cell — only a non-blank `label` overrides it.
 `cellTitle(row) => string | undefined` renders as the generated cell's native `title`, symmetrical
 with `<lr-table>`'s `columns[].cellTitle` — e.g. the untruncated text behind an ellipsized cell, or
 a formatted timestamp behind a relative one. Returning `undefined` or `''` omits the `title`

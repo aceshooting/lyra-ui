@@ -81,5 +81,7 @@ ancestor to change every unset entity chip beneath it.
   `lr-entity-card` as shown above, and handle the chip's own `lr-entity-select`/`lr-entity-open`
   events for navigation.
 - A blank `entityId` disables the chip and cannot produce an activation/open event.
+- An open popover participates in shared Escape ordering even while only hovered, deferring to a
+  genuinely topmost overlay opened on top of it.
 
 ---

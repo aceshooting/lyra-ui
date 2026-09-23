@@ -38,7 +38,10 @@ wrapper can override size-tier fallbacks; a value set directly on the element st
 readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; country?: string }`.
   `undefined` (the default) auto-discovers the registry; every supplied array (either form),
   including an authoritative `[]`, overrides it entirely — a curated subset, custom order,
-  custom labels, or a locale offered before its strings are registered. Explicit catalogs are
+  custom labels, or a locale offered before its strings are registered. An entry's `label` overrides
+  the derived `localeNativeName(tag)` endonym only when it is non-blank; an explicitly blank (or
+  whitespace-only) `label` is treated the same as an omitted one and still falls back to
+  `localeNativeName(tag)`. Explicit catalogs are
   capped, cloned and frozen at assignment; mutate a new array/entry and reassign it to update the
   list. `country` (ISO 3166-1 alpha-2 or alpha-3) overrides a row's derived flag — e.g.
   showing Lebanon's flag for an `'ar'` row instead of the library's default Saudi Arabia mapping;
