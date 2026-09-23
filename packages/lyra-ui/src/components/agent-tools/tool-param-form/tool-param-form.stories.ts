@@ -76,6 +76,34 @@ export const PrefilledValue: Story = {
   `,
 };
 
+const modelSelectionSchema: FlatToolParamSchema = {
+  type: 'object',
+  properties: {
+    model: {
+      type: 'string',
+      title: 'Model',
+      description: 'Fixed by the calling tool — not editable here.',
+      const: 'gpt-4o',
+    },
+    maxTokens: {
+      type: 'integer',
+      title: 'Max tokens',
+      const: 512,
+    },
+  },
+};
+
+/**
+ * A `const` property on a `'string'` (non-enum) or `'number'`/`'integer'` field pre-fills the
+ * locked value and renders its control `readonly`: visible, focusable and submitted, but not
+ * editable.
+ */
+export const LockedConstField: Story = {
+  render: () => html`
+    <lr-tool-param-form style="max-width: 24rem" .schema=${modelSelectionSchema}></lr-tool-param-form>
+  `,
+};
+
 /**
  * Calling `reportValidity()` (the hook a consumer's own Approve/Run button
  * should call right before acting) reveals inline errors immediately,

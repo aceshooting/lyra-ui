@@ -4,6 +4,7 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { nextId } from '../../../internal/a11y.js';
@@ -58,7 +59,11 @@ export interface ToolParamFormProperty {
   readonly title?: string;
   /** Pre-filled value used whenever `value` doesn't already have this key. */
   readonly default?: unknown;
-  /** Exact primitive value required when the property is present. */
+  /** Exact primitive value required when the property is present. For a `'string'` (non-enum) or
+   * `'number'`/`'integer'` property, `const` also pre-fills the field (taking priority over
+   * `default` when both are present) and renders its control `readonly` — visible, focusable and
+   * still submitted, but not editable. The `'boolean'`/enum `<lr-select>` fields are unaffected:
+   * `const` there remains pure post-touch validation. */
   readonly const?: ToolParamFormPrimitive;
   /** Native editing-assistance hints forwarded when this property renders a text input. */
   readonly autocomplete?: string;
@@ -926,14 +931,14 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return undefined;
   }
 
-  private focusFirstControl(): void {
+  private focusFirstControl(options?: FocusOptions): void {
     if (!this.renderRoot) return;
     const controls = this.renderRoot.querySelectorAll<HTMLElement>('input.control, lr-select');
     for (const control of controls) {
       const disabled = (control as HTMLElement & { disabled?: boolean }).disabled
         || control.getAttribute('aria-disabled') === 'true';
       if (!disabled) {
-        control.focus();
+        control.focus(options);
         return;
       }
     }
@@ -945,6 +950,22 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   override click(): void {
     if (this.effectiveDisabled) return;
     this.focusFirstControl();
+  }
+
+  /** Moves focus to the first enabled rendered field, mirroring {@link click}, so the host behaves
+   *  like a regular focusable control -- see the class doc's "behaves like a regular control" note.
+   */
+  override focus(options?: FocusOptions): void {
+    if (this.effectiveDisabled) return;
+    this.focusFirstControl(options);
+  }
+
+  /** Blurs whichever nested field currently holds focus. */
+  override blur(): void {
+    const active = deepActiveElementIn(this.shadowRoot);
+    if (active && typeof (active as HTMLElement).blur === 'function') {
+      (active as HTMLElement).blur();
+    }
   }
 
   override connectedCallback(): void {
@@ -1002,13 +1023,16 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       // setFieldValue()), and must stay cleared rather than silently
       // snapping back to its default just because its current value also
       // happens to be `undefined`. Only a key genuinely absent from `value`
-      // (never touched, or reset back to `{}`) falls back to the default.
-      if (!Object.prototype.hasOwnProperty.call(this.value, key) && prop.default !== undefined) {
+      // (never touched, or reset back to `{}`) falls back to a default --
+      // `const` wins over `default` when both are present, since `const` is
+      // the value the schema requires rather than merely suggests.
+      const fallback = prop.const !== undefined ? prop.const : prop.default;
+      if (!Object.prototype.hasOwnProperty.call(this.value, key) && fallback !== undefined) {
         Object.defineProperty(out, key, {
           configurable: true,
           enumerable: true,
           writable: true,
-          value: prop.default,
+          value: fallback,
         });
       }
     }
@@ -1565,6 +1589,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         enterkeyhint=${prop.enterKeyHint || nothing}
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
+        ?readonly=${prop.const !== undefined}
         @input=${(e: Event) => this.onTextInput(key, e)}
         @focus=${this.onFieldFocus}
         @blur=${this.onFieldBlur}
@@ -1583,6 +1608,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .step=${prop.type === 'integer' ? 1 : 'any'}
         .value=${numValue}
         ?disabled=${this.effectiveDisabled}
+        .readonly=${prop.const !== undefined}
         @input=${(e: Event) => this.onNumberInput(key, e)}
         @lr-input=${this.stopNestedControlEvent}
         @change=${this.stopNestedControlEvent}

@@ -1000,6 +1000,41 @@ it('supports primitive const so a must-confirm boolean is distinct from required
   expect(el.checkValidity()).to.be.true;
 });
 
+it('renders a non-enum string const field pre-filled and readonly, with the submitted value unchanged', async () => {
+  const schema: FlatToolParamSchema = {
+    type: 'object',
+    properties: { model: { type: 'string', const: 'gpt-4o', title: 'Model' } },
+  };
+  const el = (await fixture(
+    html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+
+  const modelInput = field(el, 'model').querySelector('input') as HTMLInputElement;
+  expect(modelInput.value).to.equal('gpt-4o');
+  expect(modelInput.readOnly, 'a const-only field must render readonly, not editable').to.be.true;
+  expect(modelInput.disabled, 'readonly is not the same contract as disabled -- still focusable/reachable').to.be.false;
+  expect(el.effectiveValue['model']).to.equal('gpt-4o');
+  expect(el.errors['model']).to.be.undefined;
+
+  modelInput.focus();
+  expect(el.shadowRoot!.activeElement === modelInput, 'a readonly control must still be reachable').to.be.true;
+});
+
+it('renders a number const field pre-filled and readonly', async () => {
+  const schema: FlatToolParamSchema = {
+    type: 'object',
+    properties: { maxTokens: { type: 'integer', const: 512, title: 'Max tokens' } },
+  };
+  const el = (await fixture(
+    html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+
+  const maxTokensInput = field(el, 'maxTokens').querySelector('lr-number-input') as LyraNumberInput;
+  expect(maxTokensInput.value).to.equal('512');
+  expect(maxTokensInput.readonly, 'a const-only field must render readonly, not editable').to.be.true;
+  expect(el.effectiveValue['maxTokens']).to.equal(512);
+});
+
 it('handles circular and BigInt values without throwing, omits unsafe FormData, and recovers', async () => {
   const form = (await fixture(html`
     <form><lr-tool-param-form name="args"></lr-tool-param-form></form>
@@ -1418,6 +1453,33 @@ it('click() focuses the first enabled control, skips one force-disabled from out
   expect(
     el.shadowRoot!.activeElement === activeElementWhileDisabled,
     'click() must no-op while effectively disabled',
+  ).to.be.true;
+});
+
+it('focus() and blur() forward to the first enabled control like click(), and focus() no-ops while effectively disabled', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const cityInput = field(el, 'city').querySelector('input') as HTMLInputElement;
+  const unitsSelect = field(el, 'units').querySelector('lr-select') as HTMLElement;
+
+  cityInput.disabled = true;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === unitsSelect, 'focus() must skip a force-disabled control').to.be.true;
+
+  el.blur();
+  expect(el.shadowRoot!.activeElement, 'blur() must clear the shadow root active element').to.equal(null);
+
+  cityInput.disabled = false;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === cityInput).to.be.true;
+
+  el.disabled = true;
+  await el.updateComplete;
+  el.blur();
+  const activeElementWhileDisabled = el.shadowRoot!.activeElement;
+  el.focus();
+  expect(
+    el.shadowRoot!.activeElement === activeElementWhileDisabled,
+    'focus() must no-op while effectively disabled',
   ).to.be.true;
 });
 

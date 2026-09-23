@@ -1158,7 +1158,12 @@ boolean; readonly autocapitalize?: string; readonly autoCorrect?: string; readon
 string; readonly enterKeyHint?: string }` — one `schema.properties`
   entry. `enum` is only meaningful when `type` is `'string'` (rendered as a `<lr-select>`); `const`
   enforces one exact primitive value; `title` is the display label; `description` is helper text;
-  `default` pre-fills a field whenever `value` doesn't already have that key. For a free-form
+  `default` pre-fills a field whenever `value` doesn't already have that key. For a `'string'`
+  (non-enum) or `'number'`/`'integer'` field, `const` also pre-fills the field (taking priority
+  over `default` when both are present) and renders its native control `readonly` — visible,
+  focusable and copyable, but not editable, and still submitted as the locked value. The
+  `'boolean'`/enum `<lr-select>` fields are unaffected: `const` there remains pure post-touch
+  validation, as before. For a free-form
   string field, `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
   `enterKeyHint` forward the corresponding native editing hints to the rendered text input;
   `spellcheck` defaults to `true`, and the other hints are omitted unless supplied.
@@ -1182,7 +1187,9 @@ Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly st
   `lr-input`) as that default, but the `value` property itself is left alone until the user actually
   edits that field. JSON Schema ordinarily treats `default` as an annotation; this renderer
   deliberately materializes it before validation/submission, so a valid default can satisfy
-  `required`.
+  `required`. A `const` on a `'string'` (non-enum) or `'number'`/`'integer'` field takes priority
+  over `default` for this same materialization, and additionally renders that field's control
+  `readonly` so the locked value is visible and submitted but not editable.
 - `name: string = ''` — submission key for optional native `<form>` participation
 - `disabled: boolean = false` (reflected)
 - `customError: string | null = null` (attribute `custom-error`) — reflected consumer validation
@@ -1195,9 +1202,10 @@ Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly st
 
 - `effectiveValue: ToolParamFormValue` — a detached, deeply frozen `value` snapshot with every
   property missing from it filled in
-  from `schema`'s own `default`; this is what actually renders and what `lr-input`'s detail carries.
+  from `schema`'s own `const` (when present) or `default`; this is what actually renders and what
+  `lr-input`'s detail carries.
   A key the user has explicitly cleared (a real own property set to `undefined`) stays cleared rather
-  than snapping back to its default — only a key genuinely absent from `value` falls back.
+  than snapping back to its `const`/default — only a key genuinely absent from `value` falls back.
 - `errors: Readonly<Record<string, string>>` — a frozen effective validation-error snapshot.
   Intrinsic errors use their schema property key; a schema-wide/serialization error or consumer
   custom-validity message uses `base`, the whole-control part. It is independent of which fields
@@ -1229,6 +1237,9 @@ Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly st
 - `click(): void` — forwards a host click to the first generated field's control, so the form
   behaves like a single control under both a `<label>`-driven and a programmatic click; a no-op
   while `disabled`.
+- `focus(options?: FocusOptions): void` — moves focus to the first generated field's control,
+  mirroring `click()`; a no-op while `disabled`.
+- `blur(): void` — blurs whichever generated field currently holds focus.
 
 **Events:** `lr-input` (deeply frozen `detail: { value: ToolParamFormValue }` — the full detached
 current value snapshot, every property with defaults resolved, not just the field that changed),
