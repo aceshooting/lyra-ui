@@ -237,6 +237,12 @@ export const styles = css`
     transform: rotate(-90deg);
   }
 
+  /* Retain layout during the outgoing [data-hidden] transition. Once it settles, [hidden]
+     removes the closed popup from layout so its stale fixed-position box cannot enlarge an
+     ancestor's scrollable overflow. */
+  [part='popup'][hidden] {
+    display: none;
+  }
   [part='popup'] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);

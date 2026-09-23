@@ -387,6 +387,16 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   @state() private hasStartSlot = false;
   @state() private hasEndSlot = false;
   @state() private hasFooterSlot = false;
+  /** Removes the settled-closed picker popup from layout (`[hidden]{display:none}`) so its stale
+   *  last-placed box stops contributing to an ancestor's scrollable overflow. Cleared
+   *  synchronously in `willUpdate()` before `place()` measures the popup, so the first
+   *  measurement still sees a real box; re-set once the close transition settles. */
+  @state() private popupHidden = true;
+  /** Gates the popup's `[data-hidden]` reveal separately from `popupHidden`: unhiding and
+   *  fading in during the same render would skip the opacity/transform transition entirely (no
+   *  prior painted frame to transition from), so this flips to `true` only once `place()` has
+   *  actually positioned the popup, one render after `popupHidden` clears. */
+  @state() private popupPositioned = false;
 
   private _open = false;
   private _readonly = false;
@@ -1012,6 +1022,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
         this.forceClose(false);
         return;
       }
+      // `waitForDeferredPlacement` also resolves `true` when there was never an active
+      // positioner to wait for (e.g. a host that reports disconnected at update-flush time, so
+      // `positionPopup()`'s own hook below never ran) -- treat that the same as a real placement
+      // so `[data-hidden]` still clears and the popup renders open.
+      this.popupPositioned = true;
       await this.updateComplete;
       if (this.transitionToken !== token) return;
     }
@@ -1022,6 +1037,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       const popup = this.renderRoot.querySelector('[part="popup"]');
       const animations = popup?.getAnimations({ subtree: true }) ?? [];
       await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+      if (this.transitionToken !== token) return;
+    }
+    if (event === 'lr-after-hide') {
+      this.popupHidden = true;
+      await this.updateComplete;
       if (this.transitionToken !== token) return;
     }
     this.emit(event);
@@ -1038,6 +1058,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       offset: finiteNumber(this.distance, 0),
       sync: 'width',
       strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+    });
+    const operation = this.cleanupPositioner;
+    void operation.ready.then((positioned) => {
+      if (positioned && this.cleanupPositioner === operation && this.open && this.isConnected) {
+        this.popupPositioned = true;
+      }
     });
   }
 
@@ -1253,6 +1279,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
         : nextActiveSegment;
     }
     this.segmentOrderKey = orderKey;
+    if (changed.has('open')) this.popupPositioned = false;
+    if (this.open) this.popupHidden = false;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -1290,6 +1318,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override disconnectedCallback(): void {
+    this.popupHidden = true;
     this.releaseExternalDescription();
     this.releaseRequiredDescription();
     this.transitionToken++;
@@ -1597,9 +1626,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
         <div
           id=${this.popupId}
           part="popup"
+          ?hidden=${this.popupHidden}
           role="dialog"
           aria-label=${this.localize('timeInputPopup')}
-          ?data-hidden=${!this.open}
+          ?data-hidden=${!this.open || !this.popupPositioned}
         >
           <div part="columns">
             ${this.segmentOrder.map((name) => this.renderColumn(name))}

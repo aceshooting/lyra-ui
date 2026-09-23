@@ -388,6 +388,13 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private listId = nextId('locale-picker-list');
   private controlId = nextId('locale-picker-control');
   private cleanup?: () => void;
+  /** Removes the settled-closed option listbox from layout (`[hidden]{display:none}`) so its
+   *  stale last-placed box stops contributing to an ancestor's scrollable overflow. Cleared
+   *  synchronously in `willUpdate()` before `syncPopup()`/`place()` measures the listbox, so the
+   *  first measurement still sees a real box; re-set only once the closing transition settles
+   *  (see {@link settleClosedLayout}). */
+  @state() private listboxHidden = true;
+  private closeSettleToken = 0;
   private overlayHandle?: OverlayHandle;
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
@@ -512,6 +519,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.closeSettleToken++;
+    this.listboxHidden = true;
     this.releaseExternalDescription();
     super.disconnectedCallback();
     this.cleanup?.();
@@ -557,6 +566,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
       this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
     }
+    if (this.open) this.listboxHidden = false;
   }
 
   /** The current locale tag (empty string when nothing is committed). */
@@ -925,6 +935,24 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       });
   }
 
+  /** Waits for the listbox's closing opacity/transform/visibility transition (see
+   *  `[part='listbox']`'s `--lr-transition-fast`) to actually finish, then sets `listboxHidden`
+   *  so the settled-closed listbox leaves layout. A token guards against a reopen superseding an
+   *  in-flight wait -- see `updated()`'s `open`-driven caller. */
+  private async settleClosedLayout(): Promise<void> {
+    const token = ++this.closeSettleToken;
+    if (this.isConnected) {
+      const view = this.ownerDocument.defaultView;
+      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
+      if (this.closeSettleToken !== token) return;
+      const listbox = this.renderRoot.querySelector('[part="listbox"]');
+      const animations = listbox?.getAnimations({ subtree: true }) ?? [];
+      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+      if (this.closeSettleToken !== token) return;
+    }
+    this.listboxHidden = true;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncExternalDescription();
@@ -933,6 +961,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       (this.open && (changed.has('locales') || changed.has('registryTick') || changed.has('locale')));
     if (reposition) {
       this.syncPopup();
+    }
+    if (changed.has('open')) {
+      if (this.open) this.closeSettleToken++;
+      else void this.settleClosedLayout();
     }
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
@@ -1204,6 +1236,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         </button>
         <div
           part="listbox"
+          ?hidden=${this.listboxHidden}
           id=${this.listId}
           role="listbox"
           @mousedown=${this.onListboxMouseDown}

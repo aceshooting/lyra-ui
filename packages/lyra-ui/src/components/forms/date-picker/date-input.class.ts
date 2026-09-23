@@ -612,6 +612,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private visibilityListener?: () => void;
   private overlayHandle?: OverlayHandle;
   private restorePopupFocusOnClose = false;
+  /** Removes the settled-closed calendar popup from layout (`[hidden]{display:none}`) so its
+   *  stale last-placed box stops contributing to an ancestor's scrollable overflow. Cleared
+   *  synchronously in `willUpdate()` before `place()` measures the popup, so the first
+   *  measurement still sees a real box; re-set once the close transition settles. */
+  @state() private popupHidden = true;
+  /** Gates the popup's open-transition CSS separately from `popupHidden`: unhiding and becoming
+   *  visible in the same render would skip the opacity/transform transition entirely (no prior
+   *  painted frame to transition from), so this flips to `true` only once `place()` has actually
+   *  positioned the popup, one render after `popupHidden` clears. */
+  @state() private popupPositioned = false;
   private transitionToken = 0;
   private transitionWaiters = new Map<
     'lr-after-show' | 'lr-after-hide',
@@ -1237,7 +1247,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       } else {
         this.unbindDocumentPointer();
       }
+      this.popupPositioned = false;
     }
+    if (this.open) this.popupHidden = false;
   }
 
   /** Synchronous disabled truth for public actions, including an ancestor fieldset cascade that
@@ -1323,6 +1335,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       offset: finiteNumber(this.distance, 0),
       strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
     });
+    {
+      const operation = this.cleanupFn;
+      void operation.ready.then((positioned) => {
+        if (positioned && this.cleanupFn === operation && this.open && this.isConnected) {
+          this.popupPositioned = true;
+        }
+      });
+    }
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = activateNonmodalOverlay({
       host: this,
@@ -1363,6 +1383,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       await Promise.all(
         animations.map((animation) => animation.finished.catch(() => undefined))
       );
+      if (this.transitionToken !== token) return;
+    }
+    if (event === 'lr-after-hide') {
+      this.popupHidden = true;
+      await this.updateComplete;
       if (this.transitionToken !== token) return;
     }
     this.emit(event);
@@ -1515,6 +1540,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   override disconnectedCallback(): void {
+    this.popupHidden = true;
     this.externalDescription?.release();
     this.externalDescription = undefined;
     this.transitionToken++;
@@ -1597,6 +1623,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             placement: normalizeDateInputPlacement(this.placement),
             offset: finiteNumber(this.distance, 0),
             strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+          });
+          const operation = this.cleanupFn;
+          void operation.ready.then((positioned) => {
+            if (positioned && this.cleanupFn === operation && this.open && this.isConnected) {
+              this.popupPositioned = true;
+            }
           });
         }
       }
@@ -2175,6 +2207,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             <div
               id=${this.popupId}
               part="popup"
+              ?hidden=${this.popupHidden}
+              ?data-positioned=${this.popupPositioned}
               role="dialog"
               aria-hidden=${this.open ? 'false' : 'true'}
               aria-label=${this.dialogLabelAuthored ? this.dialogLabel : this.localize('chooseDate')}

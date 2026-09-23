@@ -169,6 +169,12 @@ export const styles = css`
     transform: rotate(90deg);
   }
 
+  /* Retain layout during the outgoing transition. Once it settles, [hidden] removes the closed
+     listbox from layout so its stale fixed-position box cannot enlarge an ancestor's scrollable
+     overflow. */
+  [part='listbox'][hidden] {
+    display: none;
+  }
   [part='listbox'] {
     position: fixed;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));

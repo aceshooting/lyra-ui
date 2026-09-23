@@ -197,6 +197,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part="popup"][hidden] {
+    display: none;
+  }
   [part="popup"] {
     position: fixed;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
@@ -204,13 +207,16 @@ export const styles = css`
       var(--lr-popover-viewport-clamp),
       var(--lr-size-28rem)
     );
+    /* Retain layout during the outgoing transition. Once it settles, [hidden] removes the
+       closed popup from layout so its stale fixed-position box cannot enlarge an ancestor's
+       scrollable overflow. */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
     transition-property: opacity, transform, visibility;
     transition-duration: var(--hide-duration, var(--lr-transition-fast));
   }
-  :host([open]) [part="popup"] {
+  :host([open]) [part="popup"][data-positioned] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
