@@ -4,6 +4,7 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import {
   releaseReorderOwnerState,
@@ -54,17 +55,6 @@ function isRowOwnChrome(node: Element, item: LyraReorderItem): boolean {
   return false;
 }
 
-/** Walks from `document.activeElement` down through nested `shadowRoot.activeElement` chains to
- *  the deepest actually-focused element -- a composed control's real focus target (e.g. a
- *  `<lr-icon-button>`'s own native `<button>`) sits behind one or more shadow boundaries that
- *  `document.activeElement` alone never reaches. */
-function deepActiveElement(doc: Document): Element | null {
-  let active: Element | null = doc.activeElement;
-  while (active?.shadowRoot?.activeElement) {
-    active = active.shadowRoot.activeElement;
-  }
-  return active;
-}
 
 /** True when `node` sits inside `root`'s composed subtree. `Node.contains()` alone never crosses
  *  a shadow boundary, and the captured focus target here is typically one or two shadow roots
@@ -278,9 +268,24 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     if (movedItem) this.finishMove(movedItem, reconciliation.direction, reconciliation.toIndex);
   }
 
+  // Multiple owned items rewriting `.value` in the same tick (a framework re-render re-keying
+  // every row) each independently reach this notification through their own `willUpdate()`. One
+  // full `onSlotChange()`/`syncBoundaryState()` pass already reconciles every item's boundary
+  // state at once, so N notifications inside one microtask checkpoint collapse into exactly one
+  // pass here -- mirroring the coalesced select/combobox option-metadata pattern. A structural
+  // slot change (a row added/removed/moved) still runs `onSlotChange()` immediately through its
+  // own `slotchange`/MutationObserver listeners, untouched by this guard.
+  private identityChangeReconciliationPending = false;
+
   /** @internal Reconciles only a directly owned item's live identity edit. */
   [reorderIdentityChange](item: LyraReorderItem): void {
-    if (item.parentElement === this) this.onSlotChange();
+    if (item.parentElement !== this) return;
+    if (this.identityChangeReconciliationPending) return;
+    this.identityChangeReconciliationPending = true;
+    queueMicrotask(() => {
+      this.identityChangeReconciliationPending = false;
+      this.onSlotChange();
+    });
   }
 
   private refreshItemObserver(): void {
@@ -423,7 +428,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     this.pendingFocusTarget = {
       item,
       direction: focusDirection,
-      preScheduleFocus: deepActiveElement(this.ownerDocument),
+      preScheduleFocus: deepActiveElementIn(this.ownerDocument),
     };
     this.focusRestoreGeneration += 1;
     this.scheduleFocusRestore();

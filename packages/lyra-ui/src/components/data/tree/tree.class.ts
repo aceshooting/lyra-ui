@@ -440,6 +440,17 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   /** Set when the child observer reports an `inert` attribute mutation, consumed by
    *  `resolveActiveFromDom()`'s focus repair below. */
   private inertMutationPending = false;
+  /** Root-level `<lr-tree-item>` ancestors whose subtree had a `selected`/`disabled`/`inert`/
+   *  `lazy` attribute mutate since the last reconfigure pass, populated only when a
+   *  `MutationObserver` delivery contains attribute records exclusively (a mixed batch that also
+   *  touches structure clears it instead, falling back to the always-correct full walk below).
+   *  Many independently-resolving descendants (a live status tree, staggered lazy-directory
+   *  resolution) each land in their own, separate delivery over time -- unlike the other R12
+   *  sites, these cannot coalesce into a single microtask, since they are not simultaneous. What
+   *  can still shrink is *what* each delivery re-pushes: `updated()` consumes this set to
+   *  re-configure only the affected root ancestors instead of walking every root-level sibling,
+   *  falling back to the full walk whenever any other tracked property changed too. */
+  private dirtyConfigureRoots = new Set<LyraTreeItem>();
   /** The last item this tree saw take real focus. Read only as corroboration that a focus loss the
    *  platform caused (see `resolveActiveFromDom()`) actually happened *here*. */
   private lastFocusedNodeId: string | null = null;
@@ -991,7 +1002,33 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('activeId') || changed.has('data') || this.hasAuthoredItems) {
+    // An update caused by nothing this tree itself tracks (`changed` is empty) and carrying a
+    // recorded, purely-attribute mutation batch is exactly a staggered descendant toggle with no
+    // other reason to re-walk the whole root set: re-push context only to the root ancestors that
+    // batch touched. Any other update -- `activeId`/`data` changing, the first authored-items
+    // render, or any other tracked property -- keeps the original, always-correct full walk, since
+    // those can change every root's context (identity, selection, set size/position) at once.
+    if (changed.size === 0 && this.hasAuthoredItems && this.dirtyConfigureRoots.size > 0) {
+      const nodes = this.nodeElements;
+      const count = nodes.length;
+      for (const node of this.dirtyConfigureRoots) {
+        const i = nodes.indexOf(node);
+        if (i < 0) continue;
+        configureTreeItemOwner(node, {
+          ...treeItemOwnerContext(node),
+          activeId: this.activeId,
+          ancestry: [],
+          depth: 0,
+          setSize: count,
+          posInSet: i + 1,
+          selection: this.selection,
+          ownsSelection: true,
+          identity: undefined,
+          expandIcon: this.iconSource('expand-icon'),
+          collapseIcon: this.iconSource('collapse-icon'),
+        });
+      }
+    } else if (changed.has('activeId') || changed.has('data') || this.hasAuthoredItems) {
       const nodes = this.nodeElements;
       const count = this.hasAuthoredItems ? nodes.length : this.declaredRootCount;
       nodes.forEach((node, i) => {
@@ -1010,6 +1047,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         });
       });
     }
+    this.dirtyConfigureRoots.clear();
   }
 
   /** Children changed: re-derive which child model is in play, and (via the requested update)
@@ -1034,11 +1072,40 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private childObserverDocument?: Document;
   private childObserverGeneration = 0;
 
+  /** Climbs from a (possibly deeply nested) `<lr-tree-item>` to whichever `<lr-tree-item>` is a
+   *  direct child of this tree -- the same membership `nodeElements`' `:scope >` query recognizes
+   *  -- or `null` if `node` is not inside this tree's declarative child model at all. */
+  private rootTreeItemAncestor(node: Element): LyraTreeItem | null {
+    const itemTag = tag('tree-item');
+    let current: Element | null = node;
+    while (current && current.parentElement && current.parentElement !== this) {
+      current = current.parentElement;
+    }
+    return current && current.parentElement === this && current.localName === itemTag
+      ? (current as LyraTreeItem)
+      : null;
+  }
+
   /** The observer's own entry point: it additionally records whether an `inert` toggle was among
    *  the records, which `resolveActiveFromDom()` needs to tell a platform-caused focus loss apart
-   *  from any other reason the active item stopped being navigable. */
+   *  from any other reason the active item stopped being navigable. A batch made up entirely of
+   *  attribute records (no structural `childList` change riding along) also records which root
+   *  ancestors it touched, so `updated()` can target just those instead of every root-level
+   *  sibling; a mixed batch clears that set and falls back to the full walk, since a structural
+   *  change can shift every root's `setSize`/`posInSet`. */
   private onChildMutations = (records: MutationRecord[]): void => {
     if (records.some((record) => record.attributeName === 'inert')) this.inertMutationPending = true;
+    if (records.every((record) => record.type === 'attributes')) {
+      const itemTag = tag('tree-item');
+      for (const record of records) {
+        const target = record.target;
+        if (!(target instanceof Element) || target.localName !== itemTag) continue;
+        const root = this.rootTreeItemAncestor(target);
+        if (root) this.dirtyConfigureRoots.add(root);
+      }
+    } else {
+      this.dirtyConfigureRoots.clear();
+    }
     this.onChildrenChanged();
   };
 

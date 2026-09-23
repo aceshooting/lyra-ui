@@ -309,6 +309,42 @@ it('rehomes the roving stop when the active item becomes unavailable', async () 
   expect(document.activeElement === first).to.equal(true);
 });
 
+it('coalesces same-tick item disabled notifications into one roving-focus reconciliation', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+      <lr-menu-item value="c">C</lr-menu-item>
+      <lr-menu-item value="d">D</lr-menu-item>
+    </lr-menu>
+  `);
+  const items = ownItems(menu);
+  let calls = 0;
+  const original = (
+    menu as unknown as { onItemStateChange: (event?: Event) => void }
+  ).onItemStateChange.bind(menu);
+  (menu as unknown as { onItemStateChange: (event?: Event) => void }).onItemStateChange = (
+    event?: Event,
+  ) => {
+    calls++;
+    original(event);
+  };
+  // Force a re-render so Lit re-binds the `@lr-menu-item-state-change` listener to the spy.
+  menu.requestUpdate();
+  await menu.updateComplete;
+
+  for (const item of items) item.disabled = true;
+  await Promise.all(items.map((item) => item.updateComplete));
+  await menu.updateComplete;
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  // An unfixed listener re-scans `this.items` once per item's own state-change dispatch (one
+  // call per item here). The coalesced path collapses every same-tick dispatch into one pass;
+  // the sibling `itemStateObserver` MutationObserver may still contribute one more of its own
+  // already-batched calls, so this stays a well-below-N bound rather than an exact one.
+  expect(calls).to.be.lessThan(items.length);
+});
+
 it('contains private item-state events while still repairing roving focus', async () => {
   const menu = await fixture<LyraMenu>(html`
     <lr-menu label="Actions">

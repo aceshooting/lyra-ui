@@ -890,13 +890,31 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     for (const item of this.items) item.size = this.dropdownSize;
   }
 
+  // `lr-menu-item-state-change` fires once per item, per disabled/loading/hidden change -- N
+  // items changing in the same tick each dispatch their own event, and an unbatched listener
+  // would re-scan `this.items` once per dispatch. Contain propagation immediately (this is
+  // private item-to-owner coordination, never a public bubbling event) but collapse the actual
+  // roving-focus reconciliation into one pass per microtask batch, mirroring the coalesced
+  // select/combobox option-metadata pattern. The sibling `itemStateObserver` MutationObserver
+  // already delivers one native batch per mutation-record set and calls `onItemStateChange()`
+  // directly -- untouched, since the platform already coalesces it.
+  private itemStateChangeReconciliationPending = false;
+
+  private onItemStateChangeEvent = (event: Event): void => {
+    // This is private item-to-owner coordination. Contain it immediately so it cannot appear to
+    // originate from a composite wrapper further up the tree.
+    event.stopPropagation();
+    if (this.itemStateChangeReconciliationPending) return;
+    this.itemStateChangeReconciliationPending = true;
+    queueMicrotask(() => {
+      this.itemStateChangeReconciliationPending = false;
+      this.onItemStateChange();
+    });
+  };
+
   /** Repairs the roving stop when an active item becomes unavailable; move actual focus only
    * when that item held it, preserving outside and slotted region focus during background edits. */
-  private onItemStateChange = (event?: Event): void => {
-    // This is private item-to-owner coordination. Let the owning menu repair its roving stop,
-    // then contain the implementation event so it cannot appear to originate from a composite
-    // wrapper further up the tree.
-    event?.stopPropagation();
+  private onItemStateChange = (): void => {
     const navigable = this.items.filter((item) => this.isNavigable(item));
     if (
       this.activeIndex >= 0 &&
@@ -1377,7 +1395,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         @focusin=${this.onListFocusIn}
         @pointerover=${this.onPopupPointerOver}
         @pointerleave=${this.onPopupPointerLeave}
-        @lr-menu-item-state-change=${this.onItemStateChange}
+        @lr-menu-item-state-change=${this.onItemStateChangeEvent}
         @lr-select=${this.onNestedSelect}
       >
         <slot @slotchange=${this.onItemsSlotChange}></slot>

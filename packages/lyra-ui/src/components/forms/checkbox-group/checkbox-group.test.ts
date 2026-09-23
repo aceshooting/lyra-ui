@@ -24,6 +24,36 @@ function describedByIds(fieldset: HTMLFieldSetElement): string[] {
   return fieldset.getAttribute('aria-describedby')?.match(/\S+/g) ?? [];
 }
 
+it('coalesces a bulk value assignment into one reconciliation instead of one per checkbox', async () => {
+  const el = (await fixture(html`<lr-checkbox-group label="Choices"></lr-checkbox-group>`)) as LyraCheckboxGroup;
+  const boxes = Array.from({ length: 40 }, (_, index) => {
+    const box = document.createElement('lr-checkbox') as LyraCheckbox;
+    box.value = String(index);
+    return box;
+  });
+  el.append(...boxes);
+  await Promise.all(boxes.map((box) => box.updateComplete));
+  await el.updateComplete;
+
+  let queries = 0;
+  const nativeQuerySelectorAll = el.querySelectorAll.bind(el);
+  (el as unknown as { querySelectorAll: typeof el.querySelectorAll }).querySelectorAll = ((
+    selector: string,
+  ) => {
+    queries++;
+    return nativeQuerySelectorAll(selector);
+  }) as typeof el.querySelectorAll;
+
+  el.value = boxes.map((box) => box.value);
+
+  expect(el.value).to.deep.equal(boxes.map((box) => box.value));
+  // Every unbatched per-checkbox notification independently re-queries and re-scans the full
+  // catalog (checkbox-group.class.ts's `boxes` getter is an uncached live query), so an unfixed
+  // bulk assignment costs roughly 2 queries per changed checkbox. A single coalesced pass stays
+  // far below that, regardless of how many checkboxes were reassigned.
+  expect(queries).to.be.lessThan(boxes.length);
+});
+
 it('lets a consumer retint the invalid options border independently', async () => {
   const el = (await fixture(html`
     <lr-checkbox-group style="--lr-checkbox-group-invalid-border: rgb(1, 2, 3)">

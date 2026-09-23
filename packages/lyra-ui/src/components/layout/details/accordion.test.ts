@@ -434,6 +434,51 @@ describe('<lr-accordion>', () => {
     });
   });
 
+  it('coalesces same-tick item disabled notifications on multiple owned items into one roving-focus reconciliation', async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-accordion>
+        <lr-accordion-item id="one" label="One" style=${quickMotion}>First</lr-accordion-item>
+        <lr-accordion-item id="two" label="Two" style=${quickMotion}>Second</lr-accordion-item>
+        <lr-accordion-item id="three" label="Three" style=${quickMotion}>Third</lr-accordion-item>
+        <lr-accordion-item id="four" label="Four" style=${quickMotion}>Fourth</lr-accordion-item>
+        <lr-accordion-item id="five" label="Five" style=${quickMotion}>Fifth</lr-accordion-item>
+        <lr-accordion-item id="six" label="Six" style=${quickMotion}>Sixth</lr-accordion-item>
+      </lr-accordion>
+    </div>`);
+    const accordion = wrapper.querySelector('lr-accordion') as LyraAccordion;
+    const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+    await Promise.all(items.map((item) => item.updateComplete));
+
+    let writes = 0;
+    for (const item of items) {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        Object.getPrototypeOf(item) as object,
+        'isTabbable',
+      )!;
+      Object.defineProperty(item, 'isTabbable', {
+        configurable: true,
+        get(): boolean {
+          return descriptor.get!.call(item) as boolean;
+        },
+        set(value: boolean) {
+          writes++;
+          descriptor.set!.call(item, value);
+        },
+      });
+    }
+
+    for (const item of items) item.disabled = true;
+    await Promise.all(items.map((item) => item.updateComplete));
+    await accordion.updateComplete;
+    // Flush a macrotask boundary so any coalesced microtask work has definitely settled.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    // Every #syncRovingTabIndex() pass writes `isTabbable` on every panel. An unfixed listener
+    // queues one non-deduplicated reconciliation microtask per item, so N same-tick changes cost
+    // N passes x N panels = O(N^2) writes; a single coalesced pass costs only O(N).
+    expect(writes).to.be.lessThan(items.length * items.length);
+  });
+
   it('expands and collapses direct enabled children through group methods', async () => {
     const { accordion, items } = await renderAccordion();
     items[1]!.disabled = true;

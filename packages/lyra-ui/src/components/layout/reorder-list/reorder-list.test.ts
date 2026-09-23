@@ -50,6 +50,54 @@ describe("<lr-reorder-list>", () => {
     expect(base.getAttribute("aria-label")).to.equal("");
   });
 
+  it('completes a move without an uncaught error when the active-element getter throws (e.g. happy-dom with nothing focused)', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    const middle = itemsOf(el)[1]!;
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    upButton.focus();
+    Object.defineProperty(el.ownerDocument, 'activeElement', {
+      configurable: true,
+      get(): never {
+        throw new TypeError("Cannot read properties of undefined (reading 'getRootNode')");
+      },
+    });
+    try {
+      upButton.click();
+      await el.updateComplete;
+    } finally {
+      delete (el.ownerDocument as unknown as Record<string, unknown>)['activeElement'];
+    }
+    expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
+  });
+
+  it('coalesces same-tick identity changes on multiple owned items into one boundary reconciliation', async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list>
+        <lr-reorder-item value="a">Row A</lr-reorder-item>
+        <lr-reorder-item value="b">Row B</lr-reorder-item>
+        <lr-reorder-item value="c">Row C</lr-reorder-item>
+        <lr-reorder-item value="d">Row D</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    const items = itemsOf(el);
+    let calls = 0;
+    const original = (
+      el as unknown as { syncBoundaryState: () => void }
+    ).syncBoundaryState.bind(el);
+    (el as unknown as { syncBoundaryState: () => void }).syncBoundaryState = () => {
+      calls++;
+      original();
+    };
+
+    for (const [index, item] of items.entries()) item.value = `${item.value}${index}-2`;
+    await Promise.all(items.map((item) => item.updateComplete));
+    await el.updateComplete;
+    // Flush a macrotask boundary so any coalesced microtask work has definitely settled.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(calls).to.equal(1);
+  });
+
   it("marks the first item atStart and the last item atEnd after initial slotchange", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const items = itemsOf(el);

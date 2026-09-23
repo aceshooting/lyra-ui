@@ -39,6 +39,57 @@ it("survives keyboard navigation over slotted tree-items that carry no item", as
   expect(() => press("End")).to.not.throw();
 });
 
+it('collapses staggered single-item attribute mutations into targeted, not whole-tree, reconfiguration', async () => {
+  const count = 8;
+  const el = (await fixture(html`
+    <lr-tree label="Docs">
+      <lr-tree-item label="Item 0"></lr-tree-item>
+      <lr-tree-item label="Item 1"></lr-tree-item>
+      <lr-tree-item label="Item 2"></lr-tree-item>
+      <lr-tree-item label="Item 3"></lr-tree-item>
+      <lr-tree-item label="Item 4"></lr-tree-item>
+      <lr-tree-item label="Item 5"></lr-tree-item>
+      <lr-tree-item label="Item 6"></lr-tree-item>
+      <lr-tree-item label="Item 7"></lr-tree-item>
+    </lr-tree>
+  `)) as LyraTree;
+  await el.updateComplete;
+  const items = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  expect(items).to.have.length(count);
+
+  let iconReads = 0;
+  const original = (
+    el as unknown as { iconSource: (name: string) => Element | null }
+  ).iconSource.bind(el);
+  (el as unknown as { iconSource: (name: string) => Element | null }).iconSource = (
+    name: string,
+  ) => {
+    iconReads++;
+    return original(name);
+  };
+
+  // Each item's `disabled` mutation lands in its own, separate microtask/task boundary --
+  // arriving staggered over time, the way many independently-resolving async nodes would --
+  // rather than all inside one synchronous burst Lit's own update batching would already collapse.
+  // The first item stays enabled and untouched throughout, so it remains the roving `activeId`
+  // the whole time -- isolating this from the unrelated, always-correct full-walk path a moving
+  // `activeId` would otherwise legitimately trigger on every iteration.
+  const [active, ...rest] = items;
+  void active;
+  for (const item of rest) {
+    item.disabled = true;
+    await item.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+  await el.updateComplete;
+
+  expect(rest.map((item) => item.disabled)).to.deep.equal(rest.map(() => true));
+  // Every reconfigure pass reads both icons once per root item it touches. An unfixed handler
+  // re-pushes context to every root on every single staggered delivery (count deliveries x count
+  // roots); a targeted pass only re-pushes to the root(s) that actually changed.
+  expect(iconReads).to.be.lessThan(count * count);
+});
+
 // The declarative child model end to end. A `wa-tree`/`sl-tree` app migrates by renaming tags only,
 // so this markup shape -- no `data` property anywhere -- has to be a working tree: rendered rows,
 // no empty state, a roving tabindex, arrow navigation and correct set-position ARIA.

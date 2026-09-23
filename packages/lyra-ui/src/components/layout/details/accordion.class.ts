@@ -476,10 +476,21 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     this.#bindPanels(slot.assignedElements({ flatten: true }));
   }
 
+  // N owned items toggling `disabled` in the same synchronous tick each notify independently, so
+  // an un-deduplicated `queueMicrotask()` per notification would queue N reconciliation passes,
+  // each re-scanning and re-writing every panel's `isTabbable`. Collapse same-tick notifications
+  // into exactly one pass, mirroring the coalesced select/combobox option-metadata pattern -- and
+  // this file's own `#armAvailabilityObserver()` MutationObserver sibling, which already delivers
+  // one native batch per mutation-record set and reconciles with the same no-argument call below.
+  #itemStateChangeReconciliationPending = false;
+
   #handleOwnedItemStateChange = (item: LyraAccordionItem): void => {
     if (!this.panels.has(item)) return;
+    if (this.#itemStateChangeReconciliationPending) return;
+    this.#itemStateChangeReconciliationPending = true;
     queueMicrotask(() => {
-      if (this.panels.has(item)) this.#reconcileRovingFocus(item);
+      this.#itemStateChangeReconciliationPending = false;
+      this.#reconcileRovingFocus();
     });
   };
 

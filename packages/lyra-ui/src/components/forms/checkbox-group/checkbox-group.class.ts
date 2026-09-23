@@ -434,8 +434,16 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.reflectValidityStates();
   }
 
+  // Set around a loop that writes `checked`/`indeterminate` on multiple owned checkboxes in the
+  // same task (applyValues(), formResetCallback()) so each child's own resulting
+  // notifyCheckboxStateChange() call is a no-op instead of an independent, uncached O(N)
+  // sync() -- the loop's own trailing sync() call already reconciles the aggregate once. An
+  // isolated single-checkbox write outside such a loop still syncs immediately.
+  private suppressCheckboxSync = false;
+
   /** @internal Same-task child-to-owner state transaction; emits no user event. */
   notifyCheckboxStateChange(checkbox: LyraCheckbox): void {
+    if (this.suppressCheckboxSync) return;
     if (this.isConnected && this.ownsCheckbox(checkbox)) this.sync();
   }
 
@@ -594,11 +602,16 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
    *  the owned value/validity. Shared by the `value` setter and by form restore. */
   private applyValues(values: readonly string[]): void {
     const remaining = [...values];
-    for (const box of this.boxes) {
-      const value = box.value ?? 'on';
-      const index = remaining.indexOf(value);
-      box.checked = index >= 0;
-      if (index >= 0) remaining.splice(index, 1);
+    this.suppressCheckboxSync = true;
+    try {
+      for (const box of this.boxes) {
+        const value = box.value ?? 'on';
+        const index = remaining.indexOf(value);
+        box.checked = index >= 0;
+        if (index >= 0) remaining.splice(index, 1);
+      }
+    } finally {
+      this.suppressCheckboxSync = false;
     }
     this.sync();
   }
@@ -893,7 +906,17 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.firstEnabledBox()?.click();
   }
 
-  formResetCallback(): void { this.boxes.forEach((box) => box.resetFromGroup()); this.touched = false; this.hasInteracted = false; this.sync(); }
+  formResetCallback(): void {
+    this.suppressCheckboxSync = true;
+    try {
+      this.boxes.forEach((box) => box.resetFromGroup());
+    } finally {
+      this.suppressCheckboxSync = false;
+    }
+    this.touched = false;
+    this.hasInteracted = false;
+    this.sync();
+  }
   formStateRestoreCallback(
     state: string | File | FormData | null,
     _mode?: 'restore' | 'autocomplete',
