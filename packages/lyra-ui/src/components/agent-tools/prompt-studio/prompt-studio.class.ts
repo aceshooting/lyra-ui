@@ -227,11 +227,19 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   private uniqueMessages(source: unknown = this.messages): PromptStudioMessage[] {
     const seen = new Set<string>();
-    return this.messageItems(source).filter((message) => {
-      if (!message || typeof message.id !== 'string' || message.id.trim().length === 0 || seen.has(message.id)) return false;
-      seen.add(message.id);
-      return true;
-    });
+    return this.messageItems(source)
+      .filter((message) => {
+        if (!message || typeof message.id !== 'string' || message.id.trim().length === 0 || seen.has(message.id)) return false;
+        seen.add(message.id);
+        return true;
+      })
+      // A foreign/parsed-data `content` value (missing, or `null` after a JSON round-trip of an
+      // omitted field -- `content` is typed as a required `string`, a compile-time-only promise
+      // for a JS consumer) must not reach resolvePreviews()/resolveText(), which dereferences
+      // `content.length`/`content.slice()` with no guard of its own: an un-coerced malformed value
+      // throws inside this component's own render() and blanks the whole panel instead of just the
+      // one malformed message.
+      .map((message) => (typeof message.content === 'string' ? message : { ...message, content: '' }));
   }
 
   private uniqueVersions(): PromptStudioVersion[] {

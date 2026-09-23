@@ -662,3 +662,23 @@ it('normalizes duplicate example ids first-wins before the nested grid', async (
   if (!table) throw new Error('Expected the normalized examples table to render.');
   expect(table.rows[0]!.input).to.equal('First example');
 });
+
+it('tolerates a non-array `tags` field on one example without blanking the rest of the dataset', async () => {
+  const el = (await fixture(html`<lr-eval-dataset></lr-eval-dataset>`)) as LyraEvalDataset;
+  el.examples = [
+    { id: 'bad', input: 'malformed row', tags: 5 as unknown as readonly string[] },
+    { id: 'good', input: 'well-formed row', tags: ['ok'] },
+  ];
+  await el.updateComplete;
+  expect(gridRowCount(el)).to.equal(2);
+});
+
+it('tolerates a bare-string `tags` field on one example without blanking the grid', async () => {
+  const el = (await fixture(html`<lr-eval-dataset></lr-eval-dataset>`)) as LyraEvalDataset;
+  el.examples = [
+    { id: 'bad', input: 'malformed row', tags: 'oops' as unknown as readonly string[] },
+    { id: 'good', input: 'well-formed row', tags: ['ok'] },
+  ];
+  await el.updateComplete;
+  expect(gridRowCount(el)).to.equal(2);
+});

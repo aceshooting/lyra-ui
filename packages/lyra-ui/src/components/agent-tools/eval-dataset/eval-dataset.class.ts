@@ -217,7 +217,14 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   @state() private selectedId: string | null = null;
 
   private get normalizedExamples(): EvalExample[] {
-    return firstByIdentity(Array.isArray(this.examples) ? this.examples : [], (example) => example.id);
+    const deduped = firstByIdentity(Array.isArray(this.examples) ? this.examples : [], (example) => example.id);
+    // A foreign/parsed-data `tags` value (a bare string, number, boolean, or plain object instead
+    // of an array -- plausible after a JSON round-trip or an import) must not reach the
+    // unconditional per-render consumers below (allTags(), visibleExamples, buildColumns()'s
+    // sort/cell accessors): every one of them iterates or `.join()`s `tags` with no guard of its
+    // own, so an un-coerced malformed value throws inside this component's own willUpdate()/
+    // render() and blanks the whole dataset instead of just the one malformed row.
+    return deduped.map((example) => (Array.isArray(example.tags) ? example : { ...example, tags: undefined }));
   }
 
   protected override willUpdate(changed: PropertyValues): void {

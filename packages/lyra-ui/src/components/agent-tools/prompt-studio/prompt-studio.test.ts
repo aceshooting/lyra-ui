@@ -714,3 +714,23 @@ it('supports native keyboard activation and keeps focus with the moved message a
   expect(boundaryFocusedAction?.getAttribute('part')).to.equal('move-message-up');
   expect(el.messages.map((message) => message.id)).to.deep.equal(['user', 'assistant', 'system']);
 });
+
+it('tolerates a message with missing `content` without blanking the rest of the panel', async () => {
+  const el = (await fixture(html`<lr-prompt-studio></lr-prompt-studio>`)) as LyraPromptStudio;
+  el.messages = [
+    { id: 'bad', role: 'user' } as unknown as PromptStudioMessage,
+    { id: 'good', role: 'user', content: 'hi' },
+  ];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="message"]')).to.have.lengthOf(2);
+});
+
+it('tolerates a message with `content: null` without blanking the rest of the panel', async () => {
+  const el = (await fixture(html`<lr-prompt-studio></lr-prompt-studio>`)) as LyraPromptStudio;
+  el.messages = [
+    { id: 'bad', role: 'user', content: null as unknown as string },
+    { id: 'good', role: 'user', content: 'hi' },
+  ];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="message"]')).to.have.lengthOf(2);
+});
