@@ -256,11 +256,11 @@ declare -A LANE_STATUS=()
 if [[ "$SERIAL" == "1" ]]; then
   for browser in "${REQUESTED_BROWSERS[@]}"; do
     step "lane: $browser (serial)"
-    if ( set -euo pipefail; run_browser_lane "$browser" ) 2>&1 | tee "$LOG_DIR/$browser.log"; then
-      LANE_STATUS[$browser]=0
-    else
-      LANE_STATUS[$browser]=1
-    fi
+    # Keep the lane outside an if-condition, which would disable errexit inside its shard loop.
+    set +e
+    ( set -euo pipefail; run_browser_lane "$browser" ) 2>&1 | tee "$LOG_DIR/$browser.log"
+    LANE_STATUS[$browser]=$?
+    set -e
   done
 else
   for browser in "${REQUESTED_BROWSERS[@]}"; do

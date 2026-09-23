@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { availableParallelism } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { availableParallelism, tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -429,3 +429,87 @@ test('budgets aggregate shards from both unequal engine page allocations', () =>
     assert.equal(Number(result.stdout.trim()), expected, `${cpus} CPUs, ${requested} requested shards`);
   }
 });
+
+function runAggregateFixture(script, serial, failure = '') {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-aggregate-'));
+  try {
+    for (const child of ['scripts', 'bin', 'logs']) mkdirSync(join(directory, child));
+    copyFileSync(
+      resolve(packageDirectory, '../../scripts', script),
+      join(directory, 'scripts', script),
+    );
+    const packageManager = JSON.parse(
+      readFileSync(resolve(packageDirectory, '../../package.json'), 'utf8'),
+    ).packageManager;
+    writeFileSync(join(directory, 'package.json'), JSON.stringify({ packageManager }));
+    writeFileSync(join(directory, 'bin/pnpm'), `#!/usr/bin/env bash
+set -eu
+if [[ "$*" == '--version' ]]; then
+  printf '%s\\n' '${packageManager.replace(/^pnpm@/u, '')}'
+  exit 0
+fi
+printf '%s|%s|%s\\n' "$*" "\${WTR_BROWSER:-none}" "\${WTR_SHARD_INDEX:-0}" >> "$AGGREGATE_CALLS"
+if [[ -n "$AGGREGATE_FAILURE" && "$*" == *"$AGGREGATE_FAILURE"* && "\${WTR_SHARD_INDEX:-1}" == 1 ]]; then
+  exit 23
+fi
+`, { mode: 0o755 });
+    const result = spawnSync('bash', [join(directory, 'scripts', script), ...(serial ? ['--serial'] : [])], {
+      cwd: directory,
+      encoding: 'utf8',
+      timeout: 15_000,
+      env: {
+        ...process.env,
+        PATH: `${join(directory, 'bin')}:${dirname(process.execPath)}:${process.env.PATH}`,
+        TMPDIR: join(directory, 'logs'),
+        TEST_SH_SKIP_INSTALL: '1',
+        TEST_SH_ENGINE_SHARDS: '1',
+        TEST_ALL_BROWSERS_SKIP_INSTALL: '1',
+        AGGREGATE_FAILURE: failure,
+        AGGREGATE_CALLS: join(directory, 'calls'),
+      },
+    });
+    assert.ifError(result.error);
+    return {
+      status: result.status,
+      output: `${result.stdout}${result.stderr}`.replace(/\u001b\[[0-9;]*m/gu, ''),
+      calls: readFileSync(join(directory, 'calls'), 'utf8').trim().split('\n'),
+    };
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+for (const serial of [false, true]) {
+  const mode = serial ? 'serial' : 'parallel';
+  for (const failure of ['test:ssr', 'test:hydration', 'test:coverage']) {
+    test(`the ${mode} full sweep preserves ${failure} failure before coverage floors`, () => {
+      const result = runAggregateFixture('test.sh', serial, failure);
+      assert.equal(result.status, 1, result.output);
+      assert.match(result.output, /FAIL\s+chromium/u);
+      assert.ok(!result.calls.some((call) => call.includes('check:coverage-floors')));
+      assert.match(result.output, /PASS\s+workspace/u, 'other lanes still run');
+    });
+  }
+  test(`the ${mode} full sweep stops a visual lane when its build fails`, () => {
+    const result = runAggregateFixture('test.sh', serial, 'docs:build');
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /FAIL\s+visual/u);
+    assert.ok(!result.calls.some((call) => call.includes('test:visual')));
+  });
+  test(`the ${mode} browser sweep retains a failed first shard`, () => {
+    const result = runAggregateFixture('test_all_browsers.sh', serial, 'test:full-engine-shard');
+    assert.equal(result.status, 1, result.output);
+    const shardCalls = result.calls.filter((call) => call.includes('test:full-engine-shard'));
+    assert.equal(shardCalls.length, 5, 'each browser stops after its failed first shard');
+    assert.ok(shardCalls.every((call) => call.endsWith('|1')));
+    assert.equal((result.output.match(/FAIL\s+/gu) ?? []).length, 5);
+  });
+  for (const script of ['test.sh', 'test_all_browsers.sh']) {
+    test(`the ${mode} ${script} sweep reports success when every command succeeds`, () => {
+      const result = runAggregateFixture(script, serial);
+      assert.equal(result.status, 0, result.output);
+      assert.doesNotMatch(result.output, /FAIL\s+/u);
+      assert.equal((result.output.match(/PASS\s+/gu) ?? []).length, 5);
+    });
+  }
+}

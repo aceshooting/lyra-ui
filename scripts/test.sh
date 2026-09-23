@@ -231,11 +231,13 @@ declare -A LANE_STATUS=()
 if [[ "$SERIAL" == "1" ]]; then
   for lane in "${LANE_ORDER[@]}"; do
     step "lane: $lane (serial)"
-    if ( set -euo pipefail; run_lane "$lane" ) 2>&1 | tee "$(lane_log "$lane")"; then
-      LANE_STATUS[$lane]=0
-    else
-      LANE_STATUS[$lane]=1
-    fi
+    # An if-condition disables errexit throughout a called function, even when the subshell
+    # sets it again. Capture the pipeline status outside a conditional so a failed step stops
+    # its lane before a later command can replace the failure with success.
+    set +e
+    ( set -euo pipefail; run_lane "$lane" ) 2>&1 | tee "$(lane_log "$lane")"
+    LANE_STATUS[$lane]=$?
+    set -e
   done
 else
   for lane in "${LANE_ORDER[@]}"; do
