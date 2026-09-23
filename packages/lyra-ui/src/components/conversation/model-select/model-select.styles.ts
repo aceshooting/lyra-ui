@@ -203,6 +203,10 @@ export const styles = css`
     transform: rotate(90deg);
   }
 
+  [part="listbox"][hidden] {
+    display: none;
+  }
+
   [part="listbox"] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);
@@ -227,9 +231,9 @@ export const styles = css`
     );
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
-    /* Closed state: invisible and slightly raised. visibility, not display:none, so
-       opacity/transform can transition; hit-testing and a11y exposure stay off since this part is
-       already position:fixed. */
+    /* Retain layout during the outgoing transition. Once it settles, the paired [hidden] rule
+       above removes the closed popup from layout so its stale placed position cannot enlarge an
+       ancestor's scrollable overflow (see model-select.class.ts's catalogPicker.listboxHidden). */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));

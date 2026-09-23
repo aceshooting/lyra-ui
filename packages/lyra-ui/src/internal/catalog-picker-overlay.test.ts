@@ -7,6 +7,7 @@ import {
 interface PickerHost extends HTMLElement {
   readonly renderRoot: ShadowRoot;
   readonly effectiveDisabled: boolean;
+  readonly updateComplete: Promise<boolean>;
 }
 
 interface PickerFixture {
@@ -28,6 +29,7 @@ function createPicker(owner: Document, allowCustom = false): PickerFixture {
   Object.defineProperties(host, {
     effectiveDisabled: { configurable: true, value: false },
     renderRoot: { configurable: true, value: root },
+    updateComplete: { configurable: true, value: Promise.resolve(true) },
   });
   return {
     controller: new CatalogPickerController(host, {

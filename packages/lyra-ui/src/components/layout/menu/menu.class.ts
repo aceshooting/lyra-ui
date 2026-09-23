@@ -12,6 +12,7 @@ import {
 } from '../../../internal/anchored-overlay-runtime.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
@@ -68,6 +69,20 @@ const SUBMENU_CLOSE_DELAY = 300;
  *  literal this reset used before it moved onto the shared debounce controller, and identical to
  *  `<lr-select>`'s listbox type-ahead. */
 const TYPE_AHEAD_RESET_MS = 500;
+
+function parseCssTime(value: string): number {
+  const trimmed = value.trim();
+  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
+  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
+  return 0;
+}
+
+/** The longest comma-separated transition time in a `transitionDuration`/`transitionDelay`
+ *  computed-style pair -- mirrors `toast-item.class.ts`'s identical helper for its own exit
+ *  transition wait. */
+function maxCssTime(value: string): number {
+  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
+}
 
 function isLyraMenuItemElement(value: unknown): value is LyraMenuItem {
   if (!isHtmlElement(value)) return false;
@@ -259,6 +274,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   @state() private presentationOpen = false;
+  // Starts hidden: mirrors the shipped lr-select/lr-combobox `listboxHidden` remediation so a
+  // settled-closed `.submenu-surface` leaves layout instead of only losing visibility/opacity
+  // once it has been opened at least once -- see `.submenu-surface[hidden]` in menu.styles.ts.
+  @state() private presentationHidden = true;
+  private presentationHideWatcher?: () => void;
   private submenuAnchor: HTMLElement | null = null;
   private submenuStateChange: ((open: boolean) => void) | null = null;
 
@@ -490,6 +510,22 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.toggleAttribute('data-list-empty', assigned('slot:not([name])') === 0);
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    // Cleared before render, not in `updated()`: `updated()`'s own `reposition()` call below
+    // measures `.submenu-surface` synchronously, so the render it follows must already have
+    // dropped `[hidden]` -- exactly how lr-select's shipped `listboxHidden` remediation orders its
+    // own `willUpdate()` write ahead of its `updated()`-time placement call. Gated on
+    // `submenuAnchor`: a standalone/dropdown-contained menu never renders `.submenu-surface` at
+    // all (see `render()`), so `presentationHidden` would otherwise churn -- and, written
+    // synchronously from `updated()`'s own close branch below, trip Lit's dev "scheduled an update
+    // after an update completed" warning -- for a value no template ever reads.
+    if (this.presentationOpen && this.submenuAnchor) {
+      this.cancelPresentationHideWatch();
+      this.presentationHidden = false;
+    }
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never
@@ -522,6 +558,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         this.applyRovingTabIndex();
         this.clearSubmenuTimers();
         this.closeSubmenus();
+        // No `else` branch: without a `submenuAnchor`, `willUpdate()` never clears
+        // `presentationHidden` in the first place (see its own doc), so it is already settled
+        // `true` here.
+        if (this.submenuAnchor) this.schedulePresentationHide();
       }
     }
     if (changed.has('dropdownContained')) {
@@ -543,6 +583,57 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         placement,
         strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
       });
+    }
+  }
+
+  private cancelPresentationHideWatch(): void {
+    this.presentationHideWatcher?.();
+    this.presentationHideWatcher = undefined;
+  }
+
+  /** Waits for `.submenu-surface`'s own real CSS exit transition (read live, so a consumer's
+   *  `--lr-transition-fast` override is honored) before removing it from layout -- the same
+   *  transition-settle shape as `toast-item.class.ts`'s `waitForVisualCompletion`, kept local
+   *  here since submenu placement is already this component's own private mechanism. Every path,
+   *  including the immediate no-transition ones, defers the actual `@state` write a microtask:
+   *  this runs synchronously from `updated()`, and writing a reactive field there -- after this
+   *  same update has already been marked complete -- trips Lit's dev "scheduled an update after
+   *  an update completed" warning (see `firstUpdated()`'s identical microtask deferral elsewhere
+   *  in this file). */
+  private schedulePresentationHide(): void {
+    this.cancelPresentationHideWatch();
+    const surface = this.renderRoot.querySelector<HTMLElement>('.submenu-surface');
+    const view = this.ownerDocument.defaultView;
+    const transitionMs =
+      surface && view
+        ? maxCssTime(view.getComputedStyle(surface).transitionDuration) +
+          maxCssTime(view.getComputedStyle(surface).transitionDelay)
+        : 0;
+    const waitForEvent = Boolean(surface && view && transitionMs > 0 && !prefersReducedMotion(view));
+    let settled = false;
+    let timeout: number | undefined;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      if (timeout !== undefined) view?.clearTimeout(timeout);
+      surface?.removeEventListener('transitionend', onEnd);
+      if (this.presentationHideWatcher === cancel) this.presentationHideWatcher = undefined;
+      this.presentationHidden = true;
+    };
+    const onEnd = (event: TransitionEvent): void => {
+      if (event.target === surface) finish();
+    };
+    const cancel = (): void => {
+      settled = true;
+      if (timeout !== undefined) view?.clearTimeout(timeout);
+      surface?.removeEventListener('transitionend', onEnd);
+    };
+    this.presentationHideWatcher = cancel;
+    if (waitForEvent && surface && view) {
+      surface.addEventListener('transitionend', onEnd);
+      timeout = view.setTimeout(finish, transitionMs + 50);
+    } else {
+      queueMicrotask(finish);
     }
   }
 
@@ -573,6 +664,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     for (const item of this.items) this.releaseItemOwner(item);
     this._dropdownOpen = false;
     this.presentationOpen = false;
+    this.cancelPresentationHideWatch();
+    this.presentationHidden = true;
     this.submenuStateChange?.(false);
   }
 
@@ -1302,6 +1395,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         class=${this.presentationOpen
           ? 'submenu-surface open'
           : 'submenu-surface'}
+        ?hidden=${this.presentationHidden}
         @keydown=${this.onPopupKeyDown}
         @pointerover=${this.onPopupPointerOver}
         @pointerleave=${this.onPopupPointerLeave}

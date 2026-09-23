@@ -10,6 +10,7 @@ import {
 interface PickerHost extends HTMLElement {
   readonly renderRoot: ShadowRoot;
   readonly effectiveDisabled: boolean;
+  readonly updateComplete: Promise<boolean>;
 }
 
 function pickerController(
@@ -21,6 +22,7 @@ function pickerController(
   Object.defineProperties(host, {
     effectiveDisabled: { configurable: true, value: false },
     renderRoot: { configurable: true, value: renderRoot },
+    updateComplete: { configurable: true, value: Promise.resolve(true) },
   });
   const controller = new CatalogPickerController(host, {
     catalog: () => catalog,

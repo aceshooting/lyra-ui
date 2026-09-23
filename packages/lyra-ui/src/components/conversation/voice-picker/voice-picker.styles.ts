@@ -214,6 +214,10 @@ export const styles = css`
     color: var(--lr-voice-picker-preview-active-color, var(--lr-color-brand));
   }
 
+  [part='listbox'][hidden] {
+    display: none;
+  }
+
   [part='listbox'] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);
@@ -241,6 +245,9 @@ export const styles = css`
     );
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
+    /* Retain layout during the outgoing transition. Once it settles, the paired [hidden] rule
+       above removes the closed popup from layout so its stale placed position cannot enlarge an
+       ancestor's scrollable overflow (see voice-picker.class.ts's catalogPicker.listboxHidden). */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));

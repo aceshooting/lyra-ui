@@ -1,7 +1,22 @@
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
 import { resolveIntlLocale } from './intl-cache.js';
+import { prefersReducedMotion } from './motion.js';
 import { dispatchNativeEvent, relayNativeEvent } from './native-event-relay.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
+
+function parseCssTime(value: string): number {
+  const trimmed = value.trim();
+  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
+  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
+  return 0;
+}
+
+/** The longest comma-separated transition time in a `transitionDuration`/`transitionDelay`
+ *  computed-style pair -- mirrors `toast-item.class.ts`'s identical helper for its own exit
+ *  transition wait. */
+function maxCssTime(value: string): number {
+  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
+}
 
 /** The common public row vocabulary for catalog-backed controls. */
 export interface LyraCatalogEntry {
@@ -134,6 +149,7 @@ interface CatalogPickerChangeDetail {
 interface CatalogPickerHost extends HTMLElement {
   readonly renderRoot: HTMLElement | DocumentFragment;
   readonly effectiveDisabled: boolean;
+  readonly updateComplete: Promise<boolean>;
 }
 
 interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
@@ -145,7 +161,10 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
   emitChange: (detail: CatalogPickerChangeDetail) => void;
   onValueChange: (value: string, oldValue: string) => void;
   onDefaultValueChange: (value: string, oldValue: string) => void;
-  onStateChange: (state: 'open' | 'query' | 'activeIndex', oldValue: boolean | string | number) => void;
+  onStateChange: (
+    state: 'open' | 'query' | 'activeIndex' | 'listboxHidden',
+    oldValue: boolean | string | number,
+  ) => void;
   beforeValueChange?: (value: string, oldValue: string) => void;
   beforeActiveIndexChange?: (next: number, oldValue: number) => void;
   afterQueryChange?: (query: string, oldValue: string) => void;
@@ -173,6 +192,11 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   private valueDirty = false;
   private settingDefaultValue = false;
   private reflectingDefaultValue = false;
+  // Starts hidden: mirrors the shipped lr-select/lr-combobox `listboxHidden` remediation so a
+  // settled-closed `[part="listbox"]` leaves layout instead of only losing visibility/opacity --
+  // see `[part="listbox"][hidden]` in each host's own stylesheet.
+  private _listboxHidden = true;
+  private listboxHideWatcher?: () => void;
 
   suppressControlEvents = false;
 
@@ -248,6 +272,69 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     return this._open;
   }
 
+  /** `false` while open or mid-close-transition, so the exit animation still has a real box to
+   *  animate; settles to `true` once the closed listbox's transition has visually finished (or
+   *  immediately, for reduced motion / a zero-duration override). Bound to `[part="listbox"]`'s
+   *  `?hidden=` by each host -- see `catalog-picker.ts`'s own module doc and the paired
+   *  `[part="listbox"][hidden] { display: none; }` rule in each host's stylesheet. */
+  get listboxHidden(): boolean {
+    return this._listboxHidden;
+  }
+
+  private setListboxHidden(next: boolean): void {
+    if (next === this._listboxHidden) return;
+    const old = this._listboxHidden;
+    this._listboxHidden = next;
+    this.options.onStateChange('listboxHidden', old);
+  }
+
+  private cancelListboxHideWatch(): void {
+    this.listboxHideWatcher?.();
+    this.listboxHideWatcher = undefined;
+  }
+
+  /** Waits for `[part="listbox"]`'s own real CSS exit transition (read live, so a consumer's
+   *  `--lr-transition-fast` override is honored) before removing it from layout -- exactly
+   *  `toast-item.class.ts`'s `waitForVisualCompletion` shape, kept local here rather than shared
+   *  since this is the only other transition-settle wait in the source tree today. */
+  private scheduleListboxHide(): void {
+    this.cancelListboxHideWatch();
+    const listbox = this.host.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
+    const view = this.host.ownerDocument.defaultView;
+    if (!listbox || !view || prefersReducedMotion(view)) {
+      this.setListboxHidden(true);
+      return;
+    }
+    const computed = view.getComputedStyle(listbox);
+    const transitionMs =
+      maxCssTime(computed.transitionDuration) + maxCssTime(computed.transitionDelay);
+    if (transitionMs <= 0) {
+      this.setListboxHidden(true);
+      return;
+    }
+    let settled = false;
+    let timeout: number | undefined;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      if (timeout !== undefined) view.clearTimeout(timeout);
+      listbox.removeEventListener('transitionend', onEnd);
+      if (this.listboxHideWatcher === cancel) this.listboxHideWatcher = undefined;
+      this.setListboxHidden(true);
+    };
+    const onEnd = (event: TransitionEvent): void => {
+      if (event.target === listbox) finish();
+    };
+    const cancel = (): void => {
+      settled = true;
+      if (timeout !== undefined) view.clearTimeout(timeout);
+      listbox.removeEventListener('transitionend', onEnd);
+    };
+    listbox.addEventListener('transitionend', onEnd);
+    timeout = view.setTimeout(finish, transitionMs + 50);
+    this.listboxHideWatcher = cancel;
+  }
+
   setOpen(next: boolean): void {
     const liveDisabled =
       this.host.effectiveDisabled ||
@@ -264,6 +351,17 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       this.deactivateOverlay(false);
     }
     this._open = resolved;
+    if (resolved) {
+      this.cancelListboxHideWatch();
+      this.setListboxHidden(false);
+    } else {
+      // Deferred past the host's next render: that render is what drops `:host([open])` and
+      // actually starts the CSS exit transition `scheduleListboxHide()` needs to observe.
+      void this.host.updateComplete.then(() => {
+        if (this._open || !this.host.isConnected) return;
+        this.scheduleListboxHide();
+      });
+    }
     this.options.onStateChange('open', old);
   }
 
@@ -585,6 +683,8 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   disconnected(): void {
     this.popupPosition.disconnect();
     this.deactivateOverlay(false);
+    this.cancelListboxHideWatch();
+    this.setListboxHidden(true);
     this.setOpen(false);
   }
 

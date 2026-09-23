@@ -1119,6 +1119,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     return html`
       <div
         part="listbox"
+        ?hidden=${this.catalogPicker.listboxHidden}
         id=${this.listId}
         role="listbox"
         @mousedown=${this.onListboxMouseDown}

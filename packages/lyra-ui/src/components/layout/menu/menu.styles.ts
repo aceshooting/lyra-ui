@@ -46,6 +46,9 @@ export const styles = css`
     background: transparent;
     border: 0;
   }
+  .submenu-surface[hidden] {
+    display: none;
+  }
   .submenu-surface {
     position: fixed;
     z-index: var(--lr-layer-dropdown);
@@ -72,6 +75,9 @@ export const styles = css`
     /* Anchored overlay: a positioner-placed submenu floating over page content, on the same
        elevation tier as every other anchored popup. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
+    /* Retain layout during the outgoing transition. Once it settles, the paired [hidden] rule
+       above removes the closed surface from layout so its stale placed position cannot enlarge
+       an ancestor's scrollable overflow (see menu.class.ts's presentationHidden). */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
