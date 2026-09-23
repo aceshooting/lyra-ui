@@ -842,12 +842,18 @@ describe('lr-video-playlist public contract', () => {
     await settle(el);
     el.goTo(1);
     await settle(el);
+    let changes = 0;
+    el.addEventListener('lr-video-change', () => changes++);
     childVideos(el)[0]!.inert = true;
     childVideos(el)[1]!.inert = true;
     await settle(el);
     expect(items(el).every((button) => button.getAttribute('aria-current') === 'false')).to.be.true;
     expect(childVideos(el)[0]!.hidden).to.be.true;
     expect(childVideos(el)[1]!.hidden).to.be.true;
+    // Documented, deliberate silence (see the class's `@event lr-video-change` JSDoc): clearing
+    // to "no active video" has no non-null video to carry in the frozen detail shape, so this
+    // host-caused clear emits nothing rather than widen the event's type.
+    expect(changes).to.equal(0);
   });
 
   it('does not wrap arrow-navigation focus past either end of the list', async () => {

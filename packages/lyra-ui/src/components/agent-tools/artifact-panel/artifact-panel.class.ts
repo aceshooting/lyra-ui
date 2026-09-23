@@ -50,7 +50,9 @@ export interface LyraArtifactPanelEventMap {
  * @customElement lr-artifact-panel
  * @event lr-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
  * @event lr-version-change - `detail: { versionId }`. Fired when the previous/next
- *   navigation moves to a different version.
+ *   navigation moves to a different version. Not fired when a `versions` reassignment drops the
+ *   currently-active version id: `activeVersionId` resets to `null` silently, since `null` is
+ *   already a documented steady state ("the latest version"), not itself a selection.
  * @event lr-restore - `detail: { versionId }`. Fired by the restore-this-version button;
  *   mutates nothing itself — `versions` and the resulting content stay host-owned state.
  * @event lr-copy - `detail: { ok: true, text }`. Fired after the clipboard write fulfills.

@@ -368,6 +368,25 @@ it('keeps explicit-empty and dynamic host naming distinct from the source tree',
   ).to.equal('Sources');
 });
 
+it('forwards a JS-only accessibleLabel override onto the internal tree', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker></lr-source-picker>`
+  )) as LyraSourcePicker;
+  el.sources = sources;
+  el.accessibleLabel = 'Grounding sources tree';
+  await el.updateComplete;
+  expect(el.hasAttribute('aria-label')).to.equal(false);
+  expect(
+    el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')
+  ).to.equal('Grounding sources tree');
+
+  el.setAttribute('aria-label', 'Host name wins');
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')
+  ).to.not.equal('Grounding sources tree');
+});
+
 it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
@@ -1332,8 +1351,9 @@ it('canonicalizes and prunes controlled source ids across replacement and emitte
   el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]')[1]!.click();
   expect((await pending).detail.selectedSourceIds).to.deep.equal(['a', 'b']);
 
+  const prunedPending = oneEvent(el, 'lr-sources-change');
   el.sources = [{ id: 'b', label: 'Beta' }];
-  await el.updateComplete;
+  expect((await prunedPending).detail.selectedSourceIds).to.deep.equal(['b']);
   expect(el.selectedSourceIds).to.deep.equal(['b']);
   expect(
     el.shadowRoot!.querySelector('[part="summary"]')!.textContent

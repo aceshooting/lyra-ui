@@ -191,8 +191,9 @@ export interface LyraWidgetEventMap {
  *   Call `preventDefault()` to leave `activeViewId` unchanged. Not fired when a consumer sets
  *   `activeViewId` directly. `detail: { viewId }`.
  * @event lr-view-change - Non-cancelable post-commit notification, fired after a header
- *   view-toggle click accepts the change. Not fired when a consumer sets `activeViewId` directly.
- *   `detail: { viewId }`.
+ *   view-toggle click accepts the change. Also fires when a `views` reassignment drops the
+ *   currently-active view, forcing a fallback to the first remaining view. Not fired when a
+ *   consumer sets `activeViewId` directly, even to a now-invalid id. `detail: { viewId }`.
  * @event lr-activate - Fired on every accepted header view-toggle activation, whether or not
  *   `activeViewId` actually moved. `detail: { value }` carries the activated view's `viewId`.
  *   Bubbling and composed, so a host outside the shadow tree receives it. Not cancelable:
@@ -438,7 +439,18 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       this.focusedViewIdBeforeUpdate = focused?.dataset['viewId'];
       const views = this.views;
       if (!views.some((view) => view.viewId === this.activeViewId)) {
+        // A `views` reassignment dropping the currently-active id is a self-mutation of public
+        // state (`activeViewId`), not a consumer setting `activeViewId` directly -- the
+        // "not fired when a consumer sets activeViewId directly" carve-out above does not cover
+        // this path, so emit here to keep an external copy of `activeViewId` in sync. Skipped on
+        // the very first update (nothing to resync yet) and when `activeViewId` was itself set in
+        // the same batch (that IS the direct-set case the carve-out covers).
+        const forcedBySibling =
+          this.hasUpdated && changed.has('views') && !changed.has('activeViewId');
         this.activeViewId = views[0]?.viewId ?? '';
+        if (forcedBySibling) {
+          this.emit('lr-view-change', { viewId: this.activeViewId });
+        }
       }
     }
   }

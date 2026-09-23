@@ -179,6 +179,10 @@ function trackSnapshot(
  * @event lr-video-change - Emitted when `goTo()`, `next()`, `previous()`, or ended advancement
  *   selects a video. Detail is `{ previousIndex, currentIndex, video }`; `video` is a fresh,
  *   detached, recursively frozen `{ title, poster, sources, tracks }` data snapshot with no live DOM nodes.
+ *   Not fired when a light-DOM mutation (a video removed, or every remaining video made
+ *   `inert`/disabled) leaves no enabled video to activate: the internal active-video/active-index
+ *   state is still reset in that case, but `video` has no non-null value the frozen detail shape
+ *   could carry, so the host-caused clear stays silent rather than widen the event's type.
  * @event {FocusEvent} focus - Relayed once from a playlist row as a bubbling, composed native
  *   event.
  * @event {FocusEvent} blur - Relayed once from a playlist row as a bubbling, composed native

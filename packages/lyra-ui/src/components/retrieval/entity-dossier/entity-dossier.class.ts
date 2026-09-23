@@ -1,6 +1,5 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 export type { LyraEntity } from '../entity-card/entity-card.class.js';
@@ -252,8 +251,14 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     }
     const entity = this.entity;
     const c = this.confidence;
-    const tabsLabel =
-      hostAriaLabel(this) === null ? this.accessibleLabel ?? nothing : nothing;
+    // Not `hostAriaLabel(this)`: that helper folds a JS-only `accessibleLabel` into its own
+    // "host already has a name" answer, so testing `=== null` could never distinguish "consumer
+    // authored the host aria-label attribute" from "consumer set accessibleLabel via JS" -- and
+    // the override this component documents (above) would never be reachable. Read the DOM
+    // attribute directly instead, mirroring `node-palette.class.ts`'s `!hasAttribute()` idiom.
+    const tabsLabel = this.hasAttribute('aria-label')
+      ? nothing
+      : this.accessibleLabel ?? nothing;
 
     return html`
       <div part="base">

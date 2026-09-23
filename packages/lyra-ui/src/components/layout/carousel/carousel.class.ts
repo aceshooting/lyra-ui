@@ -119,7 +119,10 @@ export interface LyraCarouselEventMap {
  *   visible but is inert and hidden from assistive technology; the native button is the action.
  * @slot previous-icon - Optional decorative previous-navigation icon, with the same inert visual
  *   content contract as `next-icon`.
- * @event lr-slide-change - Active slide changed. `detail: { index, slide }`.
+ * @event lr-slide-change - Active slide changed. `detail: { index, slide }`. Also fires when a
+ *   `slidesPerPage` change or a slide's removal forces the active index onto a different slide.
+ *   Not fired when a consumer sets `currentSlide` directly to an out-of-range value; the
+ *   assignment is clamped silently.
  * @attr {number} currentSlide - Web Awesome compatibility alias for `current-slide`; HTML
  *   normalizes it to `currentslide` at runtime. When both are present initially,
  *   `current-slide` wins.
@@ -451,7 +454,19 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.slideSlot
     ) {
       const normalized = this.normalizedIndex();
-      if (this.currentSlide !== normalized) this.currentSlide = normalized;
+      if (this.currentSlide !== normalized) {
+        // A bare `currentSlide` write is clamped silently (no event on a direct set, matching
+        // this component's existing contract). A `slidesPerPage` change that pushes the active
+        // slide out of range is a sibling-property correction, not a direct set, so it emits --
+        // mirroring changeTo()'s and the scroll-settle handler's own emit-after-write pattern.
+        const forcedBySibling =
+          changed.has('slidesPerPage') && !changed.has('currentSlide');
+        this.currentSlide = normalized;
+        if (forcedBySibling) {
+          const slide = this.slideElements()[normalized];
+          if (slide) this.emit('lr-slide-change', { index: normalized, slide });
+        }
+      }
     }
   }
 
@@ -715,7 +730,15 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       }
     }
     const current = this.normalizedIndex(slides.length);
-    if (this.currentSlide !== current) this.currentSlide = current;
+    if (this.currentSlide !== current) {
+      // Reached when a light-DOM mutation (a slide removed, or made inert/hidden) shrinks the
+      // slide set out from under the active index -- never from a direct `currentSlide` write,
+      // which `willUpdate()` already normalizes earlier in the same update cycle. Emit so a
+      // consumer tracking the active slide only via this event stays in sync.
+      this.currentSlide = current;
+      const slide = slides[current];
+      if (slide) this.emit('lr-slide-change', { index: current, slide });
+    }
     const visible = this.visibleIndices(slides.length, current);
     this.repairFocusBeforeSlideExclusion(slides, visible);
     const format = getNumberFormat(this.effectiveLocale);

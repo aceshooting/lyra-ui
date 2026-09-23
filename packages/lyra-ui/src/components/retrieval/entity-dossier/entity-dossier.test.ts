@@ -270,6 +270,20 @@ it('keeps host naming distinct from the internal tab strip across dynamic change
   expect(tabs.getAttribute('aria-label')).to.equal(null);
 });
 
+it('forwards a JS-only accessibleLabel override onto the internal tab strip', async () => {
+  const el = (await fixture(html`<lr-entity-dossier></lr-entity-dossier>`)) as LyraEntityDossier;
+  el.entity = entity;
+  el.accessibleLabel = 'Person record tabs';
+  await el.updateComplete;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
+  expect(el.hasAttribute('aria-label')).to.equal(false);
+  expect(tabs.getAttribute('aria-label')).to.equal('Person record tabs');
+
+  el.setAttribute('aria-label', 'Entity detail');
+  await el.updateComplete;
+  expect(tabs.getAttribute('aria-label')).to.equal(null);
+});
+
 it('honors a .strings override of a reused key (neighborListLabel) on the relationships tab label', async () => {
   const el = await populated();
   el.strings = { neighborListLabel: 'Relations' };

@@ -815,9 +815,11 @@ describe("views", () => {
     ).to.equal(true);
     expect(el.shadowRoot!.activeElement === beforeToggle).to.equal(true);
 
+    const pending = oneEvent(el, "lr-view-change");
     el.views = [{ viewId: "c", label: "C" }];
-    await el.updateComplete;
+    const event = await pending;
     expect(el.activeViewId).to.equal("c");
+    expect(event.detail.viewId).to.equal("c");
     expect(
       el.shadowRoot!.activeElement ===
         el.shadowRoot!.querySelector('[part="view-toggle"][data-view-id="c"]')

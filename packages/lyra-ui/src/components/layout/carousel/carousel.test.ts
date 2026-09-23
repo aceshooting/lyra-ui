@@ -444,6 +444,62 @@ describe("Web Awesome carousel surface", () => {
     expect(active?.getAttribute("aria-current")).to.equal("true");
   });
 
+  it("emits lr-slide-change when a slidesPerPage change forces the active slide to clamp", async () => {
+    const el = await carousel(html`
+      <lr-carousel slides-per-page="1">
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+        <lr-carousel-item>Three</lr-carousel-item>
+        <lr-carousel-item>Four</lr-carousel-item>
+      </lr-carousel>
+    `);
+    el.currentSlide = 3;
+    await el.updateComplete;
+    expect(el.currentSlide).to.equal(3);
+
+    const changed = oneEvent(el, "lr-slide-change");
+    el.slidesPerPage = 2;
+    const event = await changed;
+    expect(el.currentSlide).to.equal(2);
+    expect(event.detail.index).to.equal(2);
+  });
+
+  it("emits lr-slide-change when removing the active slide forces a clamp", async () => {
+    const el = await carousel(html`
+      <lr-carousel>
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+        <lr-carousel-item>Three</lr-carousel-item>
+      </lr-carousel>
+    `);
+    el.currentSlide = 2;
+    await el.updateComplete;
+    expect(el.currentSlide).to.equal(2);
+
+    const changed = oneEvent(el, "lr-slide-change");
+    el.lastElementChild?.remove();
+    const event = await changed;
+    expect(el.currentSlide).to.equal(1);
+    expect(event.detail.index).to.equal(1);
+  });
+
+  it("does not emit lr-slide-change from a direct out-of-range currentSlide assignment", async () => {
+    const el = await carousel(html`
+      <lr-carousel>
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    let emitted = false;
+    el.addEventListener("lr-slide-change", () => {
+      emitted = true;
+    });
+    el.currentSlide = 99;
+    await el.updateComplete;
+    expect(el.currentSlide).to.equal(1);
+    expect(emitted).to.equal(false);
+  });
+
   it("parks focused navigation on the viewport when the final control set disappears", async () => {
     const el = await carousel(html`
       <lr-carousel navigation pagination>

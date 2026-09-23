@@ -2444,7 +2444,9 @@ slot has assigned content. Assigning `view='code'` without assigned code content
 navigation and the built-in copy/download buttons.
 
 **Events:** `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
-fired when the previous/next navigation moves to a different version), `lr-restore` (`detail: {
+fired when the previous/next navigation moves to a different version; not fired when a `versions`
+reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
+since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
 versionId }`, fired by the restore-this-version button; mutates nothing itself), `lr-copy`
 (`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and

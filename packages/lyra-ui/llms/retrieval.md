@@ -1037,7 +1037,9 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   omitted state and removes the attribute
 
 **Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
-fired after every toggle including select-all).
+fired after every toggle including select-all. Also fired when a `sources` reassignment prunes a
+previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
+`selectedSourceIds` directly; that assignment is normalized silently).
 
 **Slots:** none.
 
