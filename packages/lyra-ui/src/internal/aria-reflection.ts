@@ -56,8 +56,10 @@ export function syncAriaControlsElements(
     reflected.ariaControlsElements = [];
     return;
   }
-  const targets = resolveIdReferences(host, controls);
-  if (targets.length > 0) reflected.ariaControlsElements = targets;
+  // A truthy `controls` that currently resolves to nothing (id removed, renamed, or not yet
+  // rendered) must still clear a previously reflected relationship -- otherwise the internal
+  // control keeps pointing at a stale target that no longer matches the host's own attribute.
+  reflected.ariaControlsElements = resolveIdReferences(host, controls);
 }
 
 /** Reflects a host's `aria-describedby` relationship onto its shadow semantic control. */
@@ -70,8 +72,10 @@ export function syncAriaDescribedByElements(
   const targets = resolveIdReferences(host, describedBy);
   const reflected = control as HTMLElement & { ariaDescribedByElements: Element[] | null };
   updateDescriptionBaseline(control, () => {
-    if (targets.length > 0) reflected.ariaDescribedByElements = targets;
-    else if (!describedBy) reflected.ariaDescribedByElements = null;
+    // A truthy `describedBy` that currently resolves to nothing must clear the relationship the
+    // same way a falsy one does -- otherwise it leaves the previously reflected elements in
+    // place, pointing at a target the host's own aria-describedby no longer names.
+    reflected.ariaDescribedByElements = targets.length > 0 ? targets : null;
   });
   return targets.length > 0;
 }

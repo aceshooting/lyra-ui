@@ -3223,3 +3223,28 @@ it("keeps [part~='base'] border-box -- and sized to a fixed host width -- even w
     styleOverride.remove();
   }
 });
+
+it('drops the internal aria-controls relationship once the host idref stops resolving', async function () {
+  const control = (await fixture(html`
+    <div>
+      <lr-button aria-controls="panel-one">Toggle</lr-button>
+      <div id="panel-one"></div>
+    </div>
+  `)) as HTMLDivElement;
+  const el = control.querySelector('lr-button') as LyraButton;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement & {
+    ariaControlsElements?: Element[] | null;
+  };
+  if (!('ariaControlsElements' in base)) this.skip();
+
+  expect((base.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([
+    'panel-one',
+  ]);
+
+  // The host attribute now names an id that resolves to nothing (renamed away here) -- the
+  // internal control must not keep pointing at the previous panel.
+  el.setAttribute('aria-controls', 'panel-missing');
+  await el.updateComplete;
+
+  expect(base.ariaControlsElements ?? []).to.deep.equal([]);
+});
