@@ -12,6 +12,7 @@ import { literalSetConverter, trueDefaultBooleanConverter } from '../../../inter
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
@@ -3983,8 +3984,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     else this.appliedPointPaint.delete(sourceId);
   }
 
+  /**
+   * Unlike `resolvedLayerColor()`'s other ~16 call sites (all MapLibre `setPaintProperty` /
+   * style-spec sinks), this result reaches a raw 2D canvas context's `fillStyle`/`strokeStyle` in
+   * `rasterPointIcon()`. Canvas silently keeps its prior paint (opaque black on a fresh context)
+   * when handed an unparseable string, so the resolved candidate is routed through the shared
+   * `resolveCanvasColor()` DOM probe -- same as heatmap/audio-visualizer -- falling back to the
+   * layer's theme-appropriate tone instead of silently rendering a black icon.
+   */
   private pointIconColor(layer: CanonicalMapDataLayer): string {
-    return resolvedLayerColor(this, layer.point?.iconColor ?? `var(${ON_TONE_TOKEN[layer.tone ?? 'accent']})`, layer.tone);
+    const resolved = resolvedLayerColor(
+      this, layer.point?.iconColor ?? `var(${ON_TONE_TOKEN[layer.tone ?? 'accent']})`, layer.tone,
+    );
+    return resolveCanvasColor(this, resolved, dataLayerColor(this, layer.tone));
   }
 
   private removePointIcons(sourceId: string): void {

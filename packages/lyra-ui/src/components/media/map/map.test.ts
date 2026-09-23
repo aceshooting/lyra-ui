@@ -5144,6 +5144,16 @@ describe('dataLayers clustering and heatmap', () => {
     expect(images.size).to.equal(0);
   });
 
+  it('falls back to the tone color instead of black when iconColor is an unresolvable literal', async () => {
+    const { el } = await connectedMapWithoutMaplibre('--lr-theme-color-success-fill-loud: rgb(1, 2, 3)');
+    const { images } = stubMaplibreMap(el);
+    el.dataLayers = entry({ tone: 'success', point: { field: 'category', iconColor: 'not-a-color',
+      icons: [{ value: 'home', path: 'M0 0H24V24H0Z' }] } });
+    await el.updateComplete;
+    const imageId = [...images.keys()][0]!;
+    expect([...images.get(imageId)!.data.slice(0, 4)]).to.deep.equal([1, 2, 3, 255]);
+  });
+
   it('honors stroke caps, joins, fill mode and viewBox scaling while owning icon options', async () => {
     const { el } = await connectedMapWithoutMaplibre();
     const { images } = stubMaplibreMap(el);
