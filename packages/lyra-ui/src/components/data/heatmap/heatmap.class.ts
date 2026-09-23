@@ -32,6 +32,7 @@ import {
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { escapeCsvField } from '../../utility/export-button/csv.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
@@ -395,7 +396,8 @@ let warnedNoCanvasContext = false;
 function warnNoCanvasContext(): void {
   if (warnedNoCanvasContext) return;
   warnedNoCanvasContext = true;
-  console.warn(
+  devWarnOnce(
+    'heatmap-no-canvas-context',
     '<lr-heatmap>: no 2D canvas context is available in this environment; color resolution ' +
       'for non-hex/non-rgb values (e.g. oklch(), color(srgb ...), named colors) will fall back ' +
       'to the given default instead of resolving the requested color.'
@@ -540,8 +542,10 @@ export interface LyraHeatmapEventMap {
   'lr-selection-change': CustomEvent<HeatmapSelectionChangeDetail>;
 }
 
-/** The raster snapshot format returned by `LyraHeatmap.exportData()`. */
-export type LyraHeatmapExportFormat = 'png';
+/** The snapshot format returned by `LyraHeatmap.exportData()`: `'png'` for the raster canvas
+ *  snapshot, `'csv'` for the underlying matrix/calendar values, matching every other
+ *  visualization sibling's `exportData(format)` shape. */
+export type LyraHeatmapExportFormat = 'csv' | 'png';
 
 /**
  * `<lr-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw
@@ -937,13 +941,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   /**
-   * Returns a PNG data URL for the most recently completed canvas paint. The snapshot includes the
-   * painted axes, cells, and canvas overlays, plus frozen label bands when `stickyLabels` is in
-   * use; DOM-only legend, tooltip, and accessible-cell overlays are intentionally omitted. An
-   * empty string means the component has not completed a paint yet, its canvas has no dimensions,
-   * it is waiting for deferred visibility, or the browser could not encode the snapshot.
+   * Returns a spreadsheet-safe CSV snapshot (`format: 'csv'`) of the underlying matrix/calendar
+   * values, or a PNG data URL (`format: 'png'`) for the most recently completed canvas paint. The
+   * PNG snapshot includes the painted axes, cells, and canvas overlays, plus frozen label bands
+   * when `stickyLabels` is in use; DOM-only legend, tooltip, and accessible-cell overlays are
+   * intentionally omitted. An empty PNG string means the component has not completed a paint yet,
+   * its canvas has no dimensions, it is waiting for deferred visibility, or the browser could not
+   * encode the snapshot. The CSV snapshot reads `data` directly (unbounded by the render cap) and
+   * omits no-data cells (the `-1`/non-finite sentinel `isNoData()` already honors for painting),
+   * the same way the canvas draw path skips them.
    */
   exportData(format: LyraHeatmapExportFormat): string {
+    if (format === 'csv') return this.exportCsv();
     if (format !== 'png' || !this.canvasHasContent || !this.canvas) return '';
     if (this.canvas.width <= 0 || this.canvas.height <= 0) return '';
     try {
@@ -965,6 +974,30 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     } catch {
       return '';
     }
+  }
+
+  /** `exportData('csv')`'s worker: one header row plus one data row per real (non-no-data) cell,
+   *  reading `data` directly rather than any bounded render cache. */
+  private exportCsv(): string {
+    const data = this.data;
+    if (data.kind === 'calendar') {
+      const header = ['date', 'value'].map(escapeCsvField).join(',');
+      const rows = data.days
+        .filter((day) => !this.isNoData(day.value))
+        .map((day) => [day.date, this.formatNumericValue(day.value)].map(escapeCsvField).join(','));
+      return [header, ...rows].join('\r\n');
+    }
+    const header = ['row', 'column', 'value'].map(escapeCsvField).join(',');
+    const rows: string[] = [];
+    data.values.forEach((rowValues, rowIndex) => {
+      const rowLabel = data.rowLabels[rowIndex] ?? '';
+      rowValues.forEach((value, colIndex) => {
+        if (this.isNoData(value)) return;
+        const colLabel = data.colLabels[colIndex] ?? '';
+        rows.push([rowLabel, colLabel, this.formatNumericValue(value)].map(escapeCsvField).join(','));
+      });
+    });
+    return [header, ...rows].join('\r\n');
   }
 
   /** The geometry the last `drawMatrix()` pass painted with, frozen and shared with the

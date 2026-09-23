@@ -1167,7 +1167,12 @@ it('updates in place (same Chart instance) when only data changes', async () => 
   const instance = (el as any).chart;
   el.datasets = [{ label: 'x', data: [3, 4] }];
   await el.updateComplete;
-  expect((el as any).chart).to.equal(instance);
+  // Compare a stable primitive projection (Chart.js instances expose a numeric `.id`), never
+  // the live instance itself -- an equality failure here would otherwise hand chai's
+  // AssertionError the live Chart.js object (it owns a real canvas/context), and
+  // structuredClone()-ing that to report the failure throws DataCloneError, hanging the file
+  // until the watchdog fires instead of failing cleanly.
+  expect((el as any).chart?.id).to.equal(instance.id);
 });
 
 it('preserves a legend-toggled hidden dataset across an in-place datasets-only update', async () => {
@@ -1801,7 +1806,8 @@ it('redraws when a config callback is replaced even though its surrounding data 
 
   el.config = { options: { plugins: { tooltip: { callbacks: { label: second } } } } } as never;
   await el.updateComplete;
-  expect((el as any).chart).to.equal(instance);
+  // See the primitive-projection note above -- never assert live Chart.js instance identity.
+  expect((el as any).chart?.id).to.equal(instance.id);
   expect((el as any).buildConfig().options.plugins.tooltip.callbacks.label).to.equal(second);
 });
 
@@ -1867,7 +1873,12 @@ it('updates in place when neither `type` nor the effective `config.type` changes
   const instance = (el as any).chart;
   el.datasets = [{ label: 'x', data: [5, 6] }];
   await el.updateComplete;
-  expect((el as any).chart).to.equal(instance);
+  // Compare a stable primitive projection (Chart.js instances expose a numeric `.id`), never
+  // the live instance itself -- an equality failure here would otherwise hand chai's
+  // AssertionError the live Chart.js object (it owns a real canvas/context), and
+  // structuredClone()-ing that to report the failure throws DataCloneError, hanging the file
+  // until the watchdog fires instead of failing cleanly.
+  expect((el as any).chart?.id).to.equal(instance.id);
 });
 
 it('renders independent hover and pressed theme hooks for each chart control surface', async () => {
@@ -2291,7 +2302,9 @@ it('keeps the core chart usable and renders a localized warning when an optional
     'optional feature warning never rendered',
   );
 
-  expect((el as any).chart).to.exist;
+  // Boolean projection, not `.to.exist` on the live instance -- see the primitive-projection
+  // note above.
+  expect((el as any).chart != null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part="feature-warning"]')!.textContent).to.contain(
     'Zoom add-on unavailable',
   );
@@ -3051,7 +3064,9 @@ it('does not construct a Chart.js instance if disconnected before the lazy chart
   document.body.appendChild(el);
   el.remove();
   await aTimeout(100);
-  expect((el as unknown as { chart?: unknown }).chart).to.be.undefined;
+  // Boolean projection, not `.to.be.undefined` on the live instance -- see the
+  // primitive-projection note above.
+  expect((el as unknown as { chart?: unknown }).chart == null).to.be.true;
 });
 
 it('does not leak a Chart instance bound to a detached canvas when zoom turns on and the element disconnects before loadChartJsWithZoom() resolves', async () => {
@@ -3077,7 +3092,9 @@ it('does not leak a Chart instance bound to a detached canvas when zoom turns on
   // Chart.js's own `destroy()` (see chart.js's `Chart#destroy()`), so check
   // `config` (untouched by `destroy()`) instead, just to confirm this really
   // was a real, built Chart instance and not e.g. `undefined` all along.
-  expect((el as any).chart).to.be.undefined;
+  // Boolean projection, not `.to.be.undefined` on the live instance -- see the
+  // primitive-projection note above.
+  expect((el as any).chart == null).to.be.true;
   expect(instanceBeforeZoom.config.type).to.equal('line');
 });
 
@@ -3348,7 +3365,9 @@ it('skips drawing when the element disconnects after zoom starts loading but bef
   el.remove();
   await aTimeout(200);
 
-  expect((el as any).chart).to.be.undefined;
+  // Boolean projection, not `.to.be.undefined` on the live instance -- see the
+  // primitive-projection note above.
+  expect((el as any).chart == null).to.be.true;
 });
 
 // --- seriesToDataset(): array color passthrough, empty-palette fallback, dash ---------------------
@@ -4378,7 +4397,9 @@ describe('data labels and stack totals', () => {
     // throw here in its beforeUpdate hook. Per-instance registration keeps it safe.
     plain.datasets = [{ label: 'Cost', data: [6, 9] }];
     await plain.updateComplete;
-    expect((plain as any).chart).to.exist;
+    // Boolean projection, not `.to.exist` on the live instance -- see the primitive-projection
+    // note above.
+    expect((plain as any).chart != null).to.be.true;
   });
 
   it('attaches the data-labels plugin to the live chart when turned on after first render', async () => {
@@ -5382,7 +5403,9 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     el.remove(); // disconnect before loadChartJsWithZoom() resolves
     await aTimeout(200);
 
-    expect((el as any).chart).to.be.undefined;
+    // Boolean projection, not `.to.be.undefined` on the live instance -- see the
+    // primitive-projection note above.
+    expect((el as any).chart == null).to.be.true;
   });
 
   it('does not attach a stale data-labels plugin if the element disconnects after the load starts but before it resolves', async () => {
@@ -5397,7 +5420,9 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     el.remove();
     await aTimeout(200);
 
-    expect((el as any).chart).to.be.undefined;
+    // Boolean projection, not `.to.be.undefined` on the live instance -- see the
+    // primitive-projection note above.
+    expect((el as any).chart == null).to.be.true;
   });
 
   it('does not build a chart from a connect-time data-labels load if the element disconnects before it resolves', async () => {
@@ -5411,7 +5436,9 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     document.body.appendChild(el);
     el.remove();
     await aTimeout(200);
-    expect((el as any).chart).to.be.undefined;
+    // Boolean projection, not `.to.be.undefined` on the live instance -- see the
+    // primitive-projection note above.
+    expect((el as any).chart == null).to.be.true;
   });
 });
 
@@ -7170,4 +7197,20 @@ it('gives radar the same line-weight borderWidth default as line, not the thinne
   const lineBorderWidth = (runtime(line)!.getDatasetMeta(0).dataset as import('chart.js').LineElement).options.borderWidth;
   const radarBorderWidth = (runtime(radar)!.getDatasetMeta(0).dataset as import('chart.js').LineElement).options.borderWidth;
   expect(radarBorderWidth).to.equal(lineBorderWidth);
+});
+
+it("stretches [part='base'] to fill a grid/flex-stretched host instead of shrink-wrapping to its own content", async () => {
+  const el = (await fixture(html`<lr-chart
+    without-animation
+    .labels=${['A', 'B']}
+    .datasets=${[{ label: 'Series', data: [1, 2] }]}
+  ></lr-chart>`)) as LyraChart;
+  // Simulates the effect of a CSS Grid/flex row's default align-items: stretch growing the host
+  // taller than its own content -- :host's block-size stays auto, so only [part='base'] filling it
+  // (not shrink-wrapping) keeps the chart from leaving dead space below.
+  el.style.blockSize = '500px';
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).blockSize).to.equal('500px');
 });

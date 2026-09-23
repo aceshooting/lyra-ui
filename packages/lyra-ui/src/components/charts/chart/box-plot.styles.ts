@@ -35,6 +35,13 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
+    /* :host's block-size stays auto (a chart shrink-wraps to its content by default), but a
+       CSS-Grid/flex-stretched host (default align-items: stretch) grows taller than that content --
+       without this, [part='base'] keeps shrink-wrapping instead of filling the stretched host,
+       leaving dead space below the chart. Same fix as lr-card/lr-stat/lr-word-cloud/
+       lr-context-meter's own [part='base']. */
+    block-size: 100%;
+    box-sizing: border-box;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:

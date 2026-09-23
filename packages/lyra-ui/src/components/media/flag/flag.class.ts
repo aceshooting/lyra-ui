@@ -10,6 +10,7 @@ import { styles } from './flag.styles.js';
 import { ALPHA2_RE, alpha3ToAlpha2, languageToCountry } from './language-map.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flagLoadError, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -202,7 +203,7 @@ let warnedMissingFlagResolver = false;
 function warnMissingFlagResolver(code: string): void {
   if (warnedMissingFlagResolver) return;
   warnedMissingFlagResolver = true;
-  console.warn(
+  devWarn(
     `<lr-flag> could not resolve the code "${code}" because no flag resolver is registered. `
       + `Import the optional peer entry once at startup -- import `
       + `'@aceshooting/lyra-ui/components/media/flag/flag-peer.js' -- and install `

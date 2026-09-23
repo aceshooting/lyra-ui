@@ -1314,6 +1314,21 @@ describe('missing-resolver diagnostic', () => {
     expect(el.hasAttribute('data-unresolved'), 'still reflects the unresolved state').to.be.true;
     expect(warnings, 'an unmapped code must stay silent').to.deep.equal([]);
   });
+
+  it('stays silent in production (no Lit dev-mode signal), not just when a resolver is registered', async () => {
+    type LitWarningGlobal = { litIssuedWarnings?: Set<string> };
+    const savedLitIssuedWarnings = (globalThis as LitWarningGlobal).litIssuedWarnings;
+    delete (globalThis as LitWarningGlobal).litIssuedWarnings;
+    try {
+      setFlagUrlResolver(null);
+      const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+      await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+
+      expect(warnings, 'gated behind the shared dev-mode signal, like every sibling diagnostic').to.deep.equal([]);
+    } finally {
+      (globalThis as LitWarningGlobal).litIssuedWarnings = savedLitIssuedWarnings;
+    }
+  });
 });
 
 // A peer that is INSTALLED but too old to carry the capability is a different failure from a peer

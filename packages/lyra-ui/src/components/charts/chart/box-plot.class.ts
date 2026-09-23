@@ -421,6 +421,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   })
   legendPosition: LyraChartChromeLegendPosition = 'bottom';
   @property() height = '280px';
+  /** Category (x) axis title, mirroring `yLabel`. Unset (the default) renders no title. */
+  @property({ attribute: 'x-label' }) xLabel = '';
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter }) beginAtZero = true;
   /** Accessible chart name. A host `aria-label` wins. */
@@ -707,7 +709,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       else this.style.removeProperty('--_lr-chart-height');
     }
     if (this.loading) return;
-    const contentChanged = ['labels', 'datasets', 'hiddenDatasets', 'legend', 'legendPosition', 'height', 'yLabel', 'beginAtZero', 'label', 'description', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'].some((name) =>
+    const contentChanged = ['labels', 'datasets', 'hiddenDatasets', 'legend', 'legendPosition', 'height', 'xLabel', 'yLabel', 'beginAtZero', 'label', 'description', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'].some((name) =>
       changed.has(name),
     );
     const direction = this.effectiveDirection;
@@ -949,6 +951,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         },
         scales: {
           x: {
+            title: { display: !!this.xLabel, text: this.xLabel, color: theme.tick },
             ticks: { color: theme.tick, font: { size: theme.tickFontSize } },
             grid: { color: theme.grid },
           },

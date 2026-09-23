@@ -861,8 +861,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           this.plotWidth = rect.width;
           this.plotHeight = rect.height;
         }
-        this.fitAxisTitles();
-        this.fitCategoryLabels();
+        // Do not fit here: plotWidth/plotHeight just changed, but the DOM (the
+        // `data-title-extent`/tick geometry a fit pass reads) still reflects the previous,
+        // not-yet-rerendered frame until Lit's async update lands. updated() (below) already
+        // unconditionally re-fits once that render settles, so an immediate call here would
+        // only ever ride stale pre-render geometry and duplicate that work.
       }
       if (entries.some((entry) => this.axisTitleTargets.has(entry.target as SVGTextElement))) {
         this.queueAxisTitleFit();

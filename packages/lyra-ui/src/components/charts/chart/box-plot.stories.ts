@@ -171,6 +171,7 @@ export const PerBoxInteractivity: Story = {
         height="16rem"
         style="inline-size: 26rem; max-inline-size: 100%;"
         legend
+        x-label="Week"
         y-label="Latency (ms)"
         .labels=${['Week 1', 'Week 2']}
         .datasets=${boxes}

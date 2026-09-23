@@ -508,7 +508,12 @@ it('updates in place (same Chart instance) when only datasets/labels change', as
 
   el.datasets = [{ label: 'x', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] }];
   await el.updateComplete;
-  expect((el as any).chart).to.equal(instance);
+  // Compare a stable primitive projection (Chart.js instances expose a numeric `.id`), never
+  // the live instance itself -- an equality failure here would otherwise hand chai's
+  // AssertionError the live Chart.js object (it owns a real canvas/context), and
+  // structuredClone()-ing that to report the failure throws DataCloneError, hanging the file
+  // until the watchdog fires instead of failing cleanly.
+  expect((el as any).chart?.id).to.equal(instance.id);
 });
 
 it('preserves a legend-toggled hidden dataset across an in-place datasets-only update', async () => {
@@ -654,7 +659,8 @@ it('updates in place (same Chart instance) across a bare height change, instead 
 
   el.height = '400px';
   await el.updateComplete;
-  expect((el as any).chart).to.equal(instance);
+  // See the primitive-projection note above -- never assert live Chart.js instance identity.
+  expect((el as any).chart?.id).to.equal(instance.id);
 });
 
 it('uses height as a private fallback without overwriting the public --lr-chart-height hook', async () => {
@@ -1020,7 +1026,9 @@ it('does not construct a Chart.js instance if disconnected before the lazy peer 
   document.body.appendChild(el);
   el.remove();
   await aTimeout(100);
-  expect((el as unknown as { chart?: unknown }).chart).to.be.undefined;
+  // Boolean projection, not `.to.be.undefined` on the live instance -- see the
+  // primitive-projection note above.
+  expect((el as unknown as { chart?: unknown }).chart == null).to.be.true;
 });
 
 it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the host', async () => {
@@ -1045,6 +1053,31 @@ it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the 
   expect(config.options.plugins.tooltip.backgroundColor).to.equal('rgb(10, 11, 12)');
   expect(config.options.plugins.tooltip.titleColor).to.equal('rgb(13, 14, 15)');
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
+});
+
+it('wires xLabel into the category (x) axis title, mirroring yLabel on the value (y) axis', async () => {
+  const el = (await fixture(html`<lr-box-plot x-label="Category"></lr-box-plot>`)) as LyraBoxPlot;
+  el.yLabel = 'Loss';
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x.title.display).to.be.true;
+  expect(config.options.scales.x.title.text).to.equal('Category');
+  expect(config.options.scales.y.title.display).to.be.true;
+  expect(config.options.scales.y.title.text).to.equal('Loss');
+});
+
+it('leaves the category axis untitled when xLabel is unset, the same as yLabel', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x.title.display).to.be.false;
+  expect(config.options.scales.y.title.display).to.be.false;
 });
 
 it('resolves an axis tick-label font size from --lr-chart-tick-font-size, defaulting to Chart.js\'s own 12px built-in size (not a design token) so an unset token renders byte-identically to before the token existed', async () => {
@@ -2199,4 +2232,19 @@ it('inherits the chart canvas hover-outline token on a rendered box plot', async
   } finally {
     await resetMouse();
   }
+});
+
+it("stretches [part='base'] to fill a grid/flex-stretched host instead of shrink-wrapping to its own content", async () => {
+  const el = (await fixture(html`<lr-box-plot
+    .labels=${['K=2']}
+    .datasets=${[{ label: 'Loss', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }]}
+  ></lr-box-plot>`)) as LyraBoxPlot;
+  // Simulates the effect of a CSS Grid/flex row's default align-items: stretch growing the host
+  // taller than its own content -- :host's block-size stays auto, so only [part='base'] filling it
+  // (not shrink-wrapping) keeps the chart from leaving dead space below.
+  el.style.blockSize = '500px';
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).blockSize).to.equal('500px');
 });

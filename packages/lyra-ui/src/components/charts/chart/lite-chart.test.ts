@@ -1043,6 +1043,72 @@ it('reproduces the SSR fallback before enabling fit measurement during hydration
   }
 });
 
+it('fits axis titles/category labels only once per ResizeObserver delivery, from updated() after Lit re-renders — not a second, redundant pass against the still-stale pre-render geometry inside the callback itself', async () => {
+  const callbacks: ResizeObserverCallback[] = [];
+  const OriginalRO = window.ResizeObserver;
+  class FakeResizeObserver implements ResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      callbacks.push(callback);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    FakeResizeObserver as unknown as typeof ResizeObserver;
+
+  try {
+    const el = (await fixture(
+      html`<lr-lite-chart
+        type="bar"
+        style="width: 320px"
+        y-label="Revenue"
+        .labels=${['a', 'b']}
+        .datasets=${[{ label: 's', data: [1, 2] }]}
+      ></lr-lite-chart>`,
+    )) as LyraLiteChart;
+    await el.updateComplete;
+    // First delivery only escapes `awaitingFitMeasurement()` (no axis-title exists yet to fit
+    // against) — settle it before spying so the spy only observes the SECOND delivery, the one
+    // that fits real, already-rendered axis-title geometry.
+    callbacks[0]!(
+      [{ target: el.shadowRoot!.querySelector('svg')!, contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="axis-title"]')).to.exist;
+
+    const priv = el as unknown as Record<string, (() => void) | undefined>;
+    const originalFitAxisTitles = (priv['fitAxisTitles'] as () => void).bind(el);
+    const originalFitCategoryLabels = (priv['fitCategoryLabels'] as () => void).bind(el);
+    let axisTitleCalls = 0;
+    let categoryLabelCalls = 0;
+    priv['fitAxisTitles'] = () => {
+      axisTitleCalls++;
+      originalFitAxisTitles();
+    };
+    priv['fitCategoryLabels'] = () => {
+      categoryLabelCalls++;
+      originalFitCategoryLabels();
+    };
+
+    callbacks[0]!(
+      [{ target: el.shadowRoot!.querySelector('svg')!, contentBoxSize: [{ inlineSize: 200, blockSize: 150 }] } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    await el.updateComplete;
+
+    // updated() (which runs once Lit has re-rendered `data-title-extent` against the real new
+    // plotWidth/plotHeight) always fits exactly once per delivery. A second, synchronous call
+    // from inside the ResizeObserver callback itself -- before that re-render lands -- would
+    // measure against the previous frame's still-stale geometry and is pure redundant work.
+    expect(axisTitleCalls).to.equal(1);
+    expect(categoryLabelCalls).to.equal(1);
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+  }
+});
+
 it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize still triggers a re-render', async () => {
   // A real browser's ResizeObserver notification timing across a
   // synchronous disconnect+reconnect is inherently racy in headless test
@@ -4294,3 +4360,19 @@ describe('lr-lite-chart formatter metadata', () => {
   });
 });
 
+
+it("stretches [part='base'] to fill a grid/flex-stretched host instead of shrink-wrapping to its own content", async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    .labels=${['A', 'B']}
+    .datasets=${[{ label: 'Series', data: [1, 2] }]}
+  ></lr-lite-chart>`);
+  // Simulates the effect of a CSS Grid/flex row's default align-items: stretch growing the host
+  // taller than its own content -- :host's block-size stays auto, so only [part='base'] filling it
+  // (not shrink-wrapping) keeps the chart from leaving dead space below.
+  el.style.blockSize = '500px';
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).blockSize).to.equal('500px');
+});

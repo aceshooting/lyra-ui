@@ -194,7 +194,11 @@ it('does not recreate Chart.js after a values update is disconnected in the same
   el.remove();
   await el.updateComplete;
 
-  expect((el as any).chart).to.equal(undefined);
+  // Boolean projection, not `.to.equal(undefined)` on the live instance: chai's `assertEqual`
+  // passes the live target explicitly as the failure's `actual`, and a live Chart.js instance
+  // owns a real canvas/context that throws `DataCloneError` on structuredClone(), hanging the
+  // file until the watchdog fires instead of failing cleanly.
+  expect((el as any).chart == null).to.be.true;
 });
 
 it('paints visible pixels for an all-identical-value degenerate distribution', async () => {

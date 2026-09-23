@@ -160,6 +160,34 @@ it('exports the painted canvas and frozen label layers as a PNG without DOM over
   expect(el.exportData('png')).to.equal('');
 });
 
+it('exports the matrix data as CSV, skipping no-data cells, mirroring the chart-family exportData(csv) shape', async () => {
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap .data=${{
+    kind: 'matrix',
+    rowLabels: ['Mon', 'Tue'],
+    colLabels: ['0h', '1h'],
+    values: [[1, -1], [3, 4]],
+  }}></lr-heatmap>`);
+
+  expect(el.exportData('csv')).to.equal(
+    ['row,column,value', 'Mon,0h,1', 'Tue,0h,3', 'Tue,1h,4'].join('\r\n'),
+  );
+});
+
+it('exports calendar data as CSV, skipping no-data days', async () => {
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap .data=${{
+    kind: 'calendar',
+    days: [
+      { date: '2026-09-01', value: 5 },
+      { date: '2026-09-02', value: -1 },
+      { date: '2026-09-03', value: 7 },
+    ],
+  }}></lr-heatmap>`);
+
+  expect(el.exportData('csv')).to.equal(
+    ['date,value', '2026-09-01,5', '2026-09-03,7'].join('\r\n'),
+  );
+});
+
 it('scales a single square cell with its container and bounds invalid presentation values', async () => {
   const el = await matrix();
   el.data = { kind: 'matrix', rowLabels: ['Row'], colLabels: ['Column'], values: [[1]] };
