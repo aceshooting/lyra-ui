@@ -30,6 +30,7 @@ import type { LyraOption } from './option.class.js';
 import './option.class.js';
 import {
   autocorrectConverter,
+  literalSetConverter,
   omittedEmptyStringConverter,
   optionalLiteralSetConverter,
   spellcheckConverter,
@@ -107,6 +108,14 @@ export type LyraComboboxPlacement = 'top' | 'bottom';
 /** Unsupported values resolve to *absent*, so the listbox falls back to this control's own
  *  default rather than to a member baked into the converter. */
 const POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>(['absolute', 'fixed']);
+
+/** Unsupported values clamp to the documented `'outlined'` default -- this trigger-shaped control
+ *  does not (yet) implement the shared vocabulary's `accent`/`plain` tiers; see `appearance`'s own
+ *  doc comment. Mirrors `<lr-date-input>`'s own narrowed appearance converter. */
+const APPEARANCE = literalSetConverter(
+  ['filled', 'outlined', 'filled-outlined'] as const,
+  'outlined'
+);
 export type LyraComboboxTagRenderer = (
   option: LyraOption,
   index: number
@@ -433,11 +442,12 @@ export type LyraComboboxSourceErrorEvent =
  * a typo) still commits rather than being dropped, but renders with a dashed/italic
  * `[part='unknown-value']` badge instead of silently passing the raw string off as an ordinary
  * label -- see `isUnknownValue()`. Suppressed while an async `source` fetch has never yet resolved
- * for this element, and never shown for an `allowCustomValue` commit, which is a sanctioned
- * unmatched value, not a stale one. Over that same unresolved window the raw value itself is
- * withheld too -- the trigger (and any `multiple`-mode tag for the same value) shows the
- * `loadingText` placeholder instead of the raw string, since it is not yet knowable whether the
- * value is even unmatched.
+ * for this element, or while the public `loading` property is set (for a consumer mounting
+ * `<lr-option>` children asynchronously itself, with no `source` involved), and never shown for an
+ * `allowCustomValue` commit, which is a sanctioned unmatched value, not a stale one. Over that same
+ * unresolved window the raw value itself is withheld too -- the trigger (and any `multiple`-mode
+ * tag for the same value) shows the `loadingText` placeholder instead of the raw string, since it
+ * is not yet knowable whether the value is even unmatched.
  *
  * @customElement lr-combobox
  * @slot - `<lr-option>` elements.
@@ -708,6 +718,7 @@ export class LyraCombobox<
     multiple: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
+    readonly: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
     name: {
       reflect: true,
@@ -727,7 +738,7 @@ export class LyraCombobox<
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
-  /** Whether the listbox is open. Effectively disabled controls reject direct reopen attempts,
+  /** Whether the listbox is open. Disabled or readonly controls reject direct reopen attempts,
    * including a synchronous fieldset cascade. */
   @property({ type: Boolean, reflect: true })
   get open(): boolean {
@@ -738,7 +749,7 @@ export class LyraCombobox<
     const liveDisabled =
       this.effectiveDisabled ||
       (typeof this.matches === 'function' && this.matches(':disabled'));
-    this._open = Boolean(next) && !liveDisabled;
+    this._open = Boolean(next) && !this.readonly && !liveDisabled;
     if (this._open === old) {
       if (next && !this._open && this.hasAttribute('open'))
         this.removeAttribute('open');
@@ -774,14 +785,48 @@ export class LyraCombobox<
    * tag, and the synthetic listbox row -- and is used only while the value is genuinely unmatched,
    * so it can never override a real option's own label. A blank return falls back to the raw
    * value, exactly as no hook at all would. Caller-supplied text: it is not localized here. Not
-   * consulted while an async `source` fetch has never yet resolved for this element -- the value
-   * is not yet known to be unmatched at all, so `loadingText` renders instead (see `isUnknownValue()`).
+   * consulted while an async `source` fetch has never yet resolved for this element, or while
+   * `loading` is `true` -- the value is not yet known to be unmatched at all, so `loadingText`
+   * renders instead (see `isUnknownValue()`).
    */
   @property({ attribute: false }) getUnknownLabel?: (value: string) => string;
+  /**
+   * Whether a committed value's real label may still be pending -- e.g. the `<lr-option>` catalog
+   * behind it is still being fetched/mounted asynchronously (with no `source` involved) and simply
+   * hasn't arrived yet. Mirrors `<lr-select>`'s own `loading` property. While `true`, a committed
+   * value that currently matches no option/row (the same condition `isUnknownValue()` tests)
+   * renders the localized `loadingText` placeholder in the trigger label or the relevant `multiple`
+   * tag instead of the raw value, and is not flagged with the dashed/italic
+   * `notInCatalog`/`[part='unknown-value']` badge a genuinely unmatched value gets -- "not yet
+   * resolved" is a different state from "known to be missing". The open listbox shows the same
+   * loading row a `source` fetch in flight shows. Independent of `source`'s own async lifecycle:
+   * either condition alone is enough to suppress the unknown-value presentation. Never mutates
+   * `value`/`selectedOptions` itself, and does not itself disable the trigger. Reflected so
+   * `:host([loading])` is available as a styling hook.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true }) loading = false;
 
-  /** Visual treatment shared with other Lyra form controls. */
-  @property({ reflect: true })
-  appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined';
+  private _appearance: 'filled' | 'outlined' | 'filled-outlined' = 'outlined';
+  /**
+   * Visual treatment shared with other Lyra form controls. This trigger-shaped control supports
+   * only `filled`/`outlined`/`filled-outlined` of the library's shared five-value `LyraAppearance`
+   * vocabulary -- `accent` and `plain` have no stylesheet rule here (unlike `<lr-select>`, which
+   * implements the full set) -- so an unsupported value, including a raw attribute/property write
+   * outside this type, clamps to the `'outlined'` default rather than silently rendering unstyled.
+   * @default 'outlined'
+   */
+  @property({ converter: APPEARANCE, reflect: true })
+  get appearance(): 'filled' | 'outlined' | 'filled-outlined' {
+    return this._appearance;
+  }
+  set appearance(next: 'filled' | 'outlined' | 'filled-outlined') {
+    const normalized = APPEARANCE.normalizeReflected(this, 'appearance', next);
+    const old = this._appearance;
+    this._appearance = normalized;
+    if (normalized === old) return;
+    this.requestUpdate('appearance', old);
+  }
   /** Preferred vertical side for the floating listbox. */
   @property({ reflect: true }) placement: LyraComboboxPlacement = 'bottom';
   /**
@@ -954,7 +999,9 @@ export class LyraCombobox<
   // Applies to `form-control-label` too: leaving that box visible would orphan its required
   // asterisk. The default option slot keeps its identity-aware collection handler below.
   private readonly slotPresence = new SlotPresenceController(this);
-  @state() private loading = false;
+  /** True while a `source` fetch is actively in flight. Distinct from the public {@link loading}
+   *  property, which a consumer sets directly; combined with it wherever a loading state is read. */
+  @state() private sourceLoading = false;
   /**
    * True while the last `source` call rejected and the popup shows the retry state instead of rows.
    *
@@ -1057,6 +1104,7 @@ export class LyraCombobox<
   private _multiple = false;
   private _disabled = false;
   private _required = false;
+  private _readonly = false;
   // What `form.reset()` restores to. Captured exactly once, from whatever
   // `<lr-option selected>` markup was present the first time slotted
   // options are collected (mirrors native `<select><option selected>`) —
@@ -1359,7 +1407,7 @@ export class LyraCombobox<
       this.sourceAbort?.abort();
       this.sourceAbort = undefined;
       this.sourceToken++;
-      this.loading = false;
+      this.sourceLoading = false;
       this.sourceFailed = false;
       this.sourceEverSettled = false;
       this.asyncRows = [];
@@ -1476,6 +1524,24 @@ export class LyraCombobox<
     this.toggleAttribute('required', this._required);
     this.updateValidity();
     this.requestUpdate('required', old);
+  }
+
+  /** Forwards native read-only behavior to the internal filter input: the committed value stays
+   *  fixed and still submits with the form, the control remains focusable, selectable and
+   *  copyable, but no popup opens and no edit -- typed, picked, or a tag/clear-button removal --
+   *  can change it. Mirrors `<lr-input>`'s own `readonly`; bars constraint validation exactly like
+   *  `disabled` -- see `isBarredFromValidation()`.
+   * @default false */
+  get readonly(): boolean {
+    return this._readonly;
+  }
+  set readonly(next: boolean) {
+    const old = this._readonly;
+    this._readonly = Boolean(next);
+    this.toggleAttribute('readonly', this._readonly);
+    if (this._readonly) this.hide();
+    this.updateValidity();
+    this.requestUpdate('readonly', old);
   }
 
   /** The selected value(s): a string in single mode, a string[] in `multiple` mode.
@@ -2210,7 +2276,9 @@ export class LyraCombobox<
       nonBlank(this._selectedLabelCache.get(value)) ??
       nonBlank(this.options.find((o) => o.value === value)?.label) ??
       nonBlank(this.asyncRows.find((r) => r.value === value)?.label) ??
-      (this.source && !this.sourceEverSettled ? this.statusText('loading', this.loadingText) : undefined) ??
+      (this.loading || (this.source && !this.sourceEverSettled)
+        ? this.statusText('loading', this.loadingText)
+        : undefined) ??
       value
     );
   }
@@ -2225,9 +2293,11 @@ export class LyraCombobox<
    * Suppressed entirely until a `source` combobox's async fetch has settled at least once (see
    * `sourceEverSettled`): from mount through the debounce delay and the in-flight call itself,
    * simply hasn't had a chance to populate `asyncRows` yet, which is "not yet known", not
-   * "genuinely unknown" -- `loading` alone would miss the debounce-delay span before the request
-   * even starts, which is exactly the window `labelFor()`'s own loading-placeholder fallback needs
-   * this to agree with.
+   * "genuinely unknown" -- the private `sourceLoading` flag alone would miss the debounce-delay
+   * span before the request even starts, which is exactly the window `labelFor()`'s own
+   * loading-placeholder fallback needs this to agree with. Also suppressed while the public
+   * `loading` property is `true`, for a consumer mounting `<lr-option>` children asynchronously
+   * itself with no `source` involved -- see `loading`.
    *
    * Checked against the same four sources as `labelFor()`, but as a plain existence test rather
    * than a label lookup, so a real match with a deliberately blank label is never misreported as
@@ -2236,7 +2306,7 @@ export class LyraCombobox<
    * one, so it must never show this badge.
    */
   private isUnknownValue(value: string): boolean {
-    if (this.source && !this.sourceEverSettled) return false;
+    if (this.loading || (this.source && !this.sourceEverSettled)) return false;
     return !(
       (!this.source && !this.multiple && this.singleSelectedOption?.value === value) ||
       this._selectedLabelCache.has(value) ||
@@ -2529,7 +2599,7 @@ export class LyraCombobox<
 
   /** Opens the listbox and resolves after `lr-after-show`. */
   show(): Promise<void> {
-    if (this.open || this.liveDisabled) return Promise.resolve();
+    if (this.open || this.liveDisabled || this.readonly) return Promise.resolve();
     this.resolveTransitionWaiters('lr-after-hide');
     const settled = this.waitForTransition('lr-after-show');
     this.open = true;
@@ -2923,7 +2993,7 @@ export class LyraCombobox<
 
   /** Runs the cancelable option-creation contract, then performs its default append/select behavior. */
   private createOption(inputValue: string): void {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || this.readonly) return;
     const event = this.emit('lr-create', { inputValue }, { cancelable: true });
     if (event.defaultPrevented) return;
     const option = this.ownerDocument.createElement(
@@ -2937,7 +3007,7 @@ export class LyraCombobox<
 
   /** Commits arbitrary text in the single-select custom-value mode without adding an option. */
   private commitCustomValue(inputValue: string): void {
-    if (this.liveDisabled || this.multiple || !inputValue) return;
+    if (this.liveDisabled || this.readonly || this.multiple || !inputValue) return;
     const selectionChanged = this._selected[0] !== inputValue;
     this._selectedLabelCache.set(inputValue, inputValue);
     this.assignValue(inputValue);
@@ -2949,7 +3019,7 @@ export class LyraCombobox<
 
   private pickRow(row: ComboboxSourceRow): void {
     const sourceOption = this.sourceOptionsByRow.get(row);
-    if (this.liveDisabled || row.disabled || (sourceOption && (sourceOption.disabled || sourceOption.closest('[inert]')))) return;
+    if (this.liveDisabled || this.readonly || row.disabled || (sourceOption && (sourceOption.disabled || sourceOption.closest('[inert]')))) return;
     if (row.createInput !== undefined) {
       this.createOption(row.createInput);
       return;
@@ -3001,10 +3071,16 @@ export class LyraCombobox<
     this.emit('lr-activate', { value: row.value });
   }
 
-  private removeValue(value: string): void {
-    if (this.liveDisabled) return;
-    const next = this._selected.filter((v) => v !== value);
-    if (next.length === this._selected.length) return;
+  /**
+   * Removes exactly the occurrence at `index`, never every row sharing its public string value --
+   * `multiple` mode's committed `value` can legitimately hold a repeated string (the `value`
+   * setter never dedupes), and `shownTags` renders one tag per occurrence, so a value-keyed removal
+   * would delete every duplicate in one click. Mirrors `<lr-select>`'s `removeValueAt()`.
+   */
+  private removeValueAt(index: number): void {
+    if (this.liveDisabled || this.readonly) return;
+    if (index < 0 || index >= this._selected.length) return;
+    const next = this._selected.filter((_, i) => i !== index);
     this.assignValue(next);
     this.emitValueEvents();
   }
@@ -3017,7 +3093,7 @@ export class LyraCombobox<
    * must stay silent on `lr-filter` (the filter text never moved).
    */
   private clear(): void {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || this.readonly) return;
     const hadSelection = this._selected.length > 0;
     const queryChanged = this.query !== '';
     if (!hadSelection && !queryChanged) return;
@@ -3033,7 +3109,7 @@ export class LyraCombobox<
   }
 
   private onInput = (e: Event): void => {
-    if (this.liveDisabled) return;
+    if (this.liveDisabled || this.readonly) return;
     this.explicitInputValue = false;
     this.query = (e.target as HTMLInputElement).value;
     this.activeIndex = -1;
@@ -3109,7 +3185,7 @@ export class LyraCombobox<
     }
     const controller = new ownerWindow.AbortController();
     this.sourceAbort = controller;
-    this.loading = true;
+    this.sourceLoading = true;
     this.sourceFailed = false;
     // `Promise.resolve().then(() => source(query, ...))` moves the call
     // itself inside a `.then()` callback, so a *synchronous* throw from
@@ -3180,7 +3256,7 @@ export class LyraCombobox<
         console.warn('<lr-combobox> source() rejected:', err);
       })
       .finally(() => {
-        if (token === this.sourceToken) this.loading = false;
+        if (token === this.sourceToken) this.sourceLoading = false;
       });
   }
 
@@ -3219,7 +3295,7 @@ export class LyraCombobox<
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.isComposing || e.keyCode === 229 || this.liveDisabled) return;
+    if (e.isComposing || e.keyCode === 229 || this.liveDisabled || this.readonly) return;
     const navigable = this.renderedRows.rows.filter((r) => !r.disabled);
     switch (e.key) {
       case 'ArrowDown':
@@ -3290,8 +3366,7 @@ export class LyraCombobox<
         break;
       case 'Backspace':
         if (this.multiple && !this.query && this._selected.length) {
-          // safe: _selected.length is truthy, so the last element exists.
-          this.removeValue(this._selected[this._selected.length - 1]!);
+          this.removeValueAt(this._selected.length - 1);
         }
         break;
     }
@@ -3429,11 +3504,15 @@ export class LyraCombobox<
       <button
         part="tag__remove-button"
         type="button"
-        ?disabled=${this.effectiveDisabled}
+        ?disabled=${this.effectiveDisabled || this.readonly}
         aria-label=${this.localize('removeWithContext', undefined, { label })}
         @click=${(event: Event) => {
           event.stopPropagation();
-          this.removeValue(value);
+          // Guards a stale closed-over `index`/`value` pair: a second click on this same button,
+          // fired before Lit re-renders the tag row away, would otherwise remove whatever
+          // occurrence now sits at `index` after the first click shifted the array.
+          if (this._selected[index] !== value) return;
+          this.removeValueAt(index);
         }}
       >
         <span part="tag__remove-button__base">${closeIcon()}</span>
@@ -3551,6 +3630,7 @@ export class LyraCombobox<
               .value=${this.displayValue}
               placeholder=${hasValue && !this.multiple ? '' : this.placeholder}
               ?disabled=${this.effectiveDisabled}
+              ?readonly=${this.readonly}
               ?data-unknown-value=${singleValueUnknown}
               @input=${this.onInput}
               @keydown=${this.onKeyDown}
@@ -3565,7 +3645,7 @@ export class LyraCombobox<
               ? html`<button
                   part="clear-button"
                   type="button"
-                  ?disabled=${this.effectiveDisabled}
+                  ?disabled=${this.effectiveDisabled || this.readonly}
                   aria-label=${this.localize('clear')}
                   @click=${(e: Event) => {
                     e.stopPropagation();
@@ -3600,7 +3680,7 @@ export class LyraCombobox<
           @mousedown=${this.onListboxMouseDown}
           @click=${this.onListboxClick}
         >
-          ${this.loading
+          ${this.loading || this.sourceLoading
             ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true"
                 >${this.statusText('loading', this.loadingText)}</div
               >`

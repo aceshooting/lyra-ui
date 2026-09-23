@@ -381,6 +381,40 @@ it("emits the same native input/change pair when a selected tag is removed", asy
   expect(events.every((event) => !event.cancelable)).to.be.true;
 });
 
+it("removes only the clicked occurrence of a duplicate-valued tag, not every occurrence", async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.value = ["a", "a", "b"];
+  await el.updateComplete;
+
+  const removeButtons = [
+    ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+      '[part="tag__remove-button"]'
+    ),
+  ];
+  expect(removeButtons.length).to.equal(3);
+  removeButtons[0]!.click();
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(["a", "b"]);
+});
+
+it("Backspace on an empty query removes only the last occurrence of a duplicate-valued tag", async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.value = ["a", "b", "a"];
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector(
+    '[part="combobox-input"]'
+  ) as HTMLInputElement;
+  input.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, composed: true })
+  );
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(["a", "b"]);
+});
+
 it("falls back to the raw value in a remove-tag's accessible name when the option's computed label is blank", async () => {
   const el = (await fixture(html`
     <lr-combobox multiple>
@@ -3136,7 +3170,7 @@ it("recovers loading=false and does not throw when source() rejects", async () =
     el.open = true;
     await el.updateComplete;
     await aTimeout(250);
-    expect((el as unknown as { loading: boolean }).loading).to.be.false;
+    expect((el as unknown as { sourceLoading: boolean }).sourceLoading).to.be.false;
     expect(warnCalls.length).to.be.greaterThan(0);
     expect(String(requiredItem(requiredItem(warnCalls, 0, 'warning call'), 0, 'warning argument'))).to.include("rejected");
   } finally {
@@ -3159,7 +3193,7 @@ it("recovers loading=false when source() throws synchronously instead of returni
     el.open = true;
     await el.updateComplete;
     await aTimeout(250);
-    expect((el as unknown as { loading: boolean }).loading).to.be.false;
+    expect((el as unknown as { sourceLoading: boolean }).sourceLoading).to.be.false;
   } finally {
     console.warn = originalWarn;
   }
@@ -5418,6 +5452,37 @@ describe("focus indicator per appearance", () => {
   }
 });
 
+describe("appearance clamps to the documented subset", () => {
+  it("clamps an unsupported attribute set at first parse to the default", async () => {
+    const el = (await fixture(html`
+      <lr-combobox appearance="accent">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    await el.updateComplete;
+    expect(el.appearance).to.equal("outlined");
+    expect(el.getAttribute("appearance")).to.equal("outlined");
+  });
+
+  it("clamps an unsupported attribute written later, repairing the raw attribute", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.setAttribute("appearance", "plain");
+    await el.updateComplete;
+    expect(el.appearance).to.equal("outlined");
+    expect(el.getAttribute("appearance")).to.equal("outlined");
+  });
+
+  it("keeps every documented value unchanged", async () => {
+    for (const appearance of ["outlined", "filled", "filled-outlined"] as const) {
+      const el = (await fixture(basic())) as LyraCombobox;
+      el.setAttribute("appearance", appearance);
+      await el.updateComplete;
+      expect(el.appearance).to.equal(appearance);
+      expect(el.getAttribute("appearance")).to.equal(appearance);
+    }
+  });
+});
+
 // -- Host click() forwarding -------------------------------------------------
 
 it("forwards host click() to opening the listbox and focusing the filter input", async () => {
@@ -6497,6 +6562,25 @@ it("bars constraint validation while disabled, like a native disabled required c
   expect(el.checkValidity()).to.be.true;
 
   el.disabled = false;
+  await el.updateComplete;
+  expect(
+    el.validity.valueMissing,
+    "the violation returns once it is enforceable again"
+  ).to.be.true;
+});
+
+it("bars constraint validation while readonly, like a native readonly required control", async () => {
+  const el = (await fixture(html`
+    <lr-combobox required readonly label="Fruit"
+      ><lr-option value="a">Apple</lr-option></lr-combobox
+    >
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  expect(el.validity.valueMissing, "a barred control raises no violation").to.be
+    .false;
+  expect(el.checkValidity()).to.be.true;
+
+  el.readonly = false;
   await el.updateComplete;
   expect(
     el.validity.valueMissing,
@@ -8099,7 +8183,7 @@ describe('unknown committed value presentation', () => {
     el.value = 'ghost';
     await el.updateComplete;
     await waitUntil(
-      () => (el as unknown as { loading: boolean }).loading,
+      () => (el as unknown as { sourceLoading: boolean }).sourceLoading,
       'the proactive warm-up fetch never started',
     );
     const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
@@ -8110,7 +8194,7 @@ describe('unknown committed value presentation', () => {
 
     resolve([]);
     await waitUntil(
-      () => !(el as unknown as { loading: boolean }).loading,
+      () => !(el as unknown as { sourceLoading: boolean }).sourceLoading,
       'the source call never settled',
     );
     await el.updateComplete;
@@ -8137,7 +8221,7 @@ describe('unknown committed value presentation', () => {
       'a localized loading placeholder stands in even before the debounced fetch starts',
     ).to.equal('Loading…');
     await waitUntil(
-      () => (el as unknown as { loading: boolean }).loading,
+      () => (el as unknown as { sourceLoading: boolean }).sourceLoading,
       'the proactive warm-up fetch never started',
     );
     expect(
@@ -8147,7 +8231,7 @@ describe('unknown committed value presentation', () => {
 
     resolve([]);
     await waitUntil(
-      () => !(el as unknown as { loading: boolean }).loading,
+      () => !(el as unknown as { sourceLoading: boolean }).sourceLoading,
       'the source call never settled',
     );
     await el.updateComplete;
@@ -8167,7 +8251,7 @@ describe('unknown committed value presentation', () => {
     el.value = ['ghost'];
     await el.updateComplete;
     await waitUntil(
-      () => (el as unknown as { loading: boolean }).loading,
+      () => (el as unknown as { sourceLoading: boolean }).sourceLoading,
       'the proactive warm-up fetch never started',
     );
     const tag = el.shadowRoot!.querySelector('[part="tag"]');
@@ -8181,6 +8265,75 @@ describe('unknown committed value presentation', () => {
       'a loading placeholder stands in for the raw value',
     ).to.equal('Loading…');
     resolve([]);
+  });
+});
+
+// R26: a public `loading` toggle, mirroring `<lr-select>`'s own, for a consumer mounting
+// `<lr-option>` children asynchronously itself -- no `source` involved.
+describe('public loading toggle (no source)', () => {
+  it('defaults to false', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    expect(el.loading).to.be.false;
+  });
+
+  it('suppresses the unknown-value badge and shows a loading placeholder for a value whose option has not mounted yet', async () => {
+    const el = (await fixture(
+      html`<lr-combobox value="pending" loading></lr-combobox>`,
+    )) as LyraCombobox;
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(
+      input.hasAttribute('data-unknown-value'),
+      'still loading -- not yet known to be unknown',
+    ).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="unknown-value"]') === null).to.be.true;
+    expect(input.value, 'a loading placeholder stands in for the raw value').to.equal('Loading…');
+    expect(el.value, 'the raw value is still reachable').to.equal('pending');
+  });
+
+  it('renders the real label once the matching option mounts, with no re-assignment of value', async () => {
+    const el = (await fixture(
+      html`<lr-combobox value="pending" loading></lr-combobox>`,
+    )) as LyraCombobox;
+    await el.updateComplete;
+
+    const defaultSlot = el.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement;
+    const slotchangePromise = oneEvent(defaultSlot, 'slotchange');
+    const option = document.createElement('lr-option') as LyraOption;
+    option.setAttribute('value', 'pending');
+    option.textContent = 'Pending Thing';
+    el.append(option);
+    await slotchangePromise;
+    await el.updateComplete;
+
+    expect(el.value, 'no re-assignment of value was needed').to.equal('pending');
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(input.value, 'the real label renders once the option mounts').to.equal('Pending Thing');
+  });
+
+  it('flags a genuinely unmatched value once loading clears', async () => {
+    const el = (await fixture(
+      html`<lr-combobox value="ghost" loading></lr-combobox>`,
+    )) as LyraCombobox;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(input.hasAttribute('data-unknown-value')).to.be.false;
+
+    el.loading = false;
+    await el.updateComplete;
+    expect(el.value, 'loading never touches value').to.equal('ghost');
+    expect(input.value).to.equal('ghost');
+    expect(input.hasAttribute('data-unknown-value')).to.be.true;
+  });
+
+  it('unset-regression: with loading false (the default), an unmatched value is flagged as before', async () => {
+    const el = (await fixture(
+      html`<lr-combobox value="ghost"></lr-combobox>`,
+    )) as LyraCombobox;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+    expect(input.hasAttribute('data-unknown-value')).to.be.true;
   });
 });
 
@@ -8270,5 +8423,165 @@ describe("lr-combobox activation event", () => {
       activateCount,
       "a host writing `value` is not a user activation"
     ).to.equal(0);
+  });
+});
+
+// R30: `readonly` locks the committed value while keeping the control focusable, selectable and
+// submitted with the form -- mirrors `<lr-input>`'s own `readonly`.
+describe("readonly", () => {
+  it("defaults to false and is not reflected", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    expect(el.readonly).to.be.false;
+    expect(el.hasAttribute("readonly")).to.be.false;
+  });
+
+  it("reflects the attribute both ways", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.readonly = true;
+    await el.updateComplete;
+    expect(el.hasAttribute("readonly")).to.be.true;
+
+    el.readonly = false;
+    await el.updateComplete;
+    expect(el.hasAttribute("readonly")).to.be.false;
+  });
+
+  it("forwards readonly, not disabled, to the native filter input -- it stays focusable", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.readonly = true;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector(
+      '[part="combobox-input"]'
+    ) as HTMLInputElement;
+    expect(input.readOnly).to.be.true;
+    expect(input.disabled).to.be.false;
+
+    input.focus();
+    expect(el.shadowRoot!.activeElement === input, "still focusable").to.be
+      .true;
+  });
+
+  it("rejects opening the listbox while readonly, including a direct .show() call", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.readonly = true;
+    await el.updateComplete;
+
+    el.open = true;
+    await el.updateComplete;
+    expect(el.open, "direct open write is rejected").to.be.false;
+
+    await el.show();
+    expect(el.open, ".show() is rejected too").to.be.false;
+  });
+
+  it("does not open the listbox on focus or ArrowDown while readonly", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.readonly = true;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector(
+      '[part="combobox-input"]'
+    ) as HTMLInputElement;
+
+    input.dispatchEvent(
+      new FocusEvent("focus", { bubbles: true, composed: true })
+    );
+    await el.updateComplete;
+    expect(el.open, "focus must not open the listbox while readonly").to.be
+      .false;
+
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+    );
+    await el.updateComplete;
+    expect(el.open, "ArrowDown must not open the listbox while readonly").to
+      .be.false;
+  });
+
+  it("blocks Backspace-driven tag removal in multiple mode", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.multiple = true;
+    el.value = ["a", "b"];
+    el.readonly = true;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector(
+      '[part="combobox-input"]'
+    ) as HTMLInputElement;
+
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, composed: true })
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(["a", "b"]);
+  });
+
+  it("disables the tag remove button so a click cannot change the value", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.multiple = true;
+    el.value = ["a", "b"];
+    el.readonly = true;
+    await el.updateComplete;
+
+    const removeButton = el.shadowRoot!.querySelector(
+      '[part="tag__remove-button"]'
+    ) as HTMLButtonElement;
+    expect(removeButton.disabled, "the remove button is disabled").to.be
+      .true;
+
+    removeButton.click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(["a", "b"]);
+  });
+
+  it("hides and disables the clear button", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.clearable = true;
+    el.value = "a";
+    el.readonly = true;
+    await el.updateComplete;
+
+    const clearButton = el.shadowRoot!.querySelector(
+      '[part="clear-button"]'
+    ) as HTMLButtonElement | null;
+    if (clearButton) expect(clearButton.disabled).to.be.true;
+  });
+
+  it("still submits the committed value with the form while readonly", async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-combobox name="fruit">
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector("lr-combobox") as LyraCombobox;
+    el.value = "a";
+    el.readonly = true;
+    await el.updateComplete;
+
+    expect(
+      new FormData(form).get("fruit"),
+      "a readonly control still submits its value"
+    ).to.equal("a");
+  });
+
+  it("unset-regression: with readonly false (the default), the listbox opens and tags remain removable exactly as before", async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.multiple = true;
+    el.value = ["a", "b"];
+    await el.updateComplete;
+    expect(el.readonly).to.be.false;
+
+    await el.show();
+    expect(el.open).to.be.true;
+    await el.hide();
+
+    const removeButton = el.shadowRoot!.querySelector(
+      '[part="tag__remove-button"]'
+    ) as HTMLButtonElement;
+    expect(removeButton.disabled).to.be.false;
+    removeButton.click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(["b"]);
   });
 });

@@ -18,7 +18,8 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
-import { declaredDefaultConverter } from '../../../internal/converters.js';
+import { declaredDefaultConverter, literalSetConverter } from '../../../internal/converters.js';
+import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -31,9 +32,18 @@ export type OtpInputType = 'numeric' | 'alpha' | 'alphanumeric';
 export type OtpInputCase = 'preserve' | 'upper' | 'lower';
 /** Direction of the native compact-string selection exposed by the host editing facade. */
 export type OtpInputSelectionDirection = LyraSelectionDirection;
-/** Segment fill treatment, including the OTP-specific joined `contained` treatment. */
+/** Segment fill treatment, including the OTP-specific joined `contained` treatment. Drops the
+ *  shared `LyraAppearance` vocabulary's `accent`/`plain` tiers -- neither has a stylesheet rule
+ *  here, same as `<lr-combobox>`. */
 export type OtpInputAppearance =
   | Extract<LyraAppearance, 'outlined' | 'filled' | 'filled-outlined'> | 'contained';
+
+/** Unsupported values, including the unimplemented `accent`/`plain` tiers, clamp to the
+ *  documented `'outlined'` default. */
+const APPEARANCE = literalSetConverter<OtpInputAppearance>(
+  ['outlined', 'filled', 'filled-outlined', 'contained'],
+  'outlined'
+);
 
 const ACCEPTED: Record<OtpInputType, RegExp> = {
   numeric: /[0-9]/,
@@ -203,10 +213,25 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   /** Validation text shown immediately below the field. It sets the internal input's ARIA invalid
    *  state; rich `error`-slot content takes precedence when supplied. */
   @property({ attribute: 'error-text' }) errorText = '';
-  /** Visual fill treatment for each segment, or a single joined `contained` field. */
-  @property({ reflect: true,
-    converter: declaredDefaultConverter<OtpInputAppearance>('outlined'),
-  }) appearance: OtpInputAppearance = 'outlined';
+  private _appearance: OtpInputAppearance = 'outlined';
+  /**
+   * Visual fill treatment for each segment, or a single joined `contained` field. Does not
+   * implement the shared vocabulary's `accent`/`plain` tiers (unlike `<lr-select>`); an
+   * unsupported value, including a raw attribute/property write outside this type, clamps to the
+   * `'outlined'` default rather than silently rendering unstyled.
+   * @default 'outlined'
+   */
+  @property({ reflect: true, converter: APPEARANCE })
+  get appearance(): OtpInputAppearance {
+    return this._appearance;
+  }
+  set appearance(next: OtpInputAppearance) {
+    const normalized = APPEARANCE.normalizeReflected(this, 'appearance', next);
+    const old = this._appearance;
+    this._appearance = normalized;
+    if (normalized === old) return;
+    this.requestUpdate('appearance', old);
+  }
   /** Automatically focus the real input after the first client render. */
   @property({ type: Boolean }) override autofocus = false;
   /** Submit the owning form after an un-canceled `lr-complete`, one task later so an asynchronous
@@ -282,6 +307,16 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   private autosubmitToken = 0;
   private parsedFormatSource?: string;
   private parsedFormatCells?: Cell[] | null;
+
+  constructor() {
+    super();
+    // Toggles data-scroll-overflow/data-scroll-start/data-scroll-end on the segment row so
+    // otp-input.styles.ts's measured edge-fade rule only paints while the row genuinely overflows
+    // (an absurd `length`, or a narrow host) -- mirrors `<lr-stepper>`/`<lr-segmented>`.
+    observeScrollOverflow(this, () =>
+      this.renderRoot.querySelector('[part~="segments"]')
+    );
+  }
 
   /** The real native input used for focus, selection, autofill, and IME. */
   get input(): HTMLInputElement | null {

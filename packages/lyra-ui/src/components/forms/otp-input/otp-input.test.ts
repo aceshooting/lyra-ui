@@ -379,6 +379,37 @@ it('supports the mapped appearances and shared size ladder', async () => {
   expect(getComputedStyle(fieldOf(contained)).borderStyle).to.equal('solid');
 });
 
+it('clamps an unsupported appearance attribute set at first parse to the default', async () => {
+  const el = await fixture<LyraOtpInput>(
+    html`<lr-otp-input label="OTP" appearance="accent"></lr-otp-input>`
+  );
+  await el.updateComplete;
+  expect(el.appearance).to.equal('outlined');
+  expect(el.getAttribute('appearance')).to.equal('outlined');
+});
+
+it('clamps an unsupported appearance attribute written later, repairing the raw attribute', async () => {
+  const el = await fixture<LyraOtpInput>(
+    html`<lr-otp-input label="OTP"></lr-otp-input>`
+  );
+  el.setAttribute('appearance', 'plain');
+  await el.updateComplete;
+  expect(el.appearance).to.equal('outlined');
+  expect(el.getAttribute('appearance')).to.equal('outlined');
+});
+
+it('keeps every documented appearance value unchanged', async () => {
+  for (const appearance of ['outlined', 'filled', 'filled-outlined', 'contained'] as const) {
+    const el = await fixture<LyraOtpInput>(
+      html`<lr-otp-input label="OTP"></lr-otp-input>`
+    );
+    el.setAttribute('appearance', appearance);
+    await el.updateComplete;
+    expect(el.appearance).to.equal(appearance);
+    expect(el.getAttribute('appearance')).to.equal(appearance);
+  }
+});
+
 it('uses standalone m fallbacks while an unset size inherits a nested outer size context', async () => {
   const standalone = await fixture<LyraOtpInput>(html` <lr-otp-input label="Standalone"></lr-otp-input> `);
   const explicitMedium = await fixture<LyraOtpInput>(html`
@@ -572,6 +603,43 @@ it('contains a long RTL fixed-cell row in a 320px allocation while keeping every
   expect(cells.at(-1)!.getBoundingClientRect().right).to.be.at.most(rowRect.right + 1);
   expect(partOf(el, 'label').getBoundingClientRect().width).to.be.at.most(wrapperRect.width);
   expect(partOf(el, 'hint').getBoundingClientRect().width).to.be.at.most(wrapperRect.width);
+});
+
+it('shows a mask-image edge fade on the horizontally-scrolling segment row once it overflows, matching lr-tab-group/lr-segmented/lr-stepper', async () => {
+  const el = await fixture<LyraOtpInput>(html`
+    <lr-otp-input
+      style="display: block; max-inline-size: 90px"
+      label="Code"
+      length="8"
+    ></lr-otp-input>
+  `);
+  const row = fieldOf(el);
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  );
+  expect(row.scrollWidth).to.be.greaterThan(row.clientWidth);
+  const computed = getComputedStyle(row);
+  const maskImage =
+    computed.getPropertyValue('mask-image') ||
+    computed.getPropertyValue('-webkit-mask-image');
+  expect(maskImage).to.not.equal('none');
+  expect(maskImage).to.contain('gradient');
+});
+
+it('leaves a segment row that fits completely unmasked', async () => {
+  const el = await fixture<LyraOtpInput>(
+    html`<lr-otp-input label="Code"></lr-otp-input>`
+  );
+  const row = fieldOf(el);
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  );
+  expect(row.scrollWidth).to.be.at.most(row.clientWidth + 1);
+  const computed = getComputedStyle(row);
+  const maskImage =
+    computed.getPropertyValue('mask-image') ||
+    computed.getPropertyValue('-webkit-mask-image');
+  expect(maskImage).to.equal('none');
 });
 
 it('forwards autofocus to the real input and focuses it after first render', async () => {

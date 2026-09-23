@@ -68,6 +68,94 @@ export const styles = css`
     border-radius: var(--segment-border-radius, var(--lr-form-control-radius, var(--lr-radius)));
     background: var(--lr-color-surface-raised);
   }
+  /* Edge fade, gated on real overflow: ScrollOverflowController sets data-scroll-overflow from a
+     scrollWidth/clientWidth measurement; unconditional, it would fade a segment row that already
+     fits (the same damage lr-tab-group/lr-segmented/lr-stepper fixed). One-sided and RTL-aware:
+     data-scroll-start/data-scroll-end (same controller, logical, live on scroll) mark the edges
+     with more to reach, so a fully-scrolled edge is not faded. Both are :where()-wrapped to pin
+     specificity to the [data-scroll-overflow]-only baseline. */
+  [part~='segments'][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  [part~='segments'][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  [part~='segments'][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl))
+    [part~='segments'][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl))
+    [part~='segments'][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
   [part='control'] {
     position: absolute;
     inset: 0;
