@@ -24,21 +24,24 @@ export const styles = css`
   }
   /* Palette slot for the effective variant -- variant itself, or the matching thresholds entry.
      A separate custom property from --lr-gauge-fill, which stays the highest-priority public
-     override and is left completely alone by these rules. */
+     override and is left completely alone by these rules. Each variant also gets its own scoped
+     --lr-gauge-<variant>-fill, read as the innermost fallback before the shared token, so a
+     consumer can retint one variant's fill without the uniform --lr-gauge-fill override, which
+     would retint every variant at once. */
   :host([data-effective-variant='neutral']) {
-    --_lr-gauge-variant-fill: var(--lr-color-neutral);
+    --_lr-gauge-variant-fill: var(--lr-gauge-neutral-fill, var(--lr-color-neutral));
   }
   :host([data-effective-variant='brand']) {
-    --_lr-gauge-variant-fill: var(--lr-color-brand);
+    --_lr-gauge-variant-fill: var(--lr-gauge-brand-fill, var(--lr-color-brand));
   }
   :host([data-effective-variant='success']) {
-    --_lr-gauge-variant-fill: var(--lr-color-success);
+    --_lr-gauge-variant-fill: var(--lr-gauge-success-fill, var(--lr-color-success));
   }
   :host([data-effective-variant='warning']) {
-    --_lr-gauge-variant-fill: var(--lr-color-warning);
+    --_lr-gauge-variant-fill: var(--lr-gauge-warning-fill, var(--lr-color-warning));
   }
   :host([data-effective-variant='danger']) {
-    --_lr-gauge-variant-fill: var(--lr-color-danger);
+    --_lr-gauge-variant-fill: var(--lr-gauge-danger-fill, var(--lr-color-danger));
   }
   svg {
     display: block;

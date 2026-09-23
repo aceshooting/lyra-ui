@@ -217,6 +217,10 @@ function formatCount(n: number, locale: string): string {
  *   `color`/`tone` — the same ladder and the same inline custom-property escape `segment` uses.
  * @csspart legend-label - The text of a legend item (the segment's `label`).
  * @cssprop [--lr-context-meter-segment-color] - Per-segment color. Set inline on `[part="segment"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge. The matching `[part="legend-swatch"]` reads the same property, so a swatch can never disagree with the band it stands for.
+ * @cssprop [--lr-context-meter-tone-brand-bg=var(--lr-color-brand)] - Fill of a `data-tone="brand"` band, legend swatch, and (as the ring shape's stroke) arc, scoped to just this component so retinting it does not repaint every other `--lr-color-brand` consumer.
+ * @cssprop [--lr-context-meter-tone-success-bg=var(--lr-color-success)] - Fill of a `data-tone="success"` band, legend swatch, and ring arc, scoped to just this component.
+ * @cssprop [--lr-context-meter-tone-warning-bg=var(--lr-color-warning)] - Fill of a `data-tone="warning"` band, legend swatch, and ring arc, scoped to just this component.
+ * @cssprop [--lr-context-meter-tone-danger-bg=var(--lr-color-danger)] - Fill of a `data-tone="danger"` band, legend swatch, and ring arc, scoped to just this component.
  * @cssprop [--lr-context-meter-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch.
  * @cssprop [--lr-context-meter-track-size=var(--lr-size-0-5rem)] - Block size (thickness) of the `bar`-shape track, and therefore of its filled segments.
  * @cssprop [--lr-context-meter-track-radius=calc(var(--lr-radius) * 0.5)] - Corner radius of the `bar`-shape track.

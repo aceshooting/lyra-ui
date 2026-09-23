@@ -655,6 +655,52 @@ describe('track and seam cssprops', () => {
   });
 });
 
+describe('tone-color cssprop indirection', () => {
+  const dangerSegments = () => [{ label: 'Over budget', value: 10, tone: 'danger' as const }];
+
+  it('renders the default data-tone="danger" color byte-identically to the bare shared token, on both the bar segment and its legend swatch', async () => {
+    const el = (await fixture(html`
+      <lr-context-meter total="100" show-legend .segments=${dangerSegments()}></lr-context-meter>
+    `)) as LyraContextMeter;
+    const segment = el.shadowRoot!.querySelector('[part~="segment"]') as HTMLElement;
+    const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+    const probe = document.createElement('span');
+    probe.style.background = 'var(--lr-color-danger)';
+    el.shadowRoot!.append(probe);
+    const expected = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    expect(expected, '--lr-color-danger must resolve to a real opaque colour').to.match(
+      /^rgb\(\d+, \d+, \d+\)$/,
+    );
+    expect(getComputedStyle(segment).backgroundColor).to.equal(expected);
+    expect(getComputedStyle(swatch).backgroundColor).to.equal(expected);
+  });
+
+  it('lets an ancestor retheme just the danger tone via --lr-context-meter-tone-danger-bg, on the bar segment and its legend swatch, without touching the shared --lr-color-danger token', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-context-meter-tone-danger-bg: rgb(10, 20, 30);">
+        <lr-context-meter total="100" show-legend .segments=${dangerSegments()}></lr-context-meter>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-context-meter') as LyraContextMeter;
+    const segment = el.shadowRoot!.querySelector('[part~="segment"]') as HTMLElement;
+    const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+    expect(getComputedStyle(segment).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(swatch).backgroundColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('retints the ring-shape danger arc stroke via the same --lr-context-meter-tone-danger-bg override', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-context-meter-tone-danger-bg: rgb(10, 20, 30);">
+        <lr-context-meter shape="ring" total="100" .segments=${dangerSegments()}></lr-context-meter>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-context-meter') as LyraContextMeter;
+    const arc = el.shadowRoot!.querySelector('[part~="segment"]') as SVGElement;
+    expect(getComputedStyle(arc).stroke).to.equal('rgb(10, 20, 30)');
+  });
+});
+
 describe('projectContextMeterSegments hardening', () => {
   it('never invokes an accessor-backed disabled, and never treats it as disabled', async () => {
     // The shared public-collection snapshot boundary detaches plain records WITHOUT invoking

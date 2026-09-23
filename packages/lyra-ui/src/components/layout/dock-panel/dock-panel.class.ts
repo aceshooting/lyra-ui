@@ -565,17 +565,19 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     this.emit('lr-collapse-change', Object.freeze({ collapsed: next }));
   };
 
-  /** Rotation (deg) for the collapse-toggle's chevron: it points toward the
-   *  panel's pinned edge when expanded (that's the direction clicking it
-   *  will shrink toward) and away from it when collapsed (the direction
-   *  clicking it will grow toward) -- mirrors lr-widget's collapse-button
-   *  rotate-the-wrapping-part technique, generalized across four possible
-   *  pinned edges and, for `start`/`end`, RTL. */
-  private get toggleChevronDeg(): number {
+  /** Rotation (deg) for the collapse-toggle's chevron on the `top`/`bottom` edges: it points
+   *  toward the panel's pinned edge when expanded (the direction clicking it will shrink toward)
+   *  and away from it when collapsed (the direction clicking it will grow toward) -- mirrors
+   *  lr-widget's collapse-button rotate-the-wrapping-part technique. Direction-independent (the
+   *  block axis is unaffected by `dir`), so it stays a plain JS-computed inline rotation.
+   *  `start`/`end` mirroring, which DOES depend on `dir`, is a live `:dir(rtl)` CSS rule on
+   *  `[part="collapse-toggle"] span` instead (dock-panel.styles.ts) so an ancestor `dir` flip
+   *  repaints it with no re-render needed -- returns `undefined` for those two edges so the
+   *  template leaves no competing inline `transform` behind. */
+  private get topBottomChevronDeg(): number | undefined {
     if (this.edge === 'top') return this.collapsed ? 90 : -90;
     if (this.edge === 'bottom') return this.collapsed ? -90 : 90;
-    const pinnedPhysicalEnd = this.edge === 'end' ? !isRtl(this) : isRtl(this);
-    return this.collapsed !== pinnedPhysicalEnd ? 0 : 180;
+    return undefined;
   }
 
   private handleTemplate(): TemplateResult | typeof nothing {
@@ -615,7 +617,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       @click=${this.toggleCollapsed}
     >
       <span
-        style=${`display:inline-flex;transform:rotate(${this.toggleChevronDeg}deg)`}
+        style=${this.topBottomChevronDeg === undefined
+          ? 'display:inline-flex'
+          : `display:inline-flex;transform:rotate(${this.topBottomChevronDeg}deg)`}
         >${chevronIcon()}</span
       >
     </button>`;

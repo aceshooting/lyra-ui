@@ -86,7 +86,7 @@ export const styles = css`
     );
   }
   [part='option'][aria-selected='true'] {
-    color: var(--lr-color-brand);
+    color: var(--lr-mention-popover-option-active-color, var(--lr-color-brand));
   }
   /* A row whose items entry declares disabled is non-actionable: it keeps its own label/icon
      (still the datum it always was) but loses the pointer cursor and every hover/press affordance

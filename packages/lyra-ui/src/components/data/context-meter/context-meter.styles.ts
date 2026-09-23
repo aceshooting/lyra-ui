@@ -67,16 +67,16 @@ export const styles = css`
       var(--lr-context-meter-segment-seam-color, var(--lr-color-surface));
   }
   [part~='segment'][data-tone='brand'] {
-    background: var(--lr-color-brand);
+    background: var(--lr-context-meter-tone-brand-bg, var(--lr-color-brand));
   }
   [part~='segment'][data-tone='success'] {
-    background: var(--lr-color-success);
+    background: var(--lr-context-meter-tone-success-bg, var(--lr-color-success));
   }
   [part~='segment'][data-tone='warning'] {
-    background: var(--lr-color-warning);
+    background: var(--lr-context-meter-tone-warning-bg, var(--lr-color-warning));
   }
   [part~='segment'][data-tone='danger'] {
-    background: var(--lr-color-danger);
+    background: var(--lr-context-meter-tone-danger-bg, var(--lr-color-danger));
   }
   [part~='segment'][style*='--lr-context-meter-segment-color'] {
     background: var(--lr-context-meter-segment-color);
@@ -112,16 +112,16 @@ export const styles = css`
     background: var(--lr-color-border);
   }
   [part='legend-swatch'][data-tone='brand'] {
-    background: var(--lr-color-brand);
+    background: var(--lr-context-meter-tone-brand-bg, var(--lr-color-brand));
   }
   [part='legend-swatch'][data-tone='success'] {
-    background: var(--lr-color-success);
+    background: var(--lr-context-meter-tone-success-bg, var(--lr-color-success));
   }
   [part='legend-swatch'][data-tone='warning'] {
-    background: var(--lr-color-warning);
+    background: var(--lr-context-meter-tone-warning-bg, var(--lr-color-warning));
   }
   [part='legend-swatch'][data-tone='danger'] {
-    background: var(--lr-color-danger);
+    background: var(--lr-context-meter-tone-danger-bg, var(--lr-color-danger));
   }
   [part='legend-swatch'][style*='--lr-context-meter-segment-color'] {
     background: var(--lr-context-meter-segment-color);
@@ -269,16 +269,16 @@ export const styles = css`
       stroke-dashoffset var(--lr-transition-base);
   }
   :host([shape='ring']) [part~='segment'][data-tone='brand'] {
-    stroke: var(--lr-color-brand);
+    stroke: var(--lr-context-meter-tone-brand-bg, var(--lr-color-brand));
   }
   :host([shape='ring']) [part~='segment'][data-tone='success'] {
-    stroke: var(--lr-color-success);
+    stroke: var(--lr-context-meter-tone-success-bg, var(--lr-color-success));
   }
   :host([shape='ring']) [part~='segment'][data-tone='warning'] {
-    stroke: var(--lr-color-warning);
+    stroke: var(--lr-context-meter-tone-warning-bg, var(--lr-color-warning));
   }
   :host([shape='ring']) [part~='segment'][data-tone='danger'] {
-    stroke: var(--lr-color-danger);
+    stroke: var(--lr-context-meter-tone-danger-bg, var(--lr-color-danger));
   }
   :host([shape='ring']) [part~='segment'][style*='--lr-context-meter-segment-color'] {
     stroke: var(--lr-context-meter-segment-color);

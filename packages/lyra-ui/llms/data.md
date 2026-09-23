@@ -1659,7 +1659,12 @@ true), `label` (rendered only while `label` is non-empty)
 
 **Themeable custom properties:** `--lr-gauge-fill` (fill stroke; overrides `variant`/`thresholds`
 entirely and falls back to the effective variant's shared semantic token —
-`--lr-color-brand` by default).
+`--lr-color-brand` by default). Each variant also has its own scoped fill, read as the innermost
+fallback before the shared token so a consumer can retint one variant without `--lr-gauge-fill`'s
+uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--lr-color-neutral)`),
+`--lr-gauge-brand-fill` (default `var(--lr-color-brand)`), `--lr-gauge-success-fill` (default
+`var(--lr-color-success)`), `--lr-gauge-warning-fill` (default `var(--lr-color-warning)`), and
+`--lr-gauge-danger-fill` (default `var(--lr-color-danger)`).
 
 **Optional peer deps:** none.
 
@@ -2661,8 +2666,12 @@ block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` 
 (default `0.625rem` — a legend swatch's inline- and block-size, category and marker rows alike), and
 `--lr-sequence-strip-legend-marker-bg` (default `var(--lr-color-surface-raised)` — the neutral chip
 background behind the marker legend row's bar; it stands in for "any cell", so it deliberately
-matches no category color), and `--lr-sequence-strip-disabled-opacity` (default `var(--lr-opacity-disabled)` — opacity of
-a cell whose activated item sets `disabled`); the tooltip also consumes shared tokens
+matches no category color), `--lr-sequence-strip-disabled-opacity` (default `var(--lr-opacity-disabled)` — opacity of
+a cell whose activated item sets `disabled`), `--lr-sequence-strip-selected-color` (default
+`var(--lr-color-text)` — colour of the persistent selection ring on a cell whose index is in
+`selectedIndex`), and `--lr-sequence-strip-selected-focus-color` (default
+`var(--lr-focus-ring-color)` — colour of that same ring while the cell also has keyboard focus); the
+tooltip also consumes shared tokens
 `--lr-color-surface`, `--lr-color-text`, `--lr-font-size-xs`, `--lr-radius`, and `--lr-shadow`, and
 the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-font-size-xs`,
 `--lr-color-text-quiet`, and `--lr-radius-xs`.
@@ -3692,9 +3701,15 @@ ring stays intact. `--lr-context-meter-selected-arc-stroke` (default `16`, in th
 one bounding box, so a selected arc reports itself by thickening in place rather than by an outline
 that would trace the whole ring identically for every selection.
 `--lr-context-meter-disabled-opacity` (default `var(--lr-opacity-disabled)`) dims a band or legend row whose entry sets
-`disabled`; the band keeps its own colour, since that colour is the datum. Otherwise the component consumes shared tokens
+`disabled`; the band keeps its own colour, since that colour is the datum. Each `data-tone` band
+color is independently retintable, scoped to just this component rather than the shared token
+every other component also reads: `--lr-context-meter-tone-brand-bg` (default
+`var(--lr-color-brand)`), `--lr-context-meter-tone-success-bg` (default `var(--lr-color-success)`),
+`--lr-context-meter-tone-warning-bg` (default `var(--lr-color-warning)`) and
+`--lr-context-meter-tone-danger-bg` (default `var(--lr-color-danger)`) — each read by the bar
+segment, its legend swatch, and (as the `stroke`) the ring shape's arc, so all three surfaces for a
+tone stay in sync. Otherwise the component consumes shared tokens
 `--lr-space-xs`, `--lr-color-text-quiet`, `--lr-font`, `--lr-radius`, `--lr-color-border`,
-`--lr-color-brand`, `--lr-color-success`, `--lr-color-warning`, `--lr-color-danger`,
 `--lr-transition-base`.
 
 **Optional peer deps:** none.

@@ -400,6 +400,50 @@ describe('--lr-gauge-fill reaches the rendered [part="fill"] stroke', () => {
   });
 });
 
+describe('per-variant fill cssprop indirection', () => {
+  it('retints only the danger variant fill via --lr-gauge-danger-fill, leaving --lr-gauge-fill unset and the danger token unread', async () => {
+    const el = (await fixture(
+      html`<lr-gauge variant="danger" value="30" min="0" max="100"></lr-gauge>`,
+    )) as LyraGauge;
+    el.style.setProperty('--lr-gauge-danger-fill', 'rgb(10, 20, 30)');
+    await el.updateComplete;
+    const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGElement;
+    expect(getComputedStyle(fill).stroke).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('does not retint the success variant when only --lr-gauge-danger-fill is set', async () => {
+    const el = (await fixture(
+      html`<lr-gauge variant="success" value="30" min="0" max="100"></lr-gauge>`,
+    )) as LyraGauge;
+    const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGElement;
+    const unset = getComputedStyle(fill).stroke;
+    el.style.setProperty('--lr-gauge-danger-fill', 'rgb(10, 20, 30)');
+    await el.updateComplete;
+    expect(getComputedStyle(fill).stroke).to.equal(unset);
+  });
+
+  it('lets --lr-gauge-fill still outrank a per-variant override, unchanged from its existing highest-priority role', async () => {
+    const el = (await fixture(
+      html`<lr-gauge variant="danger" value="30" min="0" max="100"></lr-gauge>`,
+    )) as LyraGauge;
+    el.style.setProperty('--lr-gauge-danger-fill', 'rgb(10, 20, 30)');
+    el.style.setProperty('--lr-gauge-fill', 'rgb(40, 50, 60)');
+    await el.updateComplete;
+    const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGElement;
+    expect(getComputedStyle(fill).stroke).to.equal('rgb(40, 50, 60)');
+  });
+
+  it('renders byte-identically to the pre-indirection output for every variant when the new cssprops are unset', async () => {
+    for (const variant of ['neutral', 'brand', 'success', 'warning', 'danger'] as const) {
+      expect(await toneStroke(variant)).to.equal(
+        await fillStroke(
+          (await fixture(html`<lr-gauge variant=${variant}></lr-gauge>`)) as LyraGauge,
+        ),
+      );
+    }
+  });
+});
+
 describe('thresholds', () => {
   it('defaults to an empty array and the brand variant, leaving committed behavior unchanged', async () => {
     const el = (await fixture(html`<lr-gauge value="30" min="0" max="100"></lr-gauge>`)) as LyraGauge;

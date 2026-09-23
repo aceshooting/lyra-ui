@@ -1765,6 +1765,29 @@ describe('active-option row cssprop indirection', () => {
     expect(expected, '--lr-color-brand-quiet must resolve to a real opaque colour').to.match(/^rgb\(\d+, \d+, \d+\)$/);
     expect(getComputedStyle(active).backgroundColor).to.equal(expected);
   });
+
+  it('recolors the active suggestion row TEXT from --lr-mention-popover-option-active-color on an ancestor, independently of --lr-mention-popover-option-active-bg', async () => {
+    const el = await openWithItems();
+    el.style.setProperty('--lr-mention-popover-option-active-color', 'rgb(10, 20, 30)');
+    await el.updateComplete;
+    // Row 0 is pre-highlighted on open (see the class doc comment on activeIndex), which sets both
+    // aria-selected="true" and data-active from the same boolean.
+    const active = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    expect(getComputedStyle(active).color).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('renders the active row TEXT color byte-identically to the pre-cssprop-indirection output when the prop is unset', async () => {
+    const el = await openWithItems();
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    const probe = document.createElement('div');
+    el.shadowRoot!.appendChild(probe);
+    probe.style.color = 'var(--lr-color-brand)';
+    const expected = getComputedStyle(probe).color;
+    probe.remove();
+    expect(expected, '--lr-color-brand must resolve to a real opaque colour').to.match(/^rgb\(\d+, \d+, \d+\)$/);
+    expect(getComputedStyle(active).color).to.equal(expected);
+  });
 });
 
 // -- Available-space clamping (internal/positioner.js's place()) ------------

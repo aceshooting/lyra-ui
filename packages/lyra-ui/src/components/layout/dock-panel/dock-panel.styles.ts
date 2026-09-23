@@ -211,6 +211,38 @@ export const styles = css`
   :host(:dir(rtl)[edge="bottom"]) [part="collapse-toggle"] {
     transform: translateX(50%);
   }
+  /* Collapse-toggle chevron mirroring for the start/end edges (the top/bottom rotation stays
+     JS-computed in topBottomChevronDeg -- it depends only on collapsed, not direction). The chevron
+     points toward the panel's pinned edge when expanded and away from it when collapsed; since
+     start/end swap which physical side they pin to under RTL, a live dir(rtl) rule keeps the
+     glyph correct even when an ancestor's dir flips after this host has already rendered once --
+     no JS re-render required, unlike the inline-style rotation this replaces. The more specific
+     collapsed/dir(rtl) combinations below rely on selector specificity (more attribute selectors
+     always outrank fewer), not source order, to win. */
+  :host([edge="start"]) [part="collapse-toggle"] span {
+    transform: rotate(180deg);
+  }
+  :host([edge="start"][collapsed]) [part="collapse-toggle"] span {
+    transform: rotate(0deg);
+  }
+  :host([edge="end"]) [part="collapse-toggle"] span {
+    transform: rotate(0deg);
+  }
+  :host([edge="end"][collapsed]) [part="collapse-toggle"] span {
+    transform: rotate(180deg);
+  }
+  :host(:dir(rtl)[edge="start"]) [part="collapse-toggle"] span {
+    transform: rotate(0deg);
+  }
+  :host(:dir(rtl)[edge="start"][collapsed]) [part="collapse-toggle"] span {
+    transform: rotate(180deg);
+  }
+  :host(:dir(rtl)[edge="end"]) [part="collapse-toggle"] span {
+    transform: rotate(180deg);
+  }
+  :host(:dir(rtl)[edge="end"][collapsed]) [part="collapse-toggle"] span {
+    transform: rotate(0deg);
+  }
   @media (prefers-reduced-motion: reduce) {
     [part="collapse-toggle"],
     [part="handle"] {

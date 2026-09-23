@@ -324,6 +324,9 @@ export interface LyraMentionPopoverEventMap {
  * @csspart empty - The "no matches" message, shown when `items`/`query` produce zero rows.
  * @cssprop [--lr-mention-popover-option-active-bg=var(--lr-color-brand-quiet)] - Background of the
  *   hovered or `[data-active]` (keyboard-highlighted) suggestion row.
+ * @cssprop [--lr-mention-popover-option-active-color=var(--lr-color-brand)] - Text color of the
+ *   `aria-selected="true"` (keyboard-highlighted) suggestion row, independent of
+ *   `--lr-mention-popover-option-active-bg`.
  * @cssprop [--lr-mention-popover-option-disabled-opacity=0.5] - Opacity of a row whose `items` entry sets `disabled`.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  * on the listbox.

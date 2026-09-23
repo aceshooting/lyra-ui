@@ -1081,20 +1081,27 @@ it("preserves the last expanded extent across a collapse/expand round trip", asy
   expect(el.getBoundingClientRect().width).to.be.closeTo(280, 1);
 });
 
+// The start/end chevron mirroring is a live CSS :dir(rtl) rule (dock-panel.styles.ts), not a
+// JS-computed inline style, so it's read back through getComputedStyle's resolved transform
+// matrix rather than the (now edge="top"/"bottom"-only) inline style attribute.
+function chevronRotationDeg(el: LyraDockPanel): number {
+  const span = el.shadowRoot!.querySelector(
+    '[part="collapse-toggle"] span'
+  ) as HTMLElement;
+  const matrix = new DOMMatrixReadOnly(getComputedStyle(span).transform);
+  return Math.round(Math.atan2(matrix.b, matrix.a) * (180 / Math.PI));
+}
+
 it("rotates the collapse-toggle chevron toward the pinned edge when expanded, away when collapsed", async () => {
   // edge="end" in LTR is physically pinned to the right: expanded, the
   // chevron (which points right at 0deg by default) should point straight
   // at that pinned edge; collapsed, it should flip to point away (left).
   const endLtr = await dockedFixture("collapsible", "end");
   await elementUpdated(endLtr);
-  const chevron = (el: LyraDockPanel) =>
-    el.shadowRoot!.querySelector(
-      '[part="collapse-toggle"] span'
-    ) as HTMLElement;
-  expect(chevron(endLtr).style.transform).to.equal("rotate(0deg)");
+  expect(chevronRotationDeg(endLtr)).to.equal(0);
   endLtr.collapsed = true;
   await elementUpdated(endLtr);
-  expect(chevron(endLtr).style.transform).to.equal("rotate(180deg)");
+  expect(Math.abs(chevronRotationDeg(endLtr))).to.equal(180);
 
   // Mirrored case: edge="start" under dir="rtl" is *also* physically pinned
   // to the right (the inline-start side flips to the right under RTL), so
@@ -1109,10 +1116,30 @@ it("rotates the collapse-toggle chevron toward the pinned edge when expanded, aw
   )) as HTMLDivElement;
   const startRtl = rtlWrapper.querySelector("lr-dock-panel") as LyraDockPanel;
   await elementUpdated(startRtl);
-  expect(chevron(startRtl).style.transform).to.equal("rotate(0deg)");
+  expect(chevronRotationDeg(startRtl)).to.equal(0);
   startRtl.collapsed = true;
   await elementUpdated(startRtl);
-  expect(chevron(startRtl).style.transform).to.equal("rotate(180deg)");
+  expect(Math.abs(chevronRotationDeg(startRtl))).to.equal(180);
+});
+
+it("mirrors the collapse-toggle chevron immediately when an ancestor's dir flips post-mount, with no other reactive property changing", async () => {
+  // Regression for the chevron staying stale after an ancestor dir flip: with the rotation baked
+  // into a JS-computed inline style, nothing re-renders lr-dock-panel when an ancestor's `dir`
+  // attribute changes after mount, so the glyph pointed the pre-switch physical way until an
+  // unrelated re-render happened to refresh it. A live :dir(rtl) CSS rule needs no re-render at
+  // all -- the browser re-evaluates it the instant the ancestor's `dir` changes.
+  const wrapper = (await fixture(
+    html`<div style="position: relative; height: 10rem; display: flex;">
+      <lr-dock-panel edge="start" collapsible></lr-dock-panel>
+    </div>`
+  )) as HTMLDivElement;
+  const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
+  await elementUpdated(el);
+  expect(chevronRotationDeg(el)).to.equal(180);
+
+  // Flip the ancestor's dir -- no other reactive property of the panel changes.
+  wrapper.dir = "rtl";
+  expect(Math.abs(chevronRotationDeg(el))).to.equal(0);
 });
 
 it("points top and bottom collapse toggles toward their pinned edge until collapsed", async () => {

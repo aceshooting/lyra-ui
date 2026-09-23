@@ -55,7 +55,8 @@ export const styles = css`
   /* The controlled selection reads as a persistent ring, not a colour change: a cell's background
      is data (its category colour), so tinting it would misreport the category. */
   [part='cell'][data-selected] {
-    outline: var(--lr-focus-ring-width) solid var(--lr-color-text);
+    outline: var(--lr-focus-ring-width) solid
+      var(--lr-sequence-strip-selected-color, var(--lr-color-text));
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   /* The selection ring above and the :hover/:focus-visible ring further up are both (0,2,0) with
@@ -64,7 +65,7 @@ export const styles = css`
      channel alone. :active needs no companion: its declaration is byte-identical to the selection
      ring's. */
   [part='cell'][data-selected]:focus-visible {
-    outline-color: var(--lr-focus-ring-color);
+    outline-color: var(--lr-sequence-strip-selected-focus-color, var(--lr-focus-ring-color));
   }
   /* Round the strip's outer ends via the first/last cell, not overflow:hidden on [part='base'] --
      that would clip [part='tooltip'], deliberately positioned outside the base's own box. */

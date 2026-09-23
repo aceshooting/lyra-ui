@@ -1243,6 +1243,58 @@ it('leaves the selection ring in place while a selected cell is merely hovered',
   }
 });
 
+describe('selection-ring cssprop indirection', () => {
+  it('lets an ancestor retheme the selection ring color via --lr-sequence-strip-selected-color, without touching the shared --lr-color-text token', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-sequence-strip-selected-color: rgb(10, 20, 30);">
+        <lr-sequence-strip></lr-sequence-strip>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
+    el.items = items;
+    el.categories = categories;
+    el.selectedIndex = 1;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-index="1"]')!;
+    expect(getComputedStyle(selected).outlineColor).to.equal('rgb(10, 20, 30)');
+  });
+
+  it('lets an ancestor retheme the focused selection ring color via --lr-sequence-strip-selected-focus-color, without touching the shared --lr-focus-ring-color token', async () => {
+    const wrapper = (await fixture(html`
+      <div style="--lr-sequence-strip-selected-focus-color: rgb(40, 50, 60);">
+        <lr-sequence-strip></lr-sequence-strip>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
+    el.items = items;
+    el.categories = categories;
+    el.selectedIndex = 1;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-index="1"]')!;
+    selected.focus();
+    expect(getComputedStyle(selected).outlineColor).to.equal('rgb(40, 50, 60)');
+  });
+
+  it('renders the selection ring byte-identically to the pre-indirection shared tokens when the new cssprops are unset', async () => {
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = items;
+    el.categories = categories;
+    el.selectedIndex = 1;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-index="1"]')!;
+    const probe = document.createElement('span');
+    probe.style.outlineColor = 'var(--lr-color-text)';
+    el.shadowRoot!.append(probe);
+    const expectedRest = getComputedStyle(probe).outlineColor;
+    probe.style.outlineColor = 'var(--lr-focus-ring-color)';
+    const expectedFocus = getComputedStyle(probe).outlineColor;
+    probe.remove();
+    expect(getComputedStyle(selected).outlineColor).to.equal(expectedRest);
+    selected.focus();
+    expect(getComputedStyle(selected).outlineColor).to.equal(expectedFocus);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Span-preserving bucketed overview past the render cap (16.0.0).
 // ---------------------------------------------------------------------------

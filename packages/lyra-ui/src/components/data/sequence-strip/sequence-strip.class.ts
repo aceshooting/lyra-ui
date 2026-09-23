@@ -199,6 +199,8 @@ export interface LyraSequenceStripEventMap {
  * @cssprop [--lr-sequence-strip-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch (category and marker rows alike).
  * @cssprop [--lr-sequence-strip-legend-marker-bg=var(--lr-color-surface-raised)] - Neutral chip background behind the marker legend row's bar; it stands in for "any cell", so it deliberately matches no category color.
  * @cssprop [--lr-sequence-strip-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a cell whose activated item sets `disabled`.
+ * @cssprop [--lr-sequence-strip-selected-color=var(--lr-color-text)] - Colour of the persistent selection ring on a cell whose index is in `selectedIndex`.
+ * @cssprop [--lr-sequence-strip-selected-focus-color=var(--lr-focus-ring-color)] - Colour of that same selection ring while the cell also has keyboard focus.
  * @status stable
  * @since 4.0.0
  */

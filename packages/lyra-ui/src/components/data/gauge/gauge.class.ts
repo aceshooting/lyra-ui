@@ -102,7 +102,18 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * @csspart label - The label text. Rendered only while `label` is non-empty.
  * @cssprop [--lr-gauge-fill=var(--lr-color-brand)] - Fill stroke for radial, ring, and linear
  * gauges. The token default follows the effective variant -- `variant`, or the matching
- * `thresholds` entry -- rather than always `brand`.
+ * `thresholds` entry -- rather than always `brand`. Outranks every per-variant token below, so
+ * setting it retints the fill uniformly regardless of the effective variant.
+ * @cssprop [--lr-gauge-neutral-fill=var(--lr-color-neutral)] - Fill stroke used when the
+ * effective variant is `neutral`, without disturbing `--lr-gauge-fill`'s higher-priority role.
+ * @cssprop [--lr-gauge-brand-fill=var(--lr-color-brand)] - Fill stroke used when the effective
+ * variant is `brand`.
+ * @cssprop [--lr-gauge-success-fill=var(--lr-color-success)] - Fill stroke used when the
+ * effective variant is `success`.
+ * @cssprop [--lr-gauge-warning-fill=var(--lr-color-warning)] - Fill stroke used when the
+ * effective variant is `warning`.
+ * @cssprop [--lr-gauge-danger-fill=var(--lr-color-danger)] - Fill stroke used when the effective
+ * variant is `danger`.
  * @status stable
  * @since 4.0.0
  */
