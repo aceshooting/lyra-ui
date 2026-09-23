@@ -72,7 +72,7 @@ in `solarleb_cygnus/AGENTS.md`.
 
 ## Monorepo layout
 
-pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@12.4.2`.
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@12.5.1`.
 The published package supports Node ≥ 20; contributor generation, measured-quality, release, and
 primary CI work use the exact Node `22.23.2` recorded in [`.nvmrc`](.nvmrc). Run `nvm use` before
 those commands rather than relying on an arbitrary Node 22 patch.
