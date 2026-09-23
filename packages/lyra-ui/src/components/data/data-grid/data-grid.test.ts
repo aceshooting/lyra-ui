@@ -842,6 +842,17 @@ it('skips a column definition whose id accessor throws, keeping valid neighbors'
   expect(columnIds).to.deep.equal(['name', 'team']);
 });
 
+it('treats a blank column label as absent and falls back to the humanized field name', async () => {
+  const element = await dataGrid();
+  element.columns = [
+    { field: 'name', label: 'Name' },
+    { field: 'team', label: '' },
+  ];
+  await element.updateComplete;
+  const cell = header(element, 'team');
+  expect(cell.textContent?.trim()).to.equal('Team');
+});
+
 it('treats a primitive (non-object, non-function) row as having no identity, without throwing', async () => {
   const element = await dataGrid();
   element.data = ['just a string', 42, true] as unknown as Person[];

@@ -822,6 +822,18 @@ it('is accessible while open', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('falls back to the derived native name when a locale entry has an explicit blank label', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .optionDisplay=${'label'} .locales=${[{ tag: 'fr', label: '' }]}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  el.shadowRoot!.querySelector('[part="listbox"]')?.getAnimations().forEach((animation) => animation.finish());
+  const option = el.shadowRoot!.querySelector('[part="option"]');
+  expect(option!.textContent!.trim()).to.equal(localeNativeName('fr'));
+  await expect(el).to.be.accessible();
+});
+
 // RTL fixture: logical layout with no accidental Left/Right remap.
 it('mirrors row text-align via logical properties under dir="rtl", with no Left/Right remap added', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`

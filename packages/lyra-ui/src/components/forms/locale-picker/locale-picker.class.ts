@@ -807,14 +807,21 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   /** `locales` normalized to `{ tag, label }[]`: every explicit catalog wins outright, including
    *  an empty array; only `undefined` selects every locale
-   *  `getRegisteredLyraLocales()` currently reports. */
+   *  `getRegisteredLyraLocales()` currently reports. An explicitly blank (or whitespace-only)
+   *  per-entry `label` carries no useful information -- it falls back to the derived
+   *  `localeNativeName(tag)` exactly like an omitted label, rather than rendering/announcing an
+   *  empty option row. */
   private get normalizedEntries(): NormalizedLocaleEntry[] {
     const raw = this.locales;
     if (raw !== undefined) {
       return raw.map((entry): NormalizedLocaleEntry =>
         typeof entry === 'string'
           ? { tag: entry, label: localeNativeName(entry) }
-          : { tag: entry.tag, label: entry.label ?? localeNativeName(entry.tag), country: entry.country },
+          : {
+              tag: entry.tag,
+              label: entry.label !== undefined && entry.label.trim().length > 0 ? entry.label : localeNativeName(entry.tag),
+              country: entry.country,
+            },
       );
     }
     return getRegisteredLyraLocales().map((tag) => ({ tag, label: localeNativeName(tag) }));

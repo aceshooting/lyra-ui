@@ -246,6 +246,14 @@ export type TableSortDetail = TableSortRequestDetail | TableSortCommitDetail;
 interface TableColumnCommon<T> {
   key: string;
   label: string;
+  /** Accessible name override for this column's `<th role="columnheader">`, applied as its
+   *  `aria-label` whenever set -- e.g. an icon-only header rendered through `headerCell` that has
+   *  no plain-text `label` to fall back on. Omit for the default: the header's accessible name
+   *  comes from its rendered content (`headerCell`'s output, or `label`). When `label` is blank
+   *  (or whitespace-only) and this is also omitted, the header falls back to `key` for its
+   *  accessible name only -- the visible header itself stays blank, matching a deliberate
+   *  icon-only column that renders no visible text. */
+  ariaLabel?: string;
   /** Renders custom content into this column's <th>, in place of the plain `label` text -- e.g. a
    *  drag-to-resize handle or an interactive header affordance. Omit for the default plain-text
    *  `label` rendering (unchanged output). Receives the column definition itself -- there is no
@@ -3719,6 +3727,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                 ${this.columns.map((col) => {
                   const active = Boolean(col.sortable) && this.sortKey === col.key;
                   const ariaSort = active ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+                  // An explicit `ariaLabel` always wins; otherwise a blank/whitespace-only `label`
+                  // (the only case with no accessible name from rendered content) falls back to
+                  // the raw column `key` for the accessible name alone -- the visible header stays
+                  // blank, exactly as a deliberate icon-only column intends.
+                  const headerAriaLabel =
+                    col.ariaLabel ?? (typeof col.label === 'string' && col.label.trim().length === 0 ? col.key : undefined);
                   return html`<th
                     part="header-cell"
                     role="columnheader"
@@ -3730,6 +3744,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                     data-resizable=${col.resizable ? '' : nothing}
                     ?data-sortable=${col.sortable}
                     aria-sort=${col.sortable ? ariaSort : nothing}
+                    aria-label=${headerAriaLabel ?? nothing}
                     tabindex=${col.key === focusedCol ? '0' : '-1'}
                   >
                     ${typeof col.headerCell === 'function' ? col.headerCell(col) : col.label} ${this.renderResizeHandle(col)}

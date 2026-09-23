@@ -3492,10 +3492,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private columnLabel(column: DataGridColumn<Row>, id: string): string {
-    return (
-      column.label ??
-      humanizeIdentifier(column.field ?? id, this.effectiveLocale)
-    );
+    // An explicitly blank (or whitespace-only) label carries no useful information -- it falls
+    // back to the humanized field/id exactly like an omitted label, rather than rendering an
+    // empty, still keyboard-focusable columnheader.
+    return column.label !== undefined && column.label.trim().length > 0
+      ? column.label
+      : humanizeIdentifier(column.field ?? id, this.effectiveLocale);
   }
 
   private columnIsSortable(column: DataGridColumn<Row>): boolean {

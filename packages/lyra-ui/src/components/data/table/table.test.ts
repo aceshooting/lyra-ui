@@ -3794,6 +3794,51 @@ it('does not treat a custom interactive element inside a cell as a row-activatio
   expect(rowClicked).to.be.false;
 });
 
+it('falls back to the column key for a blank header label\'s accessible name, leaving the visible header blank', async () => {
+  const blankLabelColumns: TableColumn<Row>[] = [
+    ...columns,
+    {
+      key: 'actions',
+      label: '',
+      cell: () => html`<lr-select data-testid="cell-select"></lr-select>`,
+    },
+  ];
+  const el = (await fixture(
+    html`<lr-table .columns=${blankLabelColumns} .rows=${rows}></lr-table>`
+  )) as LyraTable<Row>;
+  await el.updateComplete;
+  const th = el.shadowRoot!.querySelector('[part="header-cell"][data-col-key="actions"]') as HTMLElement;
+  expect(th.getAttribute('aria-label')).to.equal('actions');
+  expect(th.textContent?.trim()).to.equal('');
+});
+
+it('lets a per-column ariaLabel override a blank header\'s accessible name', async () => {
+  const ariaLabelColumns: TableColumn<Row>[] = [
+    ...columns,
+    {
+      key: 'actions',
+      label: '',
+      ariaLabel: 'Row actions',
+      cell: () => html`<lr-select data-testid="cell-select"></lr-select>`,
+    },
+  ];
+  const el = (await fixture(
+    html`<lr-table .columns=${ariaLabelColumns} .rows=${rows}></lr-table>`
+  )) as LyraTable<Row>;
+  await el.updateComplete;
+  const th = el.shadowRoot!.querySelector('[part="header-cell"][data-col-key="actions"]') as HTMLElement;
+  expect(th.getAttribute('aria-label')).to.equal('Row actions');
+  expect(th.textContent?.trim()).to.equal('');
+});
+
+it('leaves a non-blank header label without an aria-label when ariaLabel is unset', async () => {
+  const el = (await fixture(html`<lr-table .columns=${columns} .rows=${rows}></lr-table>`)) as LyraTable<Row>;
+  await el.updateComplete;
+  const th = el.shadowRoot!.querySelector('[part="header-cell"][data-col-key="name"]') as HTMLElement;
+  expect(th.hasAttribute('aria-label')).to.be.false;
+  expect(th.textContent?.trim()).to.equal('Name');
+});
+
 it('leaves role- and tabindex-declared cell actions to their semantic owners', async () => {
   const semanticColumns: TableColumn<Row>[] = [
     { key: 'role', label: 'Role action', cell: () => html`<span role="button">Role action</span>` },
