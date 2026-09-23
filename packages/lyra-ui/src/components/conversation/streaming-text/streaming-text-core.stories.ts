@@ -52,6 +52,37 @@ export const UnmappedLanguageStaysPlain: Story = {
   `,
 };
 
+export const NarrowAllocation: Story = {
+  name: 'Narrow allocation (320px) with long content',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A 320px allocation with an unbroken plain-text token and a fenced code block whose line has no break opportunity, demonstrating the shared overflow-wrap: break-word containment shared with lr-streaming-text.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+      <lr-streaming-text-core
+        style="inline-size:320px; max-inline-size:100%;"
+        content-mode="plain"
+        .content=${'VierteljährlicheEnergieerzeugungsprognoseFürDachanlagenOhneUmbruchmöglichkeit'}
+      ></lr-streaming-text-core>
+      <lr-streaming-text-core
+        style="inline-size:320px; max-inline-size:100%;"
+        content-mode="markdown"
+        .languages=${{ typescript: tsGrammar }}
+        .content=${`Here is a streamed answer with an unbroken code line:
+
+\`\`\`typescript
+const longUnbrokenValue = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+\`\`\``}
+      ></lr-streaming-text-core>
+    </div>
+  `,
+};
+
 export const ForwardedMarkdownConfiguration: Story = {
   name: 'Forwarded markdown configuration (link-target, heading-offset, ...)',
   parameters: {

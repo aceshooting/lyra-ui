@@ -1797,3 +1797,52 @@ describe('native pointer cleanup', () => {
     }
   });
 });
+
+describe('RTL', () => {
+  it('mirrors search-row, result-row and group-header physical layout under dir="rtl"', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl">
+        <lr-command-palette
+          .commands=${[
+            { commandId: 'new', label: 'New document', description: 'Create a blank file', shortcut: '⌘N', group: 'File' },
+            { commandId: 'search', label: 'Search workspace', group: 'Navigation' },
+          ]}
+        ></lr-command-palette>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-command-palette') as LyraCommandPalette;
+    el.openPalette();
+    await el.updateComplete;
+
+    const dialog = el.shadowRoot!.querySelector('[part="dialog"]') as HTMLElement;
+    expect(dialog.matches(':dir(rtl)')).to.be.true;
+
+    // Search row: the leading <lr-icon> stays the inline-start element, which under dir="rtl"
+    // is the physical RIGHT edge of the row -- so its box sits to the right of the input's.
+    const searchIcon = el.shadowRoot!.querySelector('[part="search"] lr-icon') as HTMLElement;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+    expect(searchIcon.getBoundingClientRect().left).to.be.greaterThan(
+      input.getBoundingClientRect().left
+    );
+
+    // Result row: icon (first), label, shortcut (last) keep source order in the DOM but flow
+    // physically right-to-left, so each successive part sits further LEFT than the one before it.
+    const row = el.shadowRoot!.querySelector('[part="command"]') as HTMLElement;
+    const icon = row.querySelector('[part="icon"]') as HTMLElement | null;
+    const label = row.querySelector('[part="label"]') as HTMLElement;
+    const shortcut = row.querySelector('[part="shortcut"]') as HTMLElement;
+    expect(label.getBoundingClientRect().left).to.be.greaterThan(
+      shortcut.getBoundingClientRect().left
+    );
+    if (icon) {
+      expect(icon.getBoundingClientRect().left).to.be.greaterThan(
+        label.getBoundingClientRect().left
+      );
+    }
+
+    // Group header renders and inherits the same RTL direction as the rest of the dialog.
+    const group = el.shadowRoot!.querySelector('[part="group"]') as HTMLElement;
+    expect(group.textContent!.trim()).to.equal('File');
+    expect(group.matches(':dir(rtl)')).to.be.true;
+  });
+});

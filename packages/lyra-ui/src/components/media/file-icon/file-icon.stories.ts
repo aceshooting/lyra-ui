@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './file-icon.js';
+import { createFileTypeMetadataRegistry } from './file-type-metadata.js';
 
 const meta: Meta = { title: 'FileIcon', component: 'lr-file-icon', tags: ['autodocs'] };
 export default meta;
@@ -23,6 +24,31 @@ export const ThemedBadge: Story = {
     },
   },
   render: () => html`<div style="display:flex; flex-wrap:wrap; gap:var(--lr-space-m); --lr-file-icon-bg: var(--lr-color-success-quiet); --lr-file-icon-color: var(--lr-color-success);"><lr-file-icon mime-type="application/pdf" mode="label"></lr-file-icon><lr-file-icon mime-type="image/png" mode="label"></lr-file-icon></div>`,
+};
+
+const narrowContentRegistry = createFileTypeMetadataRegistry([{
+  mimeTypes: 'application/x-narrow-content-demo',
+  metadata: {
+    label: 'QuarterlyFinancialSummaryForTheEmeaRegionWithoutBreakOpportunity',
+    description: 'GeneratedFromTheSharedQuarterlyReportingTemplateWithNoBreakOpportunity',
+    icon: 'pdf',
+    category: 'document',
+  },
+}]);
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow allocation (320px) with long label and description',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-file-icon
+        style="max-inline-size: 100%"
+        mime-type="application/x-narrow-content-demo"
+        mode="label"
+        bytes="1048576"
+        .registry=${narrowContentRegistry}
+      ></lr-file-icon>
+    </div>
+  `,
 };
 
 export const WithByteCount: Story = {

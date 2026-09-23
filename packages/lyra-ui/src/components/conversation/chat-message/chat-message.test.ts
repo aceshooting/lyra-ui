@@ -1540,3 +1540,44 @@ describe("bubble geometry cssprops", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe("RTL", () => {
+  it('mirrors the collapsed-state collapse-button chevron under dir="rtl"', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lr-chat-message collapsible collapsed>hi</lr-chat-message>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-chat-message") as LyraChatMessage;
+    const chevron = el.shadowRoot!.querySelector(
+      '[part="collapse-button"] .chevron'
+    ) as HTMLElement;
+    expect(getComputedStyle(chevron).transform).to.equal("matrix(-1, 0, 0, 1, 0, 0)");
+  });
+
+  it('does not mirror the expanded-state (already-rotated) chevron under dir="rtl"', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lr-chat-message collapsible>hi</lr-chat-message>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-chat-message") as LyraChatMessage;
+    const chevron = el.shadowRoot!.querySelector(
+      '[part="collapse-button"] .chevron'
+    ) as HTMLElement;
+    // rotate(90deg): cos(90)=0, sin(90)=1 -> matrix(0, 1, -1, 0, 0, 0)
+    expect(getComputedStyle(chevron).transform).to.equal("matrix(0, 1, -1, 0, 0, 0)");
+  });
+
+  it('keeps the header a row and the bubble mirrored to the inline-end under dir="rtl"', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl" style="inline-size: 320px;">
+        <lr-chat-message message-role="user" collapsible>hi</lr-chat-message>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-chat-message") as LyraChatMessage;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    expect(header.matches(":dir(rtl)")).to.be.true;
+    expect(getComputedStyle(header).flexDirection).to.equal("row");
+  });
+});

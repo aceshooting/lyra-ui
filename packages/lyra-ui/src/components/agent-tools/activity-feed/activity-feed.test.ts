@@ -1728,3 +1728,28 @@ describe('card chrome theming hooks', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('RTL', () => {
+  it('mirrors the collapsed-state toggle chevron under dir="rtl"', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lr-activity-feed .entries=${makeEntries(1)}></lr-activity-feed>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-activity-feed') as LyraActivityFeed;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    expect(getComputedStyle(toggle).transform).to.equal('matrix(-1, 0, 0, 1, 0, 0)');
+  });
+
+  it('does not mirror the expanded-state (already-rotated) toggle chevron under dir="rtl"', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-activity-feed') as LyraActivityFeed;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    // rotate(90deg): cos(90)=0, sin(90)=1 -> matrix(0, 1, -1, 0, 0, 0)
+    expect(getComputedStyle(toggle).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+  });
+});

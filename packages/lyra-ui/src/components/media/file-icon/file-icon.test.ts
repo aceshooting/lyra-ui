@@ -288,6 +288,33 @@ describe('lr-file-icon', () => {
     `)) as HTMLElement;
     expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
   });
+
+  it('contains an unbroken long label and description inside a 280px allocation under dir="rtl"', async () => {
+    const registry = createFileTypeMetadataRegistry([{
+      mimeTypes: 'application/x-analysis',
+      metadata: {
+        label: 'Analysis',
+        description: 'AnUnbrokenTranslatedDescriptionWithNoBreakOpportunity'.repeat(20),
+        icon: 'code',
+        category: 'code',
+      },
+    }]);
+    const wrapper = (await fixture(html`
+      <div dir="rtl" style="inline-size: 280px">
+        <lr-file-icon
+          style="max-inline-size: 100%"
+          mime-type="application/x-analysis"
+          mode="label"
+          label=${'Document'.repeat(200)}
+          bytes="2415919"
+          .registry=${registry}
+        ></lr-file-icon>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-file-icon') as LyraFileIcon;
+    expect(el.matches(':dir(rtl)')).to.be.true;
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  });
 });
 
 describe('file type metadata registry input validation', () => {

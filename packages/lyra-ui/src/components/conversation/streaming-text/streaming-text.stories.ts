@@ -206,6 +206,40 @@ export const ForwardedMarkdownConfiguration: Story = {
     ></lr-streaming-text>`,
 };
 
+export const NarrowAllocation: Story = {
+  name: 'Narrow allocation (320px) with long content',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A 320px allocation with an unbroken plain-text token and, in Markdown mode, a wide table, a long link, and an unbroken code line, demonstrates the shared overflow-wrap: break-word containment.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+      <lr-streaming-text
+        style="inline-size:320px; max-inline-size:100%;"
+        content-mode="plain"
+        .content=${'VierteljährlicheEnergieerzeugungsprognoseFürDachanlagenOhneUmbruchmöglichkeit'}
+      ></lr-streaming-text>
+      <lr-streaming-text
+        style="inline-size:320px; max-inline-size:100%;"
+        content-mode="markdown"
+        .content=${`| Scenario | Long translated description |
+| --- | --- |
+| Narrow panel | VierteljährlicheEnergieerzeugungsprognoseFürDachanlagen |
+
+[A long documentation link](https://example.com/guides/quarterly-generation-forecast-for-rooftop-installations)
+
+\`\`\`ts
+const longUnbrokenValue = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+\`\`\``}
+      ></lr-streaming-text>
+    </div>
+  `,
+};
+
 export const ReducedMotion: Story = {
   name: 'Reduced motion (static cursor)',
   parameters: {
