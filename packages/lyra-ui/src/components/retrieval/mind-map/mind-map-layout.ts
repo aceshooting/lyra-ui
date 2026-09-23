@@ -44,6 +44,14 @@ export interface MindMapLayoutResult {
   centerY: number;
 }
 
+export interface DecimatedMindMapLayout {
+  placed: readonly PlacedTopic[];
+  links: readonly { fromId: string; toId: string }[];
+  /** The full currently-visible node count before decimation (what "of M" reports). */
+  totalCount: number;
+  truncated: boolean;
+}
+
 /** Returns the first occurrence of each nonblank topic identity across the complete hierarchy.
  * Invalid/duplicate roots drop their subtree; duplicate descendants are omitted from the later
  * parent. Retained ids and labels are never trimmed or rewritten. */
@@ -210,5 +218,108 @@ export function layoutMindMap(
     height: maxY - minY,
     centerX: -minX,
     centerY: -minY,
+  };
+}
+
+/**
+ * Largest-share-first proportional apportionment of `budget` unit picks across `weights`, via
+ * systematic (evenly spaced) sampling along the cumulative-weight axis: `budget` points spaced
+ * `total / budget` apart along `[0, total)` each fall into exactly one weight's bucket and
+ * increment its share. A branch's share is therefore proportional to its own weight (a much
+ * larger branch gets proportionally more of the budget), and -- unlike floor-then-remainder
+ * rounding -- ties among equal-weight entries (e.g. a flat list of same-size leaf branches) select
+ * evenly spaced entries across the whole list rather than clustering the extra shares at the
+ * front. Always sums to `min(budget, total)`.
+ */
+function apportionByWeight(
+  weights: readonly number[],
+  budget: number
+): number[] {
+  const shares = weights.map(() => 0);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  if (total <= 0 || budget <= 0 || weights.length === 0) return shares;
+  const sampleCount = Math.min(budget, total);
+  const step = total / sampleCount;
+  let childIndex = 0;
+  let boundary = weights[0]!;
+  for (let sample = 0; sample < sampleCount; sample++) {
+    const target = (sample + 0.5) * step;
+    while (target >= boundary && childIndex < weights.length - 1) {
+      childIndex += 1;
+      boundary += weights[childIndex]!;
+    }
+    shares[childIndex] = shares[childIndex]! + 1;
+  }
+  return shares;
+}
+
+/**
+ * Deterministically decimates an already-laid-out, currently-visible topic set (`placed`, in the
+ * depth-first order `place()` produces) down to at most `maxNodes`, two invariants held
+ * throughout: a kept node's parent (if any) is always kept too -- so the surviving set is always
+ * a connected sub-tree, never floating orphans with a dangling `link` or a gap in the semantic
+ * `role="tree"` walk -- and each parent's own child budget is apportioned to its children in
+ * proportion to each child's subtree size via `apportionByWeight()`, so a large branch keeps
+ * proportionally more of its own nodes than a small one and a flat/wide branch is sampled evenly
+ * across its whole child list, rather than the tail of the array being dropped outright. Geometry
+ * (`x`/`y`/`angle`) on a surviving node is untouched -- it keeps the position the full layout gave
+ * it, so the decimated result still reads as a sample of the true radial density rather than
+ * nodes redrawn to fill the resulting gaps.
+ */
+export function decimateMindMapLayout(
+  placed: readonly PlacedTopic[],
+  links: readonly { fromId: string; toId: string }[],
+  maxNodes: number
+): DecimatedMindMapLayout {
+  const totalCount = placed.length;
+  if (totalCount <= maxNodes || maxNodes <= 0) {
+    return { placed: [...placed], links: [...links], totalCount, truncated: false };
+  }
+
+  const childrenByParent = new Map<string | null, PlacedTopic[]>();
+  for (const node of placed) {
+    const siblings = childrenByParent.get(node.parentId);
+    if (siblings) siblings.push(node);
+    else childrenByParent.set(node.parentId, [node]);
+  }
+
+  const subtreeSizeCache = new Map<string, number>();
+  const subtreeSize = (id: string): number => {
+    const cached = subtreeSizeCache.get(id);
+    if (cached !== undefined) return cached;
+    // Pre-seed before recursing so a (structurally impossible, but defensive) cycle can't loop.
+    subtreeSizeCache.set(id, 1);
+    const children = childrenByParent.get(id) ?? [];
+    let total = 1;
+    for (const child of children) total += subtreeSize(child.id);
+    subtreeSizeCache.set(id, total);
+    return total;
+  };
+
+  const kept = new Set<string>();
+  const visit = (node: PlacedTopic, budget: number): void => {
+    if (budget <= 0) return;
+    kept.add(node.id);
+    const children = childrenByParent.get(node.id) ?? [];
+    if (children.length === 0 || budget <= 1) return;
+    const shares = apportionByWeight(
+      children.map((child) => subtreeSize(child.id)),
+      budget - 1
+    );
+    children.forEach((child, index) => visit(child, shares[index]!));
+  };
+
+  const roots = childrenByParent.get(null) ?? [];
+  const rootShares = apportionByWeight(
+    roots.map((root) => subtreeSize(root.id)),
+    maxNodes
+  );
+  roots.forEach((root, index) => visit(root, rootShares[index]!));
+
+  return {
+    placed: placed.filter((node) => kept.has(node.id)),
+    links: links.filter((link) => kept.has(link.fromId) && kept.has(link.toId)),
+    totalCount,
+    truncated: true,
   };
 }

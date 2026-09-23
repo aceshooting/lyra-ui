@@ -1191,6 +1191,14 @@ LyraTopic[] }`; a single root sits at the center, multiple roots hang off an imp
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment
 
+Above 500 currently-visible nodes (per the current expand/collapse state), the SVG and the
+parallel sr-only tree both render a deterministic, connectivity-preserving, subtree-size-weighted
+sample instead of every node: a kept node's parent, if any, is always kept too (no floating nodes
+with a dangling connector or a gap in the `role="tree"` walk), and a larger branch keeps
+proportionally more of its own nodes than a small one, sampled evenly across a wide/flat branch's
+own child list rather than dropping its tail outright. A surviving node keeps the position the
+full layout gave it. A localized "showing N of M" notice appears in `[part="limit"]`.
+
 **Events:** `lr-topic-select` (`detail: { topicId }`, a _leaf_ topic was activated),
 `lr-topic-toggle` (`detail: { topicId, expanded }`, a parent topic was activated, or auto-expanded by
 keyboard descent).
@@ -1198,7 +1206,8 @@ keyboard descent).
 **Slots:** none.
 
 **CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `link`
-(parent-child connector), `focus-ring` (keyboard focus ring), `live-region` (visually hidden
+(parent-child connector), `focus-ring` (keyboard focus ring), `limit` (the "showing N of M"
+render-cap notice, present only above 500 currently-visible nodes), `live-region` (visually hidden
 announcement region), `empty` (shown when `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
@@ -2482,11 +2491,17 @@ Pointer and programmatic focus synchronize the single roving tab stop, and every
 least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker. Optional
 cluster membership is exposed as each option's description and in a visible text legend, so the
 grouping never depends on color alone.
+Above 1,000 points, the plot renders a deterministic, evenly spaced sample of the whole array
+(spanning the full input, not a leading run) instead of every point, keeping DOM node and listener
+count bounded while the sampled points stay representative of the full plotted distribution; a
+localized "showing N of M" notice appears in `[part="limit"]`. `bounds` and the cluster legend
+still derive from the complete `points` array, so a decimated view keeps the same scale and the
+same complete legend as the full plot.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
-`empty`.
+`limit` (the "showing N of M" render-cap notice, present only above 1,000 points), `empty`.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`

@@ -1,5 +1,9 @@
 import { expect } from '@open-wc/testing';
-import { layoutMindMap, type LyraTopic } from './mind-map-layout.js';
+import {
+  decimateMindMapLayout,
+  layoutMindMap,
+  type LyraTopic,
+} from './mind-map-layout.js';
 import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
 import {
   canonicalIdentityList,
@@ -266,4 +270,108 @@ it('does not throw a call-stack RangeError laying out a very large flat topic li
   expect(result.height).to.be.a('number').greaterThan(0);
   expect(Number.isFinite(result.width)).to.be.true;
   expect(Number.isFinite(result.height)).to.be.true;
+});
+
+describe('decimateMindMapLayout', () => {
+  const layoutOf = (topics: LyraTopic[]) =>
+    layoutMindMap(topics, 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
+
+  it('is a no-op at or below the cap', () => {
+    const { placed, links } = layoutOf([
+      { id: 'root', label: 'Root', children: [{ id: 'c1', label: 'C1' }, { id: 'c2', label: 'C2' }] },
+    ]);
+    const result = decimateMindMapLayout(placed, links, 3);
+    expect(result.truncated).to.equal(false);
+    expect(result.placed).to.deep.equal(placed);
+    expect(result.links).to.deep.equal(links);
+    expect(result.totalCount).to.equal(3);
+  });
+
+  it('never keeps a node whose parent was dropped -- the surviving set stays a connected sub-tree', () => {
+    const { placed, links } = layoutOf([
+      {
+        id: 'root',
+        label: 'Root',
+        children: Array.from({ length: 40 }, (_unused, i) => ({
+          id: `branch-${i}`,
+          label: `Branch ${i}`,
+          children: [{ id: `leaf-${i}`, label: `Leaf ${i}` }],
+        })),
+      },
+    ]);
+    const result = decimateMindMapLayout(placed, links, 30);
+    expect(result.truncated).to.equal(true);
+    expect(result.placed.length).to.be.at.most(30);
+    const keptIds = new Set(result.placed.map((node) => node.id));
+    expect(keptIds.has('root'), 'the root always survives').to.equal(true);
+    for (const node of result.placed) {
+      if (node.parentId !== null) {
+        expect(
+          keptIds.has(node.parentId),
+          `${node.id}'s parent ${node.parentId} must survive alongside it`
+        ).to.equal(true);
+      }
+    }
+    // Every surviving link connects two surviving nodes -- no dangling reference to a dropped one.
+    for (const link of result.links) {
+      expect(keptIds.has(link.fromId)).to.equal(true);
+      expect(keptIds.has(link.toId)).to.equal(true);
+    }
+  });
+
+  it('samples a flat/wide branch evenly across its whole child list, not just the first entries', () => {
+    const { placed, links } = layoutOf([
+      {
+        id: 'root',
+        label: 'Root',
+        children: Array.from({ length: 1000 }, (_unused, i) => ({ id: `c${i}`, label: `C${i}` })),
+      },
+    ]);
+    const result = decimateMindMapLayout(placed, links, 100);
+    const keptIndexes = result.placed
+      .filter((node) => node.id !== 'root')
+      .map((node) => Number(node.id.slice(1)));
+    expect(Math.min(...keptIndexes)).to.be.lessThan(50);
+    expect(Math.max(...keptIndexes)).to.be.greaterThan(950);
+  });
+
+  it('gives a much larger branch proportionally more of the budget than a tiny sibling branch', () => {
+    const { placed, links } = layoutOf([
+      {
+        id: 'root',
+        label: 'Root',
+        children: [
+          {
+            id: 'big',
+            label: 'Big',
+            children: Array.from({ length: 900 }, (_unused, i) => ({ id: `big-${i}`, label: `Big ${i}` })),
+          },
+          {
+            id: 'small',
+            label: 'Small',
+            children: Array.from({ length: 10 }, (_unused, i) => ({ id: `small-${i}`, label: `Small ${i}` })),
+          },
+        ],
+      },
+    ]);
+    const result = decimateMindMapLayout(placed, links, 100);
+    const bigSurvivors = result.placed.filter((node) => node.id.startsWith('big-')).length;
+    const smallSurvivors = result.placed.filter((node) => node.id.startsWith('small-')).length;
+    expect(bigSurvivors).to.be.greaterThan(smallSurvivors * 5);
+  });
+
+  it('is deterministic across repeated calls with the same input', () => {
+    const { placed, links } = layoutOf([
+      {
+        id: 'root',
+        label: 'Root',
+        children: Array.from({ length: 500 }, (_unused, i) => ({ id: `c${i}`, label: `C${i}` })),
+      },
+    ]);
+    const first = decimateMindMapLayout(placed, links, 200);
+    const second = decimateMindMapLayout(placed, links, 200);
+    expect(second.placed.map((node) => node.id)).to.deep.equal(
+      first.placed.map((node) => node.id)
+    );
+  });
 });

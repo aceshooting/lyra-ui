@@ -1482,6 +1482,96 @@ describe('lifecycle super calls', () => {
   });
 });
 
+describe('lr-mind-map topic count past the render cap', () => {
+  const wideTopics = (count: number): LyraTopic[] => [
+    {
+      id: 'root',
+      label: 'Root',
+      children: Array.from({ length: count }, (_unused, index) => ({
+        id: `t-${index}`,
+        label: `Topic ${index}`,
+      })),
+    },
+  ];
+
+  it('caps the rendered node count and shows a localized showing-N-of-M notice', async () => {
+    const el = (await fixture(
+      html`<lr-mind-map .topics=${wideTopics(800)}></lr-mind-map>`
+    )) as LyraMindMap;
+    await el.updateComplete;
+
+    const nodes = el.shadowRoot!.querySelectorAll('[part="node"]');
+    expect(nodes.length, 'the node projection stays capped').to.be.at.most(500);
+    const notice = el.shadowRoot!.querySelector('[part="limit"]');
+    expect(notice).not.to.equal(null);
+    expect(notice!.textContent).to.equal(
+      `Showing ${nodes.length} of 801 topics.`
+    );
+  });
+
+  it('keeps the hub/root node and spreads survivors across the whole child list instead of truncating to the first N', async () => {
+    const el = (await fixture(
+      html`<lr-mind-map .topics=${wideTopics(2000)}></lr-mind-map>`
+    )) as LyraMindMap;
+    await el.updateComplete;
+
+    const ids = [...el.shadowRoot!.querySelectorAll('[part="node"]')].map(
+      (node) => node.getAttribute('data-id')
+    );
+    expect(ids).to.include('root');
+    // A naive first-N truncation would never reach past the first ~500 children; a
+    // distribution-preserving sample keeps representatives from later in the list too.
+    expect(ids.some((id) => id != null && Number(id.slice(2)) > 1000)).to.equal(
+      true
+    );
+  });
+
+  it('keeps the semantic sr-only tree in sync with the decimated visual set (no orphaned nodes)', async () => {
+    const el = (await fixture(
+      html`<lr-mind-map .topics=${wideTopics(800)}></lr-mind-map>`
+    )) as LyraMindMap;
+    await el.updateComplete;
+
+    const visualIds = [
+      ...el.shadowRoot!.querySelectorAll('[part="node"]'),
+    ].map((node) => node.getAttribute('data-id'));
+    const semanticCount =
+      el.shadowRoot!.querySelectorAll('[role="tree"] [role="treeitem"]')
+        .length;
+    // One treeitem per rendered node (root included), matching the visual SVG one for one --
+    // proof the decimation didn't drop a node from one representation but not the other.
+    expect(semanticCount).to.equal(visualIds.length);
+  });
+
+  it('produces the same decimated set on repeated renders of the same input (deterministic)', async () => {
+    const els = wideTopics(600);
+    const el = (await fixture(
+      html`<lr-mind-map .topics=${els}></lr-mind-map>`
+    )) as LyraMindMap;
+    await el.updateComplete;
+    const first = [...el.shadowRoot!.querySelectorAll('[part="node"]')].map(
+      (node) => node.getAttribute('data-id')
+    );
+    el.topics = wideTopics(600);
+    await el.updateComplete;
+    const second = [...el.shadowRoot!.querySelectorAll('[part="node"]')].map(
+      (node) => node.getAttribute('data-id')
+    );
+    expect(second).to.deep.equal(first);
+  });
+
+  it('shows no truncation notice and renders every topic when the visible set is at or below the cap', async () => {
+    const el = (await fixture(
+      html`<lr-mind-map .topics=${wideTopics(499)}></lr-mind-map>`
+    )) as LyraMindMap;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(
+      500
+    );
+    expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+  });
+});
+
 describe('hover feedback on [part="node"]', () => {
   it('paints the configured node halo under a real pointer', async () => {
     const el = await fixture<LyraMindMap>(html`

@@ -17,6 +17,7 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import {
+  decimateMindMapLayout,
   layoutMindMap,
   type LyraTopic,
   type MindMapLayoutResult,
@@ -36,6 +37,11 @@ export interface LyraMindMapEventMap {
 }
 
 const DEFAULT_RING_GAP_PX = 96; // 6rem at the default 16px root font size
+/** Render-scale ceiling for the currently-visible (per expand state) topic set. Above this,
+ *  `decimateMindMapLayout()` keeps a deterministic, connectivity-preserving, subtree-size-weighted
+ *  sample rather than rendering every node, bounding DOM node/listener count while keeping the
+ *  radial layout's branch proportions representative. */
+const MAX_RENDERED_MIND_MAP_NODES = 500;
 const NAV_KEYS = new Set([
   'ArrowUp',
   'ArrowDown',
@@ -74,6 +80,10 @@ const NAV_KEYS = new Set([
  * first placed topic is seeded as the keyboard cursor) rather than only after the first arrow key.
  * @csspart live-region - The visually hidden announcement region.
  * @csspart empty - The empty-state message, shown when `topics` is empty.
+ * @csspart limit - The "showing N of M" notice, present only once the currently-visible topic
+ *   count exceeds the render cap. The rendered subset is a deterministic, connectivity-preserving,
+ *   subtree-size-weighted sample of the full visible set (never floating nodes with no path back
+ *   to the root), so both the SVG and the parallel sr-only tree stay representative above the cap.
  * @cssprop [--lr-mind-map-ring-gap=6rem] - Radius step per depth ring.
  * @cssprop [--lr-mind-map-node-hover-halo=var(--lr-color-brand-quiet)] - Stroke color of the
  * hover halo drawn around a topic node's dot, giving mouse users the same "this is clickable"
@@ -92,6 +102,10 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     mindMapLeafStatus: LYRA_DEFAULT_mindMapLeafStatus,
     mindMapTopicStatus: LYRA_DEFAULT_mindMapTopicStatus,
     noData: LYRA_DEFAULT_noData,
+    // Not yet in the generated per-component slice above (default-strings.generated.ts is
+    // regenerated once, in the integration task); this key's DEFAULT_STRINGS/LyraMessageKey
+    // source-of-truth entry already lives in src/internal/localization.ts.
+    mindMapNodeLimit: 'Showing {shown} of {total} topics.',
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -131,6 +145,10 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     centerX: 0,
     centerY: 0,
   };
+  /** The currently-visible (per expand state) topic count before `MAX_RENDERED_MIND_MAP_NODES`
+   *  decimation -- the "of M" half of the truncation notice. */
+  private totalTopicCount = 0;
+  private topicsTruncated = false;
   private resizeObserver?: ResizeObserver;
   private resizeObserverDocument?: Document;
   private resizeRafId?: number;
@@ -271,11 +289,23 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   private relayout(): void {
     const hubLabel =
       this.label == null ? this.localize('mindMapLabel') : this.label;
-    this.cachedLayout = layoutMindMap(this.topics, hubLabel, {
+    const fullLayout = layoutMindMap(this.topics, hubLabel, {
       ringGap: this.ringGapPx(),
       rtl: isRtl(this),
       isExpanded: (id, depth) => this.isExpanded(id, depth),
     });
+    const decimated = decimateMindMapLayout(
+      fullLayout.placed,
+      fullLayout.links,
+      MAX_RENDERED_MIND_MAP_NODES
+    );
+    this.totalTopicCount = decimated.totalCount;
+    this.topicsTruncated = decimated.truncated;
+    this.cachedLayout = {
+      ...fullLayout,
+      placed: [...decimated.placed],
+      links: [...decimated.links],
+    };
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -521,7 +551,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
           })}
           ${layout.placed.map(
             (node) => svg`
-              <g part="node" style=${`transform: translate(${node.x}px, ${node.y}px)`} @click=${() =>
+              <g part="node" data-id=${node.id} style=${`transform: translate(${node.x}px, ${node.y}px)`} @click=${() =>
               this.onNodeClick(node)}>
                 <line
                   class="node-hit"
@@ -544,6 +574,12 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
             ? svg`<circle part="focus-ring" cx=${focused.x} cy=${focused.y} r="10"></circle>`
             : nothing}
         </svg>
+        ${this.topicsTruncated
+          ? html`<p part="limit" role="note">${this.localize('mindMapNodeLimit', undefined, {
+                shown: getNumberFormat(this.effectiveLocale).format(layout.placed.length),
+                total: getNumberFormat(this.effectiveLocale).format(this.totalTopicCount),
+              })}</p>`
+          : nothing}
         <div class="sr-only" role="tree">
           ${(childrenByParent.get(null) ?? []).map((topic) =>
             this.renderSemanticNode(topic, childrenByParent)

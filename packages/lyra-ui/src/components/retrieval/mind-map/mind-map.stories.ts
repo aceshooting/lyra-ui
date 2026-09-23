@@ -43,3 +43,24 @@ export const Empty: Story = {
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px; height: 400px;"><lr-mind-map .topics=${topics}></lr-mind-map></div>`,
 };
+
+/** Above the 500-node render cap, the visible node count stays bounded via a deterministic,
+ * connectivity-preserving, subtree-size-weighted sample of the currently-expanded topics, with a
+ * localized "showing N of M" notice via `[part="limit"]`. */
+export const AboveRenderCap: Story = {
+  name: 'Above render cap (800 topics)',
+  render: () => html`<div style="height: 480px;">
+    <lr-mind-map
+      .topics=${[
+        {
+          id: 'root',
+          label: 'Large corpus outline',
+          children: Array.from({ length: 800 }, (_unused, index) => ({
+            id: `topic-${index}`,
+            label: `Topic ${index}`,
+          })),
+        },
+      ]}
+    ></lr-mind-map>
+  </div>`,
+};

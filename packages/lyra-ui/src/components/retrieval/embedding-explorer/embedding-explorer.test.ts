@@ -748,3 +748,71 @@ it('preserves literal native point tooltip text and label updates', async () => 
   await el.updateComplete;
   assertTitle(`Updated ${text}, embedding point 1`);
 });
+
+describe('lr-embedding-explorer point count past the render cap', () => {
+  const manyPoints = (count: number): EmbeddingPoint[] =>
+    Array.from({ length: count }, (_unused, index) => ({
+      id: `p-${index}`,
+      x: index,
+      y: index,
+      label: `Point ${index}`,
+    }));
+
+  it('caps the rendered point count and shows a localized showing-N-of-M notice', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer
+        .points=${manyPoints(1500)}
+      ></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+
+    const rendered = el.shadowRoot!.querySelectorAll('[part="point"]');
+    expect(rendered.length, 'the point projection stays capped').to.equal(1000);
+    const notice = el.shadowRoot!.querySelector('[part="limit"]');
+    expect(notice?.textContent).to.equal('Showing 1,000 of 1,500 points.');
+  });
+
+  it('samples across the whole array instead of truncating to the first N, so the tail is still represented', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer
+        .points=${manyPoints(2000)}
+      ></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+
+    const ids = [...el.shadowRoot!.querySelectorAll('[part="point"]')].map(
+      (node) => node.getAttribute('data-id')
+    );
+    // A naive first-1000 truncation would never include a point past index 999; a
+    // distribution-preserving sample spans the full input, first point through last.
+    expect(ids).to.include('p-0');
+    expect(ids).to.include('p-1999');
+    expect(ids.some((id) => Number(id!.slice(2)) > 1500)).to.equal(true);
+  });
+
+  it('produces the same decimated set on repeated renders of the same input (deterministic)', async () => {
+    const points = manyPoints(1200);
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+    const first = [...el.shadowRoot!.querySelectorAll('[part="point"]')].map((n) =>
+      n.getAttribute('data-id')
+    );
+    el.points = [...points];
+    await el.updateComplete;
+    const second = [...el.shadowRoot!.querySelectorAll('[part="point"]')].map((n) =>
+      n.getAttribute('data-id')
+    );
+    expect(second).to.deep.equal(first);
+  });
+
+  it('shows no truncation notice and renders every point when the array is at or below the cap', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${manyPoints(1000)}></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(1000);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+  });
+});

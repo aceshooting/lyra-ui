@@ -68,3 +68,22 @@ export const Narrow: Story = {
     </div>
   `,
 };
+
+const PALETTE_CLUSTER_COUNT = 8;
+
+/** Above the 1,000-point render cap, the plot keeps a deterministic, evenly spaced sample of the
+ * whole array (spanning the full input, not just its first 1,000 entries) and shows a localized
+ * "showing N of M" notice via `[part="limit"]`. */
+export const AboveRenderCap: Story = {
+  name: 'Above render cap (1,500 points)',
+  render: () =>
+    html`<lr-embedding-explorer
+      .points=${Array.from({ length: 1500 }, (_unused, index) => ({
+        id: `p-${index}`,
+        x: Math.cos(index),
+        y: Math.sin(index),
+        label: `Point ${index}`,
+        cluster: index % PALETTE_CLUSTER_COUNT,
+      }))}
+    ></lr-embedding-explorer>`,
+};

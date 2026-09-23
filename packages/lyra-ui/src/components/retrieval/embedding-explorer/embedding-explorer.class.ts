@@ -24,6 +24,11 @@ import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabe
 const WIDTH = 640;
 const HEIGHT = 360;
 const PAD = 24;
+/** Render-scale ceiling for `points`. Above this, `decimatePoints()` selects an evenly spaced
+ *  subset spanning the whole input rather than rendering everything, keeping DOM node count and
+ *  listener count bounded while still representing the full plotted distribution (not just
+ *  whichever points happen to come first in host order). */
+const MAX_RENDERED_POINTS = 1_000;
 const PALETTE = [
   'var(--lr-color-chart-1)',
   'var(--lr-color-chart-2)',
@@ -34,6 +39,27 @@ const PALETTE = [
   'var(--lr-color-chart-7)',
   'var(--lr-color-chart-8)',
 ];
+
+/**
+ * Deterministically selects at most `max` items from `items`, evenly spaced across the whole
+ * array (always including the first and last item when decimating) rather than truncating to a
+ * leading run. Mirrors `decimate()` in `sparkline.class.ts` — the same distribution-preserving
+ * shape, generalized to non-numeric items.
+ */
+function decimatePoints<T>(items: readonly T[], max: number): T[] {
+  if (items.length <= max || max <= 0) return [...items];
+  if (max === 1) return [items[0]!];
+  const step = (items.length - 1) / (max - 1);
+  const result: T[] = [];
+  const seen = new Set<number>();
+  for (let i = 0; i < max; i++) {
+    const index = Math.min(items.length - 1, Math.round(i * step));
+    if (seen.has(index)) continue;
+    seen.add(index);
+    result.push(items[index]!);
+  }
+  return result;
+}
 
 /** A projected embedding point. Coordinates must already be projected by the host. */
 export interface EmbeddingPoint {
@@ -71,6 +97,9 @@ export interface LyraEmbeddingExplorerEventMap {
  * @csspart legend-item - One cluster's legend entry.
  * @csspart legend-swatch - One cluster's decorative color swatch.
  * @csspart legend-label - One cluster's visible name.
+ * @csspart limit - The "showing N of M" notice, present only once `points` exceeds the render
+ *   cap. The rendered subset is a deterministic, evenly spaced sample of the full array (not the
+ *   leading run), so the plotted distribution stays representative above the cap.
  * @csspart empty - The empty state.
  * @cssprop [--lr-embedding-explorer-selected-stroke=var(--lr-color-brand)] - Stroke color of the selected point.
  * @cssprop [--lr-embedding-explorer-height=360px] - The plot's `block-size`. Set on the host from
@@ -98,6 +127,10 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     embeddingExplorerEmpty: LYRA_DEFAULT_embeddingExplorerEmpty,
     embeddingExplorerLabel: LYRA_DEFAULT_embeddingExplorerLabel,
     embeddingExplorerPoint: LYRA_DEFAULT_embeddingExplorerPoint,
+    // Not yet in the generated per-component slice above (default-strings.generated.ts is
+    // regenerated once, in the integration task); this key's DEFAULT_STRINGS/LyraMessageKey
+    // source-of-truth entry already lives in src/internal/localization.ts.
+    embeddingExplorerPointLimit: 'Showing {shown} of {total} points.',
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -135,12 +168,20 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     );
   }
 
+  /** `validPoints`, decimated to `MAX_RENDERED_POINTS` -- the set actually rendered, focusable,
+   *  and reachable by roving-tabindex arrow navigation. `bounds` and the cluster legend still
+   *  derive from the full `validPoints`, so a decimated view keeps the same scale and the same
+   *  complete legend as the full plot. */
+  private get renderedPoints(): EmbeddingPoint[] {
+    return decimatePoints(this.validPoints, MAX_RENDERED_POINTS);
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (!changed.has('points')) return;
     const active = activeElementIn(this.shadowRoot) ?? null;
     const focusedId = active?.getAttribute('data-id');
-    const points = this.validPoints;
+    const points = this.renderedPoints;
     const matchingIndex = focusedId
       ? points.findIndex((point) => point.id === focusedId)
       : -1;
@@ -212,7 +253,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     point: EmbeddingPoint,
     index: number
   ): void {
-    const points = this.validPoints;
+    const points = this.renderedPoints;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       this.select(point);
@@ -294,6 +335,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       return html`<div part="base" role="region" aria-label=${label}>
         <p part="empty">${this.localize('embeddingExplorerEmpty')}</p>
       </div>`;
+    const renderedPoints = this.renderedPoints;
     const bounds = points.reduce(
       (result, point) => ({
         minX: Math.min(result.minX, point.x),
@@ -310,6 +352,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       clusters.map((cluster, index) => [cluster, index])
     );
     const visibleClusters = clusters.filter((cluster) => cluster.trim() !== '');
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     return html`<div part="base">
       <svg
         part="plot"
@@ -317,10 +360,16 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
         role="listbox"
         aria-label=${label}
       >
-        ${points.map((point, index) =>
+        ${renderedPoints.map((point, index) =>
           this.renderPoint(point, index, bounds, clusterIndices)
         )}
       </svg>
+      ${renderedPoints.length < points.length
+        ? html`<p part="limit" role="note">${this.localize('embeddingExplorerPointLimit', undefined, {
+              shown: numberFormat.format(renderedPoints.length),
+              total: numberFormat.format(points.length),
+            })}</p>`
+        : nothing}
       ${visibleClusters.length > 0
         ? html`<div part="legend" role="list">
             ${visibleClusters.map(
