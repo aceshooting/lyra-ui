@@ -69,6 +69,7 @@
     "publint": "^0.3.24",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "remark-gfm": "^4.0.1",
     "secretlint": "^13.0.5",
     "storybook": "10.6.0",
     "tailwindcss": "^4.3.3",

@@ -2,6 +2,7 @@ import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
+import remarkGfm from 'remark-gfm';
 import { codecovVitePlugin } from '@codecov/vite-plugin';
 import { componentImportsPlugin } from './component-imports.js';
 import { createGroupedStoryIndexer } from './story-indexer.js';
@@ -10,7 +11,15 @@ import { storyTitlePlugin } from './story-title-plugin.js';
 /** @type { import('@storybook/web-components-vite').StorybookConfig } */
 const config = {
   stories: ['../packages/lyra-ui/src/components/**/*.stories.ts', '../.storybook/*.mdx'],
-  addons: ['@storybook/addon-docs', '@storybook/addon-a11y'],
+  addons: [
+    {
+      name: '@storybook/addon-docs',
+      // MDX 2+ is CommonMark only: without GFM the guide pages' `| a | b |` tables render as
+      // literal pipe-separated paragraphs.
+      options: { mdxPluginOptions: { mdxCompileOptions: { remarkPlugins: [remarkGfm] } } },
+    },
+    '@storybook/addon-a11y',
+  ],
   experimental_indexers: async (existingIndexers) => {
     const probe = '/component.stories.ts';
     const csfIndexer = existingIndexers.find((indexer) => {
