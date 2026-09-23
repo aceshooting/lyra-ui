@@ -363,6 +363,10 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
+  [part="listbox"][hidden] {
+    display: none;
+  }
+
   [part="listbox"] {
     position: fixed;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
@@ -381,9 +385,8 @@ export const styles = css`
     ${overlaySurface}
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
-    /* Closed state: invisible and slightly raised. visibility rather than display:none so
-       opacity/transform can transition; the part is already position:fixed, so hit-testing and a11y
-       exposure stay off. */
+    /* Retain layout during the outgoing transition. Once it settles, hidden removes the
+       closed popup from layout so its stale position cannot enlarge an ancestor's scroll area. */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));

@@ -1038,6 +1038,8 @@ export class LyraCombobox<
   private restoringOverlayFocus = false;
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
+  @state() private listboxHidden = true;
+
   private _isFirstUpdate = true;
   private openVetoed = false;
   /** Set only by `hide()`. Cleanup is applied in `willUpdate()` after `lr-hide` accepts the close,
@@ -1345,6 +1347,7 @@ export class LyraCombobox<
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
     this.announceOpenTransition(changed);
+    if (this.open) this.listboxHidden = false;
     if (changed.has('open') && !this.openVetoed) this.listboxPositioned = false;
     if (changed.has('open') && this.openVetoed) {
       this.closeCleanupPending = false;
@@ -1962,6 +1965,7 @@ export class LyraCombobox<
   }
 
   override disconnectedCallback(): void {
+    this.listboxHidden = true;
     this.releaseExternalDescription();
     this.transitionToken++;
     this.listboxPositioned = false;
@@ -2107,6 +2111,8 @@ export class LyraCombobox<
     }
   }
 
+  private optionRefreshPending = false;
+
   private onOptionChange = (e: Event): void => {
     // The notification is sealed here rather than allowed to keep bubbling: it
     // is a private child-to-parent refresh signal, not part of this
@@ -2140,12 +2146,17 @@ export class LyraCombobox<
         this.adornmentClones.get(option)?.markup !== this.adornmentMarkup(option)) {
       this.adornmentClones.delete(option);
     }
+    // Many options notify together during mounting or a catalog metadata refresh. Reconcile the
+    // complete catalog once per microtask batch; explicit selected writes above remain immediate.
+    if (this.optionRefreshPending) return;
+    this.optionRefreshPending = true;
     // Touch the `options` array reference so Lit's change-detection sees a
     // "new" value and re-renders `renderRows()`/`filtered`/`labelFor()` off
     // the options' now-current data -- the *set* of options is unchanged,
     // only one member's own properties are, so this skips
     // collectOptions()'s selection-seeding logic entirely.
     queueMicrotask(() => {
+      this.optionRefreshPending = false;
       this.refreshOptionDefaults();
       this.reflectSelected();
       this.options = [...this.options];
@@ -2845,6 +2856,11 @@ export class LyraCombobox<
       await Promise.all(
         animations.map((animation) => animation.finished.catch(() => undefined))
       );
+      if (this.transitionToken !== token) return;
+    }
+    if (event === 'lr-after-hide') {
+      this.listboxHidden = true;
+      await this.updateComplete;
       if (this.transitionToken !== token) return;
     }
     this.emit(event);
@@ -3571,6 +3587,7 @@ export class LyraCombobox<
         </div>
         <div
           part="listbox"
+          ?hidden=${this.listboxHidden}
           ?data-positioned=${this.listboxPositioned}
           id=${this.listId}
           role=${this.sourceFailed ? 'dialog' : 'listbox'}

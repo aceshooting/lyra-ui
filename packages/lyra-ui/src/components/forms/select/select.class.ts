@@ -739,6 +739,9 @@ export class LyraSelect<
   private positionedDirection?: 'ltr' | 'rtl';
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
+  @state() private listboxHidden = true;
+  @state() private listboxPositioned = false;
+
   private _isFirstUpdate = true;
   private openVetoed = false;
   // A disable-forced close has no vetoable lifecycle, but that suppression belongs only to the
@@ -973,6 +976,8 @@ export class LyraSelect<
       }
     }
     this.announceOpenTransition(changed);
+    if (changed.has('open') && !this.openVetoed) this.listboxPositioned = false;
+    if (this.open) this.listboxHidden = false;
     if (changed.has('open') && !this.open && !this.openVetoed) {
       // The veto has already run synchronously. Clear only for an accepted close, so a vetoed
       // listbox retains its active descendant for assistive technology and Enter.
@@ -1025,6 +1030,7 @@ export class LyraSelect<
    * control cannot keep an interactive popup open even when an ordinary `lr-hide` listener would
    * cancel a user-requested close. */
   private forceCloseOpenState(): void {
+    this.listboxHidden = true;
     // A normal close may already have changed `_open` in this task while its willUpdate veto point
     // is still pending. Suppress that exact transition as well, but do not leave a sticky flag on a
     // control that was already settled closed: it could be re-enabled and shown before this batch
@@ -1520,6 +1526,7 @@ export class LyraSelect<
   }
 
   override disconnectedCallback(): void {
+    this.listboxHidden = true;
     this.releaseExternalDescription();
     this.transitionToken++;
     super.disconnectedCallback();
@@ -1947,6 +1954,8 @@ export class LyraSelect<
   // know the value moved already has `lr-change`/`lr-input`. A listener bound
   // directly to the `<lr-option>` still sees it -- the option is the event
   // target, and the target's own listeners run before this slot listener.
+  private optionRefreshPending = false;
+
   private onOptionChange = (e: Event): void => {
     e.stopPropagation();
     const option = e.composedPath().find(isLyraOptionElement);
@@ -1989,11 +1998,16 @@ export class LyraSelect<
         this.adornmentClones.get(option)?.markup !== this.adornmentMarkup(option)) {
       this.adornmentClones.delete(option);
     }
+    // Many options notify together during mounting or a catalog metadata refresh. Reconcile the
+    // complete catalog once per microtask batch; explicit selected writes above remain immediate.
+    if (this.optionRefreshPending) return;
+    this.optionRefreshPending = true;
     const previousActive = this.activeOption;
     const previousActiveRawIndex = previousActive
       ? this.options.indexOf(previousActive)
       : this.activeIndex;
     queueMicrotask(() => {
+      this.optionRefreshPending = false;
       this.refreshOptionDefaults();
       this.reflectSelected();
       this.options = [...this.options];
@@ -2043,7 +2057,13 @@ export class LyraSelect<
       strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
       sync: this.sync,
     });
-    this.positioningReady = this.cleanup.ready;
+    const operation = this.cleanup;
+    this.positioningReady = operation.ready.then((positioned) => {
+      if (positioned && this.cleanup === operation && this.open && this.isConnected) {
+        this.listboxPositioned = true;
+      }
+      return positioned;
+    });
   }
 
   private activateListboxOverlay(): void {
@@ -2215,6 +2235,11 @@ export class LyraSelect<
       await Promise.all(
         animations.map((animation) => animation.finished.catch(() => undefined))
       );
+      if (this.transitionToken !== token) return;
+    }
+    if (event === 'lr-after-hide') {
+      this.listboxHidden = true;
+      await this.updateComplete;
       if (this.transitionToken !== token) return;
     }
     this.emit(event);
@@ -2870,6 +2895,8 @@ export class LyraSelect<
         </div>
         <div
           part="listbox"
+          ?hidden=${this.listboxHidden}
+          ?data-positioned=${this.listboxPositioned}
           id=${this.listId}
           role="listbox"
           aria-multiselectable=${this.multiple ? 'true' : 'false'}

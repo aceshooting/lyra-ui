@@ -3062,6 +3062,7 @@ it("renders a populated open listbox with vertical scrolling and horizontal over
   await el.updateComplete;
   const listbox =
     el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  await waitUntil(() => getComputedStyle(listbox).visibility === 'visible');
   const computed = getComputedStyle(listbox);
 
   expect(computed.visibility).to.equal("visible");
@@ -5890,15 +5891,18 @@ describe("lr-select mapped Select parity surface", () => {
     el.append(fragment);
     const started = performance.now();
     document.body.append(el);
-    await el.updateComplete;
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => resolve())
-    );
-    expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.lengthOf(
-      1000
-    );
-    expect(performance.now() - started).to.be.below(3000);
-    el.remove();
+    try {
+      await el.updateComplete;
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      );
+      expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.lengthOf(
+        1000
+      );
+      expect(performance.now() - started).to.be.below(3000);
+    } finally {
+      el.remove();
+    }
   });
 });
 
