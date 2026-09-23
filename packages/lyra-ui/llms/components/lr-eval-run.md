@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -69,4 +69,5 @@ child events as `lr-example-claim-select` (`{ exampleId, claim }`),
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,
 `example-label`, `example-status`, `example-status-message`, `input-section`, `input`, `output-section`, `output`,
 `grounding-section`, `grounding-summary`, `tool-trace-section`, `tool-trace`, `section-heading`,
-`live-region`, `empty`.
+`live-region`, `empty`, `limit` (localized notice shown when `examples` exceeds the 500-row render
+ceiling).

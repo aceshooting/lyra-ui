@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,6 +45,9 @@ duplicates are omitted first-wins before empty state, focus/disclosure state, co
 rendering, or actions. Rows whose `text` is missing, nonstring, blank, or whitespace-only are also
 omitted without hiding later valid memories.
 
+At most 500 items per section render as `item` rows; a section's list past that length renders a
+localized `limit` notice after that section's list rather than mounting an unbounded number of rows.
+
 **Events:**
 
 - `lr-add` (`detail: LyraMemoryAddDetail` = `{ memory: LyraMemoryItem }`) — a pending "promote to
@@ -66,7 +69,8 @@ somewhere to land after a confirmation resolves), `item-row`, `item-text`, `conf
 `data-tone`; omitted when `confidence` is unset), `expand-toggle` / `item-body` (both omitted when
 `provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
 `remove-button`, `forget-all-button`, `forget-all-confirm` (the `lr-confirm-bar` that replaces
-`forget-all-button` while the bulk confirmation is pending).
+`forget-all-button` while the bulk confirmation is pending), `limit` (localized notice shown when a
+section's items exceed the 500-item render ceiling).
 
 **Keyboard/focus contract:** activating an action from the keyboard replaces that control with an
 `lr-confirm-bar`, and focus moves into the bar (landing on Deny, the safe action) rather than

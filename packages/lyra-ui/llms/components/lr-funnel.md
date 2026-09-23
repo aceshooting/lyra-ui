@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,13 +56,18 @@ interface LyraFunnelStage {
 }
 ```
 
+At most 500 valid stages render, each as its own bar row; a `stages` array past that length renders
+a localized `limit` notice after the list rather than mounting an unbounded number of bars. Every
+stage's share is still measured against the true first stage regardless of truncation.
+
 **Events:** none.
 
 **Slots:** none.
 
 **CSS parts:** `base`, `stages` (the `<ol>`), `stage`, `dropoff`, `stage-header`, `stage-label`,
 `stage-value`, `stage-share`, `comparison-value`, `track`, `bar`, `bar-overflow` (a second token on
-`bar` when the stage exceeds the first stage), `comparison-bar`, `empty`
+`bar` when the stage exceeds the first stage), `comparison-bar`, `empty`, `limit` (localized notice
+shown when `stages` exceeds the 500-stage render ceiling)
 
 **Themeable custom properties:** `--lr-funnel-bar-color` (default `var(--lr-color-brand)`),
 `--lr-funnel-comparison-color` (default `var(--lr-color-border-strong)`), `--lr-funnel-track-color`

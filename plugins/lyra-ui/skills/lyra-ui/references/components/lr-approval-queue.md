@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -38,7 +38,8 @@ resolved while open closes the dialog, and reentrant host updates during selecti
 stale request.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
-`tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching
+`tool-name`, `request-id`, `status`, `empty`, `limit` (localized notice shown when `requests`
+exceeds the 500-row render ceiling). The `[part='request']` row matching
 `selectedInvocationId`
 carries both `data-selected="true"` (the styling hook) and `aria-current="true"` (the semantic
 state), so the selection is announced, not merely painted. Other request rows explicitly render

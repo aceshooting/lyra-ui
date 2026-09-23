@@ -7060,6 +7060,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "list",
             "deprecated": null
           },
@@ -15899,6 +15903,10 @@
             "deprecated": null
           },
           {
+            "name": "agenda-limit",
+            "deprecated": null
+          },
+          {
             "name": "date",
             "deprecated": null
           },
@@ -15908,6 +15916,10 @@
           },
           {
             "name": "event",
+            "deprecated": null
+          },
+          {
+            "name": "event-limit",
             "deprecated": null
           },
           {
@@ -24133,6 +24145,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "list",
             "deprecated": null
           },
@@ -32063,6 +32079,10 @@
           },
           {
             "name": "export-button",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -47731,6 +47751,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "plot",
             "deprecated": null
           },
@@ -50886,6 +50910,10 @@
           },
           {
             "name": "input-section",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -56767,6 +56795,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "stage",
             "deprecated": null
           },
@@ -59878,6 +59910,10 @@
           },
           {
             "name": "evidence-span",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -76254,6 +76290,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "list",
             "deprecated": null
           },
@@ -78795,6 +78835,10 @@
           },
           {
             "name": "focus-ring",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -93141,6 +93185,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "list",
             "deprecated": null
           },
@@ -102610,6 +102658,10 @@
           },
           {
             "name": "heading",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {

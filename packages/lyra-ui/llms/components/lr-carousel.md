@@ -80,8 +80,10 @@ retain their mapped opt-in defaults, and the autoplay interval remains 3000ms.
   automatically
 
 **Events:** `lr-slide-change` (`detail: { index, slide }`) — emitted after the active slide changes
-from a method, button, key, pagination item, autoplay tick, or settled user scroll. `slide` is the
-original assigned element at `index`, never a loop endcap.
+from a method, button, key, pagination item, autoplay tick, or settled user scroll. Also emitted
+when a `slidesPerPage` change or a slide's removal forces the active index onto a different slide.
+Not emitted when a consumer sets `currentSlide` directly to an out-of-range value; that assignment
+is clamped silently. `slide` is the original assigned element at `index`, never a loop endcap.
 
 **Paging and scrolling.** In non-loop mode the page count is the set of reachable starts from zero
 to `slideCount - slidesPerPage`, stepping by `slidesPerMove` and always including the final start.

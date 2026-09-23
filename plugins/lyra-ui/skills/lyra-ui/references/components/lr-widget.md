@@ -78,7 +78,9 @@ toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-v
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
 `preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
 `activeViewId` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
-active view's `viewId`. Not emitted when a consumer sets `activeViewId` directly), and
+active view's `viewId`. Also emitted when a `views` reassignment drops the currently-active view,
+forcing a fallback to the first remaining view. Not emitted when a consumer sets `activeViewId`
+directly, even to a now-invalid id), and
 `lr-activate` (non-cancelable; `detail: { value }` — note the key is `value`, not `viewId` — is the
 activated view's `viewId`, fired on **every** accepted header view-toggle activation whether or not
 `activeViewId` actually moved. `lr-view-request` stays the veto point, and a vetoed activation emits

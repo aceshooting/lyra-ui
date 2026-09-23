@@ -26,7 +26,7 @@ import {
 import { styles } from './mind-map.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapTopicStatus, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapNodeLimit, LYRA_DEFAULT_mindMapTopicStatus, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraTopic };
@@ -100,12 +100,9 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     mindMapExpanded: LYRA_DEFAULT_mindMapExpanded,
     mindMapLabel: LYRA_DEFAULT_mindMapLabel,
     mindMapLeafStatus: LYRA_DEFAULT_mindMapLeafStatus,
+    mindMapNodeLimit: LYRA_DEFAULT_mindMapNodeLimit,
     mindMapTopicStatus: LYRA_DEFAULT_mindMapTopicStatus,
     noData: LYRA_DEFAULT_noData,
-    // Not yet in the generated per-component slice above (default-strings.generated.ts is
-    // regenerated once, in the integration task); this key's DEFAULT_STRINGS/LyraMessageKey
-    // source-of-truth entry already lives in src/internal/localization.ts.
-    mindMapNodeLimit: 'Showing {shown} of {total} topics.',
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -18,7 +18,7 @@ import { styles } from './embedding-explorer.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint, LYRA_DEFAULT_embeddingExplorerPointLimit } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const WIDTH = 640;
@@ -127,10 +127,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     embeddingExplorerEmpty: LYRA_DEFAULT_embeddingExplorerEmpty,
     embeddingExplorerLabel: LYRA_DEFAULT_embeddingExplorerLabel,
     embeddingExplorerPoint: LYRA_DEFAULT_embeddingExplorerPoint,
-    // Not yet in the generated per-component slice above (default-strings.generated.ts is
-    // regenerated once, in the integration task); this key's DEFAULT_STRINGS/LyraMessageKey
-    // source-of-truth entry already lives in src/internal/localization.ts.
-    embeddingExplorerPointLimit: 'Showing {shown} of {total} points.',
+    embeddingExplorerPointLimit: LYRA_DEFAULT_embeddingExplorerPointLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

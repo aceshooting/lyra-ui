@@ -13156,13 +13156,18 @@ interface LyraFunnelStage {
 }
 ```
 
+At most 500 valid stages render, each as its own bar row; a `stages` array past that length renders
+a localized `limit` notice after the list rather than mounting an unbounded number of bars. Every
+stage's share is still measured against the true first stage regardless of truncation.
+
 **Events:** none.
 
 **Slots:** none.
 
 **CSS parts:** `base`, `stages` (the `<ol>`), `stage`, `dropoff`, `stage-header`, `stage-label`,
 `stage-value`, `stage-share`, `comparison-value`, `track`, `bar`, `bar-overflow` (a second token on
-`bar` when the stage exceeds the first stage), `comparison-bar`, `empty`
+`bar` when the stage exceeds the first stage), `comparison-bar`, `empty`, `limit` (localized notice
+shown when `stages` exceeds the 500-stage render ceiling)
 
 **Themeable custom properties:** `--lr-funnel-bar-color` (default `var(--lr-color-brand)`),
 `--lr-funnel-comparison-color` (default `var(--lr-color-border-strong)`), `--lr-funnel-track-color`
@@ -15153,6 +15158,11 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   section retains the localized purpose name rather than duplicating an authored host name; when
   set programmatically without a host attribute, this value names the section
 
+At most 4 events render as `event` buttons inside a single month-view day cell, and at most 500
+events render as `agenda-event` buttons in agenda view; either ceiling past that count renders a
+localized `event-limit`/`agenda-limit` "+N more" notice rather than mounting an unbounded number of
+buttons.
+
 **Keyboard:** the month grid is a fixed 6×7 matrix (leading/trailing days of adjacent months fill it
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
 Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rendered grid rolls
@@ -15166,8 +15176,10 @@ Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rend
 **CSS parts:** `header` and `navigation` are aliases on the header wrapper; `nav` is shared by both
 month-navigation buttons; `previous-button` and `next-button` identify each direct button;
 `nav-glyph` is the chevron (`scaleX(-1)`-mirrored under RTL); `title`, `weekdays`, `weekday`,
-`grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `agenda`, and
-`agenda-event`.
+`grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `event-limit`
+(localized "+N more" notice shown in a day cell whose events exceed the 4-event per-cell render
+ceiling), `agenda`, `agenda-event`, and `agenda-limit` (localized "+N more" notice shown in agenda
+view when the visible month's events exceed the 500-event render ceiling).
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size
@@ -16838,7 +16850,9 @@ toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-v
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
 `preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
 `activeViewId` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
-active view's `viewId`. Not emitted when a consumer sets `activeViewId` directly), and
+active view's `viewId`. Also emitted when a `views` reassignment drops the currently-active view,
+forcing a fallback to the first remaining view. Not emitted when a consumer sets `activeViewId`
+directly, even to a now-invalid id), and
 `lr-activate` (non-cancelable; `detail: { value }` — note the key is `value`, not `viewId` — is the
 activated view's `viewId`, fired on **every** accepted header view-toggle activation whether or not
 `activeViewId` actually moved. `lr-view-request` stays the veto point, and a vetoed activation emits
@@ -17020,8 +17034,10 @@ retain their mapped opt-in defaults, and the autoplay interval remains 3000ms.
   automatically
 
 **Events:** `lr-slide-change` (`detail: { index, slide }`) — emitted after the active slide changes
-from a method, button, key, pagination item, autoplay tick, or settled user scroll. `slide` is the
-original assigned element at `index`, never a loop endcap.
+from a method, button, key, pagination item, autoplay tick, or settled user scroll. Also emitted
+when a `slidesPerPage` change or a slide's removal forces the active index onto a different slide.
+Not emitted when a consumer sets `currentSlide` directly to an out-of-range value; that assignment
+is clamped silently. `slide` is the original assigned element at `index`, never a loop endcap.
 
 **Paging and scrolling.** In non-loop mode the page count is the set of reachable starts from zero
 to `slideCount - slidesPerPage`, stepping by `slidesPerMove` and always including the final start.
@@ -30119,7 +30135,10 @@ exact shape `{ title, poster, sources, tracks }`, not the live child element. `s
 fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;
 `tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener that needs to
 annotate or reshape the payload must create its own mutable copy; the dispatched detail and every
-nested record/array reject mutation.
+nested record/array reject mutation. Not fired when a light-DOM mutation (a video removed, or every
+remaining video made `inert`/disabled) leaves no enabled video to activate: the internal
+active-video/active-index state still resets in that case, but `video` has no non-null value the
+frozen detail shape could carry, so the host-caused clear stays silent.
 
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.
@@ -41992,7 +42011,9 @@ slot has assigned content. Assigning `view='code'` without assigned code content
 navigation and the built-in copy/download buttons.
 
 **Events:** `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
-fired when the previous/next navigation moves to a different version), `lr-restore` (`detail: {
+fired when the previous/next navigation moves to a different version; not fired when a `versions`
+reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
+since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
 versionId }`, fired by the restore-this-version button; mutates nothing itself), `lr-copy`
 (`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
@@ -42228,7 +42249,8 @@ menu. These composed child events surface unchanged; the inspector does not emit
 **CSS parts:** `base`, `toolbar`,
 `segments`, `segment`, `segment-header`, `segment-label`, `segment-text`, `segment-tokens`,
 `meter` (the embedded `lr-context-meter`), `citation`, `redaction` (one redaction placeholder
-marker), `truncation-boundary`, `copy-button`, `export-button`, `empty`.
+marker), `truncation-boundary`, `copy-button`, `export-button`, `empty`, `limit` (localized notice
+shown when `segments` exceeds the 500-row render ceiling).
 
 ## `lr-eval-dataset`
 
@@ -42392,7 +42414,8 @@ child events as `lr-example-claim-select` (`{ exampleId, claim }`),
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,
 `example-label`, `example-status`, `example-status-message`, `input-section`, `input`, `output-section`, `output`,
 `grounding-section`, `grounding-summary`, `tool-trace-section`, `tool-trace`, `section-heading`,
-`live-region`, `empty`.
+`live-region`, `empty`, `limit` (localized notice shown when `examples` exceeds the 500-row render
+ceiling).
 
 ## `lr-policy-summary`
 
@@ -42417,7 +42440,8 @@ resolve/acknowledge action — see `lr-tool-approval-dialog`/`lr-confirm-bar` fo
 gate.
 
 **CSS parts:** `base`, `empty`, `summary`, `count`, `state-badge`,
-`list`, `decision`, `decision-header`, `category`, `label`, `detail`, `explanation`.
+`list`, `decision`, `decision-header`, `category`, `label`, `detail`, `explanation`, `limit`
+(localized notice shown when `decisions` exceeds the 500-row render ceiling).
 
 **Themeable custom properties:** `--lr-policy-summary-count-allow-color` (default
 `var(--lr-color-success)`), `--lr-policy-summary-count-deny-color` (default
@@ -42598,7 +42622,8 @@ resolved while open closes the dialog, and reentrant host updates during selecti
 stale request.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
-`tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching
+`tool-name`, `request-id`, `status`, `empty`, `limit` (localized notice shown when `requests`
+exceeds the 500-row render ceiling). The `[part='request']` row matching
 `selectedInvocationId`
 carries both `data-selected="true"` (the styling hook) and `aria-current="true"` (the semantic
 state), so the selection is announced, not merely painted. Other request rows explicitly render
@@ -44503,7 +44528,9 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   omitted state and removes the attribute
 
 **Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
-fired after every toggle including select-all).
+fired after every toggle including select-all. Also fired when a `sources` reassignment prunes a
+previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
+`selectedSourceIds` directly; that assignment is normalized silently).
 
 **Slots:** none.
 
@@ -44657,6 +44684,14 @@ LyraTopic[] }`; a single root sits at the center, multiple roots hang off an imp
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment
 
+Above 500 currently-visible nodes (per the current expand/collapse state), the SVG and the
+parallel sr-only tree both render a deterministic, connectivity-preserving, subtree-size-weighted
+sample instead of every node: a kept node's parent, if any, is always kept too (no floating nodes
+with a dangling connector or a gap in the `role="tree"` walk), and a larger branch keeps
+proportionally more of its own nodes than a small one, sampled evenly across a wide/flat branch's
+own child list rather than dropping its tail outright. A surviving node keeps the position the
+full layout gave it. A localized "showing N of M" notice appears in `[part="limit"]`.
+
 **Events:** `lr-topic-select` (`detail: { topicId }`, a _leaf_ topic was activated),
 `lr-topic-toggle` (`detail: { topicId, expanded }`, a parent topic was activated, or auto-expanded by
 keyboard descent).
@@ -44664,7 +44699,8 @@ keyboard descent).
 **Slots:** none.
 
 **CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `link`
-(parent-child connector), `focus-ring` (keyboard focus ring), `live-region` (visually hidden
+(parent-child connector), `focus-ring` (keyboard focus ring), `limit` (the "showing N of M"
+render-cap notice, present only above 500 currently-visible nodes), `live-region` (visually hidden
 announcement region), `empty` (shown when `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
@@ -45100,6 +45136,11 @@ rendering, or events. Usable display fields are captured once while emitted sele
 objects retain their original identity. Malformed rows and later duplicate ids are omitted; the
 first valid occurrence wins.
 
+At most 500 citations render as `evidence-item` rows; a `citations` array past that length still
+reports its true count in `evidence-count` but renders a localized `limit` notice after the list
+rather than mounting an unbounded number of rows. The full citation set is still forwarded to the
+composed `lr-claim-evidence` for claim-to-citation lookup, which applies its own render cap.
+
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
 The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
@@ -45116,7 +45157,8 @@ row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-co
 its semantics survive list-style resets),
 `evidence-item` (one `<li>` containing a badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
-`Citation.span` range, omitted when unset), `claims` (the claim/evidence region), `empty`
+`Citation.span` range, omitted when unset), `limit` (localized notice shown when `citations` exceeds
+the 500-citation render ceiling), `claims` (the claim/evidence region), `empty`
 (shown when `assessment` is `null`).
 
 **Themeable custom properties:** shared tokens only.
@@ -45503,6 +45545,9 @@ duplicates are omitted first-wins before empty state, focus/disclosure state, co
 rendering, or actions. Rows whose `text` is missing, nonstring, blank, or whitespace-only are also
 omitted without hiding later valid memories.
 
+At most 500 items per section render as `item` rows; a section's list past that length renders a
+localized `limit` notice after that section's list rather than mounting an unbounded number of rows.
+
 **Events:**
 
 - `lr-add` (`detail: LyraMemoryAddDetail` = `{ memory: LyraMemoryItem }`) — a pending "promote to
@@ -45524,7 +45569,8 @@ somewhere to land after a confirmation resolves), `item-row`, `item-text`, `conf
 `data-tone`; omitted when `confidence` is unset), `expand-toggle` / `item-body` (both omitted when
 `provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
 `remove-button`, `forget-all-button`, `forget-all-confirm` (the `lr-confirm-bar` that replaces
-`forget-all-button` while the bulk confirmation is pending).
+`forget-all-button` while the bulk confirmation is pending), `limit` (localized notice shown when a
+section's items exceed the 500-item render ceiling).
 
 **Keyboard/focus contract:** activating an action from the keyboard replaces that control with an
 `lr-confirm-bar`, and focus moves into the bar (landing on Deny, the safe action) rather than
@@ -45938,11 +45984,17 @@ Pointer and programmatic focus synchronize the single roving tab stop, and every
 least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker. Optional
 cluster membership is exposed as each option's description and in a visible text legend, so the
 grouping never depends on color alone.
+Above 1,000 points, the plot renders a deterministic, evenly spaced sample of the whole array
+(spanning the full input, not a leading run) instead of every point, keeping DOM node and listener
+count bounded while the sampled points stay representative of the full plotted distribution; a
+localized "showing N of M" notice appears in `[part="limit"]`. `bounds` and the cluster legend
+still derive from the complete `points` array, so a decimated view keeps the same scale and the
+same complete legend as the full plot.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
-`empty`.
+`limit` (the "showing N of M" render-cap notice, present only above 1,000 points), `empty`.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
@@ -46019,6 +46071,9 @@ duplicates are omitted first-wins before empty state, controlled selection, evid
 rendering, or events. An unrecognized runtime claim status renders as localized “Unsupported” with
 the danger treatment instead of producing an empty or misleading badge.
 
+At most 500 claims render as `claim` rows; a `claims` array past that length renders a localized
+`limit` notice after the list rather than mounting an unbounded number of rows.
+
 - `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
   evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
   density knob: each claim's border and background stay. `false` (the default) keeps the full
@@ -46035,7 +46090,8 @@ composed `lr-citation-open` event intentionally crosses `lr-claim-evidence` unch
 `{ sourceId, index, href }` detail.
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
-`confidence`, `explanation`, `evidence`, `empty`.
+`confidence`, `explanation`, `evidence`, `limit` (localized notice shown when `claims` exceeds the
+500-claim render ceiling), `empty`.
 
 **Themeable custom properties:** `--lr-claim-evidence-compact-padding` (default
 `var(--lr-space-xs)`) — `[part='claim-trigger']`'s padding while `compact`;
@@ -46108,13 +46164,18 @@ Metrics and runs are canonicalized independently by nonblank `id`. Malformed row
 duplicates are omitted first-wins before metric fallback, slice derivation/filtering, cards, charts,
 history, counts, rendering, or actions.
 
+At most 500 of the currently filtered runs render as `run` buttons and feed the trend chart; a
+filtered set past that length renders a localized `limit` notice after the run history rather than
+mounting an unbounded number of rows.
+
 **Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
 `lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
 corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
-`chart`, `runs`, `runs-heading`, `run`, `empty`.
+`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice shown when the filtered runs
+exceed the 500-run render ceiling), `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
 `var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.

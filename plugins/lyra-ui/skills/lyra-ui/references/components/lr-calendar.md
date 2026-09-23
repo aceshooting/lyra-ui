@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,6 +50,11 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   section retains the localized purpose name rather than duplicating an authored host name; when
   set programmatically without a host attribute, this value names the section
 
+At most 4 events render as `event` buttons inside a single month-view day cell, and at most 500
+events render as `agenda-event` buttons in agenda view; either ceiling past that count renders a
+localized `event-limit`/`agenda-limit` "+N more" notice rather than mounting an unbounded number of
+buttons.
+
 **Keyboard:** the month grid is a fixed 6×7 matrix (leading/trailing days of adjacent months fill it
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
 Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rendered grid rolls
@@ -63,8 +68,10 @@ Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rend
 **CSS parts:** `header` and `navigation` are aliases on the header wrapper; `nav` is shared by both
 month-navigation buttons; `previous-button` and `next-button` identify each direct button;
 `nav-glyph` is the chevron (`scaleX(-1)`-mirrored under RTL); `title`, `weekdays`, `weekday`,
-`grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `agenda`, and
-`agenda-event`.
+`grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `event-limit`
+(localized "+N more" notice shown in a day cell whose events exceed the 4-event per-cell render
+ceiling), `agenda`, `agenda-event`, and `agenda-limit` (localized "+N more" notice shown in agenda
+view when the visible month's events exceed the 500-event render ceiling).
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size

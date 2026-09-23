@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,6 +33,9 @@ duplicates are omitted first-wins before empty state, controlled selection, evid
 rendering, or events. An unrecognized runtime claim status renders as localized “Unsupported” with
 the danger treatment instead of producing an empty or misleading badge.
 
+At most 500 claims render as `claim` rows; a `claims` array past that length renders a localized
+`limit` notice after the list rather than mounting an unbounded number of rows.
+
 - `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
   evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
   density knob: each claim's border and background stay. `false` (the default) keeps the full
@@ -49,7 +52,8 @@ composed `lr-citation-open` event intentionally crosses `lr-claim-evidence` unch
 `{ sourceId, index, href }` detail.
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
-`confidence`, `explanation`, `evidence`, `empty`.
+`confidence`, `explanation`, `evidence`, `limit` (localized notice shown when `claims` exceeds the
+500-claim render ceiling), `empty`.
 
 **Themeable custom properties:** `--lr-claim-evidence-compact-padding` (default
 `var(--lr-space-xs)`) — `[part='claim-trigger']`'s padding while `compact`;

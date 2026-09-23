@@ -50,7 +50,10 @@ exact shape `{ title, poster, sources, tracks }`, not the live child element. `s
 fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;
 `tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener that needs to
 annotate or reshape the payload must create its own mutable copy; the dispatched detail and every
-nested record/array reject mutation.
+nested record/array reject mutation. Not fired when a light-DOM mutation (a video removed, or every
+remaining video made `inert`/disabled) leaves no enabled video to activate: the internal
+active-video/active-index state still resets in that case, but `video` has no non-null value the
+frozen detail shape could carry, so the host-caused clear stays silent.
 
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.

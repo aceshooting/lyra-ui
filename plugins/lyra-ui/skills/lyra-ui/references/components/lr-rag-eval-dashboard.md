@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -36,13 +36,18 @@ Metrics and runs are canonicalized independently by nonblank `id`. Malformed row
 duplicates are omitted first-wins before metric fallback, slice derivation/filtering, cards, charts,
 history, counts, rendering, or actions.
 
+At most 500 of the currently filtered runs render as `run` buttons and feed the trend chart; a
+filtered set past that length renders a localized `limit` notice after the run history rather than
+mounting an unbounded number of rows.
+
 **Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
 `lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
 corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
-`chart`, `runs`, `runs-heading`, `run`, `empty`.
+`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice shown when the filtered runs
+exceed the 500-run render ceiling), `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
 `var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.

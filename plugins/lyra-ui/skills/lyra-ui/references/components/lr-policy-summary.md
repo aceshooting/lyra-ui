@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -37,7 +37,8 @@ resolve/acknowledge action — see `lr-tool-approval-dialog`/`lr-confirm-bar` fo
 gate.
 
 **CSS parts:** `base`, `empty`, `summary`, `count`, `state-badge`,
-`list`, `decision`, `decision-header`, `category`, `label`, `detail`, `explanation`.
+`list`, `decision`, `decision-header`, `category`, `label`, `detail`, `explanation`, `limit`
+(localized notice shown when `decisions` exceeds the 500-row render ceiling).
 
 **Themeable custom properties:** `--lr-policy-summary-count-allow-color` (default
 `var(--lr-color-success)`), `--lr-policy-summary-count-deny-color` (default

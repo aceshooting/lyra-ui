@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,6 +53,11 @@ rendering, or events. Usable display fields are captured once while emitted sele
 objects retain their original identity. Malformed rows and later duplicate ids are omitted; the
 first valid occurrence wins.
 
+At most 500 citations render as `evidence-item` rows; a `citations` array past that length still
+reports its true count in `evidence-count` but renders a localized `limit` notice after the list
+rather than mounting an unbounded number of rows. The full citation set is still forwarded to the
+composed `lr-claim-evidence` for claim-to-citation lookup, which applies its own render cap.
+
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
 The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
@@ -69,7 +74,8 @@ row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-co
 its semantics survive list-style resets),
 `evidence-item` (one `<li>` containing a badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
-`Citation.span` range, omitted when unset), `claims` (the claim/evidence region), `empty`
+`Citation.span` range, omitted when unset), `limit` (localized notice shown when `citations` exceeds
+the 500-citation render ceiling), `claims` (the claim/evidence region), `empty`
 (shown when `assessment` is `null`).
 
 **Themeable custom properties:** shared tokens only.

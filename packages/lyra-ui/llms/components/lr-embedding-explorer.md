@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,11 +34,17 @@ Pointer and programmatic focus synchronize the single roving tab stop, and every
 least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker. Optional
 cluster membership is exposed as each option's description and in a visible text legend, so the
 grouping never depends on color alone.
+Above 1,000 points, the plot renders a deterministic, evenly spaced sample of the whole array
+(spanning the full input, not a leading run) instead of every point, keeping DOM node and listener
+count bounded while the sampled points stay representative of the full plotted distribution; a
+localized "showing N of M" notice appears in `[part="limit"]`. `bounds` and the cluster legend
+still derive from the complete `points` array, so a decimated view keeps the same scale and the
+same complete legend as the full plot.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
-`empty`.
+`limit` (the "showing N of M" render-cap notice, present only above 1,000 points), `empty`.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`

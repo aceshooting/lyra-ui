@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -62,4 +62,5 @@ menu. These composed child events surface unchanged; the inspector does not emit
 **CSS parts:** `base`, `toolbar`,
 `segments`, `segment`, `segment-header`, `segment-label`, `segment-text`, `segment-tokens`,
 `meter` (the embedded `lr-context-meter`), `citation`, `redaction` (one redaction placeholder
-marker), `truncation-boundary`, `copy-button`, `export-button`, `empty`.
+marker), `truncation-boundary`, `copy-button`, `export-button`, `empty`, `limit` (localized notice
+shown when `segments` exceeds the 500-row render ceiling).
