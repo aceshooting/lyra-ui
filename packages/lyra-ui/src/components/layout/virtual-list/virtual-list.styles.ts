@@ -122,6 +122,13 @@ export const styles = css`
     );
     padding: var(--lr-thread-list-excerpt-highlight-padding, 0);
   }
+  /* lr-activity-feed's renderText output lands in this shadow root at or above virtualize-at, the
+     same one-shadow-hop-unreachable shape as the row-excerpt <mark> rule immediately above --
+     :where() keeps specificity at zero so an inline style on the callback's own returned anchor
+     still wins. SHADOW-MODE ONLY, for the same reason documented above. */
+  [part="row"] [part~="entry-text"] a:where(:any-link) {
+    color: var(--lr-activity-feed-entry-text-link-color, var(--lr-color-brand));
+  }
   [part="group"] {
     position: absolute;
     inset-inline: 0;

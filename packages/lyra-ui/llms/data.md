@@ -3292,8 +3292,9 @@ owns none of that.
 - `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
 - `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
 - `selected: boolean = false` (reflected)
-- `compact: boolean = false` (reflected) — tighter card padding for dense canvases and palette
-  previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
+- `compact: boolean = false` (reflected) — tighter card padding, row gap, and header icon-to-heading
+  gap for dense canvases and palette previews; the border, background, shadow and the
+  `selected`/`status="running"` treatments all stay
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
@@ -3315,7 +3316,9 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 
 **Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`),
 `--lr-flow-node-compact-padding` (default `var(--lr-space-xs)`) and `--lr-flow-node-compact-gap`
-(default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact` — and
+(default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact`;
+`--lr-flow-node-compact-header-gap` (default `var(--lr-space-2xs)`) — `[part="header"]`'s own
+icon-to-heading gap while `compact` — and
 `--lr-flow-node-selected-outline-color` (default `var(--lr-color-brand)`) — the card's outline color
 while `selected`. Like the other state-scoped custom properties here, it is an inline `var()`
 fallback at its point of use rather than a `:host` declaration, so it can be set on the element _or any

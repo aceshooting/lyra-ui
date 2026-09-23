@@ -121,3 +121,36 @@ export const NarrowAllStates: Story = {
     </div>
   `,
 };
+
+export const DensityAndChrome: Story = {
+  name: 'compact + frame="plain"',
+  render: () => html`
+    <div style="display:grid; gap:1rem; max-width:32rem;">
+      <lr-source-list label-plural="2 sources" expanded>
+        <lr-source-card source-id="doc-1" title="annual_report.pdf">
+          <span slot="excerpt">Default card framing keeps this panel visually distinct.</span>
+        </lr-source-card>
+      </lr-source-list>
+      <lr-source-list label-plural="2 sources" compact expanded>
+        <lr-source-card compact source-id="doc-1" title="annual_report.pdf">
+          <span slot="excerpt">Compact keeps the card while tightening header and list spacing.</span>
+        </lr-source-card>
+      </lr-source-list>
+      <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
+        <lr-source-list label-plural="1 source" frame="plain" expanded>
+          <lr-source-card frame="plain" source-id="doc-1" title="notes.txt">
+            <span slot="excerpt">Plain nests in existing message chrome without a second outer frame.</span>
+          </lr-source-card>
+        </lr-source-list>
+      </div>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Top to bottom: the default card, `compact` (tighter header/list spacing with chrome intact), and `frame="plain"` inside a container that already supplies the outer border. Plain keeps the panel’s internal header/list divider.',
+      },
+    },
+  },
+};

@@ -61,6 +61,10 @@ export interface LyraCommunityCardEventMap {
  * @csspart empty - The empty state shown when `community` is `null`.
  * @cssprop [--lr-community-card-bg=var(--lr-color-surface)] - Resting background of `[part="base"]`.
  *   `frame="plain"` still paints transparent.
+ * @cssprop [--lr-community-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
+ *   `compact`.
+ * @cssprop [--lr-community-card-compact-gap=var(--lr-space-xs)] - `[part="base"]` gap while
+ *   `compact`.
  * @status stable
  * @since 4.0.0
  */
@@ -87,7 +91,8 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   @property({ attribute: false }) members: readonly LyraEntity[] = [];
   /** Visible member chips before the "+N" overflow chip. */
   @property({ type: Number, attribute: 'max-members' }) maxMembers = 8;
-  /** Single-row layout (title + member count + drill button, no summary/chips). */
+  /** Single-row layout (title + member count + drill button, no summary/chips), and tighter
+   *  `[part="base"]` padding/gap — same convention as the sibling `lr-entity-card`'s `compact`. */
   @property({ type: Boolean, reflect: true }) compact = false;
   /** Container treatment, in the shared `LyraFrame` vocabulary — the same property this
    *  component's sibling `lr-entity-card` carries. `'card'` (the default) keeps the bordered,

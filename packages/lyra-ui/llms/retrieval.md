@@ -832,7 +832,8 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
 - `members: LyraEntity[] = []` (attribute: false) — rendered as chips, up to `maxMembers`
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
-- `compact: boolean = false` (reflected) — omits the summary excerpt and member chips
+- `compact: boolean = false` (reflected) — omits the summary excerpt and member chips, and tightens
+  `[part='base']`'s padding/gap — same convention as the sibling `lr-entity-card`'s `compact`
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property this component's sibling `lr-entity-card`
   carries. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the
@@ -853,8 +854,10 @@ activated).
 
 **Themeable custom properties:** `--lr-community-card-bg` (default `var(--lr-color-surface)`) —
 `[part='base']`'s RESTING background, so a panel retinting its `lr-entity-card`/`lr-source-card`
-siblings can retint this card with it; `frame='plain'` still drops the fill entirely. Otherwise
-shared tokens.
+siblings can retint this card with it; `frame='plain'` still drops the fill entirely.
+`--lr-community-card-compact-padding` (default `var(--lr-space-s)`) and
+`--lr-community-card-compact-gap` (default `var(--lr-space-xs)`) — `[part='base']` padding/gap
+while `compact`. Otherwise shared tokens.
 
 **Optional peer deps:** none.
 
@@ -1389,6 +1392,15 @@ direct light-DOM children of the list (plain composition — no `.items` array p
   header summary, e.g. `"3 sources"` or `"1 source"`; this component never counts or pluralizes on
   its own. Takes precedence over `label` when both are set. If neither is set, the header falls back
   to the localized `sourceListDefaultLabel` string (English default: `"Sources"`).
+- `compact: boolean = false` (reflected) — tighter header and list padding/gap, for a panel
+  rendered repeatedly down a message transcript — same convention as this list's own slotted
+  `lr-source-card` children's `compact`. Purely a density knob: the outer border and surface stay,
+  so pair it with `frame="plain"` to remove card chrome.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled outer
+  container. `'plain'` removes that outer border, background, and corner radius so a list nested
+  inside existing message chrome does not double it. Plain preserves the header/list divider and
+  whichever regular or compact padding applies.
 
 **Getters:** `sourceCount: number` — read-only, live-updated count of the currently-slotted children,
 handy for building a `label-plural` string reactively, e.g. `` list.labelPlural = `${list.sourceCount} sources` ``.
@@ -1408,7 +1420,13 @@ list/listitem semantics return.
 `toggle` (the chevron indicator inside the header), `list` (wrapper around the default slot, `hidden`
 while collapsed).
 
-**Themeable custom properties:** shared tokens only — `--lr-color-border`, `--lr-color-surface`,
+**Themeable custom properties:** `--lr-source-list-compact-header-padding` (default
+`var(--lr-space-2xs) var(--lr-space-s)`) and `--lr-source-list-compact-header-gap` (default
+`var(--lr-space-2xs)`) — `[part="header"]` padding/gap while `compact`; `--lr-source-list-compact-gap`
+(default `var(--lr-space-2xs)`) and `--lr-source-list-compact-list-padding` (default
+`var(--lr-space-s)`) — `[part="list"]` gap/padding while `compact`. All four are inline `var()`
+fallbacks at their point of use, so any can be set on the element or an ancestor. Otherwise shared
+tokens — `--lr-color-border`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-brand` / `-brand-quiet`, `--lr-radius`, `--lr-space-xs`/`-s`/
 `-m`, `--lr-transition-fast`, `--lr-focus-ring-*`.
 

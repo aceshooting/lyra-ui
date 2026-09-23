@@ -299,6 +299,24 @@ describe('compact / frame escape hatches', () => {
     expect(getComputedStyle(compactHeader).fontSize).to.equal('11px');
   });
 
+  it('also reduces compact body typography through its own dedicated retunable cssprop', async () => {
+    const regular = (await fixture(
+      html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const compact = (await fixture(
+      html`<lr-thinking-panel compact expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const regularBody = regular.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const compactBody = compact.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+
+    expect(Number.parseFloat(getComputedStyle(compactBody).fontSize)).to.be.lessThan(
+      Number.parseFloat(getComputedStyle(regularBody).fontSize),
+    );
+
+    compact.style.setProperty('--lr-thinking-panel-compact-body-font-size', '11px');
+    expect(getComputedStyle(compactBody).fontSize).to.equal('11px');
+  });
+
   it('drops only the outer chrome under frame="plain", retaining the collapse divider and density', async () => {
     const plain = (await fixture(
       html`<lr-thinking-panel compact frame="plain" expanded>Reasoning</lr-thinking-panel>`,

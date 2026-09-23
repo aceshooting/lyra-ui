@@ -184,6 +184,55 @@ it('renders only title + member count + drill button in compact mode -- no summa
   expect(el.shadowRoot!.querySelector('[part="drill-button"]')).to.exist;
 });
 
+it('tightens [part="base"] padding and gap in compact mode, matching sibling lr-entity-card/lr-source-card', async () => {
+  const regular = (await fixture(
+    html`<lr-community-card></lr-community-card>`
+  )) as LyraCommunityCard;
+  regular.community = community;
+  regular.members = members;
+  await regular.updateComplete;
+  const regularBase = regular.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const compact = (await fixture(
+    html`<lr-community-card compact></lr-community-card>`
+  )) as LyraCommunityCard;
+  compact.community = community;
+  compact.members = members;
+  await compact.updateComplete;
+  const compactBase = compact.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const regularPadding = getComputedStyle(regularBase).paddingBlockStart;
+  const compactPadding = getComputedStyle(compactBase).paddingBlockStart;
+  expect(parseFloat(compactPadding)).to.be.lessThan(parseFloat(regularPadding));
+
+  const regularGap = getComputedStyle(regularBase).rowGap;
+  const compactGap = getComputedStyle(compactBase).rowGap;
+  expect(parseFloat(compactGap)).to.be.lessThan(parseFloat(regularGap));
+});
+
+it('retunes the compact padding/gap through --lr-community-card-compact-*, falling back to the pre-existing values when unset', async () => {
+  const unset = (await fixture(
+    html`<lr-community-card compact .community=${community} .members=${members}></lr-community-card>`
+  )) as LyraCommunityCard;
+  await unset.updateComplete;
+  const unsetBase = getComputedStyle(unset.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+  expect(unsetBase.paddingTop).to.equal('8px'); // --lr-space-s fallback
+  expect(unsetBase.rowGap).to.equal('4px'); // --lr-space-xs fallback
+
+  const retuned = (await fixture(
+    html`<lr-community-card
+      compact
+      .community=${community}
+      .members=${members}
+      style="--lr-community-card-compact-padding: 3px; --lr-community-card-compact-gap: 5px"
+    ></lr-community-card>`
+  )) as LyraCommunityCard;
+  await retuned.updateComplete;
+  const retunedBase = getComputedStyle(retuned.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+  expect(retunedBase.paddingTop).to.equal('3px');
+  expect(retunedBase.rowGap).to.equal('5px');
+});
+
 it('defaults to frame="card", keeping the bordered chrome', async () => {
   const el = (await fixture(
     html`<lr-community-card></lr-community-card>`

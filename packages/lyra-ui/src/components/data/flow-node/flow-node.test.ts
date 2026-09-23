@@ -570,6 +570,32 @@ describe('compact density and the card part', () => {
     expect(chrome.boxShadow).to.not.equal('none');
   });
 
+  it('also tightens [part="header"]\'s own icon-to-heading gap under compact, falling back to --lr-space-2xs when unset', async () => {
+    const regular = (await fixture(
+      html`<lr-flow-node heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
+    )) as LyraFlowNode;
+    const compact = (await fixture(
+      html`<lr-flow-node compact heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
+    )) as LyraFlowNode;
+    const headerOf = (el: LyraFlowNode): HTMLElement =>
+      el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+
+    const regularGap = getComputedStyle(headerOf(regular)).columnGap;
+    const compactGap = getComputedStyle(headerOf(compact)).columnGap;
+    expect(parseFloat(compactGap)).to.be.lessThan(parseFloat(regularGap));
+    expect(compactGap).to.equal('2px'); // --lr-space-2xs fallback
+  });
+
+  it('retunes the compact header gap through --lr-flow-node-compact-header-gap', async () => {
+    const el = (await fixture(
+      html`<lr-flow-node compact heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
+    )) as LyraFlowNode;
+    el.style.setProperty('--lr-flow-node-compact-header-gap', '6px');
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    expect(getComputedStyle(header).columnGap).to.equal('6px');
+  });
+
   it('lets a consumer retune the compact values through --lr-flow-node-compact-*', async () => {
     const el = (await fixture(html`<lr-flow-node compact heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
     el.style.setProperty('--lr-flow-node-compact-padding', '3px');

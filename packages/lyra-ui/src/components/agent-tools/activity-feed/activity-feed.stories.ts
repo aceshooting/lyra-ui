@@ -122,6 +122,34 @@ export const RichEntryTextWithConsumerPartStyling: Story = {
   `,
 };
 
+const renderLinkedEntryText = (entry: ActivityEntry) => html`
+  <a href="https://example.com" target="_blank" rel="noopener noreferrer">${entry.text}</a>
+`;
+
+export const RenderTextAnchorLinkColor: Story = {
+  name: 'renderText anchor styling hook',
+  render: () => html`
+    <div style="max-width: 32rem;">
+      <lr-activity-feed
+        mode="live"
+        expanded
+        virtualize-at="0"
+        style="--lr-activity-feed-entry-text-link-color: var(--lr-color-danger);"
+        .entries=${entries.slice(0, 1)}
+        .renderText=${renderLinkedEntryText}
+      ></lr-activity-feed>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A `renderText` callback\'s returned anchor renders inside this shadow root (or the internal `<lr-virtual-list>`\'s, once virtualized), unreachable from page CSS or `::part()`; `--lr-activity-feed-entry-text-link-color` (here retuned to the danger token) is the styling hook for it.',
+      },
+    },
+  },
+};
+
 const dataEntries: ActivityEntry[] = [
   {
     id: 'd1',

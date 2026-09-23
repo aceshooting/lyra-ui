@@ -11,6 +11,27 @@ export const styles = css`
     background: var(--lr-color-surface);
     overflow: hidden;
   }
+  /* Density escape -- same convention as this list's own slotted lr-source-card children's
+     compact. Values sit behind inline var() fallbacks, not :host declarations that every instance
+     re-declares and so shadows any ancestor value, so a transcript can retune every embedded panel
+     at once; the fallbacks are the pre-existing values, so an unset panel renders unchanged. */
+  :host([compact]) [part='header'] {
+    padding: var(--lr-source-list-compact-header-padding, var(--lr-space-2xs) var(--lr-space-s));
+    gap: var(--lr-source-list-compact-header-gap, var(--lr-space-2xs));
+  }
+  :host([compact]) [part='list'] {
+    gap: var(--lr-source-list-compact-gap, var(--lr-space-2xs));
+    padding: var(--lr-source-list-compact-list-padding, var(--lr-space-s));
+  }
+  /* Chrome escape -- same convention as lr-thinking-panel's/lr-task-list's frame="plain": drops
+     the outer border/background/radius so a panel nested in a container that already draws a
+     border (a message bubble) doesn't double it. The header/list divider is layout, not outer
+     chrome, so it stays. */
+  :host([frame='plain']) [part='base'] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
   [part='header'] {
     display: flex;
     align-items: center;

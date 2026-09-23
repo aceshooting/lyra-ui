@@ -186,6 +186,13 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   toggle, status dot, label, and summary while `compact`.
  * @cssprop [--lr-activity-feed-compact-entry-padding=var(--lr-space-2xs) var(--lr-space-s)] -
  *   `[part="entry"]` padding while `compact`.
+ * @cssprop [--lr-activity-feed-compact-entry-gap=var(--lr-space-2xs)] - Gap between an entry's
+ *   icon/dot and its label/timestamp while `compact`.
+ * @cssprop [--lr-activity-feed-entry-text-link-color=var(--lr-color-brand)] - Colour of an anchor
+ *   returned from `renderText`. Such an anchor renders inside this component's shadow root (or
+ *   the internal `<lr-virtual-list>`'s, once virtualized), so page CSS cannot reach it and
+ *   `::part()` cannot select past the first compound selector to reach it either; without this
+ *   hook it computes to the UA default link blue. Set `revert` for the UA default.
  * @cssprop [--lr-activity-feed-background=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
  * @cssprop [--lr-activity-feed-border-color=var(--lr-color-border)] - Colour of the outer card's
@@ -262,9 +269,9 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    *  `activityFeedLabel` fallback, while this remains the visible header text. */
   @property() label?: string;
 
-  /** Tighter header and entry-row padding for dense transcript contexts. Defaults to `false`,
-   *  preserving the regular-density treatment. This changes density only; the outer border and
-   *  surface remain, so use `frame="plain"` to remove card chrome. */
+  /** Tighter header and entry-row padding and gap for dense transcript contexts. Defaults to
+   *  `false`, preserving the regular-density treatment. This changes density only; the outer
+   *  border and surface remain, so use `frame="plain"` to remove card chrome. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
@@ -282,7 +289,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   /** Overrides the default plain text inside every `[part="entry-text"]` wrapper with an arbitrary
    *  `TemplateResult` (e.g. rendered markdown, or markdown plus a trailing list of
    *  `<lr-tool-call-chip>`s). The stable wrapper remains available for styling in both rendering
-   *  paths, since both render every entry through the same internal template. */
+   *  paths, since both render every entry through the same internal template. A returned anchor
+   *  is given the `--lr-activity-feed-entry-text-link-color` hook (see below) since it otherwise
+   *  renders inside a shadow root neither page CSS nor `::part()` can reach past the wrapper;
+   *  other descendant markup stays reachable only by inheritance or an inline style. */
   @property({ attribute: false }) renderText?: (entry: ActivityEntry) => TemplateResult;
 
   /** At/above this entry count, the body renders through an internal `<lr-virtual-list>`. */

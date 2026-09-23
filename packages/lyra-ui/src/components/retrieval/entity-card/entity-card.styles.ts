@@ -18,6 +18,11 @@ export const styles = css`
     background: var(--lr-entity-card-bg, var(--lr-color-surface));
     color: var(--lr-color-text);
     min-inline-size: 0;
+    /* Fill a CSS-Grid/flex-stretched host (default align-items: stretch), matching a taller
+       sibling tile (e.g. lr-entity-dossier's confidence lr-stat) instead of leaving blank space
+       below this card's own border. */
+    block-size: 100%;
+    box-sizing: border-box;
   }
   /* Density escape -- same convention as lr-empty's compact and the sibling lr-community-card.
      Values sit behind inline var() fallbacks, not a :host declaration that every instance

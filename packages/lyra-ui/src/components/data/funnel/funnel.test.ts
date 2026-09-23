@@ -356,3 +356,25 @@ describe('<lr-funnel> render cap', () => {
     expect(part(el, 'limit') === null).to.equal(true);
   });
 });
+
+describe('<lr-funnel> grid/flex stretch', () => {
+  it('stretches [part="base"] to fill a CSS Grid row, matching a taller sibling instead of leaving blank space', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="display: grid; grid-template-columns: 1fr 1fr; inline-size: 600px;">
+        <lr-funnel .stages=${SIGNUP_FUNNEL.slice(0, 1)}></lr-funnel>
+        <div style="block-size: 400px;">tall sibling</div>
+      </div>
+    `);
+    const funnel = wrapper.querySelector('lr-funnel') as LyraFunnel;
+    await funnel.updateComplete;
+
+    const hostRect = funnel.getBoundingClientRect();
+    // The grid row stretched the host to match the taller sibling (default align-items: stretch).
+    expect(hostRect.height).to.be.greaterThan(100);
+
+    const baseRect = part(funnel, 'base')!.getBoundingClientRect();
+    // [part="base"] must fill its own host's full measured height, not shrink-wrap to its own
+    // (shorter) content and leave visible blank grid-track space below the host.
+    expect(baseRect.height).to.be.closeTo(hostRect.height, 1);
+  });
+});

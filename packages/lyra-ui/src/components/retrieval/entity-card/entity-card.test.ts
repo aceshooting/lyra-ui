@@ -413,6 +413,27 @@ it('uses caller type colors only as an accent and retains semantic foreground co
   }
 });
 
+it('stretches [part="base"] to fill a flex row, matching a taller sibling instead of leaving blank space', async () => {
+  const wrapper = (await fixture(
+    html`<div style="display: flex; inline-size: 600px;">
+      <lr-entity-card></lr-entity-card>
+      <div style="block-size: 400px;">tall sibling</div>
+    </div>`
+  )) as HTMLElement;
+  const el = wrapper.querySelector('lr-entity-card') as LyraEntityCard;
+  el.entity = entity;
+  await el.updateComplete;
+
+  const hostRect = el.getBoundingClientRect();
+  // The flex row stretched the host to match the taller sibling (default align-items: stretch).
+  expect(hostRect.height).to.be.greaterThan(100);
+
+  const baseRect = el.shadowRoot!.querySelector('[part="base"]')!.getBoundingClientRect();
+  // [part="base"] must fill its own host's full measured height, not shrink-wrap to its own
+  // (shorter) content and leave visible blank space below its border.
+  expect(baseRect.height).to.be.closeTo(hostRect.height, 1);
+});
+
 it('routes forced-color badge paint back through the system-owned semantic tokens', async () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(

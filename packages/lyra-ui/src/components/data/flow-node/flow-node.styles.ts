@@ -68,6 +68,11 @@ export const styles = css`
     padding: var(--lr-flow-node-compact-padding, var(--lr-space-xs));
     gap: var(--lr-flow-node-compact-gap, var(--lr-space-2xs));
   }
+  /* The header's own icon-to-heading gap is separate from .card's row gap above, so compact must
+     tighten it too or the header visibly stays at full density while everything around it shrinks. */
+  :host([compact]) [part='header'] {
+    gap: var(--lr-flow-node-compact-header-gap, var(--lr-space-2xs));
+  }
   :host([selected]) .card {
     outline: var(--lr-size-2px) solid
       var(--lr-flow-node-selected-outline-color, var(--lr-color-brand));

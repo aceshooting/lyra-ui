@@ -18,6 +18,16 @@ export const styles = css`
     background: var(--lr-community-card-bg, var(--lr-color-surface));
     color: var(--lr-color-text);
   }
+  /* Density escape -- same convention as sibling lr-entity-card's identical compact rule. Values
+     sit behind inline var() fallbacks, not a :host declaration that every instance re-declares and
+     so shadows any ancestor value; the fallbacks are the pre-existing values, so an unset card
+     renders unchanged. MUST stay before frame='plain' below: both are :host([x]) [part='base'],
+     equal specificity, so source order alone decides, and plain (no chrome at all) must win on a
+     card that is both. */
+  :host([compact]) [part='base'] {
+    padding: var(--lr-community-card-compact-padding, var(--lr-space-s));
+    gap: var(--lr-community-card-compact-gap, var(--lr-space-xs));
+  }
   /* Strips the card chrome for a card nested inside an already-bordered/backgrounded container --
      the same escape hatch as sibling lr-entity-card's identical frame='plain' rule. */
   :host([frame='plain']) [part='base'] {

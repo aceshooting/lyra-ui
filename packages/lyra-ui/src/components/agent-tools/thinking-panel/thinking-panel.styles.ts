@@ -36,6 +36,10 @@ export const styles = css`
   }
   :host([compact]) [part="body"] {
     padding: var(--lr-thinking-panel-compact-body-padding, var(--lr-space-s));
+    font-size: var(
+      --lr-thinking-panel-compact-body-font-size,
+      var(--lr-font-size-sm)
+    );
   }
   /* Removes only the outer card. The header/body divider stays: it explains the expanded
      disclosure structure even when a surrounding message supplies the frame. */

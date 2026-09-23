@@ -144,6 +144,8 @@ const NEAR_BOTTOM_PX = 48;
  *   `[part="header"]` while `compact`.
  * @cssprop [--lr-thinking-panel-compact-body-padding=var(--lr-space-s)] - `[part="body"]` padding
  *   while `compact`.
+ * @cssprop [--lr-thinking-panel-compact-body-font-size=var(--lr-font-size-sm)] - Font size of
+ *   `[part="body"]` while `compact`.
  * @cssprop [--lr-thinking-panel-background=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
  * @cssprop [--lr-thinking-panel-border-color=var(--lr-color-border)] - Colour of the outer card's
@@ -190,9 +192,10 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    *  including `'Thinking'` or `''`, is rendered verbatim. */
   @property() label?: string;
 
-  /** Tighter header/body padding and header gap for dense transcript contexts. Defaults to
-   *  `false`, preserving the regular-density treatment. This changes density only; the outer
-   *  border and surface remain, so use `frame="plain"` to remove card chrome. */
+  /** Tighter header/body padding, header gap, and header/body font size for dense transcript
+   *  contexts. Defaults to `false`, preserving the regular-density treatment. This changes
+   *  density only; the outer border and surface remain, so use `frame="plain"` to remove card
+   *  chrome. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)

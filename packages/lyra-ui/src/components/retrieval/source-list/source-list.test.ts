@@ -436,3 +436,83 @@ it('preserves live author roles while connected and after release', async () => 
   await new Promise<void>((resolve) => setTimeout(resolve));
   expect(card.getAttribute('role')).to.equal('article');
 });
+
+describe('compact and frame', () => {
+  const part = (el: LyraSourceList, name: string) =>
+    el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('defaults compact to false and frame to "card", reflecting both as attributes when set', async () => {
+    const plain = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
+    expect(plain.compact).to.be.false;
+    expect(plain.hasAttribute('compact')).to.be.false;
+    expect(plain.frame).to.equal('card');
+    expect(plain.getAttribute('frame')).to.equal('card');
+
+    const el = (await fixture(
+      html`<lr-source-list compact frame="plain"></lr-source-list>`,
+    )) as LyraSourceList;
+    expect(el.compact).to.be.true;
+    expect(el.hasAttribute('compact')).to.be.true;
+    expect(el.frame).to.equal('plain');
+  });
+
+  it('compact tightens header padding/gap and list padding/gap, keeping the outer card chrome', async () => {
+    const regular = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;
+    const el = (await fixture(
+      html`<lr-source-list compact expanded></lr-source-list>`,
+    )) as LyraSourceList;
+
+    const compactBase = getComputedStyle(part(el, 'base'));
+    const regularBase = getComputedStyle(part(regular, 'base'));
+    expect(compactBase.borderTopWidth).to.equal(regularBase.borderTopWidth);
+    expect(compactBase.borderTopWidth).to.not.equal('0px');
+
+    const compactHeader = getComputedStyle(part(el, 'header'));
+    const regularHeader = getComputedStyle(part(regular, 'header'));
+    expect(parseFloat(compactHeader.paddingTop)).to.be.lessThan(parseFloat(regularHeader.paddingTop));
+    expect(parseFloat(compactHeader.columnGap)).to.be.lessThan(parseFloat(regularHeader.columnGap));
+
+    const compactList = getComputedStyle(part(el, 'list'));
+    const regularList = getComputedStyle(part(regular, 'list'));
+    expect(parseFloat(compactList.paddingTop)).to.be.lessThan(parseFloat(regularList.paddingTop));
+    expect(parseFloat(compactList.rowGap)).to.be.lessThan(parseFloat(regularList.rowGap));
+  });
+
+  it('lets a consumer retune the compact values through --lr-source-list-compact-*', async () => {
+    const el = (await fixture(
+      html`<lr-source-list compact expanded></lr-source-list>`,
+    )) as LyraSourceList;
+    el.style.setProperty('--lr-source-list-compact-header-padding', '1px 2px');
+    el.style.setProperty('--lr-source-list-compact-header-gap', '3px');
+    el.style.setProperty('--lr-source-list-compact-gap', '4px');
+    el.style.setProperty('--lr-source-list-compact-list-padding', '5px');
+    await el.updateComplete;
+
+    const header = getComputedStyle(part(el, 'header'));
+    expect(header.padding).to.equal('1px 2px');
+    expect(header.gap).to.equal('3px');
+
+    const list = getComputedStyle(part(el, 'list'));
+    expect(list.gap).to.equal('4px');
+    expect(list.padding).to.equal('5px');
+  });
+
+  it('frame="plain" removes the outer border/background, keeping the header/list divider', async () => {
+    const el = (await fixture(html`<lr-source-list frame="plain" expanded></lr-source-list>`)) as LyraSourceList;
+    const baseStyle = getComputedStyle(part(el, 'base'));
+    expect(baseStyle.borderTopWidth).to.equal('0px');
+    expect(baseStyle.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    const listStyle = getComputedStyle(part(el, 'list'));
+    expect(listStyle.borderTopWidth).to.not.equal('0px');
+  });
+
+  it('leaves the default presentation byte-identical when compact and frame are unset', async () => {
+    const implicit = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
+    const explicit = (await fixture(
+      html`<lr-source-list .compact=${false} frame="card"></lr-source-list>`,
+    )) as LyraSourceList;
+    expect(getComputedStyle(part(implicit, 'base')).cssText).to.equal(
+      getComputedStyle(part(explicit, 'base')).cssText,
+    );
+  });
+});

@@ -31,6 +31,7 @@ export const styles = css`
       --lr-activity-feed-compact-entry-padding,
       var(--lr-space-2xs) var(--lr-space-s)
     );
+    gap: var(--lr-activity-feed-compact-entry-gap, var(--lr-space-2xs));
   }
   /* Removes only the outer card. The header/body divider stays: it explains the expanded
      disclosure structure even when a surrounding message supplies the frame. */
@@ -203,6 +204,18 @@ export const styles = css`
     min-inline-size: var(--lr-size-3ch);
     overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
+  }
+  /* renderText's own TemplateResult renders inside this shadow root (below virtualize-at), the
+     same shadow-internal case as lr-table's cell(row) anchor hook -- unreachable from page CSS,
+     and ::part() cannot select past the first compound selector to reach a descendant either,
+     so without this rule a returned anchor computes to the UA default link blue. At or above
+     virtualize-at the same template instantiates inside lr-virtual-list's OWN shadow root instead
+     (::part() takes no descendant combinator, so this selector cannot reach across that second
+     boundary either) -- that twin lives in virtual-list.styles.ts next to the identical
+     lr-thread-list row-excerpt precedent. :where() keeps specificity at zero so an inline style on
+     the callback's own returned anchor still wins. */
+  [part="entry-text"] a:where(:any-link) {
+    color: var(--lr-activity-feed-entry-text-link-color, var(--lr-color-brand));
   }
   [part="entry-timestamp"],
   lr-virtual-list::part(entry-timestamp) {

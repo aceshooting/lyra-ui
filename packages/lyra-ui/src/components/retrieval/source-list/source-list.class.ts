@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 import { styles } from './source-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -53,6 +54,14 @@ export interface LyraSourceListEventMap {
  * @csspart header - The clickable header (`<button>`) toggling `expanded`.
  * @csspart toggle - The chevron indicator inside the header.
  * @csspart list - The wrapper around the default slot, `hidden` while collapsed.
+ * @cssprop [--lr-source-list-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
+ *   `[part="header"]` padding while `compact`.
+ * @cssprop [--lr-source-list-compact-header-gap=var(--lr-space-2xs)] - Gap between the header
+ *   toggle and label while `compact`.
+ * @cssprop [--lr-source-list-compact-gap=var(--lr-space-2xs)] - Gap between `[part="list"]`'s
+ *   rows while `compact`.
+ * @cssprop [--lr-source-list-compact-list-padding=var(--lr-space-s)] - `[part="list"]` padding
+ *   while `compact`.
  * @status stable
  * @since 4.0.0
  */
@@ -80,6 +89,19 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
    *  or `"1 source"` — this component never counts or pluralizes on its own
    *  (see the class doc). Takes precedence over `label` when both are set. */
   @property({ attribute: 'label-plural' }) labelPlural = '';
+
+  /** Tighter header and list padding/gap, for a panel rendered repeatedly down a message
+   *  transcript — same convention as this component's slotted `<lr-source-card>` children's own
+   *  `compact`. Defaults to `false`, preserving the regular-density treatment. This changes
+   *  density only; the outer border and surface remain, so use `frame="plain"` to remove card
+   *  chrome. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,
+   *  and corner radius so a list nested inside existing message chrome does not double it. Plain
+   *  preserves the header/list divider and whichever regular or compact padding applies. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   // Tracks the default slot's assigned-element count purely for the
   // `sourceCount` convenience getter below -- unlike `<lr-multi-split>`'s

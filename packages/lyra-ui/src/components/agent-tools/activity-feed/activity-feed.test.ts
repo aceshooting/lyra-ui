@@ -676,6 +676,57 @@ describe('renderText', () => {
       expect(getComputedStyle(text!).fontSize).to.equal('13px');
     });
   }
+
+  // renderText's own JSDoc advertises rendered markdown as intended content; such a callback's
+  // returned anchor renders inside this shadow root, unreachable from page CSS, and ::part()
+  // cannot select past the first compound selector to reach it either -- without a styling hook
+  // it computes to the UA default link blue, matching lr-table's identical cell(row) anchor case.
+  it('gives a renderText anchor the brand colour rather than the UA default blue', async () => {
+    const el = (await fixture(html`<lr-activity-feed expanded></lr-activity-feed>`)) as LyraActivityFeed;
+    el.renderText = (entry) => html`<a href="#x">${entry.text}</a>`;
+    el.entries = [{ id: '1', text: 'a link' }];
+    await el.updateComplete;
+    const anchor = el.shadowRoot!.querySelector('[part="entry-text"] a') as HTMLAnchorElement;
+    expect(getComputedStyle(anchor).color).to.not.equal('rgb(0, 0, 238)');
+  });
+
+  it('honours --lr-activity-feed-entry-text-link-color on a renderText anchor', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed
+        expanded
+        style="--lr-activity-feed-entry-text-link-color: rgb(1, 2, 3)"
+      ></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    el.renderText = (entry) => html`<a href="#x">${entry.text}</a>`;
+    el.entries = [{ id: '1', text: 'a link' }];
+    await el.updateComplete;
+    const anchor = el.shadowRoot!.querySelector('[part="entry-text"] a') as HTMLAnchorElement;
+    expect(getComputedStyle(anchor).color).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('lets an inline style on a renderText-returned anchor still win', async () => {
+    const el = (await fixture(html`<lr-activity-feed expanded></lr-activity-feed>`)) as LyraActivityFeed;
+    el.renderText = (entry) => html`<a href="#x" style="color: rgb(9, 9, 9)">${entry.text}</a>`;
+    el.entries = [{ id: '1', text: 'a link' }];
+    await el.updateComplete;
+    const anchor = el.shadowRoot!.querySelector('[part="entry-text"] a') as HTMLAnchorElement;
+    expect(getComputedStyle(anchor).color).to.equal('rgb(9, 9, 9)');
+  });
+
+  it('also gives a renderText anchor the brand colour, honouring --lr-activity-feed-entry-text-link-color, in the virtualized path', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed
+        expanded
+        virtualize-at="0"
+        style="--lr-activity-feed-entry-text-link-color: rgb(1, 2, 3)"
+      ></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    el.renderText = (entry) => html`<a href="#x">${entry.text}</a>`;
+    el.entries = [{ id: '1', text: 'a link' }];
+    const owner = await semanticListOwner(el);
+    const anchor = owner.querySelector('[part="entry-text"] a') as HTMLAnchorElement;
+    expect(getComputedStyle(anchor).color).to.equal('rgb(1, 2, 3)');
+  });
 });
 
 describe('entry data', () => {
@@ -1546,6 +1597,28 @@ describe('compact and frame', () => {
     expect(parseFloat(compactEntry.paddingInlineStart)).to.be.lessThan(
       parseFloat(regularEntry.paddingInlineStart),
     );
+  });
+
+  it('compact also tightens the gap between an entry\'s icon/dot and its label/timestamp', async () => {
+    const regular = (await fixture(
+      html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    const el = (await fixture(
+      html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+
+    const compactEntry = getComputedStyle(part(el, 'entry'));
+    const regularEntry = getComputedStyle(part(regular, 'entry'));
+    expect(parseFloat(compactEntry.columnGap)).to.be.lessThan(parseFloat(regularEntry.columnGap));
+  });
+
+  it('retunes the compact entry gap through --lr-activity-feed-compact-entry-gap', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    el.style.setProperty('--lr-activity-feed-compact-entry-gap', '7px');
+    await el.updateComplete;
+    expect(getComputedStyle(part(el, 'entry')).gap).to.equal('7px');
   });
 
   it('frame="plain" removes the border, radius and background', async () => {

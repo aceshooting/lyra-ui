@@ -690,9 +690,10 @@ plain text) — this component has no dependency on either.
 - `label?: string` — omitted localizes `thinkingPanelLabel` (`'Thinking'` in the built-in English
   catalog). Any supplied string is an explicit override and renders verbatim, including
   `label="Thinking"` under a non-English `.strings` catalog and `label=""`.
-- `compact: boolean = false` (reflected) — tightens the header/body padding and the header's
-  internal gap for dense transcript rows. This is only a density control: its card border and
-  surface remain, so use `frame="plain"` when surrounding message chrome already supplies them.
+- `compact: boolean = false` (reflected) — tightens the header/body padding, the header's internal
+  gap, and the header/body font size for dense transcript rows. This is only a density control: its
+  card border and surface remain, so use `frame="plain"` when surrounding message chrome already
+  supplies them.
 - `frame: LyraFrame = 'card'` (reflected) — the library-wide container-frame vocabulary
   (`'card' | 'plain'`). `'card'` keeps the bordered, filled outer container. `'plain'` removes its
   border, background, and corner radius so a nested panel does not double an existing frame;
@@ -745,7 +746,9 @@ pending duration/toggle accent without changing the shared brand token;
 `--lr-thinking-panel-compact-header-font-size` (default `var(--lr-font-size-sm)`) — font size of
 `[part="header"]` while `compact`; and
 `--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
-padding while `compact`. `--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
+padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
+`var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
+`--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
 `--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
@@ -1947,12 +1950,13 @@ plain and virtualized rendering paths while `label` remains the visible header t
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
 identically whether or not the feed is currently virtualized; replaces the plain text **inside**
 the persistent `[part="entry-text"]` wrapper rather than removing that part, and `virtualizeAt: number = 199` (attribute
-`virtualize-at`). `compact: boolean = false` (reflected) — tighter header and entry-row padding for
-dense transcript contexts, the same density-only convention `<lr-confirm-bar>`'s and
+`virtualize-at`). `compact: boolean = false` (reflected) — tighter header and entry-row padding and
+gap for dense transcript contexts, the same density-only convention `<lr-confirm-bar>`'s and
 `<lr-thinking-panel>`'s own `compact` establish: the outer border and surface stay, so pair it
 with `frame="plain"` to remove card chrome. Retune it through
-`--lr-activity-feed-compact-header-padding`, `--lr-activity-feed-compact-header-gap`, and
-`--lr-activity-feed-compact-entry-padding`. `frame: LyraFrame = 'card'` (reflected) — `'card' |
+`--lr-activity-feed-compact-header-padding`, `--lr-activity-feed-compact-header-gap`,
+`--lr-activity-feed-compact-entry-padding`, and `--lr-activity-feed-compact-entry-gap`.
+`frame: LyraFrame = 'card'` (reflected) — `'card' |
 'plain'`, imported from the library's shared container-frame vocabulary and behaving exactly as
 it does on `lr-confirm-bar`/`lr-thinking-panel`/`lr-agent-run`/etc.: `'plain'` removes the outer
 border, background, and corner radius so a feed nested inside existing message chrome doesn't
@@ -1974,13 +1978,19 @@ part is reachable in both rendering paths, virtualized or not.
 tall the expanded body grows before it scrolls internally; and
 `--lr-activity-feed-live-status-color` (default `var(--lr-color-brand)`) — background color of
 `status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
-The `compact` density is retunable through three properties: `--lr-activity-feed-compact-header-padding`
+The `compact` density is retunable through four properties: `--lr-activity-feed-compact-header-padding`
 (default `var(--lr-space-2xs) var(--lr-space-s)`) and `--lr-activity-feed-compact-header-gap`
 (default `var(--lr-space-2xs)`) both scoped to `[part="header"]` while `compact`, and
-`--lr-activity-feed-compact-entry-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`)
-scoped to `[part="entry"]` while `compact`. All three are inline `var()` fallbacks at their point
+`--lr-activity-feed-compact-entry-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) and
+`--lr-activity-feed-compact-entry-gap` (default `var(--lr-space-2xs)`) both scoped to
+`[part="entry"]` while `compact`. All four are inline `var()` fallbacks at their point
 of use, so any can be set on the element or on an ancestor, same as `lr-confirm-bar`'s and
-`lr-thinking-panel`'s own compact tokens. The card chrome itself is retunable the same way:
+`lr-thinking-panel`'s own compact tokens. `renderText`'s returned content is otherwise unreachable
+by selector from outside the shadow root it renders into (the plain or the internal
+`<lr-virtual-list>`'s), so a returned anchor specifically is given
+`--lr-activity-feed-entry-text-link-color` (default `var(--lr-color-brand)`), mirroring
+`lr-table`'s identical `cell(row)`-anchor hook; set it to `revert` for the UA default link color.
+The card chrome itself is retunable the same way:
 `--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
 `--lr-activity-feed-border-color` (default `var(--lr-color-border)`) colors both its border and the
 header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
@@ -1997,6 +2007,10 @@ hooks tune the card presentation rather than reinstating chrome you asked to dro
   and the dot for DOM queries.
 - `compact`/`frame` render byte-identically to the pre-existing default when unset — neither
   property changes anything about the plain-card presentation.
+- A `renderText`-returned anchor is the only descendant markup given a default styling hook
+  (`--lr-activity-feed-entry-text-link-color`); other rich descendants (`<code>`, `<em>`, custom
+  chips) stay reachable only through inheritance or an inline style on the callback's own return
+  value, since `::part(entry-text)` cannot select past the wrapper.
 - Focus repair after an `entries` change is asynchronous while virtualized (it waits on the
   internal `<lr-virtual-list>`'s own follow-up render before deciding whether the previously
   focused row actually disappeared), but synchronous when collapsing (`expanded` going `false`)

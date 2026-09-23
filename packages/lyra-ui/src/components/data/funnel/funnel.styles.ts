@@ -15,6 +15,10 @@ export const styles = css`
        containment removes content-based sizing. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-16rem);
+    /* Fill a CSS-Grid/flex-stretched host (default align-items: stretch) instead of shrink-wrapping
+       to the stage content and leaving blank space in the tile's own allocated row height. */
+    block-size: 100%;
+    box-sizing: border-box;
   }
 
   [part='stages'] {

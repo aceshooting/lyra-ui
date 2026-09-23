@@ -48,6 +48,8 @@ const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id
  *   `compact`.
  * @cssprop [--lr-flow-node-compact-gap=var(--lr-space-2xs)] - Gap between `[part="card"]`'s rows
  *   while `compact`.
+ * @cssprop [--lr-flow-node-compact-header-gap=var(--lr-space-2xs)] - Gap between `[part="header"]`'s
+ *   icon slot and heading while `compact`.
  * @cssprop [--lr-flow-node-selected-outline-color=var(--lr-color-brand)] - Outline color of the
  *   card while `selected`. The outline stays independent from execution-state border and glow.
  * @cssprop [--lr-flow-node-running-border=var(--lr-color-brand)] - Border color of the card while
@@ -118,10 +120,11 @@ export class LyraFlowNode extends LyraElement {
   @property({ attribute: 'status-detail' }) statusDetail = '';
   @property({ type: Number, attribute: 'duration-ms' }) durationMs: number | null = null;
   @property({ type: Boolean, reflect: true }) selected = false;
-  /** Tighter card padding and row gap, for the dense canvases and palette previews these cards
-   *  usually render in -- same convention as `lr-source-card`'s `compact`. Defaults to `false`,
-   *  i.e. the full card padding. Purely a density knob: the border, background and shadow stay, as
-   *  do the `selected` and `status="running"` treatments. */
+  /** Tighter card padding and row gap, including the header's own icon-to-heading gap, for the
+   *  dense canvases and palette previews these cards usually render in -- same convention as
+   *  `lr-source-card`'s `compact`. Defaults to `false`, i.e. the full card padding. Purely a
+   *  density knob: the border, background and shadow stay, as do the `selected` and
+   *  `status="running"` treatments. */
   @property({ type: Boolean, reflect: true }) compact = false;
   private _inputs: readonly FlowHandle[] = DEFAULT_INPUTS;
   /** Frozen snapshot of at most the first 10,000 input handles. Reassign to update. */
