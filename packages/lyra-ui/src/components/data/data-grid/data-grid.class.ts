@@ -1270,6 +1270,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private measurementUpdateQueued = false;
   private measurementScrollSyncQueued = false;
   private bodyScrollStateSyncQueued = false;
+  private measurementFrame?: { readonly owner: Window; handle: number };
   /** A component-issued vertical scroll that must not be mistaken for intervening user intent. */
   private expectedBodyScroll?: {
     readonly body: HTMLElement;
@@ -3046,12 +3047,41 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     });
   }
 
+  /** ResizeObserver fires up to once per animation frame while an animated/dragged ancestor
+   *  resize is in progress. Coalesce however many ticks land in one frame into a single deferred
+   *  read (`measureRenderedItems()`) and write (`syncBodyScrollbarInlineEndGutter()`) pass,
+   *  instead of forcing a fresh layout read across the whole rendered virtual-item set on every
+   *  tick. Mirrors `<lr-table>`'s own `scheduleLayoutSync()`. */
+  private scheduleMeasurementSync(): void {
+    if (this.measurementFrame) return;
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
+    const frame = { owner, handle: 0 };
+    frame.handle = owner.requestAnimationFrame(() => {
+      if (this.measurementFrame !== frame) return;
+      this.measurementFrame = undefined;
+      if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
+      const body = this.bodyElement;
+      if (body) this.syncBodyScrollbarInlineEndGutter(body);
+      this.measureRenderedItems();
+    });
+    this.measurementFrame = frame;
+  }
+
+  private cancelMeasurementFrame(): void {
+    const frame = this.measurementFrame;
+    if (!frame) return;
+    this.measurementFrame = undefined;
+    frame.owner.cancelAnimationFrame(frame.handle);
+  }
+
   private resetRowMeasurementObserver(): void {
     this.rowMeasurementObserver?.disconnect();
     this.rowMeasurementObserver = undefined;
     this.rowMeasurementObserverOwner = undefined;
     this.rowMeasurementObserverBody = undefined;
     this.observedMeasurementElements.clear();
+    this.cancelMeasurementFrame();
     // A realm/container reset can change wrapping even when the body has the same CSS pixel
     // width (for example, a new document's fonts or inherited theme). Preserve the last stable
     // item as a pending restoration target, but never reuse measurements across that boundary.
@@ -3085,7 +3115,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         this.syncBodyScrollState(body);
         for (const entry of entries) {
           if (entry.target !== body) continue;
-          this.syncBodyScrollbarInlineEndGutter(body);
+          // The borderBoxSize width is already computed by the browser as part of this entry --
+          // reading it costs no forced layout, unlike syncBodyScrollbarInlineEndGutter() and
+          // measureRenderedItems() below, so it stays inline rather than deferred.
           const width =
             entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
           if (this.recordMeasuredBodyWidth(width)) {
@@ -3093,7 +3125,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             return;
           }
         }
-        this.measureRenderedItems();
+        this.scheduleMeasurementSync();
       });
       this.rowMeasurementObserver = observer;
       this.rowMeasurementObserverOwner = owner;
@@ -4377,17 +4409,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 id=${menuId}
                 role="group"
                 aria-label=${menuLabel}
-                @keydown=${(event: KeyboardEvent) => {
-                  if (event.key !== 'Escape' || event.defaultPrevented) return;
-                  this.activeColumnMenu = null;
-                  event.preventDefault();
-                  const trigger = (
-                    event.currentTarget as HTMLElement
-                  ).parentElement?.querySelector<HTMLElement>(
-                    '[part="column-menu-button"]'
-                  );
-                  void this.updateComplete.then(() => trigger?.focus());
-                }}
               >
                 ${pinAllowed
                   ? html`

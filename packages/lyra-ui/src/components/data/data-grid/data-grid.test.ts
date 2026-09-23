@@ -18,6 +18,7 @@ import type {
 } from "./data-grid-types.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { registerLyraLocale } from "../../../internal/localization.js";
+import { activateNonmodalOverlay } from "../../../internal/nonmodal-overlay-manager.js";
 import {
   aggregateValues,
   columnId,
@@ -6446,16 +6447,62 @@ it("renders an honest native column-control group with distinct localized action
 
   const action = group.querySelector<HTMLButtonElement>("button")!;
   action.focus();
-  action.dispatchEvent(
-    new KeyboardEvent("keydown", {
-      key: "Escape",
-      bubbles: true,
-      cancelable: true,
-    })
-  );
+  await sendKeys({ press: "Escape" });
   await element.updateComplete;
   expect(header(element, "name").querySelector('[role="group"]') === null).to.be.true;
   expect(element.shadowRoot!.activeElement === trigger).to.be.true;
+});
+
+it("defers Escape to a genuinely topmost overlay instead of always closing the per-column menu", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      with-column-menu
+      pinnable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const trigger = header(element, "name").querySelector<HTMLButtonElement>(
+    '[part="column-menu-button"]'
+  )!;
+  trigger.click();
+  await element.updateComplete;
+
+  const group = header(element, "name").querySelector<HTMLElement>(
+    '[part="column-menu"] [role="group"]'
+  )!;
+  const action = group.querySelector<HTMLButtonElement>("button")!;
+  action.focus();
+
+  // A second nonmodal overlay opens on top of the still-open column menu without stealing
+  // keyboard focus away from it -- the shared stack, not DOM focus location, decides who owns
+  // Escape.
+  const outerPanel = document.createElement("div");
+  outerPanel.tabIndex = -1;
+  document.body.append(outerPanel);
+  const dismissed: string[] = [];
+  const outerHandle = activateNonmodalOverlay({
+    host: outerPanel,
+    panel: () => outerPanel,
+    onEscape: () => dismissed.push("outer"),
+  });
+
+  try {
+    await sendKeys({ press: "Escape" });
+    await element.updateComplete;
+
+    expect(dismissed, "the truly topmost overlay's Escape handler runs").to.deep.equal([
+      "outer",
+    ]);
+    expect(
+      header(element, "name").querySelector('[role="group"]') === null,
+      "the non-topmost per-column menu stays open"
+    ).to.be.false;
+  } finally {
+    outerHandle.deactivate({ restoreFocus: false });
+    outerPanel.remove();
+  }
 });
 
 it("exposes a complete keyboard-adjustable separator and normalizes inverted width bounds", async () => {
@@ -8853,5 +8900,53 @@ describe("controlled re-binds of filters and sort", () => {
     element.filters = [{ id: "name", value: ["ada"] }];
     await element.updateComplete;
     expect(element.filters, "a different array length is a real change").to.not.equal(firstFilters);
+  });
+});
+
+describe("ResizeObserver callback batching (perf)", () => {
+  it("coalesces several synchronous ResizeObserver callback ticks into a single rAF-scheduled measurement pass", async () => {
+    const originalResizeObserver = window.ResizeObserver;
+    const originalRaf = window.requestAnimationFrame;
+    let capturedCallback: ResizeObserverCallback | undefined;
+    let rafCallCount = 0;
+    class FakeResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        capturedCallback = cb;
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    (window as unknown as { ResizeObserver: unknown }).ResizeObserver = FakeResizeObserver;
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafCallCount++;
+      return originalRaf.call(window, cb);
+    }) as typeof window.requestAnimationFrame;
+    try {
+      await dataGrid(html`
+        <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+      `);
+      expect(typeof capturedCallback, "the grid registers its own ResizeObserver").to.equal(
+        "function"
+      );
+      rafCallCount = 0;
+      // Simulate three ResizeObserver ticks firing back-to-back in the same frame -- exactly what
+      // an animated/dragged ancestor resize does, once per animation frame.
+      capturedCallback!([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      capturedCallback!([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      capturedCallback!([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      expect(rafCallCount, "one rAF-scheduled pass per frame, not one per tick").to.equal(1);
+      // ...and the very next tick after that frame settles schedules a fresh one (the id resets,
+      // rather than getting stuck disabled after the first coalesced frame).
+      await new Promise<void>((resolve) => originalRaf.call(window, () => resolve()));
+      rafCallCount = 0;
+      capturedCallback!([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      expect(rafCallCount, "the next tick after the frame settles schedules a fresh pass").to.equal(
+        1
+      );
+    } finally {
+      window.ResizeObserver = originalResizeObserver;
+      window.requestAnimationFrame = originalRaf;
+    }
   });
 });
