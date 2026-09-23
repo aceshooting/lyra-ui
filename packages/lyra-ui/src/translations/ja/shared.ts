@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   anchorJumpedToPage: '{page} ページへ移動しました。',
   anchorNotFound: 'このドキュメント内に該当する箇所が見つかりません。',
   highlightWithLabel: 'ハイライト：{label}',
+  highlightOfTotal: '{total} 件中 {index} 件目のハイライト',
   tokensIn: '入力トークン',
   tokensOut: '出力トークン',
   comparePanel: '比較',

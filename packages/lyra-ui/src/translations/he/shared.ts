@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   anchorJumpedToPage: 'בוצע מעבר לעמוד {page}.',
   anchorNotFound: 'הקטע לא נמצא במסמך זה.',
   highlightWithLabel: 'הדגשה: {label}',
+  highlightOfTotal: 'הדגשה {index} מתוך {total}',
   tokensIn: 'אסימוני קלט',
   tokensOut: 'אסימוני פלט',
   comparePanel: 'השוואה',

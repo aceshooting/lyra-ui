@@ -97,7 +97,6 @@ const strings: LyraLocaleStrings = {
   pdfViewerNextPage: 'Page suivante',
   highlightLayerLabel: 'Surlignages',
   cellHighlightWithLabel: 'Surlignage : {value} — {label}',
-  highlightOfTotal: 'Surlignage {index} sur {total}',
   pageRailLabel: 'Miniatures des pages',
   pageRailPage: 'Page {page}',
   pageRailPageHighlighted: {

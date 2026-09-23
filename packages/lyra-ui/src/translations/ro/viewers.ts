@@ -97,7 +97,6 @@ const strings: LyraLocaleStrings = {
   pdfViewerNextPage: 'Pagina următoare',
   highlightLayerLabel: 'Evidențieri',
   cellHighlightWithLabel: 'Evidențiere: {value} — {label}',
-  highlightOfTotal: 'Evidențierea {index} din {total}',
   pageRailLabel: 'Miniaturi de pagină',
   pageRailPage: 'Pagina {page}',
   pageRailPageHighlighted: {

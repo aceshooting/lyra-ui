@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   anchorJumpedToPage: 'S-a efectuat saltul la pagina {page}.',
   anchorNotFound: 'Pasajul nu a fost găsit în acest document.',
   highlightWithLabel: 'Evidențiere: {label}',
+  highlightOfTotal: 'Evidențierea {index} din {total}',
   tokensIn: 'Tokenuri intrare',
   tokensOut: 'Tokenuri ieșire',
   comparePanel: 'Comparație',

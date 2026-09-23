@@ -100,6 +100,7 @@ const strings: LyraLocaleStrings = {
   anchorJumpedToPage: 'Zu Seite {page} gesprungen.',
   anchorNotFound: 'Die Passage wurde in diesem Dokument nicht gefunden.',
   highlightWithLabel: 'Hervorhebung: {label}',
+  highlightOfTotal: 'Hervorhebung {index} von {total}',
   tokensIn: 'Eingabe-Token',
   tokensOut: 'Ausgabe-Token',
   comparePanel: 'Vergleich',

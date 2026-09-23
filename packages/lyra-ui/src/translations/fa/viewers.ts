@@ -97,7 +97,6 @@ const strings: LyraLocaleStrings = {
   pdfViewerNextPage: 'صفحه بعدی',
   highlightLayerLabel: 'موارد برجسته‌شده',
   cellHighlightWithLabel: 'مورد برجسته: {label} — {value}',
-  highlightOfTotal: 'مورد برجستهٔ {index} از {total}',
   pageRailLabel: 'تصاویر بندانگشتی صفحات',
   pageRailPage: 'صفحه {page}',
   pageRailPageHighlighted: {

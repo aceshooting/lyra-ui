@@ -102,6 +102,7 @@ const strings: LyraLocaleStrings = {
   anchorJumpedToPage: 'Выполнен переход на страницу {page}.',
   anchorNotFound: 'Фрагмент не найден в этом документе.',
   highlightWithLabel: 'Выделение: {label}',
+  highlightOfTotal: 'Выделение {index} из {total}',
   tokensIn: 'Входные токены',
   tokensOut: 'Выходные токены',
   comparePanel: 'Сравнение',

@@ -97,7 +97,6 @@ const strings: LyraLocaleStrings = {
   pdfViewerNextPage: 'העמוד הבא',
   highlightLayerLabel: 'הדגשות',
   cellHighlightWithLabel: 'הדגשה: {label} — {value}',
-  highlightOfTotal: 'הדגשה {index} מתוך {total}',
   pageRailLabel: 'תמונות ממוזערות של עמודים',
   pageRailPage: 'עמוד {page}',
   pageRailPageHighlighted: {

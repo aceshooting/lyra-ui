@@ -100,6 +100,7 @@ const strings: LyraLocaleStrings = {
   anchorJumpedToPage: 'به صفحهٔ {page} رفت.',
   anchorNotFound: 'بخش موردنظر در این سند یافت نشد.',
   highlightWithLabel: 'مورد برجسته: {label}',
+  highlightOfTotal: 'مورد برجستهٔ {index} از {total}',
   tokensIn: 'توکن‌های ورودی',
   tokensOut: 'توکن‌های خروجی',
   comparePanel: 'مقایسه',

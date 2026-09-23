@@ -97,7 +97,6 @@ const strings: LyraLocaleStrings = {
   pdfViewerNextPage: '下一页',
   highlightLayerLabel: '高亮',
   cellHighlightWithLabel: '高亮：{label}（{value}）',
-  highlightOfTotal: '第{index}处高亮，共{total}处',
   pageRailLabel: '页面缩略图',
   pageRailPage: '第{page}页',
   pageRailPageHighlighted: {

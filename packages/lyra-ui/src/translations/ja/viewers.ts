@@ -97,7 +97,6 @@ const strings: LyraLocaleStrings = {
   pdfViewerNextPage: '次のページ',
   highlightLayerLabel: 'ハイライト',
   cellHighlightWithLabel: 'ハイライト：{label}（{value}）',
-  highlightOfTotal: '{total} 件中 {index} 件目のハイライト',
   pageRailLabel: 'ページのサムネイル',
   pageRailPage: '{page} ページ',
   pageRailPageHighlighted: {

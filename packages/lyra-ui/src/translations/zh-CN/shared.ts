@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   anchorJumpedToPage: '已跳转到第{page}页。',
   anchorNotFound: '在此文档中未找到该段落。',
   highlightWithLabel: '高亮：{label}',
+  highlightOfTotal: '第{index}处高亮，共{total}处',
   tokensIn: '输入 token',
   tokensOut: '输出 token',
   comparePanel: '对比',

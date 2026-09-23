@@ -104,6 +104,7 @@ const strings: LyraLocaleStrings = {
   anchorJumpedToPage: 'تم الانتقال إلى الصفحة {page}.',
   anchorNotFound: 'لم يتم العثور على المقطع في هذا المستند.',
   highlightWithLabel: 'تمييز: {label}',
+  highlightOfTotal: 'التمييز {index} من {total}',
   tokensIn: 'الرموز الواردة',
   tokensOut: 'الرموز الصادرة',
   comparePanel: 'المقارنة',

@@ -97,7 +97,6 @@ const strings: LyraLocaleStrings = {
   pdfViewerNextPage: 'Próxima página',
   highlightLayerLabel: 'Destaques',
   cellHighlightWithLabel: 'Destaque: {value} — {label}',
-  highlightOfTotal: 'Destaque {index} de {total}',
   pageRailLabel: 'Miniaturas das páginas',
   pageRailPage: 'Página {page}',
   pageRailPageHighlighted: {
