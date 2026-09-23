@@ -511,6 +511,7 @@ export const DOCUMENT_ANCHOR_TARGET_TAGS = Object.freeze([
   'lr-contact-viewer',
   'lr-csv-viewer',
   'lr-dataset-viewer',
+  'lr-diff-view',
   'lr-docx-viewer',
   'lr-ebook-viewer',
   'lr-email-viewer',

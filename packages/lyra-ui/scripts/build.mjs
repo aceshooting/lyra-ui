@@ -40,7 +40,7 @@ await new Promise((resolve, reject) => {
 });
 
 const normalizedMixins = await normalizeMixinDeclarations(join(packageDir, 'dist'));
-assertNormalizedMixinCount(normalizedMixins, 20);
+assertNormalizedMixinCount(normalizedMixins, 21);
 console.log(
   `Published mixin declarations normalized: ${normalizedMixins.replacements} base declaration(s) ` +
     `across ${normalizedMixins.filesChanged} file(s).`,
