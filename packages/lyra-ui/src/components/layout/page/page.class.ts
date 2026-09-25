@@ -1,9 +1,7 @@
 import {
   html,
   nothing,
-  svg,
   type PropertyValues,
-  type SVGTemplateResult,
   type TemplateResult,
 } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -15,6 +13,7 @@ import {
 } from '../../../internal/aria-ownership.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
+import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import {
@@ -41,26 +40,6 @@ interface CustomToggleOwnership {
   accessibleAuthoredLabel: string | null;
   hostAria: AriaOwnershipLease;
   hostAuthoredLabel: string | null;
-}
-
-function navigationIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.75"
-      stroke-linecap="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <line x1="4" y1="7" x2="20" y2="7"></line>
-      <line x1="4" y1="12" x2="20" y2="12"></line>
-      <line x1="4" y1="17" x2="20" y2="17"></line>
-    </svg>
-  `;
 }
 
 export interface LyraPageEventMap {
@@ -707,7 +686,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
                 @click=${this.onDefaultToggleClick}
               >
                 <span part="navigation-toggle-icon" aria-hidden="true" inert>
-                  <slot name="navigation-toggle-icon">${navigationIcon()}</slot>
+                  <slot name="navigation-toggle-icon">${menuIcon()}</slot>
                 </span>
               </button>
             </slot>

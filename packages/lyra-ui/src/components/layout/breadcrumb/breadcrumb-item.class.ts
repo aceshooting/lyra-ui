@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -69,15 +70,7 @@ export class LyraBreadcrumbItem extends LyraElement {
   /** Author tokens minus `opener`, plus the guard whenever `target` is set. `undefined` when
    *  nothing remains, so the attribute is omitted rather than rendered empty. */
   private get resolvedRel(): string | undefined {
-    const authored = (this.rel ?? '')
-      .split(/\s+/)
-      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
-    const tokens = new Set(authored);
-    if (this.target) {
-      tokens.add('noopener');
-      tokens.add('noreferrer');
-    }
-    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
+    return resolveGuardedRel(this.rel, this.target);
   }
   @property({ type: Boolean, reflect: true }) current = false;
   private readonly slots = new SlotPresenceController(this);

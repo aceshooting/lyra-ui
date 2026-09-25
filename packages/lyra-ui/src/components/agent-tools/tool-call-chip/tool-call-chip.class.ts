@@ -1,10 +1,8 @@
 import {
   html,
-  svg,
   nothing,
   type ComplexAttributeConverter,
   type TemplateResult,
-  type SVGTemplateResult,
   type PropertyValues,
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -19,6 +17,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
 
+import { TOOL_STATUS_LABEL_KEY, isToolCallStatus, toolStatusIcon } from '../tool-status.js';
 import { styles } from './tool-call-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -38,104 +37,14 @@ export interface LyraToolCallChipEventMap {
   'lr-tool-call-chip-select': CustomEvent<ToolChipSelectDetail>;
 }
 
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
-// tool-call-specific glyphs to that module -- it's off limits here -- so
-// these still read as part of the same visual language as the rest of the
-// library's inline icons. Same approach lr-checkbox's/lr-chat-message's
-// own local glyphs take for the identical reason, and deliberately the same
-// shapes lr-tool-result-dialog's own local glyphs use, so a call reads
-// identically whether it's shown as this inline chip or in that dialog.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function icon(paths: SVGTemplateResult): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >${paths}</svg>
-  `;
-}
-
-function pendingIcon(): SVGTemplateResult {
-  return icon(
-    svg`<circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline>`
-  );
-}
-
-/** A three-quarter arc, spun by the `:host([status="running"]) [part="icon"] svg`
- *  CSS animation -- a full circle wouldn't visibly convey rotation. */
-function runningIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M21 12a9 9 0 1 1-9-9"></path>`);
-}
-
-function successIcon(): SVGTemplateResult {
-  return icon(
-    svg`<circle cx="12" cy="12" r="9"></circle><polyline points="8 12.5 11 15.5 16 9.5"></polyline>`
-  );
-}
-
-function errorIcon(): SVGTemplateResult {
-  return icon(svg`
-    <circle cx="12" cy="12" r="9"></circle>
-    <line x1="9" y1="9" x2="15" y2="15"></line>
-    <line x1="15" y1="9" x2="9" y2="15"></line>
-  `);
-}
-
-/** A "blocked" glyph (circle + diagonal slash) -- distinct from `errorIcon()`
- *  since a denial is a policy rejection, not a runtime failure. */
-function deniedIcon(): SVGTemplateResult {
-  return icon(
-    svg`<circle cx="12" cy="12" r="9"></circle><line x1="6" y1="18" x2="18" y2="6"></line>`
-  );
-}
-
-const STATUS_ICON: Record<ToolCallStatus, () => SVGTemplateResult> = {
-  pending: pendingIcon,
-  running: runningIcon,
-  success: successIcon,
-  error: errorIcon,
-  denied: deniedIcon,
-};
-
-/** Visible (not just color-coded) text for every status -- English fallback
- *  values only; STATUS_LABEL_KEY below supplies the localize() key for each,
- *  and STATUS_VALUES (right below) still derives its allowed-value set from
- *  this object's keys, unaffected by localization. Mirrors
- *  `<lr-tool-result-dialog>`'s identical STATUS_LABEL/STATUS_LABEL_KEY split. */
-const STATUS_LABEL: Record<ToolCallStatus, string> = {
-  pending: 'Pending',
-  running: 'Running',
-  success: 'Success',
-  error: 'Error',
-  denied: 'Denied',
-};
-
-/** localize() key for each status's visible label -- see STATUS_LABEL for
- *  the English fallback text. */
-const STATUS_LABEL_KEY: Record<ToolCallStatus, string> = {
-  pending: 'statusPending',
-  running: 'statusRunning',
-  success: 'statusSuccess',
-  error: 'statusError',
-  denied: 'statusDenied',
-};
-
-const STATUS_VALUES = new Set<string>(Object.keys(STATUS_LABEL));
+// The status glyphs and label keys are shared with `<lr-tool-result-dialog>`,
+// `<lr-tool-timeline>` and `<lr-tool-call-block>` (../tool-status.ts), so a
+// call reads identically wherever it is shown.
+const STATUS_ICON = toolStatusIcon;
 
 const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
   fromAttribute(value): ToolCallStatus {
-    return value !== null && STATUS_VALUES.has(value)
+    return value !== null && isToolCallStatus(value)
       ? (value as ToolCallStatus)
       : 'pending';
   },
@@ -490,7 +399,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   private get effectiveStatus(): ToolCallStatus {
-    return STATUS_VALUES.has(this.status) ? this.status : 'pending';
+    return isToolCallStatus(this.status) ? this.status : 'pending';
   }
 
   /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`
@@ -507,7 +416,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private get accessibleLabel(): string {
     const parts = [this.name || this.localize('toolCall')];
     if (this.summary) parts.push(this.summary);
-    parts.push(this.localize(STATUS_LABEL_KEY[this.effectiveStatus]));
+    parts.push(this.localize(TOOL_STATUS_LABEL_KEY[this.effectiveStatus]));
     const durationMs = this.safeDurationMs;
     if (durationMs != null) {
       parts.push(this.localizedDuration(durationMs));
@@ -548,7 +457,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
       >
         <span part="icon" aria-hidden="true" inert>
           <slot name="icon"
-            >${this.icon ? this.icon : STATUS_ICON[status]()}</slot
+            >${this.icon ? this.icon : STATUS_ICON(status)}</slot
           >
         </span>
         <span part="label">
@@ -558,7 +467,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         </span>
         <span part="meta">
           <span part="status-text"
-            >${this.localize(STATUS_LABEL_KEY[status])}</span
+            >${this.localize(TOOL_STATUS_LABEL_KEY[status])}</span
           >
           <span part="duration" ?hidden=${!hasDuration}
             >${durationMs != null

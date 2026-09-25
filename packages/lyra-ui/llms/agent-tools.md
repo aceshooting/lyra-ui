@@ -3831,6 +3831,19 @@ These named interfaces and helper signatures are available to typed integrations
     expanded: boolean;
   }`
 
+- **`components-agent-tools-tool-call-block-tool-call-block-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`.
+  `ToolCallBlockRenderErrorDetail {
+    toolName: string;
+    error: unknown;
+    callId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`.
+  `ToolCallBlockToggleDetail {
+    expanded: boolean;
+    callId: string;
+  }`
+
 - **`components-agent-tools-tool-call-chip-tool-call-chip-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js`.
   `ToolChipSelectDetail {
@@ -3954,3 +3967,97 @@ These named interfaces and helper signatures are available to typed integrations
   `normalizeLyraSpans(values: readonly unknown[], activeSpanId?: string | null): LyraSpanProjection`
   Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
   `normalizeLyraSpanStatus(value: unknown): LyraSpanStatus`
+
+## `lr-tool-call-block`
+
+One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware
+verb (`Used web_search`, `Failed to use web_search`, …) beside a status glyph and an optional
+duration; activating it expands the block in place to show the call's arguments, then its error,
+then its result. First-party invention (no Web Awesome equivalent). `<lr-message-parts
+tool-display="block">` renders each paired tool-call/tool-result through one of these blocks.
+
+Details are deferred: a collapsed block renders an empty `body` and never reads `args` or
+`result`. Expanded, `args` render through `<lr-json-viewer>` and `result` through
+`<lr-tool-result-view>`, so any renderer registered with `registerToolRenderer()` still applies.
+With no details yet the body reads the localized `Pending`/`Running` while the call is in
+progress, and `No data` only for a terminal status.
+
+**Properties:**
+
+- `name: string = ''` — tool name; an empty name renders the localized generic `Tool call` label
+- `callId: string = ''` (attribute `call-id`) — invocation id echoed in `lr-toggle` and
+  `lr-render-error` details
+- `status: ToolCallStatus = 'pending'` (reflected, including the default) —
+  `'pending'|'running'|'success'|'error'|'denied'`; selects the header verb, glyph and accent.
+  Values outside the set normalize and reflect as `pending`
+- `expanded: boolean = false` (reflected) — whether the details are shown
+- `label?: string` — header override, used verbatim (including `''`); when set, the localized
+  status text renders beside it in `status-text`. Unset renders the localized status verb
+- `durationMs?: number` (attribute `duration-ms`) — shown only when finite; negative values clamp
+  to `0`. Formatted in the effective locale (`820ms`, `1.5s`)
+- `args: unknown` (property only) — call arguments; the identity is kept and never snapshotted
+- `result: unknown` (property only) — call result; `undefined` means no result yet
+- `error?: string` — a non-empty string renders the error section (caller text, verbatim)
+- `redactedFields: readonly string[] = []` (property only) — dotted paths within
+  `args`/`result`/`error` to mask with the localized `Value hidden` placeholder. A bare
+  `'args'`/`'result'`/`'error'` masks the whole branch, arrays are walked by index
+  (`result.rows.0.ssn`), and a path with no match is a no-op. The same bounded rules as
+  `<lr-tool-timeline>`: more than 100 paths, a path over 4,096 characters or 64 segments, or a walk
+  past 10,000 nodes fails closed to the placeholder, as does an unreadable list. Clone-owned: assign
+  a new array to change it
+
+**Events:**
+
+- `lr-toggle` (`detail: ToolCallBlockToggleDetail = { expanded: boolean; callId: string }`) —
+  after a header activation changes `expanded`; never for programmatic writes. Not cancelable
+- `lr-render-error` (`detail: ToolCallBlockRenderErrorDetail = { toolName: string; error: unknown;
+  callId: string }`) — the composed result view's `lr-render-error`, contained and re-emitted from
+  the host with `callId` added. The result view fires it whenever no registered renderer matches
+  (not only when one fails), so an expanded block with an unregistered tool name emits it on each
+  expand and on each `result`/`args` identity change while expanded. A collapsed block renders no
+  result view and emits nothing
+- `lr-copy`, `lr-copy-error`, `lr-error`, `lr-search-change` — passthrough from the composed
+  arguments `<lr-json-viewer>`
+
+**Methods:** none. Focus lands natively on the header button.
+
+**Slots:** none.
+
+**Keyboard:** Tab reaches the header; Enter or Space toggles it. When expanded, Tab continues into
+the arguments viewer, then to the `result` section — which is a keyboard stop (`tabindex="0"`)
+only while a wide custom renderer overflows it, so it can be scrolled — then into the result's own
+controls. Collapsing while focus is inside the details returns focus to the header.
+
+**CSS parts:** `base` (the card), `header` (the disclosure `<button>`), `toggle` (the chevron,
+first in the header), `icon` (status glyph wrapper), `label`, `status-text` (only while `label` is
+set), `duration` (only while finite), `body` (the disclosed region), `args`, `args-label`,
+`result`, `result-label`, `error`, `error-label`, `empty` (the no-details message).
+
+**Themeable custom properties:**
+
+- `--lr-tool-call-block-background` (default `var(--lr-color-surface)`) — card fill
+- `--lr-tool-call-block-border-color` (default `var(--lr-color-border)`) — card edge and
+  header/body divider
+- `--lr-tool-call-block-radius` (default `var(--lr-radius)`) — card radius
+- `--lr-tool-call-block-accent` — status glyph colour; its private default follows `status`
+  (`--lr-color-text-quiet`, then brand while running, success, danger on error, warning when denied)
+- `--lr-tool-call-block-error-color` (default `var(--lr-color-danger)`) — error section text
+
+The running glyph spins and the pending glyph pulses at `--lr-transition-ambient`; both stop under
+`prefers-reduced-motion: reduce`.
+
+**Optional peer deps:** none.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.js';
+</script>
+
+<lr-tool-call-block name="web_search" call-id="call-1" status="success" duration-ms="1450"></lr-tool-call-block>
+<script type="module">
+  const block = document.querySelector('lr-tool-call-block');
+  block.args = { query: 'lyra', apiKey: 'sk-secret' };
+  block.result = { hits: 3 };
+  block.redactedFields = ['args.apiKey'];
+</script>
+```

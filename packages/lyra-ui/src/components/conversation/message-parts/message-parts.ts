@@ -7,6 +7,7 @@
 // icon-button-register.ts's own header comment for the full trade.
 export * from './message-parts.class.js';
 import '../../agent-tools/thinking-panel/thinking-panel.js';
+import '../../agent-tools/tool-call-block/tool-call-block.js';
 import '../../agent-tools/tool-call-chip/tool-call-chip.js';
 import '../../agent-tools/tool-result-view/tool-result-view.js';
 import '../../forms/button/button.js';

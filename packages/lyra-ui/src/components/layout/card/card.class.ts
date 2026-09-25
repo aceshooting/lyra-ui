@@ -7,6 +7,7 @@ import {
   bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -235,15 +236,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @property() rel?: string;
 
   private get resolvedRel(): string | undefined {
-    const authored = (this.rel ?? '')
-      .split(/\s+/)
-      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
-    const tokens = new Set(authored);
-    if (this.target) {
-      tokens.add('noopener');
-      tokens.add('noreferrer');
-    }
-    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
+    return resolveGuardedRel(this.rel, this.target);
   }
 
   @state() private hasHeaderSlot = false;

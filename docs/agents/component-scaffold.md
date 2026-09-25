@@ -22,7 +22,8 @@ populated state. The story is populated as well; an empty tag is not sufficient 
 It also updates the family's source barrel, its authored `llms/<family>.md` reference, the family
 directory catalog, the component inventory, and the authored component-metadata assignment. A new
 tag enters the `new-component-experimental` profile: it receives the current full package version
-as `since` and full semver protection, but it does not claim stable qualification before review.
+as `since` (or `unreleased` while that version is already tagged, until the next version bump) and
+full semver protection, but it does not claim stable qualification before review.
 
 After writing, the command regenerates the custom-elements manifest and registration artifacts,
 checks family, inventory, registration, and story/test enrollment, then runs the new component's

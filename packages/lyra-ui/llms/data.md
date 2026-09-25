@@ -483,6 +483,17 @@ re-dispatch `focus` and `blur` once from the grid host as bubbling, composed nat
 preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
 crossing the shadow boundary.
 
+**Row context menus with `lr-context-menu`.** Wrap the grid in an `lr-context-menu` region and
+leave `lr-cell-contextmenu` **un-prevented**: preventing it suppresses the native menu, and the
+context menu ignores a native event that is already prevented (the opposite polarity from its own
+`lr-show`, where preventing *allows* the platform menu). For a right-click and for Shift+F10 the
+grid's `lr-cell-contextmenu` arrives **before** the context menu's `lr-show`, so store its `rowKey`
+and read it in `lr-show`. For the ContextMenu key the grid only emits `lr-cell-contextmenu` from the
+platform's follow-up `contextmenu`, which arrives **after** `lr-show` and not on every operating
+system, so rows computed from it would be stale: update the rows again in `lr-cell-contextmenu`
+when the menu is already open (rows changed while open are repaired by the menu), or fall back to
+`selectedRowKeys`.
+
 **Slots:** `empty`, `loading`, `no-results`, `error` (replaces the built-in failed-load state,
 including its retry button, while `error` is set).
 

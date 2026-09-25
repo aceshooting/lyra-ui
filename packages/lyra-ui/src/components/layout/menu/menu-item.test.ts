@@ -2293,6 +2293,20 @@ describe('lr-menu-item link support (href/target/rel/download)', () => {
     expect(base(item).hasAttribute('rel')).to.equal(false);
   });
 
+  it('strips opener in any letter case and de-duplicates rel tokens, matching lr-button', async () => {
+    const item = await fixtureInMenu(
+      html`<lr-menu-item href="https://example.com" rel="OPENER me Opener me nofollow"
+        >Profile</lr-menu-item
+      >`
+    );
+    expect(base(item).getAttribute('rel')).to.equal('me nofollow');
+
+    item.target = '_blank';
+    item.rel = 'noopener me noopener';
+    await item.updateComplete;
+    expect(base(item).getAttribute('rel')).to.equal('noopener me noreferrer');
+  });
+
   it('renders download on the anchor', async () => {
     const item = await fixtureInMenu(
       html`<lr-menu-item href="https://example.com/file.csv" download="data.csv"

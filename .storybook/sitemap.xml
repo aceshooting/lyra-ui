@@ -12,6 +12,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://aceshooting.github.io/lyra-ui/</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/activityfeed--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-observability-tool-call-block--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-prompt-studio--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-schema-viewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-subagent-panel--docs</loc></url>
@@ -144,6 +145,8 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/form-color-picker--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/form-radio--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/form-rating--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-inputs-toggle--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-inputs-toggle-group--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-knowndate--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-otp-input--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-phoneinput--docs</loc></url>
@@ -181,6 +184,8 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-app-rail-group--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-divider--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-menu-label--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-navigation-menu--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-navigation-menu-item--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-page--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-scroller--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-split-panel--docs</loc></url>
@@ -219,6 +224,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/observability-rubric-form--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/observability-span-waterfall--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/observability-trace-tree--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-context-menu--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-dropdown--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-popover--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-positioned-surface-guides--docs</loc></url>

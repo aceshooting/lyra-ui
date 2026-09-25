@@ -83,8 +83,10 @@
   `rel` has a live reverse-tabnabbing vector, not a style nit. The guarantee is implemented by
   *merging* rather than by refusing author input: take the author's tokens, always drop `opener`
   (the one token that re-opens the vector), and force-add `noopener` + `noreferrer` whenever
-  `target` is set. `button.class.ts`'s and `breadcrumb-item.class.ts`'s `resolvedRel` getters are
-  the reference implementation.
+  `target` is set. `resolveGuardedRel()` in `src/internal/link-rel.ts` is the one implementation:
+  the `resolvedRel` getters in `button`, `icon-button`, `breadcrumb-item`, `card` and `menu-item`
+  all delegate to it (it also strips `opener` in any letter case and de-duplicates tokens), so a new
+  author-`rel` anchor calls it instead of re-typing the merge.
 
   This replaces the earlier, stricter rule ("never expose `rel` independently of `target`", still
   the shape `app-rail-item.class.ts` uses). That rule was over-broad in both directions: it refused

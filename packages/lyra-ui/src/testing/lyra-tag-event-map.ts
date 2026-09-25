@@ -31,6 +31,7 @@ import type { LyraTerminalEventMap } from '../components/agent-tools/terminal/te
 import type { LyraTestResultsEventMap } from '../components/agent-tools/test-results/test-results.class.js';
 import type { LyraThinkingPanelEventMap } from '../components/agent-tools/thinking-panel/thinking-panel.class.js';
 import type { LyraToolApprovalDialogEventMap } from '../components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
+import type { LyraToolCallBlockEventMap } from '../components/agent-tools/tool-call-block/tool-call-block.class.js';
 import type { LyraToolCallChipEventMap } from '../components/agent-tools/tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolParamFormEventMap } from '../components/agent-tools/tool-param-form/tool-param-form.class.js';
 import type { LyraToolResultDialogEventMap } from '../components/agent-tools/tool-result-dialog/tool-result-dialog.class.js';
@@ -114,6 +115,8 @@ import type { LyraSwatchPickerEventMap } from '../components/forms/swatch-picker
 import type { LyraSwitchEventMap } from '../components/forms/switch/switch.class.js';
 import type { LyraTextareaEventMap } from '../components/forms/textarea/textarea.class.js';
 import type { LyraTimeRangeEventMap } from '../components/forms/time-range/time-range.class.js';
+import type { LyraToggleGroupEventMap } from '../components/forms/toggle-group/toggle-group.class.js';
+import type { LyraToggleEventMap } from '../components/forms/toggle/toggle.class.js';
 import type { LyraTokenInputEventMap } from '../components/forms/token-input/token-input.class.js';
 import type { LyraAppRailGroupEventMap } from '../components/layout/app-rail-group/app-rail-group.class.js';
 import type { LyraAppRailItemEventMap } from '../components/layout/app-rail/app-rail-item.class.js';
@@ -131,6 +134,8 @@ import type { LyraDropdownItemEventMap } from '../components/layout/menu/dropdow
 import type { LyraMenuItemEventMap } from '../components/layout/menu/menu-item.class.js';
 import type { LyraMenuEventMap } from '../components/layout/menu/menu.class.js';
 import type { LyraMultiSplitEventMap } from '../components/layout/multi-split/multi-split.class.js';
+import type { LyraNavigationMenuItemEventMap } from '../components/layout/navigation-menu-item/navigation-menu-item.class.js';
+import type { LyraNavigationMenuEventMap } from '../components/layout/navigation-menu/navigation-menu.class.js';
 import type { LyraPageEventMap } from '../components/layout/page/page.class.js';
 import type { LyraReorderItemEventMap } from '../components/layout/reorder-list/reorder-item.class.js';
 import type { LyraReorderListEventMap } from '../components/layout/reorder-list/reorder-list.class.js';
@@ -167,6 +172,7 @@ import type { LyraTagEventMap } from '../components/overlays/badge/tag.class.js'
 import type { LyraCalloutEventMap } from '../components/overlays/callout/callout.class.js';
 import type { LyraChipGroupEventMap } from '../components/overlays/chip/chip-group.class.js';
 import type { LyraChipEventMap } from '../components/overlays/chip/chip.class.js';
+import type { LyraContextMenuEventMap } from '../components/overlays/context-menu/context-menu.class.js';
 import type { LyraDialogEventMap } from '../components/overlays/dialog/dialog.class.js';
 import type { LyraDropdownEventMap } from '../components/overlays/overlay/dropdown.class.js';
 import type { LyraPopoverEventMap } from '../components/overlays/overlay/popover.class.js';
@@ -302,6 +308,7 @@ export interface LyraTagEventTypes {
   'lr-confirm-bar': LyraConfirmBarEventMap;
   'lr-contact-viewer': LyraContactViewerEventMap;
   'lr-context-inspector': LyraContextInspectorEventMap;
+  'lr-context-menu': LyraContextMenuEventMap;
   'lr-context-meter': LyraContextMeterEventMap;
   'lr-conversation-item': LyraConversationItemEventMap;
   'lr-copy-button': LyraCopyButtonEventMap;
@@ -389,6 +396,8 @@ export interface LyraTagEventTypes {
   'lr-multi-split': LyraMultiSplitEventMap;
   'lr-mutation-observer': LyraMutationObserverEventMap;
   'lr-native-time-input': LyraInputEventMap;
+  'lr-navigation-menu': LyraNavigationMenuEventMap;
+  'lr-navigation-menu-item': LyraNavigationMenuItemEventMap;
   'lr-neighbor-list': LyraNeighborListEventMap;
   'lr-node-palette': LyraNodePaletteEventMap;
   'lr-notebook-viewer': LyraNotebookViewerEventMap;
@@ -470,8 +479,11 @@ export interface LyraTagEventTypes {
   'lr-timeline': LyraTimelineEventMap;
   'lr-toast': LyraToastEventMap;
   'lr-toast-item': LyraToastItemEventMap;
+  'lr-toggle': LyraToggleEventMap;
+  'lr-toggle-group': LyraToggleGroupEventMap;
   'lr-token-input': LyraTokenInputEventMap;
   'lr-tool-approval-dialog': LyraToolApprovalDialogEventMap;
+  'lr-tool-call-block': LyraToolCallBlockEventMap;
   'lr-tool-call-chip': LyraToolCallChipEventMap;
   'lr-tool-param-form': LyraToolParamFormEventMap;
   'lr-tool-result-dialog': LyraToolResultDialogEventMap;
@@ -528,6 +540,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-compare-panel': { 'lr-vote': true },
   'lr-confirm-bar': { 'lr-approve': true, 'lr-deny': true },
   'lr-context-inspector': { 'lr-export': true },
+  'lr-context-menu': { 'lr-hide': true, 'lr-select': true, 'lr-show': true },
   'lr-context-meter': { 'lr-segment-activate': true },
   'lr-data-grid': { 'lr-cell-contextmenu': true, 'lr-retry': true, 'lr-sort-request': true },
   'lr-date-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
@@ -592,6 +605,8 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-time-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-time-range': { 'lr-invalid': true },
   'lr-toast-item': { 'lr-hide': true, 'lr-show': true },
+  'lr-toggle': { 'lr-toggle-toggle-request': true },
+  'lr-toggle-group': { 'lr-toggle-group-toggle-request': true },
   'lr-token-input': { 'lr-add': true, 'lr-invalid': true, 'lr-remove': true, 'lr-token-edit': true },
   'lr-tool-approval-dialog': { 'lr-approve': true, 'lr-deny': true },
   'lr-tool-param-form': { 'lr-invalid': true },

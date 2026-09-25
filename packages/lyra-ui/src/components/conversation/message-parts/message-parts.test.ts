@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import type {
   CitationSelectEventDetail,
   MessagePart,
@@ -9,6 +9,9 @@ import type {
   MessagePartsContentMode,
 } from "./message-parts.class.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import type { LyraToolCallBlock } from "../../agent-tools/tool-call-block/tool-call-block.class.js";
+import { adaptAiSdkMessage } from "../../../ai/adapters/ai-sdk.js";
+import type { ToolInvocation } from "../../../ai/types.js";
 
 function assertiveSinkTexts(doc: Document = document): string[] {
   return Array.from(
@@ -907,4 +910,304 @@ it("uses one nonempty first-wins part projection for rendering and error announc
   expect(rendered).to.have.lengthOf(1);
   expect(rendered[0]!.textContent).to.contain("First failure");
   expect(assertiveSinkTexts()).to.deep.equal(["First failure"]);
+});
+
+describe('tool-display', () => {
+  const call = (id: string, invocation: Partial<ToolInvocation> = {}, state?: 'streaming' | 'complete'): MessagePart => ({
+    id,
+    type: 'tool-call',
+    ...(state ? { state } : {}),
+    invocation: { id: 'call-1', name: 'search', args: { query: 'Lyra' }, status: 'running', ...invocation },
+  });
+  const result = (id: string, extra: Record<string, unknown> = {}): MessagePart =>
+    ({ id, type: 'tool-result', invocationId: 'call-1', name: 'search', result: { hits: 2 }, state: 'complete', ...extra }) as MessagePart;
+  const blocks = (el: LyraMessageParts): LyraToolCallBlock[] =>
+    [...el.shadowRoot!.querySelectorAll<LyraToolCallBlock>('lr-tool-call-block')];
+  const wrappers = (el: LyraMessageParts, name: string): HTMLElement[] =>
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>(`[part~="${name}"]`)];
+
+  it('keeps the chip display by default, reflecting it, with identical references and one renderPart call per part', async () => {
+    const calls: Array<[string, number]> = [];
+    const source = [call('call'), result('result'), { id: 'text', type: 'text', text: 'Hi' } as MessagePart];
+    const el = (await fixture(html`<lr-message-parts
+      content-mode="plain"
+      .parts=${source}
+      .renderPart=${(part: MessagePart, index: number) => {
+        calls.push([part.id, index]);
+        return undefined;
+      }}
+    ></lr-message-parts>`)) as LyraMessageParts;
+    expect(el.toolDisplay).to.equal('chip');
+    expect(el.getAttribute('tool-display')).to.equal('chip');
+    expect(el.shadowRoot!.querySelectorAll('lr-tool-call-chip')).to.have.lengthOf(1);
+    expect(el.shadowRoot!.querySelectorAll('lr-tool-result-view')).to.have.lengthOf(1);
+    expect(blocks(el)).to.have.lengthOf(0);
+    const view = el.shadowRoot!.querySelector('lr-tool-result-view') as HTMLElement & { result: unknown };
+    const owned = el.parts[1] as { result: unknown };
+    expect(view.result === owned.result).to.equal(true);
+    expect(calls).to.deep.equal([['call', 0], ['result', 1], ['text', 2]]);
+  });
+
+  it('folds a paired result into one block at the call position', async () => {
+    const el = (await fixture(html`<lr-message-parts
+      tool-display="block"
+      .parts=${[call('call'), result('result')]}
+    ></lr-message-parts>`)) as LyraMessageParts;
+    const [block] = blocks(el);
+    expect(blocks(el)).to.have.lengthOf(1);
+    expect(block!.name).to.equal('search');
+    expect(block!.callId).to.equal('call-1');
+    expect(block!.args).to.deep.equal({ query: 'Lyra' });
+    expect(block!.result).to.deep.equal({ hits: 2 });
+    expect(block!.status).to.equal('success');
+    expect(wrappers(el, 'tool-result')).to.have.lengthOf(0);
+    expect(wrappers(el, 'tool-call')).to.have.lengthOf(1);
+    expect(el.shadowRoot!.querySelectorAll('lr-tool-call-chip')).to.have.lengthOf(0);
+  });
+
+  it('keeps the same block instance and its user-expanded state when the result arrives', async () => {
+    const el = (await fixture(html`<lr-message-parts
+      tool-display="block"
+      .parts=${[call('call')]}
+    ></lr-message-parts>`)) as LyraMessageParts;
+    const first = blocks(el)[0]!;
+    expect(first.status).to.equal('running');
+    first.shadowRoot!.querySelector<HTMLButtonElement>('[part="header"]')!.click();
+    await first.updateComplete;
+    el.parts = [call('call'), result('result')];
+    await el.updateComplete;
+    const second = blocks(el)[0]!;
+    expect(second === first).to.equal(true);
+    expect(second.status).to.equal('success');
+    expect(second.expanded).to.equal(true);
+  });
+
+  it('resolves the block status from the call and its paired result', async () => {
+    const cases: Array<[MessagePart[], string]> = [
+      [[call('c', { status: 'denied' }), result('r')], 'denied'],
+      [[call('c', { status: 'error' })], 'error'],
+      [[call('c'), result('r', { error: 'boom', result: undefined })], 'error'],
+      [[call('c'), result('r', { state: 'streaming' })], 'running'],
+      [[call('c', { status: 'pending' }), result('r')], 'success'],
+      [[call('c', { status: 'pending' })], 'pending'],
+      [[call('c', { status: 'bogus' as ToolInvocation['status'] })], 'pending'],
+    ];
+    for (const [source, expected] of cases) {
+      const el = (await fixture(html`<lr-message-parts tool-display="block" .parts=${source}></lr-message-parts>`)) as LyraMessageParts;
+      expect(blocks(el)[0]!.status, JSON.stringify(source.map((part) => part.id))).to.equal(expected);
+    }
+  });
+
+  it('renders unpaired, duplicate and windowed-out results on their own, and folds a result that precedes its call', async () => {
+    const unpaired = (await fixture(html`<lr-message-parts tool-display="block"
+      .parts=${[result('orphan', { invocationId: 'nobody' })]}></lr-message-parts>`)) as LyraMessageParts;
+    expect(wrappers(unpaired, 'tool-result')).to.have.lengthOf(1);
+
+    const early = (await fixture(html`<lr-message-parts tool-display="block"
+      .parts=${[result('r'), call('c')]}></lr-message-parts>`)) as LyraMessageParts;
+    expect(wrappers(early, 'tool-result')).to.have.lengthOf(0);
+    expect(blocks(early)[0]!.status).to.equal('success');
+
+    const duplicate = (await fixture(html`<lr-message-parts tool-display="block"
+      .parts=${[call('c'), result('r1'), result('r2', { result: { hits: 9 } })]}></lr-message-parts>`)) as LyraMessageParts;
+    expect(wrappers(duplicate, 'tool-result')).to.have.lengthOf(1);
+    expect(blocks(duplicate)[0]!.result).to.deep.equal({ hits: 2 });
+
+    const citation = (id: string): MessagePart => ({ id, type: 'citation', citation: { id, label: id } });
+    const windowed = (await fixture(html`<lr-message-parts tool-display="block" max-rendered-parts="2"
+      .parts=${[citation('cite-a'), call('c'), result('r'), citation('cite-b')]}></lr-message-parts>`)) as LyraMessageParts;
+    expect(blocks(windowed)).to.have.lengthOf(0);
+    expect(wrappers(windowed, 'tool-result')).to.have.lengthOf(1);
+    const badge = windowed.shadowRoot!.querySelector('lr-citation-badge') as HTMLElement & { index: number };
+    expect(badge.index).to.equal(2);
+  });
+
+  it('never folds across a custom render', async () => {
+    const customCall = (await fixture(html`<lr-message-parts tool-display="block"
+      .parts=${[call('c'), result('r')]}
+      .renderPart=${(part: MessagePart) => (part.type === 'tool-call' ? html`<em>custom call</em>` : undefined)}
+    ></lr-message-parts>`)) as LyraMessageParts;
+    expect(blocks(customCall)).to.have.lengthOf(0);
+    expect(customCall.shadowRoot!.querySelectorAll('em')).to.have.lengthOf(1);
+    expect(wrappers(customCall, 'tool-result')).to.have.lengthOf(1);
+
+    const customResult = (await fixture(html`<lr-message-parts tool-display="block"
+      .parts=${[call('c', { result: { own: true } }), result('r')]}
+      .renderPart=${(part: MessagePart) => (part.type === 'tool-result' ? html`<em>custom result</em>` : undefined)}
+    ></lr-message-parts>`)) as LyraMessageParts;
+    expect(blocks(customResult)[0]!.result).to.deep.equal({ own: true });
+    expect(customResult.shadowRoot!.querySelectorAll('em')).to.have.lengthOf(1);
+  });
+
+  it('normalizes an unsupported tool display to reflected chip', async () => {
+    const el = (await fixture(html`<lr-message-parts tool-display="bogus"></lr-message-parts>`)) as LyraMessageParts;
+    expect(el.toolDisplay).to.equal('chip');
+    expect(el.getAttribute('tool-display')).to.equal('chip');
+    el.toolDisplay = 'block';
+    await el.updateComplete;
+    el.toolDisplay = 'nope' as LyraMessageParts['toolDisplay'];
+    await el.updateComplete;
+    expect(el.toolDisplay).to.equal('chip');
+    expect(el.getAttribute('tool-display')).to.equal('chip');
+  });
+
+  it('passes a block toggle through and never emits a chip selection in block display', async () => {
+    const el = (await fixture(html`<lr-message-parts tool-display="block" .parts=${[call('c')]}></lr-message-parts>`)) as LyraMessageParts;
+    let chipSelects = 0;
+    el.addEventListener('lr-tool-call-chip-select', () => chipSelects++);
+    const toggled = oneEvent(el, 'lr-toggle');
+    blocks(el)[0]!.shadowRoot!.querySelector<HTMLButtonElement>('[part="header"]')!.click();
+    expect(((await toggled) as CustomEvent).detail).to.deep.equal({ expanded: true, callId: 'call-1' });
+    expect(chipSelects).to.equal(0);
+  });
+
+  it('forwards the block parts under the tool-block prefix', async () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      lr-message-parts.forwarding::part(tool-block-header) { outline: 3px solid rgb(1, 2, 3); }
+      lr-message-parts.forwarding::part(tool-block-args) { outline: 4px solid rgb(4, 5, 6); }
+    `;
+    document.head.append(style);
+    try {
+      const el = (await fixture(html`<lr-message-parts class="forwarding" tool-display="block"
+        .parts=${[call('c')]}></lr-message-parts>`)) as LyraMessageParts;
+      const block = blocks(el)[0]!;
+      expect(getComputedStyle(block.shadowRoot!.querySelector('[part="header"]')!).outlineWidth).to.equal('3px');
+      block.expanded = true;
+      await block.updateComplete;
+      expect(getComputedStyle(block.shadowRoot!.querySelector('[part="args"]')!).outlineWidth).to.equal('4px');
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('stretches the tool-call wrapper to the message width in block display', async () => {
+    const el = (await fixture(html`<lr-message-parts style="inline-size: 30rem" tool-display="block"
+      .parts=${[call('c')]}></lr-message-parts>`)) as LyraMessageParts;
+    const wrapper = wrappers(el, 'tool-call')[0]!;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(wrapper.getBoundingClientRect().width).to.be.closeTo(base.getBoundingClientRect().width, 1);
+  });
+
+  it('is accessible with populated blocks, one expanded, and does not announce tool errors', async () => {
+    const before = assertiveSinkTexts().length;
+    const el = (await fixture(html`<lr-message-parts tool-display="block" .parts=${[
+      call('c'),
+      result('r', { error: 'failed', result: undefined }),
+      call('c2', { id: 'call-2', name: 'fetch' }),
+    ]}></lr-message-parts>`)) as LyraMessageParts;
+    const block = blocks(el)[0]!;
+    block.expanded = true;
+    await block.updateComplete;
+    await expect(el).to.be.accessible();
+    el.parts = [...el.parts, call('c3', { id: 'call-3', status: 'error', error: 'late failure' })];
+    await el.updateComplete;
+    expect(assertiveSinkTexts().length).to.equal(before);
+  });
+
+  it('carries duration and redaction from the invocation into the block', async () => {
+    const el = (await fixture(html`<lr-message-parts tool-display="block" .parts=${[
+      call('timed', { startedAt: 1000, endedAt: 2500, redactedFields: ['args.apiKey'], args: { apiKey: 'secret', q: 'x' } }),
+      call('untimed', { id: 'call-2', startedAt: 1000 }),
+    ]}></lr-message-parts>`)) as LyraMessageParts;
+    const [timed, untimed] = blocks(el) as [LyraToolCallBlock, LyraToolCallBlock];
+    expect(timed.durationMs).to.equal(1500);
+    expect(timed.shadowRoot!.querySelector('[part="duration"]')!.textContent!.trim()).to.equal('1.5s');
+    expect(untimed.shadowRoot!.querySelector('[part="duration"]') === null).to.equal(true);
+    timed.expanded = true;
+    await timed.updateComplete;
+    const viewer = timed.shadowRoot!.querySelector('lr-json-viewer') as HTMLElement & { data: Record<string, unknown> };
+    expect(viewer.data['apiKey']).to.equal('Value hidden');
+  });
+
+  it('masks a later block for the same invocation with the paths its first call promised', async () => {
+    const first = call('first', { redactedFields: ['error', 'args.apiKey'], status: 'error', error: 'token=abc' });
+    const second = call('second', { status: 'error', error: 'token=abc', args: { apiKey: 'secret' } });
+    const el = (await fixture(html`<lr-message-parts
+      tool-display="block"
+      .parts=${[first, second]}
+      .renderPart=${(part: MessagePart) => (part.id === 'first' ? html`<em>host call</em>` : undefined)}
+    ></lr-message-parts>`)) as LyraMessageParts;
+    const block = blocks(el)[0]!;
+    block.expanded = true;
+    await block.updateComplete;
+    expect(block.shadowRoot!.querySelector('[part="error"] p')!.textContent!.trim()).to.equal('Value hidden');
+    const viewer = block.shadowRoot!.querySelector('lr-json-viewer') as HTMLElement & { data: Record<string, unknown> };
+    expect(viewer.data['apiKey']).to.equal('Value hidden');
+
+    const overLimit = (await fixture(html`<lr-message-parts tool-display="block" .parts=${[
+      call('c', {
+        redactedFields: new Array<string>(101).fill('args.unrelated'),
+        status: 'error',
+        error: 'token=abc',
+      }),
+    ]}></lr-message-parts>`)) as LyraMessageParts;
+    const failClosed = blocks(overLimit)[0]!;
+    failClosed.expanded = true;
+    await failClosed.updateComplete;
+    expect(failClosed.shadowRoot!.querySelector('[part="error"] p')!.textContent!.trim()).to.equal('Value hidden');
+  });
+
+  it('masks redacted fields in the chip display too, except in custom renders', async () => {
+    const masked = call('c', { redactedFields: ['result.token', 'error'], error: 'token=abc', status: 'error' });
+    const el = (await fixture(html`<lr-message-parts .parts=${[
+      masked,
+      result('r', { result: { token: 't', keep: 1 } }),
+    ]}></lr-message-parts>`)) as LyraMessageParts;
+    const view = el.shadowRoot!.querySelector('lr-tool-result-view') as HTMLElement & { result: Record<string, unknown> };
+    expect(view.result['token']).to.equal('Value hidden');
+    expect(view.result['keep']).to.equal(1);
+    const chip = el.shadowRoot!.querySelector('lr-tool-call-chip') as HTMLElement & { summary: string };
+    expect(chip.summary).to.equal('Value hidden');
+
+    const citation: MessagePart = { id: 'cite', type: 'citation', citation: { id: 'cite', label: 'c' } };
+    const windowed = (await fixture(html`<lr-message-parts max-rendered-parts="2" .parts=${[
+      masked,
+      result('r', { result: { token: 't' } }),
+      citation,
+    ]}></lr-message-parts>`)) as LyraMessageParts;
+    const windowedView = windowed.shadowRoot!.querySelector('lr-tool-result-view') as HTMLElement & { result: Record<string, unknown> };
+    expect(windowedView.result['token']).to.equal('Value hidden');
+
+    let seen: unknown;
+    await fixture(html`<lr-message-parts
+      .parts=${[masked, result('r', { result: { token: 't' } })]}
+      .renderPart=${(part: MessagePart) => {
+        if (part.type !== 'tool-result') return undefined;
+        seen = (part as { result: unknown }).result;
+        return html`<em>custom</em>`;
+      }}
+    ></lr-message-parts>`);
+    expect((seen as Record<string, unknown>)['token']).to.equal('t');
+  });
+
+  it('renders an AI SDK denial end to end as a denied block', async () => {
+    const message = adaptAiSdkMessage({
+      id: 'm',
+      role: 'assistant',
+      parts: [{ type: 'tool-search', toolCallId: 'd', state: 'output-denied', input: { q: 'x' } }],
+    });
+    const el = (await fixture(html`<lr-message-parts tool-display="block" .parts=${message!.parts ?? []}></lr-message-parts>`)) as LyraMessageParts;
+    const block = blocks(el)[0]!;
+    expect(block.status).to.equal('denied');
+    expect(block.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Use of search denied');
+    expect(getComputedStyle(block.shadowRoot!.querySelector('[part="icon"] svg')!).animationName).to.equal('none');
+    expect(wrappers(el, 'tool-call')[0]!.dataset['state']).to.equal('complete');
+  });
+
+  it('delivers an expanded block render error to the host with the call id', async () => {
+    const name = `unregistered_${Date.now().toString(36)}`;
+    const el = (await fixture(html`<lr-message-parts tool-display="block" .parts=${[
+      call('c', { name }),
+      result('r', { name }),
+    ]}></lr-message-parts>`)) as LyraMessageParts;
+    const details: Array<Record<string, unknown>> = [];
+    el.addEventListener('lr-render-error', (event) => details.push((event as CustomEvent).detail));
+    const block = blocks(el)[0]!;
+    block.expanded = true;
+    await block.updateComplete;
+    await waitUntil(() => details.length > 0, 'block render error reaches the host');
+    expect(details[0]!['callId']).to.equal('call-1');
+    expect(details[0]!['toolName']).to.equal(name);
+  });
 });

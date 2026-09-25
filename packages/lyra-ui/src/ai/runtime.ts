@@ -201,13 +201,33 @@ function validDocument(value: unknown, limits: Readonly<AgentStreamLimits>): boo
   return ['mimeType', 'uri', 'version'].every((key) => validOptionalString(value[key], limits.maxSnapshotBytes));
 }
 
+// Equal to the component-side redaction ceilings in
+// components/agent-tools/tool-redaction.ts (MAX_REDACTION_PATHS / MAX_REDACTION_PATH_CHARACTERS);
+// kept local so this runtime layer imports nothing from the component tree.
+const MAX_TOOL_REDACTION_PATHS = 100;
+const MAX_TOOL_REDACTION_PATH_CHARACTERS = 4_096;
+
+function validOptionalFiniteNumber(value: unknown): boolean {
+  return value === undefined || (typeof value === 'number' && Number.isFinite(value));
+}
+
+function validOptionalRedactionPaths(value: unknown): boolean {
+  if (value === undefined) return true;
+  return Array.isArray(value)
+    && value.length <= MAX_TOOL_REDACTION_PATHS
+    && value.every((path) => typeof path === 'string' && path.length <= MAX_TOOL_REDACTION_PATH_CHARACTERS);
+}
+
 function validTool(value: unknown, limits: Readonly<AgentStreamLimits>): value is ToolInvocation {
   if (!isRecord(value)) return false;
   return validIdentifier(value['id'], limits)
     && validIdentifier(value['name'], limits)
     && isRecord(value['args'])
     && TOOL_STATUSES.has(String(value['status']))
-    && validOptionalString(value['error'], limits.maxStatusMessageCharacters);
+    && validOptionalString(value['error'], limits.maxStatusMessageCharacters)
+    && validOptionalFiniteNumber(value['startedAt'])
+    && validOptionalFiniteNumber(value['endedAt'])
+    && validOptionalRedactionPaths(value['redactedFields']);
 }
 
 function validPart(value: unknown, limits: Readonly<AgentStreamLimits>): value is MessagePart {

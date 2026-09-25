@@ -18,6 +18,13 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+import { TOOL_CALL_STATUSES } from '../tool-status.js';
+import {
+  EMPTY_REDACTION_PATHS,
+  projectedRedactionFields,
+  redactToolDetail,
+  type RedactedToolDetail,
+} from '../tool-redaction.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings.generated.js';
@@ -117,42 +124,10 @@ interface CanonicalToolTimelineEntry {
 }
 
 const MAX_RENDERED_ENTRIES = 500;
-const MAX_REDACTION_PATHS = 100;
-const MAX_REDACTION_DEPTH = 64;
-const MAX_REDACTION_NODES = 10_000;
-const TOOL_STATUSES = new Set<ToolCallStatus>(['pending', 'running', 'success', 'error', 'denied']);
-const EMPTY_REDACTION_PATHS: readonly unknown[] = Object.freeze([]);
-const TOO_MANY_REDACTION_PATHS: readonly unknown[] = Object.freeze(
-  new Array<unknown>(MAX_REDACTION_PATHS + 1),
-);
+const TOOL_STATUSES: ReadonlySet<ToolCallStatus> = new Set<ToolCallStatus>(TOOL_CALL_STATUSES);
 
 function descriptorValue(value: object, property: PropertyKey): ReturnType<typeof getOwnDataDescriptor> {
   return getOwnDataDescriptor(value, property);
-}
-
-function projectedRedactionFields(value: unknown): readonly unknown[] | undefined {
-  try {
-    if (!Array.isArray(value)) return EMPTY_REDACTION_PATHS;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    )
-      return undefined;
-    if (lengthDescriptor.value > MAX_REDACTION_PATHS) return TOO_MANY_REDACTION_PATHS;
-    const fields: unknown[] = [];
-    for (let index = 0; index < lengthDescriptor.value; index += 1) {
-      const field = descriptorValue(value, String(index));
-      if (field === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
-      fields.push(field === MISSING_OWN_DATA_DESCRIPTOR ? undefined : field.value);
-    }
-    return Object.freeze(fields);
-  } catch {
-    return undefined;
-  }
 }
 
 function projectToolTimelineEntry(value: unknown): CanonicalToolTimelineEntry | undefined {
@@ -258,90 +233,6 @@ function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActiva
  *  `<lr-checkpoint>`'s own `defaultFormatTimestamp`, duplicated locally. */
 function defaultFormatTimestamp(date: Date, locale: string): string {
   return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
-}
-
-/**
- * Returns a structural clone of `value` with every leaf/branch under `currentPath` that `paths`
- * names replaced by `placeholder`. A path with no corresponding field in `value` is simply never
- * visited -- `Object.entries` only iterates real keys -- so a dangling path degrades gracefully
- * instead of throwing. Arrays are walked with numeric-index path segments (`args.rows.0.ssn`);
- * every other non-plain-object value below an unmasked branch is treated as an opaque leaf.
- */
-function redactBranch(
-  value: unknown,
-  currentPath: string,
-  paths: readonly string[],
-  placeholder: string,
-  budget: { nodes: number },
-  depth: number,
-): unknown {
-  if (paths.includes(currentPath)) return placeholder;
-  if (depth >= MAX_REDACTION_DEPTH || budget.nodes >= MAX_REDACTION_NODES) return placeholder;
-  budget.nodes++;
-  if (!paths.some((p) => p.startsWith(`${currentPath}.`))) return value;
-  if (Array.isArray(value)) {
-    try {
-      const result: unknown[] = [];
-      for (let index = 0; index < value.length; index++) {
-        if (budget.nodes >= MAX_REDACTION_NODES) return placeholder;
-        result.push(redactBranch(value[index], `${currentPath}.${index}`, paths, placeholder, budget, depth + 1));
-      }
-      return result;
-    } catch {
-      return placeholder;
-    }
-  }
-  if (value !== null && typeof value === 'object') {
-    const result = Object.create(null) as Record<string, unknown>;
-    try {
-      for (const key in value as Record<string, unknown>) {
-        if (!Object.prototype.propertyIsEnumerable.call(value, key)) continue;
-        if (budget.nodes >= MAX_REDACTION_NODES) return placeholder;
-        result[key] = redactBranch(
-          (value as Record<string, unknown>)[key],
-          `${currentPath}.${key}`,
-          paths,
-          placeholder,
-          budget,
-          depth + 1,
-        );
-      }
-    } catch {
-      return placeholder;
-    }
-    return result;
-  }
-  return value;
-}
-
-/** Entry point for `redactBranch()` -- a no-op (returns `value` unchanged) whenever `paths` is
- *  empty, so the common unredacted case never allocates a clone. */
-function redactField(value: unknown, root: string, paths: readonly unknown[], placeholder: string): unknown {
-  if (paths.length === 0) return value;
-  if (paths.length > MAX_REDACTION_PATHS) return placeholder;
-  const relevant: string[] = [];
-  for (const path of paths) {
-    if (typeof path !== 'string' || path.length > 4_096) return placeholder;
-    if (path !== root && !path.startsWith(`${root}.`)) continue;
-    if (path.split('.').length - 1 > MAX_REDACTION_DEPTH) return placeholder;
-    relevant.push(path);
-  }
-  if (relevant.length === 0) return value;
-  return redactBranch(value, root, relevant, placeholder, { nodes: 0 }, 0);
-}
-
-interface RedactedEntry {
-  args: unknown;
-  result: unknown;
-  error: unknown;
-}
-
-interface RedactionCacheEntry extends RedactedEntry {
-  sourceArgs: unknown;
-  sourceResult: unknown;
-  sourceError: unknown;
-  sourcePaths: readonly unknown[];
-  placeholder: string;
 }
 
 /**
@@ -489,7 +380,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   @state() private openedEntryIds = new Set<string>();
   private projectedEntriesCache: CanonicalToolTimelineEntry[] = [];
   private projectionTruncated = false;
-  private redactionCache = new WeakMap<CanonicalToolTimelineEntry, RedactionCacheEntry>();
+  private redactionCache = new WeakMap<CanonicalToolTimelineEntry, RedactedToolDetail>();
   private limitAnnouncementSink?: AnnouncementSink;
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
@@ -731,33 +622,13 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     this.emit('lr-tool-render-error', { ...entryCorrelation(entry), ...event.detail });
   }
 
-  private redactedEntry(entry: CanonicalToolTimelineEntry, placeholder: string): RedactedEntry {
-    const paths = entry.redactedFields;
-    const cached = this.redactionCache.get(entry);
-    if (
-      cached
-      && cached.sourceArgs === entry.args
-      && cached.sourceResult === entry.result
-      && cached.sourceError === entry.error
-      && cached.sourcePaths === paths
-      && cached.placeholder === placeholder
-    ) {
-      return cached;
-    }
-    const redacted: RedactionCacheEntry = {
-      sourceArgs: entry.args,
-      sourceResult: entry.result,
-      sourceError: entry.error,
-      sourcePaths: paths,
+  private redactedEntry(entry: CanonicalToolTimelineEntry, placeholder: string): RedactedToolDetail {
+    const redacted = redactToolDetail(
+      { args: entry.args, result: entry.result, error: entry.error },
+      entry.redactedFields,
       placeholder,
-      args: redactField(entry.args, 'args', paths, placeholder),
-      result: entry.result === undefined
-        ? undefined
-        : redactField(entry.result, 'result', paths, placeholder),
-      error: entry.error === undefined
-        ? undefined
-        : redactField(entry.error, 'error', paths, placeholder),
-    };
+      this.redactionCache.get(entry),
+    );
     this.redactionCache.set(entry, redacted);
     return redacted;
   }

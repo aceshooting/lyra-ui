@@ -35,3 +35,9 @@ test('llms/conversation.md documents the same full-replacement, interactivity-lo
     'the authored consumer reference must name at least one concrete affordance lost',
   );
 });
+
+test('llms/conversation.md documents the tool-display option and its block pairing', () => {
+  assert.match(llmsConversation, /toolDisplay: MessagePartsToolDisplay = 'chip'/);
+  assert.match(llmsConversation, /tool-display="block"/);
+  assert.match(llmsConversation, /<lr-tool-call-block>/);
+});

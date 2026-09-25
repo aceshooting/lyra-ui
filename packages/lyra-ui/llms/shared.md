@@ -137,7 +137,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 272
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 278
   root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -2087,6 +2087,18 @@ import {
   vendor SDKs into the package. Feed AG-UI events through `new AgUiStreamAdapter().push(event)`.
   Adapter inputs are treated as untrusted data, recursively snapshotted, and rejected without
   throwing when malformed, non-serializable, or over their configured budgets.
+  `adaptAiSdkMessage()` maps AI SDK tool states structurally: `output-error` → `error`,
+  `output-available` → `success`, `approval-requested` → `pending`, `output-denied` → `denied`
+  (a complete part), `approval-responded` with `approval.approved === false` → `denied` (still
+  streaming until the SDK moves it on), and every other state, including an approved
+  `approval-responded`, → `running`. The denial reason is not mapped.
+- **Tool invocation timing and redaction** — `ToolInvocation` optionally carries `startedAt` and
+  `endedAt` (epoch milliseconds; together they derive the duration `<lr-message-parts
+  tool-display="block">` and `<lr-tool-timeline>` show) and `redactedFields` (dotted paths within
+  `args`/`result`/`error` masked wherever Lyra renders the invocation's payload). The stream runtime
+  validates them on `tool-upsert` events and `tool-call` parts: a non-finite or non-number time, or
+  a `redactedFields` that is not an array of at most 100 strings of at most 4,096 characters, fails
+  the event as `invalid_stream_event`.
 - **Resource limits** — pass a partial `AgentStreamLimits` to `createAgentStreamState()`, or adapter
   limit options to the relevant adapter. The exported `DEFAULT_AGENT_STREAM_LIMITS`,
   `DEFAULT_AI_SDK_ADAPTER_LIMITS`, `DEFAULT_AG_UI_ADAPTER_LIMITS`, and
@@ -2871,6 +2883,9 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
   `isActive()`, and `dismissBackdrop()`; the deactivate argument is the exported
   `OverlayDeactivateOptions` record, and its return value is the deferred scroll-lock release
   function (or `undefined`).
+  `deactivate({ restoreFocus: false })` on the topmost entry hands focus to the overlay now on top
+  only when the closing panel held focus or that overlay traps focus (a modal); focus that sat
+  elsewhere, such as a field the user moved to while a hover panel was open, stays put.
   Exact records are `OverlayActivationOptions { host: HTMLElement; panel: () => HTMLElement |
 null; modalRoot?: () => HTMLElement | null; onEscape: () => void; onBackdrop?: () => void;
 preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
@@ -3359,6 +3374,9 @@ These named interfaces and helper signatures are available to typed integrations
   status: unknown;
   result: unknown;
   error: unknown;
+  startedAt: unknown;
+  endedAt: unknown;
+  redactedFields: unknown;
 }`
   `ToolResultErrorMessagePart {
   error: unknown;
@@ -3483,6 +3501,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-confirm-bar": unknown;
   "lr-contact-viewer": unknown;
   "lr-context-inspector": unknown;
+  "lr-context-menu": unknown;
   "lr-context-meter": unknown;
   "lr-control-group": unknown;
   "lr-conversation-item": unknown;
@@ -3587,6 +3606,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-multi-split": unknown;
   "lr-mutation-observer": unknown;
   "lr-native-time-input": unknown;
+  "lr-navigation-menu": unknown;
+  "lr-navigation-menu-item": unknown;
   "lr-neighbor-list": unknown;
   "lr-node-palette": unknown;
   "lr-notebook-viewer": unknown;
@@ -3682,8 +3703,11 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-timeline-item": unknown;
   "lr-toast": unknown;
   "lr-toast-item": unknown;
+  "lr-toggle": unknown;
+  "lr-toggle-group": unknown;
   "lr-token-input": unknown;
   "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-block": unknown;
   "lr-tool-call-chip": unknown;
   "lr-tool-param-form": unknown;
   "lr-tool-result-dialog": unknown;
@@ -3894,6 +3918,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-confirm-bar": unknown;
   "lr-contact-viewer": unknown;
   "lr-context-inspector": unknown;
+  "lr-context-menu": unknown;
   "lr-context-meter": unknown;
   "lr-control-group": unknown;
   "lr-conversation-item": unknown;
@@ -3998,6 +4023,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-multi-split": unknown;
   "lr-mutation-observer": unknown;
   "lr-native-time-input": unknown;
+  "lr-navigation-menu": unknown;
+  "lr-navigation-menu-item": unknown;
   "lr-neighbor-list": unknown;
   "lr-node-palette": unknown;
   "lr-notebook-viewer": unknown;
@@ -4093,8 +4120,11 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-timeline-item": unknown;
   "lr-toast": unknown;
   "lr-toast-item": unknown;
+  "lr-toggle": unknown;
+  "lr-toggle-group": unknown;
   "lr-token-input": unknown;
   "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-block": unknown;
   "lr-tool-call-chip": unknown;
   "lr-tool-param-form": unknown;
   "lr-tool-result-dialog": unknown;
@@ -4184,6 +4214,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-confirm-bar": unknown;
   "lr-contact-viewer": unknown;
   "lr-context-inspector": unknown;
+  "lr-context-menu": unknown;
   "lr-context-meter": unknown;
   "lr-control-group": unknown;
   "lr-conversation-item": unknown;
@@ -4288,6 +4319,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-multi-split": unknown;
   "lr-mutation-observer": unknown;
   "lr-native-time-input": unknown;
+  "lr-navigation-menu": unknown;
+  "lr-navigation-menu-item": unknown;
   "lr-neighbor-list": unknown;
   "lr-node-palette": unknown;
   "lr-notebook-viewer": unknown;
@@ -4383,8 +4416,11 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-timeline-item": unknown;
   "lr-toast": unknown;
   "lr-toast-item": unknown;
+  "lr-toggle": unknown;
+  "lr-toggle-group": unknown;
   "lr-token-input": unknown;
   "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-block": unknown;
   "lr-tool-call-chip": unknown;
   "lr-tool-param-form": unknown;
   "lr-tool-result-dialog": unknown;
@@ -4543,6 +4579,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-confirm-bar": unknown;
   "lr-contact-viewer": unknown;
   "lr-context-inspector": unknown;
+  "lr-context-menu": unknown;
   "lr-context-meter": unknown;
   "lr-control-group": unknown;
   "lr-conversation-item": unknown;
@@ -4647,6 +4684,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-multi-split": unknown;
   "lr-mutation-observer": unknown;
   "lr-native-time-input": unknown;
+  "lr-navigation-menu": unknown;
+  "lr-navigation-menu-item": unknown;
   "lr-neighbor-list": unknown;
   "lr-node-palette": unknown;
   "lr-notebook-viewer": unknown;
@@ -4742,8 +4781,11 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-timeline-item": unknown;
   "lr-toast": unknown;
   "lr-toast-item": unknown;
+  "lr-toggle": unknown;
+  "lr-toggle-group": unknown;
   "lr-token-input": unknown;
   "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-block": unknown;
   "lr-tool-call-chip": unknown;
   "lr-tool-param-form": unknown;
   "lr-tool-result-dialog": unknown;

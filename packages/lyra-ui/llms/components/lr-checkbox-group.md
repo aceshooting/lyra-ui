@@ -24,6 +24,8 @@ targets keep their own fixed hit-area floor while the surrounding text wraps.
 A form-associated collection of `<lr-checkbox>` children. Its readonly `value` is a defensive
 `string[]` snapshot; each
 selected value is submitted under `name` and `required` requires at least one selection.
+For zero-or-more choices in button chrome behind one tab stop that submit nothing, use
+`lr-toggle-group`.
 
 **Properties:** `label`, `hint`, `errorText`, `value`, `customError` (`custom-error`), `name`,
 `required`, `disabled`, `orientation: 'vertical' | 'horizontal' = 'vertical'`,

@@ -60,6 +60,9 @@ interface RadioGroupController {
 }
 
 export type RadioAppearance = 'default' | 'button';
+// Spelled locally rather than aliased to the internal adjacent-runs type: the protected
+// `buttonRunPosition` getter is part of this class's public signature, and an alias would make that
+// internal type publicly reachable. The two unions are identical, so group projections still assign.
 type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
 
 /**

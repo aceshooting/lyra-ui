@@ -6,6 +6,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { normalizeManifest } from './component-inventory.mjs';
+import { UNRELEASED_VERSION } from './component-metadata.mjs';
+import { expandLyraInventoryManifest } from './generate-component-inventory.mjs';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 const PROFILE = 'new-component-experimental';
@@ -221,10 +223,17 @@ function componentFiles(details) {
   ]);
 }
 
-function expectedMaturity(version) {
+// Mirrors `componentMetadataByTag()`: a tag no release has shipped falls back to the current
+// package version, unless that version is already tagged (`history.taggedCurrent`), in which case
+// it is `unreleased` until the next version bump.
+function expectedSince(version, metadata) {
+  return metadata.history?.taggedCurrent ? UNRELEASED_VERSION : version;
+}
+
+function expectedMaturity(since) {
   return {
     status: 'experimental',
-    since: version,
+    since,
     deprecated: null,
     profile: PROFILE,
     rationale: PROFILE_RATIONALE,
@@ -405,6 +414,9 @@ export async function scaffoldComponent({
     state.paths.ssrAllBarrel,
     state.paths.allowlist,
     state.paths.packageJson,
+    // `pnpm registrations` generates the new tag's stable alias module outside the component
+    // directory, so removing that directory alone would leave the alias behind.
+    join(packageDir, 'src/components', `${tag}.ts`),
   ];
   // A missing file snapshots as `null` and is DELETED on rollback rather than restored, so a
   // generator that creates one of these on its first run cannot leave it behind after a failure.
@@ -430,7 +442,9 @@ export async function scaffoldComponent({
     const steps = verificationSteps(`src/components/${family}/${name}/${name}.test.ts`);
     await runStep(steps[0]);
 
-    const manifest = readJson(state.paths.manifest);
+    // The generated manifest is compact (a subclass omits inherited members), while the inventory
+    // records -- and `check:component-inventory` validates -- the inheritance-expanded surface.
+    const manifest = expandLyraInventoryManifest(readJson(state.paths.manifest));
     const normalized = normalizeManifest(manifest, { ecosystem: 'lyra' });
     const component = normalized.find((entry) => entry.tag === tag);
     const expectedClassModule = `src/components/${family}/${name}/${name}.class.ts`;
@@ -446,7 +460,8 @@ export async function scaffoldComponent({
     for (const step of steps.slice(1)) await runStep(step);
 
     const materialized = readJson(state.paths.inventory).components.find((entry) => entry.tag === tag);
-    const expected = expectedMaturity(state.packageJson.version);
+    // Re-read: the component-metadata step reconciles `history` (for example after a version bump).
+    const expected = expectedMaturity(expectedSince(state.packageJson.version, readJson(state.paths.metadata)));
     if (JSON.stringify(materialized?.maturity) !== JSON.stringify(expected)) {
       throw new Error(
         `${PROFILE} did not materialize the reviewed metadata for ${tag}; the scaffold was rolled back.`,

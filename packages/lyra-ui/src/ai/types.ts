@@ -124,6 +124,15 @@ export interface ToolInvocation {
   status: ToolCallStatus;
   result?: unknown;
   error?: string;
+  /** Epoch milliseconds the call started. */
+  startedAt?: number;
+  /** Epoch milliseconds the call reached a terminal state. With `startedAt`, derives the duration
+   *  `<lr-message-parts tool-display="block">` and `<lr-tool-timeline>` display. */
+  endedAt?: number;
+  /** Dotted paths within `args`/`result`/`error` to mask wherever Lyra renders this invocation's
+   *  payload (`<lr-message-parts>` in either `tool-display`, `<lr-tool-timeline>`). A bare
+   *  `'args'`/`'result'`/`'error'` masks the whole branch; a path with no match is a no-op. */
+  redactedFields?: readonly string[];
 }
 
 /**

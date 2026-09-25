@@ -18,6 +18,8 @@
 
 Responsive semantic grouping primitive for related action controls. It preserves the slotted
 controls and exposes `role="group"` on its internal wrapper.
+It holds no state and handles no keys; for a row of toggles with pressed state behind one tab stop,
+use `lr-toggle-group`.
 
 **Properties:**
 

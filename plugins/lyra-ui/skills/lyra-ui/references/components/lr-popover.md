@@ -141,6 +141,9 @@ If the import fails, leave the native disclosure visible and usable.
   Note there is deliberately no `aria-haspopup="none"` — that is an invalid attribute value, not a
   neutral one, and axe reports it as a critical violation. `lr-dropdown` still pins `popupRole` to
   `menu`; the escape hatch lives on the general-purpose primitive.
+  For a whole bar of such flyouts — coordinated so one opens at a time, sharing one panel region,
+  with arrow keys between triggers and an optional collapsed layout — use `lr-navigation-menu`
+  (documented in `layout.md`) instead of several popovers.
 - `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
   keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
   closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either

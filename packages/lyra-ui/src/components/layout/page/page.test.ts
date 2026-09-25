@@ -343,6 +343,24 @@ it('gives the default toggle an exact controls/expanded contract and supports it
   expect(toggle.getAttribute('aria-expanded')).to.equal('true');
 });
 
+it('renders the shared three-bar hamburger as the default navigation-toggle glyph', async () => {
+  const page = (await fixture(
+    html`<lr-page style="inline-size:320px"></lr-page>`
+  )) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const glyph = page.shadowRoot!.querySelector<SVGElement>(
+    'slot[name="navigation-toggle-icon"] > svg'
+  );
+  expect(glyph !== null, 'default toggle glyph').to.equal(true);
+  expect(glyph!.getAttribute('aria-hidden')).to.equal('true');
+  expect(glyph!.getAttribute('width')).to.equal('1em');
+  const lines = [...glyph!.querySelectorAll('line')].map((line) =>
+    ['x1', 'y1', 'x2', 'y2'].map((name) => line.getAttribute(name)).join(' ')
+  );
+  expect(lines).to.deep.equal(['4 7 20 7', '4 12 20 12', '4 17 20 17']);
+});
+
 it('keeps slotted skip content and toggle glyph controls decorative while preserving the outer actions', async () => {
   const root = await fixture(html`
     <div>

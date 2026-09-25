@@ -27,4 +27,6 @@ export * from './swatch-picker/swatch-picker.js';
 export * from './switch/switch.js';
 export * from './textarea/textarea.js';
 export * from './time-range/time-range.js';
+export * from './toggle/toggle.js';
+export * from './toggle-group/toggle-group.js';
 export * from './token-input/token-input.js';

@@ -12,10 +12,17 @@ import './components/data/table/table.js';
 import './components/agent-tools/thinking-panel/thinking-panel.js';
 import './components/utility/random-content/random-content.js';
 import './components/agent-tools/browser-frame/browser-frame.js';
+import './components/forms/toggle/toggle.js';
+import './components/forms/toggle-group/toggle-group.js';
+import './components/layout/navigation-menu/navigation-menu.js';
+import './components/agent-tools/tool-call-block/tool-call-block.js';
+import './components/conversation/message-parts/message-parts.js';
 
 interface ClosedSetCase {
   readonly tag: string;
   readonly property: string;
+  /** Attribute name when it differs from the property name. */
+  readonly attribute?: string;
   readonly fallback: string;
   readonly valid: string;
   readonly reflected: boolean;
@@ -35,6 +42,32 @@ const CASES: readonly ClosedSetCase[] = [
   { tag: 'lr-thinking-panel', property: 'mode', fallback: 'live', valid: 'post-hoc', reflected: true },
   { tag: 'lr-random-content', property: 'mode', fallback: 'unique', valid: 'sequence', reflected: true },
   { tag: 'lr-browser-frame', property: 'phase', fallback: 'idle', valid: 'streaming', reflected: true },
+  { tag: 'lr-toggle', property: 'appearance', fallback: 'plain', valid: 'outlined', reflected: true },
+  {
+    tag: 'lr-toggle-group',
+    property: 'selectionMode',
+    attribute: 'selection-mode',
+    fallback: 'multiple',
+    valid: 'single',
+    reflected: true,
+  },
+  {
+    tag: 'lr-navigation-menu',
+    property: 'panelAnchor',
+    attribute: 'panel-anchor',
+    fallback: 'menu',
+    valid: 'item',
+    reflected: true,
+  },
+  { tag: 'lr-tool-call-block', property: 'status', fallback: 'pending', valid: 'running', reflected: true },
+  {
+    tag: 'lr-message-parts',
+    property: 'toolDisplay',
+    attribute: 'tool-display',
+    fallback: 'chip',
+    valid: 'block',
+    reflected: true,
+  },
 ] as const;
 
 describe('shared closed-set normalization', () => {
@@ -50,12 +83,12 @@ describe('shared closed-set normalization', () => {
       values[testCase.property] = 'not-a-supported-value';
       await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
       expect(values[testCase.property]).to.equal(testCase.fallback);
-      if (testCase.reflected) expect(el.getAttribute(testCase.property)).to.equal(testCase.fallback);
+      if (testCase.reflected) expect(el.getAttribute(testCase.attribute ?? testCase.property)).to.equal(testCase.fallback);
 
-      el.setAttribute(testCase.property, 'also-not-supported');
+      el.setAttribute(testCase.attribute ?? testCase.property, 'also-not-supported');
       await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
       expect(values[testCase.property]).to.equal(testCase.fallback);
-      if (testCase.reflected) expect(el.getAttribute(testCase.property)).to.equal(testCase.fallback);
+      if (testCase.reflected) expect(el.getAttribute(testCase.attribute ?? testCase.property)).to.equal(testCase.fallback);
     });
   }
 });

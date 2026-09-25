@@ -16,6 +16,7 @@ import { closeIcon, expandIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
+import { TOOL_STATUS_LABEL_KEY, isToolCallStatus, toolGlyph, toolStatusIcon } from '../tool-status.js';
 import { styles } from './tool-result-dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -46,32 +47,6 @@ export interface LyraToolResultDialogEventMap {
   'lr-maximize-change': CustomEvent<{ readonly maximized: boolean }>;
 }
 
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
-// tool-result-specific glyphs to that module -- it's off limits here -- so
-// these still read as part of the same visual language as the rest of the
-// library's inline icons. Same approach lr-checkbox's/lr-chat-message's
-// own local glyphs take for the identical reason.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function icon(paths: SVGTemplateResult): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >${paths}</svg>
-  `;
-}
-
 /** A "restore from maximized" glyph -- the mirror image of `expandIcon()`,
  *  arrows pointing inward toward the center instead of outward toward the
  *  corners, same as lr-widget's fullscreen-exit affordance reuses
@@ -81,7 +56,7 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
  *  identical "x" icons side by side would be ambiguous about which one
  *  dismisses the dialog and which one only un-maximizes it. */
 function shrinkIcon(): SVGTemplateResult {
-  return icon(svg`
+  return toolGlyph(svg`
     <polyline points="4 14 10 14 10 20"></polyline>
     <polyline points="20 10 14 10 14 4"></polyline>
     <line x1="14" y1="10" x2="21" y2="3"></line>
@@ -89,78 +64,21 @@ function shrinkIcon(): SVGTemplateResult {
   `);
 }
 
-function pendingIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline>`);
-}
-
-/** A three-quarter arc, spun by the `[status="running"] [part="status"] svg`
- *  CSS animation -- a full circle wouldn't visibly convey rotation. */
-function runningIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M21 12a9 9 0 1 1-9-9"></path>`);
-}
-
-function successIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><polyline points="8 12.5 11 15.5 16 9.5"></polyline>`);
-}
-
-function errorIcon(): SVGTemplateResult {
-  return icon(svg`
-    <circle cx="12" cy="12" r="9"></circle>
-    <line x1="9" y1="9" x2="15" y2="15"></line>
-    <line x1="15" y1="9" x2="9" y2="15"></line>
-  `);
-}
-
-/** A "blocked" glyph (circle + diagonal slash) -- distinct from `errorIcon()`
- *  since a denial is a policy rejection, not a runtime failure. */
-function deniedIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><line x1="6" y1="18" x2="18" y2="6"></line>`);
-}
-
-const STATUS_ICON: Record<ToolResultStatus, () => SVGTemplateResult> = {
-  pending: pendingIcon,
-  running: runningIcon,
-  success: successIcon,
-  error: errorIcon,
-  denied: deniedIcon,
-};
-
-/** Visible (not just color-coded) text for every status -- English fallback
- *  values only; STATUS_LABEL_KEY below supplies the localize() key for each,
- *  and STATUS_VALUES (right below) still derives its allowed-value set from
- *  this object's keys, unaffected by localization. */
-const STATUS_LABEL: Record<ToolResultStatus, string> = {
-  pending: 'Pending',
-  running: 'Running',
-  success: 'Success',
-  error: 'Error',
-  denied: 'Denied',
-};
-
-/** localize() key for each status's visible label -- see STATUS_LABEL for
- *  the English fallback text. */
-const STATUS_LABEL_KEY: Record<ToolResultStatus, string> = {
-  pending: 'statusPending',
-  running: 'statusRunning',
-  success: 'statusSuccess',
-  error: 'statusError',
-  denied: 'statusDenied',
-};
-
-const STATUS_VALUES = new Set<string>(Object.keys(STATUS_LABEL));
+// The status glyphs and label keys are shared with `<lr-tool-call-chip>`, `<lr-tool-timeline>` and
+// `<lr-tool-call-block>` (../tool-status.ts), so a call reads identically wherever it is shown.
 
 /**
  * Normalizes `status` at the attribute boundary -- an out-of-union value
  * (markup a caller doesn't fully control, or a raw string from an untyped
  * consumer) falls back to `'pending'` here rather than reaching
- * STATUS_ICON/STATUS_LABEL as a bad lookup key and crashing `render()`. This
+ * the status glyph/label lookups as a bad key and crashing `render()`. This
  * only covers attribute parsing; a `.status = ...` assignment made directly
  * as a property bypasses converters entirely, which is why `render()` below
- * also falls back at the STATUS_ICON/STATUS_LABEL lookup itself.
+ * also falls back at the glyph/label lookup itself.
  */
 const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
   fromAttribute(value): ToolResultStatus {
-    return value !== null && STATUS_VALUES.has(value) ? (value as ToolResultStatus) : 'pending';
+    return value !== null && isToolCallStatus(value) ? value : 'pending';
   },
   toAttribute(value): string {
     return value;
@@ -460,8 +378,8 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
           <div part="title">
             <span part="tool-name" id=${this.titleId}>${this.toolName || this.localize('toolCall')}</span>
             <span part="status"
-              >${(STATUS_ICON[this.status] ?? STATUS_ICON.pending)()}<span
-                >${this.localize(STATUS_LABEL_KEY[this.status] ?? STATUS_LABEL_KEY.pending)}</span
+              >${toolStatusIcon(this.status)}<span
+                >${this.localize(TOOL_STATUS_LABEL_KEY[this.status] ?? TOOL_STATUS_LABEL_KEY.pending)}</span
               ></span
             >
             ${durationMs != null

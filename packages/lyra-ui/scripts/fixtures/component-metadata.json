@@ -54,9 +54,15 @@
   "assignments": {
     "new-component-experimental": [
       "lr-app-rail-group",
+      "lr-context-menu",
       "lr-drop-zone",
       "lr-funnel",
-      "lr-streaming-text-core"
+      "lr-navigation-menu",
+      "lr-navigation-menu-item",
+      "lr-streaming-text-core",
+      "lr-toggle",
+      "lr-toggle-group",
+      "lr-tool-call-block"
     ],
     "published-stable": [
       "lr-accordion",
@@ -20346,7 +20352,7 @@
     "current": {
       "version": "20.0.1",
       "sourceCommit": null,
-      "manifestSha256": "ea6cc224ca0605c5ecc8a255257be1178bec8bdb17c6da049a27f53109e0099e",
+      "manifestSha256": "2d2b572c049dea85a10c677751885598d3f9e28d879f6c769a3da9f9125fe069",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -20411,6 +20417,7 @@
         "lr-confirm-bar",
         "lr-contact-viewer",
         "lr-context-inspector",
+        "lr-context-menu",
         "lr-context-meter",
         "lr-control-group",
         "lr-conversation-item",
@@ -20516,6 +20523,8 @@
         "lr-multi-split",
         "lr-mutation-observer",
         "lr-native-time-input",
+        "lr-navigation-menu",
+        "lr-navigation-menu-item",
         "lr-neighbor-list",
         "lr-node-palette",
         "lr-notebook-viewer",
@@ -20610,8 +20619,11 @@
         "lr-timeline-item",
         "lr-toast",
         "lr-toast-item",
+        "lr-toggle",
+        "lr-toggle-group",
         "lr-token-input",
         "lr-tool-approval-dialog",
+        "lr-tool-call-block",
         "lr-tool-call-chip",
         "lr-tool-param-form",
         "lr-tool-result-dialog",

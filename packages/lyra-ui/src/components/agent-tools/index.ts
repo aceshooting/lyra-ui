@@ -26,6 +26,7 @@ export * from './terminal/terminal.js';
 export * from './test-results/test-results.js';
 export * from './thinking-panel/thinking-panel.js';
 export * from './tool-approval-dialog/tool-approval-dialog.js';
+export * from './tool-call-block/tool-call-block.js';
 export * from './tool-call-chip/tool-call-chip.js';
 export * from './tool-param-form/tool-param-form.js';
 export * from './tool-result-dialog/tool-result-dialog.js';

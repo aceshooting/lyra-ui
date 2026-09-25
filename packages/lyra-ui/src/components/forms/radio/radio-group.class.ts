@@ -36,6 +36,7 @@ import {
   isAriaTrue,
 } from '../../../internal/accessibility-visibility.js';
 import { composedParentElement } from '../../../internal/active-element.js';
+import { measureAdjacentRuns, type AdjacentRunPosition } from '../../../internal/adjacent-runs.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -395,44 +396,16 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     );
   }
 
-  private areActuallyAdjacent(first: LyraRadio, second: LyraRadio): boolean {
-    const firstRect = first.getBoundingClientRect();
-    const secondRect = second.getBoundingClientRect();
-    if (firstRect.width <= 0 || firstRect.height <= 0 || secondRect.width <= 0 || secondRect.height <= 0) {
-      return false;
-    }
-    // A new flex line is not a continuation even if its inline edges happen to align. Allow a
-    // sub-pixel tolerance for zoom and engine rounding, and the one collapsed border already
-    // projected on a subsequent ResizeObserver pass.
-    const sameRow = Math.abs(firstRect.top - secondRect.top) <= 1 &&
-      Math.abs(firstRect.bottom - secondRect.bottom) <= 1;
-    if (!sameRow) return false;
-    const direction = getComputedStyle(this).direction;
-    const gap = direction === 'rtl'
-      ? firstRect.left - secondRect.right
-      : secondRect.left - firstRect.right;
-    return gap >= -2 && gap <= 1;
-  }
-
   private projectButtonRuns(): void {
     const radios = this.radios();
-    const joinsPrevious = radios.map(() => false);
-    if (this.orientation === 'horizontal') {
-      for (let index = 1; index < radios.length; index += 1) {
-        const previous = radios[index - 1]!;
-        const current = radios[index]!;
-        joinsPrevious[index] = this.isButtonRadio(previous) && this.isButtonRadio(current) &&
-          this.areActuallyAdjacent(previous, current);
-      }
-    }
-    for (let index = 0; index < radios.length; index += 1) {
-      const joinsBefore = joinsPrevious[index] ?? false;
-      const joinsAfter = joinsPrevious[index + 1] ?? false;
-      const position = joinsBefore
-        ? joinsAfter ? 'middle' : 'end'
-        : joinsAfter ? 'start' : 'standalone';
-      radios[index]!.setButtonRunPosition(position);
-    }
+    // Vertical groups never join: every option keeps all four corners.
+    const positions = this.orientation === 'horizontal'
+      ? measureAdjacentRuns(radios, {
+        direction: getComputedStyle(this).direction === 'rtl' ? 'rtl' : 'ltr',
+        joinable: (radio) => this.isButtonRadio(radio as LyraRadio),
+      })
+      : radios.map((): AdjacentRunPosition => 'standalone');
+    radios.forEach((radio, index) => radio.setButtonRunPosition(positions[index]!));
   }
 
   private armMembershipObserver(): void {

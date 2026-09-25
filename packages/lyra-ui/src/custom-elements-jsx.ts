@@ -31,6 +31,7 @@ import type { LyraTerminal, LyraTerminalEventMap } from './components/agent-tool
 import type { LyraTestResults, LyraTestResultsEventMap } from './components/agent-tools/test-results/test-results.class.js';
 import type { LyraThinkingPanel, LyraThinkingPanelEventMap } from './components/agent-tools/thinking-panel/thinking-panel.class.js';
 import type { LyraToolApprovalDialog, LyraToolApprovalDialogEventMap } from './components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
+import type { LyraToolCallBlock, LyraToolCallBlockEventMap } from './components/agent-tools/tool-call-block/tool-call-block.class.js';
 import type { LyraToolCallChip, LyraToolCallChipEventMap } from './components/agent-tools/tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolParamForm, LyraToolParamFormEventMap } from './components/agent-tools/tool-param-form/tool-param-form.class.js';
 import type { LyraToolResultDialog, LyraToolResultDialogEventMap } from './components/agent-tools/tool-result-dialog/tool-result-dialog.class.js';
@@ -138,6 +139,8 @@ import type { LyraSwatchPicker, LyraSwatchPickerEventMap } from './components/fo
 import type { LyraSwitch, LyraSwitchEventMap } from './components/forms/switch/switch.class.js';
 import type { LyraTextarea, LyraTextareaEventMap } from './components/forms/textarea/textarea.class.js';
 import type { LyraTimeRange, LyraTimeRangeEventMap } from './components/forms/time-range/time-range.class.js';
+import type { LyraToggleGroup, LyraToggleGroupEventMap } from './components/forms/toggle-group/toggle-group.class.js';
+import type { LyraToggle, LyraToggleEventMap } from './components/forms/toggle/toggle.class.js';
 import type { LyraTokenInput, LyraTokenInputEventMap } from './components/forms/token-input/token-input.class.js';
 import type { LyraAppRailGroup, LyraAppRailGroupEventMap } from './components/layout/app-rail-group/app-rail-group.class.js';
 import type { LyraAppRailItem, LyraAppRailItemEventMap } from './components/layout/app-rail/app-rail-item.class.js';
@@ -162,6 +165,8 @@ import type { LyraMenuItem, LyraMenuItemEventMap } from './components/layout/men
 import type { LyraMenuLabel } from './components/layout/menu/menu-label.class.js';
 import type { LyraMenu, LyraMenuEventMap } from './components/layout/menu/menu.class.js';
 import type { LyraMultiSplit, LyraMultiSplitEventMap } from './components/layout/multi-split/multi-split.class.js';
+import type { LyraNavigationMenuItem, LyraNavigationMenuItemEventMap } from './components/layout/navigation-menu-item/navigation-menu-item.class.js';
+import type { LyraNavigationMenu, LyraNavigationMenuEventMap } from './components/layout/navigation-menu/navigation-menu.class.js';
 import type { LyraPage, LyraPageEventMap } from './components/layout/page/page.class.js';
 import type { LyraReorderItem, LyraReorderItemEventMap } from './components/layout/reorder-list/reorder-item.class.js';
 import type { LyraReorderList, LyraReorderListEventMap } from './components/layout/reorder-list/reorder-list.class.js';
@@ -203,6 +208,7 @@ import type { LyraTag, LyraTagEventMap } from './components/overlays/badge/tag.c
 import type { LyraCallout, LyraCalloutEventMap } from './components/overlays/callout/callout.class.js';
 import type { LyraChipGroup, LyraChipGroupEventMap } from './components/overlays/chip/chip-group.class.js';
 import type { LyraChip, LyraChipEventMap } from './components/overlays/chip/chip.class.js';
+import type { LyraContextMenu, LyraContextMenuEventMap } from './components/overlays/context-menu/context-menu.class.js';
 import type { LyraDialog, LyraDialogEventMap } from './components/overlays/dialog/dialog.class.js';
 import type { LyraDrawer } from './components/overlays/drawer/drawer.class.js';
 import type { LyraEmpty } from './components/overlays/empty/empty.class.js';
@@ -2923,6 +2929,31 @@ never,
   {
     'export-filename'?: LyraContextInspector['exportFilename'];
   }
+>;
+
+export type LyraContextMenuReactProps = LyraReactElementProps<
+  LyraContextMenu,
+  | 'disabled'
+  | 'label'
+  | 'locale'
+  | 'size'
+  | 'strings',
+  {},
+  LyraContextMenuEventMap,
+  | 'lr-after-hide'
+  | 'lr-after-show'
+  | 'lr-hide'
+  | 'lr-select'
+  | 'lr-show',
+  | '--hide-duration'
+  | '--lr-overlay-border'
+  | '--lr-overlay-max-inline-size'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
+  | '--max-width'
+  | '--show-duration',
+  {}
 >;
 
 export type LyraContextMeterReactProps = LyraReactElementProps<
@@ -6854,7 +6885,8 @@ export type LyraMessagePartsReactProps = LyraReactElementProps<
   | 'parts'
   | 'renderPart'
   | 'showReasoning'
-  | 'strings',
+  | 'strings'
+  | 'toolDisplay',
   {},
   LyraMessagePartsEventMap,
   | 'lr-anchor-result'
@@ -6884,6 +6916,7 @@ export type LyraMessagePartsReactProps = LyraReactElementProps<
     'content-mode'?: LyraMessageParts['contentMode'];
     'max-rendered-parts'?: LyraMessageParts['maxRenderedParts'];
     'show-reasoning'?: LyraMessageParts['showReasoning'];
+    'tool-display'?: LyraMessageParts['toolDisplay'];
   }
 >;
 
@@ -7192,6 +7225,75 @@ export type LyraNativeTimeInputReactProps = LyraReactElementProps<
     'with-hint'?: LyraNativeTimeInput['withHint'];
     'with-label'?: LyraNativeTimeInput['withLabel'];
     'without-spin-buttons'?: LyraNativeTimeInput['withoutSpinButtons'];
+  }
+>;
+
+export type LyraNavigationMenuReactProps = LyraReactElementProps<
+  LyraNavigationMenu,
+  | 'accessibleLabel'
+  | 'distance'
+  | 'expanded'
+  | 'hideDelay'
+  | 'indicator'
+  | 'locale'
+  | 'mobileBreakpoint'
+  | 'panelAnchor'
+  | 'showDelay'
+  | 'skipDelay'
+  | 'strings',
+  {},
+  LyraNavigationMenuEventMap,
+  | 'lr-expanded-change',
+  | '--lr-navigation-menu-gap'
+  | '--lr-navigation-menu-indicator-color'
+  | '--lr-navigation-menu-indicator-size'
+  | '--lr-positioning-strategy',
+  {
+    'aria-label'?: LyraNavigationMenu['accessibleLabel'];
+    'hide-delay'?: LyraNavigationMenu['hideDelay'];
+    'mobile-breakpoint'?: LyraNavigationMenu['mobileBreakpoint'];
+    'panel-anchor'?: LyraNavigationMenu['panelAnchor'];
+    'show-delay'?: LyraNavigationMenu['showDelay'];
+    'skip-delay'?: LyraNavigationMenu['skipDelay'];
+  }
+>;
+
+export type LyraNavigationMenuItemReactProps = LyraReactElementProps<
+  LyraNavigationMenuItem,
+  | 'accessibleLabel'
+  | 'current'
+  | 'href'
+  | 'locale'
+  | 'open'
+  | 'rel'
+  | 'strings'
+  | 'target',
+  {},
+  LyraNavigationMenuItemEventMap,
+  | 'lr-toggle',
+  | '--lr-navigation-menu-hide-duration'
+  | '--lr-navigation-menu-item-active-bg'
+  | '--lr-navigation-menu-item-current-color'
+  | '--lr-navigation-menu-item-current-font-weight'
+  | '--lr-navigation-menu-item-font-size'
+  | '--lr-navigation-menu-item-font-weight'
+  | '--lr-navigation-menu-item-hover-bg'
+  | '--lr-navigation-menu-item-hover-color'
+  | '--lr-navigation-menu-item-min-block-size'
+  | '--lr-navigation-menu-item-open-bg'
+  | '--lr-navigation-menu-item-padding-inline'
+  | '--lr-navigation-menu-panel-indent'
+  | '--lr-navigation-menu-panel-max-inline-size'
+  | '--lr-navigation-menu-panel-padding'
+  | '--lr-navigation-menu-show-duration'
+  | '--lr-navigation-menu-switch-duration'
+  | '--lr-overlay-border'
+  | '--lr-overlay-radius'
+  | '--lr-overlay-shadow-anchored'
+  | '--lr-overlay-surface'
+  | '--lr-positioning-strategy',
+  {
+    'aria-label'?: LyraNavigationMenuItem['accessibleLabel'];
   }
 >;
 
@@ -11051,6 +11153,60 @@ export type LyraToastItemReactProps = LyraReactElementProps<
   }
 >;
 
+export type LyraToggleReactProps = LyraReactElementProps<
+  LyraToggle,
+  | 'appearance'
+  | 'disabled'
+  | 'locale'
+  | 'pressed'
+  | 'size'
+  | 'strings'
+  | 'value'
+  | 'variant',
+  {},
+  LyraToggleEventMap,
+  | 'blur'
+  | 'focus'
+  | 'lr-change'
+  | 'lr-toggle-toggle-request'
+  | 'lr-toolbar-actions-change',
+  | '--lr-toggle-background'
+  | '--lr-toggle-border-color'
+  | '--lr-toggle-color'
+  | '--lr-toggle-gap'
+  | '--lr-toggle-hover-background'
+  | '--lr-toggle-padding-inline'
+  | '--lr-toggle-pressed-background'
+  | '--lr-toggle-pressed-border-color'
+  | '--lr-toggle-pressed-color'
+  | '--lr-toggle-radius',
+  {
+    'aria-labelledby'?: LyraAttributeValue<string | null>;
+  }
+>;
+
+export type LyraToggleGroupReactProps = LyraReactElementProps<
+  LyraToggleGroup,
+  | 'appearance'
+  | 'disabled'
+  | 'label'
+  | 'locale'
+  | 'orientation'
+  | 'selectionMode'
+  | 'size'
+  | 'strings'
+  | 'value',
+  {},
+  LyraToggleGroupEventMap,
+  | 'lr-change'
+  | 'lr-toggle-group-toggle-request',
+  | '--lr-toggle-group-gap'
+  | '--lr-toggle-group-wrap-gap',
+  {
+    'selection-mode'?: LyraToggleGroup['selectionMode'];
+  }
+>;
+
 export type LyraTokenInputReactProps = LyraReactElementProps<
   LyraTokenInput,
   | 'accessibleLabel'
@@ -11165,6 +11321,39 @@ export type LyraToolApprovalDialogReactProps = LyraReactElementProps<
     'light-dismiss'?: LyraToolApprovalDialog['lightDismiss'];
     'proposal-key'?: LyraToolApprovalDialog['proposalKey'];
     'tool-name'?: LyraToolApprovalDialog['toolName'];
+  }
+>;
+
+export type LyraToolCallBlockReactProps = LyraReactElementProps<
+  LyraToolCallBlock,
+  | 'args'
+  | 'callId'
+  | 'durationMs'
+  | 'error'
+  | 'expanded'
+  | 'label'
+  | 'locale'
+  | 'name'
+  | 'redactedFields'
+  | 'result'
+  | 'status'
+  | 'strings',
+  {},
+  LyraToolCallBlockEventMap,
+  | 'lr-copy'
+  | 'lr-copy-error'
+  | 'lr-error'
+  | 'lr-render-error'
+  | 'lr-search-change'
+  | 'lr-toggle',
+  | '--lr-tool-call-block-accent'
+  | '--lr-tool-call-block-background'
+  | '--lr-tool-call-block-border-color'
+  | '--lr-tool-call-block-error-color'
+  | '--lr-tool-call-block-radius',
+  {
+    'call-id'?: LyraToolCallBlock['callId'];
+    'duration-ms'?: LyraToolCallBlock['durationMs'];
   }
 >;
 
@@ -12061,6 +12250,7 @@ export interface LyraReactIntrinsicElements {
   'lr-confirm-bar': LyraConfirmBarReactProps;
   'lr-contact-viewer': LyraContactViewerReactProps;
   'lr-context-inspector': LyraContextInspectorReactProps;
+  'lr-context-menu': LyraContextMenuReactProps;
   'lr-context-meter': LyraContextMeterReactProps;
   'lr-control-group': LyraControlGroupReactProps;
   'lr-conversation-item': LyraConversationItemReactProps;
@@ -12166,6 +12356,8 @@ export interface LyraReactIntrinsicElements {
   'lr-multi-split': LyraMultiSplitReactProps;
   'lr-mutation-observer': LyraMutationObserverReactProps;
   'lr-native-time-input': LyraNativeTimeInputReactProps;
+  'lr-navigation-menu': LyraNavigationMenuReactProps;
+  'lr-navigation-menu-item': LyraNavigationMenuItemReactProps;
   'lr-neighbor-list': LyraNeighborListReactProps;
   'lr-node-palette': LyraNodePaletteReactProps;
   'lr-notebook-viewer': LyraNotebookViewerReactProps;
@@ -12260,8 +12452,11 @@ export interface LyraReactIntrinsicElements {
   'lr-timeline-item': LyraTimelineItemReactProps;
   'lr-toast': LyraToastReactProps;
   'lr-toast-item': LyraToastItemReactProps;
+  'lr-toggle': LyraToggleReactProps;
+  'lr-toggle-group': LyraToggleGroupReactProps;
   'lr-token-input': LyraTokenInputReactProps;
   'lr-tool-approval-dialog': LyraToolApprovalDialogReactProps;
+  'lr-tool-call-block': LyraToolCallBlockReactProps;
   'lr-tool-call-chip': LyraToolCallChipReactProps;
   'lr-tool-param-form': LyraToolParamFormReactProps;
   'lr-tool-result-dialog': LyraToolResultDialogReactProps;

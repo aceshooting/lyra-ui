@@ -3665,6 +3665,7 @@
           "lr-task-list",
           "lr-thinking-panel",
           "lr-tool-approval-dialog",
+          "lr-tool-call-block",
           "lr-tool-call-chip",
           "lr-tool-result-view",
           "lr-tooltip",
@@ -32488,6 +32489,299 @@
         "form": {
           "associated": false,
           "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-context-menu",
+      "family": "overlays",
+      "classModule": "src/components/overlays/context-menu/context-menu.class.ts",
+      "registrationModule": "src/components/overlays/context-menu/context-menu.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-dropdown"
+        ],
+        "transitive": [
+          "lr-menu",
+          "lr-menu-item"
+        ],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          }
+        ],
+        "properties": [
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "open",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          },
+          {
+            "name": "trigger",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-after-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-select",
+            "type": "CustomEvent<MenuItemSelectDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent",
+            "bubbles": true
+          },
+          {
+            "name": "lr-show",
+            "type": "CustomEvent<LyraContextMenuShowDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "content",
+            "deprecated": null
+          },
+          {
+            "name": "popup",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--hide-duration",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-transition-fast)"
+          },
+          {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-overlay-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-overlay-shadow-anchored",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-m)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-overlay)"
+          },
+          {
+            "name": "--max-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-overlay-max-inline-size,var(--lr-size-20rem))"
+          },
+          {
+            "name": "--show-duration",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-transition-fast)"
+          }
+        ],
+        "cssStates": [
+          {
+            "name": "open",
+            "deprecated": null
+          }
+        ],
+        "methods": [
+          {
+            "name": "hide",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "{ focusTrigger?: boolean }",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<void>"
+              }
+            ]
+          },
+          {
+            "name": "showAt",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "point",
+                    "type": "LyraContextMenuPoint",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "options",
+                    "type": "{ returnFocusTo?: HTMLElement }",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "disabled"
+          ],
           "methods": []
         },
         "native": {
@@ -79322,6 +79616,7 @@
           "lr-json-viewer",
           "lr-markdown",
           "lr-thinking-panel",
+          "lr-tool-call-block",
           "lr-tool-call-chip",
           "lr-tool-result-view",
           "lr-widget-renderer"
@@ -79391,6 +79686,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "tool-display",
+            "property": "toolDisplay",
+            "type": "MessagePartsToolDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -79461,6 +79765,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "toolDisplay",
+            "attribute": "tool-display",
+            "type": "MessagePartsToolDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "slots": [],
@@ -79521,7 +79834,7 @@
           },
           {
             "name": "lr-render-error",
-            "type": "CustomEvent<{ error: unknown } | { toolName: string; error: unknown }>",
+            "type": "CustomEvent< { error: unknown } | { toolName: string; error: unknown } | ToolCallBlockRenderErrorDetail >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -79545,7 +79858,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<ThinkingPanelToggleDetail>",
+            "type": "CustomEvent<ThinkingPanelToggleDetail | ToolCallBlockToggleDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -79619,6 +79932,26 @@
           },
           {
             "name": "text",
+            "deprecated": null
+          },
+          {
+            "name": "tool-block-args",
+            "deprecated": null
+          },
+          {
+            "name": "tool-block-body",
+            "deprecated": null
+          },
+          {
+            "name": "tool-block-error",
+            "deprecated": null
+          },
+          {
+            "name": "tool-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "tool-block-result",
             "deprecated": null
           },
           {
@@ -83711,6 +84044,764 @@
             "showPicker",
             "stepDown",
             "stepUp"
+          ]
+        }
+      }
+    },
+    {
+      "tag": "lr-navigation-menu",
+      "family": "layout",
+      "classModule": "src/components/layout/navigation-menu/navigation-menu.class.ts",
+      "registrationModule": "src/components/layout/navigation-menu/navigation-menu.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-navigation-menu-item"
+        ],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "distance",
+            "property": "distance",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 6
+          },
+          {
+            "name": "expanded",
+            "property": "expanded",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "hide-delay",
+            "property": "hideDelay",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 150
+          },
+          {
+            "name": "indicator",
+            "property": "indicator",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "mobile-breakpoint",
+            "property": "mobileBreakpoint",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "panel-anchor",
+            "property": "panelAnchor",
+            "type": "LyraNavigationMenuPanelAnchor",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "menu"
+          },
+          {
+            "name": "show-delay",
+            "property": "showDelay",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 200
+          },
+          {
+            "name": "skip-delay",
+            "property": "skipDelay",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 300
+          }
+        ],
+        "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "collapsed",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "distance",
+            "attribute": "distance",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 6
+          },
+          {
+            "name": "expanded",
+            "attribute": "expanded",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "hideDelay",
+            "attribute": "hide-delay",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 150
+          },
+          {
+            "name": "indicator",
+            "attribute": "indicator",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "mobileBreakpoint",
+            "attribute": "mobile-breakpoint",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "panelAnchor",
+            "attribute": "panel-anchor",
+            "type": "LyraNavigationMenuPanelAnchor",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "menu"
+          },
+          {
+            "name": "showDelay",
+            "attribute": "show-delay",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 200
+          },
+          {
+            "name": "skipDelay",
+            "attribute": "skip-delay",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 300
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          },
+          {
+            "name": "toggle-icon",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-expanded-change",
+            "type": "CustomEvent<LyraNavigationMenuExpandedChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "indicator",
+            "deprecated": null
+          },
+          {
+            "name": "indicator-arrow",
+            "deprecated": null
+          },
+          {
+            "name": "list",
+            "deprecated": null
+          },
+          {
+            "name": "toggle",
+            "deprecated": null
+          },
+          {
+            "name": "toggle-icon",
+            "deprecated": null
+          },
+          {
+            "name": "toggle-label",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-navigation-menu-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-navigation-menu-indicator-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-overlay-border,var(--lr-color-border-subtle))"
+          },
+          {
+            "name": "--lr-navigation-menu-indicator-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-375rem)"
+          },
+          {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "cssStates": [
+          {
+            "name": "collapsed",
+            "deprecated": null
+          }
+        ],
+        "methods": [
+          {
+            "name": "close",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-navigation-menu-item",
+      "family": "layout",
+      "classModule": "src/components/layout/navigation-menu-item/navigation-menu-item.class.ts",
+      "registrationModule": "src/components/layout/navigation-menu-item/navigation-menu-item.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "current",
+            "property": "current",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "href",
+            "property": "href",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "open",
+            "property": "open",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "rel",
+            "property": "rel",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "target",
+            "property": "target",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "current",
+            "attribute": "current",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "href",
+            "attribute": "href",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "open",
+            "attribute": "open",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "rel",
+            "attribute": "rel",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "target",
+            "attribute": "target",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          },
+          {
+            "name": "end",
+            "deprecated": null
+          },
+          {
+            "name": "expand-icon",
+            "deprecated": null
+          },
+          {
+            "name": "panel",
+            "deprecated": null
+          },
+          {
+            "name": "start",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent<LyraNavigationMenuToggleDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "base-current",
+            "deprecated": null
+          },
+          {
+            "name": "base-open",
+            "deprecated": null
+          },
+          {
+            "name": "end",
+            "deprecated": null
+          },
+          {
+            "name": "expand-icon",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "panel",
+            "deprecated": null
+          },
+          {
+            "name": "start",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-navigation-menu-hide-duration",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-duration-fast)"
+          },
+          {
+            "name": "--lr-navigation-menu-item-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab,var(--lr-color-brand-quiet),var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-navigation-menu-item-current-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-navigation-menu-item-current-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-navigation-menu-item-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-m)"
+          },
+          {
+            "name": "--lr-navigation-menu-item-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-medium)"
+          },
+          {
+            "name": "--lr-navigation-menu-item-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-navigation-menu-item-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-navigation-menu-item-min-block-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-height-m,var(--lr-theme-form-control-height-m,var(--lr-size-2-5rem)))"
+          },
+          {
+            "name": "--lr-navigation-menu-item-open-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-navigation-menu-item-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-l)"
+          },
+          {
+            "name": "--lr-navigation-menu-panel-indent",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-l)"
+          },
+          {
+            "name": "--lr-navigation-menu-panel-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-48rem)"
+          },
+          {
+            "name": "--lr-navigation-menu-panel-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-navigation-menu-show-duration",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-duration-fast)"
+          },
+          {
+            "name": "--lr-navigation-menu-switch-duration",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-duration-base)"
+          },
+          {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-overlay-shadow-anchored",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-m)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-overlay)"
+          },
+          {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": [
+            "click",
+            "focus"
           ]
         }
       }
@@ -131115,6 +132206,679 @@
       }
     },
     {
+      "tag": "lr-toggle",
+      "family": "forms",
+      "classModule": "src/components/forms/toggle/toggle.class.ts",
+      "registrationModule": "src/components/forms/toggle/toggle.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraToggleAppearance",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
+            "name": "aria-labelledby",
+            "property": "aria-labelledby",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "pressed",
+            "property": "pressed",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "value",
+            "property": "value",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "variant",
+            "property": "variant",
+            "type": "LyraVariant",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "neutral"
+          }
+        ],
+        "properties": [
+          {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraToggleAppearance",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "effectiveDisabled",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "pressed",
+            "attribute": "pressed",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "value",
+            "attribute": "value",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "variant",
+            "attribute": "variant",
+            "type": "LyraVariant",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "neutral"
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          },
+          {
+            "name": "end",
+            "deprecated": null
+          },
+          {
+            "name": "start",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "blur",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent"
+          },
+          {
+            "name": "focus",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraToggleChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-toggle-request",
+            "type": "CustomEvent<LyraToggleChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toolbar-actions-change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "button",
+            "deprecated": null
+          },
+          {
+            "name": "end",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "start",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-toggle-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-toggle-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-toggle-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-toggle-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-gap)"
+          },
+          {
+            "name": "--lr-toggle-hover-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+          },
+          {
+            "name": "--lr-toggle-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-toggle-pressed-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-fill-quiet)"
+          },
+          {
+            "name": "--lr-toggle-pressed-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-loud)"
+          },
+          {
+            "name": "--lr-toggle-pressed-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-on-quiet)"
+          },
+          {
+            "name": "--lr-toggle-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-radius)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "getToolbarActions",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "readonly LyraToolbarAction[]"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "disabled",
+            "value"
+          ],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [
+            "blur",
+            "focus"
+          ],
+          "delegatedMethods": [
+            "blur",
+            "click",
+            "focus"
+          ]
+        }
+      }
+    },
+    {
+      "tag": "lr-toggle-group",
+      "family": "forms",
+      "classModule": "src/components/forms/toggle-group/toggle-group.class.ts",
+      "registrationModule": "src/components/forms/toggle-group/toggle-group.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraToggleAppearance | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "orientation",
+            "property": "orientation",
+            "type": "LyraOrientation",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "horizontal"
+          },
+          {
+            "name": "selection-mode",
+            "property": "selectionMode",
+            "type": "LyraToggleGroupSelectionMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "multiple"
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraToggleAppearance | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "orientation",
+            "attribute": "orientation",
+            "type": "LyraOrientation",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "horizontal"
+          },
+          {
+            "name": "selectionMode",
+            "attribute": "selection-mode",
+            "type": "LyraToggleGroupSelectionMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "multiple"
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "value",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<Readonly<{ value: readonly string[] }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-group-toggle-request",
+            "type": "CustomEvent< LyraEventDetailSnapshot<LyraToggleGroupToggleRequestDetail> >",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-toggle-group-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-toggle-group-wrap-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "disabled",
+            "value"
+          ],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": [
+            "blur",
+            "click",
+            "focus"
+          ]
+        }
+      }
+    },
+    {
       "tag": "lr-token-input",
       "family": "forms",
       "classModule": "src/components/forms/token-input/token-input.class.ts",
@@ -132740,6 +134504,386 @@
             "blur",
             "focus"
           ],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-tool-call-block",
+      "family": "agent-tools",
+      "classModule": "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
+      "registrationModule": "src/components/agent-tools/tool-call-block/tool-call-block.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-json-viewer",
+          "lr-tool-result-view"
+        ],
+        "transitive": [
+          "lr-copy-button",
+          "lr-icon-button",
+          "lr-skeleton",
+          "lr-tooltip"
+        ],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "call-id",
+            "property": "callId",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "duration-ms",
+            "property": "durationMs",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "error",
+            "property": "error",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "expanded",
+            "property": "expanded",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "property": "name",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "status",
+            "property": "status",
+            "type": "ToolCallStatus",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "args",
+            "attribute": null,
+            "type": "unknown",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "callId",
+            "attribute": "call-id",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "durationMs",
+            "attribute": "duration-ms",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "error",
+            "attribute": "error",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "expanded",
+            "attribute": "expanded",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "attribute": "name",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "redactedFields",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
+            "name": "result",
+            "attribute": null,
+            "type": "unknown",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "status",
+            "attribute": "status",
+            "type": "ToolCallStatus",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [],
+        "events": [
+          {
+            "name": "lr-copy",
+            "type": "CustomEvent<LyraClipboardWriteSuccess>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
+          },
+          {
+            "name": "lr-copy-error",
+            "type": "CustomEvent<LyraClipboardWriteFailure>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
+          },
+          {
+            "name": "lr-error",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
+          },
+          {
+            "name": "lr-render-error",
+            "type": "CustomEvent<ToolCallBlockRenderErrorDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
+          },
+          {
+            "name": "lr-search-change",
+            "type": "CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number; }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent<ToolCallBlockToggleDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "args",
+            "deprecated": null
+          },
+          {
+            "name": "args-label",
+            "deprecated": null
+          },
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "body",
+            "deprecated": null
+          },
+          {
+            "name": "duration",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "error-label",
+            "deprecated": null
+          },
+          {
+            "name": "header",
+            "deprecated": null
+          },
+          {
+            "name": "icon",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "result",
+            "deprecated": null
+          },
+          {
+            "name": "result-label",
+            "deprecated": null
+          },
+          {
+            "name": "status-text",
+            "deprecated": null
+          },
+          {
+            "name": "toggle",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-tool-call-block-accent",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-tool-call-block-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-tool-call-block-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-tool-call-block-error-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-tool-call-block-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "name"
+          ],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
           "delegatedMethods": []
         }
       }

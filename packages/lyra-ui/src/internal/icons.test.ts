@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { render } from 'lit';
-import { chevronIcon, closeIcon, playIcon, pauseIcon, calendarIcon, expandIcon } from './icons.js';
+import { chevronIcon, closeIcon, playIcon, pauseIcon, calendarIcon, expandIcon, menuIcon } from './icons.js';
 
 function renderIcon(tpl: ReturnType<typeof chevronIcon>): SVGElement {
   const container = document.createElement('div');
@@ -18,6 +18,7 @@ const icons = {
   pauseIcon,
   calendarIcon,
   expandIcon,
+  menuIcon,
 };
 
 for (const [name, fn] of Object.entries(icons)) {
@@ -36,6 +37,16 @@ it('chevronIcon points right by default (no baked-in rotation)', () => {
   const svg = renderIcon(chevronIcon());
   expect(svg.getAttribute('style') ?? '').to.not.include('rotate');
   expect(svg.getAttribute('transform')).to.be.null;
+});
+
+it('menuIcon draws the hamburger as three full-width horizontal lines', () => {
+  const svg = renderIcon(menuIcon());
+  const lines = [...svg.querySelectorAll('line')].map((line) =>
+    ['x1', 'y1', 'x2', 'y2'].map((name) => line.getAttribute(name)).join(' '),
+  );
+  expect(lines).to.deep.equal(['4 7 20 7', '4 12 20 12', '4 17 20 17']);
+  expect(svg.getAttribute('stroke-linecap')).to.equal('round');
+  expect(svg.getAttribute('focusable')).to.equal('false');
 });
 
 it('every icon shares the same viewBox and stroke-width for visual consistency', () => {

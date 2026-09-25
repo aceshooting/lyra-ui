@@ -329,3 +329,39 @@ it('accepts an omitted parts collection and rejects non-record metadata', () => 
   expect(adaptAiSdkMessage({ id: 'bad-metadata', role: 'user', metadata: null } as never))
     .to.equal(null);
 });
+
+it('maps AI SDK tool denials to denied instead of a running call', () => {
+  const message = requireAdaptedMessage({
+    id: 'message-denials',
+    role: 'assistant',
+    parts: [
+      { type: 'tool-search', toolCallId: 'denied', state: 'output-denied', input: { query: 'Lyra' } },
+      {
+        type: 'tool-search',
+        toolCallId: 'rejected',
+        state: 'approval-responded',
+        input: {},
+        approval: { id: 'a1', approved: false },
+      },
+      {
+        type: 'tool-search',
+        toolCallId: 'approved',
+        state: 'approval-responded',
+        input: {},
+        approval: { id: 'a2', approved: true },
+      },
+      { type: 'tool-search', toolCallId: 'unanswered', state: 'approval-responded', input: {} },
+    ],
+  });
+
+  expect(message.parts).to.have.lengthOf(4);
+  expect(message.parts?.map((part) => part.type)).to.deep.equal(['tool-call', 'tool-call', 'tool-call', 'tool-call']);
+  expect(message.parts?.[0]).to.deep.nested.include({
+    id: 'denied:call',
+    state: 'complete',
+    'invocation.status': 'denied',
+  });
+  expect(message.parts?.[1]).to.deep.nested.include({ state: 'streaming', 'invocation.status': 'denied' });
+  expect(message.parts?.[2]).to.deep.nested.include({ state: 'streaming', 'invocation.status': 'running' });
+  expect(message.parts?.[3]).to.deep.nested.include({ state: 'streaming', 'invocation.status': 'running' });
+});

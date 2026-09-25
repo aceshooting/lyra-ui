@@ -2,14 +2,37 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import type { CitationMessagePart, CitationSelectEventDetail, MessagePart } from '../../../ai/types.js';
-import type { LyraThinkingPanelEventMap } from '../../agent-tools/thinking-panel/thinking-panel.class.js';
+import type {
+  CitationMessagePart,
+  CitationSelectEventDetail,
+  MessagePart,
+  ToolCallMessagePart,
+  ToolInvocation,
+  ToolResultMessagePart,
+} from '../../../ai/types.js';
+import type {
+  LyraThinkingPanelEventMap,
+  ThinkingPanelToggleDetail,
+} from '../../agent-tools/thinking-panel/thinking-panel.class.js';
+import type {
+  LyraToolCallBlockEventMap,
+  ToolCallBlockRenderErrorDetail,
+  ToolCallBlockToggleDetail,
+} from '../../agent-tools/tool-call-block/tool-call-block.class.js';
+import type { LyraToolStatus } from '../../../internal/shared-unions.js';
+import { isToolCallStatus } from '../../agent-tools/tool-status.js';
+import {
+  projectedRedactionFields,
+  redactToolDetail,
+  TOO_MANY_REDACTION_PATHS,
+  type RedactedToolDetail,
+} from '../../agent-tools/tool-redaction.js';
 import type { LyraToolCallChipEventMap } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-view/tool-result-view.class.js';
 import type { LyraAttachmentChipEventMap } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
 import type { LyraJsonViewerEventMap } from '../../utility/json-viewer/json-viewer.class.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -20,7 +43,7 @@ import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -30,10 +53,17 @@ import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFA
  * every interactive affordance and event the built-in renderer would otherwise wire up for that
  * part type: the `error` part's retry button (`lr-part-retry`), a `citation` part's activation
  * (`lr-citation-select`), and the composed children's own events for `tool-call`
- * (`<lr-tool-call-chip>`'s `lr-tool-call-chip-select`), `tool-result`/`attachment`
+ * (`<lr-tool-call-chip>`'s `lr-tool-call-chip-select`, or `<lr-tool-call-block>`'s `lr-toggle` in
+ * `tool-display="block"`), `tool-result`/`attachment`
  * (`<lr-tool-result-view>`/`<lr-attachment-chip>`'s preview surface) and `data`
  * (`<lr-widget-renderer>`'s `lr-widget-action`/`lr-widget-state-change`). A host overriding an
  * interactive part type must reimplement whatever of that interaction it still wants.
+ *
+ * It is called exactly once per rendered part, in order, in both tool displays. In
+ * `tool-display="block"` a custom-rendered `tool-call` is never paired, so its `tool-result` still
+ * renders on its own; a custom-rendered `tool-result` is never folded, and the call's block shows
+ * the invocation's own `result` instead. Output returned from here is the host's own and is never
+ * masked by an invocation's `redactedFields`.
  */
 export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 
@@ -41,6 +71,42 @@ export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 export type MessagePartsContentMode = 'plain' | 'markdown';
 
 const MESSAGE_PARTS_CONTENT_MODES = Object.freeze(['plain', 'markdown'] as const);
+
+/** How `tool-call`/`tool-result` parts render: `chip` (a tool-call chip plus a separate result
+ *  view) or `block` (each call paired with its result in one inline `<lr-tool-call-block>`). */
+export type MessagePartsToolDisplay = 'chip' | 'block';
+
+const MESSAGE_PARTS_TOOL_DISPLAY = literalSetConverter<MessagePartsToolDisplay>(['chip', 'block'], 'chip');
+
+/** Identity-stable empty path list, so a block's owned `redactedFields` never re-snapshots. */
+const EMPTY_REDACTED_FIELDS: readonly string[] = Object.freeze([]);
+
+const TOOL_BLOCK_EXPORTPARTS =
+  'header:tool-block-header, body:tool-block-body, args:tool-block-args, result:tool-block-result, error:tool-block-error';
+
+/** A block's status from its call and (optional) paired result part. */
+function resolveBlockStatus(invocation: ToolInvocation, result?: ToolResultMessagePart): LyraToolStatus {
+  const status = isToolCallStatus(invocation.status) ? invocation.status : 'pending';
+  if (status === 'denied') return 'denied';
+  if (status === 'error' || (result && 'error' in result)) return 'error';
+  if (result && result.state === 'streaming') return 'running';
+  if (result) return 'success';
+  return status;
+}
+
+/** Mirrors `<lr-tool-timeline>`'s duration derivation. */
+function invocationDuration(invocation: ToolInvocation): number | undefined {
+  if (invocation.startedAt == null || invocation.endedAt == null) return undefined;
+  const diff = invocation.endedAt - invocation.startedAt;
+  return Number.isFinite(diff) ? diff : undefined;
+}
+
+/** One render pass's tool pairing (block display only). */
+interface ToolPairing {
+  readonly custom: ReadonlyMap<string, unknown>;
+  readonly results: ReadonlyMap<string, ToolResultMessagePart>;
+  readonly folded: ReadonlySet<string>;
+}
 
 function normalizeMessagePartsContentMode(value: unknown): MessagePartsContentMode {
   return typeof value === 'string' &&
@@ -51,7 +117,8 @@ function normalizeMessagePartsContentMode(value: unknown): MessagePartsContentMo
 
 export interface LyraMessagePartsEventMap
   extends Omit<LyraMarkdownEventMap, 'lr-render-error'>,
-    LyraThinkingPanelEventMap,
+    Omit<LyraThinkingPanelEventMap, 'lr-toggle'>,
+    Omit<LyraToolCallBlockEventMap, 'lr-toggle' | 'lr-render-error'>,
     LyraToolCallChipEventMap,
     Omit<LyraToolResultViewEventMap, 'lr-render-error'>,
     LyraAttachmentChipEventMap,
@@ -60,7 +127,10 @@ export interface LyraMessagePartsEventMap
     Omit<LyraWidgetRendererEventMap, 'lr-render-error'> {
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-part-retry': CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>;
-  'lr-render-error': CustomEvent<{ error: unknown } | { toolName: string; error: unknown }>;
+  'lr-toggle': CustomEvent<ThinkingPanelToggleDetail | ToolCallBlockToggleDetail>;
+  'lr-render-error': CustomEvent<
+    { error: unknown } | { toolName: string; error: unknown } | ToolCallBlockRenderErrorDetail
+  >;
 }
 
 /**
@@ -77,16 +147,25 @@ export interface LyraMessagePartsEventMap
  *
  * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
  *
+ * `tool-display="block"` pairs each `tool-call` part with the first `tool-result` part carrying its
+ * invocation id and renders the pair through one collapsed `<lr-tool-call-block>` at the call's
+ * position; the folded result part renders nothing (it still counts toward `max-rendered-parts`).
+ * The block shows a running state until the result arrives, and reads its duration from the
+ * invocation's `startedAt`/`endedAt`. An invocation's `redactedFields` masks every built-in
+ * rendering of its payload in either display: the block's details, the chip's summary, and a
+ * standalone result part's result and error.
+ *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-message-parts
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
  * @event lr-part-retry - Retry was requested for a retryable error part. `detail: { part }`.
- * @event lr-toggle - Passthrough from a rendered reasoning panel.
+ * @event lr-toggle - Passthrough from a rendered reasoning panel or tool-call block.
  * @event lr-tool-call-chip-select - Passthrough from a rendered tool-call chip. The
  * `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
- * @event lr-render-error - Passthrough from rendered Markdown, tool-result, or widget content.
+ * @event lr-render-error - Passthrough from rendered Markdown, tool-result, or widget content, or
+ * tool-call block (`callId` included).
  * @event lr-link-click - Passthrough from rendered Markdown.
  * @event lr-highlight-activate - Passthrough from rendered Markdown.
  * @event lr-text-select - Passthrough from rendered Markdown.
@@ -107,6 +186,11 @@ export interface LyraMessagePartsEventMap
  * @csspart tool-call - A tool-call part.
  * @csspart tool-result - A tool-result part.
  * @csspart tool-result-error - Error copy for a failed tool-result part.
+ * @csspart tool-block-header - A tool-call block's disclosure button (`tool-display="block"`).
+ * @csspart tool-block-body - A tool-call block's disclosed region (`tool-display="block"`).
+ * @csspart tool-block-args - A tool-call block's arguments section (`tool-display="block"`).
+ * @csspart tool-block-result - A tool-call block's result section (`tool-display="block"`).
+ * @csspart tool-block-error - A tool-call block's error section (`tool-display="block"`).
  * @csspart citation - A citation part.
  * @csspart attachment - An attachment part.
  * @csspart data - A data or widget part.
@@ -128,6 +212,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    envListValueHidden: LYRA_DEFAULT_envListValueHidden,
     messagePartError: LYRA_DEFAULT_messagePartError,
     messagePartRetry: LYRA_DEFAULT_messagePartRetry,
     messagePartsLabel: LYRA_DEFAULT_messagePartsLabel,
@@ -174,6 +259,23 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     });
   }
 
+  private toolDisplayValue: MessagePartsToolDisplay = 'chip';
+
+  /** How tool parts render. `chip` (the default) keeps a tool-call chip plus a separate result
+   *  view; `block` pairs each call with its result in one collapsed `<lr-tool-call-block>`.
+   *  Unsupported values normalize and reflect as `chip`, and the default reflects too. */
+  @property({ reflect: true, attribute: 'tool-display', converter: MESSAGE_PARTS_TOOL_DISPLAY })
+  get toolDisplay(): MessagePartsToolDisplay {
+    return this.toolDisplayValue;
+  }
+  set toolDisplay(value: MessagePartsToolDisplay) {
+    const normalized = MESSAGE_PARTS_TOOL_DISPLAY.normalizeReflected(this, 'tool-display', value);
+    const previous = this.toolDisplayValue;
+    if (previous === normalized) return;
+    this.toolDisplayValue = normalized;
+    this.requestUpdate('toolDisplay', previous);
+  }
+
   /** Include reasoning parts. */
   @property({
     type: Boolean,
@@ -199,6 +301,9 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** Accessible name override for the internal message-part group. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   private knownErrorIds = new Set<string>();
+  /** First tool-call's projected `redactedFields` per invocation id; only non-empty entries. */
+  private redactionByInvocation = new Map<string, readonly unknown[]>();
+  private redactionMemo = new WeakMap<MessagePart, RedactedToolDetail>();
   private errorAnnouncementSink?: AnnouncementSink;
   private suppressNextErrorAnnouncement = true;
 
@@ -258,6 +363,8 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (!changed.has('parts') && this.hasUpdated) return;
+    this.redactionByInvocation = this.projectRedactions();
     if (!changed.has('parts')) return;
     const current = this.effectiveParts.filter((part) => part.type === 'error');
     // The `hasUpdated` half of this guard is a deliberate mount exclusion, not an oversight, and
@@ -274,6 +381,37 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       }
     }
     this.knownErrorIds = new Set(current.map((part) => part.id));
+  }
+
+  /** Pure data (no DOM), so it is safe on the server. Scans every part, not the rendered window,
+   *  so a windowed-out call still masks its standalone result. */
+  private projectRedactions(): Map<string, readonly unknown[]> {
+    const map = new Map<string, readonly unknown[]>();
+    const seen = new Set<string>();
+    for (const part of this.effectiveParts) {
+      if (part.type !== 'tool-call') continue;
+      const id = part.invocation.id;
+      if (typeof id !== 'string' || seen.has(id)) continue;
+      seen.add(id);
+      const paths = projectedRedactionFields(part.invocation.redactedFields) ?? TOO_MANY_REDACTION_PATHS;
+      if (paths.length > 0) map.set(id, paths);
+    }
+    return map;
+  }
+
+  /** The masked payloads for `part` under its invocation's paths, or `undefined` when nothing is
+   *  masked -- then every binding keeps the original reference. */
+  private redacted(
+    part: MessagePart,
+    invocationId: unknown,
+    source: { args: unknown; result: unknown; error: unknown },
+  ): RedactedToolDetail | undefined {
+    if (typeof invocationId !== 'string') return undefined;
+    const paths = this.redactionByInvocation.get(invocationId);
+    if (!paths) return undefined;
+    const detail = redactToolDetail(source, paths, this.localize('envListValueHidden'), this.redactionMemo.get(part));
+    this.redactionMemo.set(part, detail);
+    return detail;
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
@@ -321,7 +459,54 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     return parts.join(' ');
   }
 
-  private renderBuiltin(part: MessagePart, citationRank: number): unknown {
+  private renderToolBlock(part: ToolCallMessagePart, paired?: ToolResultMessagePart): TemplateResult {
+    const invocation = part.invocation;
+    const result = paired ? paired.result : invocation.result;
+    const error = paired && 'error' in paired ? paired.error : invocation.error;
+    // The invocation-level paths (from its first tool-call part), not this part's own list: a later
+    // call part for the same invocation must not render a payload the first one promised to mask,
+    // exactly as the chip display and standalone results already resolve it.
+    const redactedFields =
+      (this.redactionByInvocation.get(invocation.id) as readonly string[] | undefined) ?? EMPTY_REDACTED_FIELDS;
+    // Property bindings only (plus the `status` attribute): an attribute named `callId` would not
+    // reach the `call-id` attribute. `expanded` is never bound, so the block keeps its own state.
+    return html`<lr-tool-call-block
+      .name=${invocation.name}
+      .callId=${invocation.id}
+      .args=${invocation.args}
+      status=${resolveBlockStatus(invocation, paired)}
+      .result=${result}
+      .error=${error}
+      .durationMs=${invocationDuration(invocation)}
+      .redactedFields=${redactedFields}
+      exportparts=${TOOL_BLOCK_EXPORTPARTS}
+    ></lr-tool-call-block>`;
+  }
+
+  /** Block display only: which results fold into which calls. First call per non-blank id, first
+   *  result per call, and nothing custom-rendered on either side. */
+  private pairTools(parts: readonly MessagePart[], custom: ReadonlyMap<string, unknown>): ToolPairing {
+    const calls = new Map<string, string>();
+    for (const part of parts) {
+      if (part.type !== 'tool-call' || custom.has(part.id)) continue;
+      const id = part.invocation.id;
+      if (isNonBlankIdentity(id) && !calls.has(id)) calls.set(id, part.id);
+    }
+    const results = new Map<string, ToolResultMessagePart>();
+    const folded = new Set<string>();
+    for (const part of parts) {
+      if (part.type !== 'tool-result' || custom.has(part.id)) continue;
+      const id = part.invocationId;
+      if (!isNonBlankIdentity(id)) continue;
+      const callPartId = calls.get(id);
+      if (callPartId === undefined || results.has(callPartId)) continue;
+      results.set(callPartId, part);
+      folded.add(part.id);
+    }
+    return { custom, results, folded };
+  }
+
+  private renderBuiltin(part: MessagePart, citationRank: number, pairing?: ToolPairing): unknown {
     switch (part.type) {
       case 'text':
         return this.contentMode === 'markdown'
@@ -336,29 +521,45 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
             ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
             : part.text}</lr-thinking-panel
         >`;
-      case 'tool-call':
+      case 'tool-call': {
+        if (this.toolDisplay === 'block') return this.renderToolBlock(part, pairing?.results.get(part.id));
+        const masked = this.redacted(part, part.invocation.id, {
+          args: undefined,
+          result: undefined,
+          error: part.invocation.error,
+        });
+        const summary = masked ? masked.error : part.invocation.error;
         return html`<lr-tool-call-chip
           .callId=${part.invocation.id}
           .name=${part.invocation.name}
           .status=${part.invocation.status}
-          .summary=${part.invocation.error ?? ''}
+          .summary=${summary ?? ''}
         ></lr-tool-call-chip>`;
-      case 'tool-result':
-        if ('error' in part) {
+      }
+      case 'tool-result': {
+        const hasError = 'error' in part;
+        const masked = this.redacted(part, part.invocationId, {
+          args: undefined,
+          result: part.result,
+          error: hasError ? part.error : undefined,
+        });
+        const result = masked ? masked.result : part.result;
+        if (hasError) {
           return html`<div part="tool-result-error">
-            <span>${part.error}</span>
+            <span>${masked ? masked.error : part.error}</span>
             ${part.result !== undefined
               ? html`<lr-tool-result-view
                   .toolName=${part.name ?? ''}
-                  .result=${part.result}
+                  .result=${result}
                 ></lr-tool-result-view>`
               : nothing}
           </div>`;
         }
         return html`<lr-tool-result-view
           .toolName=${part.name ?? ''}
-          .result=${part.result}
+          .result=${result}
         ></lr-tool-result-view>`;
+      }
       case 'citation':
         return html`<lr-citation-badge
           .index=${citationRank}
@@ -405,11 +606,16 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     }
   }
 
-  private renderOne(part: MessagePart, index: number, citationRank: number): TemplateResult | typeof nothing {
+  private renderOne(
+    part: MessagePart,
+    citationRank: number,
+    custom: ReadonlyMap<string, unknown>,
+    pairing?: ToolPairing,
+  ): TemplateResult | typeof nothing {
     if (part.type === 'reasoning' && !this.showReasoning) return nothing;
-    const custom = this.renderPart?.(part, index);
+    if (pairing?.folded.has(part.id)) return nothing;
     return html`<div part=${this.partNames(part)} data-type=${part.type} data-state=${part.state ?? 'complete'}>
-      ${custom === undefined ? this.renderBuiltin(part, citationRank) : custom}
+      ${custom.has(part.id) ? custom.get(part.id) : this.renderBuiltin(part, citationRank, pairing)}
     </div>`;
   }
 
@@ -424,11 +630,22 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       if (part.type === 'citation') citationRanks.set(part.id, ++citationRank);
     }
     const parts = this.renderedParts;
+    // One `renderPart` call per rendered part, in order, before anything renders: block display
+    // needs to know which parts are custom before it can pair calls with results.
+    const custom = new Map<string, unknown>();
+    if (this.renderPart) {
+      parts.forEach((part, index) => {
+        if (part.type === 'reasoning' && !this.showReasoning) return;
+        const rendered = this.renderPart?.(part, index);
+        if (rendered !== undefined) custom.set(part.id, rendered);
+      });
+    }
+    const pairing = this.toolDisplay === 'block' ? this.pairTools(parts, custom) : undefined;
     return html`<div part="base" role="group" aria-label=${label}>
       ${repeat(
         parts,
         (part) => part.id,
-        (part, index) => this.renderOne(part, index, citationRanks.get(part.id) ?? 0)
+        (part) => this.renderOne(part, citationRanks.get(part.id) ?? 0, custom, pairing)
       )}
     </div>`;
   }

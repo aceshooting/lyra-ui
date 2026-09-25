@@ -56,12 +56,12 @@
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
   ],
   "summary": {
-    "componentCount": 288,
-    "automatedAccessibility": 287,
+    "componentCount": 294,
+    "automatedAccessibility": 293,
     "accessibilityExemptions": 1,
     "accessibilityMissing": 0,
-    "visualEnrolled": 84,
-    "forcedColorsEnrolled": 4,
+    "visualEnrolled": 87,
+    "forcedColorsEnrolled": 6,
     "assistiveTechnologyVerified": 0
   },
   "components": [
@@ -1970,7 +1970,7 @@
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3540,
+              "line": 3561,
               "test": "keeps the collapse toggle reachable and accessible in a populated rail",
               "target": "el",
               "state": "populated"
@@ -2012,7 +2012,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3023,
+              "line": 3044,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2370,7 +2370,7 @@
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3540,
+              "line": 3561,
               "test": "keeps the collapse toggle reachable and accessible in a populated rail",
               "target": "el",
               "state": "populated"
@@ -2412,7 +2412,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3023,
+              "line": 3044,
               "kind": "320px allocation test signal"
             }
           ]
@@ -10288,28 +10288,28 @@
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2673,
+              "line": 2679,
               "test": "is accessible while showing the loading state (async source pending)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2690,
+              "line": 2696,
               "test": "renders structured async-row adornments and preserves selected opaque data",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 2847,
+              "line": 2853,
               "test": "is accessible while showing the empty state (no matching rows)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 4668,
+              "line": 4674,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -10334,7 +10334,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 4638,
+              "line": 4644,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -11884,6 +11884,199 @@
       }
     },
     {
+      "tag": "lr-context-menu",
+      "family": "overlays",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/overlays/context-menu/context-menu.test.ts",
+              "line": 1534,
+              "test": "passes axe while open, with a submenu open, in RTL and with a host aria-label",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/context-menu/context-menu.test.ts",
+              "line": 1534,
+              "test": "passes axe while open, with a submenu open, in RTL and with a host aria-label",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/context-menu/context-menu.test.ts",
+              "line": 1534,
+              "test": "passes axe while open, with a submenu open, in RTL and with a host aria-label",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/context-menu/context-menu.test.ts",
+              "line": 1534,
+              "test": "passes axe while open, with a submenu open, in RTL and with a host aria-label",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/context-menu/context-menu.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/context-menu/context-menu.test.ts",
+              "line": 643,
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/context-menu/context-menu.test.ts",
+              "line": 1644,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "complete",
+          "stories": [
+            "overlay-context-menu--open"
+          ],
+          "axes": [
+            "dark",
+            "light",
+            "rtl"
+          ],
+          "evidence": [
+            {
+              "file": "visual-baselines/manifest.json",
+              "kind": "automated screenshot enrollment"
+            }
+          ],
+          "reviewer": "aceshooting",
+          "reviewedAt": "2026-09-11",
+          "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "No component-owned motion declaration or programmatic animation was detected.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "Automated captures are enrolled, but complete human visual approval is not recorded.",
+        "The component declares no optional peer dependencies.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/overlays/context-menu/context-menu.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
       "tag": "lr-context-meter",
       "family": "data",
       "maturity": "stable",
@@ -13421,7 +13614,7 @@
             },
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 5031,
+              "line": 5079,
               "test": "tracks inherited theme heights at small and large sizes without extra action padding",
               "target": "el",
               "state": "populated"
@@ -29607,8 +29800,15 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 865,
+              "line": 868,
               "test": "is accessible with populated mixed content",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/message-parts/message-parts.test.ts",
+              "line": 1092,
+              "test": "is accessible with populated blocks, one expanded, and does not announce tool errors",
               "target": "el",
               "state": "populated"
             }
@@ -30821,6 +31021,384 @@
       }
     },
     {
+      "tag": "lr-navigation-menu",
+      "family": "layout",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "reducedMotion",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
+              "line": 235,
+              "test": "passes axe collapsed and expanded with an item open in flow",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
+              "line": 208,
+              "test": "renders a named nav landmark with a list of listitem hosts and passes axe closed",
+              "target": "menu",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
+              "line": 226,
+              "test": "passes axe with a panel open",
+              "target": "menu",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
+              "line": 274,
+              "test": "passes landmark-unique with two distinctly labelled menus",
+              "target": "container",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
+              "line": 507,
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
+              "line": 237,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "complete",
+          "stories": [
+            "layout-navigation-menu--collapsed-expanded",
+            "layout-navigation-menu--narrow-long-labels",
+            "layout-navigation-menu--open-panel"
+          ],
+          "axes": [
+            "dark",
+            "forced-colors",
+            "light",
+            "narrow",
+            "rtl"
+          ],
+          "evidence": [
+            {
+              "file": "visual-baselines/manifest.json",
+              "kind": "automated screenshot enrollment"
+            }
+          ],
+          "reviewer": "aceshooting",
+          "reviewedAt": "2026-09-11",
+          "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "enrolled-automated-visual",
+          "stories": [
+            "layout-navigation-menu--collapsed-expanded",
+            "layout-navigation-menu--open-panel"
+          ],
+          "evidence": [
+            {
+              "file": "visual-baselines/manifest.json",
+              "kind": "forced-colors emulated screenshot axis"
+            }
+          ],
+          "limitation": "Automated emulation and pixel probes do not constitute Windows High Contrast manual verification."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "Automated captures are enrolled, but complete human visual approval is not recorded.",
+        "The component declares no optional peer dependencies.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Automated emulation and pixel probes do not constitute Windows High Contrast manual verification.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/layout/navigation-menu/navigation-menu.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
+      "tag": "lr-navigation-menu-item",
+      "family": "layout",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "keyboard",
+          "rtl",
+          "reducedMotion",
+          "narrowAllocation",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts",
+              "line": 188,
+              "test": "opens in flow when unowned, without positioning or hover, and passes axe while open",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "No component-local rendered RTL assertion is recorded."
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "No component-local 320px allocation assertion is recorded."
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "complete",
+          "stories": [
+            "layout-navigation-menu--collapsed-expanded",
+            "layout-navigation-menu--open-panel"
+          ],
+          "axes": [
+            "dark",
+            "forced-colors",
+            "light",
+            "rtl"
+          ],
+          "evidence": [
+            {
+              "file": "visual-baselines/manifest.json",
+              "kind": "automated screenshot enrollment"
+            }
+          ],
+          "reviewer": "aceshooting",
+          "reviewedAt": "2026-09-11",
+          "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "enrolled-automated-visual",
+          "stories": [
+            "layout-navigation-menu--collapsed-expanded",
+            "layout-navigation-menu--open-panel"
+          ],
+          "evidence": [
+            {
+              "file": "visual-baselines/manifest.json",
+              "kind": "forced-colors emulated screenshot axis"
+            }
+          ],
+          "limitation": "Automated emulation and pixel probes do not constitute Windows High Contrast manual verification."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "Interactive implementation detected without a recorded component keyboard-test signal.",
+        "No component-local rendered RTL assertion is recorded.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-local 320px allocation assertion is recorded.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "Automated captures are enrolled, but complete human visual approval is not recorded.",
+        "The component declares no optional peer dependencies.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Automated emulation and pixel probes do not constitute Windows High Contrast manual verification.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
       "tag": "lr-neighbor-list",
       "family": "retrieval",
       "maturity": "stable",
@@ -31582,7 +32160,7 @@
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 4668,
+              "line": 4674,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -31614,7 +32192,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 4638,
+              "line": 4644,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31953,28 +32531,28 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 346,
+              "line": 364,
               "test": "keeps slotted skip content and toggle glyph controls decorative while preserving the outer actions",
               "target": "page",
               "state": "populated"
             },
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 1469,
+              "line": 1487,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
             },
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 1469,
+              "line": 1487,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
             },
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 1469,
+              "line": 1487,
               "test": "is accessible in populated desktop, mobile-closed, and mobile-open states",
               "target": "page",
               "state": "populated"
@@ -31988,7 +32566,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 991,
+              "line": 1009,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -31999,7 +32577,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 1227,
+              "line": 1245,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32010,7 +32588,7 @@
           "evidence": [
             {
               "file": "src/components/layout/page/page.test.ts",
-              "line": 1306,
+              "line": 1324,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -48067,6 +48645,373 @@
       }
     },
     {
+      "tag": "lr-toggle",
+      "family": "forms",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "reducedMotion",
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle/toggle.test.ts",
+              "line": 287,
+              "test": "names an icon-only toggle from a labelled icon and passes axe",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/toggle/toggle.test.ts",
+              "line": 553,
+              "test": "is accessible in populated unpressed, pressed and icon-only states",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/toggle/toggle.test.ts",
+              "line": 553,
+              "test": "is accessible in populated unpressed, pressed and icon-only states",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/toggle/toggle.test.ts",
+              "line": 553,
+              "test": "is accessible in populated unpressed, pressed and icon-only states",
+              "target": "icon",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle/toggle.test.ts",
+              "line": 5,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle/toggle.test.ts",
+              "line": 492,
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle/toggle.test.ts",
+              "line": 523,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": "aceshooting",
+          "reviewedAt": "2026-09-11",
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "The component declares no optional peer dependencies.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/forms/toggle/toggle.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
+      "tag": "lr-toggle-group",
+      "family": "forms",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle-group/toggle-group.test.ts",
+              "line": 764,
+              "test": "is accessible in populated multiple, single and RTL states",
+              "target": "multiple",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/toggle-group/toggle-group.test.ts",
+              "line": 764,
+              "test": "is accessible in populated multiple, single and RTL states",
+              "target": "single",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/toggle-group/toggle-group.test.ts",
+              "line": 764,
+              "test": "is accessible in populated multiple, single and RTL states",
+              "target": "rtl",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle-group/toggle-group.test.ts",
+              "line": 10,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle-group/toggle-group.test.ts",
+              "line": 189,
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle-group/toggle-group.test.ts",
+              "line": 596,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": "aceshooting",
+          "reviewedAt": "2026-09-11",
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/toggle-group/toggle-group.class.ts",
+              "line": 563,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "No component-owned motion declaration or programmatic animation was detected.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "The component declares no optional peer dependencies.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/forms/toggle-group/toggle-group-late-definition.test.ts",
+          "src/components/forms/toggle-group/toggle-group.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
       "tag": "lr-token-input",
       "family": "forms",
       "maturity": "stable",
@@ -48429,6 +49374,190 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
+      "tag": "lr-tool-call-block",
+      "family": "agent-tools",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "reducedMotion",
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
+              "line": 523,
+              "test": "scrolls a wide renderer inside the result section and makes it a keyboard stop only while it overflows",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
+              "line": 696,
+              "test": "is accessible collapsed, expanded with every section, and with a label override",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
+              "line": 696,
+              "test": "is accessible collapsed, expanded with every section, and with a label override",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
+              "line": 696,
+              "test": "is accessible collapsed, expanded with every section, and with a label override",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
+              "line": 489,
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
+              "line": 505,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": "aceshooting",
+          "reviewedAt": "2026-09-11",
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "The component declares no optional peer dependencies.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/agent-tools/tool-call-block/tool-call-block.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"

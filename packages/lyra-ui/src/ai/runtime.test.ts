@@ -1125,3 +1125,85 @@ it('handles valid no-op patch and message-completion boundaries', () => {
   expect(completed.messages).to.deep.equal([]);
   expect(completed.cursor).to.equal(1);
 });
+
+it('accepts and preserves tool timing and redaction fields', () => {
+  const state = reduceAgentStream(createAgentStreamState(), {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 1,
+    invocation: {
+      id: 'call-1',
+      name: 'search',
+      args: { apiKey: 'k' },
+      status: 'success',
+      startedAt: 1000,
+      endedAt: 2500,
+      redactedFields: ['args.apiKey'],
+    },
+  });
+  expect(state.error).to.equal(undefined);
+  expect(state.tools[0]?.startedAt).to.equal(1000);
+  expect(state.tools[0]?.endedAt).to.equal(2500);
+  expect(state.tools[0]?.redactedFields).to.deep.equal(['args.apiKey']);
+
+  const omitted = reduceAgentStream(createAgentStreamState(), {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 1,
+    invocation: { id: 'call-1', name: 'search', args: {}, status: 'running' },
+  });
+  expect(omitted.error).to.equal(undefined);
+  expect(omitted.tools).to.have.lengthOf(1);
+});
+
+it('rejects malformed tool timing and redaction fields as invalid stream events', () => {
+  const malformed: ReadonlyArray<Record<string, unknown>> = [
+    { startedAt: Number.NaN },
+    { startedAt: Number.POSITIVE_INFINITY },
+    { startedAt: '1000' },
+    { endedAt: null },
+    { redactedFields: 'args' },
+    { redactedFields: [1] },
+    // A hole is not a string path; the owned snapshot must not let a sparse list through.
+    { redactedFields: new Array<string>(2) },
+    { redactedFields: new Array<string>(101).fill('args.a') },
+    { redactedFields: [`args.${'x'.repeat(4_092)}`] },
+  ];
+  for (const extra of malformed) {
+    const invocation = { id: 'call-1', name: 'search', args: {}, status: 'running', ...extra };
+    const upsert = reduceAgentStream(createAgentStreamState(), {
+      type: 'tool-upsert',
+      generation: 0,
+      sequence: 1,
+      invocation,
+    } as unknown as AgentStreamEvent);
+    expect(upsert.error?.code, JSON.stringify(Object.keys(extra))).to.equal('invalid_stream_event');
+    expect(upsert.tools).to.have.lengthOf(0);
+
+    const message = reduceAgentStream(createAgentStreamState(), {
+      type: 'message-start',
+      generation: 0,
+      sequence: 1,
+      message: {
+        id: 'message-1',
+        role: 'assistant',
+        parts: [{ id: 'call-part', type: 'tool-call', invocation }],
+      },
+    } as unknown as AgentStreamEvent);
+    expect(message.error?.code, `message part ${JSON.stringify(Object.keys(extra))}`).to.equal('invalid_stream_event');
+  }
+
+  const boundary = reduceAgentStream(createAgentStreamState(), {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 1,
+    invocation: {
+      id: 'call-1',
+      name: 'search',
+      args: {},
+      status: 'running',
+      redactedFields: [...new Array<string>(99).fill('args.a'), `args.${'x'.repeat(4_091)}`],
+    },
+  });
+  expect(boundary.error, '100 paths of up to 4,096 characters are admitted').to.equal(undefined);
+});

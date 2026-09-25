@@ -1662,6 +1662,27 @@ describe("toggle button i18n", () => {
     expect(getComputedStyle(glyph).width).to.equal('20px');
     expect(getComputedStyle(glyph).height).to.equal('20px');
   });
+
+  it('renders the shared three-bar hamburger while closed and the close glyph while open', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail></lr-app-rail>`
+    )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    await el.updateComplete;
+
+    const glyphLines = () =>
+      [...el.shadowRoot!.querySelectorAll('[part="toggle"] > svg line')].map((line) =>
+        ['x1', 'y1', 'x2', 'y2'].map((name) => line.getAttribute(name)).join(' ')
+      );
+    const glyph = el.shadowRoot!.querySelector<SVGElement>('[part="toggle"] > svg');
+    expect(glyph?.getAttribute('aria-hidden')).to.equal('true');
+    expect(glyphLines()).to.deep.equal(['4 7 20 7', '4 12 20 12', '4 17 20 17']);
+
+    el.open = true;
+    await el.updateComplete;
+    expect(glyphLines()).to.deep.equal(['18 6 6 18', '6 6 18 18']);
+  });
 });
 
 // -- preferredMode --------------------------------------------------------

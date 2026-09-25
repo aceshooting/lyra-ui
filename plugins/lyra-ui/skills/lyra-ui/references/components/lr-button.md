@@ -369,6 +369,9 @@ box no matter what tier or override is in play.
   a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
   are resolved onto the focused internal control through `ariaDescribedByElements`; external
   `aria-labelledby` is not copied across the shadow boundary.
+- For a toggle that owns its pressed state — a vetoable request, `lr-change`, and optional grouping
+  behind one tab stop — use `lr-toggle` / `lr-toggle-group` rather than flipping host `aria-pressed`
+  in a click handler.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
   For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
   BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support

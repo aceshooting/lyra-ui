@@ -4,6 +4,7 @@ export * from './badge/tag.js';
 export * from './callout/callout.js';
 export * from './chip/chip-group.js';
 export * from './chip/chip.js';
+export * from './context-menu/context-menu.js';
 export * from './dialog/dialog.js';
 export * from './drawer/drawer.js';
 export * from './empty/empty.js';

@@ -6,6 +6,9 @@ import "./reorder-list/reorder-list.js";
 import "./reorder-list/reorder-item.js";
 import "./multi-split/multi-split.js";
 import type { LyraMultiSplit } from "./multi-split/multi-split.js";
+import { nextFrame, waitUntil } from '@open-wc/testing';
+import './navigation-menu/navigation-menu.js';
+import type { LyraNavigationMenu } from './navigation-menu/navigation-menu.js';
 
 const LONG_LABEL = "unbroken".repeat(4_096);
 
@@ -66,4 +69,34 @@ it("contains long split-panel content in a 320px allocation", async () => {
   await split.updateComplete;
 
   expectContained(frame, "split");
+});
+
+it('contains long navigation-menu labels in a 320px allocation, collapsed or not', async () => {
+  const bar = (await fixture(html`
+    <div style="inline-size:320px">
+      <lr-navigation-menu>
+        <lr-navigation-menu-item open>${LONG_LABEL}<div slot="panel">${LONG_LABEL}</div></lr-navigation-menu-item>
+        <lr-navigation-menu-item href="#long">${LONG_LABEL}</lr-navigation-menu-item>
+      </lr-navigation-menu>
+    </div>
+  `)) as HTMLElement;
+  const barMenu = bar.querySelector('lr-navigation-menu') as LyraNavigationMenu;
+  await barMenu.updateComplete;
+  await waitUntil(() => barMenu.querySelector('[role="listitem"]') !== null, 'the menu never bound its items');
+  expect(barMenu.collapsed).to.equal(false);
+  expectContained(bar, 'navigation menu bar');
+
+  const collapsed = (await fixture(html`
+    <div style="inline-size:320px">
+      <lr-navigation-menu mobile-breakpoint="40rem" expanded>
+        <lr-navigation-menu-item open>${LONG_LABEL}<div slot="panel">${LONG_LABEL}</div></lr-navigation-menu-item>
+        <lr-navigation-menu-item href="#long">${LONG_LABEL}</lr-navigation-menu-item>
+      </lr-navigation-menu>
+    </div>
+  `)) as HTMLElement;
+  const collapsedMenu = collapsed.querySelector('lr-navigation-menu') as LyraNavigationMenu;
+  await waitUntil(() => collapsedMenu.collapsed, 'the long-label menu never collapsed');
+  await collapsedMenu.updateComplete;
+  await nextFrame();
+  expectContained(collapsed, 'navigation menu collapsed');
 });

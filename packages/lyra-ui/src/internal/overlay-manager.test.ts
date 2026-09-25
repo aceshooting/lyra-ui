@@ -1112,6 +1112,97 @@ it('moves focus into a surviving lower overlay when the top closes without resto
   bottomHandle.deactivate({ restoreFocus: false });
 });
 
+it('leaves outside focus alone when a nonmodal top closes without restoring focus above another nonmodal overlay', () => {
+  const outside = document.createElement('input');
+  outside.dataset['overlayBackground'] = '';
+  outside.setAttribute('aria-label', 'outside field');
+  document.body.append(outside);
+  const bottom = createOverlay(document, 'pinned-nonmodal');
+  const bottomHandle = activateNonmodalOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => undefined,
+  });
+  outside.focus();
+  const top = createOverlay(document, 'hovered-nonmodal');
+  const topHandle = activateNonmodalOverlay({
+    host: top.host,
+    panel: () => top.panel,
+    onEscape: () => undefined,
+  });
+
+  try {
+    expect(topHandle.isTopmost()).to.equal(true);
+    topHandle.deactivate({ restoreFocus: false });
+
+    expect(deepActiveElement(document)?.getAttribute('aria-label')).to.equal('outside field');
+    expect(bottomHandle.isActive()).to.equal(true);
+    expect(bottomHandle.isTopmost()).to.equal(true);
+  } finally {
+    topHandle.deactivate({ restoreFocus: false });
+    bottomHandle.deactivate({ restoreFocus: false });
+  }
+});
+
+it('still hands focus to a lower nonmodal overlay when focus was inside the nonmodal top that closed', () => {
+  const outside = document.createElement('input');
+  outside.dataset['overlayBackground'] = '';
+  document.body.append(outside);
+  const bottom = createOverlay(document, 'pinned-nonmodal');
+  const bottomHandle = activateNonmodalOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => undefined,
+  });
+  outside.focus();
+  const top = createOverlay(document, 'focused-nonmodal');
+  const topHandle = activateNonmodalOverlay({
+    host: top.host,
+    panel: () => top.panel,
+    onEscape: () => undefined,
+  });
+
+  try {
+    top.last.focus();
+    expect(deepActiveElement(document)?.textContent).to.equal('focused-nonmodal last');
+    topHandle.deactivate({ restoreFocus: false });
+
+    expect(deepActiveElement(document)?.textContent).to.equal('pinned-nonmodal first');
+  } finally {
+    topHandle.deactivate({ restoreFocus: false });
+    bottomHandle.deactivate({ restoreFocus: false });
+  }
+});
+
+it('keeps pulling focus into a surviving focus-trapping overlay after a detached nonmodal top dropped it', () => {
+  const bottom = createOverlay(document, 'trapping-modal');
+  const bottomHandle = activateOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => undefined,
+  });
+  bottomHandle.focusInitial();
+  const top = createOverlay(document, 'detached-nonmodal');
+  const topHandle = activateNonmodalOverlay({
+    host: top.host,
+    panel: () => top.panel,
+    onEscape: () => undefined,
+  });
+
+  try {
+    top.first.focus();
+    expect(deepActiveElement(document)?.textContent).to.equal('detached-nonmodal first');
+    top.host.remove();
+    expect(deepActiveElement(document)?.localName).to.equal('body');
+    topHandle.deactivate({ restoreFocus: false });
+
+    expect(deepActiveElement(document)?.textContent).to.equal('trapping-modal first');
+  } finally {
+    topHandle.deactivate({ restoreFocus: false });
+    bottomHandle.deactivate({ restoreFocus: false });
+  }
+});
+
 it('makes modal background paths inert and restores pre-existing inert state', () => {
   const preInert = document.createElement('aside');
   preInert.dataset['overlayBackground'] = '';

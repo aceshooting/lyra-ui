@@ -14,6 +14,7 @@ import {
 } from '../../../internal/a11y.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
@@ -315,19 +316,11 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  retrievable bytes, so it cannot be a download target. */
   @property() download?: string;
 
-  /** Resolved `rel` for the rendered anchor: author tokens minus `opener`, plus the
-   *  `noopener noreferrer` guard whenever `target` is set. `undefined` when nothing remains, so the
-   *  attribute is omitted entirely rather than rendered empty. */
+  /** Resolved `rel` for the rendered anchor: de-duplicated author tokens minus `opener` (in any
+   *  letter case), plus the `noopener noreferrer` guard whenever `target` is set. `undefined` when
+   *  nothing remains, so the attribute is omitted entirely rather than rendered empty. */
   private get resolvedRel(): string | undefined {
-    const authored = (this.rel ?? '')
-      .split(/\s+/)
-      .filter((token) => token && token !== 'opener');
-    if (this.target) {
-      for (const guard of ['noopener', 'noreferrer']) {
-        if (!authored.includes(guard)) authored.push(guard);
-      }
-    }
-    return authored.length ? authored.join(' ') : undefined;
+    return resolveGuardedRel(this.rel, this.target);
   }
 
   /** Resolved, safety-checked `href` for the rendered anchor, or `undefined` when `href` is unset

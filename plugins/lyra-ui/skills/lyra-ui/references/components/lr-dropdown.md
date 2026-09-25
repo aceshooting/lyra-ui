@@ -56,7 +56,9 @@ localized "Menu" fallback. A consumer-supplied menu keeps its own naming precede
 `aria-label` (including an explicit empty value), then an explicit nondefault `label`, then the
 dropdown fallback. Its `header` and `footer` slots remain rendered outside the inner
 `role="menu"` list while contained, including after live slot changes; Tab can therefore reach
-their controls without putting arbitrary content inside the menu role.
+their controls without putting arbitrary content inside the menu role. An open dropdown stays open
+when Tab moves focus out of it; `lr-context-menu` deliberately differs and closes when Tab leaves
+its surface.
 
 **Properties:**
 
