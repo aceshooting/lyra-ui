@@ -47,7 +47,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     box-sizing: border-box;
     padding: var(--lr-space-s) var(--lr-space-m);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="item-header"],
   lr-virtual-list::part(item-header) {

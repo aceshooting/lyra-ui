@@ -22,7 +22,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     border: var(--border-width, var(--lr-border-width-thin)) solid
-      var(--border-color, var(--lr-color-border));
+      var(--border-color, var(--lr-color-border-subtle));
     border-radius: var(--_lr-card-radius);
     /* The DEFAULT (outlined) tier's own hook, alongside the filled tiers' existing ones -- the
        tier most cards render was the only one with no card-specific lever, so retinting one
@@ -116,7 +116,12 @@ export const styles = css`
     border-color: transparent;
     background: transparent;
   }
+  /* An actionable or linked card is one whole-card control, and at rest this edge is its only
+     visible boundary (WCAG 2.2 SC 1.4.11) -- so it stays on the control-grade token, not the
+     decorative subtle tier a passive card uses. --border-color still wins; the (0,3,0) filled,
+     accent and plain rules above still clear it. */
   [part="base"][data-actionable="true"] {
+    border-color: var(--border-color, var(--lr-color-border));
     cursor: pointer;
     transition: border-color var(--lr-transition-fast);
   }
@@ -219,7 +224,7 @@ export const styles = css`
     gap: var(--spacing, var(--padding, var(--lr-space-m)));
     padding: var(--spacing, var(--padding, var(--lr-space-m)));
     border-block-end: var(--border-width, var(--lr-border-width-thin)) solid
-      var(--border-color, var(--lr-color-border));
+      var(--border-color, var(--lr-color-border-subtle));
   }
   ::slotted([slot="header"]) {
     flex: 1 1 auto;
@@ -249,7 +254,7 @@ export const styles = css`
     gap: var(--spacing, var(--padding, var(--lr-space-m)));
     padding: var(--spacing, var(--padding, var(--lr-space-m)));
     border-block-start: var(--border-width, var(--lr-border-width-thin)) solid
-      var(--border-color, var(--lr-color-border));
+      var(--border-color, var(--lr-color-border-subtle));
   }
   .footer-actions {
     display: inline-flex;

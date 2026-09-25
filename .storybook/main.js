@@ -10,7 +10,13 @@ import { storyTitlePlugin } from './story-title-plugin.js';
 
 /** @type { import('@storybook/web-components-vite').StorybookConfig } */
 const config = {
-  stories: ['../packages/lyra-ui/src/components/**/*.stories.ts', '../.storybook/*.mdx'],
+  // `.storybook/*.stories.js` holds cross-cutting pages that belong to no one component (the
+  // Theming/shadcn look comparison), so they cannot live beside a component's own stories.
+  stories: [
+    '../packages/lyra-ui/src/components/**/*.stories.ts',
+    '../.storybook/*.stories.js',
+    '../.storybook/*.mdx',
+  ],
   addons: [
     {
       name: '@storybook/addon-docs',

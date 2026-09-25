@@ -745,7 +745,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-task-list
         .items=${items}
-        style="--lr-task-list-background: var(--lr-color-surface); --lr-task-list-border-color: var(--lr-color-border); --lr-task-list-radius: var(--lr-radius)"
+        style="--lr-task-list-background: var(--lr-color-surface); --lr-task-list-border-color: var(--lr-color-border-subtle); --lr-task-list-radius: var(--lr-radius)"
       ></lr-task-list>
     `)) as LyraTaskList;
     const unset = getComputedStyle(part(control, 'base'));
@@ -757,5 +757,16 @@ describe('card chrome theming hooks', () => {
     expect(getComputedStyle(part(control, 'body')).borderTopColor).to.equal(
       getComputedStyle(part(tokened, 'body')).borderTopColor,
     );
+  });
+
+  it('draws the card edge and divider on the decorative --lr-color-border-subtle tier', async () => {
+    const el = (await fixture(html`
+      <lr-task-list
+        .items=${items}
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+      ></lr-task-list>
+    `)) as LyraTaskList;
+    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(7, 8, 9)');
   });
 });

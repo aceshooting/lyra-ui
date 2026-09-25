@@ -75,6 +75,18 @@
       },
       "themeInput": "--lr-theme-color-border-strong"
     },
+    "--lr-color-border-subtle": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Decorative edge colour for dividers and rules, card, panel, table and section edges, and separators between items. Resolves to --lr-color-border until --lr-theme-color-surface-border-subtle is set. Never the only visible boundary of a control or a meaningful graphic: those need 3:1 non-text contrast (WCAG 2.2 SC 1.4.11) and stay on --lr-color-border.",
+      "values": {
+        "light": "var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))",
+        "dark": "var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))",
+        "forcedColors": "ButtonText"
+      },
+      "themeInput": "--lr-theme-color-surface-border-subtle"
+    },
     "--lr-color-brand": {
       "type": "color",
       "group": "color",

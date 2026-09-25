@@ -11,6 +11,10 @@ import '../components/forms/combobox/option.js';
 import '../components/forms/combobox/combobox.js';
 import '../components/forms/locale-picker/locale-picker.js';
 import '../components/utility/mention-popover/mention-popover.js';
+import '../components/forms/color-picker/color-picker.js';
+import '../components/forms/input/time-input.js';
+import '../components/conversation/model-select/model-select.js';
+import '../components/conversation/voice-picker/voice-picker.js';
 
 /**
  * The overlay-surface contract: ONE overlay token family every floating surface reads.
@@ -438,6 +442,150 @@ it('is accessible with every overlay surface open and populated in dark mode', a
   await settle(dialog.host);
   finishAnimations(dialog.box);
   await expect(dialog.host).to.be.accessible();
+});
+
+// --- Edge tier: floating panels decorative, form-owned popups on the control boundary ---------
+
+/** The two theme inputs behind the two edge tiers, deliberately distinct from each other. */
+const CONTROL_EDGE = 'rgb(10, 20, 30)';
+const SUBTLE_EDGE = 'rgb(40, 50, 60)';
+const EDGE_THEME = `--lr-theme-color-surface-border: ${CONTROL_EDGE}; --lr-theme-color-surface-border-subtle: ${SUBTLE_EDGE};`;
+
+async function mountShadowSurface(
+  wrapperStyle: string,
+  tagName: string,
+  content: TemplateResult,
+  selector: string,
+  name: string,
+): Promise<Surface> {
+  const host = await hostIn(wrapperStyle, tagName, content);
+  return { name, host, box: shadowPart(host, selector, tagName) };
+}
+
+const mountMentionPopover = (wrapperStyle = ''): Promise<Surface> =>
+  mountShadowSurface(
+    wrapperStyle,
+    'lr-mention-popover',
+    html`<lr-mention-popover></lr-mention-popover>`,
+    '[part~="listbox"]',
+    'lr-mention-popover listbox',
+  );
+
+const mountModelSelect = (wrapperStyle = ''): Promise<Surface> =>
+  mountShadowSurface(
+    wrapperStyle,
+    'lr-model-select',
+    html`<lr-model-select label="Model"></lr-model-select>`,
+    '[part~="listbox"]',
+    'lr-model-select listbox',
+  );
+
+const mountVoicePicker = (wrapperStyle = ''): Promise<Surface> =>
+  mountShadowSurface(
+    wrapperStyle,
+    'lr-voice-picker',
+    html`<lr-voice-picker label="Voice"></lr-voice-picker>`,
+    '[part~="listbox"]',
+    'lr-voice-picker listbox',
+  );
+
+const mountColorPicker = (wrapperStyle = ''): Promise<Surface> =>
+  mountShadowSurface(
+    wrapperStyle,
+    'lr-color-picker',
+    html`<lr-color-picker label="Colour"></lr-color-picker>`,
+    '[part~="panel"]',
+    'lr-color-picker panel',
+  );
+
+const mountTimeInput = (wrapperStyle = ''): Promise<Surface> =>
+  mountShadowSurface(
+    wrapperStyle,
+    'lr-time-input',
+    html`<lr-time-input label="Start"></lr-time-input>`,
+    '[part~="popup"]',
+    'lr-time-input popup',
+  );
+
+/** Floating panels: not themselves operable, lifted by their shadow, so their edge is decorative. */
+const PANEL_BUILDERS: ReadonlyArray<(wrapperStyle?: string) => Promise<Surface>> = [
+  mountPopover,
+  mountDropdown,
+  mountMenu,
+  mountDialog,
+];
+
+/** Popups that belong to a form control, which keep the boundary contrast of the field they extend. */
+const CONTROL_POPUP_BUILDERS: ReadonlyArray<(wrapperStyle?: string) => Promise<Surface>> = [
+  mountSelect,
+  mountCombobox,
+  mountLocalePicker,
+  mountColorPicker,
+  mountTimeInput,
+  mountModelSelect,
+  mountVoicePicker,
+  mountMentionPopover,
+];
+
+async function edgeMismatches(
+  builders: ReadonlyArray<(wrapperStyle?: string) => Promise<Surface>>,
+  wrapperStyle: string,
+  expected: string,
+): Promise<string> {
+  const wrong: string[] = [];
+  for (const build of builders) {
+    const surface = await build(wrapperStyle);
+    const { edge } = paint(surface.box);
+    if (edge !== expected) wrong.push(`${surface.name} edge is ${edge}, expected ${expected}`);
+  }
+  return wrong.join('\n');
+}
+
+it('paints every floating panel edge from the subtle border input', async () => {
+  // Distinct inputs are the whole point: with only one of them set, "reads the subtle tier" and
+  // "reads the control tier" resolve to the same colour and the test could not tell them apart.
+  expect(
+    await edgeMismatches(PANEL_BUILDERS, EDGE_THEME, SUBTLE_EDGE),
+    'floating panels off the decorative edge tier',
+  ).to.equal('');
+});
+
+it('keeps every form-owned popup edge on the control border input', async () => {
+  expect(
+    await edgeMismatches(CONTROL_POPUP_BUILDERS, EDGE_THEME, CONTROL_EDGE),
+    'form-owned popups off the control edge tier',
+  ).to.equal('');
+});
+
+it('lets a consumer --lr-overlay-border outrank both edge tiers', async () => {
+  const override = `${EDGE_THEME} --lr-overlay-border: ${BORDER};`;
+  const wrong = [
+    await edgeMismatches(PANEL_BUILDERS, override, BORDER),
+    await edgeMismatches(CONTROL_POPUP_BUILDERS, override, BORDER),
+  ].filter((text) => text !== '');
+  expect(wrong.join('\n'), 'surfaces that ignored the consumer edge colour').to.equal('');
+});
+
+it('resolves both edge tiers to the control border while the subtle input is unset', async () => {
+  // Unset-regression: the subtle tier is opt-in. With only the control input set, a panel edge
+  // must still land on it, so the split is invisible until a theme sets the subtle input.
+  const controlOnly = `--lr-theme-color-surface-border: ${CONTROL_EDGE};`;
+  const wrong = [
+    await edgeMismatches(PANEL_BUILDERS, controlOnly, CONTROL_EDGE),
+    await edgeMismatches(CONTROL_POPUP_BUILDERS, controlOnly, CONTROL_EDGE),
+  ].filter((text) => text !== '');
+  expect(wrong.join('\n'), 'surfaces that diverged with the subtle input unset').to.equal('');
+});
+
+it('keeps the edge tiers apart under dir="rtl"', async () => {
+  const panel = await mountPopover(EDGE_THEME);
+  const control = await mountSelect(EDGE_THEME);
+  for (const surface of [panel, control]) {
+    surface.host.setAttribute('dir', 'rtl');
+    await settle(surface.host);
+  }
+  expect(paint(panel.box).edge, 'RTL popover edge').to.equal(SUBTLE_EDGE);
+  expect(paint(control.box).edge, 'RTL select listbox edge').to.equal(CONTROL_EDGE);
 });
 
 // --- lr-menu-item row-chrome hooks (the sibling gap the overlay-surface sweep turned up) ------

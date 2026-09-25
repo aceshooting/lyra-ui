@@ -18,7 +18,7 @@ export const styles = css`
     block-size: 100%;
     inline-size: 100%;
     border-radius: var(--lr-flag-radius, calc(var(--lr-radius) * 0.33));
-    box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border) inset;
+    box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border-subtle) inset;
     object-fit: var(--lr-flag-object-fit, cover);
   }
   /* The img carries hidden for the whole loading phase, so the skeleton stands alone.

@@ -6668,7 +6668,7 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
       [
         '--indent-guide-color',
         'var(--sl-color-neutral-200)',
-        'var(--lr-color-border)',
+        'var(--lr-color-border-subtle)',
       ],
       ['--indent-size', 'var(--sl-spacing-medium)', 'var(--lr-space-l)'],
     ],
@@ -6888,7 +6888,7 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
       [
         '--indent-guide-color',
         'var(--wa-color-surface-border)',
-        'var(--lr-color-border)',
+        'var(--lr-color-border-subtle)',
       ],
       ['--indent-size', 'var(--wa-space-m)', 'var(--lr-space-l)'],
     ],
@@ -6936,7 +6936,7 @@ const REVIEWED_TARGET_CSS_DEFAULT_ADDITION_GROUPS = [
   [
     ['sl-card'],
     [
-      ['--border-color', 'var(--lr-color-border)'],
+      ['--border-color', 'var(--lr-color-border-subtle)'],
       ['--border-radius', 'var(--lr-radius)'],
       ['--border-width', 'var(--lr-border-width-thin)'],
       ['--padding', 'var(--spacing,var(--lr-space-m))'],
@@ -6961,7 +6961,7 @@ const REVIEWED_TARGET_CSS_DEFAULT_ADDITION_GROUPS = [
   [
     ['sl-divider', 'wa-divider'],
     [
-      ['--color', 'var(--lr-color-border)'],
+      ['--color', 'var(--lr-color-border-subtle)'],
       ['--spacing', 0],
       ['--width', 'var(--lr-border-width-thin)'],
     ],

@@ -270,7 +270,8 @@ the content stacked on it. The shared field halo `--lr-form-control-focus-shadow
 paints a `box-shadow` while the dropzone holds focus; it is additive, so the
 `[part='base']:focus-visible` outline is untouched. Plus shared
 tokens — `--lr-space-xs`, `--lr-space-l`,
-`--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
+`--lr-color-border`, `--lr-color-border-subtle` (the selected-file rows' edge), `--lr-radius`,
+`--lr-color-surface`, `--lr-color-text-quiet`,
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 

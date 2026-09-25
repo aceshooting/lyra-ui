@@ -9,7 +9,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
@@ -19,7 +19,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(--lr-pdf-viewer-toolbar-bg, var(--lr-color-brand-quiet));
     font-size: var(--lr-font-size-sm);
     flex-wrap: wrap;
@@ -94,7 +94,7 @@ export const styles = css`
      of the surrounding UI direction. Scoped to the canvas alone, leaving the text-layer's own RTL
      centering (below) untouched. */
   lr-virtual-list::part(page-canvas) {
-    box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border);
+    box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border-subtle);
     direction: ltr;
   }
   lr-virtual-list::part(page-error) {

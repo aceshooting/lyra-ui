@@ -129,7 +129,7 @@ already focused on the chip still hears an upload failure — goes to the librar
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
-`--lr-attachment-chip-border` (default `var(--lr-color-border)`) — the trio's private defaults
+`--lr-attachment-chip-border` (default `var(--lr-color-border-subtle)`) — the trio's private defaults
 change per `status` (`uploading` → brand/brand-quiet/transparent, `error` →
 danger/danger-quiet/transparent, `success` → success/success-quiet/transparent), while an inherited
 or direct public value remains authoritative; `--lr-attachment-chip-compact-thumbnail-size` (default

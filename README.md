@@ -181,7 +181,8 @@ the alias stays valid if the component's internal family changes. Import
 Every one of the 288 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
-  no per-component theming API to learn.
+  no per-component theming API to learn. A ready-made light/dark base ships as `theme.css`, and an
+  opt-in `themes/shadcn.css` preset gives every component the shadcn/ui look.
 - **Internationalization** via a small runtime (`registerLyraLocale`/`setLyraLocale`, or a
   per-instance `.strings` override) — every built-in string (labels, announcements, aria-labels)
   is translatable without a rebuild or a per-locale bundle.

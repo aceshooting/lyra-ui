@@ -86,7 +86,7 @@ pending duration/toggle accent without changing the shared brand token;
 padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
 `var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
 `--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
-`--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
+`--lr-thinking-panel-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
@@ -96,7 +96,7 @@ four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (def
 `transparent` to opt out entirely), and `--lr-thinking-panel-body-hover-outline-offset` (default
 `calc(-1 * var(--lr-focus-ring-offset))`). Unset, all four resolve to the rule's previous literal
 paint. Plus shared
-`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
+`--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
 

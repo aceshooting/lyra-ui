@@ -112,7 +112,8 @@ current imperative search match; `--lr-json-viewer-string-color` (default
 `--lr-json-viewer-boolean-color` (default `var(--lr-color-warning)`), and
 `--lr-json-viewer-null-color` (default `var(--lr-color-text-quiet)`) — per-value-type color hooks.
 Plus shared
-tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
+tokens `--lr-color-border-subtle`,
+`--lr-color-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.
 

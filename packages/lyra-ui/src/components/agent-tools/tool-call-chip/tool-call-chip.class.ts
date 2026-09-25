@@ -212,8 +212,8 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * default becomes transparent for every non-`pending` status; a public override wins.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  * on the anchored detail tooltip.
- * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
- * the anchored detail tooltip.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
+ * colour, on the anchored detail tooltip.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  * anchored detail tooltip.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.

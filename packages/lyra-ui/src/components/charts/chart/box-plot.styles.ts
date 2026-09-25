@@ -21,7 +21,7 @@ export const styles = css`
        through getComputedStyle, mirroring chart.ts. Each is its own token, defaulting to the
        semantic one, so a host can retheme the chart's grid, ticks, legend and tooltip without
        touching unrelated text, border and surface colors. */
-    --_lr-chart-grid-color: var(--lr-color-border);
+    --_lr-chart-grid-color: var(--lr-color-border-subtle);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
     /* Matches Chart.js's OWN built-in 12px tick font size (defaults.font.size), mirroring
        chart.styles.ts -- box-plot never set a font size before --lr-chart-tick-font-size existed,
@@ -194,11 +194,12 @@ export const styles = css`
   [part='canvas']:hover {
     /* Scoped so a consumer can retint or resize just this hover outline without touching every
        other --lr-border-width-thin consumer -- the indirection of the --lr-chart-grid-color and
-       -tick-color block above, applied per state. */
+       -tick-color block above, applied per state. Its last arm is the control-grade
+       --lr-color-border rather than the decorative grid default, as in chart.styles.ts. */
     outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid
       var(
         --lr-chart-canvas-hover-outline-color,
-        var(--lr-chart-grid-color, var(--_lr-chart-grid-color))
+        var(--lr-chart-grid-color, var(--lr-color-border))
       );
     outline-offset: var(--lr-focus-ring-offset);
   }

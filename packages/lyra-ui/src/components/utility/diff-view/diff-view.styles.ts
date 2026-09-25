@@ -18,7 +18,7 @@ export const styles = css`
   [part="base"] {
     position: relative;
     max-block-size: var(--lr-diff-view-max-height, var(--_lr-diff-view-max-height));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: auto;

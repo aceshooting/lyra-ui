@@ -10,7 +10,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     min-inline-size: 0;
     padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* The RESTING frame's own hook, alongside the compact tier's existing padding/gap levers --
        the default tier every citation list actually renders was the only one with no card-specific
@@ -107,7 +107,7 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
     padding-block-start: var(--lr-space-xs);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-1-4);

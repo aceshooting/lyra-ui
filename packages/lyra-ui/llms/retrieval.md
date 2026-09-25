@@ -669,7 +669,7 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 
 The anchored detail popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -1317,7 +1317,7 @@ public value remains authoritative in every status. Shared tokens include
 
 The anchored source-preview popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -1429,7 +1429,7 @@ while collapsed).
 (default `var(--lr-space-2xs)`) and `--lr-source-list-compact-list-padding` (default
 `var(--lr-space-s)`) — `[part="list"]` gap/padding while `compact`. All four are inline `var()`
 fallbacks at their point of use, so any can be set on the element or an ancestor. Otherwise shared
-tokens — `--lr-color-border`, `--lr-color-surface`,
+tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-brand` / `-brand-quiet`, `--lr-radius`, `--lr-space-xs`/`-s`/
 `-m`, `--lr-transition-fast`, `--lr-focus-ring-*`.
 
@@ -1503,7 +1503,7 @@ button — only rendered when the `full` slot has content).
 `[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
 `var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
 the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens
-elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
+elsewhere. Plus shared tokens — `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text` / `-text-quiet`, `--lr-color-brand`, `--lr-radius`, `--lr-space-xs`/`-s`,
 `--lr-focus-ring-*`.
 

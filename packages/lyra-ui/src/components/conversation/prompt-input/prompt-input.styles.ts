@@ -66,7 +66,7 @@ export const styles = css`
 
   [part='source-picker'] {
     padding: var(--lr-space-s);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
 
   [part='chips'] {

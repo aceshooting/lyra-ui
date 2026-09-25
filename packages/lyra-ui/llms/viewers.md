@@ -173,7 +173,8 @@ defaults to `color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partn
 var(--lr-color-mix-hover))`; `--lr-document-preview-download-link-active-bg` uses the same mix with
 `var(--lr-color-mix-active)`, styling the native download action's hover and pressed backgrounds.
 Plus shared tokens
-`--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
+`--lr-color-border` (action buttons and the progress ring), `--lr-color-border-subtle` (the frame
+and header rule), `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
 

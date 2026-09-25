@@ -678,6 +678,25 @@ describe('lr-document-compare', () => {
     }
   });
 
+    it('keeps each keyboard-focusable pane on the control border, not the subtle tier', async () => {
+      // The pane is a tabindex="0" scroll region with no fill of its own, so its border is the only
+      // resting boundary of a focusable widget (WCAG 2.2 SC 1.4.11) and must not read the
+      // decorative --lr-color-border-subtle tier a theme may lighten.
+      const el = (await fixture(html`
+        <lr-document-compare
+          view="side-by-side"
+          style="--lr-theme-color-surface-border: rgb(4, 5, 6); --lr-theme-color-surface-border-subtle: rgb(1, 2, 3)"
+          .oldVersion=${{ id: 'old', name: 'Old', text: 'before' }}
+          .newVersion=${{ id: 'new', name: 'New', text: 'after' }}
+        ></lr-document-compare>
+      `)) as LyraDocumentCompare;
+      for (const part of ['pane-old', 'pane-new']) {
+        const pane = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+        expect(pane.tabIndex, part).to.equal(0);
+        expect(getComputedStyle(pane).borderTopColor, part).to.equal('rgb(4, 5, 6)');
+      }
+    });
+
     it('uses live narrow and wide pane geometry with logical LTR/RTL order', async () => {
       for (const direction of ['ltr', 'rtl']) {
         const narrowWrap = await fixture<HTMLElement>(html`

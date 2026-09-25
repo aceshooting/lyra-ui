@@ -42,7 +42,7 @@ export const styles = css`
       var(--_lr-command-palette-max-block-size)
     );
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* Modal-panel surface, not the page surface -- in dark mode the two are the same near-black
        and the palette would read as a scrim with a floating list on it. */

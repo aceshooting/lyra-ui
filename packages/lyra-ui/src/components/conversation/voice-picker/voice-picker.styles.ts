@@ -1,6 +1,9 @@
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
-import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
+import {
+  overlaySurfaceFill,
+  overlaySurfaceControlEdge,
+} from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -110,7 +113,7 @@ export const styles = css`
     text-overflow: ellipsis;
     padding-inline-end: var(--lr-space-xs);
     margin-inline-end: var(--lr-space-xs);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     font-size: var(--lr-size-0-6875rem);
     font-weight: var(--lr-font-weight-bold);
     text-transform: uppercase;
@@ -239,6 +242,7 @@ export const styles = css`
        (internal/overlay-surface.styles.ts). The radius arm stays this component's own hook, with
        the family only as its middle fallback, so a component-scoped override still wins. */
     ${overlaySurfaceFill}
+    ${overlaySurfaceControlEdge}
     border-radius: var(
       --lr-voice-picker-radius,
       var(--lr-overlay-radius, var(--_lr-voice-picker-radius-default))

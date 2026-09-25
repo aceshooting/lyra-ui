@@ -67,7 +67,7 @@ while collapsed).
 (default `var(--lr-space-2xs)`) and `--lr-source-list-compact-list-padding` (default
 `var(--lr-space-s)`) — `[part="list"]` gap/padding while `compact`. All four are inline `var()`
 fallbacks at their point of use, so any can be set on the element or an ancestor. Otherwise shared
-tokens — `--lr-color-border`, `--lr-color-surface`,
+tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-brand` / `-brand-quiet`, `--lr-radius`, `--lr-space-xs`/`-s`/
 `-m`, `--lr-transition-fast`, `--lr-focus-ring-*`.
 
@@ -141,7 +141,7 @@ button — only rendered when the `full` slot has content).
 `[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
 `var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
 the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens
-elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
+elsewhere. Plus shared tokens — `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text` / `-text-quiet`, `--lr-color-brand`, `--lr-radius`, `--lr-space-xs`/`-s`,
 `--lr-focus-ring-*`.
 

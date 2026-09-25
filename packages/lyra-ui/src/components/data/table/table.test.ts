@@ -9196,3 +9196,72 @@ describe('row expand toggle accessible name', () => {
     expect(toggleNames(el)).to.deep.equal(['Collapse Alpha', 'Expand Beta']);
   });
 });
+
+describe('decorative edges versus control boundaries', () => {
+  // Distinct sentinels on the host itself: an inline declaration beats the shadow :host token
+  // defaults, so each assertion names which of the two border tokens a surface is wired to. The
+  // theme input repeats the control sentinel because the retry button is slotted into a nested
+  // lr-empty, whose own :host re-derives --lr-color-border from that input.
+  const borderTokens =
+    '--lr-theme-color-surface-border: rgb(4, 5, 6); --lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)';
+  const subtle = 'rgb(1, 2, 3)';
+  const control = 'rgb(4, 5, 6)';
+
+  it('draws the frame, rules and sticky seams with --lr-color-border-subtle', async () => {
+    const stickyColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', sticky: 'start', cell: (r) => r.name },
+      { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+    ];
+    const el = (await fixture(html`<lr-table
+      accessible-label="People"
+      filterable
+      has-more
+      style=${borderTokens}
+    ></lr-table>`)) as LyraTable<Row>;
+    el.columns = stickyColumns;
+    el.rows = rows;
+    await el.updateComplete;
+
+    const part = (name: string): HTMLElement =>
+      el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+    expect(getComputedStyle(part('base')).borderTopColor, 'frame').to.equal(subtle);
+    expect(getComputedStyle(part('filter-label')).borderBottomColor, 'filter rule').to.equal(subtle);
+    expect(getComputedStyle(part('header-cell')).borderBottomColor, 'header underline').to.equal(subtle);
+    expect(getComputedStyle(part('cell')).borderBottomColor, 'row rule').to.equal(subtle);
+    expect(getComputedStyle(part('cell')).boxShadow, 'sticky seam').to.include(subtle);
+  });
+
+  it('keeps the only drawn edge of the load-more button on --lr-color-border', async () => {
+    const el = (await fixture(html`<lr-table
+      accessible-label="People"
+      has-more
+      style=${borderTokens}
+      .columns=${columns}
+      .rows=${rows}
+    ></lr-table>`)) as LyraTable<Row>;
+    await el.updateComplete;
+
+    const more = el.shadowRoot!.querySelector('[part="more-button"]') as HTMLElement;
+    expect(getComputedStyle(more).borderTopWidth, 'load-more edge width').to.not.equal('0px');
+    expect(getComputedStyle(more).borderTopColor, 'load-more edge').to.equal(control);
+  });
+
+  it('keeps the filter field and retry button boundaries on --lr-color-border', async () => {
+    const el = (await fixture(html`<lr-table
+      accessible-label="People"
+      filterable
+      error
+      style=${borderTokens}
+      .columns=${columns}
+      .rows=${rows}
+    ></lr-table>`)) as LyraTable<Row>;
+    await el.updateComplete;
+
+    const filter = el.shadowRoot!.querySelector('[part="filter"]') as HTMLElement;
+    const retry = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLElement;
+    const errorCell = el.shadowRoot!.querySelector('[part="error-cell"]') as HTMLElement;
+    expect(getComputedStyle(filter).borderTopColor, 'filter field').to.equal(control);
+    expect(getComputedStyle(retry).borderTopColor, 'retry button').to.equal(control);
+    expect(getComputedStyle(errorCell).borderBottomColor, 'error row rule').to.equal(subtle);
+  });
+});

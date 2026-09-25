@@ -656,7 +656,9 @@ The listbox popup itself is a floating surface and paints from the **shared over
 `--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this popup together with every other floating surface, and none of
-it touches the trigger row the popup drops from.
+it touches the trigger row the popup drops from. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this popup belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
@@ -1145,6 +1147,9 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
 `<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
@@ -3317,7 +3322,9 @@ and the raised tone is what separates it from the field's fill — `--lr-color-s
 resolves to the plain page surface in light mode and would erase that separation, while in dark
 mode the raised tone is already distinct from the page, so this panel never had the
 reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
-along with every other popup.
+along with every other popup. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the `popup` panel reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -5945,7 +5952,9 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-color-picker-radius`, which still wins when set.
+`--lr-color-picker-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
 `<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
@@ -6450,6 +6459,9 @@ them declared on `:host`, so one declaration on `:root` — or on any ancestor, 
 this listbox together with every other floating surface. `--lr-overlay-radius` reaches the listbox
 only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
 set: a component-scoped override outranks the shared family, never the other way round.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the listbox reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`

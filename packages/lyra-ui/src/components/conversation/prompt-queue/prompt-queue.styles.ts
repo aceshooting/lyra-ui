@@ -35,7 +35,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }

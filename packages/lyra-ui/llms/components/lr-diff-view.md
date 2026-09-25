@@ -123,7 +123,7 @@ inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`
 background of a `highlights` line by tone,
 `--lr-diff-view-highlight-active-outline` (default `var(--lr-color-brand)` — outline of the line
 whose covering highlight is `activeHighlightId`), plus
-shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
+shared tokens `--lr-color-border`/`-border-subtle`/`-surface`/`-success`/`-success-quiet`/`-danger`/
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.
 

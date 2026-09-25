@@ -63,7 +63,7 @@ export const styles = css`
     padding-block: var(--lr-size-2px);
     padding-inline: var(--lr-size-6px);
     border-radius: var(--lr-radius-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     z-index: var(--lr-layer-content);
     transform: translate(var(--lr-size-6px), calc(-100% - var(--lr-size-6px)));
     max-inline-size: min(

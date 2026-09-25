@@ -4377,3 +4377,26 @@ describe("aria-describedby forwarding", () => {
     }
   });
 });
+
+it('draws selected-file rows in the subtle border tier while the dropzone stays control-grade', async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+      <lr-file-input multiple></lr-file-input>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-file-input') as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('a.csv', 'text/csv')]);
+  await result;
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="file"]');
+  expect(row === null, 'file row missing').to.be.false;
+  expect(getComputedStyle(row!).borderTopColor).to.equal('rgb(1, 2, 3)');
+  // The dashed dropzone edge is the drop target's only boundary, so it keeps the control grade.
+  await waitUntil(
+    () => getComputedStyle(base).borderTopColor === 'rgb(7, 8, 9)',
+    'the resting dropzone border left the control-grade --lr-color-border',
+  );
+});

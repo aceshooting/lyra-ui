@@ -9,7 +9,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-s);
     padding: var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* The RESTING frame's own hook, matching the sibling lr-entity-card/lr-source-card cards this
        one renders alongside in a GraphRAG panel -- retinting that panel's cards must not stop at

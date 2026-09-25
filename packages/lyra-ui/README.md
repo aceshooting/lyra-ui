@@ -427,12 +427,15 @@ meant two unrelated things. There is now one name per concept, library-wide.
 
 ### Tokens and theming
 
-- **`theme.css` now declares cascade layers**: `@layer lr-base, lr-theme, lr-utilities, lr-overrides`,
-  with the tokens in `lr-theme`. Any _unlayered_ declaration of yours now beats every Lyra one
-  regardless of specificity or load order, so a plain `:root { --lr-theme-… }` override always wins
-  with no `!important`. If you already wrap your overrides in your own `@layer`, they now sort
-  relative to `lr-theme` rather than losing to an unlayered `:root` — name your layer in an
-  `@layer` statement after importing `theme.css`, or move those rules out of a layer entirely.
+- **`theme.css` now declares cascade layers**:
+  `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`, with the tokens in
+  `lr-theme` (`lr-theme-preset`, which holds the optional `themes/shadcn.css` preset, joined the list
+  later; name all five if you declare the order yourself). Any _unlayered_ declaration of yours now
+  beats every Lyra one regardless of specificity or load order, so a plain `:root { --lr-theme-… }`
+  override always wins with no `!important`. If you already wrap your overrides in your own
+  `@layer`, they now sort relative to `lr-theme` rather than losing to an unlayered `:root` — name
+  your layer in an `@layer` statement after importing `theme.css`, or move those rules out of a
+  layer entirely.
 - **`--lr-font-size-md` is removed**; use `--lr-font-size-m`. The two were the same value under two
   names, which is why `<lr-button>` rendered `size="m"` and `size="l"` at identical text sizes.
 - **Compound motion tokens are split into duration and easing** (`--lr-duration-*` +
@@ -660,6 +663,18 @@ matching `data-lr-theme` attribute) on an ancestor:
 @import "@aceshooting/lyra-ui/theme.css";
 ```
 
+**shadcn/ui look.** Add one more import to restyle every component after shadcn/ui's default
+("new-york", Neutral) — monochrome primary, `0.5rem` radii, `text-sm`, `h-9` controls, a 3px focus
+ring. It layers over `theme.css` whatever the load order, also answers to shadcn's `.dark`/`.light`
+classes, and keeps gemstone accents working. A few values deliberately differ from shadcn to keep
+WCAG contrast (control borders, focus colour, danger red, chart colours); see
+[The shadcn look](./llms/shared.md#the-shadcn-look--themesshadcncss).
+
+```css
+@import "@aceshooting/lyra-ui/theme.css";
+@import "@aceshooting/lyra-ui/themes/shadcn.css";
+```
+
 Tooling can consume the canonical DTCG interchange document from
 `@aceshooting/lyra-ui/design-tokens.json`. The generated
 `@aceshooting/lyra-ui/design-tokens.css` entry supplies explicit light/dark fixture selectors for
@@ -691,11 +706,12 @@ Applications can override any `--lr-theme-*` input directly:
 }
 ```
 
-`theme.css` declares `@layer lr-base, lr-theme, lr-utilities, lr-overrides` and puts its own tokens
-in `lr-theme`, so an _unlayered_ rule of yours — like the `:root` block above — wins over every Lyra
-declaration regardless of specificity or which stylesheet the bundler emitted first. The optional
-`native.css` and `utilities.css` assets use `lr-base` and `lr-utilities`; `lr-overrides` remains
-available for application rules. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
+`theme.css` declares `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides` and
+puts its own tokens in `lr-theme`, so an _unlayered_ rule of yours — like the `:root` block above —
+wins over every Lyra declaration regardless of specificity or which stylesheet the bundler emitted
+first. The optional `themes/shadcn.css` preset uses `lr-theme-preset`, and the optional `native.css`
+and `utilities.css` assets use `lr-base` and `lr-utilities`; `lr-overrides` remains available for
+application rules. If you declare Lyra's layer order yourself, name all five. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
 Component-specific `--lr-*` custom properties remain available for local overrides.
 
 Canvas components automatically repaint after observable theme attributes, stylesheet/link nodes,

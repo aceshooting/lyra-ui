@@ -23,7 +23,7 @@ export const styles = css`
     min-block-size: 0;
     block-size: 100%;
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
@@ -35,7 +35,7 @@ export const styles = css`
     gap: var(--lr-space-s);
     min-inline-size: 0;
     padding: var(--lr-space-s) var(--lr-space-m);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part='heading'] {
     min-inline-size: 0;
@@ -108,7 +108,7 @@ export const styles = css`
     min-block-size: 0;
     overflow: auto;
     padding: var(--lr-space-m);
-    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(--lr-color-surface-raised);
   }
   [part='details-content'] {
@@ -131,6 +131,9 @@ export const styles = css`
   [part='section'] > * {
     min-inline-size: 0;
   }
+  /* The control-grade border token, not the subtle divider tier: the built-in composer renders
+     frame='plain' with no edge of its own, so this rule is the visible boundary of the text-entry
+     control (WCAG 2.2 SC 1.4.11), not a decorative section divider. */
   [part='composer'] {
     min-inline-size: 0;
     padding: var(--lr-space-s) var(--lr-space-m);
@@ -151,7 +154,7 @@ export const styles = css`
       grid-template-rows: minmax(0, 1fr) minmax(0, 45%);
     }
     [part='details'] {
-      border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+      border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
       border-inline-start: 0;
     }
   }

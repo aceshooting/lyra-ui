@@ -84,6 +84,16 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-color-border-subtle",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))",
+          "dark": "var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))",
+          "forcedColors": "ButtonText"
+        }
+      },
+      {
         "name": "--lr-color-brand",
         "type": "color",
         "scope": "shared",

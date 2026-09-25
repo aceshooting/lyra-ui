@@ -239,10 +239,13 @@ mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail
 `var(--lr-space-s)`/`var(--lr-space-xs)`, the values this rule hard-coded before either token
 existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm,
 previously reachable only through `::part(nav)`. Plus shared
-tokens (`--lr-color-border`,
+tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
-`--lr-focus-ring-*`, `--lr-transition-base`). `resizable`'s width is driven entirely by
+`--lr-focus-ring-*`, `--lr-transition-base`). The rail's inline-end edge and its header/footer rules
+use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
+`'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
+mark and stays on `--lr-color-border`. `resizable`'s width is driven entirely by
 `railWidthPx`'s inline `inline-size` style rather than a new custom property.
 The mobile toggle's hover/pressed background and foreground are independently inheritable through
 `--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,

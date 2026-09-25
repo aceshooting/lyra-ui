@@ -10,7 +10,7 @@ export const styles = css`
   [part='base'] {
     min-inline-size: 0;
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }

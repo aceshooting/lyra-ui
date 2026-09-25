@@ -27,7 +27,7 @@ export const styles = css`
       var(--_lr-json-viewer-max-height)
     );
     overflow: auto;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
@@ -38,7 +38,7 @@ export const styles = css`
     display: flex;
     justify-content: flex-end;
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(--lr-color-surface);
   }
   [part="tree"] {

@@ -269,10 +269,10 @@ when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
-`var(--lr-color-border)`); `--lr-accordion-filled-bg` (default
+`var(--lr-color-border-subtle)`); `--lr-accordion-filled-bg` (default
 `var(--lr-color-surface-raised)`) and `--lr-accordion-filled-border-color` (default `transparent`);
 and `--lr-accordion-filled-outlined-bg` (default `var(--lr-color-surface-raised)`) plus
-`--lr-accordion-filled-outlined-border-color` (default `var(--lr-color-border)`). Direct item
+`--lr-accordion-filled-outlined-border-color` (default `var(--lr-color-border-subtle)`). Direct item
 surfaces have matching `--lr-accordion-item-outlined-bg`, `--lr-accordion-item-filled-bg`, and
 `--lr-accordion-item-filled-outlined-bg` hooks with the same surface fallbacks. Item trigger paint
 uses `--lr-accordion-item-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and

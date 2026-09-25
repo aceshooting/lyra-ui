@@ -2101,3 +2101,28 @@ it('still caps --lr-dialog-height at the viewport via max-block-size: 100%', asy
     await el.close('api');
   }
 });
+
+it('draws the header and footer dividing rules in the subtle border tier while --lr-overlay-border is unset', async () => {
+  const el = (await fixture(html`
+    <lr-dialog
+      open
+      label="Untitled"
+      style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9); --lr-duration-base: 0ms"
+      >Body<button slot="footer">Done</button></lr-dialog
+    >
+  `)) as LyraDialog;
+  try {
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]');
+    const footer = el.shadowRoot!.querySelector<HTMLElement>('[part="footer"]');
+    expect(header === null || footer === null, 'header or footer part missing').to.be.false;
+    expect(getComputedStyle(header!).borderBlockEndColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(footer!).borderBlockStartColor).to.equal('rgb(1, 2, 3)');
+    // A set family edge still reaches both rules, so they keep matching a retinted panel edge.
+    el.style.setProperty('--lr-overlay-border', 'rgb(4, 5, 6)');
+    expect(getComputedStyle(header!).borderBlockEndColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(footer!).borderBlockStartColor).to.equal('rgb(4, 5, 6)');
+  } finally {
+    await el.close('api');
+  }
+});

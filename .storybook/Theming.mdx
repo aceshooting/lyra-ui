@@ -192,10 +192,11 @@ retains no document or stylesheet after its last consumer disconnects.
 `theme.css` declares its layer order up front:
 
 ```css
-@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 ```
 
-The tokens themselves sit in `lr-theme`. The point is not where they sit relative to each other — it
+The tokens themselves sit in `lr-theme`; an optional look preset such as
+[the shadcn look](#the-shadcn-look) sits in `lr-theme-preset`, directly above them. The point is not where they sit relative to each other — it
 is that **any unlayered declaration beats every layered one**, whatever its specificity and whatever
 the source order. So your plain `:root { --lr-theme-color-brand-fill-loud: … }` wins even when your
 stylesheet loads *before* `theme.css`, and needs no `!important`.
@@ -213,6 +214,75 @@ application wants to opt its own rules into the shared order:
   :root { --lr-theme-color-brand-fill-loud: #7c3aed; }
 }
 ```
+
+Every Lyra stylesheet that declares an order repeats the same five names. If your application
+declares Lyra's layers itself, name all five — including `lr-theme-preset` — because a layer missing
+from the first statement the browser sees is appended at the end, after `lr-overrides`.
+
+## The shadcn look
+
+One more import restyles every component after [shadcn/ui](https://ui.shadcn.com)'s default
+"new-york" style on its Neutral base colour:
+
+```css
+@import '@aceshooting/lyra-ui/theme.css';
+@import '@aceshooting/lyra-ui/themes/shadcn.css';
+```
+
+The preset only sets `--lr-theme-*` inputs, inside the `lr-theme-preset` layer: it beats
+`theme.css` whichever loads first, and any unlayered rule of yours still beats both. Its light block
+also answers to `.light` and its dark block to `.dark`, so an application that toggles `.dark` on
+`<html>` the shadcn way gets Lyra's dark mode with no extra wiring. `.lr-light`/`.lr-dark` and
+`data-lr-theme` keep working, and a nested `.dark` region inside a light page is dark on its own.
+(`theme.css` itself never learns `.dark`/`.light`; those class names may already mean something else
+in your application. So each preset block also repeats `theme.css`'s own value, for that mode, of the
+inputs the preset leaves alone — status colours, scrims, chart and terminal colours — and `.dark`
+switches those too.)
+
+What changes: a white/near-black neutral surface family, monochrome primary (the default
+`<lr-button>` renders shadcn's black primary in light, near-white in dark), `0.5rem` radii, `text-sm`
+body text, `h-9` controls, a 3px focus ring with no offset, and Tailwind's shadow geometry. Fonts are
+named, not shipped: `Geist`, then `Inter`, then the system stack.
+
+**Deliberate deviations, each keeping a contrast guarantee shadcn does not make:**
+
+- **Control borders** are `#919191` / `#646464`, the lightest greys at 3:1 against both the page and
+  the raised surface. shadcn's own hairline (`#e5e5e5`, white at 10% in dark) is kept for decorative
+  edges only, through `--lr-color-border-subtle` (below).
+- **Focus** is an opaque grey (`#8b8b8b` / `#787878`, 3.41:1 / 4.48:1). shadcn's half-transparent
+  ring measures about 1.5:1 / 1.9:1.
+- **Danger** is `#d6000a` in light, shadcn's red a notch darker, because components also set text in
+  the loud danger colour — on the page and on the quiet danger tint of a callout, where `#e7000b`
+  measures 4.10:1. In dark it is a light red (`#ff6467`) under near-black text rather than white on a
+  dark red.
+- **Charts** keep Lyra's validated series colours; two of shadcn's chart colours fall below 3:1 on
+  white.
+- **Hover and press** mix toward a mid grey rather than toward the text colour. shadcn's primary *is*
+  the text colour, so the default mix would not move the default button at all.
+
+**Accents still work.** `setLyraTheme({ accent })` writes its ramp inline on `<html>`, which beats
+every layer, and the preset aliases the neutral role's loud slots to the brand role's — so a gemstone
+accent recolours the default button, checked controls and the focus ring, while the quiet greys
+(shadcn's secondary and muted) stay grey. One caveat: the runtime derives an accent's ramp for the
+mode *it* resolved, so an application that uses accents should switch modes with
+`setLyraTheme({ mode })` (which writes `data-lr-theme`, honoured by the preset), not by toggling
+`.dark` alone. Tailwind users can point their `dark:` variant at `[data-lr-theme=dark]`.
+
+**`--lr-color-border-subtle`** is the decorative border tier the preset uses for its hairlines.
+Components draw dividers, card, table and section edges with it — never the only visible boundary of
+a control. Unset (Lyra's own look), it resolves to `--lr-color-border`, so nothing changes; set
+`--lr-theme-color-surface-border-subtle` to give decoration its own lighter tone. Form controls never
+read it.
+
+The preset sets theme inputs only, never a component hook. For shadcn's raised sidebar tone, opt
+`<lr-app-rail>` in with one line:
+
+```css
+lr-app-rail { --lr-app-rail-background: var(--lr-color-surface-raised); }
+```
+
+Try it in the `Look` toolbar menu on any story, or compare both looks side by side in
+[Theming/shadcn](?path=/story/theming-shadcn--shadcn).
 
 ## Where an override actually reaches
 

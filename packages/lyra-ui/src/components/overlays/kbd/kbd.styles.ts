@@ -32,7 +32,7 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
     padding: var(--lr-size-0-0625rem) var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: calc(var(--lr-radius) * 0.6);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
@@ -41,7 +41,7 @@ export const styles = css`
        flat label chip, echoing lr-chip/lr-checkbox's own bordered-box treatment. Its offset tracks
        the real border's own width (the border-width ladder, not a generic size token) so the two
        lines retheme together and keep reading as one continuous raised edge. */
-    box-shadow: inset 0 calc(-1 * var(--lr-border-width-thin)) 0 var(--lr-color-border);
+    box-shadow: inset 0 calc(-1 * var(--lr-border-width-thin)) 0 var(--lr-color-border-subtle);
   }
 
   .sep {

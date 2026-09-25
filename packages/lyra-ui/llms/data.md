@@ -2866,9 +2866,9 @@ icons; an item-level slot with the same name takes precedence.
 empty-state message shown when neither child model has any items.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
-`--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-text`, `--lr-radius`,
-`--lr-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)` since the host
-itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guide-color`,
+`--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-text`,
+`--lr-radius`, `--lr-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)`
+since the host itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guide-color`,
 `--indent-guide-offset`, `--indent-guide-style`, and `--indent-guide-width`.
 
 **Optional peer deps:** none.
@@ -2981,7 +2981,7 @@ parts at every rendered depth. Declarative children remain light-DOM hosts and c
 directly as `<lr-tree-item>` elements.
 
 **Themeable custom properties:** `--indent-size` (default `var(--lr-space-l)`, applied once per
-nesting depth), `--indent-guide-color` (default `var(--lr-color-border)`),
+nesting depth), `--indent-guide-color` (default `var(--lr-color-border-subtle)`),
 `--indent-guide-offset` (default `0`, the guide's block-axis inset at both ends),
 `--indent-guide-style` (default `solid`), and `--indent-guide-width` (default `0`); these mirrored
 properties are consumed directly by every `<lr-tree-item>` and may be set on an item or inherited
@@ -3493,7 +3493,7 @@ page gives it.
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
 `var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —
 `--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow-m`,
-`--lr-color-surface`, `--lr-color-border`, `--lr-radius`, `--lr-space-2xs`,
+`--lr-color-surface`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-space-2xs`,
 `--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.
@@ -3952,7 +3952,7 @@ each horizontal-overflow edge fade; forced-colors mode removes the masks while r
 scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
-(default `var(--lr-color-border)`), `--lr-timeline-marker-color` (default
+(default `var(--lr-color-border-subtle)`), `--lr-timeline-marker-color` (default
 `var(--lr-color-text-quiet)`, with a private default that changes per `variant`), and
 `--lr-timeline-active-ring-color`
 (defaults to the effective marker color). All five item hooks inherit from theme

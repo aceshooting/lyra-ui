@@ -680,6 +680,11 @@ Defer to `ci.yml` and `package.json#scripts` for when each runs:
   writes or loosens policy, and an existing tighter canary stays tighter unless separately reviewed.
 - `pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
 
+`check:border-subtle` (blocking, in `contract-policy` next to `check:hit-area`) fails any literal
+`--lr-color-border-subtle` or `--lr-theme-color-surface-border-subtle` in `src/components/forms/**`
+or `src/internal/form-control.styles.ts`: that tier is decorative and may sit below the 3:1 a
+control's boundary needs under WCAG 2.2 SC 1.4.11.
+
 `check:hit-area` (WCAG 2.5.8 tappable-size floor) and `check:numeric-guards` (finite-number guards
 on numeric properties) are now blocking parts of `contract-policy`; both currently pass with all
 known exceptions explicit. Don't assume a check doesn't exist just because it is not listed here —

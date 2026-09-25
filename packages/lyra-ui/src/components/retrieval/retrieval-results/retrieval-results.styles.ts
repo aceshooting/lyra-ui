@@ -26,7 +26,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     padding-inline: var(--lr-space-s);
     padding-block: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   lr-virtual-list::part(row) {
     display: flex;
@@ -41,7 +41,7 @@ export const styles = css`
      it, which this component draws with the same separator its rows use. */
   lr-virtual-list::part(group) {
     box-sizing: border-box;
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part~='select'],
   lr-virtual-list::part(select) {

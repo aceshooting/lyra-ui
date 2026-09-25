@@ -196,8 +196,9 @@ fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (defau
 `var(--lr-color-brand-quiet)` — background of every rendered `[part="table"]` header cell),
 `--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`,
-`--lr-color-text-quiet`, `--lr-radius`.
+`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`
+(blockquote bar), `--lr-color-border-subtle` (table cell rules), `--lr-color-text-quiet`,
+`--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
 `loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
@@ -505,7 +506,7 @@ role/status colors or borders. The named hooks are the stable, narrow geometry c
 set once above a whole transcript. They are consumed as inline `var()` fallbacks rather than
 declared on `:host`, so the host cannot shadow an inherited value.
 
-Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
+Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
 `--lr-color-danger-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`,
 `--lr-transition-fast`, and `--lr-transition-ambient` (default `1.8s ease-in-out`) — the
@@ -1411,7 +1412,8 @@ without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity
 literal: set a length to retune it, or `none` to let the control fill its container the way
 `lr-select` does. Like every other name here it is read as a `var()` fallback and never declared on
 `:host`, so a value set on `:root` or any ancestor still reaches it. Plus shared tokens —
-`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`,
+`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
+`--lr-color-border-subtle` (the `provider-badge` separator), `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
 
@@ -1420,7 +1422,9 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-model-select-radius`, which still wins when set.
+`--lr-model-select-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 **Optional peer deps:** none.
 
@@ -1931,7 +1935,7 @@ line marked by `highlight-lines` or a `line-range` entry in `highlights`, in bot
 dark-theme rendering paths), `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-code-block-language-color` (default `var(--lr-color-brand)`) — the header `language` pill's
 background and text color, independent of the active-line outline above — plus shared tokens
-`--lr-color-border`, `--lr-radius`,
+`--lr-color-border-subtle`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in
@@ -2223,7 +2227,7 @@ card. `layout="compact"` uncaps the card by default and reads the same name, so 
 compact card too. The panel also sets `--lr-model-select-max-inline-size: none` on its own
 `[part="model-row"]`, so the nested selector fills the row rather than stopping at its standalone
 24rem ceiling — set that name on the row to re-cap it. Otherwise it consumes shared tokens
-`--lr-space-l/-m/-s/-xs`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
+`--lr-space-l/-m/-s/-xs`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-text-quiet`.
 
 **Optional peer deps:** none — it composes the library's own `<lr-model-select>` and `<lr-slider>`
@@ -3190,7 +3194,7 @@ describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`
 
 The anchored breakdown tooltip is a floating surface and paints from the **shared overlay-surface
 family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`),
-`--lr-overlay-border` (default `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-border` (default `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this surface together with every other floating surface in the
 library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
@@ -3591,7 +3595,8 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-overlay-surface` — Shared floating-surface fill, on the listbox. Default:
   `var(--lr-color-surface-overlay)`.
 - `--lr-overlay-border` — Shared floating-surface edge colour, on the listbox. Default:
-  `var(--lr-color-border)`.
+  `var(--lr-color-border)` — the control tier, not the decorative `var(--lr-color-border-subtle)`
+  floating panels default to, because the listbox belongs to the form control it opens from.
 - `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
   `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
@@ -4027,7 +4032,7 @@ values fall back to the default and negative values clamp to `0`. Collision math
 
 The toolbar is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 

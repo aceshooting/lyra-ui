@@ -63,7 +63,7 @@ export const styles = css`
     /* Modal-panel surface, not the page surface: in dark mode the two resolve to the same
        near-black and the dialog reads as a scrim with floating text. */
     background: var(--lr-color-surface-overlay);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges --
        the same role as lr-dialog, so the same elevation. */
@@ -90,7 +90,7 @@ export const styles = css`
     max-inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-space-m) var(--lr-space-l);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="title"] {
     display: flex;
@@ -252,7 +252,7 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lr-space-s);
     padding: var(--lr-space-m) var(--lr-space-l);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="footer"][hidden] {
     display: none;

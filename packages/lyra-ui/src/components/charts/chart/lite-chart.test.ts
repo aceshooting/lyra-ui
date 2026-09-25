@@ -58,6 +58,21 @@ it('does not acquire the canvas-only chart hover-outline token', async () => {
   expect(getComputedStyle(mark).outlineColor).to.not.equal('rgb(1, 2, 3)');
 });
 
+it('strokes default grid lines in the subtle border tier', async () => {
+  const el = await mount(html`
+    <lr-lite-chart
+      style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9);"
+      .labels=${['A', 'B']}
+      .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+    ></lr-lite-chart>
+  `);
+  const gridLines = [...el.shadowRoot!.querySelectorAll<SVGGraphicsElement>('[part="grid-line"]')];
+  expect(gridLines.length).to.be.greaterThan(0);
+  expect(gridLines.map((line) => getComputedStyle(line).stroke)).to.deep.equal(
+    gridLines.map(() => 'rgb(1, 2, 3)'),
+  );
+});
+
 describe('lite chart family-contract regressions', () => {
   it('drops dataset entries without array data while retaining a valid rendered sibling', async () => {
     const datasets = [

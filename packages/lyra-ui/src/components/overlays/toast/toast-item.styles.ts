@@ -66,7 +66,7 @@ export const styles = css`
        */
     background: var(--lr-color-surface-overlay);
     color: var(--lr-color-text);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-toast-item-radius, var(--lr-radius));
     /* Modal layer, but a small unscrimmed float rather than a page-blocking panel -- the lower of
        the two modal steps. */

@@ -23,7 +23,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-space-2xs);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
 
   [part='tab'] {

@@ -14,8 +14,14 @@
 
    `lr-base` is reserved for any future element-level reset; `lr-utilities` and `lr-overrides` are
    named so an application can opt its own layers into a defined position relative to Lyra's rather
-   than inventing one. Anything an app leaves unlayered still outranks all four. */
-@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+   than inventing one. `lr-theme-preset` holds an optional look preset (themes/shadcn.css), which
+   sits above these base tokens and below utilities and overrides. Anything an app leaves unlayered
+   still outranks all five.
+
+   Every Lyra stylesheet that declares an order repeats this exact statement. Order is fixed by the
+   first statement the browser sees, and a name missing from it is appended at the END -- so one
+   stale copy loading first would push `lr-theme-preset` above `lr-overrides`. */
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 
 @layer lr-theme {
   :root,
@@ -26,6 +32,10 @@
     --lr-theme-color-text-normal: #1a1a1a;
     --lr-theme-color-text-quiet: #6b7280;
     --lr-theme-color-surface-border: #8a8a90;
+    /* --lr-theme-color-surface-border-subtle (decorative dividers and card/table edges) is
+       deliberately not declared here; it falls back to --lr-color-border so dividers keep following
+       --lr-theme-color-surface-border; set it only for decoration, never for a control boundary
+       (WCAG 2.2 SC 1.4.11). */
     --lr-theme-color-border-strong: #4b5563;
     /* semantic grid: generated -- see scripts/generate-palette.mjs */
     --lr-theme-color-brand-fill-quiet: #e5efff;

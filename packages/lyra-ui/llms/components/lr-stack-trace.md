@@ -84,10 +84,10 @@ hover/focus, internal-toggle, and copy-button-hover accent, plus the two density
 `var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s while
 `compact`). The scoped color hooks avoid changing
 the shared quiet/brand tokens used by surrounding UI. `--lr-stack-trace-background` (default
-`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-stack-trace-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; `frame="plain"` still removes all three outright. Plus shared tokens
-`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
+`--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.
 

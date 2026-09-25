@@ -1751,7 +1751,7 @@ function chartDatasetStack(dataset: unknown): string | undefined {
  *   host's minimum block size. A visible data table or wrapping DOM legend grows the host in
  *   normal flow instead of overlapping following content. `height` supplies a private fallback;
  *   this public token always wins when a consumer sets it.
- * @cssprop [--lr-chart-grid-color=var(--lr-color-border)] - Grid-line color. Resolved via
+ * @cssprop [--lr-chart-grid-color=var(--lr-color-border-subtle)] - Grid-line color. Resolved via
  *   `getComputedStyle` on every draw (Chart.js paints to canvas and cannot consume `var()`).
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Axis tick-label color; also used
  *   for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token).
@@ -1793,8 +1793,9 @@ function chartDatasetStack(dataset: unknown): string | undefined {
  *   `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
  *   `[part='canvas']` hover-state outline.
- * @cssprop [--lr-chart-canvas-hover-outline-color=var(--lr-chart-grid-color)] - Color of the
- *   `[part='canvas']` hover-state outline.
+ * @cssprop [--lr-chart-canvas-hover-outline-color=var(--lr-chart-grid-color, var(--lr-color-border))] - Color of the
+ *   `[part='canvas']` hover-state outline. Follows a set `--lr-chart-grid-color`; left unset, it
+ *   stays on the control-grade `--lr-color-border` instead of the grid lines' decorative default.
  * @cssprop [--lr-chart-pattern-step=var(--lr-space-2xs)] - Tile size of the texture painted on
  *   `[part='legend-swatch']` while `forced-colors: active` matches, where every series collapses to
  *   one system color and the stripe/crosshatch pattern becomes the only channel keeping series

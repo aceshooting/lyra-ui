@@ -333,7 +333,7 @@ function isInertWithin(node: Element, root: Element): boolean {
  * @slot expand-icon - Default icon shown by expanded items; an item-level slot takes precedence.
  * @slot collapse-icon - Default icon shown by collapsed items; an item-level slot takes precedence.
  * @cssprop [--indent-size=var(--lr-space-l)] - Indentation step for nested items.
- * @cssprop [--indent-guide-color=var(--lr-color-border)] - Indentation guide color.
+ * @cssprop [--indent-guide-color=var(--lr-color-border-subtle)] - Indentation guide color.
  * @cssprop [--indent-guide-offset=0] - Block-axis inset for indentation guides.
  * @cssprop [--indent-guide-style=solid] - Indentation guide border style.
  * @cssprop [--indent-guide-width=0] - Indentation guide width.

@@ -100,7 +100,7 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 
 The anchored detail tooltip is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -617,7 +617,7 @@ tool list's mouse-hover preview on `[part="body"]` has its own four-longhand out
 `transparent` to opt out entirely), and `--lr-tool-select-dialog-body-hover-outline-offset`
 (default `calc(-1 * var(--lr-border-width-thin))`, kept inward so the ring isn't clipped by the
 body's own scrolling). Unset, all four resolve to the rule's previous literal paint. Plus shared
-`--lr-space-*`, `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`,
+`--lr-space-*`, `--lr-color-surface/-border/-border-subtle/-text/-text-quiet/-warning`, `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-checkbox>` and `<lr-switch>`, both bundled
@@ -749,7 +749,7 @@ pending duration/toggle accent without changing the shared brand token;
 padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
 `var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
 `--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
-`--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
+`--lr-thinking-panel-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
@@ -759,7 +759,7 @@ four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (def
 `transparent` to opt out entirely), and `--lr-thinking-panel-body-hover-outline-offset` (default
 `calc(-1 * var(--lr-focus-ring-offset))`). Unset, all four resolve to the rule's previous literal
 paint. Plus shared
-`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
+`--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
 
@@ -900,10 +900,10 @@ hover/focus, internal-toggle, and copy-button-hover accent, plus the two density
 `var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s while
 `compact`). The scoped color hooks avoid changing
 the shared quiet/brand tokens used by surrounding UI. `--lr-stack-trace-background` (default
-`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-stack-trace-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; `frame="plain"` still removes all three outright. Plus shared tokens
-`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
+`--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.
 
@@ -1047,8 +1047,8 @@ without changing error text or other danger-coloured surfaces), and
 `--lr-tool-approval-dialog-hover-border-color` (default `var(--lr-color-brand)` — border color of
 the raw-JSON args editor on hover, giving mouse users the same "this is editable" affordance every
 other text-entry surface in the library provides), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
-`--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
+`--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-color-border-subtle`,
+`--lr-radius`, `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-json-viewer>`, a bundled dependency of this
@@ -1433,12 +1433,12 @@ whenever the slot has no assigned content), `body`.
 than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
 not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
 `--lr-result-card-background` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
-(default `var(--lr-color-border)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
+(default `var(--lr-color-border-subtle)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
 the card chrome without a `::part(base)` override. The border-color hook also colors
 `[part="header"]`'s divider, so a retuned card doesn't strand a mismatched interior rule;
 `frame="plain"` still drops the outer chrome and that divider.
-Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
-`--lr-radius`.
+Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border-subtle`,
+`--lr-color-surface`/`-text`, `--lr-radius`.
 
 ### `lr-result-field`
 
@@ -1676,7 +1676,7 @@ var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
 status icons without changing shared status tokens. `--lr-task-list-background` (default
-`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
@@ -1759,7 +1759,7 @@ viewport's block size; not declared on `:host`, so it is inherited from the host
 `--lr-terminal-surface-color` (default `var(--lr-color-surface-raised)`) controls the card-frame
 background and the fallback foreground for inverse ANSI segments without an explicit background;
 `frame="plain"` remains transparent. `--lr-terminal-border-color` (default
-`var(--lr-color-border)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
+`var(--lr-color-border-subtle)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
 chrome — the border-color hook also colors the toolbar/log divider `frame="plain"` keeps.
 `--lr-terminal-surface-color` keeps its established name; nothing was renamed.
 `--lr-terminal-toolbar-button-hover-bg` (default
@@ -1995,7 +1995,7 @@ by selector from outside the shadow root it renders into (the plain or the inter
 `lr-table`'s identical `cell(row)`-anchor hook; set it to `revert` for the UA default link color.
 The card chrome itself is retunable the same way:
 `--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
-`--lr-activity-feed-border-color` (default `var(--lr-color-border)`) colors both its border and the
+`--lr-activity-feed-border-color` (default `var(--lr-color-border-subtle)`) colors both its border and the
 header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
 `var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
 `::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the
@@ -2069,7 +2069,7 @@ badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
 `[part="base"]` padding while `compact`. `--lr-commit-card-border-color` (default
-`var(--lr-color-border)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
+`var(--lr-color-border-subtle)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
 card's border and corner radius, and `--lr-commit-card-background` (default `transparent`) gives it
 a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
 you opt in. `frame="plain"` still removes the border and radius.
@@ -2597,7 +2597,7 @@ is unset. Like the other density/state properties in this family they are inline
 their point of use rather than `:host` declarations, so either can be set on the element _or on any
 ancestor_ — one rule on a run list retunes every compact run inside it.
 `--lr-agent-run-background` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
-(default `var(--lr-color-border)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
+(default `var(--lr-color-border-subtle)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
 `[part="base"]`'s card chrome without a `::part(base)` override; `frame="plain"` still removes all
 three outright.
 

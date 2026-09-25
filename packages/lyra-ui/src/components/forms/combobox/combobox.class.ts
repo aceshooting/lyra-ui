@@ -639,7 +639,8 @@ export type LyraComboboxSourceErrorEvent =
  * on the listbox popup. This is the public arm the popup never had: retinting it no longer means
  * retinting the page surface every card and input reads.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
- * the listbox popup.
+ * the listbox popup. Unlike a floating panel's decorative edge, it defaults to
+ * the control tier: this popup belongs to the control it opens from.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  * listbox popup.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored listbox

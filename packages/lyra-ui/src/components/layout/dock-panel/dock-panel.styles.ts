@@ -48,7 +48,7 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow: hidden;
   }
 

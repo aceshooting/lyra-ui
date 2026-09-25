@@ -120,7 +120,9 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * can keep its own action buttons.
  * @cssprop [--spacing=var(--lr-space-m)] - Space around and between card sections.
  * @cssprop [--padding=var(--spacing,var(--lr-space-m))] - Shoelace-compatible section padding.
- * @cssprop [--border-color=var(--lr-color-border)] - Shoelace-compatible border color.
+ * @cssprop [--border-color=var(--lr-color-border-subtle)] - Shoelace-compatible border color.
+ *   Unset, an `actionable` or linked (`href`) card's outer edge falls back to `--lr-color-border`
+ *   instead: that edge is then the whole-card control's only visible boundary.
  * @cssprop [--border-radius=var(--lr-radius)] - Shoelace-compatible corner radius.
  * @cssprop [--border-width=var(--lr-border-width-thin)] - Shoelace-compatible border width.
  * @cssprop [--lr-card-outlined-bg=var(--lr-color-surface)] - Background of the DEFAULT

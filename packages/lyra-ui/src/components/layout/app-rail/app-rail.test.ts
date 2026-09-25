@@ -1768,6 +1768,33 @@ describe("resizable", () => {
     expect(el.shadowRoot!.querySelector('[part="resizer"]') == null).to.be.true;
   });
 
+  it("keeps the rail edge on the control-grade border only while the resizer renders", async () => {
+    // The resizer-track is transparent at rest, so a rendered resizer's only visible mark is the
+    // rail's own inline-end edge (WCAG 2.2 SC 1.4.11); every other rail keeps the subtle tier.
+    // Distinct theme inputs stop the two border tiers resolving to the same colour.
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="
+        --lr-theme-color-surface-border: rgb(4, 5, 6);
+        --lr-theme-color-surface-border-subtle: rgb(1, 2, 3);
+      ">
+        <lr-app-rail></lr-app-rail>
+        <lr-app-rail resizable></lr-app-rail>
+        <lr-app-rail resizable force-mode="icon-only"></lr-app-rail>
+      </div>
+    `);
+    const rails = [...wrapper.querySelectorAll<LyraAppRail>("lr-app-rail")];
+    await Promise.all(rails.map((rail) => rail.updateComplete));
+    const [plain, resizable, iconOnly] = rails;
+    const edge = (rail: LyraAppRail) =>
+      getComputedStyle(rail.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!)
+        .borderInlineEndColor;
+
+    expect(resizable!.shadowRoot!.querySelector('[part="resizer"]') != null).to.be.true;
+    expect(edge(plain!)).to.equal("rgb(1, 2, 3)");
+    expect(edge(resizable!)).to.equal("rgb(4, 5, 6)");
+    expect(edge(iconOnly!)).to.equal("rgb(1, 2, 3)");
+  });
+
   it("emits a cancelable resize request before the existing non-cancelable committed resize event", async () => {
     const el = (await fixture(
       html`<lr-app-rail

@@ -1700,7 +1700,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-activity-feed
         expanded
-        style="--lr-activity-feed-background: var(--lr-color-surface); --lr-activity-feed-border-color: var(--lr-color-border); --lr-activity-feed-radius: var(--lr-radius)"
+        style="--lr-activity-feed-background: var(--lr-color-surface); --lr-activity-feed-border-color: var(--lr-color-border-subtle); --lr-activity-feed-radius: var(--lr-radius)"
         .entries=${makeEntries(1)}
       ></lr-activity-feed>
     `)) as LyraActivityFeed;
@@ -1715,6 +1715,18 @@ describe('card chrome theming hooks', () => {
     expect(getComputedStyle(part(control, 'body')).borderTopColor).to.equal(
       getComputedStyle(part(tokened, 'body')).borderTopColor,
     );
+  });
+
+  it('draws the card edge and divider on the decorative --lr-color-border-subtle tier', async () => {
+    const el = (await fixture(html`
+      <lr-activity-feed
+        expanded
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+        .entries=${makeEntries(1)}
+      ></lr-activity-feed>
+    `)) as LyraActivityFeed;
+    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(7, 8, 9)');
   });
 
   it('is accessible with the card repainted and entries rendered', async () => {

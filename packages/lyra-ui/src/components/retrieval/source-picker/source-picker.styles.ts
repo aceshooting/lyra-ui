@@ -15,7 +15,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     padding-block: var(--lr-space-xs);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="select-all-control"] {
     --lr-checkbox-checked-bg: var(

@@ -89,7 +89,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     align-items: center;
     padding: var(--lr-space-s);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part='evidence'] q {
     min-inline-size: 0;

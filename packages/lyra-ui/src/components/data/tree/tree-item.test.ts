@@ -836,6 +836,22 @@ it('applies all five mirrored indentation custom properties on the item that ren
   expect(computed.borderInlineEndWidth).to.equal('3px');
 });
 
+it('defaults the indentation guide to the subtle border while the checkbox keeps the control border', async () => {
+  const el = (await fixture(html`
+    <lr-tree-item
+      label="Nested item"
+      style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3); --indent-guide-width: 1px"
+    ></lr-tree-item>
+  `)) as LyraTreeItem;
+  configureOwnedItem(el, { depth: 2, selection: 'multiple' });
+  await el.updateComplete;
+
+  const indentation = el.shadowRoot!.querySelector<HTMLElement>('[part="indentation"]')!;
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[part~="checkbox__control"]')!;
+  expect(getComputedStyle(indentation).borderInlineEndColor, 'indent guide').to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(control).borderTopColor, 'checkbox boundary').to.equal('rgb(4, 5, 6)');
+});
+
 it('clamps owner set size to a positive integer while preserving the ARIA -1 sentinel', async () => {
   const el = (await fixture(html`<lr-tree-item .item=${item}></lr-tree-item>`)) as LyraTreeItem;
 

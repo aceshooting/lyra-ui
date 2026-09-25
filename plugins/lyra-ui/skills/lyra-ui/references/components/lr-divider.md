@@ -24,8 +24,10 @@ A semantic separator: renders `<hr part="base" role="separator" aria-orientation
 
 **Events:** none. **Slots:** none. **CSS parts:** `base`.
 
-**Themeable custom properties:** `--color` (falls back to `--lr-color-border`), `--width` (falls
-back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied on the cross axis).
+**Themeable custom properties:** `--color` (falls back to `--lr-color-border-subtle`, the
+decorative-edge token, which itself resolves to `--lr-color-border` unless a theme sets a subtle
+border), `--width` (falls back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied
+on the cross axis).
 
 The host is `display: block` when horizontal and `display: inline-block; block-size: 100%` when
 vertical, so a vertical divider fills its flex/grid row's height with no extra CSS — but it needs a

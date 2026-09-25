@@ -61,6 +61,7 @@ it('publishes a curated subset rather than the whole resolved layer', () => {
     '--lr-color-surface',
     '--lr-color-text',
     '--lr-color-border',
+    '--lr-color-border-subtle',
     '--lr-color-brand',
     '--lr-color-brand-fill-loud',
     '--lr-color-brand-on-loud',
@@ -169,6 +170,28 @@ it('re-derives the resolved layer on a subtree that carries a mode scope', async
   expect(getComputedStyle(scope).getPropertyValue('--lr-color-brand').trim()).to.equal('rgb(4, 5, 6)');
   expect(getComputedStyle(child).getPropertyValue('--lr-color-brand').trim()).to.equal('rgb(4, 5, 6)');
   expect(getComputedStyle(card).getPropertyValue('--lr-color-brand').trim()).to.equal('rgb(4, 5, 6)');
+});
+
+it('resolves the decorative border tier to --lr-color-border until its own input is set', async () => {
+  const scope = await fixture<HTMLElement>(html`
+    <div>
+      <div id="dark" class="lr-dark"></div>
+      <div id="themed" class="lr-light" style="--lr-theme-color-surface-border-subtle: rgb(4, 5, 6)"></div>
+    </div>
+  `);
+  const read = (element: Element, name: string) => getComputedStyle(element).getPropertyValue(name).trim();
+  const root = document.documentElement;
+  const dark = scope.querySelector('#dark')!;
+  const themed = scope.querySelector('#themed')!;
+  expect(read(root, '--lr-color-border-subtle')).to.equal(read(root, '--lr-color-border'));
+  expect(read(dark, '--lr-color-border-subtle')).to.equal(read(dark, '--lr-color-border'));
+  expect(read(dark, '--lr-color-border'), 'the dark scope must really be a different mode').to.not.equal(
+    read(root, '--lr-color-border'),
+  );
+  expect(read(themed, '--lr-color-border-subtle')).to.equal('rgb(4, 5, 6)');
+  expect(read(themed, '--lr-color-border'), 'the control border must not follow the decorative input').to.equal(
+    read(root, '--lr-color-border'),
+  );
 });
 
 // --- The media overrides have to survive the OS dark route -----------------------------

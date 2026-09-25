@@ -9,7 +9,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
@@ -34,7 +34,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-m);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="event"]:last-child {
     border-block-end: none;

@@ -246,7 +246,8 @@ without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity
 literal: set a length to retune it, or `none` to let the control fill its container the way
 `lr-select` does. Like every other name here it is read as a `var()` fallback and never declared on
 `:host`, so a value set on `:root` or any ancestor still reaches it. Plus shared tokens —
-`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`,
+`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
+`--lr-color-border-subtle` (the `provider-badge` separator), `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
 
@@ -255,7 +256,9 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-model-select-radius`, which still wins when set.
+`--lr-model-select-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 **Optional peer deps:** none.
 

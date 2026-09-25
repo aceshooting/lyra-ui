@@ -84,7 +84,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-s);
     padding: 0 var(--lr-space-m) var(--lr-space-m);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     padding-block-start: var(--lr-space-m);
     min-inline-size: 0;
     overflow-wrap: anywhere;

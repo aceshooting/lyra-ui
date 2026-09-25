@@ -31,7 +31,7 @@ export const styles = css`
     padding: var(--lr-space-xs);
     overflow: auto;
     list-style: none;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }

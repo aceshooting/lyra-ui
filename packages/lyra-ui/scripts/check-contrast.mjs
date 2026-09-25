@@ -15,15 +15,18 @@
 // held to 3:1 would not be quiet, and forcing it there would leave the library with no subtle rule
 // at all. The rule is therefore enforced on the tokens that DO identify a control, and the exemption
 // is documented so nobody reaches for `border-quiet` as a control's only boundary.
+// The opt-in look presets under `src/themes/*.css` are held to the same guarantees, measured against
+// the theme a consumer actually gets from theme.css + that preset -- see the section at the end.
 // Run: node scripts/check-contrast.mjs
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const palettePath = join(packageDir, 'src', 'internal', 'tokens', 'palette.styles.ts');
 const themePath = join(packageDir, 'src', 'theme.css');
+const themePresetsDir = join(packageDir, 'src', 'themes');
 const baseTokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
 const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
 
@@ -416,10 +419,200 @@ for (const [label, themeRamp, fallbackRamp, stripPrefix] of [
   }
 }
 
+// --- opt-in look presets (src/themes/*.css) -------------------------------------------------------
+// A preset replaces the page surfaces as well as the colours drawn on them, so every guarantee above
+// has to be re-established against the theme a consumer actually gets: theme.css's values for each
+// mode with the preset's values laid over them. Checked on that merged map rather than on the
+// preset's own declarations alone, because darkening the page surface changes the contrast of every
+// role the preset did NOT touch as well.
+//
+// Guarantees, in both modes and on every route a mode block can apply by (PRESET_ROUTES, below):
+//   - text-normal and text-quiet clear 4.5:1 on surface-default, surface-raised and surface-overlay
+//   - every `on-<e>` clears 4.5:1 against its paired `fill-<e>`
+//   - every role's `fill-loud` clears 4.5:1 as TEXT on surface-default, surface-raised and its own
+//     role's fill-quiet: components paint error and link text with it (`--lr-color-danger`,
+//     `--lr-color-brand`), and quiet-tinted surfaces such as a callout set their body text in it
+//   - every role's border-normal/border-loud, and the control borders (surface-border,
+//     border-strong), clear 3:1 on surface-default; the two control borders also on surface-raised,
+//     since controls sit on cards and panels as often as on the page
+//   - the focus colour clears 3:1 on surface-default and surface-raised
+//   - the chart series (3:1) and the terminal palette (4.5:1) still clear their floors against the
+//     preset's surfaces
+// Exempt, as `border-quiet` is above and for the same reason: `surface-border-subtle`. It exists for
+// purely decorative edges (dividers, card and table rules), never a control's only boundary, and a
+// preset may give it an alpha value that has no single contrast ratio anyway.
+//
+// A value this gate must measure but cannot reduce to an opaque hex (an alpha colour, an unresolved
+// var()) is a finding, not a skip: a check that silently measures nothing is how every ramp in this
+// file shipped a failure before it existed.
+const PRESET_EXEMPT = new Set(['--lr-theme-color-surface-border-subtle']);
+const PRESET_ROLES = ['brand', 'success', 'warning', 'danger', 'neutral'];
+const PRESET_TIERS = ['quiet', 'normal', 'loud'];
+
+// The routes a preset's mode block can reach the page by, and the theme.css mode underneath each.
+// `:root`/`.lr-light`/`[data-lr-theme='light']` and `.lr-dark`/`[data-lr-theme='dark']` switch
+// theme.css as well, so there the block lies over theme.css's SAME mode. A preset's `.dark` and
+// `.light` selectors do not: theme.css never answers to those class names, so a bare `.dark` lays the
+// dark block over theme.css's LIGHT values, and a `.light` region inside a dark page lays the light
+// block over theme.css's DARK ones. Every mode-dependent input a preset leaves out keeps the other
+// mode's value on those routes -- a light danger tint under dark danger text, the light chart and
+// terminal ramps on a near-black page -- which is why they are measured too, and why a preset must
+// re-declare every input theme.css's dark block sets (checked below as well).
+const PRESET_ROUTES = [
+  { preset: 'light', base: 'light', label: 'light' },
+  { preset: 'dark', base: 'dark', label: 'dark' },
+  { preset: 'dark', base: 'light', label: 'dark via .dark (theme.css stays light)' },
+  { preset: 'light', base: 'dark', label: 'light via .light inside a dark page (theme.css stays dark)' },
+];
+
+/**
+ * The innermost `selector-list { declarations }` rules of an authored preset, comments removed. A
+ * preset is one `@layer` block of flat rules, so an innermost-brace match is exact here.
+ */
+function readPresetRules(text) {
+  const source = text.replace(/\/\*[\s\S]*?\*\//g, '');
+  return [...source.matchAll(/([^{};]+)\{([^{}]*)\}/g)].map((match) => ({
+    selectors: match[1].split(',').map((selector) => selector.trim()),
+    declarations: new Map(
+      [...match[2].matchAll(/(--lr-theme-[a-z0-9-]+)\s*:\s*([^;]+);/gi)].map((declaration) => [
+        declaration[1],
+        declaration[2].trim().replace(/\s+/g, ' '),
+      ]),
+    ),
+  }));
+}
+
+/** Resolves one preset value to an opaque lowercase `#rrggbb`, or `undefined` when it has none. */
+function resolvePresetValue(value, presetBlock, baseMode, trail = []) {
+  const hex = value.match(/^#([0-9a-f]{6})$/i);
+  if (hex) return `#${hex[1].toLowerCase()}`;
+  const alias = value.match(/^var\(\s*(--lr-theme-[a-z0-9-]+)\s*(?:,\s*(.+))?\)$/i);
+  if (!alias || trail.includes(alias[1])) return undefined;
+  if (presetBlock.has(alias[1])) return resolvePresetValue(presetBlock.get(alias[1]), presetBlock, baseMode, [...trail, alias[1]]);
+  if (baseMode.has(alias[1])) return baseMode.get(alias[1]);
+  return alias[2] ? resolvePresetValue(alias[2].trim(), presetBlock, baseMode, trail) : undefined;
+}
+
+const baseThemeInputs = readThemeRamps(themeText, '');
+// Every input theme.css's dark rule declares (the consumer-scope focus-ring rule also names .lr-dark,
+// but it sits on :root too and declares no --lr-theme-* input).
+const themeDarkInputs = [
+  ...(readPresetRules(themeText).find((rule) => rule.selectors.includes('.lr-dark') && !rule.selectors.includes(':root'))
+    ?.declarations.keys() ?? []),
+];
+if (themeDarkInputs.length === 0) findings.push('theme.css: no dark rule parsed -- the preset completeness check measured nothing');
+const presetFiles = readdirSync(themePresetsDir).filter((name) => name.endsWith('.css')).sort();
+if (presetFiles.length === 0) findings.push('src/themes/ contains no preset -- the preset checks below measured nothing');
+
+for (const file of presetFiles) {
+  const rules = readPresetRules(readFileSync(join(themePresetsDir, file), 'utf8'));
+  const blocks = {
+    light: rules.find((rule) => rule.selectors.includes(':root'))?.declarations,
+    dark: rules.find((rule) => rule.selectors.includes('.lr-dark'))?.declarations,
+  };
+  for (const [mode, block] of Object.entries(blocks)) {
+    if (!block || block.size === 0) {
+      findings.push(`themes/${file}: no ${mode} block parsed -- the file shape changed`);
+      continue;
+    }
+    const missing = themeDarkInputs.filter((token) => !block.has(token));
+    if (missing.length) {
+      findings.push(
+        `themes/${file} ${mode}: does not re-declare ${missing.length} input(s) theme.css sets per mode ` +
+          `(${missing.join(', ')}). theme.css never answers to .dark/.light, so under those selectors ` +
+          `each keeps the OTHER mode's value -- copy theme.css's value for this mode into the block`,
+      );
+    }
+  }
+  const checksBefore = checks;
+  for (const route of PRESET_ROUTES) {
+    const block = blocks[route.preset];
+    if (!block || block.size === 0) continue;
+    const mode = route.label;
+    const base = baseThemeInputs[route.base];
+    const effective = new Map(base);
+    for (const [token, value] of block) {
+      const resolved = resolvePresetValue(value, block, base);
+      if (resolved) {
+        effective.set(token, resolved);
+      } else {
+        effective.delete(token);
+      }
+    }
+    const unverifiable = new Set();
+    const read = (token) => {
+      const value = effective.get(token);
+      if (!value && !unverifiable.has(token)) {
+        unverifiable.add(token);
+        findings.push(
+          `themes/${file} ${mode}: ${token} (${block.get(token) ?? 'undeclared'}) does not resolve to an opaque ` +
+            'colour, so its contrast cannot be verified -- use a hex value, or document it as exempt',
+        );
+      }
+      return value;
+    };
+    const measure = (foreground, background, floor, rule) => {
+      if (PRESET_EXEMPT.has(foreground)) return;
+      const fg = read(foreground);
+      const bg = read(background);
+      if (!fg || !bg) return;
+      checks += 1;
+      const ratio = contrastRatio(fg, bg);
+      if (ratio < floor) {
+        findings.push(
+          `themes/${file} ${mode}: ${foreground} (${fg}) on ${background} (${bg}) is ${ratio.toFixed(2)}:1, ` +
+            `below ${rule}'s ${floor}:1`,
+        );
+      }
+    };
+
+    for (const text of ['--lr-theme-color-text-normal', '--lr-theme-color-text-quiet']) {
+      for (const surface of ['default', 'raised', 'overlay']) {
+        measure(text, `--lr-theme-color-surface-${surface}`, TEXT_CONTRAST, 'WCAG 1.4.3');
+      }
+    }
+    for (const role of PRESET_ROLES) {
+      for (const tier of PRESET_TIERS) {
+        measure(`--lr-theme-color-${role}-on-${tier}`, `--lr-theme-color-${role}-fill-${tier}`, TEXT_CONTRAST, 'WCAG 1.4.3');
+      }
+      // The loud fill doubles as a text colour: error and link text on the page and on cards, and
+      // the body text of the quiet-tinted surfaces (callouts, badges, tags) drawn on its own role's
+      // quiet fill. Lyra's own grid clears all three with margin; a preset must not lose that.
+      for (const background of ['--lr-theme-color-surface-default', '--lr-theme-color-surface-raised', `--lr-theme-color-${role}-fill-quiet`]) {
+        measure(`--lr-theme-color-${role}-fill-loud`, background, TEXT_CONTRAST, 'WCAG 1.4.3');
+      }
+      for (const tier of ['normal', 'loud']) {
+        measure(`--lr-theme-color-${role}-border-${tier}`, '--lr-theme-color-surface-default', NON_TEXT_CONTRAST, 'WCAG 1.4.11');
+      }
+    }
+    for (const border of ['--lr-theme-color-surface-border', '--lr-theme-color-border-strong']) {
+      for (const surface of ['default', 'raised']) {
+        measure(border, `--lr-theme-color-surface-${surface}`, NON_TEXT_CONTRAST, 'WCAG 1.4.11');
+      }
+    }
+    for (const surface of ['default', 'raised']) {
+      measure('--lr-theme-color-focus', `--lr-theme-color-surface-${surface}`, NON_TEXT_CONTRAST, 'WCAG 1.4.11');
+    }
+    for (const token of effective.keys()) {
+      if (token.startsWith('--lr-theme-color-chart-')) {
+        measure(token, '--lr-theme-color-surface-default', NON_TEXT_CONTRAST, 'WCAG 1.4.11');
+      } else if (token.startsWith('--lr-theme-terminal-color-')) {
+        measure(token, '--lr-theme-color-surface-raised', TEXT_CONTRAST, 'WCAG 1.4.3');
+      } else if (token.startsWith('--lr-theme-terminal-bg-')) {
+        measure('--lr-theme-color-text-normal', token, TEXT_CONTRAST, 'WCAG 1.4.3');
+      }
+    }
+  }
+  if (checks === checksBefore) findings.push(`themes/${file}: no contrast pair was measured -- the gate checked nothing`);
+}
+
 if (findings.length) {
   console.error(`Contrast contract failed with ${findings.length} finding(s) across ${checks} check(s):`);
   for (const finding of findings) console.error(`- ${finding}`);
   console.error('\nRegenerate with `node scripts/generate-palette.mjs` after adjusting the ramp or the slot map.');
+  if (findings.some((finding) => finding.startsWith('themes/'))) {
+    console.error('A `themes/<file>` finding is a hand-authored preset value: adjust it in src/themes/<file>.');
+  }
   process.exitCode = 1;
 } else {
   console.log(`Contrast contract passed: ${checks} pairs checked across light and dark.`);

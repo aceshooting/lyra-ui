@@ -80,6 +80,76 @@ it('lets the composite --lr-focus-ring token style native controls', async () =>
   expect(style.outlineColor).to.equal('rgb(1, 2, 3)');
 });
 
+describe('native border roles', () => {
+  // Decorative rules (code-block frame, fieldset group edge, table row rule, hr) read the subtle
+  // border role; native controls keep the control border, their only resting boundary.
+  const decorative = ['#pre', '#fieldset', '#th', '#td', '#hr'] as const;
+  const controls = ['#input', '#button'] as const;
+
+  async function paint(style: string): Promise<HTMLElement> {
+    return fixture<HTMLElement>(html`
+      <div class="lr-native" style=${style}>
+        <pre id="pre">code</pre>
+        <fieldset id="fieldset"><legend>Group</legend></fieldset>
+        <table>
+          <tbody>
+            <tr><th id="th">Head</th><td id="td">Cell</td></tr>
+          </tbody>
+        </table>
+        <hr id="hr" />
+        <input id="input" aria-label="Name" />
+        <button id="button" type="button">Go</button>
+      </div>
+    `);
+  }
+
+  // A row rule is the cell's block-end edge; every other surface is read at its block-start edge.
+  function edgeColor(el: HTMLElement, selector: string): string {
+    const style = getComputedStyle(el.querySelector(selector)!);
+    return selector === '#th' || selector === '#td'
+      ? style.borderBottomColor
+      : style.borderTopColor;
+  }
+
+  it('paints decorative rules from the subtle theme input and controls from the control input', async () => {
+    const el = await paint(
+      '--lr-theme-color-surface-border: rgb(4, 5, 6); --lr-theme-color-surface-border-subtle: rgb(1, 2, 3);'
+    );
+    for (const selector of decorative) {
+      expect(edgeColor(el, selector), selector).to.equal('rgb(1, 2, 3)');
+    }
+    for (const selector of controls) {
+      expect(edgeColor(el, selector), selector).to.equal('rgb(4, 5, 6)');
+    }
+  });
+
+  it('falls back to the control border when no subtle input is set', async () => {
+    const el = await paint('--lr-theme-color-surface-border: rgb(4, 5, 6);');
+    for (const selector of [...decorative, ...controls]) {
+      expect(edgeColor(el, selector), selector).to.equal('rgb(4, 5, 6)');
+    }
+  });
+
+  it('prefers the resolved token layer over the theme inputs', async () => {
+    const el = await paint(
+      '--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-color-border-subtle: rgb(7, 8, 9); --lr-color-border: rgb(10, 11, 12);'
+    );
+    for (const selector of decorative) {
+      expect(edgeColor(el, selector), selector).to.equal('rgb(7, 8, 9)');
+    }
+    for (const selector of controls) {
+      expect(edgeColor(el, selector), selector).to.equal('rgb(10, 11, 12)');
+    }
+  });
+
+  it('follows an application-scoped control border when only that token is set', async () => {
+    const el = await paint('--lr-color-border: rgb(10, 11, 12);');
+    for (const selector of [...decorative, ...controls]) {
+      expect(edgeColor(el, selector), selector).to.equal('rgb(10, 11, 12)');
+    }
+  });
+});
+
 it("uses a logical quote edge that mirrors under RTL", async () => {
   const el = await fixture(html`
     <div class="lr-native" style="--lr-native-quote-border-width: 5px">

@@ -1156,6 +1156,57 @@ it('inherits linked hover/pressed hooks while direct host values still win', asy
   }
 });
 
+it('shifts the linked tile border while the pointer rests on hit-testable slotted content', async () => {
+  const el = (await fixture(html`<lr-stat
+    label="Memories"
+    value="128"
+    href="#memory-inventory"
+    style="--lr-transition-fast: 0s; --lr-color-border: rgb(4, 5, 6); --lr-stat-link-hover-border-color: rgb(1, 2, 3)"
+    ><span slot="sub">Details</span></lr-stat
+  >`)) as LyraStat;
+  const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  const sub = el.querySelector<HTMLElement>('[slot="sub"]')!;
+  expect(getComputedStyle(anchor).borderTopColor, 'resting border').to.equal('rgb(4, 5, 6)');
+  try {
+    // A public slot re-enables hit testing, so the pointer hovers the slotted span and the shared
+    // shell -- never the stretched anchor, which is the shell's other child. Only the
+    // .linked-shell:hover branch of the hover rule can reach the tile here.
+    await hoverUntilMatched(sub, 'the slotted content receives hover');
+    expect(anchor.matches(':hover'), 'anchor itself is not hovered').to.be.false;
+    await waitUntil(
+      () => getComputedStyle(anchor).borderTopColor === 'rgb(1, 2, 3)',
+      'hovering slotted content must shift the tile border like hovering the tile itself',
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('keeps a linked plain stat shadow-free while the pointer rests on slotted content', async () => {
+  const el = (await fixture(html`<lr-stat
+    frame="plain"
+    label="Memories"
+    value="128"
+    href="#memory-inventory"
+    style="--lr-transition-fast: 0s"
+    ><span slot="sub">Details</span></lr-stat
+  >`)) as LyraStat;
+  const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  const value = el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!;
+  const sub = el.querySelector<HTMLElement>('[slot="sub"]')!;
+  try {
+    await hoverUntilMatched(sub, 'the slotted content receives hover');
+    // The shell-hover underline proves the hover state landed before the shadow is read.
+    await waitUntil(
+      () => getComputedStyle(value).textDecorationLine.includes('underline'),
+      'shell hover must render the plain underline affordance',
+    );
+    expect(getComputedStyle(anchor).boxShadow).to.equal('none');
+  } finally {
+    await resetMouse();
+  }
+});
+
 it('keeps the focus ring on a linked plain stat (an outline needs no border)', async () => {
   const el = (await fixture(html`<lr-stat
     frame="plain"

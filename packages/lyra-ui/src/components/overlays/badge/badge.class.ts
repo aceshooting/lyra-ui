@@ -63,7 +63,7 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * grid; an inherited or direct public value remains authoritative.
  * @cssprop [--lr-badge-solid=var(--lr-color-fill-loud)] - Palette slot: the variant's loud fill,
  * used by `appearance="accent"`.
- * @cssprop [--lr-badge-edge=var(--lr-color-border)] - Palette slot: the variant's border color.
+ * @cssprop [--lr-badge-edge=var(--lr-color-border-subtle)] - Palette slot: the variant's border color.
  * Its private default follows each non-neutral `variant`'s loud fill; an inherited or direct
  * public value remains authoritative.
  * @cssprop [--lr-badge-ink=var(--lr-color-text)] - Palette slot: the variant's text color. Its

@@ -37,6 +37,13 @@
       ]
     },
     {
+      "name": "--lr-color-border-subtle",
+      "description": "Decorative edge colour for dividers and rules, card, panel, table and section edges, and separators between items. Resolves to --lr-color-border until --lr-theme-color-surface-border-subtle is set. Never the only visible boundary of a control or a meaningful graphic: those need 3:1 non-text contrast (WCAG 2.2 SC 1.4.11) and stay on --lr-color-border.",
+      "references": [
+        "--lr-theme-color-surface-border-subtle"
+      ]
+    },
+    {
       "name": "--lr-color-brand",
       "description": "Canonical shared component token for color brand.",
       "references": []
@@ -2553,6 +2560,11 @@
     {
       "name": "--lr-theme-color-surface-border",
       "description": "Canonical application theme input for color surface border.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-border-subtle",
+      "description": "Application input for --lr-color-border-subtle; falls back to the shared token default.",
       "references": []
     },
     {

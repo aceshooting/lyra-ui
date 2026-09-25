@@ -65,7 +65,7 @@ absent.
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-color-surface`/
-`-border`/`-text`/`-text-quiet`, `--lr-radius`, `--lr-font`.
+`-border-subtle`/`-text`/`-text-quiet`, `--lr-radius`, `--lr-font`.
 
 **Optional peer deps:** none.
 

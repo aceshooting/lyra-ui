@@ -895,7 +895,7 @@ footer rows, which are tighter than the body by default), `--lr-dialog-panel-dur
 `--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
 The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
 tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
-— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border)` — the panel edge and the
+— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border-subtle)` — the panel edge and the
 header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
 corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
 panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
@@ -1381,7 +1381,7 @@ absent.
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-color-surface`/
-`-border`/`-text`/`-text-quiet`, `--lr-radius`, `--lr-font`.
+`-border-subtle`/`-text`/`-text-quiet`, `--lr-radius`, `--lr-font`.
 
 **Optional peer deps:** none.
 
@@ -1739,7 +1739,7 @@ fallbacks. Arrow size is half the square's width. Rendering the arrow switches `
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`var(--lr-color-border-subtle)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
 edge but never the radius — its corners are already cut by its clip path. None of the four is
 declared on `:host`, so a single declaration on `:root` retints every floating surface in the
@@ -1747,6 +1747,18 @@ application, and the same declaration on one component's own ancestor scopes the
 subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from the modal tier
 `--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
 dialogs.
+
+**Edge tier.** The `var(--lr-color-border-subtle)` edge default is the decorative tier, shared by
+every floating panel — popover, dropdown and menu, detail and preview cards, the selection
+toolbar, the dialog panel. A panel's outline is not what identifies a control (WCAG 2.2 SC 1.4.11):
+the panel itself is not operable, the anchored shadow lifts it off the page, and every item inside
+identifies itself, so a theme may set `--lr-theme-color-surface-border-subtle` below 3:1 for a
+hairline edge. Popups that belong to a form control — the listboxes of `lr-select`,
+`lr-combobox`, `lr-locale-picker`, `lr-model-select`, `lr-voice-picker` and `lr-mention-popover`,
+and the `lr-color-picker` and `lr-time-input` panels — instead default to the control tier,
+`var(--lr-color-border)`, keeping the 3:1 boundary of the field they open from. A consumer
+`--lr-overlay-border` wins on both kinds. While the subtle input is unset the two tiers resolve to
+the same colour.
 
 **`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
@@ -2387,7 +2399,7 @@ _Palette — what `variant` chooses_ (new in 8.0.0): `--lr-badge-tint` (private 
 `var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
 variant's row of the semantic grid), `--lr-badge-solid` (private default
 `var(--lr-color-fill-loud)`, the loud fill used by `appearance="accent"`), `--lr-badge-edge`
-(private default `var(--lr-color-border)`, the border color), `--lr-badge-ink` (private default
+(private default `var(--lr-color-border-subtle)`, the border color), `--lr-badge-ink` (private default
 `var(--lr-color-text)`, the text color) and
 `--lr-badge-on-solid` (default `var(--lr-color-on-loud)`, the text color that stays legible on
 `--lr-badge-solid`). An inherited or direct public palette value remains authoritative. Neutral is

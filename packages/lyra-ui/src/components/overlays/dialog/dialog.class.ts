@@ -258,8 +258,8 @@ export interface LyraDialogEventMap {
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  *   on the panel. The same family every anchored popup now reads, so one declaration retints the
  *   dialog and the popups opened from it together.
- * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
- *   the panel and on the header's and footer's dividing rules.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
+ *   colour, on the panel and on the header's and footer's dividing rules.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  *   panel and on the close button.
  * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-xl)] - Elevation of a modal panel. A separate

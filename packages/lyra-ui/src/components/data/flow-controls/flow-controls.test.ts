@@ -455,6 +455,13 @@ describe('frame', () => {
     expect(chrome.boxShadow).to.not.equal('none');
   });
 
+  it('draws the card frame with the decorative --lr-color-border-subtle token', async () => {
+    const el = (await fixture(html`<lr-flow-controls
+      style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
+    ></lr-flow-controls>`)) as LyraFlowControls;
+    expect(getComputedStyle(baseOf(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
+  });
+
   it('drops border, background, shadow, padding and radius under frame="plain"', async () => {
     const el = (await fixture(html`<lr-flow-controls frame="plain"></lr-flow-controls>`)) as LyraFlowControls;
     expect(el.getAttribute('frame')).to.equal('plain');

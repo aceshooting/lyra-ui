@@ -1763,7 +1763,7 @@
             "name": "--lr-accordion-filled-outlined-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-accordion-outlined-bg",
@@ -1775,7 +1775,7 @@
             "name": "--lr-accordion-outlined-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           }
         ],
         "cssStates": [],
@@ -2565,7 +2565,7 @@
             "name": "--lr-activity-feed-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-activity-feed-compact-entry-gap",
@@ -3280,7 +3280,7 @@
             "name": "--lr-agent-run-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-agent-run-compact-gap",
@@ -8359,7 +8359,7 @@
             "name": "--lr-attachment-chip-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-attachment-chip-compact-font-size",
@@ -10638,7 +10638,7 @@
             "name": "--lr-badge-edge",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-badge-fill",
@@ -11695,7 +11695,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -11729,7 +11729,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -12383,7 +12383,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -12395,7 +12395,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -14355,7 +14355,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -14389,7 +14389,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -17342,7 +17342,7 @@
             "name": "--border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--border-radius",
@@ -19247,7 +19247,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -19281,7 +19281,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -24108,7 +24108,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -30600,7 +30600,7 @@
             "name": "--lr-commit-card-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-commit-card-compact-padding",
@@ -40682,7 +40682,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -41392,7 +41392,7 @@
             "name": "--color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--spacing",
@@ -44585,7 +44585,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -44619,7 +44619,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -45308,7 +45308,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -46710,7 +46710,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-max-inline-size",
@@ -49958,7 +49958,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -51984,7 +51984,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -63112,7 +63112,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -63146,7 +63146,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -72553,7 +72553,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -72587,7 +72587,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -73460,7 +73460,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -77820,7 +77820,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -92908,7 +92908,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -92942,7 +92942,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -93998,7 +93998,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -94032,7 +94032,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -95017,7 +95017,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-max-inline-size",
@@ -100641,7 +100641,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -100675,7 +100675,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -106524,7 +106524,7 @@
             "name": "--lr-result-card-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-result-card-compact-body-gap",
@@ -109736,7 +109736,7 @@
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-chart-grid-color)"
+            "default": "var(--lr-chart-grid-color, var(--lr-color-border))"
           },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
@@ -109770,7 +109770,7 @@
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-chart-height",
@@ -112250,7 +112250,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -117204,7 +117204,7 @@
             "name": "--lr-stack-trace-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-stack-trace-compact-gap",
@@ -124059,7 +124059,7 @@
             "name": "--lr-badge-edge",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-badge-fill",
@@ -124502,7 +124502,7 @@
             "name": "--lr-task-list-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-task-list-compact-body-padding",
@@ -125016,7 +125016,7 @@
             "name": "--lr-terminal-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-terminal-compact-line-padding-inline",
@@ -127171,7 +127171,7 @@
             "name": "--lr-thinking-panel-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-thinking-panel-compact-body-font-size",
@@ -130484,7 +130484,7 @@
             "name": "--lr-timeline-rail-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-timeline-rail-width",
@@ -133003,7 +133003,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -137126,7 +137126,7 @@
             "name": "--indent-guide-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--indent-guide-offset",
@@ -137613,7 +137613,7 @@
             "name": "--indent-guide-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--indent-guide-offset",
@@ -138306,7 +138306,7 @@
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-overlay-radius",
@@ -193456,7 +193456,7 @@
             "member": "--border-color",
             "upstreamHasDefault": false,
             "targetHasDefault": true,
-            "target": "var(--lr-color-border)"
+            "target": "var(--lr-color-border-subtle)"
           },
           {
             "member": "--border-radius",
@@ -194312,7 +194312,7 @@
             "member": "--color",
             "upstreamHasDefault": false,
             "targetHasDefault": true,
-            "target": "var(--lr-color-border)"
+            "target": "var(--lr-color-border-subtle)"
           },
           {
             "member": "--spacing",
@@ -198014,7 +198014,7 @@
             "upstreamHasDefault": true,
             "upstream": "var(--sl-color-neutral-200)",
             "targetHasDefault": true,
-            "target": "var(--lr-color-border)"
+            "target": "var(--lr-color-border-subtle)"
           },
           {
             "member": "--indent-size",
@@ -202007,7 +202007,7 @@
             "member": "--color",
             "upstreamHasDefault": false,
             "targetHasDefault": true,
-            "target": "var(--lr-color-border)"
+            "target": "var(--lr-color-border-subtle)"
           },
           {
             "member": "--spacing",
@@ -208904,7 +208904,7 @@
             "upstreamHasDefault": true,
             "upstream": "var(--wa-color-surface-border)",
             "targetHasDefault": true,
-            "target": "var(--lr-color-border)"
+            "target": "var(--lr-color-border-subtle)"
           },
           {
             "member": "--indent-size",

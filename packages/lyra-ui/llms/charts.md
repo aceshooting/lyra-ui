@@ -463,7 +463,7 @@ it sizes the `plot` region and the host's minimum block size, while a visible ta
 legend grows the host in normal flow. The `height` property writes only a private fallback, so this
 public token wins across valid, invalid, and unset `height` updates. Set it on the host or an
 ancestor, not a shadow-tree descendant, since custom properties only cascade downward);
-`--lr-chart-grid-color` (default `var(--lr-color-border)`),
+`--lr-chart-grid-color` (default `var(--lr-color-border-subtle)`),
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
 `--lr-chart-tooltip-text` (default `var(--lr-color-text)`) — each resolved fresh via
@@ -498,7 +498,9 @@ declaration on a DOM element (the outline is painted by the stylesheet, not by C
 consumed directly with no `getComputedStyle` bridging; it is an inline `var()` fallback at the point
 of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
 `--lr-border-width-thin` it always was. `--lr-chart-canvas-hover-outline-color` (default
-`var(--lr-chart-grid-color)`) independently controls that outline's color.
+`var(--lr-chart-grid-color, var(--lr-color-border))`) independently controls that outline's color;
+it follows a set `--lr-chart-grid-color`, but left unset it stays on the control-grade
+`--lr-color-border` rather than the grid lines' decorative `--lr-color-border-subtle` default.
 
 `--lr-chart-pattern-step` (default `var(--lr-space-2xs)`) is the tile size of the texture painted on
 `[part="legend-swatch"]` while `forced-colors: active` matches — the legend half of the non-colour
@@ -1253,7 +1255,7 @@ sets the canvas box-outline stroke width in pixels — the same override mechani
 individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
-hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color)`) sets
+hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color, var(--lr-color-border))`) sets
 its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
 `lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather

@@ -94,7 +94,7 @@ export function dataStateSurfaceStyles(partPrefix: string): CSSResult {
   return css`
     [part='${prefix}-row'] [part='${prefix}-cell'] {
       padding: var(--lr-space-s);
-      border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+      border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
       background: var(--lr-color-surface);
     }
   `;

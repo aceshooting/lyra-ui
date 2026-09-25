@@ -208,6 +208,7 @@ Beyond `components/*`, the package publishes a small set of focused entries:
 | Subpath                                                          | What it is                                                                                                               |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `@aceshooting/lyra-ui/theme.css`                                 | Ready-made light + dark theme values. See [Theming](?path=/docs/guides-theming--docs).                                   |
+| `@aceshooting/lyra-ui/themes/shadcn.css`                         | Opt-in shadcn/ui look over `theme.css`. See [Theming](?path=/docs/guides-theming--docs#the-shadcn-look).                 |
 | `@aceshooting/lyra-ui/design-tokens.json`                        | Canonical DTCG token interchange for design and build tooling.                                                           |
 | `@aceshooting/lyra-ui/design-tokens.css`                         | Generated light/dark token fixture selectors for previews and design-tool validation; not a replacement for `theme.css`. |
 | `@aceshooting/lyra-ui/native.css`                                | Optional tokenized styles for native descendants of an explicit `.lr-native` scope.                                      |
@@ -249,11 +250,13 @@ the ready-made light and dark palettes:
 ```
 
 **The order you load it in does not matter.** `theme.css` declares its own cascade layers up front
-(`@layer lr-base, lr-theme, lr-utilities, lr-overrides;`) and puts its tokens in `lr-theme`. Any
+(`@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;`) and puts its tokens in `lr-theme`. Any
 declaration you write _outside_ a layer beats every layered one, whatever its specificity and
 whatever the source order — so the `:root` override above wins even if your stylesheet is bundled
 before `theme.css`, and it needs no `!important`. `lr-utilities` and `lr-overrides` are named so you
-can opt your own layers into a defined position relative to Lyra's rather than inventing one.
+can opt your own layers into a defined position relative to Lyra's rather than inventing one, and
+`lr-theme-preset` holds an optional look such as `themes/shadcn.css` (see
+[Theming](?path=/docs/guides-theming--docs#the-shadcn-look)).
 
 Switch modes with `class="lr-light"` / `class="lr-dark"` (or `data-lr-theme="light"` / `"dark"`) on
 any ancestor. [Theming](?path=/docs/guides-theming--docs) covers the token layers, how far an
@@ -288,8 +291,8 @@ logical sizing and overflow, text/prose, `lr-visually-hidden` / `lr-visually-hid
 follow `<lr-page view="mobile|desktop">`, which is derived from that Page's allocated inline size;
 they do not consult the viewport.
 
-Both files declare the same order as `theme.css`: `lr-base`, `lr-theme`, `lr-utilities`, then
-`lr-overrides`. Native styles live in `lr-base` and utility classes in `lr-utilities`, so ordinary
+Both files declare the same order as `theme.css`: `lr-base`, `lr-theme`, `lr-theme-preset`,
+`lr-utilities`, then `lr-overrides`. Native styles live in `lr-base` and utility classes in `lr-utilities`, so ordinary
 unlayered application CSS remains authoritative regardless of import order. All design values come
 from Lyra tokens; the complete class inventory and bundle-specific override hooks are in
 

@@ -552,7 +552,9 @@ The listbox popup itself is a floating surface and paints from the **shared over
 `--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this popup together with every other floating surface, and none of
-it touches the trigger row the popup drops from.
+it touches the trigger row the popup drops from. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this popup belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the

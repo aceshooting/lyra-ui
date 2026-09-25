@@ -848,6 +848,21 @@ describe('static rendering', () => {
     expect(getComputedStyle(bg).backgroundSize).to.equal('16px 16px');
   });
 
+  it('paints the decorative dot grid with --lr-color-border-subtle while edges keep --lr-color-border', async () => {
+    const el = (await fixture(html`<lr-flow-canvas
+      style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
+    ></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    el.edges = edges;
+    await el.updateComplete;
+    const bg = el.shadowRoot!.querySelector('[part="background"]') as HTMLElement;
+    const edge = el.shadowRoot!.querySelector('[part="edge"]') as SVGPathElement;
+    const dots = getComputedStyle(bg).backgroundImage;
+    expect(dots, 'dot grid').to.include('rgb(1, 2, 3)');
+    expect(dots, 'dot grid').to.not.include('rgb(4, 5, 6)');
+    expect(getComputedStyle(edge).stroke, 'neutral edge').to.equal('rgb(4, 5, 6)');
+  });
+
   for (const direction of ['ltr', 'rtl'] as const) {
     it(`wraps bottom corner companions without overlap at 320px in ${direction}`, async () => {
       const el = (await fixture(html`

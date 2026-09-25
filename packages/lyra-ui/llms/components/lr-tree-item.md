@@ -166,9 +166,9 @@ icons; an item-level slot with the same name takes precedence.
 empty-state message shown when neither child model has any items.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
-`--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-text`, `--lr-radius`,
-`--lr-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)` since the host
-itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guide-color`,
+`--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-text`,
+`--lr-radius`, `--lr-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)`
+since the host itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guide-color`,
 `--indent-guide-offset`, `--indent-guide-style`, and `--indent-guide-width`.
 
 **Optional peer deps:** none.
@@ -281,7 +281,7 @@ parts at every rendered depth. Declarative children remain light-DOM hosts and c
 directly as `<lr-tree-item>` elements.
 
 **Themeable custom properties:** `--indent-size` (default `var(--lr-space-l)`, applied once per
-nesting depth), `--indent-guide-color` (default `var(--lr-color-border)`),
+nesting depth), `--indent-guide-color` (default `var(--lr-color-border-subtle)`),
 `--indent-guide-offset` (default `0`, the guide's block-axis inset at both ends),
 `--indent-guide-style` (default `solid`), and `--indent-guide-width` (default `0`); these mirrored
 properties are consumed directly by every `<lr-tree-item>` and may be set on an item or inherited

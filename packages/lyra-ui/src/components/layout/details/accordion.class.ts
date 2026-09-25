@@ -116,12 +116,12 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  *   ```
  * @csspart base - The accordion wrapper.
  * @cssprop [--lr-accordion-outlined-bg=var(--lr-color-surface)] - Outlined group background.
- * @cssprop [--lr-accordion-outlined-border-color=var(--lr-color-border)] - Outlined border color.
+ * @cssprop [--lr-accordion-outlined-border-color=var(--lr-color-border-subtle)] - Outlined border color.
  * @cssprop [--lr-accordion-filled-bg=var(--lr-color-surface-raised)] - Filled group background.
  * @cssprop [--lr-accordion-filled-border-color=transparent] - Filled border color.
  * @cssprop [--lr-accordion-filled-outlined-bg=var(--lr-color-surface-raised)] - Filled-outlined
  *   group background.
- * @cssprop [--lr-accordion-filled-outlined-border-color=var(--lr-color-border)] - Filled-outlined
+ * @cssprop [--lr-accordion-filled-outlined-border-color=var(--lr-color-border-subtle)] - Filled-outlined
  *   border color.
  * @status stable
  * @since 4.0.0

@@ -151,7 +151,7 @@ export interface LyraAttachmentChipEventMap {
  * (`uploading`/`error`/`success`); the public value remains authoritative.
  * @cssprop [--lr-attachment-chip-bg=var(--lr-color-surface)] - Chip background. Its private
  * default changes per `status` to that status's `-quiet` tint; the public value still wins.
- * @cssprop [--lr-attachment-chip-border=var(--lr-color-border)] - Chip border color. Every
+ * @cssprop [--lr-attachment-chip-border=var(--lr-color-border-subtle)] - Chip border color. Every
  * non-`pending` `status` changes its private default to `transparent`.
  * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail size
  * while `compact`, rethemeable independently of `--lr-icon-button-size`. Retry, preview, and

@@ -64,7 +64,7 @@ badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
 `[part="base"]` padding while `compact`. `--lr-commit-card-border-color` (default
-`var(--lr-color-border)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
+`var(--lr-color-border-subtle)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
 card's border and corner radius, and `--lr-commit-card-background` (default `transparent`) gives it
 a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
 you opt in. `frame="plain"` still removes the border and radius.

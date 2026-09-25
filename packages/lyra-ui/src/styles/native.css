@@ -2,7 +2,7 @@
    only to native descendants of an explicit `.lr-native` scope marker. The marker itself is never
    reset or restyled, so it can sit on an existing application region without changing that box. */
 
-@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 
 @layer lr-base {
   :where(.lr-native) :where(h1, h2, h3, h4, h5, h6) {
@@ -128,7 +128,13 @@
     );
     border: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px))
       solid
-      var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText));
+      var(
+        --lr-color-border-subtle,
+        var(
+          --lr-theme-color-surface-border-subtle,
+          var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))
+        )
+      );
     border-radius: var(--lr-radius, var(--lr-theme-border-radius-m, 0.375rem));
     background: var(
       --lr-color-surface-raised,
@@ -317,7 +323,13 @@
     );
     border: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px))
       solid
-      var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText));
+      var(
+        --lr-color-border-subtle,
+        var(
+          --lr-theme-color-surface-border-subtle,
+          var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))
+        )
+      );
     border-radius: var(--lr-radius, var(--lr-theme-border-radius-m, 0.375rem));
   }
 
@@ -370,7 +382,13 @@
         var(--lr-theme-border-width-thin, 1px)
       )
       solid
-      var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText));
+      var(
+        --lr-color-border-subtle,
+        var(
+          --lr-theme-color-surface-border-subtle,
+          var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))
+        )
+      );
     text-align: start;
     vertical-align: top;
   }
@@ -394,6 +412,12 @@
         var(--lr-theme-border-width-thin, 1px)
       )
       solid
-      var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText));
+      var(
+        --lr-color-border-subtle,
+        var(
+          --lr-theme-color-surface-border-subtle,
+          var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))
+        )
+      );
   }
 }

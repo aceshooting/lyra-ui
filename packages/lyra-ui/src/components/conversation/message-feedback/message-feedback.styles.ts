@@ -95,7 +95,7 @@ export const styles = css`
     display: grid;
     grid-template-rows: 0fr;
     overflow: hidden;
-    border: 0 solid var(--lr-color-border);
+    border: 0 solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     transition: grid-template-rows var(--lr-transition-base),

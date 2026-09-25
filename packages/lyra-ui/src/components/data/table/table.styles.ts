@@ -15,7 +15,7 @@ export const styles = css`
     overflow: auto;
     max-block-size: var(--lr-table-max-height, none);
     /* Page flow below drops both; auto restores them only while inline content really overflows. */
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* Opt-in theme-level scrollbar hooks -- each reads --lr-theme-scrollbar-* directly, with this
        scrollport's own previous literal ('auto') as the fallback, so a consumer who never sets the
@@ -38,7 +38,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
   }
@@ -122,7 +122,7 @@ export const styles = css`
   }
   [part='pagination'] {
     display: block;
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   /* columns[].priority hides [data-priority='low'] and ['medium'] header/cells once table.class.ts's
      ResizeObserver-driven measurement (recomputeHiddenPriorityColumns(), shared with
@@ -167,7 +167,7 @@ export const styles = css`
     text-align: start;
     font-weight: var(--lr-font-weight-semibold);
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     cursor: default;
     white-space: nowrap;
   }
@@ -352,7 +352,7 @@ export const styles = css`
        shorthand's two-value (block/inline) shape today, and a single flattened hook would either
        lose that distinction or force every ordinary cell to adopt the tighter block spacing. */
     padding: var(--lr-table-cell-padding-compact, var(--lr-space-xs) var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text-quiet);
     font-weight: var(--lr-font-weight-semibold);
@@ -364,7 +364,7 @@ export const styles = css`
   }
   [part='cell'] {
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     color: var(--lr-table-cell-color, inherit);
   }
   /* [data-editable] marks an editTrigger: 'double-click' column's resting (not currently open)
@@ -497,7 +497,7 @@ export const styles = css`
   }
   [part='row-total-cell'] {
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     font-weight: var(--lr-font-weight-semibold);
     text-align: end;
   }
@@ -510,7 +510,7 @@ export const styles = css`
   }
   [part='expand-toggle-cell'] {
     padding: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     text-align: center;
   }
   [part='row-expand-toggle'] {
@@ -563,7 +563,7 @@ export const styles = css`
   }
   [part='expanded-row'] [part='expanded-cell'] {
     padding: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(--lr-color-surface);
   }
   /* columns[].sticky pins a column's header/cells to the inline-start edge during horizontal scroll
@@ -579,7 +579,7 @@ export const styles = css`
        to 0 for the first sticky column, and before the first measurement pass. */
     inset-inline-start: var(--lr-table-sticky-offset, 0);
     z-index: var(--lr-layer-content);
-    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border);
+    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border-subtle);
   }
   /* Reads --_lr-table-row-bg, written by the [part='row'] stripe/selected/hover/active rules above,
      so a sticky body cell shows the same fill as the rest of its row instead of painting a flat
@@ -601,18 +601,18 @@ export const styles = css`
        opposite physical side since content now scrolls underneath from the other direction. */
     inset-inline-start: auto;
     inset-inline-end: var(--lr-table-sticky-offset, 0);
-    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border);
+    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border-subtle);
   }
   /* box-shadow's X offset is physical, not logical, so it must flip explicitly under RTL: a
      'start'-pinned column sits on the right edge with content scrolling under from the left, so its
      seam belongs on the left (negative X). */
   :host(:dir(rtl)) [part='header-cell'][data-sticky],
   :host(:dir(rtl)) [part='cell'][data-sticky] {
-    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border);
+    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border-subtle);
   }
   :host(:dir(rtl)) [part='header-cell'][data-sticky='end'],
   :host(:dir(rtl)) [part='cell'][data-sticky='end'] {
-    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border);
+    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border-subtle);
   }
   [part='foot'] {
     position: sticky;
@@ -622,7 +622,7 @@ export const styles = css`
   [part='footer-cell'] {
     /* Same tighter hook as [part='group-cell'] -- see the comment there. */
     padding: var(--lr-table-cell-padding-compact, var(--lr-space-xs) var(--lr-space-s));
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
   }
@@ -639,6 +639,9 @@ export const styles = css`
     color: var(--lr-color-brand);
     font: inherit;
     cursor: pointer;
+    /* The control tier, not --lr-color-border-subtle: this rule is the only edge the full-width
+       button draws, and under a monochrome theme its brand-coloured label no longer sets it apart
+       from the data rows above. */
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part='more-button']:hover,
@@ -663,7 +666,7 @@ export const styles = css`
      background or the roving-tabindex focus ring those rules carry. */
   [part='error-row'] [part='error-cell'] {
     padding: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(--lr-color-surface);
   }
   [part='retry-button'] {

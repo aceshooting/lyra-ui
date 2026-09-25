@@ -86,7 +86,7 @@ export const styles = css`
     content: '';
     flex: 1 1 auto;
     block-size: var(--lr-border-width-thin);
-    background: var(--lr-color-border);
+    background: var(--lr-color-border-subtle);
   }
   [part='jump-pill'] {
     font: inherit;

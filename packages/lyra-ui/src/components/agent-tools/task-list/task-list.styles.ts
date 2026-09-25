@@ -13,7 +13,7 @@ export const styles = [
        transcript can retune the nested card without a ::part(base) override. */
     [part="base"] {
       border: var(--lr-border-width-thin) solid
-        var(--lr-task-list-border-color, var(--lr-color-border));
+        var(--lr-task-list-border-color, var(--lr-color-border-subtle));
       border-radius: var(--lr-task-list-radius, var(--lr-radius));
       background: var(--lr-task-list-background, var(--lr-color-surface));
       overflow: hidden;
@@ -121,7 +121,7 @@ export const styles = [
          it, so it follows the same hook rather than stranding a mismatched rule in a retuned
          card. */
       border-block-start: var(--lr-border-width-thin) solid
-        var(--lr-task-list-border-color, var(--lr-color-border));
+        var(--lr-task-list-border-color, var(--lr-color-border-subtle));
     }
     [part="body"][hidden] {
       display: none;

@@ -245,6 +245,17 @@ it('inherits marker and rail theme hooks from an ancestor while direct item over
   expect(getComputedStyle(marker).backgroundColor).to.equal('rgb(7, 8, 9)');
 });
 
+it('defaults the connecting rail to the decorative --lr-color-border-subtle token', async () => {
+  const el = (await fixture(html`
+    <lr-timeline-item
+      style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
+    >Event</lr-timeline-item>
+  `)) as LyraTimelineItem;
+  await el.updateComplete;
+  const rail = el.shadowRoot!.querySelector('[part="rail"]') as HTMLElement;
+  expect(getComputedStyle(rail).backgroundColor).to.equal('rgb(1, 2, 3)');
+});
+
 it('active reflects and drives an explicit aria-current true/false state', async () => {
   const el = (await fixture(html`<lr-timeline-item>Event</lr-timeline-item>`)) as LyraTimelineItem;
   expect(el.active).to.be.false;

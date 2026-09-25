@@ -31,7 +31,7 @@ export const styles = css`
     align-items: stretch;
     gap: var(--lr-space-m);
     border-block-end: var(--track-width, var(--lr-border-width-thin)) solid
-      var(--track-color, var(--lr-color-border));
+      var(--track-color, var(--lr-color-border-subtle));
     overflow-x: auto;
     overflow-y: hidden;
     flex: 1 1 auto;
@@ -52,7 +52,7 @@ export const styles = css`
     border: none;
     font: inherit;
     /* Continues the tablist's own rule so the line under the strip runs unbroken edge to edge. */
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     transition: color var(--lr-transition-fast),
@@ -346,7 +346,7 @@ export const styles = css`
   :host([placement="bottom"]) [part~="scroll-button"] {
     border-block-end: none;
     border-block-start: var(--track-width, var(--lr-border-width-thin)) solid
-      var(--track-color, var(--lr-color-border));
+      var(--track-color, var(--lr-color-border-subtle));
   }
   :host([placement="bottom"]) [part="tab"][aria-selected="true"] {
     border-block-end-color: transparent;
@@ -410,11 +410,11 @@ export const styles = css`
   }
   :host([placement="start"]) [part~="tablist"] {
     border-inline-end: var(--track-width, var(--lr-border-width-thin)) solid
-      var(--track-color, var(--lr-color-border));
+      var(--track-color, var(--lr-color-border-subtle));
   }
   :host([placement="end"]) [part~="tablist"] {
     border-inline-start: var(--track-width, var(--lr-border-width-thin)) solid
-      var(--track-color, var(--lr-color-border));
+      var(--track-color, var(--lr-color-border-subtle));
   }
   /* The edge fade measures inline overflow; a vertical strip scrolls in block, so the mask would
      dim the wrong ends. */

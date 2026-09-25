@@ -52,14 +52,14 @@ export const virtualListHighlightStyles = css`
 
 export const styles = css`
   :host { display: block; }
-  [part='base'] { display: flex; flex-direction: column; box-sizing: border-box; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); overflow: hidden; }
+  [part='base'] { display: flex; flex-direction: column; box-sizing: border-box; border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); border-radius: var(--lr-radius); background: var(--lr-color-surface); overflow: hidden; }
   [part='body'] { min-block-size: 0; max-block-size: var(--lr-archive-viewer-max-height, none); overflow-y: auto; overflow-x: hidden; }
   /* Entry rows come from this component's renderItem but land in the embedded lr-virtual-list's
      OWN shadow root, a boundary deeper than this stylesheet, so a bare [part='entry'] never matches
      and every row rule goes through ::part(). ::part() takes no descendant combinator either, so a
      directory row's name element carries a second part name: part~= makes it both entry-name and
      entry-name-dir. */
-  lr-virtual-list::part(entry) { display: flex; align-items: center; gap: var(--lr-space-s); box-sizing: border-box; block-size: 100%; padding: var(--lr-space-xs) var(--lr-space-m); border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border); font-size: var(--lr-font-size-sm); }
+  lr-virtual-list::part(entry) { display: flex; align-items: center; gap: var(--lr-space-s); box-sizing: border-box; block-size: 100%; padding: var(--lr-space-xs) var(--lr-space-m); border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); font-size: var(--lr-font-size-sm); }
   lr-virtual-list::part(entry-icon) { display: inline-flex; flex: 0 0 auto; inline-size: var(--lr-size-1em); block-size: var(--lr-size-1em); color: var(--lr-color-text-quiet); }
   lr-virtual-list::part(entry-name) { flex: 1 1 auto; min-inline-size: 0; overflow: hidden; color: var(--lr-color-text); text-overflow: ellipsis; white-space: nowrap; }
   lr-virtual-list::part(entry-name-dir) { font-weight: var(--lr-font-weight-semibold); }

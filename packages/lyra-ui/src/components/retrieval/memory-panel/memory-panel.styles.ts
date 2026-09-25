@@ -46,7 +46,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     min-inline-size: 0;
     padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
@@ -110,7 +110,7 @@ export const styles = css`
   }
   [part='item-body'] {
     padding-block-start: var(--lr-space-xs);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part='item-body'][hidden] {
     display: none;

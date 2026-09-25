@@ -42,7 +42,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     min-inline-size: 0;
     padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
@@ -90,7 +90,7 @@ export const styles = css`
   [part='truncation-boundary'] {
     margin-block-start: var(--lr-space-xs);
     padding-block-start: var(--lr-space-2xs);
-    border-block-start: var(--lr-border-width-thin) dashed var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) dashed var(--lr-color-border-subtle);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
     text-align: start;

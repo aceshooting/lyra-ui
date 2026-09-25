@@ -39,11 +39,11 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font-weight: var(--lr-font-weight-semibold);
-    border-block-end: var(--lr-border-width-medium) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-medium) solid var(--lr-color-border-subtle);
   }
   [part='cell'] {
     padding: var(--lr-space-2xs) var(--lr-space-xs);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -61,7 +61,7 @@ export const styles = css`
   }
   lr-virtual-list::part(cell) {
     padding: var(--lr-space-2xs) var(--lr-space-xs);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

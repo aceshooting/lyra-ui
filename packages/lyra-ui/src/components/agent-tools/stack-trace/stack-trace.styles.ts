@@ -20,7 +20,7 @@ export const styles = css`
        each fallback is the pre-existing token, so an unset trace paints exactly as before while a
        transcript can retune the nested card without a ::part(base) override. */
     border: var(--lr-border-width-thin) solid
-      var(--lr-stack-trace-border-color, var(--lr-color-border));
+      var(--lr-stack-trace-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-stack-trace-radius, var(--lr-radius));
     background: var(--lr-stack-trace-background, var(--lr-color-surface));
     padding: var(--lr-space-s);

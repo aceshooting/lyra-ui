@@ -615,7 +615,7 @@ the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default pe
 `max(var(--lr-space-l), <safe-area inset>)` — the fullscreen `[part="base"]` inset; the
 `fullscreen-inset` attribute overrides it), and `--lr-widget-backdrop-inset` (defaults to `0` so
 the modal backdrop covers the viewport; the `backdrop-inset` attribute overrides it), plus shared
-tokens (`--lr-space-*`, `--lr-color-border/-surface/-text-quiet`,
+tokens (`--lr-space-*`, `--lr-color-border/-border-subtle/-surface/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`, `--lr-focus-ring-*`).
 
 Three properties style the pressed view toggle: `--lr-widget-view-toggle-active-bg` (default
@@ -1196,7 +1196,7 @@ to opt out entirely), and `--lr-tab-group-panel-hover-outline-offset` (default
 `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal paint.
 
 Otherwise shared tokens — `--lr-space-xs/-s/-m`,
-`--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
+`--lr-color-border/-border-subtle/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
@@ -2506,10 +2506,13 @@ mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail
 `var(--lr-space-s)`/`var(--lr-space-xs)`, the values this rule hard-coded before either token
 existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm,
 previously reachable only through `::part(nav)`. Plus shared
-tokens (`--lr-color-border`,
+tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
-`--lr-focus-ring-*`, `--lr-transition-base`). `resizable`'s width is driven entirely by
+`--lr-focus-ring-*`, `--lr-transition-base`). The rail's inline-end edge and its header/footer rules
+use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
+`'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
+mark and stays on `--lr-color-border`. `resizable`'s width is driven entirely by
 `railWidthPx`'s inline `inline-size` style rather than a new custom property.
 The mobile toggle's hover/pressed background and foreground are independently inheritable through
 `--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
@@ -2924,7 +2927,7 @@ on the inline presentation),
 `--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
-they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
+they do not affect inline panels. Plus shared tokens (`--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).
 
 **Optional peer deps:** none.
@@ -3080,15 +3083,15 @@ style those on `<lr-dropdown>` when using the overlay composition.
 
 **Themeable custom properties:** the standalone menu surface and a submenu's own surface paint from
 the **shared overlay-surface family** (16.0.0) — `--lr-overlay-surface` (default
-`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
+`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border-subtle)`),
 `--lr-overlay-radius` (default `var(--lr-radius)`) and, on the submenu only,
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` (or on any ancestor, to scope it) retints this menu together with every other
 floating surface. A menu contained by `<lr-dropdown>` paints no surface of its own, so the family has
 no effect there — the dropdown's popup carries it. The header/footer dividing rules and a slotted
-`<hr>` deliberately stay on `--lr-color-border`: they separate content rather than draw the
-surface's edge. Otherwise shared spacing and motion tokens. Row chrome is controlled through the
-menu-item properties listed below.
+`<hr>` deliberately stay outside the family on the decorative `--lr-color-border-subtle`: they
+separate content rather than draw the surface's edge. Otherwise shared spacing and motion tokens.
+Row chrome is controlled through the menu-item properties listed below.
 
 Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
 `--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
@@ -3409,9 +3412,10 @@ exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
 `color-mix()` (background) for its pressed state; `--lr-dock-panel-handle-hover-color` (default
 `var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
 `--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
-being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--lr-color-brand`,
-`--lr-color-brand-quiet`, `--lr-color-text`, `--lr-radius`, `--lr-space-xs`,
-`--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`, `--lr-icon-button-size`.
+being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
+`--lr-color-border-subtle`, `--lr-color-brand`, `--lr-color-brand-quiet`, `--lr-color-text`,
+`--lr-radius`, `--lr-space-xs`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`,
+`--lr-icon-button-size`.
 
 **Optional peer deps:** none.
 
@@ -3553,11 +3557,13 @@ hidden entirely when empty), `body` (wrapper around the default slot), `footer` 
 `footer` and `footer-actions` slots, hidden entirely when both are empty).
 
 **Themeable custom properties:** `--spacing` (default `var(--lr-space-m)`) controls the padding and
-gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`,
-`--border-radius`, and `--border-width` control the outer and section borders. Otherwise shared
-tokens — `--lr-color-border`/`-surface`/`-brand`/
-`-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
-`--lr-focus-ring-*`.
+gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`
+(default `var(--lr-color-border-subtle)`), `--border-radius`, and `--border-width` control the outer
+and section borders. An `actionable` or linked (`href`) card is the exception: unset, its outer edge
+falls back to `--lr-color-border`, because that edge is then the whole-card control's only visible
+boundary (WCAG 2.2 SC 1.4.11); its header and footer rules stay on the subtle tier. Otherwise shared
+tokens — `--lr-color-border`/`-border-subtle`/`-surface`/`-brand`/`-brand-quiet`, `--lr-radius`,
+`--lr-space-s`/`-m`, `--lr-transition-fast`, `--lr-focus-ring-*`.
 Appearance and interaction paint can be rethemed independently through `--lr-card-outlined-bg`
 (the DEFAULT `outlined` appearance's background, and `accent`'s, which adds a stripe without
 restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-details>`'s
@@ -4002,10 +4008,10 @@ when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
-`var(--lr-color-border)`); `--lr-accordion-filled-bg` (default
+`var(--lr-color-border-subtle)`); `--lr-accordion-filled-bg` (default
 `var(--lr-color-surface-raised)`) and `--lr-accordion-filled-border-color` (default `transparent`);
 and `--lr-accordion-filled-outlined-bg` (default `var(--lr-color-surface-raised)`) plus
-`--lr-accordion-filled-outlined-border-color` (default `var(--lr-color-border)`). Direct item
+`--lr-accordion-filled-outlined-border-color` (default `var(--lr-color-border-subtle)`). Direct item
 surfaces have matching `--lr-accordion-item-outlined-bg`, `--lr-accordion-item-filled-bg`, and
 `--lr-accordion-item-filled-outlined-bg` hooks with the same surface fallbacks. Item trigger paint
 uses `--lr-accordion-item-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and

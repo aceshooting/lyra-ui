@@ -9,7 +9,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
@@ -19,7 +19,7 @@ export const styles = css`
     grid-template-columns: auto minmax(0, 1fr);
     gap: var(--lr-space-2xs) var(--lr-space-s);
     padding: var(--lr-space-m);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     font-size: var(--lr-font-size-md-sm);
   }
   [part$="-label"] {
@@ -68,7 +68,7 @@ export const styles = css`
   }
   [part="attachments"] {
     padding: var(--lr-space-m);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="attachments-label"] {
     display: block;

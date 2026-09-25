@@ -211,7 +211,7 @@ to opt out entirely), and `--lr-tab-group-panel-hover-outline-offset` (default
 `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal paint.
 
 Otherwise shared tokens — `--lr-space-xs/-s/-m`,
-`--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
+`--lr-color-border/-border-subtle/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.

@@ -27,7 +27,7 @@ export const styles = css`
        row; only -tint, -edge and -ink need the non-neutral rule below. */
     --_lr-badge-tint: var(--lr-color-surface);
     --_lr-badge-solid: var(--lr-color-fill-loud);
-    --_lr-badge-edge: var(--lr-color-border);
+    --_lr-badge-edge: var(--lr-color-border-subtle);
     --_lr-badge-ink: var(--lr-color-text);
     --_lr-badge-on-solid: var(--lr-color-on-loud);
 

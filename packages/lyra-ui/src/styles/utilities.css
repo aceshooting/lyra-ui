@@ -2,7 +2,7 @@
    low-priority `lr-utilities` layer. Unlayered application CSS therefore wins regardless of load
    order, and importing this asset never resets native elements by itself. */
 
-@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 
 @layer lr-utilities {
   :where(.lr-block) {

@@ -167,7 +167,7 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     padding: var(--lr-space-m);
     padding-inline-end: calc(var(--lr-icon-button-size) + var(--lr-space-xs));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-overlay);
     box-shadow: var(--lr-shadow-m);
@@ -228,7 +228,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
     background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* The legend is pinned over the tiles, so it reads as a layer above the map, not a panel
        beside it. */
@@ -475,7 +475,7 @@ export const styles = css`
   [part='legend-limit'] {
     min-inline-size: 0;
     padding-block-start: var(--lr-space-xs);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     color: var(--lr-color-text-quiet);
     overflow-wrap: anywhere;
   }

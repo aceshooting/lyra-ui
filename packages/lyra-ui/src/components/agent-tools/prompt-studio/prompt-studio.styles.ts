@@ -105,7 +105,7 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
   }
   button:disabled, textarea:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: var(--lr-opacity-disabled); }
-  [part='preview'] { padding: var(--lr-space-m); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); }
+  [part='preview'] { padding: var(--lr-space-m); border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); border-radius: var(--lr-radius); }
   [part='preview'] article { display: grid; grid-template-columns: var(--lr-size-6rem) minmax(0, 1fr); gap: var(--lr-space-s); padding-block: var(--lr-space-xs); }
   [part='preview'] pre { min-inline-size: 0; margin: 0; color: var(--lr-color-text); font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
   @container (max-inline-size: 40rem) { [part='editor'] { grid-template-columns: 1fr; } }

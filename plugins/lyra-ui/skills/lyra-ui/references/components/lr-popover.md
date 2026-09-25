@@ -233,7 +233,7 @@ fallbacks. Arrow size is half the square's width. Rendering the arrow switches `
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`var(--lr-color-border-subtle)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
 edge but never the radius — its corners are already cut by its clip path. None of the four is
 declared on `:host`, so a single declaration on `:root` retints every floating surface in the
@@ -241,6 +241,18 @@ application, and the same declaration on one component's own ancestor scopes the
 subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from the modal tier
 `--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
 dialogs.
+
+**Edge tier.** The `var(--lr-color-border-subtle)` edge default is the decorative tier, shared by
+every floating panel — popover, dropdown and menu, detail and preview cards, the selection
+toolbar, the dialog panel. A panel's outline is not what identifies a control (WCAG 2.2 SC 1.4.11):
+the panel itself is not operable, the anchored shadow lifts it off the page, and every item inside
+identifies itself, so a theme may set `--lr-theme-color-surface-border-subtle` below 3:1 for a
+hairline edge. Popups that belong to a form control — the listboxes of `lr-select`,
+`lr-combobox`, `lr-locale-picker`, `lr-model-select`, `lr-voice-picker` and `lr-mention-popover`,
+and the `lr-color-picker` and `lr-time-input` panels — instead default to the control tier,
+`var(--lr-color-border)`, keeping the 3:1 boundary of the field they open from. A consumer
+`--lr-overlay-border` wins on both kinds. While the subtle input is unset the two tiers resolve to
+the same colour.
 
 **`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a

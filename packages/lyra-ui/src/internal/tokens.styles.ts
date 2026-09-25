@@ -53,6 +53,20 @@ import { css } from 'lit';
 // (var(--lr-form-control-required-x, var(--lr-theme-form-control-required-x, default))) the way
 // contextual-vocabulary.styles.ts chains --lr-form-control-height-*; do not declare them on :host.
 //
+// BORDER_SUBTLE -- why --lr-color-border-subtle falls back to another token instead of a literal.
+// It is the decorative edge tier: a divider or rule, a card, panel, table or section edge, a
+// separator between items, a gutter line. It is never the only visible boundary of an interactive
+// control or of a meaningful graphic -- WCAG 2.2 SC 1.4.11 holds those to 3:1 against what is next
+// to them, so they stay on --lr-color-border, and `check:border-subtle` fails the build if the
+// subtle tier appears in a form control. Its input, --lr-theme-color-surface-border-subtle, is
+// declared NOWHERE by default -- theme.css leaves it out for the same reason it leaves out
+// --lr-theme-form-control-radius -- so while it is unset the token resolves to exactly
+// --lr-color-border in every mode, and a stylesheet re-pointed to it renders identically until an
+// application opts in. The fallback is resolved on the element itself, so it follows the dark value
+// of --lr-color-border and any retuned --lr-theme-color-surface-border without restating a colour;
+// the dark fragment repeats the same chain only so every mode's record agrees. Forced colours pin
+// it to the same system colour as --lr-color-border: a themed grey must not survive there.
+//
 // Note this prose lives OUTSIDE the css`` literal on purpose: the build is plain tsc, so the
 // template's contents ship verbatim to every component that pulls in the token sheet -- i.e.
 // all of them. A comment this long inside it pushed the button bundle over its gzip budget.
@@ -64,6 +78,7 @@ const baseTokens = css`
     --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #6b7280);
     --lr-color-border: var(--lr-theme-color-surface-border, #8a8a90);
     --lr-color-border-strong: var(--lr-theme-color-border-strong, #4b5563);
+    --lr-color-border-subtle: var(--lr-theme-color-surface-border-subtle, var(--lr-color-border));
     --lr-color-brand: var(--lr-color-brand-fill-loud);
     --lr-color-brand-quiet: var(--lr-color-brand-fill-quiet);
     --lr-color-success: var(--lr-color-success-fill-loud);
@@ -400,6 +415,7 @@ const darkTokens = css`
       --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #9aa1ac);
       --lr-color-border: var(--lr-theme-color-surface-border, #6b6b74);
       --lr-color-border-strong: var(--lr-theme-color-border-strong, #c4c9d1);
+      --lr-color-border-subtle: var(--lr-theme-color-surface-border-subtle, var(--lr-color-border));
       /* A modal panel cannot share the page surface token in dark mode: both resolve to the same
          near-black, so an open dialog reads as a scrim with text floating on it and no panel at
          all. Light mode keeps the page surface deliberately -- a white dialog on a white page is
@@ -494,6 +510,7 @@ const forcedColorTokens = css`
       --lr-color-text: CanvasText;
       --lr-color-text-quiet: CanvasText;
       --lr-color-border: ButtonText;
+      --lr-color-border-subtle: ButtonText;
       --lr-color-brand: LinkText;
       --lr-color-brand-quiet: Canvas;
       --lr-color-success: LinkText;

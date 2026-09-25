@@ -161,6 +161,9 @@ them declared on `:host`, so one declaration on `:root` — or on any ancestor, 
 this listbox together with every other floating surface. `--lr-overlay-radius` reaches the listbox
 only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
 set: a component-scoped override outranks the shared family, never the other way round.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the listbox reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`

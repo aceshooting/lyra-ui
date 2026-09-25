@@ -11,7 +11,7 @@ export const styles = css`
        not unstyled. */
     --_lr-attachment-chip-accent: var(--lr-color-text-quiet);
     --_lr-attachment-chip-bg: var(--lr-color-surface);
-    --_lr-attachment-chip-border: var(--lr-color-border);
+    --_lr-attachment-chip-border: var(--lr-color-border-subtle);
     /* Compact-mode thumbnail size -- a dedicated token rather than --lr-icon-button-size (the one
        token in this library with no --lr-theme-* fallback chain), so a consumer can retheme just
        the compact thumbnail independent of every other icon-button-sized control. */

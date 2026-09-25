@@ -2035,6 +2035,33 @@ it('keeps the canvas hover outline on the chart grid-color fallback by default',
   }
 });
 
+// Grid lines are decorative and default to the subtle border tier; the canvas hover outline is the
+// hover state of a focusable widget, so with --lr-chart-grid-color unset it must not follow them.
+it('draws default grid lines in the subtle border tier while the hover outline stays control-grade', async () => {
+  const el = (await fixture(html`
+    <lr-chart
+      style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9);"
+      .labels=${['A', 'B']}
+      .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+    ></lr-chart>
+  `)) as LyraChart;
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x.grid.color).to.equal('rgb(1, 2, 3)');
+  expect(config.options.scales.y.grid.color).to.equal('rgb(1, 2, 3)');
+  const canvas = el.shadowRoot!.querySelector<HTMLElement>('[part="canvas"]')!;
+
+  try {
+    await hoverUntilMatched(canvas, 'the chart canvas never entered its hover state');
+    await waitUntil(
+      () => getComputedStyle(canvas).outlineColor === 'rgb(7, 8, 9)',
+      'the default canvas hover outline followed the subtle grid tier instead of --lr-color-border',
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
 it('routes [part="canvas"]:hover’s rendered outline through scoped width and color tokens', async () => {
   const el = (await fixture(html`
     <lr-chart

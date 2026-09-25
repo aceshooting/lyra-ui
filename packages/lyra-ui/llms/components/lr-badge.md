@@ -117,7 +117,7 @@ _Palette — what `variant` chooses_ (new in 8.0.0): `--lr-badge-tint` (private 
 `var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
 variant's row of the semantic grid), `--lr-badge-solid` (private default
 `var(--lr-color-fill-loud)`, the loud fill used by `appearance="accent"`), `--lr-badge-edge`
-(private default `var(--lr-color-border)`, the border color), `--lr-badge-ink` (private default
+(private default `var(--lr-color-border-subtle)`, the border color), `--lr-badge-ink` (private default
 `var(--lr-color-text)`, the text color) and
 `--lr-badge-on-solid` (default `var(--lr-color-on-loud)`, the text color that stays legible on
 `--lr-badge-solid`). An inherited or direct public palette value remains authoritative. Neutral is

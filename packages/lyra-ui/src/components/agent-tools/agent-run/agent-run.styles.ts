@@ -16,7 +16,7 @@ export const styles = css`
        each fallback is the pre-existing token, so an unset run paints exactly as before while a
        transcript can retune the nested card without a ::part(base) override. */
     border: var(--lr-border-width-thin) solid
-      var(--lr-agent-run-border-color, var(--lr-color-border));
+      var(--lr-agent-run-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-agent-run-radius, var(--lr-radius));
     background: var(--lr-agent-run-background, var(--lr-color-surface));
     color: var(--lr-color-text);

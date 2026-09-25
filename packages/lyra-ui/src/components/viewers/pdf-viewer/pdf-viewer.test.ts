@@ -4733,7 +4733,9 @@ describe("virtualized page part styling", () => {
 
   it("styles the page wrapper, its canvas, and its text layer", async () => {
     const el = (await fixture(
-      html`<lr-pdf-viewer></lr-pdf-viewer>`
+      html`<lr-pdf-viewer
+        style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3)"
+      ></lr-pdf-viewer>`
     )) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
     const restore = stubFetch();
@@ -4752,9 +4754,12 @@ describe("virtualized page part styling", () => {
       expect(getComputedStyle(page).position).to.equal("relative");
       expect(getComputedStyle(page).display).to.equal("flex");
       expect(getComputedStyle(page).justifyContent).to.equal("safe center");
+      // The page edge frames content rather than bounding a control, so it reads the subtle
+      // border role and follows that role's theme input.
       expect(getComputedStyle(canvas).boxShadow).to.contain(
-        tokenColor(el, "--lr-color-border")
+        tokenColor(el, '--lr-color-border-subtle')
       );
+      expect(getComputedStyle(canvas).boxShadow).to.contain('rgb(1, 2, 3)');
       expect(getComputedStyle(textLayer).position).to.equal("absolute");
       expect(getComputedStyle(textLayer).overflow).to.equal("hidden");
       expect(getComputedStyle(listBase).overflowX).to.equal("auto");

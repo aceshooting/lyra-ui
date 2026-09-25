@@ -166,6 +166,8 @@ The entry points, then:
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
+  `@aceshooting/lyra-ui/themes/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
+  [The shadcn look](#the-shadcn-look--themesshadcncss)),
   `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
   so your own components can read them),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
@@ -823,7 +825,7 @@ inside a Lyra UI without looking foreign:
 
 | Family                | Names                                                                                                                                                                                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ambient colour        | `--lr-color-surface`, `--lr-color-surface-raised`, `--lr-color-surface-overlay`, `--lr-color-overlay`, `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-strong`                         |
+| Ambient colour        | `--lr-color-surface`, `--lr-color-surface-raised`, `--lr-color-surface-overlay`, `--lr-color-overlay`, `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-strong`, `--lr-color-border-subtle` |
 | The semantic grid     | all 45 `--lr-color-{brand,success,warning,danger,neutral}-{fill,border,on}-{quiet,normal,loud}` slots                                                                                                                       |
 | Flat colour aliases   | `--lr-color-{brand,success,warning,danger,neutral}`, `--lr-color-{brand,success,warning,danger}-quiet`, `--lr-color-on-{brand,success,warning,danger,neutral}`                                                              |
 | Spacing               | `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-space-m`, `--lr-space-l`, `--lr-space-2xl`                                                                                                                        |
@@ -1037,12 +1039,14 @@ page you are on — that is what keeps two overlapping surfaces reading in the c
 `theme.css` declares its layer order up front, then puts all of its own tokens in `lr-theme`:
 
 ```css
-@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 ```
 
 - **`lr-base`** — contains the explicitly scoped native-element rules only when the optional
   `native.css` asset is imported.
 - **`lr-theme`** — where every `--lr-theme-*` token `theme.css` ships is declared.
+- **`lr-theme-preset`** — an optional look preset layered over those tokens, such as
+  [`themes/shadcn.css`](#the-shadcn-look--themesshadcncss). Empty unless one is imported.
 - **`lr-utilities`** — contains exact `lr-*` classes only when the optional `utilities.css` asset is
   imported.
 - **`lr-overrides`** — named so an application can opt its own rules into a defined position
@@ -1078,14 +1082,14 @@ flip in either direction on a change that only moves an `@import`, with nothing 
 looking wrong. Two fixes, either is fine:
 
 ```css
-/* 1. Unlayer them — an unlayered rule outranks all four Lyra layers unconditionally,
+/* 1. Unlayer them — an unlayered rule outranks all five Lyra layers unconditionally,
       whatever the load order. This is the one that cannot be broken by an import move. */
 :root {
   --lr-theme-color-brand-fill-loud: #7c3aed;
 }
 
 /* 2. Or keep your layer and pin it after Lyra's, once, before anything else loads. */
-@layer lr-base, lr-theme, lr-utilities, lr-overrides, app-theme;
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides, app-theme;
 @layer app-theme {
   :root {
     --lr-theme-color-brand-fill-loud: #7c3aed;
@@ -1095,8 +1099,111 @@ looking wrong. Two fixes, either is fine:
 
 The second form is the one to reach for when the application already has a layer architecture:
 re-declaring the order is additive, and the first occurrence of each name is what fixes its
-position — so stating all five names yourself pins `app-theme` last no matter when `theme.css`
-loads.
+position — so stating all six names yourself pins `app-theme` last no matter when `theme.css`
+loads. Name **every** Lyra layer when you do, `lr-theme-preset` included: a name missing from the
+first statement the browser sees is appended at the end, so an older four-name statement (without
+`lr-theme-preset`) would rank an imported look preset above `lr-overrides` and your own layer. Every Lyra stylesheet that declares an order repeats the same five names for exactly this
+reason.
+
+### The shadcn look — `themes/shadcn.css`
+
+One more import restyles every component after [shadcn/ui](https://ui.shadcn.com)'s default
+"new-york" style on its Neutral base colour:
+
+```ts
+import "@aceshooting/lyra-ui/theme.css";
+import "@aceshooting/lyra-ui/themes/shadcn.css";
+```
+
+The preset sets only `--lr-theme-*` inputs, so no component API changes. Every rule sits in the
+`lr-theme-preset` layer, and the file repeats `theme.css`'s layer statement, so:
+
+- **load order does not matter** — the preset beats `theme.css` whichever is emitted first;
+- **any unlayered rule of yours beats both**, exactly as it beats `theme.css` alone;
+- **`setLyraTheme({ accent })` still wins** — the runtime writes inline style on `<html>`, which beats
+  every layer.
+
+**Modes.** The light block applies to `:root, .lr-light, [data-lr-theme='light'], .light` and the
+dark block to `.lr-dark, [data-lr-theme='dark'], .dark` (declared after light, same specificity). An
+application that toggles `.dark` on `<html>` the shadcn way gets Lyra's dark mode with no extra
+wiring, and a nested `.dark` (or `.light`) region is themed on its own, native `color-scheme`
+included. Only the preset knows `.dark`/`.light`: `theme.css` never reads those class names, since an
+application may already use them for something else. That is why each preset block also repeats
+`theme.css`'s own value, for that mode, of every input the preset does not restyle — the success,
+warning and remaining danger slots, the scrims, and the chart, graph and terminal ramps — so a bare
+`.dark` switches those too instead of leaving light status tints and light chart colours on a dark
+page.
+
+| Input | Light | Dark | Notes |
+| --- | --- | --- | --- |
+| `color-surface-default` / `-raised` / `-overlay` | `#ffffff` / `#fafafa` / `#ffffff` | `#0a0a0a` / `#171717` / `#171717` | page, card/sidebar, popover |
+| `color-text-normal` / `-quiet` | `#0a0a0a` / `#737373` | `#fafafa` / `#a1a1a1` | |
+| `color-surface-border`, `color-border-strong` | `#919191` | `#646464` | control boundaries, 3:1 on page and raised surface |
+| `color-surface-border-subtle` | `#e5e5e5` | `rgb(255 255 255 / 0.1)` | decorative edges only |
+| `color-brand-*`, `color-neutral-*` | quiet `#f5f5f5`, normal `#e5e5e5`, loud `#171717` | quiet `#262626`, normal `#404040`, loud `#e5e5e5` | monochrome: primary and secondary are one family |
+| `color-danger-fill-loud` / `-on-loud` | `#d6000a` / `#ffffff` | `#ff6467` / `#0a0a0a` | other danger, success and warning slots keep Lyra's values |
+| `color-focus`, `focus-ring-width`, `focus-ring-offset` | `#8b8b8b`, `3px`, `0px` | `#787878`, `3px`, `0px` | |
+| `color-mix-partner` | `#737373` | `#737373` | hover/press mix toward a mid grey |
+| `border-radius-m` / `-xs` | `0.5rem` / `0.25rem` | same | |
+| `font-family-body` / `-mono` | `'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif` / `'Geist Mono', ui-monospace, …` | same | fonts are named, not shipped |
+| `font-size-m` | `0.875rem` | same | shadcn UI text is `text-sm` |
+| `form-control-height-s` / `-m` / `-l`, `icon-button-size` | `2rem` / `2.25rem` / `2.5rem`, `2.25rem` | same | the 44px coarse-pointer floor still applies |
+| `shadow-xs` … `shadow-xl` | Tailwind geometry, alpha 0.05 / 0.1 | same geometry, alphas ×3 | `--lr-theme-shadow-color` still tints them |
+
+Every name in the first column is `--lr-theme-` plus the cell. The default `<lr-button>`
+(`variant="neutral" appearance="accent"`) is shadcn's primary; `appearance="filled"` is secondary,
+`"outlined"` outline, `"plain"` ghost, `variant="danger"` destructive, `appearance="link"` link.
+
+**Deliberate deviations from shadcn**, each keeping a contrast guarantee shadcn does not make — the
+repository's contrast gate re-measures every value in both modes:
+
+- **Control borders** use the control grey above, not shadcn's `#e5e5e5` hairline (1.26:1 on white).
+  The hairline survives as `--lr-color-border-subtle`, for decoration only.
+- **Focus** is an opaque grey, 3.41:1 / 4.48:1 against the page. shadcn's half-transparent ring
+  measures about 1.5:1 / 1.9:1.
+- **Danger.** Components set text in the loud danger colour — error messages on the page, the body of
+  a danger callout on the quiet danger tint. shadcn's `#e7000b` measures 4.10:1 on that tint, so the
+  preset uses `#d6000a`, the same red a notch darker. Dark danger is a light red under near-black
+  text, not white on a dark red, for the same reason.
+- **Charts** keep Lyra's validated series ramp: two of shadcn's chart colours fall below 3:1 on
+  white, and the ramp is also checked for colour-blind separation.
+- **Hover and press** mix toward a mid grey. The default mixes toward the text colour, and shadcn's
+  primary _is_ the text colour, so the default button would show no hover or press state at all.
+
+**Accents.** `lr-button`'s default renders the `neutral` role, and a bare accent only re-derives
+`brand`, so the preset aliases neutral's loud slots to brand's in both modes
+(`--lr-theme-color-neutral-fill-loud: var(--lr-theme-color-brand-fill-loud)`, and likewise
+`on-loud` and `border-loud`). With no accent that is the brand literal, so nothing changes; with
+`setLyraTheme({ accent: GEMSTONES.emerald.fill })` the default button, checked checkboxes and
+radios, and the focus ring follow the accent, while neutral's quiet and normal tiers — shadcn's
+secondary and muted — stay grey. **Switch modes through `setLyraTheme({ mode })`** (or the
+no-flash bootstrap) in an application that uses accents: the runtime derives the accent ramp for the
+mode it resolved and writes `data-lr-theme`, which the preset honours. Toggling `.dark` alone would
+leave a light-mode accent ramp on a dark page. Tailwind users can point `dark:` at
+`[data-lr-theme=dark]` to share that one switch.
+
+**Overriding the preset.** An unlayered `:root { --lr-theme-… }` wins, as always. A mode-specific
+override must name the mode selectors, because the preset re-declares every input it sets on each of
+them — so a nested `.dark` region re-applies the preset's dark value over one you set on `:root`:
+
+```css
+:root, .lr-light, [data-lr-theme="light"], .light { --lr-theme-color-brand-fill-loud: #4f46e5; }
+.lr-dark, [data-lr-theme="dark"], .dark { --lr-theme-color-brand-fill-loud: #818cf8; }
+```
+
+Two document-scope conveniences re-derive only on Lyra's own mode selectors
+(`.lr-light`/`.lr-dark`/`data-lr-theme`), not on `.dark`/`.light`: the resolved layer published by
+[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss) and the
+`--lr-focus-ring` composite `theme.css` declares for your own `outline: var(--lr-focus-ring)` rules.
+A nested region whose _own_ light-DOM elements read either should carry `data-lr-theme="dark"`
+alongside `.dark`. Components are unaffected; they re-derive both on their own `:host`.
+
+**Component hooks are not part of the preset** — it sets theme inputs only. For shadcn's raised
+sidebar tone, opt `lr-app-rail` in with one line:
+
+```css
+lr-app-rail { --lr-app-rail-background: var(--lr-color-surface-raised); }
+```
 
 ### Where an override actually reaches
 
@@ -1199,6 +1306,19 @@ code. See each control's own reference page for its exact pair.
   or `pointer: coarse`) a resolved value below `2.75rem` is raised back to it, so the new subtree
   knob is not a way around WCAG 2.2 SC 2.5.8 — a deliberately dense desktop toolbar still becomes
   tappable on a phone.
+- **`--lr-color-border-subtle`** is the decorative border tier:
+  `var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))`. Components draw only purely
+  decorative edges with it — a divider or rule, a card, panel, table or section edge, a separator
+  between items, a gutter line — never the only visible boundary of an interactive control or of a
+  meaningful graphic, which WCAG 2.2 SC 1.4.11 holds to 3:1 and which therefore stay on
+  `--lr-color-border`. Form controls never read it (a build gate enforces that). The theme input is
+  unset by default, `theme.css` included, so the token is exactly `--lr-color-border` and nothing
+  renders differently until you opt in; set `--lr-theme-color-surface-border-subtle` to give
+  decoration a lighter tone without weakening a single control boundary — it may be well below 3:1,
+  or translucent (the shadcn preset uses white at 10% in dark). To change control borders, set
+  `--lr-theme-color-surface-border` instead and keep it at 3:1 against both the page and the raised
+  surface. Forced-colours mode maps both tokens to the same system colour. Use the same split in your
+  own components: `tokens-root.css` publishes `--lr-color-border-subtle` at `:root`.
 - **`--lr-color-surface-overlay` follows `--lr-theme-color-surface-default` in both modes.** It is
   the panel colour behind every floating surface — dropdowns, listboxes, menus, toasts, popovers,
   dialogs, and the `lr-app-rail` mobile drawer. In light mode it resolves straight to
@@ -1588,7 +1708,7 @@ stay in light DOM: they do not pierce a component's shadow root.
 
 `utilities.css` places exact, zero-specificity `:where(.lr-*)` classes in `lr-utilities`. It never
 uses a substring class selector, so a class such as `app-lr-flex-preview` does not opt in. Both
-assets repeat `@layer lr-base, lr-theme, lr-utilities, lr-overrides`; an ordinary unlayered
+assets repeat `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`; an ordinary unlayered
 application rule therefore beats them regardless of load order. A third opt-in asset,
 [`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), is not a
 style sheet in the same sense — it declares custom properties only, and exists so your own
