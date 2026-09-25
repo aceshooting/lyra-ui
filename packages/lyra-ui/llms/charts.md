@@ -712,6 +712,19 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `barWidth: number = 32` (attribute `bar-width`, px) — each bar's fixed width in `layout="scroll"`
   mode; ignored in the default `'fit'` mode. An excessive value is reduced as needed by the
   1,000,000px scroll-content ceiling.
+- `barSlotWidth?: number` (attribute `bar-slot-width`, px, bar type only) — a fixed per-category slot
+  width (category pitch) for the default `layout="fit"`, replacing the derived
+  `plotW / labels.length` slot. Bar group width follows from that slot and `barGapRatio` as usual,
+  default x-origins stay `plotX + index * barSlotWidth`, and `barX` still overrides each origin — so
+  bars can share an external column pitch (e.g. a sibling `<lr-heatmap>`'s cell pitch) without
+  `layout="scroll"`. The plot never overflows or scrolls: the SVG keeps the measured host width,
+  gridlines span the whole plot, and a pitch too wide for the host is clipped at the chart's edge.
+  Under `dir="rtl"` category order stays physical left-to-right exactly like the derived slot (the
+  plot starts after the small right-hand pad because the value axis sits on the right), with no
+  scroll-induced shift. Ignored in `layout="scroll"`, where `barWidth` is the pitch, and for
+  `type="line"`. Unset reads `undefined` and keeps the derived slot; `NaN`, `Infinity`, `0` and
+  negative values fall back to it, and a finite value is capped so the category run stays within
+  1,000,000px.
 - `maxLabels?: number | 'auto'` (attribute `max-labels`) — decimates which category axis labels
   actually render *text*: after the global record sampler runs, it selects from those retained
   categories, always shows the first and last sampled label, and roughly evenly distributes the
@@ -727,8 +740,10 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns
-  (see that component's own `columnX`) by supplying the same coordinate function to both. Unset (the
-  default) is the original formula, unchanged. The callback runs once per rendered category per
+  (see that component's own `columnX`) by supplying the same coordinate function to both — pair it
+  with `barSlotWidth` set to the heatmap's cell pitch so the bar widths match the columns too. Unset
+  (the default) is the original formula, unchanged. Neither this callback nor the default origins
+  mirror under `dir="rtl"`. The callback runs once per rendered category per
   render and its finite result is shared by that category's bars and label; a non-finite result
   falls back to the normal slot position.
 - `pointText?: (label: string, value: number, datasetIndex: number) => string` (attribute: false) —
@@ -750,7 +765,11 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   external grouping boundary (a month, a release, a shift change) and leave `maxLabels` unset there.
   The returned string is ellipsized to the tick's own slot exactly like a source label, with the
   full text kept as the tick's accessible name; a return value that is neither a string nor `null`
-  falls back to the source label rather than reaching the DOM.
+  falls back to the source label rather than reaching the DOM. A sparse tick (e.g. one month name
+  every few weeks) may grow into adjacent ticks whose resolved text is `null` or empty before it is
+  ellipsized, in either `layout`: a centered tick grows symmetrically, up to half the gap to the
+  nearest labelled tick on each side, so it never reaches into a labelled neighbor's slot. A tick
+  whose adjacent ticks are all labelled is ellipsized exactly as before.
 - `roundedBars: boolean = false` (attribute `rounded-bars`, bar type only) — draws each bar as a
   rounded-top-corner shape instead of a square-cornered `<rect>`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no

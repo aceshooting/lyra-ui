@@ -316,6 +316,30 @@ export const SharedBarXAlignment: Story = {
   },
 };
 
+/**
+ * `barSlotWidth` fixes the per-category pitch in the default `layout="fit"` -- here 14px, as a
+ * heatmap's week-column pitch might be -- so bars can line up with an external grid without the
+ * plot overflowing or scrolling. A month name every few weeks, with the other ticks blanked by
+ * `axisLabelText`, grows into its empty neighbors' room instead of ellipsizing to one 14px slot.
+ */
+export const FixedSlotPitch: Story = {
+  render: () => {
+    const labels = Array.from({ length: 17 }, (_, index) => `Week ${index + 40}`);
+    const months: Readonly<Record<number, string>> = { 0: 'Oct', 5: 'Nov', 9: 'Dec', 13: 'Jan' };
+    return html`
+      <lr-lite-chart
+        type="bar"
+        height="12rem"
+        style="inline-size: 24rem; max-inline-size: 100%;"
+        bar-slot-width="14"
+        .labels=${labels}
+        .datasets=${[{ label: 'Commits', data: labels.map((_, index) => ((index * 7) % 11) + 2) }]}
+        .axisLabelText=${(_label: string, index: number) => months[index] ?? null}
+      ></lr-lite-chart>
+    `;
+  },
+};
+
 /** `maxLabels` thins out which x-axis category labels render text (bars themselves always still
  *  render) once there are more categories than that -- selecting from any bounded record sample,
  *  always keeping its first and last label, and spreading the rest roughly evenly, so a long

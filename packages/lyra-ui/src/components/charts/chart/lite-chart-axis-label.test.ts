@@ -170,3 +170,127 @@ describe('lr-lite-chart axisLabelText', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('lr-lite-chart sparse category ticks', () => {
+  // Sixteen weekly categories with one short month name every four weeks: at a 240px host the
+  // derived slot is ~12px, far too narrow for a three-letter month on its own.
+  const WEEKS = Array.from({ length: 16 }, (_, index) => `Week ${index + 1}`);
+  const WEEK_DATA = [{ label: 'Visits', data: WEEKS.map((_, index) => index + 1) }];
+  const MONTH_AT: Readonly<Record<number, string>> = { 1: 'Oct', 5: 'Nov', 9: 'Dec', 13: 'Jan' };
+  const MONTHS = ['Oct', 'Nov', 'Dec', 'Jan'];
+
+  function labelledTicks(el: LyraLiteChart): SVGTextElement[] {
+    return categoryTicks(el).filter((tick) => (tick.getAttribute('data-full-label') ?? '') !== '');
+  }
+  /** Client-space horizontal geometry box (not Gecko's padded ink rect) of a tick. */
+  function horizontalBox(tick: SVGTextElement): { left: number; right: number } {
+    const box = tick.getBBox();
+    const ctm = tick.getScreenCTM()!;
+    return { left: ctm.a * box.x + ctm.e, right: ctm.a * (box.x + box.width) + ctm.e };
+  }
+  function expectNoOverlap(ticks: SVGTextElement[]): void {
+    const boxes = ticks.map(horizontalBox).sort((a, b) => a.left - b.left);
+    for (let index = 1; index < boxes.length; index++) {
+      expect(boxes[index]!.left, `tick ${index} starts after its neighbor ends`).to.be.at.least(
+        boxes[index - 1]!.right - 0.01,
+      );
+    }
+  }
+
+  for (const layout of ['fit', 'scroll'] as const) {
+    it(`lets a lone label use its empty neighbors' slots in layout="${layout}"`, async () => {
+      const el = await mount(html`<lr-lite-chart
+        type="bar"
+        layout=${layout}
+        bar-width="12"
+        style="inline-size: 240px"
+        .labels=${WEEKS}
+        .datasets=${WEEK_DATA}
+        .axisLabelText=${(_label: string, index: number) => MONTH_AT[index] ?? ''}
+      ></lr-lite-chart>`);
+      const ticks = labelledTicks(el);
+      expect(ticks.map((tick) => tick.textContent), 'no month name is ellipsized').to.deep.equal(MONTHS);
+      expect(
+        ticks.every((tick) => !tick.hasAttribute('aria-label')),
+        'an unclipped tick carries no duplicate accessible name',
+      ).to.equal(true);
+      expectNoOverlap(ticks);
+    });
+  }
+
+  it('treats an empty source label like an empty override', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 240px"
+      .labels=${WEEKS.map((_, index) => MONTH_AT[index] ?? '')}
+      .datasets=${WEEK_DATA}
+    ></lr-lite-chart>`);
+    expect(labelledTicks(el).map((tick) => tick.textContent)).to.deep.equal(MONTHS);
+  });
+
+  it('sizes the pre-layout estimate from the empty neighbors too', async () => {
+    // A hidden scroll chart renders without layout, so only the character-count estimate applies.
+    const wrapper = await fixture(html`<div style="display: none">
+      <lr-lite-chart
+        type="bar"
+        layout="scroll"
+        bar-width="12"
+        .labels=${WEEKS}
+        .datasets=${WEEK_DATA}
+        .axisLabelText=${(_label: string, index: number) => MONTH_AT[index] ?? ''}
+      ></lr-lite-chart>
+    </div>`);
+    const el = wrapper.querySelector('lr-lite-chart') as LyraLiteChart;
+    await el.updateComplete;
+    const ticks = labelledTicks(el);
+    expect(ticks.map((tick) => tick.textContent)).to.deep.equal(MONTHS);
+    // Half the four-slot gap to each labelled neighbor, both sides, minus the 4px margin.
+    expect(Number(ticks[1]!.getAttribute('data-label-extent'))).to.be.closeTo(4 * 12 - 4, 0.001);
+  });
+
+  it('never grows a lone label into a labelled neighbor slot and leaves labelled neighbors unchanged', async () => {
+    const LONG = Array.from({ length: 12 }, (_, index) => `Category ${index + 1}`);
+    const data = [{ label: 'S', data: LONG.map((_, index) => index + 1) }];
+    const full = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 360px"
+      .labels=${LONG}
+      .datasets=${data}
+    ></lr-lite-chart>`);
+    const sparse = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 360px"
+      .labels=${LONG}
+      .datasets=${data}
+      .axisLabelText=${(label: string, index: number) => (index === 7 || index === 9 ? '' : label)}
+    ></lr-lite-chart>`);
+    const fullTicks = categoryTicks(full);
+    const sparseTicks = categoryTicks(sparse);
+    const snapshot = (tick: SVGTextElement) =>
+      [tick.textContent, tick.getAttribute('data-label-extent'), tick.getAttribute('aria-label')].join('|');
+    // Ticks 0..5 and 11 have only labelled neighbors; 6 and 10 each have a labelled neighbor on
+    // one side, so their symmetric extent is still bounded by that side -- all ellipsized exactly
+    // as before.
+    for (const index of [0, 1, 2, 3, 4, 5, 11]) {
+      expect(snapshot(sparseTicks[index]!), `tick ${index}`).to.equal(snapshot(fullTicks[index]!));
+    }
+    // The one-sided ticks resolve the same bound from a differently-summed gap, so only
+    // floating-point noise may differ in the extent; the painted text must not.
+    const textOf = (tick: SVGTextElement) => [tick.textContent, tick.getAttribute('aria-label')].join('|');
+    for (const index of [6, 10]) {
+      expect(textOf(sparseTicks[index]!), `tick ${index}`).to.equal(textOf(fullTicks[index]!));
+      expect(Number(sparseTicks[index]!.getAttribute('data-label-extent')), `tick ${index} extent`).to.be.closeTo(
+        Number(fullTicks[index]!.getAttribute('data-label-extent')),
+        1e-9,
+      );
+    }
+    // Tick 8 sits between two empty ticks and gains their room on both sides.
+    expect(Number(sparseTicks[8]!.getAttribute('data-label-extent'))).to.be.greaterThan(
+      Number(fullTicks[8]!.getAttribute('data-label-extent')) * 1.5,
+    );
+    expect((sparseTicks[8]!.textContent ?? '').length).to.be.greaterThan(
+      (fullTicks[8]!.textContent ?? '').length,
+    );
+    expectNoOverlap(sparseTicks.filter((tick) => tick.textContent !== ''));
+  });
+});

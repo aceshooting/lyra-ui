@@ -13,7 +13,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { finiteAdd, finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { finiteAdd, finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
@@ -220,6 +220,46 @@ function logDomainFraction(value: number, lo: number, hi: number): number {
   return Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
 }
 
+/** Whether a category tick's resolved text paints anything. */
+function hasCategoryLabelText(label: string | null | undefined): boolean {
+  return (label ?? '').trim() !== '';
+}
+
+/**
+ * Pre-layout width budget for one rendered category tick. A labelled tick whose adjacent rendered
+ * ticks are all labelled keeps the uniform `width` exactly. A tick next to empty ticks may use their
+ * room: toward a labelled tick it takes half the gap (so two growing neighbors can never both claim
+ * it, and never reach into the other's own slot); toward only empty ticks it takes up to the outer
+ * edge of the outermost one. A centered tick takes the smaller side twice so it stays symmetric; a
+ * boundary tick grows toward the plot interior only. fitCategoryLabels() refines this after layout.
+ */
+function sparseCategoryLabelExtent(
+  labels: readonly string[],
+  xs: readonly number[],
+  position: number,
+  grow: 'middle' | 'left' | 'right',
+  pitch: number,
+  width: number,
+): number {
+  if (!hasCategoryLabelText(labels[position])) return width;
+  const emptyBefore = position > 0 && !hasCategoryLabelText(labels[position - 1]);
+  const emptyAfter = position < labels.length - 1 && !hasCategoryLabelText(labels[position + 1]);
+  if (!emptyBefore && !emptyAfter) return width;
+  const x = xs[position]!;
+  const halfToward = (step: -1 | 1): number => {
+    let outermost = -1;
+    for (let index = position + step; index >= 0 && index < labels.length; index += step) {
+      if (hasCategoryLabelText(labels[index])) return Math.abs(x - xs[index]!) / 2;
+      outermost = index;
+    }
+    return outermost < 0 ? Number.POSITIVE_INFINITY : Math.abs(x - xs[outermost]!) + pitch / 2;
+  };
+  const extent = grow === 'middle'
+    ? 2 * Math.min(halfToward(-1), halfToward(1)) - BAR_CORNER_RADIUS
+    : halfToward(grow === 'right' ? 1 : -1) - BAR_CORNER_RADIUS;
+  return finiteRange(Math.max(width, extent), width, width, MAX_SCROLL_CONTENT_WIDTH);
+}
+
 function domainFraction(value: number, lo: number, hi: number): number {
   const span = hi - lo;
   if (Number.isFinite(span) && span > 0) {
@@ -361,7 +401,10 @@ export interface LyraLiteChartEventMap {
  * `barX` lets a consumer hand in its own per-category x-coordinate function
  * — e.g. to pixel-align this chart's bars with a sibling `lr-heatmap`'s
  * calendar columns — overriding the internal slot math for both bars and
- * their labels. All three are additive and no-ops when left unset.
+ * their labels. All three are additive and no-ops when left unset. For that
+ * heatmap alignment, pair `barX` with `barSlotWidth` set to the heatmap's
+ * cell pitch: it fixes the per-category slot (and so each bar's width) in the
+ * default `layout="fit"` without making the plot overflow or scroll.
  *
  * Seven further additive, opt-in properties: `pointText` overrides the
  * per-bar/per-point `<title>` tooltip and accessible-name text (mirrors
@@ -600,6 +643,20 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  property existed) in `layout="fit"`, the default. Scroll content is capped at 1,000,000px,
    *  so an excessive requested width is reduced as needed to keep SVG and CSS geometry finite. */
   @property({ type: Number, attribute: 'bar-width' }) barWidth = 32;
+  /** Fixed per-category slot width (the category pitch) in px for `type="bar"` in `layout="fit"`,
+   *  replacing the derived `plotW / labels.length` slot. Each bar group's width follows from this
+   *  slot and `barGapRatio` exactly as it does from the derived slot, and default category
+   *  x-origins stay `plotX + index * barSlotWidth` -- so bars can share an external column pitch
+   *  such as a sibling `lr-heatmap`'s cell pitch without switching to `layout="scroll"`. The plot
+   *  never overflows or scrolls: the SVG keeps the measured host width, gridlines still span the
+   *  whole plot, and a pitch too wide for the host is clipped at the chart's edge. `barX` still
+   *  overrides each category's x-origin. Category order stays physical left-to-right under
+   *  `dir="rtl"`, where the plot starts after the small right-hand pad because the value axis sits
+   *  on the right, exactly like the derived slot. Ignored by `layout="scroll"`, where `barWidth`
+   *  sets the pitch, and by `type="line"`. Unset (the default) reads `undefined` and keeps the
+   *  derived slot; a non-finite, zero or negative value falls back to it too, and a finite value is
+   *  capped so the whole category run stays within 1,000,000px. */
+  @property({ type: Number, attribute: 'bar-slot-width' }) barSlotWidth?: number;
   /** Caps how many x-axis category labels render text once `this.labels.length` exceeds it,
    *  decimating roughly evenly while always keeping the first and last label. `'auto'` derives a
    *  deterministic cap from the resolved plot width and widest rendered category label using the
@@ -644,7 +701,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *
    * The returned string is ellipsized to the tick's own slot exactly like a source label, with the
    * full text kept as the tick's accessible name; a return value that is neither a string nor
-   * `null` falls back to the source label rather than reaching the DOM.
+   * `null` falls back to the source label rather than reaching the DOM. A sparse tick may first
+   * grow into adjacent ticks whose resolved text is `null` or empty (in either `layout`): a centered
+   * tick grows symmetrically, up to half the gap to the nearest labelled tick on each side, so it
+   * never reaches into a labelled neighbor's slot. A tick whose adjacent ticks are all labelled is
+   * ellipsized exactly as before.
    */
   @property({ attribute: false }) axisLabelText?: (
     label: string,
@@ -1141,7 +1202,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  of letting both independently claim it in full. */
   private fitCategoryLabels(): void {
     if (!this.ownerDocument?.defaultView || !this.isConnected || !this.svgEl?.getClientRects().length) return;
+    // A tick whose resolved text is empty paints nothing, so it arbitrates exactly like a tick
+    // `axisLabelText` blanked with `null`: its labelled neighbors may grow into its slot.
     const ticks = [...this.svgEl.querySelectorAll<SVGTextElement>('[part="axis-label"][data-full-label]')]
+      .filter((tick) => hasCategoryLabelText(tick.getAttribute('data-full-label')))
       .sort((a, b) => Number(a.getAttribute('x')) - Number(b.getAttribute('x')));
     const count = ticks.length;
     if (count === 0) return;
@@ -2297,6 +2361,17 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     );
   }
 
+  /** A valid `barSlotWidth`, capped so the category run stays finite, or `undefined` to keep the
+   *  derived slot. */
+  private fixedBarSlotWidth(n: number): number | undefined {
+    const requested = typeof this.barSlotWidth === 'number'
+      ? finiteNumber(this.barSlotWidth, 0)
+      : 0;
+    if (requested <= 0) return undefined;
+    const maxSlot = n > 0 ? MAX_SCROLL_CONTENT_WIDTH / n : MAX_SCROLL_CONTENT_WIDTH;
+    return finiteRange(requested, 0, 0, maxSlot);
+  }
+
   private displayCategoryLabel(label: string, availableWidth: number): string {
     const maxCharacters = Math.max(
       1,
@@ -2337,6 +2412,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     let w: number;
     let plotW: number;
     let slot: number;
+    let fixedSlot: number | undefined;
     if (this.layout === 'scroll') {
       // Fixed-width bars: content width is driven by category count ×
       // barWidth instead of the measured host width, and CAN exceed it --
@@ -2352,10 +2428,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       w = axisGutter + plotW + PAD_RIGHT;
     } else {
       // 'fit' (default): squeeze to the measured host width, byte-for-byte
-      // the same computation as before `layout` existed.
+      // the same computation as before `layout` existed. An opt-in `barSlotWidth` only replaces
+      // the derived per-category slot; the SVG keeps the measured width so nothing overflows.
       w = measuredWidth;
       plotW = Math.max(0, w - axisGutter - PAD_RIGHT);
-      slot = n > 0 ? plotW / n : 0;
+      fixedSlot = this.fixedBarSlotWidth(n);
+      slot = fixedSlot ?? (n > 0 ? plotW / n : 0);
     }
     const recordSample = this.recordSample();
     const selectedIndices = new Set<number>();
@@ -2396,7 +2474,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
     const visibleLabelIndexes = this.visibleLabelIndexes(
       n,
-      plotW,
+      // A fixed pitch spreads the category ticks over `n * slot`, not the whole plot width.
+      fixedSlot === undefined || this.effectiveType !== 'bar' ? plotW : n * slot,
       recordSample.rowIndexes,
     );
     const categoryLabelX = (i: number): number =>
@@ -2429,20 +2508,21 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // label against a decimation stride that (thanks to `visibleLabelIndexes()` rounding) is not
     // perfectly even.
     const decimationStride = renderedTickIndexes.length ? n / renderedTickIndexes.length : 1;
-    const categoryLabelWidth = Math.max(
-      0,
-      decimationStride *
-        (this.effectiveType === 'bar'
-          ? slot
-          : n > 1
-            ? plotW / (n - 1)
-            : plotW) - BAR_CORNER_RADIUS,
-    );
-    const categoryLabels = awaitingFitMeasurement ? [] : renderedTickIndexes.map((i) => {
-      const label = this.labels[i] ?? '';
+    const categoryLabelPitch = decimationStride *
+      (this.effectiveType === 'bar'
+        ? slot
+        : n > 1
+          ? plotW / (n - 1)
+          : plotW);
+    const categoryLabelWidth = Math.max(0, categoryLabelPitch - BAR_CORNER_RADIUS);
+    const tickFullLabels = renderedTickIndexes.map((i) => {
       const override = tickOverrides.get(i);
-      const fullLabel = typeof override === 'string' ? override : label;
-      const x = categoryLabelX(i);
+      return typeof override === 'string' ? override : this.labels[i] ?? '';
+    });
+    const tickXs = renderedTickIndexes.map(categoryLabelX);
+    const categoryLabels = awaitingFitMeasurement ? [] : renderedTickIndexes.map((i, position) => {
+      const fullLabel = tickFullLabels[position]!;
+      const x = tickXs[position]!;
       // The first and last surviving ticks sit AT the plot's own boundary (`plotX` /
       // `plotX + plotW`), not one stride short of it like every other survivor -- they have no
       // neighbor on their outer side, so a centered label there overhangs past the svg's own
@@ -2466,13 +2546,21 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             : i === n - 1
               ? (rtl ? 'start' : 'end')
               : 'middle';
-      const displayLabel = this.displayCategoryLabel(fullLabel, categoryLabelWidth);
+      const labelExtent = sparseCategoryLabelExtent(
+        tickFullLabels,
+        tickXs,
+        position,
+        textAnchor === 'middle' ? 'middle' : i === 0 ? 'right' : 'left',
+        categoryLabelPitch,
+        categoryLabelWidth,
+      );
+      const displayLabel = this.displayCategoryLabel(fullLabel, labelExtent);
       return svg`<text
         part="axis-label"
         x=${x}
         y=${plotY + plotH + CATEGORY_LABEL_OFFSET}
         text-anchor=${textAnchor}
-        data-label-extent=${categoryLabelWidth}
+        data-label-extent=${labelExtent}
         data-full-label=${fullLabel}
         aria-label=${displayLabel === fullLabel ? nothing : fullLabel}
       >${displayLabel}</text>`;

@@ -1705,6 +1705,241 @@ it('resolves a stateful barX callback once per rendered category and falls back 
   expect(Number(secondLabel.getAttribute('x'))).to.be.closeTo(secondCenter, 1);
 });
 
+// --- barSlotWidth fixed category pitch -----------------------------------------
+
+describe('barSlotWidth', () => {
+  const SLOT_LABELS = ['w1', 'w2', 'w3', 'w4', 'w5', 'w6'];
+  const SLOT_DATA = [{ label: 'S', data: [1, 2, 3, 4, 5, 6] }];
+
+  function viewBoxWidth(el: LyraLiteChart): number {
+    return Number(el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')!.split(' ')[2]);
+  }
+  function barBoxes(el: LyraLiteChart): { x: number; width: number }[] {
+    return [...el.shadowRoot!.querySelectorAll<SVGRectElement>('[part="bar"]')].map((bar) => ({
+      x: Number(bar.getAttribute('x')),
+      width: Number(bar.getAttribute('width')),
+    }));
+  }
+  /** Serializes every geometry- and text-bearing attribute of the rendered marks and ticks. */
+  function geometrySnapshot(el: LyraLiteChart): string {
+    const nodes = el.shadowRoot!.querySelectorAll('[part="bar"], [part="axis-label"], [part="grid-line"]');
+    return [...nodes]
+      .map((node) =>
+        [
+          node.getAttribute('part'),
+          ...['x', 'y', 'width', 'height', 'x1', 'x2', 'text-anchor', 'data-label-extent', 'aria-label']
+            .map((name) => node.getAttribute(name)),
+          node.textContent,
+        ].join('|'),
+      )
+      .join('\n');
+  }
+
+  it('is unset by default and leaves fit geometry on the derived plotW / n slot (unset regression)', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 400px"
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    expect(el.barSlotWidth, 'the property reads undefined while unset').to.equal(undefined);
+    expect(el.hasAttribute('bar-slot-width'), 'nothing reflects').to.equal(false);
+    const w = viewBoxWidth(el);
+    const slot = (w - 36 - 8) / SLOT_LABELS.length;
+    const bars = barBoxes(el);
+    expect(bars.length).to.equal(SLOT_LABELS.length);
+    bars.forEach((bar, i) => {
+      expect(bar.x, `bar ${i} x`).to.be.closeTo(36 + i * slot + slot * 0.1, 0.001);
+      expect(bar.width, `bar ${i} width`).to.be.closeTo(slot * 0.8, 0.001);
+    });
+    expect(categoryAxisLabels(el).map((label) => label.textContent)).to.deep.equal(SLOT_LABELS);
+    const unset = geometrySnapshot(el);
+
+    // Every invalid value falls back to exactly the same derived geometry.
+    for (const invalid of [Number.NaN, 0, -12, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      el.barSlotWidth = invalid;
+      await el.updateComplete;
+      expect(geometrySnapshot(el), `barSlotWidth=${invalid}`).to.equal(unset);
+    }
+    el.barSlotWidth = undefined;
+    await el.updateComplete;
+    expect(geometrySnapshot(el), 'unsetting restores the derived slot').to.equal(unset);
+  });
+
+  it('falls back to the derived slot for an unparsable bar-slot-width attribute', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 400px"
+      bar-slot-width="wide"
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    const slot = (viewBoxWidth(el) - 36 - 8) / SLOT_LABELS.length;
+    expect(barBoxes(el)[1]!.x).to.be.closeTo(36 + slot + slot * 0.1, 0.001);
+  });
+
+  it('replaces the derived fit slot with a fixed pitch without overflowing the host', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 400px"
+      bar-slot-width="20"
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    expect(el.barSlotWidth).to.equal(20);
+    const bars = barBoxes(el);
+    bars.forEach((bar, i) => {
+      expect(bar.x, `bar ${i} x`).to.be.closeTo(36 + i * 20 + 2, 0.001);
+      expect(bar.width, `bar ${i} width`).to.be.closeTo(16, 0.001);
+    });
+    const ticks = categoryAxisLabels(el);
+    ticks.forEach((tick, i) => {
+      expect(Number(tick.getAttribute('x')), `tick ${i} x`).to.be.closeTo(36 + i * 20 + 10, 0.001);
+    });
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const svgEl = el.shadowRoot!.querySelector('svg')!;
+    expect(viewBoxWidth(el), 'fit keeps the measured width').to.be.closeTo(svgEl.getBoundingClientRect().width, 1);
+    expect(svgEl.getAttribute('style') ?? '', 'fit never sizes the svg explicitly').to.not.contain('inline-size');
+    expect(base.scrollWidth, 'the fit plot never overflows').to.be.at.most(base.clientWidth);
+  });
+
+  it('derives the bar group width from the fixed slot and barGapRatio', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 400px"
+      .barSlotWidth=${30}
+      .barGapRatio=${0.5}
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    const bars = barBoxes(el);
+    expect(bars[2]!.x).to.be.closeTo(36 + 2 * 30 + 7.5, 0.001);
+    expect(bars[2]!.width).to.be.closeTo(15, 0.001);
+  });
+
+  it('keeps barX authoritative for the x-origin while the fixed slot sets the width', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 400px"
+      .barSlotWidth=${14}
+      .barX=${(index: number) => 50 + index * 14}
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    const bars = barBoxes(el);
+    bars.forEach((bar, i) => {
+      expect(bar.x, `bar ${i} x`).to.be.closeTo(50 + i * 14 + 1.4, 0.001);
+      expect(bar.width, `bar ${i} width`).to.be.closeTo(11.2, 0.001);
+    });
+    expect(Number(categoryAxisLabels(el)[3]!.getAttribute('x'))).to.be.closeTo(50 + 3 * 14 + 7, 0.001);
+  });
+
+  it('keeps the same physical left-to-right placement under dir="rtl" with no scroll shift', async () => {
+    const mountIn = async (dir: 'ltr' | 'rtl') => {
+      const wrapper = await fixture(html`<div dir=${dir} style="inline-size: 400px">
+        <lr-lite-chart
+          type="bar"
+          .barSlotWidth=${20}
+          .labels=${SLOT_LABELS}
+          .datasets=${SLOT_DATA}
+        ></lr-lite-chart>
+        <lr-lite-chart
+          type="bar"
+          .barSlotWidth=${20}
+          .barX=${(index: number) => 100 + index * 20}
+          .labels=${SLOT_LABELS}
+          .datasets=${SLOT_DATA}
+        ></lr-lite-chart>
+      </div>`);
+      const [plain, aligned] = [...wrapper.querySelectorAll('lr-lite-chart')] as LyraLiteChart[];
+      for (const chart of [plain!, aligned!]) {
+        await waitUntil(() => (chart as unknown as { plotWidth: number }).plotWidth > 0);
+        await chart.updateComplete;
+      }
+      return { plain: plain!, aligned: aligned! };
+    };
+    const ltr = await mountIn('ltr');
+    const rtl = await mountIn('rtl');
+    expect(
+      (rtl.plain as unknown as { readonly effectiveDirection: string }).effectiveDirection,
+    ).to.equal('rtl');
+
+    // Default origins keep category order physical and move only plotX, exactly like the
+    // derived slot: the value-axis gutter sits on the right, so the plot starts at PAD_RIGHT.
+    barBoxes(rtl.plain).forEach((bar, i) => {
+      expect(bar.x, `rtl bar ${i} x`).to.be.closeTo(8 + i * 20 + 2, 0.001);
+      expect(bar.width).to.be.closeTo(16, 0.001);
+    });
+    // barX is never mirrored: the same callback yields the same coordinates in either direction.
+    expect(barBoxes(rtl.aligned)).to.deep.equal(barBoxes(ltr.aligned));
+
+    for (const chart of [rtl.plain, rtl.aligned]) {
+      const base = chart.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const svgEl = chart.shadowRoot!.querySelector('svg')!;
+      expect(base.scrollWidth, 'no rtl overflow to scroll').to.be.at.most(base.clientWidth);
+      // Rendered pixels match the SVG coordinates 1:1 -- no PAD_RIGHT-sized scroll shift.
+      const svgLeft = svgEl.getBoundingClientRect().left;
+      const bars = [...chart.shadowRoot!.querySelectorAll<SVGRectElement>('[part="bar"]')];
+      bars.forEach((bar) => {
+        expect(bar.getBoundingClientRect().left - svgLeft).to.be.closeTo(Number(bar.getAttribute('x')), 0.5);
+      });
+    }
+  });
+
+  it('is ignored by layout="scroll", where barWidth keeps setting the pitch', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      layout="scroll"
+      bar-width="40"
+      bar-slot-width="10"
+      style="inline-size: 120px"
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    expect(viewBoxWidth(el)).to.be.closeTo(36 + 6 * 40 + 8, 0.001);
+    expect(barBoxes(el)[1]!.x).to.be.closeTo(36 + 40 + 4, 0.001);
+  });
+
+  it('caps an extreme fixed slot before it reaches SVG geometry', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      style="inline-size: 400px"
+      .barSlotWidth=${Number.MAX_VALUE}
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    const cap = 1_000_000 / SLOT_LABELS.length;
+    expect(barBoxes(el)[0]!.width).to.be.closeTo(cap * 0.8, 0.001);
+    expect(geometrySnapshot(el)).to.not.match(/(?:NaN|Infinity|e\+)/);
+  });
+
+  it('has no effect on type="line"', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="line"
+      style="inline-size: 400px"
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    const before = geometrySnapshot(el) + el.shadowRoot!.querySelector('[part="line"]')!.getAttribute('d');
+    el.barSlotWidth = 12;
+    await el.updateComplete;
+    const after = geometrySnapshot(el) + el.shadowRoot!.querySelector('[part="line"]')!.getAttribute('d');
+    expect(after).to.equal(before);
+  });
+
+  it('stays accessible with a fixed pitch', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      label="Weekly totals"
+      .barSlotWidth=${18}
+      .labels=${SLOT_LABELS}
+      .datasets=${SLOT_DATA}
+    ></lr-lite-chart>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(6);
+    await expect(el).to.be.accessible();
+  });
+});
+
 // --- pointText tooltip formatter -----------------------------------------------
 
 it('pointText overrides the per-bar title-derived accessible name', async () => {
