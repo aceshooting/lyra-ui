@@ -496,3 +496,163 @@ describe('parseMarkdownDocument link/image scheme allowlist', () => {
     expect(container.querySelector('a')!.getAttribute('href')).to.equal('javascript:alert(1)');
   });
 });
+
+describe('escape-mode raw-block text', () => {
+  type HtmlMode = 'sanitize' | 'escape' | 'trusted';
+
+  // No closing `>`, so marked lexes it as text rather than as an inline HTML tag.
+  const payload = '<img src=x onerror=void(0)';
+  const escapedPayload = '&lt;img src=x onerror=void(0)';
+  const openers = ['<code>', '<CODE>', '<kbd>', '<pre>', '<script>'] as const;
+  const escapeOpener = (opener: string): string => `&lt;${opener.slice(1, -1)}&gt;`;
+  const introHtml = (opener: string): string => `<p part='paragraph'>Intro ${opener} run</p>\n`;
+  /** The parse output's table markup around `inner` (both pinned table fragments below use it). */
+  const tableHtml = (inner: string): string => `<table part='table'>\n${inner}</table>\n`;
+
+  /** Where the text follows the opener, with the exact parse output for a rendered opener `o`
+   *  and follow-up text `p`. */
+  const contexts: ReadonlyArray<{
+    name: string;
+    source: (opener: string) => string;
+    html: (o: string, p: string) => string;
+  }> = [
+    {
+      name: 'the same paragraph',
+      source: (opener) => `Intro ${opener} run ${payload}`,
+      html: (o, p) => `<p part='paragraph'>Intro ${o} run ${p}</p>\n`,
+    },
+    {
+      name: 'a later paragraph',
+      source: (opener) => `Intro ${opener} run\n\nLater ${payload}`,
+      html: (o, p) => `${introHtml(o)}<p part='paragraph'>Later ${p}</p>\n`,
+    },
+    {
+      name: 'a heading',
+      source: (opener) => `Intro ${opener} run\n\n# Heading ${payload}`,
+      html: (o, p) => `${introHtml(o)}<h1 part='heading'>Heading ${p}</h1>\n`,
+    },
+    {
+      name: 'a list item',
+      source: (opener) => `Intro ${opener} run\n\n- Item ${payload}`,
+      html: (o, p) => `${introHtml(o)}<ul part='list'>\n<li>Item ${p}</li>\n</ul>\n`,
+    },
+    {
+      name: 'a table cell',
+      source: (opener) => `Intro ${opener} run\n\n| A | B |\n| --- | --- |\n| ${payload} | c |`,
+      html: (o, p) =>
+        introHtml(o) +
+        tableHtml(
+          `<thead>\n<tr>\n<th scope='col'>A</th><th scope='col'>B</th></tr>\n` +
+            `</thead>\n<tbody><tr>\n<td>${p}</td>\n<td>c</td>\n</tr>\n</tbody>\n`,
+        ),
+    },
+    {
+      name: 'a blockquote',
+      source: (opener) => `Intro ${opener} run\n\n> Quote ${payload}`,
+      html: (o, p) =>
+        `${introHtml(o)}<blockquote part='blockquote'>\n<p part='paragraph'>Quote ${p}</p>\n</blockquote>\n`,
+    },
+  ];
+
+  const parse = (marked: MarkedModule, content: string, mode: HtmlMode): string =>
+    parseMarkdownDocument({
+      marked,
+      content,
+      gfm: true,
+      linkTarget: null,
+      headingOffset: 0,
+      escapeHtmlOption: mode === 'escape',
+      trustedHtmlOption: mode === 'trusted',
+      highlightCodeOption: false,
+      getCachedHighlight: () => undefined,
+      failedHighlightKeys: new Set(),
+      headingAnchorsOption: false,
+      mathOption: false,
+      cachedKatex: null,
+      pendingKeys: [],
+      headingTreeOut: [],
+    }).html;
+
+  /** Parsed without a live document, so nothing in the markup loads or runs. */
+  const parseHtml = (markup: string): Document => new DOMParser().parseFromString(markup, 'text/html');
+
+  const eventHandlerAttributes = (root: ParentNode): string[] =>
+    Array.from(root.querySelectorAll('*')).flatMap((element) =>
+      Array.from(element.attributes)
+        .filter((attribute) => attribute.name.toLowerCase().startsWith('on'))
+        .map((attribute) => `${element.localName}[${attribute.name}]`),
+    );
+
+  it('keeps text after an unclosed raw-block opener as text in every later block', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    for (const opener of openers) {
+      for (const context of contexts) {
+        const label = `${opener} followed by ${context.name}`;
+        const doc = parseHtml(parse(marked, context.source(opener), 'escape'));
+        expect(doc.body.querySelectorAll('img, script').length, label).to.equal(0);
+        expect(eventHandlerAttributes(doc.body), label).to.deep.equal([]);
+        expect(doc.body.textContent ?? '', label).to.include(payload);
+      }
+    }
+  });
+
+  it('leaves escape-mode output byte-identical outside a raw run and keeps entity references inside one', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    const corpus = [
+      '# Title &amp; &copy; &#169;',
+      '',
+      'Plain &amp; &copy; &#169; &#xA9; text, <b>bold</b> raw, a < b > c, "double" \'single\' & bare &x.',
+      '',
+      '- item &copy; <span>x</span>',
+      '- `code &amp;` and **strong &#169;**',
+      '',
+      '> quote &amp; <i>it</i>',
+      '',
+      '| A &amp; | B |',
+      '| --- | --- |',
+      '| &copy; <u>u</u> | &#169; |',
+      '',
+      '<div>block &amp; html</div>',
+    ].join('\n');
+    // The escape-mode output of the release before raw-run text was escaped.
+    const corpusHtml =
+      `<h1 part='heading'>Title &amp; &copy; ©</h1>\n` +
+      `<p part='paragraph'>Plain &amp; &copy; © © text, &lt;b&gt;bold&lt;/b&gt; raw, a &lt; b &gt; c, ` +
+      `&quot;double&quot; &#39;single&#39; &amp; bare &amp;x.</p>\n` +
+      `<ul part='list'>\n<li>item &copy; &lt;span&gt;x&lt;/span&gt;</li>\n` +
+      `<li><code part='inline-code'>code &amp;amp;</code> and <strong>strong ©</strong></li>\n</ul>\n` +
+      `<blockquote part='blockquote'>\n<p part='paragraph'>quote &amp; &lt;i&gt;it&lt;/i&gt;</p>\n</blockquote>\n` +
+      tableHtml(
+        `<thead>\n<tr>\n<th scope='col'>A &amp;</th><th scope='col'>B</th></tr>\n</thead>\n` +
+          `<tbody><tr>\n<td>&copy; &lt;u&gt;u&lt;/u&gt;</td>\n<td>©</td>\n</tr>\n</tbody>\n`,
+      ) +
+      `&lt;div&gt;block &amp;amp; html&lt;/div&gt;`;
+    expect(parse(marked, corpus, 'escape')).to.equal(corpusHtml);
+
+    // Inside a raw run, character references stay encoded (not decoded) and render as the same
+    // character; a bare `&` and an unterminated tag-like run render literally.
+    const rawRun = parse(marked, 'Intro <code> &amp; &copy; &#169; &#xA9; & 1 < 2 <b', 'escape');
+    expect(rawRun).to.equal(
+      `<p part='paragraph'>Intro &lt;code&gt; &amp; &copy; &#169; &#xA9; &amp; 1 &lt; 2 &lt;b</p>\n`,
+    );
+    expect((parseHtml(rawRun).body.textContent ?? '').trim()).to.equal('Intro <code> & © © © & 1 < 2 <b');
+  });
+
+  it('changes escape mode only: sanitize and trusted output are unchanged for the same inputs', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    for (const opener of openers) {
+      for (const context of contexts) {
+        const label = `${opener} followed by ${context.name}`;
+        const source = context.source(opener);
+        // Sanitize and trusted parses emit the raw run verbatim, exactly as before; DOMPurify (in
+        // sanitize mode) is what makes that output safe, and trusted mode is the documented bypass.
+        const verbatim = context.html(opener, payload);
+        expect(parse(marked, source, 'sanitize'), `${label} (sanitize)`).to.equal(verbatim);
+        expect(parse(marked, source, 'trusted'), `${label} (trusted)`).to.equal(verbatim);
+        expect(parse(marked, source, 'escape'), `${label} (escape)`).to.equal(
+          context.html(escapeOpener(opener), escapedPayload),
+        );
+      }
+    }
+  });
+});

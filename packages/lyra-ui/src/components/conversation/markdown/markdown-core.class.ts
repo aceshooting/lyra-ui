@@ -257,10 +257,11 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ type: Number, attribute: 'tab-size' }) override tabSize = 4;
 
   /** How authored raw HTML is handled: sanitized through DOMPurify (default), escaped as visible
-   * text, or deliberately trusted. Independently of this, every markdown-native link/image
-   * `href`/`src` is always scheme-validated (`http:`/`https:`/`blob:`/`mailto:`, plus `data:` for
-   * images) unless `htmlMode` is `trusted` -- a rejected scheme drops the anchor/image, rendering
-   * only its text/alt content. */
+   * text, or deliberately trusted. In escape mode, a consumer `renderer.text` or `renderer.html`
+   * override replaces the escaping and is the consumer's responsibility. Independently of this,
+   * every markdown-native link/image `href`/`src` is always scheme-validated
+   * (`http:`/`https:`/`blob:`/`mailto:`, plus `data:` for images) unless `htmlMode` is `trusted`
+   * -- a rejected scheme drops the anchor/image, rendering only its text/alt content. */
   @property({ attribute: 'html-mode' }) override htmlMode: MarkdownHtmlMode =
     'sanitize';
 

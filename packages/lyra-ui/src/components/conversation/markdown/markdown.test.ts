@@ -3638,3 +3638,56 @@ describe('maxHeight', () => {
     expect(content.getBoundingClientRect().height).to.be.lessThan(unclamped);
   });
 });
+
+describe('escape-mode raw-block text', () => {
+  // No closing `>`, so marked lexes it as text rather than as an inline HTML tag.
+  const payload = '<img src=x onerror=void(0)';
+  const openers = ['<code>', '<CODE>', '<kbd>', '<pre>', '<script>'] as const;
+  const contexts: ReadonlyArray<{ name: string; source: (opener: string) => string }> = [
+    { name: 'the same paragraph', source: (opener) => `Intro ${opener} run ${payload}` },
+    { name: 'a later paragraph', source: (opener) => `Intro ${opener} run\n\nLater ${payload}` },
+    { name: 'a heading', source: (opener) => `Intro ${opener} run\n\n# Heading ${payload}` },
+    { name: 'a list item', source: (opener) => `Intro ${opener} run\n\n- Item ${payload}` },
+    {
+      name: 'a table cell',
+      source: (opener) => `Intro ${opener} run\n\n| A | B |\n| --- | --- |\n| ${payload} | c |`,
+    },
+    { name: 'a blockquote', source: (opener) => `Intro ${opener} run\n\n> Quote ${payload}` },
+  ];
+
+  const eventHandlerAttributes = (root: ParentNode): string[] =>
+    Array.from(root.querySelectorAll('*')).flatMap((element) =>
+      Array.from(element.attributes)
+        .filter((attribute) => attribute.name.toLowerCase().startsWith('on'))
+        .map((attribute) => `${element.localName}[${attribute.name}]`),
+    );
+
+  before(async () => {
+    await import('./markdown-core.js');
+  });
+
+  for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
+    it(`renders text after an unclosed raw-block opener as visible text in every later block (${tag})`, async () => {
+      for (const opener of openers) {
+        for (const context of contexts) {
+          const label = `${tag}: ${opener} followed by ${context.name}`;
+          const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+          const el = document.createElement(tag) as HTMLElement & { content: string; htmlMode: string };
+          el.htmlMode = 'escape';
+          el.content = context.source(opener);
+          wrapper.appendChild(el);
+          const part = (): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+          await waitUntil(
+            () => el.shadowRoot?.querySelector('[part="content"]') != null && !part().hasAttribute('data-fallback'),
+            `${label}: the parsed Markdown never rendered`,
+          );
+          expect(el.shadowRoot!.querySelectorAll('img, script').length, label).to.equal(0);
+          expect(eventHandlerAttributes(el.shadowRoot!), label).to.deep.equal([]);
+          expect(part().textContent ?? '', label).to.include(payload);
+          expect(part().innerText, label).to.include(payload);
+          wrapper.remove();
+        }
+      }
+    });
+  }
+});
