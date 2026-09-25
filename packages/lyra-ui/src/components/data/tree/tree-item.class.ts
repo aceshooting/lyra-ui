@@ -173,7 +173,7 @@ export interface LyraTreeItemEventMap {
  * @cssprop [--show-duration=var(--lr-duration-base)] - Expansion motion duration.
  * @cssprop [--hide-duration=var(--lr-duration-base)] - Collapse motion duration.
  * @cssprop [--indent-size=var(--lr-space-l)] - Indentation step applied once per nesting depth.
- * @cssprop [--indent-guide-color=var(--lr-color-border)] - Indentation guide color.
+ * @cssprop [--indent-guide-color=var(--lr-color-border-subtle)] - Indentation guide color.
  * @cssprop [--indent-guide-offset=0] - Block-axis inset at both ends of the indentation guide.
  * @cssprop [--indent-guide-style=solid] - Indentation guide border style.
  * @cssprop [--indent-guide-width=0] - Indentation guide width.

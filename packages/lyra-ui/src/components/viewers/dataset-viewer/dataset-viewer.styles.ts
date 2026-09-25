@@ -11,7 +11,7 @@ export const styles = css`
     flex-direction: column;
     box-sizing: border-box;
     min-inline-size: 0;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
@@ -55,11 +55,11 @@ export const styles = css`
     background: var(--lr-dataset-viewer-header-row-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-text);
     font-weight: var(--lr-font-weight-semibold);
-    border-block-end: var(--lr-border-width-medium) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-medium) solid var(--lr-color-border-subtle);
   }
   [part='header-cell'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -75,8 +75,8 @@ export const styles = css`
   }
   lr-virtual-list::part(cell) {
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

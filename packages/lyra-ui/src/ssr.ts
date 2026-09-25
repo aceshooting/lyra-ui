@@ -270,6 +270,17 @@ export const LYRA_SSR_TAG_CAPABILITIES = Object.freeze({
   [tag('flow-canvas')]: {
     layoutMeasurement: 'after-hydration', // recomputes rendered node/edge geometry from measured container size
   },
+  [tag('toggle-group')]: {
+    layoutMeasurement: 'after-hydration', // joined runs are measured from rendered rects
+    observers: 'after-hydration', // group size/appearance/tab-stop projection is driven by Mutation/ResizeObservers
+  },
+  [tag('navigation-menu')]: {
+    layoutMeasurement: 'after-hydration', // the collapsed bar/toggle layout is chosen from the measured allocation
+    observers: 'after-hydration', // a ResizeObserver drives the collapse decision and panel positioning
+  },
+  [tag('navigation-menu-item')]: {
+    layoutMeasurement: 'after-hydration', // the flyout panel is positioned from measured trigger/menu rects
+  },
 } satisfies Record<string, LyraSsrTagCapabilities>);
 
 /**
@@ -333,6 +344,7 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-condition-builder',
   'lr-confirm-bar',
   'lr-context-inspector',
+  'lr-context-menu',
   'lr-context-meter',
   'lr-control-group',
   'lr-conversation-item',
@@ -483,8 +495,10 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-timeline-item',
   'lr-toast',
   'lr-toast-item',
+  'lr-toggle',
   'lr-token-input',
   'lr-tool-approval-dialog',
+  'lr-tool-call-block',
   'lr-tool-call-chip',
   'lr-tool-param-form',
   'lr-tool-result-dialog',

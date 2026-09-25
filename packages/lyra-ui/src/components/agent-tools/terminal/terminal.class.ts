@@ -250,7 +250,7 @@ export interface LyraTerminalEventMap {
  *   `[part="toolbar"]`'s buttons while `compact`.
  * @cssprop [--lr-terminal-compact-line-padding-inline=var(--lr-space-xs)] - Inline padding of each
  *   rendered `[part="line"]` while `compact`.
- * @cssprop [--lr-terminal-border-color=var(--lr-color-border)] - Colour of the outer card's
+ * @cssprop [--lr-terminal-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the toolbar/log divider, which `frame="plain"` keeps.
  * @cssprop [--lr-terminal-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.

@@ -258,7 +258,8 @@ export const styles = css`
        --lr-color-surface-overlay resolves to the plain page surface in light mode and would erase
        that separation. The dark-mode defect the family exists to fix does not reach here either --
        the raised tone is already distinct from the dark page surface, so this panel never read as
-       a hole. Edge, radius and elevation take the family's own defaults unchanged. */
+       a hole. Radius and elevation take the family's own defaults unchanged; the edge keeps the
+       control tier, as every form control's own popup does (overlay-surface.styles.ts). */
     border: var(--lr-border-width-thin) solid
       var(--lr-overlay-border, var(--lr-color-border));
     border-radius: var(--lr-overlay-radius, var(--lr-radius));

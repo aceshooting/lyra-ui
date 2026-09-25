@@ -16,7 +16,7 @@ export const styles = css`
      transcript can retune the nested card without a ::part(base) override. */
   [part="base"] {
     border: var(--lr-border-width-thin) solid
-      var(--lr-thinking-panel-border-color, var(--lr-color-border));
+      var(--lr-thinking-panel-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-thinking-panel-radius, var(--lr-radius));
     background: var(--lr-thinking-panel-background, var(--lr-color-surface));
     overflow: hidden;
@@ -158,7 +158,7 @@ export const styles = css`
     /* The header/body divider is the same chrome the outer border is, and frame="plain" keeps it,
        so it follows the same hook rather than stranding a mismatched rule in a retuned card. */
     border-block-start: var(--lr-border-width-thin) solid
-      var(--lr-thinking-panel-border-color, var(--lr-color-border));
+      var(--lr-thinking-panel-border-color, var(--lr-color-border-subtle));
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
     line-height: var(--lr-line-height-normal);

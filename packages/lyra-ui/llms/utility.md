@@ -111,7 +111,7 @@ shared-clamp note.
 
 The menu popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -576,7 +576,8 @@ current imperative search match; `--lr-json-viewer-string-color` (default
 `--lr-json-viewer-boolean-color` (default `var(--lr-color-warning)`), and
 `--lr-json-viewer-null-color` (default `var(--lr-color-text-quiet)`) — per-value-type color hooks.
 Plus shared
-tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
+tokens `--lr-color-border-subtle`,
+`--lr-color-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.
 
@@ -989,6 +990,9 @@ The popup is a floating surface and paints from the **shared overlay-surface fam
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: the listbox completes the
+value of the text field it is bound to and keeps that field's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the popup reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
@@ -1214,7 +1218,7 @@ inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`
 background of a `highlights` line by tone,
 `--lr-diff-view-highlight-active-outline` (default `var(--lr-color-brand)` — outline of the line
 whose covering highlight is `activeHighlightId`), plus
-shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
+shared tokens `--lr-color-border`/`-border-subtle`/`-surface`/`-success`/`-success-quiet`/`-danger`/
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.
 
@@ -1495,8 +1499,10 @@ A semantic separator: renders `<hr part="base" role="separator" aria-orientation
 
 **Events:** none. **Slots:** none. **CSS parts:** `base`.
 
-**Themeable custom properties:** `--color` (falls back to `--lr-color-border`), `--width` (falls
-back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied on the cross axis).
+**Themeable custom properties:** `--color` (falls back to `--lr-color-border-subtle`, the
+decorative-edge token, which itself resolves to `--lr-color-border` unless a theme sets a subtle
+border), `--width` (falls back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied
+on the cross axis).
 
 The host is `display: block` when horizontal and `display: inline-block; block-size: 100%` when
 vertical, so a vertical divider fills its flex/grid row's height with no extra CSS — but it needs a

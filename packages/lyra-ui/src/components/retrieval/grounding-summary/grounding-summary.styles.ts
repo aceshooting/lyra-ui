@@ -83,7 +83,7 @@ export const styles = css`
     padding-block: var(--lr-space-xs);
   }
   [part="evidence-item"] + [part="evidence-item"] {
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="evidence-label"] {
     font-size: var(--lr-font-size-sm);

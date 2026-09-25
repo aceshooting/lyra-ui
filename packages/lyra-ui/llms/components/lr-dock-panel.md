@@ -105,9 +105,10 @@ exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
 `color-mix()` (background) for its pressed state; `--lr-dock-panel-handle-hover-color` (default
 `var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
 `--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
-being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--lr-color-brand`,
-`--lr-color-brand-quiet`, `--lr-color-text`, `--lr-radius`, `--lr-space-xs`,
-`--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`, `--lr-icon-button-size`.
+being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
+`--lr-color-border-subtle`, `--lr-color-brand`, `--lr-color-brand-quiet`, `--lr-color-text`,
+`--lr-radius`, `--lr-space-xs`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`,
+`--lr-icon-button-size`.
 
 **Optional peer deps:** none.
 

@@ -58,10 +58,14 @@ export const styles = css`
     cursor: pointer;
     transition: border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
   }
-  /* :where() zeroes the [href] contribution, leaving :hover at (0,1,0) -- tied with the pressed
-     rule below, which therefore takes the tile on source order while the pointer is down. */
+  /* :where() zeroes everything but :hover, leaving both branches at (0,1,0) -- tied with the
+     resting [part='base'] rule above, which they therefore beat on source order, and with the
+     pressed rule below, which therefore takes the tile while the pointer is down. The shell branch
+     covers a pointer resting on hit-testable slotted content, a sibling of the stretched anchor
+     that never makes the anchor itself :hover. Wrapping the whole shell selector in :where() would
+     zero :hover too, and the resting border would then win outright. */
   :where([part='base'][href]):hover,
-  :where(.linked-shell:hover > [part='base']) {
+  :where(.linked-shell):hover > :where([part='base']) {
     border-color: var(--lr-stat-link-hover-border-color, var(--lr-color-brand));
     /* A hovered tile is resting chrome, not an overlay, so the lift stops at the card step. */
     box-shadow: var(--lr-stat-link-hover-shadow, var(--lr-shadow-s));
@@ -299,7 +303,8 @@ export const styles = css`
   /* The card's border-shift-plus-lift affordance does not read on a border-less, background-less
      box, so a linked plain stat underlines its headline value instead. The :focus-visible outline
      above needs no border and still applies. */
-  :host([frame='plain']) [part='base'][href]:hover {
+  :host([frame='plain']) [part='base'][href]:hover,
+  :host([frame='plain']) .linked-shell:hover > [part='base'] {
     box-shadow: none;
   }
   /* Stripped for the hover treatment's reason: a lift shadow with no surface under it reads as a

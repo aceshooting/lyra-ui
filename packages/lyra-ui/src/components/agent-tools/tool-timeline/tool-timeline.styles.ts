@@ -58,7 +58,7 @@ export const styles = css`
     inline-size: var(--lr-border-width-thin);
     min-block-size: var(--lr-space-l);
     margin-block-start: var(--lr-space-2xs);
-    background: var(--lr-color-border);
+    background: var(--lr-color-border-subtle);
   }
   [part="entry"][data-status="running"] [part="entry-marker"]::before {
     background: var(

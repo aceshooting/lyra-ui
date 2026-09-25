@@ -100,7 +100,7 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 
 The anchored detail tooltip is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -617,7 +617,7 @@ tool list's mouse-hover preview on `[part="body"]` has its own four-longhand out
 `transparent` to opt out entirely), and `--lr-tool-select-dialog-body-hover-outline-offset`
 (default `calc(-1 * var(--lr-border-width-thin))`, kept inward so the ring isn't clipped by the
 body's own scrolling). Unset, all four resolve to the rule's previous literal paint. Plus shared
-`--lr-space-*`, `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`,
+`--lr-space-*`, `--lr-color-surface/-border/-border-subtle/-text/-text-quiet/-warning`, `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-checkbox>` and `<lr-switch>`, both bundled
@@ -749,7 +749,7 @@ pending duration/toggle accent without changing the shared brand token;
 padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
 `var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
 `--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
-`--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
+`--lr-thinking-panel-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
@@ -759,7 +759,7 @@ four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (def
 `transparent` to opt out entirely), and `--lr-thinking-panel-body-hover-outline-offset` (default
 `calc(-1 * var(--lr-focus-ring-offset))`). Unset, all four resolve to the rule's previous literal
 paint. Plus shared
-`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
+`--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
 
@@ -900,10 +900,10 @@ hover/focus, internal-toggle, and copy-button-hover accent, plus the two density
 `var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s while
 `compact`). The scoped color hooks avoid changing
 the shared quiet/brand tokens used by surrounding UI. `--lr-stack-trace-background` (default
-`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-stack-trace-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; `frame="plain"` still removes all three outright. Plus shared tokens
-`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
+`--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.
 
@@ -1047,8 +1047,8 @@ without changing error text or other danger-coloured surfaces), and
 `--lr-tool-approval-dialog-hover-border-color` (default `var(--lr-color-brand)` — border color of
 the raw-JSON args editor on hover, giving mouse users the same "this is editable" affordance every
 other text-entry surface in the library provides), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
-`--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
+`--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-color-border-subtle`,
+`--lr-radius`, `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-json-viewer>`, a bundled dependency of this
@@ -1433,12 +1433,12 @@ whenever the slot has no assigned content), `body`.
 than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
 not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
 `--lr-result-card-background` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
-(default `var(--lr-color-border)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
+(default `var(--lr-color-border-subtle)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
 the card chrome without a `::part(base)` override. The border-color hook also colors
 `[part="header"]`'s divider, so a retuned card doesn't strand a mismatched interior rule;
 `frame="plain"` still drops the outer chrome and that divider.
-Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
-`--lr-radius`.
+Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border-subtle`,
+`--lr-color-surface`/`-text`, `--lr-radius`.
 
 ### `lr-result-field`
 
@@ -1676,7 +1676,7 @@ var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
 status icons without changing shared status tokens. `--lr-task-list-background` (default
-`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
@@ -1759,7 +1759,7 @@ viewport's block size; not declared on `:host`, so it is inherited from the host
 `--lr-terminal-surface-color` (default `var(--lr-color-surface-raised)`) controls the card-frame
 background and the fallback foreground for inverse ANSI segments without an explicit background;
 `frame="plain"` remains transparent. `--lr-terminal-border-color` (default
-`var(--lr-color-border)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
+`var(--lr-color-border-subtle)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
 chrome — the border-color hook also colors the toolbar/log divider `frame="plain"` keeps.
 `--lr-terminal-surface-color` keeps its established name; nothing was renamed.
 `--lr-terminal-toolbar-button-hover-bg` (default
@@ -1995,7 +1995,7 @@ by selector from outside the shadow root it renders into (the plain or the inter
 `lr-table`'s identical `cell(row)`-anchor hook; set it to `revert` for the UA default link color.
 The card chrome itself is retunable the same way:
 `--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
-`--lr-activity-feed-border-color` (default `var(--lr-color-border)`) colors both its border and the
+`--lr-activity-feed-border-color` (default `var(--lr-color-border-subtle)`) colors both its border and the
 header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
 `var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
 `::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the
@@ -2069,7 +2069,7 @@ badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
 `[part="base"]` padding while `compact`. `--lr-commit-card-border-color` (default
-`var(--lr-color-border)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
+`var(--lr-color-border-subtle)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
 card's border and corner radius, and `--lr-commit-card-background` (default `transparent`) gives it
 a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
 you opt in. `frame="plain"` still removes the border and radius.
@@ -2597,7 +2597,7 @@ is unset. Like the other density/state properties in this family they are inline
 their point of use rather than `:host` declarations, so either can be set on the element _or on any
 ancestor_ — one rule on a run list retunes every compact run inside it.
 `--lr-agent-run-background` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
-(default `var(--lr-color-border)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
+(default `var(--lr-color-border-subtle)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
 `[part="base"]`'s card chrome without a `::part(base)` override; `frame="plain"` still removes all
 three outright.
 
@@ -3831,6 +3831,19 @@ These named interfaces and helper signatures are available to typed integrations
     expanded: boolean;
   }`
 
+- **`components-agent-tools-tool-call-block-tool-call-block-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`.
+  `ToolCallBlockRenderErrorDetail {
+    toolName: string;
+    error: unknown;
+    callId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`.
+  `ToolCallBlockToggleDetail {
+    expanded: boolean;
+    callId: string;
+  }`
+
 - **`components-agent-tools-tool-call-chip-tool-call-chip-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js`.
   `ToolChipSelectDetail {
@@ -3954,3 +3967,97 @@ These named interfaces and helper signatures are available to typed integrations
   `normalizeLyraSpans(values: readonly unknown[], activeSpanId?: string | null): LyraSpanProjection`
   Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
   `normalizeLyraSpanStatus(value: unknown): LyraSpanStatus`
+
+## `lr-tool-call-block`
+
+One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware
+verb (`Used web_search`, `Failed to use web_search`, …) beside a status glyph and an optional
+duration; activating it expands the block in place to show the call's arguments, then its error,
+then its result. First-party invention (no Web Awesome equivalent). `<lr-message-parts
+tool-display="block">` renders each paired tool-call/tool-result through one of these blocks.
+
+Details are deferred: a collapsed block renders an empty `body` and never reads `args` or
+`result`. Expanded, `args` render through `<lr-json-viewer>` and `result` through
+`<lr-tool-result-view>`, so any renderer registered with `registerToolRenderer()` still applies.
+With no details yet the body reads the localized `Pending`/`Running` while the call is in
+progress, and `No data` only for a terminal status.
+
+**Properties:**
+
+- `name: string = ''` — tool name; an empty name renders the localized generic `Tool call` label
+- `callId: string = ''` (attribute `call-id`) — invocation id echoed in `lr-toggle` and
+  `lr-render-error` details
+- `status: ToolCallStatus = 'pending'` (reflected, including the default) —
+  `'pending'|'running'|'success'|'error'|'denied'`; selects the header verb, glyph and accent.
+  Values outside the set normalize and reflect as `pending`
+- `expanded: boolean = false` (reflected) — whether the details are shown
+- `label?: string` — header override, used verbatim (including `''`); when set, the localized
+  status text renders beside it in `status-text`. Unset renders the localized status verb
+- `durationMs?: number` (attribute `duration-ms`) — shown only when finite; negative values clamp
+  to `0`. Formatted in the effective locale (`820ms`, `1.5s`)
+- `args: unknown` (property only) — call arguments; the identity is kept and never snapshotted
+- `result: unknown` (property only) — call result; `undefined` means no result yet
+- `error?: string` — a non-empty string renders the error section (caller text, verbatim)
+- `redactedFields: readonly string[] = []` (property only) — dotted paths within
+  `args`/`result`/`error` to mask with the localized `Value hidden` placeholder. A bare
+  `'args'`/`'result'`/`'error'` masks the whole branch, arrays are walked by index
+  (`result.rows.0.ssn`), and a path with no match is a no-op. The same bounded rules as
+  `<lr-tool-timeline>`: more than 100 paths, a path over 4,096 characters or 64 segments, or a walk
+  past 10,000 nodes fails closed to the placeholder, as does an unreadable list. Clone-owned: assign
+  a new array to change it
+
+**Events:**
+
+- `lr-toggle` (`detail: ToolCallBlockToggleDetail = { expanded: boolean; callId: string }`) —
+  after a header activation changes `expanded`; never for programmatic writes. Not cancelable
+- `lr-render-error` (`detail: ToolCallBlockRenderErrorDetail = { toolName: string; error: unknown;
+  callId: string }`) — the composed result view's `lr-render-error`, contained and re-emitted from
+  the host with `callId` added. The result view fires it whenever no registered renderer matches
+  (not only when one fails), so an expanded block with an unregistered tool name emits it on each
+  expand and on each `result`/`args` identity change while expanded. A collapsed block renders no
+  result view and emits nothing
+- `lr-copy`, `lr-copy-error`, `lr-error`, `lr-search-change` — passthrough from the composed
+  arguments `<lr-json-viewer>`
+
+**Methods:** none. Focus lands natively on the header button.
+
+**Slots:** none.
+
+**Keyboard:** Tab reaches the header; Enter or Space toggles it. When expanded, Tab continues into
+the arguments viewer, then to the `result` section — which is a keyboard stop (`tabindex="0"`)
+only while a wide custom renderer overflows it, so it can be scrolled — then into the result's own
+controls. Collapsing while focus is inside the details returns focus to the header.
+
+**CSS parts:** `base` (the card), `header` (the disclosure `<button>`), `toggle` (the chevron,
+first in the header), `icon` (status glyph wrapper), `label`, `status-text` (only while `label` is
+set), `duration` (only while finite), `body` (the disclosed region), `args`, `args-label`,
+`result`, `result-label`, `error`, `error-label`, `empty` (the no-details message).
+
+**Themeable custom properties:**
+
+- `--lr-tool-call-block-background` (default `var(--lr-color-surface)`) — card fill
+- `--lr-tool-call-block-border-color` (default `var(--lr-color-border)`) — card edge and
+  header/body divider
+- `--lr-tool-call-block-radius` (default `var(--lr-radius)`) — card radius
+- `--lr-tool-call-block-accent` — status glyph colour; its private default follows `status`
+  (`--lr-color-text-quiet`, then brand while running, success, danger on error, warning when denied)
+- `--lr-tool-call-block-error-color` (default `var(--lr-color-danger)`) — error section text
+
+The running glyph spins and the pending glyph pulses at `--lr-transition-ambient`; both stop under
+`prefers-reduced-motion: reduce`.
+
+**Optional peer deps:** none.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.js';
+</script>
+
+<lr-tool-call-block name="web_search" call-id="call-1" status="success" duration-ms="1450"></lr-tool-call-block>
+<script type="module">
+  const block = document.querySelector('lr-tool-call-block');
+  block.args = { query: 'lyra', apiKey: 'sk-secret' };
+  block.result = { hits: 3 };
+  block.redactedFields = ['args.apiKey'];
+</script>
+```

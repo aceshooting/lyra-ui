@@ -8,7 +8,7 @@ export const styles = css`
     min-inline-size: 0;
     inline-size: 100%;
     aspect-ratio: 16 / 9;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
     container-type: inline-size;
@@ -53,7 +53,7 @@ export const styles = css`
     display: flex;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-overlay);
     box-shadow: var(--lr-shadow-s);

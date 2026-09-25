@@ -1021,7 +1021,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-thinking-panel
         expanded
-        style="--lr-thinking-panel-background: var(--lr-color-surface); --lr-thinking-panel-border-color: var(--lr-color-border); --lr-thinking-panel-radius: var(--lr-radius)"
+        style="--lr-thinking-panel-background: var(--lr-color-surface); --lr-thinking-panel-border-color: var(--lr-color-border-subtle); --lr-thinking-panel-radius: var(--lr-radius)"
         >Reasoning</lr-thinking-panel
       >
     `)) as LyraThinkingPanel;
@@ -1034,5 +1034,17 @@ describe('card chrome theming hooks', () => {
     expect(getComputedStyle(part(control, 'body')).borderTopColor).to.equal(
       getComputedStyle(part(tokened, 'body')).borderTopColor,
     );
+  });
+
+  it('draws the card edge and divider on the decorative --lr-color-border-subtle tier', async () => {
+    const el = (await fixture(html`
+      <lr-thinking-panel
+        expanded
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+        >Reasoning</lr-thinking-panel
+      >
+    `)) as LyraThinkingPanel;
+    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(7, 8, 9)');
   });
 });

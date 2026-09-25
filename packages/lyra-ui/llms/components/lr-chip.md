@@ -73,6 +73,8 @@ relied on `<lr-chip selected>` to create an action.
 - `toggleable: boolean = false` (reflected) — sole opt-in into the toggle/pressed interactive mode,
   independent of `selected`'s current value. Pair it with `selected` for an initially pressed chip;
   leave `selected` unset for an initially unpressed chip.
+  For a pressed-state button in control chrome (with `appearance`, the size ladder and a grouped
+  single tab stop) rather than filter-pill chrome, use `lr-toggle` / `lr-toggle-group`.
 - `value?: string` — opaque consumer bookkeeping value, never read, validated, or rendered by this
   component itself, only ever echoed back verbatim (including `undefined` if never set) in
   `lr-remove`'s detail

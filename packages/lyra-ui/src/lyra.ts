@@ -455,6 +455,18 @@ export type {
   PageNavigationPlacement,
   PageView,
 } from './components/layout/page/page.class.js';
+export { LyraNavigationMenu } from './components/layout/navigation-menu/navigation-menu.class.js';
+export type {
+  LyraNavigationMenuEventMap,
+  LyraNavigationMenuExpandedChangeDetail,
+  LyraNavigationMenuExpandedChangeSource,
+  LyraNavigationMenuPanelAnchor,
+} from './components/layout/navigation-menu/navigation-menu.class.js';
+export { LyraNavigationMenuItem } from './components/layout/navigation-menu-item/navigation-menu-item.class.js';
+export type {
+  LyraNavigationMenuItemEventMap,
+  LyraNavigationMenuToggleDetail,
+} from './components/layout/navigation-menu-item/navigation-menu-item.class.js';
 export { LyraTimeRange } from './components/forms/time-range/time-range.class.js';
 export type {
   TimeRangeHandle,
@@ -786,6 +798,12 @@ export type {
   ToolChipSelectDetail,
   LyraToolCallChipEventMap,
 } from './components/agent-tools/tool-call-chip/tool-call-chip.class.js';
+export { LyraToolCallBlock } from './components/agent-tools/tool-call-block/tool-call-block.class.js';
+export type {
+  ToolCallBlockToggleDetail,
+  ToolCallBlockRenderErrorDetail,
+  LyraToolCallBlockEventMap,
+} from './components/agent-tools/tool-call-block/tool-call-block.class.js';
 export { LyraToolResultView } from './components/agent-tools/tool-result-view/tool-result-view.class.js';
 export type { ToolResultFallback } from './components/agent-tools/tool-result-view/tool-result-view.class.js';
 export {
@@ -998,6 +1016,13 @@ export {
   LyraDropdown,
   type LyraDropdownEventMap,
 } from './components/overlays/overlay/dropdown.class.js';
+export {
+  LyraContextMenu,
+  type LyraContextMenuEventMap,
+  type LyraContextMenuPoint,
+  type LyraContextMenuShowDetail,
+  type LyraContextMenuSource,
+} from './components/overlays/context-menu/context-menu.class.js';
 export { LyraChip } from './components/overlays/chip/chip.class.js';
 export type {
   ChipRemoveDetail,
@@ -1331,6 +1356,18 @@ export type {
   LyraCheckboxGroupEventMap,
   LyraCheckboxGroupToggleRequestDetail,
 } from './components/forms/checkbox-group/checkbox-group.class.js';
+export { LyraToggle } from './components/forms/toggle/toggle.class.js';
+export type {
+  LyraToggleAppearance,
+  LyraToggleChangeDetail,
+  LyraToggleEventMap,
+} from './components/forms/toggle/toggle.class.js';
+export { LyraToggleGroup } from './components/forms/toggle-group/toggle-group.class.js';
+export type {
+  LyraToggleGroupEventMap,
+  LyraToggleGroupSelectionMode,
+  LyraToggleGroupToggleRequestDetail,
+} from './components/forms/toggle-group/toggle-group.class.js';
 export { LyraTokenInput } from './components/forms/token-input/token-input.class.js';
 export type {
   LyraTokenInputEventMap,

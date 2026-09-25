@@ -3,7 +3,10 @@ import {
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
-import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import {
+  overlaySurface,
+  overlaySurfaceControlEdge,
+} from '../../../internal/overlay-surface.styles.js';
 import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
@@ -413,6 +416,7 @@ export const styles = css`
        public arm the private trigger pair never had: retinting it no longer means retinting the
        page surface every card and input reads. */
     ${overlaySurface}
+    ${overlaySurfaceControlEdge}
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     /* Retain layout during the outgoing transition. Once it settles, hidden removes the

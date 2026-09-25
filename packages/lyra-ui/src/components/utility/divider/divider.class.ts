@@ -11,7 +11,7 @@ export type LyraDividerOrientation = LyraOrientation;
  *
  * @customElement lr-divider
  * @csspart base - The separator element.
- * @cssprop [--color=var(--lr-color-border)] - Separator color.
+ * @cssprop [--color=var(--lr-color-border-subtle)] - Separator color.
  * @cssprop [--spacing=0] - Space on both block sides (inline sides when vertical).
  * @cssprop [--width=var(--lr-border-width-thin)] - Separator thickness.
  * @status stable

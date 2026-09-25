@@ -442,7 +442,7 @@ export interface LyraLiteChartEventMap {
  * @slot data-table - An optional consumer-provided complete/paginated accessible data alternative.
  * @cssprop [--lr-chart-height=var(--lr-size-280px)] - Consumer-owned chart height. The `height`
  *   property supplies only a private fallback, so this public token always wins when set.
- * @cssprop [--lr-chart-grid-color=var(--lr-color-border)] - Grid-line color.
+ * @cssprop [--lr-chart-grid-color=var(--lr-color-border-subtle)] - Grid-line color.
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Axis and legend-detail color.
  * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-2xs)] - Axis tick-label font size. Same
  *   token name as `lr-chart`'s canvas equivalent, so theming either retunes both.

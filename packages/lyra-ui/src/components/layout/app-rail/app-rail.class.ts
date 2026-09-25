@@ -1,10 +1,10 @@
-import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal/aria-ownership.js';
-import { chevronIcon, closeIcon } from '../../../internal/icons.js';
+import { chevronIcon, closeIcon, menuIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -67,31 +67,6 @@ export interface LyraAppRailToggleDetail {
 
 export interface LyraAppRailResizeDetail {
   widthPx: number;
-}
-
-// icons.ts has no hamburger/menu glyph and this component must not modify
-// that shared module -- inlined here instead, matching its 24x24
-// viewBox/stroke-width/currentColor convention so it reads as part of the
-// same icon set.
-function menuIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.75"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <line x1="4" y1="7" x2="20" y2="7"></line>
-      <line x1="4" y1="12" x2="20" y2="12"></line>
-      <line x1="4" y1="17" x2="20" y2="17"></line>
-    </svg>
-  `;
 }
 
 /**

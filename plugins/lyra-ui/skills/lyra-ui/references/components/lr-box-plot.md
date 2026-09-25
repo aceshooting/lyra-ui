@@ -142,7 +142,7 @@ sets the canvas box-outline stroke width in pixels — the same override mechani
 individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
-hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color)`) sets
+hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color, var(--lr-color-border))`) sets
 its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
 `lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather

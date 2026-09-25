@@ -202,7 +202,7 @@ export const styles = css`
     inset-inline-start: -200%;
     inline-size: 500%;
     block-size: 500%;
-    background-image: radial-gradient(circle, var(--lr-color-border) var(--lr-size-1px), transparent var(--lr-size-1px));
+    background-image: radial-gradient(circle, var(--lr-color-border-subtle) var(--lr-size-1px), transparent var(--lr-size-1px));
     background-size: var(--lr-flow-canvas-grid-size, var(--_lr-flow-canvas-grid-size, var(--lr-size-0-5rem))) var(--lr-flow-canvas-grid-size, var(--_lr-flow-canvas-grid-size, var(--lr-size-0-5rem)));
     cursor: grab;
   }

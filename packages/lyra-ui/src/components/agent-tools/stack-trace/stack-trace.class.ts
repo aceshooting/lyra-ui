@@ -127,7 +127,7 @@ export interface LyraStackTraceEventMap {
  *   between `[part="group"]`s while `compact`.
  * @cssprop [--lr-stack-trace-background=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-stack-trace-border-color=var(--lr-color-border)] - Colour of the outer card's
+ * @cssprop [--lr-stack-trace-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border.
  * @cssprop [--lr-stack-trace-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.

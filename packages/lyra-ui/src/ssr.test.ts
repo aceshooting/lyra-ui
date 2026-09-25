@@ -77,8 +77,8 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     const values = Object.values(LYRA_SSR_STATIC_SAFETY);
     const staticSafeCount = values.filter((value) => value === 'static-safe').length;
     const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
-    expect(staticSafeCount).to.equal(222);
-    expect(hydrationRequiredCount).to.equal(48);
+    expect(staticSafeCount).to.equal(225);
+    expect(hydrationRequiredCount).to.equal(51);
     expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
   });
 

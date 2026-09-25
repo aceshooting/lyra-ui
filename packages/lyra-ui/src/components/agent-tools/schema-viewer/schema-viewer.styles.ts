@@ -10,7 +10,7 @@ export const styles = css`
       var(--lr-schema-viewer-max-indent, var(--lr-size-12rem))
     );
     min-inline-size: 0;
-    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     padding-inline-start: 0;
   }
   [part~='node'] > :not(ul) {

@@ -23,7 +23,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-size-2px);
     padding-block: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part~='chunk-current'],
   lr-virtual-list::part(chunk-current) {

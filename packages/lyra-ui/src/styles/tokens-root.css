@@ -76,7 +76,7 @@
    which predates this file. Both spell the same chain, so importing both is a no-op either way
    round. */
 
-@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 
 @layer lr-theme {
   :root,
@@ -90,6 +90,7 @@
     --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #6b7280);
     --lr-color-border: var(--lr-theme-color-surface-border, #8a8a90);
     --lr-color-border-strong: var(--lr-theme-color-border-strong, #4b5563);
+    --lr-color-border-subtle: var(--lr-theme-color-surface-border-subtle, var(--lr-color-border));
     --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, #e5efff);
     --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, #95c0fe);
     --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, #035ec6);
@@ -210,6 +211,7 @@
       --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #9aa1ac);
       --lr-color-border: var(--lr-theme-color-surface-border, #6b6b74);
       --lr-color-border-strong: var(--lr-theme-color-border-strong, #c4c9d1);
+      --lr-color-border-subtle: var(--lr-theme-color-surface-border-subtle, var(--lr-color-border));
       --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, #002b62);
       --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, #035ec6);
       --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, #5b9eff);
@@ -332,6 +334,7 @@
     --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #9aa1ac);
     --lr-color-border: var(--lr-theme-color-surface-border, #6b6b74);
     --lr-color-border-strong: var(--lr-theme-color-border-strong, #c4c9d1);
+    --lr-color-border-subtle: var(--lr-theme-color-surface-border-subtle, var(--lr-color-border));
     --lr-color-brand-fill-quiet: var(--lr-theme-color-brand-fill-quiet, #002b62);
     --lr-color-brand-fill-normal: var(--lr-theme-color-brand-fill-normal, #035ec6);
     --lr-color-brand-fill-loud: var(--lr-theme-color-brand-fill-loud, #5b9eff);
@@ -452,6 +455,7 @@
       --lr-color-text: CanvasText;
       --lr-color-text-quiet: CanvasText;
       --lr-color-border: ButtonText;
+      --lr-color-border-subtle: ButtonText;
       --lr-color-brand: LinkText;
       --lr-color-brand-quiet: Canvas;
       --lr-color-on-brand: Canvas;

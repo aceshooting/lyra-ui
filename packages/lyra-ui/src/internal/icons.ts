@@ -53,6 +53,15 @@ export function closeIcon(): SVGTemplateResult {
   `);
 }
 
+/** A three-bar "hamburger" glyph, for navigation and menu toggles. */
+export function menuIcon(): SVGTemplateResult {
+  return icon(svg`
+    <line x1="4" y1="7" x2="20" y2="7"></line>
+    <line x1="4" y1="12" x2="20" y2="12"></line>
+    <line x1="4" y1="17" x2="20" y2="17"></line>
+  `);
+}
+
 /** A right-pointing play triangle. */
 export function playIcon(): SVGTemplateResult {
   return icon(svg`<polygon points="6 4 20 12 6 20 6 4"></polygon>`);

@@ -40,7 +40,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-thread-list-search-gap, var(--lr-space-xs));
     padding: var(--lr-thread-list-search-padding, var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part='search-input'] {
     box-sizing: border-box;

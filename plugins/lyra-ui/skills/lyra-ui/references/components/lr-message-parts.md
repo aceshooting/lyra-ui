@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 26 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,37 +19,14 @@
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
 Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint and displays
-accumulated plain text without parsing or highlighting by default. The `streaming-render` property
-can opt those parts into progressive Markdown. Replacing that same-id part with `state: 'complete'`
-parses and renders the final content.
+accumulated plain text without parsing or highlighting. Replacing that same-id part with
+`state: 'complete'` parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected)
-and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to built-in text
-and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
-blocks during a streaming part and preserves the `plain` fallback by default; code chrome adds the
-localized language label and raw-source copy action to fenced code. These settings do not replace
-the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
-`toolDisplay: MessagePartsToolDisplay = 'chip'` (attribute `tool-display`, reflected) — `'chip'`
-preserves the existing separate call chip and result part. `'disclosure'` pairs each rendered
-built-in tool call with the first result whose `invocationId` matches its call `invocation.id`, hides
-that result at its original position, and shows it inside a collapsed inline details panel at the
-call's position. Pending calls show their localized call status; when a paired result arrives, the
-summary shows localized success or error. Pairing uses the full effective parts list, so a visible
-call can find a result outside the `maxRenderedParts` window, while calls outside that window do not
-consume a visible result. A result is paired only once; duplicate results remain in their own rows.
-If `renderPart` is supplied, pairing occurs only when both the
-call and result are in the rendered window and both callbacks return `undefined` (built-in
-rendering); custom output keeps its part independent. Finite, nonnegative
-`call.metadata.durationMs` adds a localized duration;
-`call.metadata.redactedFields` may list dotted paths such as `args.apiKey`, `result.secret`, or
-`error.stack` to mask while the disclosure is expanded. Redaction is bounded; malformed or
-over-budget paths fail closed by showing the localized hidden-value placeholder. Unsupported values
-normalize to `'chip'`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -64,16 +41,50 @@ renderer would otherwise wire up for it (the `error` part's retry button's `lr-p
 `citation` part's activation `lr-citation-select`, and the composed `<lr-tool-call-chip>`/
 `<lr-tool-result-view>`/`<lr-attachment-chip>`/`<lr-widget-renderer>` children's own events) — a
 host overriding an interactive part type must reimplement whatever of that interaction it still
-wants; `accessibleLabel: string | null = null` (attribute `aria-label`).
+wants; `accessibleLabel: string | null = null` (attribute `aria-label`);
+`toolDisplay: MessagePartsToolDisplay = 'chip'` (attribute `tool-display`, reflected, including the
+default — every instance carries `tool-display="chip"` until set, like `content-mode="markdown"`).
+`renderPart` is called exactly once per rendered part, in order, in both tool displays, and its
+output is the host's own: it is never masked by `redactedFields`.
 
-Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`.
+Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`;
+unsupported `tool-display` values normalize and reflect as `chip`.
 
-`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
-'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
-`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is also exported from
-`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js` and the package
-root. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
-`lr-markdown-core` component modules. Tool results are a strict
+**Tool display.** `MessagePartsToolDisplay = 'chip' | 'block'` (exported from the class module).
+`chip` (the default, unchanged) renders a `tool-call` part as `<lr-tool-call-chip>` and a
+`tool-result` part as a separate `<lr-tool-result-view>`. `tool-display="block"` renders each
+`tool-call` through one collapsed `<lr-tool-call-block>` (header `Used web_search`, status glyph,
+duration; expanding shows arguments, error and result in place) and pairs it with its result:
+
+- The first rendered, non-custom `tool-call` per non-blank `invocation.id` pairs with the first
+  rendered, non-custom `tool-result` whose `invocationId` matches, wherever that result sits in the
+  window (a result before its call still folds into the call's position). The folded result part
+  renders nothing — no wrapper — but still counts toward `max-rendered-parts`.
+- Everything else renders as in chip display: unpaired results, a result whose call is outside the
+  rendered window, duplicate results after the first, and custom-rendered calls or results. A
+  second call part with the same invocation id renders its own unpaired block.
+- The block binds `name`, `callId` and `args` from the invocation, and `redactedFields` from the
+  invocation-level paths described under redaction below; `result` from
+  the paired part (else `invocation.result`); `error` from the paired part when it carries one (else
+  `invocation.error`); and `durationMs = endedAt - startedAt` when both are set (else no duration).
+  `expanded` is never bound, so a user-expanded block stays open across `parts` updates.
+- Block status, first match wins: invocation `denied` → `denied`; invocation `error` or a paired
+  error result → `error`; a paired result still `streaming` → `running`; any paired result →
+  `success`; otherwise the invocation's own status (an unknown value → `pending`), so a call still
+  waiting on its result keeps showing `pending`/`running`.
+- The tool-call wrapper stretches to the message width in block display.
+
+**Redaction in both displays.** An invocation's `redactedFields` (dotted paths rooted at
+`args`/`result`/`error`, see `<lr-tool-call-block>`) masks every built-in rendering of its payload
+with the localized `Value hidden`: in block display the block's details; in chip display, and for
+unfolded results in block display, the chip's `summary` (the invocation error) and a standalone
+result part's result and error text. The paths come from the first `tool-call` part for that
+invocation id in the full `parts` sequence — for blocks too — so a windowed-out call still masks its
+standalone result, and a later call part for the same id cannot unmask what the first one hid. With no `redactedFields` anywhere, nothing is cloned and every binding receives the
+original reference.
+
+`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
+discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
 retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
 and data parts carry exactly one of `data` or `widget`. Empty ids and later duplicate occurrences
@@ -82,16 +93,17 @@ are ignored so each rendered identity and announcement remains unambiguous.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
-`lr-tool-call-chip-select`, `lr-widget-action`,
+`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
+In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
+`lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
+emitted. Tool errors are never announced; only `error` parts are.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-disclosure`,
-`tool-header`, `tool-status`, `tool-duration`, `tool-args`, `tool-result` (also used for the paired
-result inside the disclosure), `tool-error` (paired error copy), `tool-result-error`, `code-block`,
-`code-block-header`, `code-block-language`, `code-block-copy` (forwarded from text and reasoning
-Markdown parts), `citation`, `attachment`, `data`, `audio`, `audio-control`, `audio-transcript`,
-`error`, `retry`.
+**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
+`tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
+`audio-transcript`, `error`, `retry`. Block display forwards five block parts:
+`tool-block-header`, `tool-block-body`, `tool-block-args`, `tool-block-result`,
+`tool-block-error`.
 
 **Themeable custom properties:** `--lr-message-parts-streaming-color` (default
 `var(--lr-color-text-quiet)`) controls a streaming wrapper's inherited text color.
@@ -115,14 +127,6 @@ error id and later adding it again creates a new announcement.
 import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
 ```
 
-```html
-<lr-message-parts
-  tool-display="disclosure"
-  streaming-render="progressive"
-  code-block-chrome
-></lr-message-parts>
-```
-
 **Additional API surface:**
 
 - `lr-anchor-result` event — Passthrough from rendered Markdown.
@@ -133,11 +137,12 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
   `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
 - `lr-remove` event — Passthrough from a rendered attachment.
-- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
+- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content, or
+  tool-call block (`callId` included).
 - `lr-retry` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
-- `lr-toggle` event — Passthrough from a rendered reasoning panel or tool disclosure.
+- `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
 - `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip. The
   `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.

@@ -624,9 +624,15 @@ assert.match(
 // --lr-theme-scrollbar-width/-gutter hook directly, with its own default as the fallback, instead
 // of through a shared canonical token, so there is no longer a shared token or theme.css
 // declaration for them. That drops this count from 265 to 263, while the derived/fixed count below
-// stays 77.
-assert.match(tokens, /## Direct theme-backed tokens \(270\)/);
+// stays 77. --lr-color-border-subtle (read through --lr-theme-color-surface-border-subtle) takes it
+// from 270 to 271.
+assert.match(tokens, /## Direct theme-backed tokens \(271\)/);
 assert.match(tokens, /## Derived and fixed tokens \(77\)/);
+// The decorative border tier documents its derived fallback, not a literal.
+assert.match(
+  tokens,
+  /\| `--lr-color-border-subtle` \| `--lr-theme-color-surface-border-subtle` \| `var\(--lr-color-border\)` \|/,
+);
 assert.match(tokens, /Aliases and computed values still follow/);
 assert.match(tokens, /fixed contract constants are intentionally\nnot theme inputs/);
 assert.doesNotMatch(tokens, /Each reads one `--lr-theme-\*` input/);

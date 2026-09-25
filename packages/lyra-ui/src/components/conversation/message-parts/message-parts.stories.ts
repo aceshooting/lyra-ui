@@ -225,3 +225,66 @@ export const ContentModeFallback: Story = {
     </div>
   `,
 };
+
+const toolBlockParts: MessagePart[] = [
+  { id: 'intro', type: 'text', text: 'Let me look that up.', state: 'complete' },
+  {
+    id: 'search-call',
+    type: 'tool-call',
+    state: 'complete',
+    invocation: {
+      id: 'call-search',
+      name: 'web_search',
+      args: { query: 'enterprise revenue 2025', apiKey: 'sk-live-secret' },
+      status: 'running',
+      startedAt: 1_700_000_000_000,
+      endedAt: 1_700_000_001_450,
+      redactedFields: ['args.apiKey'],
+    },
+  },
+  {
+    id: 'search-result',
+    type: 'tool-result',
+    state: 'complete',
+    invocationId: 'call-search',
+    name: 'web_search',
+    result: { hits: [{ title: 'Annual report', page: 12 }] },
+  },
+  {
+    id: 'fetch-call',
+    type: 'tool-call',
+    state: 'complete',
+    invocation: { id: 'call-fetch', name: 'fetch_page', args: { url: 'https://example.com/report' }, status: 'running' },
+  },
+  {
+    id: 'fetch-result',
+    type: 'tool-result',
+    state: 'complete',
+    invocationId: 'call-fetch',
+    name: 'fetch_page',
+    error: 'The page timed out after 30 seconds',
+  },
+  {
+    id: 'delete-call',
+    type: 'tool-call',
+    state: 'complete',
+    invocation: { id: 'call-delete', name: 'delete_file', args: { path: '/tmp/report.pdf' }, status: 'denied' },
+  },
+  {
+    id: 'streaming-call',
+    type: 'tool-call',
+    state: 'streaming',
+    invocation: { id: 'call-summarize', name: 'summarize', args: {}, status: 'running' },
+  },
+];
+
+/** Each call pairs with its result in one collapsed block: success with a duration and a redacted
+ *  argument, a failed call, a denied call, and a call still streaming without a result. */
+export const ToolDisplayBlock: Story = {
+  name: 'Tool display: block',
+  render: () => html`
+    <div style="max-inline-size: var(--lr-size-30rem);">
+      <lr-message-parts tool-display="block" .parts=${toolBlockParts}></lr-message-parts>
+    </div>
+  `,
+};

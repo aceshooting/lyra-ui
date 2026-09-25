@@ -3,7 +3,10 @@ import {
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
-import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
+import {
+  overlaySurfaceFill,
+  overlaySurfaceControlEdge,
+} from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -191,6 +194,7 @@ export const styles = css`
        the family only as its middle fallback: a component-scoped override still wins over the
        shared name, which is the alias-not-rename rule applied to Lyra's own prior spelling. */
     ${overlaySurfaceFill}
+    ${overlaySurfaceControlEdge}
     border-radius: var(
       --lr-locale-picker-radius,
       var(--lr-overlay-radius, var(--_lr-locale-picker-radius-default))

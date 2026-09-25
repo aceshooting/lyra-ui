@@ -1,0 +1,378 @@
+/* The shadcn/ui look for Lyra: the default "new-york" style on the Neutral base colour.
+
+   Import it AFTER (or before -- see below) the base theme, once, at the application root:
+
+     import '@aceshooting/lyra-ui/theme.css';
+     import '@aceshooting/lyra-ui/themes/shadcn.css';
+
+   Only --lr-theme-* inputs are set here, so every lr-* component picks the look up through the
+   normal inheritance path and nothing about a component's own API changes.
+
+   CASCADE. Every rule sits in the lr-theme-preset layer, which the statement below orders after
+   lr-theme and before lr-utilities / lr-overrides. The statement is byte-identical to the one in
+   theme.css: layer order is fixed by the first statement the browser sees, so either file may load
+   first. The consequences:
+     - this file beats theme.css whatever the load order;
+     - any UNLAYERED application rule beats both, so a plain
+       :root { --lr-theme-color-brand-fill-loud: ... } still wins with no !important;
+     - setLyraTheme({ accent }) writes its ramp as inline style on <html>, which beats every layer.
+
+   MODES. The light block also answers to .light and the dark block to .dark, so a shadcn
+   application that toggles .dark on <html> gets Lyra's dark mode for free, and so does a nested
+   .dark region. That support lives in
+   this file only: theme.css never learns .dark/.light, because an existing application may already
+   use those class names for something else. The dark block is declared after the light block at
+   equal specificity, and the two blocks declare exactly the same custom properties. The second
+   rule is load-bearing: a token set here in light only would keep its light value inside a dark
+   scope, because this layer's :root declaration outranks theme.css's own dark one. And since
+   theme.css does not switch under .dark/.light, each block ends by repeating theme.css's own
+   value for every other input theme.css's dark rule sets, so .dark delivers all of Lyra's dark
+   mode rather than dark surfaces over light status colours, charts and terminal colours.
+
+   DELIBERATE DEVIATIONS FROM SHADCN. Each keeps a contrast guarantee shadcn does not make:
+     - Control borders are #919191 / #646464, the lightest greys with 3:1 against both the page
+       and the raised surface (SC 1.4.11). shadcn's hairline grey is kept for purely decorative
+       edges only, through --lr-theme-color-surface-border-subtle.
+     - The focus colour is an opaque grey (#8b8b8b / #787878, 3.41:1 / 4.48:1). shadcn's
+       half-transparent ring measures about 1.5:1 / 1.9:1.
+     - Danger. Components also set text in the loud danger fill: error messages on the page, and
+       the body of a danger callout on the quiet danger tint. shadcn's #e7000b measures 4.10:1 on
+       that tint, so light danger is #d6000a, the same red a notch darker (4.67:1 on the tint,
+       5.43:1 under white text). Dark danger is a light red with near-black text rather than white
+       on a dark red, for the same reason.
+     - Charts keep Lyra's validated series ramp; two of shadcn's chart colours fall below 3:1 on
+       white.
+     - Hover and press mix toward a mid grey instead of toward the text colour. shadcn's primary
+       fill IS the text colour, so the text-following default would move it by nothing at all and
+       the default button would show no hover or press state.
+
+   ACCENTS. The neutral role's loud slots are aliases of the brand role's, in both blocks, because
+   lr-button's default (variant neutral, appearance accent) is where shadcn's primary lands and a
+   bare accent only repaints brand. With no accent the alias resolves to the brand literal in the
+   same block, so the rendering is identical; with setLyraTheme({ accent }) primary follows the
+   accent. Neutral's quiet and normal tiers stay literal greys, as shadcn's secondary/muted do.
+   The runtime derives an accent ramp for the mode IT resolved, so an application that uses
+   accents switches modes through setLyraTheme({ mode }) (which writes data-lr-theme, honoured
+   below), not by toggling .dark alone.
+
+   SHAPE. Tooling reads this file as data, so its shape is a contract: after comments, exactly the
+   layer statement plus one lr-theme-preset block holding the light rule and then the dark rule;
+   --lr-theme-* declarations (and color-scheme) only, each value on one line; every fill-<tier> of
+   a role paired with its on-<tier>. Component hooks are therefore never set here -- the docs give
+   the one-line opt-ins, such as lr-app-rail's raised sidebar background. */
+
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+
+@layer lr-theme-preset {
+  :root,
+  .lr-light,
+  [data-lr-theme='light'],
+  .light {
+    color-scheme: light;
+
+    /* Surfaces and text. */
+    --lr-theme-color-surface-default: #ffffff;
+    --lr-theme-color-surface-raised: #fafafa;
+    --lr-theme-color-surface-overlay: #ffffff;
+    --lr-theme-color-text-normal: #0a0a0a;
+    --lr-theme-color-text-quiet: #737373;
+
+    /* Borders: a control grey that clears 3:1, and shadcn's own hairline for decoration only. */
+    --lr-theme-color-surface-border: #919191;
+    --lr-theme-color-surface-border-subtle: #e5e5e5;
+    --lr-theme-color-border-strong: #919191;
+
+    /* Brand: shadcn is monochrome, so primary and secondary are one grey family. */
+    --lr-theme-color-brand-fill-quiet: #f5f5f5;
+    --lr-theme-color-brand-fill-normal: #e5e5e5;
+    --lr-theme-color-brand-fill-loud: #171717;
+    --lr-theme-color-brand-border-quiet: #e5e5e5;
+    --lr-theme-color-brand-border-normal: #737373;
+    --lr-theme-color-brand-border-loud: #171717;
+    --lr-theme-color-brand-on-quiet: #171717;
+    --lr-theme-color-brand-on-normal: #171717;
+    --lr-theme-color-brand-on-loud: #fafafa;
+
+    /* Neutral: literal quiet/normal tiers, loud tier aliased to brand so an accent reaches it. */
+    --lr-theme-color-neutral-fill-quiet: #f5f5f5;
+    --lr-theme-color-neutral-fill-normal: #e5e5e5;
+    --lr-theme-color-neutral-fill-loud: var(--lr-theme-color-brand-fill-loud);
+    --lr-theme-color-neutral-border-quiet: #e5e5e5;
+    --lr-theme-color-neutral-border-normal: #737373;
+    --lr-theme-color-neutral-border-loud: var(--lr-theme-color-brand-border-loud);
+    --lr-theme-color-neutral-on-quiet: #171717;
+    --lr-theme-color-neutral-on-normal: #171717;
+    --lr-theme-color-neutral-on-loud: var(--lr-theme-color-brand-on-loud);
+
+    /* Danger: shadcn's destructive red, one notch darker (see the deviations above). The other
+       danger slots keep Lyra's values. */
+    --lr-theme-color-danger-fill-loud: #d6000a;
+    --lr-theme-color-danger-on-loud: #ffffff;
+
+    /* Focus: an opaque grey, drawn 3px wide flush against the control. */
+    --lr-theme-color-focus: #8b8b8b;
+    --lr-theme-focus-ring-width: 3px;
+    --lr-theme-focus-ring-offset: 0px;
+
+    /* Interaction: hover and press move every fill toward the middle, so they always move. */
+    --lr-theme-color-mix-partner: #737373;
+
+    /* Shape and type. */
+    --lr-theme-border-radius-m: 0.5rem;
+    --lr-theme-border-radius-xs: 0.25rem;
+    --lr-theme-font-family-body: 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --lr-theme-font-family-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --lr-theme-font-size-m: 0.875rem;
+    /* shadcn's tracking-tight headings; read by the heading letter-spacing hook's fallback. */
+    --lr-theme-heading-letter-spacing: -0.025em;
+
+    /* Control geometry. The coarse-pointer 44px floor in the core tokens still applies. */
+    --lr-theme-form-control-height-s: 2rem;
+    --lr-theme-form-control-height-m: 2.25rem;
+    --lr-theme-form-control-height-l: 2.5rem;
+    --lr-theme-icon-button-size: 2.25rem;
+
+    /* Elevation: Tailwind's shadow geometry. The colour stays the shared shadow-colour triplet. */
+    --lr-theme-shadow-xs: 0 1px 2px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.05);
+    --lr-theme-shadow-s: 0 1px 3px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1), 0 1px 2px -1px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1);
+    --lr-theme-shadow-m: 0 4px 6px -1px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1), 0 2px 4px -2px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1);
+    --lr-theme-shadow-l: 0 10px 15px -3px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1), 0 4px 6px -4px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1);
+    --lr-theme-shadow-xl: 0 20px 25px -5px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1), 0 8px 10px -6px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1);
+
+    /* Unchanged from theme.css: its light value for every other input its dark rule re-declares --
+       the success, warning and remaining danger slots, the scrims, and the chart, graph and terminal
+       ramps. They are repeated here because theme.css never answers to .dark or .light. Without
+       them a bare .dark would lay this preset's dark surfaces over theme.css's LIGHT status tints,
+       chart series and terminal palette, and a .light region inside a dark page the reverse; both
+       mixes fail contrast. Copied verbatim from theme.css, and only between the two marker comments
+       below; re-copy them whenever theme.css's palettes are regenerated. The lint-level preset test
+       reads the markers and fails on a missing, extra or stale entry, so every input this preset
+       restyles on purpose belongs above the start marker, never between the two. */
+    /* BEGIN REPEATED BASE THEME VALUES */
+    --lr-theme-color-success-fill-quiet: #d3fbd8;
+    --lr-theme-color-success-fill-normal: #91d09a;
+    --lr-theme-color-success-fill-loud: #0c7830;
+    --lr-theme-color-success-border-quiet: #91d09a;
+    --lr-theme-color-success-border-normal: #3e9550;
+    --lr-theme-color-success-border-loud: #00571f;
+    --lr-theme-color-success-on-quiet: #000001;
+    --lr-theme-color-success-on-normal: #000001;
+    --lr-theme-color-success-on-loud: #edeef1;
+    --lr-theme-color-warning-fill-quiet: #ffebd2;
+    --lr-theme-color-warning-fill-normal: #ddb781;
+    --lr-theme-color-warning-fill-loud: #855905;
+    --lr-theme-color-warning-border-quiet: #ddb781;
+    --lr-theme-color-warning-border-normal: #a77526;
+    --lr-theme-color-warning-border-loud: #624001;
+    --lr-theme-color-warning-on-quiet: #000001;
+    --lr-theme-color-warning-on-normal: #000001;
+    --lr-theme-color-warning-on-loud: #edeef1;
+    --lr-theme-color-danger-fill-quiet: #ffe9e6;
+    --lr-theme-color-danger-fill-normal: #ffa099;
+    --lr-theme-color-danger-border-quiet: #ffa099;
+    --lr-theme-color-danger-border-normal: #dc3e41;
+    --lr-theme-color-danger-border-loud: #890415;
+    --lr-theme-color-danger-on-quiet: #000001;
+    --lr-theme-color-danger-on-normal: #000001;
+    --lr-theme-color-no-data: rgb(128 128 128 / 25%);
+    --lr-theme-color-overlay: rgb(0 0 0 / 0.5);
+    --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.92);
+    --lr-theme-color-on-strong-overlay: #ffffff;
+    --lr-theme-color-chart-1: #0e006e;
+    --lr-theme-color-chart-2: #4d011a;
+    --lr-theme-color-chart-3: #862002;
+    --lr-theme-color-chart-4: #503983;
+    --lr-theme-color-chart-5: #315fdd;
+    --lr-theme-color-chart-6: #935e7c;
+    --lr-theme-color-chart-7: #de6906;
+    --lr-theme-color-chart-8: #8f81d3;
+    --lr-theme-graph-cat-1: #8250df;
+    --lr-theme-graph-cat-2: #bf3989;
+    --lr-theme-graph-cat-3: #0a7d91;
+    --lr-theme-graph-cat-4: #57606a;
+    --lr-theme-graph-cat-5: #b083f5;
+    --lr-theme-graph-cat-6: #f470b8;
+    --lr-theme-graph-cat-7: #52d6e8;
+    --lr-theme-graph-cat-8: #c9d1d9;
+    --lr-theme-terminal-color-black: #2b2b2b;
+    --lr-theme-terminal-color-red: #901114;
+    --lr-theme-terminal-color-green: #015e15;
+    --lr-theme-terminal-color-yellow: #5f4a03;
+    --lr-theme-terminal-color-blue: #06489c;
+    --lr-theme-terminal-color-magenta: #67298c;
+    --lr-theme-terminal-color-cyan: #02585f;
+    --lr-theme-terminal-color-white: #555555;
+    --lr-theme-terminal-color-bright-black: #404040;
+    --lr-theme-terminal-color-bright-red: #b32322;
+    --lr-theme-terminal-color-bright-green: #01791e;
+    --lr-theme-terminal-color-bright-yellow: #796005;
+    --lr-theme-terminal-color-bright-blue: #145ec1;
+    --lr-theme-terminal-color-bright-magenta: #823bae;
+    --lr-theme-terminal-color-bright-cyan: #04717a;
+    --lr-theme-terminal-color-bright-white: #6c6c6c;
+    --lr-theme-terminal-bg-black: #868686;
+    --lr-theme-terminal-bg-red: #d2918a;
+    --lr-theme-terminal-bg-green: #89b18a;
+    --lr-theme-terminal-bg-yellow: #b6a372;
+    --lr-theme-terminal-bg-blue: #88a6d4;
+    --lr-theme-terminal-bg-magenta: #b497cb;
+    --lr-theme-terminal-bg-cyan: #77b0b6;
+    --lr-theme-terminal-bg-white: #b7b7b7;
+    --lr-theme-terminal-bg-bright-black: #9e9e9e;
+    --lr-theme-terminal-bg-bright-red: #f9aea5;
+    --lr-theme-terminal-bg-bright-green: #a4d2a4;
+    --lr-theme-terminal-bg-bright-yellow: #d8c288;
+    --lr-theme-terminal-bg-bright-blue: #a2c6fb;
+    --lr-theme-terminal-bg-bright-magenta: #d6b4f0;
+    --lr-theme-terminal-bg-bright-cyan: #8dd2da;
+    --lr-theme-terminal-bg-bright-white: #d1d1d1;
+    /* END REPEATED BASE THEME VALUES */
+  }
+
+  .lr-dark,
+  [data-lr-theme='dark'],
+  .dark {
+    color-scheme: dark;
+
+    --lr-theme-color-surface-default: #0a0a0a;
+    --lr-theme-color-surface-raised: #171717;
+    --lr-theme-color-surface-overlay: #171717;
+    --lr-theme-color-text-normal: #fafafa;
+    --lr-theme-color-text-quiet: #a1a1a1;
+
+    /* shadcn's dark hairline is white at 10%. It is decorative only, so the alpha is harmless:
+       nothing that must stay visible is ever drawn with it. */
+    --lr-theme-color-surface-border: #646464;
+    --lr-theme-color-surface-border-subtle: rgb(255 255 255 / 0.1);
+    --lr-theme-color-border-strong: #646464;
+
+    --lr-theme-color-brand-fill-quiet: #262626;
+    --lr-theme-color-brand-fill-normal: #404040;
+    --lr-theme-color-brand-fill-loud: #e5e5e5;
+    --lr-theme-color-brand-border-quiet: #262626;
+    --lr-theme-color-brand-border-normal: #a1a1a1;
+    --lr-theme-color-brand-border-loud: #e5e5e5;
+    --lr-theme-color-brand-on-quiet: #fafafa;
+    --lr-theme-color-brand-on-normal: #fafafa;
+    --lr-theme-color-brand-on-loud: #171717;
+
+    --lr-theme-color-neutral-fill-quiet: #262626;
+    --lr-theme-color-neutral-fill-normal: #404040;
+    --lr-theme-color-neutral-fill-loud: var(--lr-theme-color-brand-fill-loud);
+    --lr-theme-color-neutral-border-quiet: #262626;
+    --lr-theme-color-neutral-border-normal: #a1a1a1;
+    --lr-theme-color-neutral-border-loud: var(--lr-theme-color-brand-border-loud);
+    --lr-theme-color-neutral-on-quiet: #fafafa;
+    --lr-theme-color-neutral-on-normal: #fafafa;
+    --lr-theme-color-neutral-on-loud: var(--lr-theme-color-brand-on-loud);
+
+    --lr-theme-color-danger-fill-loud: #ff6467;
+    --lr-theme-color-danger-on-loud: #0a0a0a;
+
+    --lr-theme-color-focus: #787878;
+    --lr-theme-focus-ring-width: 3px;
+    --lr-theme-focus-ring-offset: 0px;
+
+    --lr-theme-color-mix-partner: #737373;
+
+    --lr-theme-border-radius-m: 0.5rem;
+    --lr-theme-border-radius-xs: 0.25rem;
+    --lr-theme-font-family-body: 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --lr-theme-font-family-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --lr-theme-font-size-m: 0.875rem;
+    --lr-theme-heading-letter-spacing: -0.025em;
+
+    --lr-theme-form-control-height-s: 2rem;
+    --lr-theme-form-control-height-m: 2.25rem;
+    --lr-theme-form-control-height-l: 2.5rem;
+    --lr-theme-icon-button-size: 2.25rem;
+
+    /* Same geometry, alphas tripled: a 10% black shadow on a near-black page is no shadow. */
+    --lr-theme-shadow-xs: 0 1px 2px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.15);
+    --lr-theme-shadow-s: 0 1px 3px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3), 0 1px 2px -1px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3);
+    --lr-theme-shadow-m: 0 4px 6px -1px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3), 0 2px 4px -2px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3);
+    --lr-theme-shadow-l: 0 10px 15px -3px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3), 0 4px 6px -4px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3);
+    --lr-theme-shadow-xl: 0 20px 25px -5px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3), 0 8px 10px -6px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3);
+
+    /* Unchanged from theme.css: its dark value for each input repeated in the light block above. */
+    /* BEGIN REPEATED BASE THEME VALUES */
+    --lr-theme-color-success-fill-quiet: #013912;
+    --lr-theme-color-success-fill-normal: #0c7830;
+    --lr-theme-color-success-fill-loud: #67b374;
+    --lr-theme-color-success-border-quiet: #013912;
+    --lr-theme-color-success-border-normal: #3e9550;
+    --lr-theme-color-success-border-loud: #67b374;
+    --lr-theme-color-success-on-quiet: #edeef1;
+    --lr-theme-color-success-on-normal: #edeef1;
+    --lr-theme-color-success-on-loud: #000001;
+    --lr-theme-color-warning-fill-quiet: #402801;
+    --lr-theme-color-warning-fill-normal: #855905;
+    --lr-theme-color-warning-fill-loud: #c39554;
+    --lr-theme-color-warning-border-quiet: #402801;
+    --lr-theme-color-warning-border-normal: #a77526;
+    --lr-theme-color-warning-border-loud: #c39554;
+    --lr-theme-color-warning-on-quiet: #edeef1;
+    --lr-theme-color-warning-on-normal: #edeef1;
+    --lr-theme-color-warning-on-loud: #000001;
+    --lr-theme-color-danger-fill-quiet: #5c010a;
+    --lr-theme-color-danger-fill-normal: #bb0320;
+    --lr-theme-color-danger-border-quiet: #5c010a;
+    --lr-theme-color-danger-border-normal: #dc3e41;
+    --lr-theme-color-danger-border-loud: #f86b66;
+    --lr-theme-color-danger-on-quiet: #edeef1;
+    --lr-theme-color-danger-on-normal: #edeef1;
+    --lr-theme-color-no-data: rgb(180 180 180 / 30%);
+    --lr-theme-color-overlay: rgb(0 0 0 / 0.72);
+    --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.95);
+    --lr-theme-color-on-strong-overlay: #ffffff;
+    --lr-theme-color-chart-1: #bbff94;
+    --lr-theme-color-chart-2: #ffbce8;
+    --lr-theme-color-chart-3: #2bd66a;
+    --lr-theme-color-chart-4: #bb99cb;
+    --lr-theme-color-chart-5: #7888fe;
+    --lr-theme-color-chart-6: #9b6b90;
+    --lr-theme-color-chart-7: #db3a29;
+    --lr-theme-color-chart-8: #555de3;
+    --lr-theme-graph-cat-1: #b58cff;
+    --lr-theme-graph-cat-2: #ff7ab2;
+    --lr-theme-graph-cat-3: #4fd1c5;
+    --lr-theme-graph-cat-4: #aab4c4;
+    --lr-theme-graph-cat-5: #d4a7ff;
+    --lr-theme-graph-cat-6: #ff91c8;
+    --lr-theme-graph-cat-7: #79e2ef;
+    --lr-theme-graph-cat-8: #e4e7eb;
+    --lr-theme-terminal-color-black: #929292;
+    --lr-theme-terminal-color-red: #f9786c;
+    --lr-theme-terminal-color-green: #67bb6b;
+    --lr-theme-terminal-color-yellow: #c7a01e;
+    --lr-theme-terminal-color-blue: #69a5fe;
+    --lr-theme-terminal-color-magenta: #c385ef;
+    --lr-theme-terminal-color-cyan: #17bac8;
+    --lr-theme-terminal-color-white: #c4c4c4;
+    --lr-theme-terminal-color-bright-black: #ababab;
+    --lr-theme-terminal-color-bright-red: #ffaba1;
+    --lr-theme-terminal-color-bright-green: #7cdf81;
+    --lr-theme-terminal-color-bright-yellow: #ecbe24;
+    --lr-theme-terminal-color-bright-blue: #a0c6fe;
+    --lr-theme-terminal-color-bright-magenta: #dcaefe;
+    --lr-theme-terminal-color-bright-cyan: #00ddef;
+    --lr-theme-terminal-color-bright-white: #dedede;
+    --lr-theme-terminal-bg-black: #292929;
+    --lr-theme-terminal-bg-red: #733a35;
+    --lr-theme-terminal-bg-green: #335735;
+    --lr-theme-terminal-bg-yellow: #5c4b1a;
+    --lr-theme-terminal-bg-blue: #324e76;
+    --lr-theme-terminal-bg-magenta: #5a406e;
+    --lr-theme-terminal-bg-cyan: #1c565d;
+    --lr-theme-terminal-bg-white: #525252;
+    --lr-theme-terminal-bg-bright-black: #3d3d3d;
+    --lr-theme-terminal-bg-bright-red: #904e47;
+    --lr-theme-terminal-bg-bright-green: #456f46;
+    --lr-theme-terminal-bg-bright-yellow: #756127;
+    --lr-theme-terminal-bg-bright-blue: #446493;
+    --lr-theme-terminal-bg-bright-magenta: #73548a;
+    --lr-theme-terminal-bg-bright-cyan: #286f76;
+    --lr-theme-terminal-bg-bright-white: #696969;
+    /* END REPEATED BASE THEME VALUES */
+  }
+}

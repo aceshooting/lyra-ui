@@ -1025,3 +1025,20 @@ it('constructs iframe focus relays in the host owner realm, preserves payload, a
     ownerFrame.remove();
   }
 });
+
+it('draws the frame and toolbar edges in the subtle border tier while the zoom buttons stay control-grade', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+      <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraZoomableFrame>('lr-zoomable-frame')!;
+  await el.updateComplete;
+  const controls = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"]');
+  const zoomIn = el.shadowRoot!.querySelector<HTMLElement>('[part="zoom-in-button"]');
+  expect(controls === null || zoomIn === null, 'toolbar or zoom button missing').to.be.false;
+
+  expect(getComputedStyle(el).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(controls!).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(zoomIn!).borderTopColor).to.equal('rgb(7, 8, 9)');
+});

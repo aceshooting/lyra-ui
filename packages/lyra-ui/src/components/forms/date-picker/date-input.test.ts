@@ -4048,14 +4048,15 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
     el.remove();
   });
 
-  it("hands focus to a reconnected instance's own popup resolver when a stacked overlay above it closes", async () => {
-    // Reconnection registers its overlay entry through `reconnectOpenPopup()`'s own
-    // `panel` resolver rather than `updated()`'s (see the previous test). That resolver is only
-    // ever invoked by the overlay manager itself -- specifically when a later, stacked entry
-    // above this one deactivates with `restoreFocus: false` and focus falls through to whichever
-    // entry is now topmost. Two simultaneously open date-inputs on the same document reproduce
-    // that stack; the reconnected one must sit underneath so closing the other exercises its
-    // reconnect-sourced resolver instead of leaving it dead code.
+  // Two simultaneously open date-inputs on one document, the lower one reconnected while open so
+  // its overlay entry is registered through `reconnectOpenPopup()`'s own `panel` resolver rather
+  // than `updated()`'s (see the previous test). `#outside` holds focus throughout, so it is also
+  // the upper popup's captured focus-return target.
+  async function stackAboveReconnectedDateInput(): Promise<{
+    lower: LyraDateInput;
+    upper: LyraDateInput;
+    outside: HTMLButtonElement;
+  }> {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div>
         <lr-date-input
@@ -4066,10 +4067,13 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
           id="upper"
           style="--show-duration: 1ms; --hide-duration: 1ms"
         ></lr-date-input>
+        <button id="outside">Outside</button>
       </div>
     `);
     const lower = wrapper.querySelector("#lower") as LyraDateInput;
     const upper = wrapper.querySelector("#upper") as LyraDateInput;
+    const outside = wrapper.querySelector("#outside") as HTMLButtonElement;
+    outside.focus();
 
     await lower.show();
     await lower.updateComplete;
@@ -4087,6 +4091,26 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
     await upper.updateComplete;
     expect(upper.open, "upper stacks above the already-reconnected lower").to
       .be.true;
+    return { lower, upper, outside };
+  }
+
+  it("hands focus to a reconnected instance's own popup resolver when a stacked overlay above it closes while holding focus", async () => {
+    // The reconnect-sourced `panel` resolver is only ever invoked by the overlay manager itself:
+    // when the entry stacked above it closes while holding focus and focus cannot return to where
+    // it came from, focus falls through to whichever entry is now topmost. Focus is placed inside
+    // the upper popup and its captured return target is removed, so closing it must exercise the
+    // reconnected resolver instead of leaving it dead code.
+    const { lower, upper, outside } = await stackAboveReconnectedDateInput();
+    const picker = upper.shadowRoot!.querySelector(
+      "lr-date-picker"
+    ) as LyraDatePicker;
+    await picker.updateComplete;
+    const day = picker.shadowRoot!.querySelector(
+      '[part~="day"][tabindex="0"]'
+    ) as HTMLButtonElement;
+    day.focus();
+    expect(picker.shadowRoot!.activeElement === day).to.equal(true);
+    outside.remove();
 
     const afterHide = oneEvent(upper, "lr-after-hide");
     void upper.hide();
@@ -4101,6 +4125,30 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
       lower.shadowRoot!.activeElement?.tagName.toLowerCase(),
       "closing the entry above hands focus into the still-open reconnected popup"
     ).to.equal("lr-date-picker");
+  });
+
+  it("leaves outside focus alone when a stacked overlay above a still-open reconnected instance closes without holding it", async () => {
+    // The overlay that closes never held focus, so the shared stack must not pull focus out of
+    // an unrelated control and into the popup that happens to sit beneath it.
+    const { lower, upper } = await stackAboveReconnectedDateInput();
+
+    const afterHide = oneEvent(upper, "lr-after-hide");
+    void upper.hide();
+    await upper.updateComplete;
+    await afterHide;
+    expect(upper.open, "the topmost stacked instance closed").to.be.false;
+    expect(
+      lower.open,
+      "the reconnected instance underneath is untouched"
+    ).to.be.true;
+    expect(
+      document.activeElement?.id ?? document.activeElement?.localName ?? "none",
+      "focus stays on the unrelated control"
+    ).to.equal("outside");
+    expect(
+      lower.shadowRoot!.activeElement === null,
+      "the popup beneath does not take focus"
+    ).to.equal(true);
   });
 
   it("adoptedCallback tears down positioning, the overlay, and cross-document listeners", async () => {

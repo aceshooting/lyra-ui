@@ -2,7 +2,7 @@
 
 # Component index
 
-288 custom elements, grouped by the source family they live in.
+294 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -18,7 +18,7 @@ their owning family path and do not register the tag.
 `strings`, TypeScript, frameworks, SSR): `llms/shared.md`. Design tokens: `llms/tokens.md`.
 Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.md`.
 
-## Form controls & inputs — `components/forms/` (29)
+## Form controls & inputs — `components/forms/` (31)
 
 - `lr-combobox` · lr-combobox.js · `stable` since `4.0.0` — a filterable single/multi select that combines a text input with a listbox.
 - `lr-option` · lr-option.js · `stable` since `4.0.0` — a selectable option for `<lr-combobox>` and `<lr-select>`.
@@ -49,6 +49,8 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-emoji-picker` · lr-emoji-picker.js · `stable` since `4.0.0` — a searchable, keyboard-navigable, form-associated emoji picker.
 - `lr-rubric-form` · lr-rubric-form.js · `stable` since `4.0.0` — a configurable annotation rubric (LangSmith annotation-queue style): score, category, and freeform-comment keys with a submit-and-next fl...
 - `lr-locale-picker` · lr-locale-picker.js · `stable` since `6.0.0` — a closed-list locale switcher over the library's own locale registry.
+- `lr-toggle` · lr-toggle.js · `experimental` since `unreleased` — a two-state button that owns its `pressed` state.
+- `lr-toggle-group` · lr-toggle-group.js · `experimental` since `unreleased` — a set of `<lr-toggle>` children behind one tab stop.
 
 ## Data display, dashboards & flow canvas — `components/data/` (26)
 
@@ -79,7 +81,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-graph-query-builder` · lr-graph-query-builder.js · `stable` since `4.1.0` — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-condition-builder` · lr-condition-builder.js · `stable` since `9.0.0` — a composable structured-condition builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with on...
 
-## Layout, navigation & structure — `components/layout/` (36)
+## Layout, navigation & structure — `components/layout/` (38)
 
 - `lr-multi-split` · lr-multi-split.js · `stable` since `9.0.0` — resizable panels for dashboard layouts.
 - `lr-split-panel` · lr-split-panel.js · `stable` since `8.0.0` — an accessible, draggable two-pane layout.
@@ -117,8 +119,10 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-drilldown-panel` · lr-drilldown-panel.js · `stable` since `4.1.0` — a controlled navigation and category shell for related evidence, documents, entities, and host-rendered agent runs.
 - `lr-filter-bar` · lr-filter-bar.js · `stable` since `4.1.0` — a row of dashboard filters, each declared by the host (`filters`) rather than invented by this component: every filter composes an existi...
 - `lr-page` · lr-page.js · `stable` since `8.0.0` — a semantic application/page shell that derives its mobile or desktop presentation from its own allocated inline size.
+- `lr-navigation-menu` · lr-navigation-menu.js · `experimental` since `unreleased` — a site-header navigation bar following the WAI-ARIA disclosure navigation pattern: a `nav` landmark holding a list of `<lr-navigation-men...
+- `lr-navigation-menu-item` · lr-navigation-menu-item.js · `experimental` since `unreleased` — one entry of an `<lr-navigation-menu>` bar: a link, a disclosure trigger with a flyout panel, or a plain button.
 
-## Overlays, status & feedback — `components/overlays/` (21)
+## Overlays, status & feedback — `components/overlays/` (22)
 
 - `lr-toast` · lr-toast.js · `stable` since `4.0.0` — one placement-specific stacking toast region.
 - `lr-toast-item` · lr-toast-item.js · `stable` since `4.0.0` — a single toast notification.
@@ -133,6 +137,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-popover` · lr-popover.js · `stable` since `4.0.0` — a light-dismiss floating surface, click-triggered by default.
 - `lr-tooltip` · lr-tooltip.js · `stable` since `4.0.0` — a localized tooltip for a consumer-owned trigger.
 - `lr-dropdown` · lr-dropdown.js · `stable` since `4.0.0` — a trigger-owned action menu.
+- `lr-context-menu` · lr-context-menu.js · `experimental` since `unreleased` — turns any slotted region into a context-menu target.
 - `lr-spinner` · lr-spinner.js · `stable` since `4.0.0` — an indeterminate busy indicator.
 - `lr-progress-bar` · lr-progress-bar.js · `stable` since `4.0.0` — a determinate or indeterminate progress indicator.
 - `lr-progress-ring` · lr-progress-ring.js · `stable` since `4.0.0` — a circular determinate or indeterminate progress indicator.
@@ -268,7 +273,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-selection-toolbar` · lr-selection-toolbar.js · `stable` since `7.0.0` — a nonmodal action toolbar positioned above selected text.
 - `lr-realtime-session` · lr-realtime-session.js · `stable` since `7.0.0` — a provider-neutral voice-session shell composing connection status, live activity, transcript, native capture, mute, interruption, and co...
 
-## Agent tooling, tool calls & evaluation — `components/agent-tools/` (35)
+## Agent tooling, tool calls & evaluation — `components/agent-tools/` (36)
 
 - `lr-tool-call-chip` · lr-tool-call-chip.js · `stable` since `4.0.0` — a compact inline pill representing one tool/ function call an agent made mid-conversation, e.g.
 - `lr-tool-result-view` · lr-tool-result-view.js · `stable` since `4.0.0` — renders a tool call's result via whichever custom renderer a host app has registered for it (see `registerToolRenderer()` in `registry.ts...
@@ -305,6 +310,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-prompt-studio` · lr-prompt-studio.js · `stable` since `7.0.0` — a provider-neutral prompt-development workbench for ordered role messages, `{{variable}}` substitution, version selection, preview, save,...
 - `lr-json-schema-viewer` · lr-json-schema-viewer.js · `stable` since `9.0.0` — a recursive, selectable JSON Schema inspector with required-state, constraints, composition branches, `$ref` display, validation issues,...
 - `lr-subagent-panel` · lr-subagent-panel.js · `stable` since `7.0.0` — a controlled hierarchy of nested agent runs with lifecycle status, task/model context, progress, selection, cancellation, and retry intents.
+- `lr-tool-call-block` · lr-tool-call-block.js · `experimental` since `unreleased` — one tool call shown inline as a collapsed-by-default disclosure.
 
 ## Retrieval, knowledge graph & grounding — `components/retrieval/` (30)
 

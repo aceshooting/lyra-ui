@@ -1684,6 +1684,27 @@ describe("toggle button i18n", () => {
     expect(getComputedStyle(glyph).width).to.equal('20px');
     expect(getComputedStyle(glyph).height).to.equal('20px');
   });
+
+  it('renders the shared three-bar hamburger while closed and the close glyph while open', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail></lr-app-rail>`
+    )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    await el.updateComplete;
+
+    const glyphLines = () =>
+      [...el.shadowRoot!.querySelectorAll('[part="toggle"] > svg line')].map((line) =>
+        ['x1', 'y1', 'x2', 'y2'].map((name) => line.getAttribute(name)).join(' ')
+      );
+    const glyph = el.shadowRoot!.querySelector<SVGElement>('[part="toggle"] > svg');
+    expect(glyph?.getAttribute('aria-hidden')).to.equal('true');
+    expect(glyphLines()).to.deep.equal(['4 7 20 7', '4 12 20 12', '4 17 20 17']);
+
+    el.open = true;
+    await el.updateComplete;
+    expect(glyphLines()).to.deep.equal(['18 6 6 18', '6 6 18 18']);
+  });
 });
 
 // -- preferredMode --------------------------------------------------------
@@ -1788,6 +1809,33 @@ describe("resizable", () => {
     )) as LyraAppRail;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="resizer"]') == null).to.be.true;
+  });
+
+  it("keeps the rail edge on the control-grade border only while the resizer renders", async () => {
+    // The resizer-track is transparent at rest, so a rendered resizer's only visible mark is the
+    // rail's own inline-end edge (WCAG 2.2 SC 1.4.11); every other rail keeps the subtle tier.
+    // Distinct theme inputs stop the two border tiers resolving to the same colour.
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="
+        --lr-theme-color-surface-border: rgb(4, 5, 6);
+        --lr-theme-color-surface-border-subtle: rgb(1, 2, 3);
+      ">
+        <lr-app-rail></lr-app-rail>
+        <lr-app-rail resizable></lr-app-rail>
+        <lr-app-rail resizable force-mode="icon-only"></lr-app-rail>
+      </div>
+    `);
+    const rails = [...wrapper.querySelectorAll<LyraAppRail>("lr-app-rail")];
+    await Promise.all(rails.map((rail) => rail.updateComplete));
+    const [plain, resizable, iconOnly] = rails;
+    const edge = (rail: LyraAppRail) =>
+      getComputedStyle(rail.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!)
+        .borderInlineEndColor;
+
+    expect(resizable!.shadowRoot!.querySelector('[part="resizer"]') != null).to.be.true;
+    expect(edge(plain!)).to.equal("rgb(1, 2, 3)");
+    expect(edge(resizable!)).to.equal("rgb(4, 5, 6)");
+    expect(edge(iconOnly!)).to.equal("rgb(1, 2, 3)");
   });
 
   it("emits a cancelable resize request before the existing non-cancelable committed resize event", async () => {

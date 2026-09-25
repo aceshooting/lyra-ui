@@ -656,7 +656,9 @@ The listbox popup itself is a floating surface and paints from the **shared over
 `--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this popup together with every other floating surface, and none of
-it touches the trigger row the popup drops from.
+it touches the trigger row the popup drops from. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this popup belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
@@ -1145,6 +1147,9 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
 `<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
@@ -2339,6 +2344,9 @@ box no matter what tier or override is in play.
   a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
   are resolved onto the focused internal control through `ariaDescribedByElements`; external
   `aria-labelledby` is not copied across the shadow boundary.
+- For a toggle that owns its pressed state — a vetoable request, `lr-change`, and optional grouping
+  behind one tab stop — use `lr-toggle` / `lr-toggle-group` rather than flipping host `aria-pressed`
+  in a click handler.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
   For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
   BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support
@@ -2442,6 +2450,8 @@ the menu relationship and expanded state on the element that actually receives f
 browsers intentionally clear each serialized internal IDREF attribute after its explicit element
 list is assigned. Browsers without those APIs retain the forwarded string attributes as
 best-effort fallbacks.
+For an icon-only toggle that owns its pressed state (with a vetoable request and `lr-change`), use
+`lr-toggle` with a host `aria-label` instead of managing `aria-pressed` yourself.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native interactive root,
 activating the action button or a safe anchor through the same path as pointer/keyboard input.
@@ -3317,7 +3327,9 @@ and the raised tone is what separates it from the field's fill — `--lr-color-s
 resolves to the plain page surface in light mode and would erase that separation, while in dark
 mode the raised tone is already distinct from the page, so this panel never had the
 reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
-along with every other popup.
+along with every other popup. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the `popup` panel reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -4889,6 +4901,8 @@ and scale.
 
 The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
 `sl-radio-button`.
+For exactly-one choices in button chrome, prefer this inside `lr-radio-group` over `lr-toggle-group`,
+whose `aria-pressed` toggles convey no exclusivity and can be cleared.
 
 An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
 For example, assigning `checked = false` to an already-unchecked radio prevents a later
@@ -5196,6 +5210,10 @@ A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the ori
 axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
 horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
 
+For an exactly-one choice in button chrome (text alignment, view mode), prefer this group with
+`lr-radio-button` over `lr-toggle-group`: `role="radio"` conveys exclusivity and position, which
+`aria-pressed` cannot. A choice the user may clear belongs on `lr-toggle-group selection-mode="single"`.
+
 Host `aria-describedby` references resolve onto the internal `role="radiogroup"` before its local
 hint/error guidance. References track unresolved IDs, target replacement/removal/reinsertion,
 reconnect, and document adoption. Group descriptions remain on the group; child radios can carry
@@ -5277,6 +5295,8 @@ targets keep their own fixed hit-area floor while the surrounding text wraps.
 A form-associated collection of `<lr-checkbox>` children. Its readonly `value` is a defensive
 `string[]` snapshot; each
 selected value is submitted under `name` and `required` requires at least one selection.
+For zero-or-more choices in button chrome behind one tab stop that submit nothing, use
+`lr-toggle-group`.
 
 **Properties:** `label`, `hint`, `errorText`, `value`, `customError` (`custom-error`), `name`,
 `required`, `disabled`, `orientation: 'vertical' | 'horizontal' = 'vertical'`,
@@ -5946,7 +5966,9 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-color-picker-radius`, which still wins when set.
+`--lr-color-picker-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
 `<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
@@ -6452,6 +6474,9 @@ them declared on `:host`, so one declaration on `:root` — or on any ancestor, 
 this listbox together with every other floating surface. `--lr-overlay-radius` reaches the listbox
 only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
 set: a component-scoped override outranks the shared family, never the other way round.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the listbox reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
@@ -6764,3 +6789,231 @@ These named interfaces and helper signatures are available to typed integrations
     readonly end: number;
     readonly id?: string;
   }`
+
+## `lr-toggle`
+
+A two-state button that owns its `pressed` state — the self-managed counterpart of
+`<lr-button aria-pressed>`. It renders a native `<button type="button">` whose `aria-pressed` is
+always `"true"` or `"false"`, and takes the shared `variant`/`appearance`/`size` vocabulary. It is
+not a form control: it is not form-associated and submits nothing, so an ancestor
+`<fieldset disabled>` does not reach it and it is absent from `form.elements` (disable each toggle
+explicitly). A value that must be submitted belongs on `lr-switch`, `lr-checkbox`,
+`lr-checkbox-group` or `lr-radio-group`. For the same reason it renders no label/hint/error chrome:
+its content is its name. For a tri-state `mixed` button use `<lr-button aria-pressed="mixed">`.
+
+**Naming.** The accessible name comes from the host `aria-label` (forwarded by presence, including
+an explicitly empty value), the host `aria-labelledby` (resolved onto the internal button through
+`ariaLabelledByElements`, following same-ID replacement, reconnect and adoption, and winning over
+`aria-label` and content per ARIA), or the content. A host `aria-describedby` is resolved onto the
+internal button the same way. An **icon-only** toggle must be named by one of those — a labelled
+icon (`<lr-icon label="Bold">`) or visually hidden text also works — and there is deliberately no
+generic fallback name. **Keep the label constant while `pressed` changes** (WAI-ARIA APG toggle
+button): state is conveyed by `aria-pressed` alone, so a "Mute"/"Unmute" swap is wrong. A host
+`aria-pressed` is not supported — the host has no role; use `pressed`.
+
+**Properties:**
+
+- `pressed: boolean` (reflected, default `false`) — the toggle state. Programmatic writes are silent.
+- `disabled: boolean = false` (reflected) — an owning group's `disabled` is projected without
+  changing it.
+- `value: string = ''` — item identity inside an `lr-toggle-group`, echoed in event details; never
+  submitted.
+- `variant: LyraVariant` (reflected, default `'neutral'`) — the semantic row for the pressed fill and
+  indicator. Unsupported values fall back to `neutral`.
+- `appearance: LyraToggleAppearance` (reflected, default `'plain'`) — `plain` (text-only chrome with a
+  transparent border, so geometry matches) or `outlined` (a full `--lr-color-border` control
+  boundary). Unsupported values fall back to `plain`.
+- `size: LyraSize` (reflected, default `'m'`) — the shared ladder, accepting `2xs`/`xs`/`s`/`m`/`l`/`xl`
+  and `small`/`medium`/`large`. Unsupported values fall back to `m`.
+- `effectiveDisabled: boolean` (read-only) — `disabled` or an owning group's `disabled`.
+
+**Events:**
+
+- `lr-toggle-toggle-request` — cancelable; a user activation (click, Enter on keydown, Space on keyup, or host `click()`) is about to flip `pressed`.
+- `lr-change` — not cancelable; after a committed user toggle.
+- `lr-toolbar-actions-change` — no detail; the toggle joined or left an `lr-toggle-group`.
+- `focus` / `blur` — relayed once from the internal button, bubbling and composed.
+
+Both toggle events carry `detail: { pressed, value }` (`LyraToggleChangeDetail`). On the request,
+`pressed` is the proposed state while the property still holds the old one; `preventDefault()` keeps
+the current state and no `lr-change` follows, and a listener may instead resolve the request by
+assigning `pressed` itself during the dispatch, which suppresses the built-in commit the same way.
+Neither fires for a programmatic write or while disabled. The toggle never emits the library's
+disclosure events `lr-toggle` or `lr-toggle-request`; its own request is named by the boolean-control
+family rule (`lr-switch-toggle-request`, `lr-checkbox-toggle-request`). **Inside an
+`lr-toggle-group` the group consumes both toggle events** and republishes them under its own names,
+so listeners on an individual grouped toggle receive neither.
+
+**Types:**
+
+- `LyraToggleChangeDetail { readonly pressed: boolean; readonly value: string }` — the detail of
+  `lr-toggle-toggle-request` and `lr-change`.
+- `LyraToggleAppearance = 'plain' | 'outlined'` — the `appearance` set.
+- `LyraToggleEventMap` — the typed event map for `addEventListener`.
+
+**Methods:** `focus(options?)`, `blur()` and `click()` forward to the internal button; `click()` runs
+the full activation path (request, then `lr-change`), and `focus()`/`click()` are no-ops while
+disabled. `getToolbarActions()` implements the `lr-message-actions` logical-toolbar protocol: a
+standalone toggle returns one stable action (`id: 'toggle'`) that leases the internal button's
+`tabindex`, so a slotted pin or read-aloud toggle shares the toolbar's single roving tab stop. A
+grouped toggle returns `[]`, because the group owns that tab stop.
+
+**Slots:** default — the label or icon content; `start` — leading adornment; `end` — trailing
+adornment. `start` and `end` are hidden while empty.
+
+**CSS parts:** `base` / `button` (both on the native button), `start`, `label` (a long label
+ellipsizes), `end`. There are no state parts: style the reflected host attribute
+(`lr-toggle[pressed]::part(button)`).
+
+**Hit area.** Unlike `lr-icon-button`, the toggle keeps the size ladder, including for icon-only
+content. Every tier floors both axes at 1.5rem (24px, the WCAG 2.5.8 minimum) and an icon-only
+toggle is at least square; the default `m` tier equals the 2.5rem (40px) `--lr-icon-button-size`
+floor; under a coarse pointer every tier floors at 2.75rem (44px). Only fine-pointer `2xs`/`xs`/`s`
+sit below 40px — keep `m` or larger, or use `lr-icon-button` with a consumer-managed `aria-pressed`,
+where the compact 40px floor matters.
+
+**Pressed look.** The pressed state paints `--lr-color-fill-quiet` from the `variant` row plus a loud
+`--lr-color-border-loud` border. That border is the state's 3:1 non-text indicator (WCAG 1.4.11): a
+quiet fill alone is not. Override it through `--lr-toggle-pressed-border-color` if you accept that
+trade-off. Under forced colours the pressed state paints `Highlight`/`HighlightText`, unpressed hover
+and press get outline affordances, and disabled toggles read as `GrayText` at full opacity.
+
+**Themeable custom properties** (not declared on the host, so ancestor values win):
+`--lr-toggle-radius` (default `var(--lr-form-control-radius)`), `--lr-toggle-padding-inline`
+(default `var(--lr-space-s)`), `--lr-toggle-gap` (default `var(--lr-form-control-gap)`),
+`--lr-toggle-color` (default `var(--lr-color-text)`), `--lr-toggle-background` (default
+`transparent`), `--lr-toggle-border-color` (built-in default transparent for `plain`,
+`var(--lr-color-border)` for `outlined`), `--lr-toggle-hover-background` (default
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`),
+`--lr-toggle-pressed-background` (default `var(--lr-color-fill-quiet)`), `--lr-toggle-pressed-color`
+(default `var(--lr-color-on-quiet)`) and `--lr-toggle-pressed-border-color` (default
+`var(--lr-color-border-loud)`).
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/toggle/toggle.js';
+</script>
+
+<lr-toggle value="bold">Bold</lr-toggle>
+<lr-toggle aria-label="Pin message" value="pin" pressed>
+  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 7 4 3v2H6v-2l4-3z"></path></svg>
+</lr-toggle>
+```
+
+## `lr-toggle-group`
+
+A set of `lr-toggle` children behind **one tab stop**, with `multiple` or zero-or-one `single`
+selection. Owned toggles are the light-DOM `<lr-toggle>` descendants whose nearest group is this one
+and whose top-level wrapper sits in the default slot, so wrappers such as an `lr-tooltip` are allowed
+while a nested group keeps its own toggles. It is not form-associated and submits nothing.
+
+**Which selection control?**
+
+| Need | Use |
+|---|---|
+| Zero or more toggles in button chrome (text formatting, filters) | `lr-toggle-group` |
+| An optional single choice that can be cleared (highlight colour) | `lr-toggle-group selection-mode="single"` |
+| **Exactly one**, never empty (text alignment, view mode) | `lr-radio-group` + `lr-radio-button` |
+| A value submitted with a form | `lr-checkbox-group` or `lr-radio-group` |
+
+**Single mode is zero-or-one.** Pressing a toggle releases the others, and pressing the pressed
+toggle again clears the choice. Each toggle keeps its `aria-pressed` button semantics, which convey
+neither exclusivity nor position ("2 of 3") to assistive technology, and un-pressing a sibling is not
+announced. So a choice that must never be empty is a radio choice and belongs on `lr-radio-group` with
+`lr-radio-button`; when exclusivity matters in a zero-or-one group, say so in the group's name
+(`label="Highlight colour (optional, pick one)"`). To refuse clearing **temporarily** — while a
+dependent request is in flight, say — call `preventDefault()` on `lr-toggle-group-toggle-request`
+when `detail.value.length === 0`.
+
+**Properties:**
+
+- `selectionMode: LyraToggleGroupSelectionMode` (attribute `selection-mode`, reflected, default
+  `'multiple'`) — `'multiple'` or `'single'`. Unsupported values fall back to `multiple`. Switching to
+  `single` silently keeps only the first pressed toggle; switching back changes nothing.
+- `value: readonly string[]` (property only) — the distinct `value`s of the pressed owned toggles in
+  DOM order, as a frozen snapshot. Assigning presses the toggles it names and releases the rest,
+  silently; in `single` mode only the first owned toggle matching the first listed value that names
+  any toggle is pressed. An assignment made before any toggle exists is applied once they arrive.
+- `disabled: boolean` (reflected, default `false`) — disables every owned toggle without changing any
+  toggle's own `disabled`, leaving zero tab stops; re-enabling restores each toggle's own state.
+- `orientation: LyraOrientation` (reflected, default `'horizontal'`) — arrow-key axis and layout.
+  Vertical groups never join their toggles.
+- `size?: LyraSize` (reflected, opt-in) — when set, overrides every owned toggle's tier without
+  rewriting its `size`; unset (the default) leaves each toggle's own tier in charge.
+- `appearance?: LyraToggleAppearance` (reflected, opt-in) — when set, overrides every owned toggle's
+  appearance without rewriting it; unset leaves each toggle's own appearance in charge.
+- `label: string = ''` — accessible-name fallback when the host has no `aria-label` (the host
+  `aria-label` wins by presence, including an empty value).
+
+**Events:**
+
+- `lr-toggle-group-toggle-request` — cancelable; an owned toggle is about to flip.
+- `lr-change` — not cancelable; after a committed user change, with single-mode exclusivity applied.
+
+The request's `detail: { value, previousValue, option }` (`LyraToggleGroupToggleRequestDetail`) is
+the group value that **would** result, the value as it stands, and the toggle the user acted on (kept
+by identity). `preventDefault()` keeps every toggle unchanged and no `lr-change` follows; assigning the
+group's `value` from a listener resolves the request the same way. `lr-change` carries
+`detail: { value }`. Both details are detached, frozen snapshots. The group **consumes each owned
+toggle's `lr-toggle-toggle-request` and `lr-change`** and republishes them as these two events, so an
+ancestor never receives two differently shaped sequences for one interaction, and a listener on an
+individual grouped toggle receives neither. Programmatic `value`, `pressed` and `selection-mode`
+changes are silent.
+
+**Types:**
+
+- `LyraToggleGroupToggleRequestDetail { readonly value: readonly string[]; readonly previousValue:
+  readonly string[]; readonly option: LyraToggle }` — the request detail.
+- `LyraToggleGroupSelectionMode = 'single' | 'multiple'` — the `selectionMode` set.
+- `LyraToggleGroupEventMap` — the typed event map for `addEventListener`.
+
+**Keyboard and focus.** One owned toggle's internal button carries `tabindex="0"`: the last focused
+(or clicked) toggle, else the first pressed, else the first available; the rest carry `-1`, and no
+host ever gets a `tabindex`. ArrowRight/ArrowLeft (mirrored under RTL) or ArrowDown/ArrowUp when
+vertical move to the next/previous available toggle with wrap-around, Home/End to the first/last.
+Arrows only move focus — Enter and Space toggle the focused toggle. Disabled, `hidden`, `inert`
+(or inside an inert wrapper), `aria-hidden`, `aria-disabled` and CSS-hidden toggles are skipped. When
+the tab-stop toggle is removed or hidden the stop clamps to the next available toggle, else the
+previous one, and focus lost with a removed or hidden toggle moves to the new stop unless the user had
+already moved it elsewhere.
+
+**Methods:** `focus(options?)` focuses the current tab stop; `blur()` releases whichever owned toggle
+holds focus; `click()` toggles the current tab stop through its full activation path, so the request
+and `lr-change` fire and a veto still applies. All three are no-ops while disabled or when no toggle
+is available.
+
+**Joined runs.** Horizontally adjacent toggles join into one bordered run (inner corners squared,
+borders collapsed), measured from their rendered geometry after layout. A real
+`--lr-toggle-group-gap`, a wrapped line, a hidden toggle or a vertical group keeps every toggle's
+corners.
+
+**Inside `lr-message-actions`** the group stays one nested composite with its own tab stop: it does
+not implement `getToolbarActions()`, and its toggles contribute no actions while grouped.
+
+**Slots:** default — `lr-toggle` children, directly or inside wrappers. Give every toggle a distinct,
+non-empty `value`: the group warns once in development when it finds an empty or duplicate one, and
+lists each distinct value once.
+
+**CSS parts:** `base` (the `role="group"` flex container).
+
+**Themeable custom properties:** `--lr-toggle-group-gap` (built-in default `0` when horizontal, so
+toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wrap-gap` (default
+`var(--lr-space-2xs)`, between wrapped lines). Narrow allocations wrap intrinsically.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/toggle-group/toggle-group.js';
+  import '@aceshooting/lyra-ui/components/forms/toggle/toggle.js';
+</script>
+
+<lr-toggle-group label="Text formatting" appearance="outlined">
+  <lr-toggle value="bold">Bold</lr-toggle>
+  <lr-toggle value="italic" pressed>Italic</lr-toggle>
+  <lr-toggle value="underline">Underline</lr-toggle>
+</lr-toggle-group>
+
+<lr-toggle-group selection-mode="single" label="Highlight colour (optional, pick one)">
+  <lr-toggle value="yellow" pressed>Yellow</lr-toggle>
+  <lr-toggle value="green">Green</lr-toggle>
+</lr-toggle-group>
+```

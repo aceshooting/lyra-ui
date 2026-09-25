@@ -45,7 +45,9 @@ export interface OverlayActivationOptions {
 }
 
 export interface OverlayDeactivateOptions {
-  /** Defaults to true. Explicit outside-pointer paths can suppress restoration. */
+  /** Defaults to true. Explicit outside-pointer paths can suppress restoration. With `false`, a
+   *  topmost entry that closes hands focus to the surviving top overlay only when its own panel held
+   *  focus, or when that overlay traps focus; focus that sat elsewhere is left where it is. */
   restoreFocus?: boolean;
   /** Defaults to false. Skips releasing this entry's scroll lock as part of deactivation and
    *  returns the release function instead, so a component with a visible exit animation can hold

@@ -71,7 +71,7 @@ card. `layout="compact"` uncaps the card by default and reads the same name, so 
 compact card too. The panel also sets `--lr-model-select-max-inline-size: none` on its own
 `[part="model-row"]`, so the nested selector fills the row rather than stopping at its standalone
 24rem ceiling — set that name on the row to re-cap it. Otherwise it consumes shared tokens
-`--lr-space-l/-m/-s/-xs`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
+`--lr-space-l/-m/-s/-xs`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-text-quiet`.
 
 **Optional peer deps:** none — it composes the library's own `<lr-model-select>` and `<lr-slider>`

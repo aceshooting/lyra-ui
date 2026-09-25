@@ -24,10 +24,37 @@ import { css } from 'lit';
  *   panel floating over the page paints itself with. In light mode that resolves to the page
  *   surface, unchanged; in dark mode it is a distinctly lighter near-black than the page, so an
  *   anchored popup reads as a raised object instead of a hole.
- * - `--lr-overlay-border` — the surface's own edge, defaulting to `--lr-color-border`. Content
- *   separators *inside* an overlay (a menu's header rule, a slotted `hr`) are deliberately not
- *   part of this: they divide content, they do not draw the surface.
+ * - `--lr-overlay-border` — the surface's own edge. Its default depends on what the surface is
+ *   (see "Edge tier" below): `--lr-color-border-subtle` for a floating panel,
+ *   `--lr-color-border` for a popup that belongs to a form control. Content separators *inside*
+ *   an overlay (a menu's header rule, a slotted `hr`) are deliberately not part of this: they
+ *   divide content, they do not draw the surface.
  * - `--lr-overlay-radius` — the corner radius, defaulting to `--lr-radius`.
+ *
+ * Edge tier. A floating panel — a popover, a dropdown or menu, a detail or preview card, a
+ * floating toolbar, a dialog panel — takes the decorative tier, `--lr-color-border-subtle`.
+ * WCAG 2.2 SC 1.4.11 (Non-text Contrast) holds to 3:1 only the visual information a user needs to
+ * identify a control or a meaningful graphic, and a panel's outline is neither: the panel is not
+ * itself operable, the anchored elevation shadow is what lifts it off the page, and every item
+ * inside identifies itself by its own text, icon or focus indicator. A theme may therefore set
+ * `--lr-theme-color-surface-border-subtle` well below 3:1 and give panels a hairline edge.
+ *
+ * A popup that belongs to a form-associated control — `lr-select`'s, `lr-combobox`'s and
+ * `lr-locale-picker`'s listboxes, `lr-color-picker`'s panel, the `lr-model-select` and
+ * `lr-voice-picker` catalog listboxes, and `lr-mention-popover`'s listbox, which completes a text
+ * field's value — keeps the control tier, `--lr-color-border`, instead. That popup is the open
+ * half of the control a user is filling in: it opens flush against the field's own 3:1 boundary
+ * and holds the choices that set its value, so it keeps the boundary contrast of the field it
+ * extends, the same rule `check:border-subtle` enforces for every form control's own border. Such
+ * a component interpolates `overlaySurfaceControlEdge` below into the same rule as the surface,
+ * which sets the private `--_lr-overlay-edge` hook the default arm reads. Private because the
+ * choice between the two tiers is the component's, not a theming surface; `--lr-overlay-border`
+ * stays the outer arm, so a consumer value still wins on every surface of both kinds.
+ * `time-input.styles.ts` reads the family directly rather than through this sheet and spells the
+ * control tier into its own fallback.
+ *
+ * With the subtle input unset the two tiers resolve to the same colour, so the split renders
+ * identically until a theme opts in.
  *
  * Elevation is deliberately NOT here. It is the one property of a floating surface that differs by
  * kind rather than by theme, so it resolves through two sibling names declared at each point of
@@ -55,7 +82,17 @@ import { css } from 'lit';
 export const overlaySurfaceFill = css`
   background: var(--lr-overlay-surface, var(--lr-color-surface-overlay));
   border: var(--lr-border-width-thin) solid
-    var(--lr-overlay-border, var(--lr-color-border));
+    var(--lr-overlay-border, var(--_lr-overlay-edge, var(--lr-color-border-subtle)));
+`;
+
+/**
+ * Pins the edge of a form control's own popup to the control tier (see "Edge tier" on
+ * `overlaySurfaceFill`). Interpolate it into the same rule that takes `overlaySurfaceFill` or
+ * `overlaySurface`, so the private hook is declared on the surface element itself rather than on
+ * `:host`, and reaches only that surface and the content it holds.
+ */
+export const overlaySurfaceControlEdge = css`
+  --_lr-overlay-edge: var(--lr-color-border);
 `;
 
 /**

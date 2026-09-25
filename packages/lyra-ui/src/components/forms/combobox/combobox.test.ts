@@ -2220,9 +2220,15 @@ it("shares visual order and topmost dismissal with other managed nonmodal overla
     color.open,
     "the older overlay remains open after the same pointer event"
   ).to.be.true;
+  // The combobox closed while focus sat on the pressed outside control, not in its listbox, so the
+  // manager must leave that focus alone instead of pulling it into the older overlay beneath.
   expect(
-    document.activeElement === color,
-    "focus returns through the manager to the surviving overlay"
+    document.activeElement === outside,
+    "the pressed outside control keeps focus"
+  ).to.be.true;
+  expect(
+    color.shadowRoot!.activeElement === null,
+    "the surviving overlay beneath does not take focus"
   ).to.be.true;
 
   color.open = false;

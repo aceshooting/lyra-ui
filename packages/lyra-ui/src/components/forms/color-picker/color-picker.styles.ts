@@ -1,6 +1,9 @@
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
-import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
+import {
+  overlaySurfaceFill,
+  overlaySurfaceControlEdge,
+} from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -268,6 +271,7 @@ export const styles = css`
        (internal/overlay-surface.styles.ts). The radius arm stays this component's own hook, with
        the family only as its middle fallback, so a component-scoped override still wins. */
     ${overlaySurfaceFill}
+    ${overlaySurfaceControlEdge}
     border-radius: var(
       --lr-color-picker-radius,
       var(--lr-overlay-radius, var(--_lr-color-picker-radius))

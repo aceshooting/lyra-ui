@@ -50,7 +50,7 @@ page gives it.
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
 `var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —
 `--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow-m`,
-`--lr-color-surface`, `--lr-color-border`, `--lr-radius`, `--lr-space-2xs`,
+`--lr-color-surface`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-space-2xs`,
 `--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.

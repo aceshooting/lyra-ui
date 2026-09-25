@@ -612,6 +612,19 @@ describe('image frame ring border-width token', () => {
     const image = await img(el);
     expect(getComputedStyle(image).boxShadow).to.contain('4px');
   });
+
+  it('paints the decorative frame ring in the subtle border tier', async () => {
+    setFlagUrlResolver(async () => TEST_FLAG_SRC);
+    const el = (await fixture(
+      html`<lr-flag
+        country="fr"
+        style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)"
+      ></lr-flag>`,
+    )) as LyraFlag;
+    const image = await img(el);
+    expect(getComputedStyle(image).boxShadow).to.contain('rgb(1, 2, 3)');
+    expect(getComputedStyle(image).boxShadow).to.not.contain('rgb(7, 8, 9)');
+  });
 });
 
 describe('live resolver registration', () => {

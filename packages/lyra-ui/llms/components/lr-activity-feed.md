@@ -94,7 +94,7 @@ by selector from outside the shadow root it renders into (the plain or the inter
 `lr-table`'s identical `cell(row)`-anchor hook; set it to `revert` for the UA default link color.
 The card chrome itself is retunable the same way:
 `--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
-`--lr-activity-feed-border-color` (default `var(--lr-color-border)`) colors both its border and the
+`--lr-activity-feed-border-color` (default `var(--lr-color-border-subtle)`) colors both its border and the
 header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
 `var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
 `::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the

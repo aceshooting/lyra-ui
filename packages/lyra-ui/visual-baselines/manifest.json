@@ -115,6 +115,17 @@
         "rtl": "This fixture exists only to exercise the component's 320px allocation branch.",
         "forced-colors": "This fixture covers 320px allocation; forced-colors semantics are covered separately."
       }
+    },
+    "forced-colors-state": {
+      "axes": [
+        "light",
+        "dark",
+        "rtl",
+        "forced-colors"
+      ],
+      "exemptions": {
+        "narrow": "Narrow allocation is covered by the component's dedicated 320px fixture."
+      }
     }
   },
   "stories": [
@@ -239,6 +250,12 @@
       "narrowProbe": "viewport-fit",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "This new forced-open 320px RTL edge-positioned fixture is enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "overlay-context-menu--open",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New forced-open context-menu fixture enrolled as automated evidence pending human visual review."
     },
     {
       "id": "overlay-popover--default",
@@ -549,6 +566,25 @@
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "layout-navigation-menu--open-panel",
+      "profile": "forced-colors-state",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New fixture enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "layout-navigation-menu--collapsed-expanded",
+      "profile": "forced-colors-state",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New fixture enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "layout-navigation-menu--narrow-long-labels",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New fixture enrolled as automated evidence pending human visual review."
     },
     {
       "id": "layout-page--desktop",
@@ -869,6 +905,18 @@
     ],
     "lr-word-cloud": [
       "wordcloud--default"
+    ],
+    "lr-context-menu": [
+      "overlay-context-menu--open"
+    ],
+    "lr-navigation-menu": [
+      "layout-navigation-menu--open-panel",
+      "layout-navigation-menu--collapsed-expanded",
+      "layout-navigation-menu--narrow-long-labels"
+    ],
+    "lr-navigation-menu-item": [
+      "layout-navigation-menu--open-panel",
+      "layout-navigation-menu--collapsed-expanded"
     ]
   },
   "untaggedStories": {

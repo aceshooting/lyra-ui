@@ -8,6 +8,7 @@ import {
 } from '../../../internal/aria-controls.js';
 import { styles } from './icon-button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
@@ -286,15 +287,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
    *  `noopener noreferrer` guard whenever `target` is set. `undefined` when nothing remains, so the
    *  attribute is omitted rather than rendered empty. Mirrors `<lr-button>`'s own `resolvedRel`. */
   private get resolvedRel(): string | undefined {
-    const authored = (this.rel ?? '')
-      .split(/\s+/)
-      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
-    const tokens = new Set(authored);
-    if (this.target) {
-      tokens.add('noopener');
-      tokens.add('noreferrer');
-    }
-    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
+    return resolveGuardedRel(this.rel, this.target);
   }
 
   /**

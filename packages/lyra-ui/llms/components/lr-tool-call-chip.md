@@ -82,7 +82,7 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 
 The anchored detail tooltip is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 

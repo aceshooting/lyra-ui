@@ -234,7 +234,7 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @cssprop [--lr-task-list-error-color=var(--lr-color-danger)] - Error status icon color.
  * @cssprop [--lr-task-list-background=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-task-list-border-color=var(--lr-color-border)] - Colour of the outer card's
+ * @cssprop [--lr-task-list-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-task-list-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.

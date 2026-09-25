@@ -15,7 +15,7 @@ export const styles = css`
        themeColors() resolves these once per draw() via getComputedStyle, same pattern as
        heatmap.ts's scale-lo/-hi. Each has its own token, defaulting to a semantic one, so a host
        can retheme the chart's grid/ticks/legend/tooltip alone. */
-    --_lr-chart-grid-color: var(--lr-color-border);
+    --_lr-chart-grid-color: var(--lr-color-border-subtle);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
     /* Matches Chart.js's OWN built-in 12px tick font size (defaults.font.size), not a design
        token, so leaving --lr-chart-tick-font-size unset renders byte-identically to before that
@@ -209,11 +209,13 @@ export const styles = css`
   [part='canvas']:hover {
     /* Scoped so a consumer can retint or resize just this hover outline without affecting every
        other --lr-border-width-thin consumer on the page -- the --lr-chart-grid-color/-tick-color
-       indirection above, applied to a state-specific rule. */
+       indirection above, applied to a state-specific rule. The last arm is the control-grade
+       --lr-color-border, not the private grid default: grid lines are decorative and may resolve
+       to the subtle border, but this outline is the hover state of a focusable widget. */
     outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid
       var(
         --lr-chart-canvas-hover-outline-color,
-        var(--lr-chart-grid-color, var(--_lr-chart-grid-color))
+        var(--lr-chart-grid-color, var(--lr-color-border))
       );
     outline-offset: var(--lr-focus-ring-offset);
   }

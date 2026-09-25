@@ -2300,6 +2300,31 @@ it('inherits the chart canvas hover-outline token on a rendered box plot', async
   }
 });
 
+it('draws default grid lines in the subtle border tier while the hover outline stays control-grade', async () => {
+  const el = (await fixture(html`
+    <lr-box-plot
+      style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9);"
+      .labels=${['K=2']}
+      .datasets=${[{ label: 'Loss', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }]}
+    ></lr-box-plot>
+  `)) as LyraBoxPlot;
+  await waitUntil(() => (el as any).chart != null, 'box plot never initialized');
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x.grid.color).to.equal('rgb(1, 2, 3)');
+  expect(config.options.scales.y.grid.color).to.equal('rgb(1, 2, 3)');
+  const canvas = el.shadowRoot!.querySelector<HTMLElement>('[part="canvas"]')!;
+
+  try {
+    await hoverUntilMatched(canvas, 'the box-plot canvas never entered its hover state');
+    await waitUntil(
+      () => getComputedStyle(canvas).outlineColor === 'rgb(7, 8, 9)',
+      'the default box-plot hover outline followed the subtle grid tier instead of --lr-color-border',
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
 it("stretches [part='base'] to fill a grid/flex-stretched host instead of shrink-wrapping to its own content", async () => {
   const el = (await fixture(html`<lr-box-plot
     .labels=${['K=2']}

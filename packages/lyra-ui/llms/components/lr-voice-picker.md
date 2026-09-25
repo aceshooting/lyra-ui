@@ -190,7 +190,8 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-overlay-surface` — Shared floating-surface fill, on the listbox. Default:
   `var(--lr-color-surface-overlay)`.
 - `--lr-overlay-border` — Shared floating-surface edge colour, on the listbox. Default:
-  `var(--lr-color-border)`.
+  `var(--lr-color-border)` — the control tier, not the decorative `var(--lr-color-border-subtle)`
+  floating panels default to, because the listbox belongs to the form control it opens from.
 - `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
   `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.

@@ -21,7 +21,7 @@ export const styles = css`
 
   [part="prompt"] {
     padding: var(--lr-space-s) var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
   }
@@ -44,7 +44,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);
     max-block-size: var(

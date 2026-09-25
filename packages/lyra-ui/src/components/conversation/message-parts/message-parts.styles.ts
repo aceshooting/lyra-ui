@@ -34,6 +34,11 @@ export const styles = css`
     max-inline-size: 100%;
   }
 
+  /* A tool-call block spans the message instead of shrink-wrapping like a chip. */
+  :host(:where([tool-display='block'])) [part~='tool-call'] {
+    align-self: stretch;
+  }
+
   [part~='tool-result'],
   [part~='data'] {
     overflow: auto;

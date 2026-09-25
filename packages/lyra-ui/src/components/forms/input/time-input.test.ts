@@ -796,38 +796,68 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     expect(el.open).to.equal(false);
   });
 
-  it('hands focus-return duty to the next open picker when a non-topmost instance is light-dismissed', async () => {
-    // Two simultaneously open pickers register as separate stacked overlay entries. Dismissing the
-    // non-topmost one via an outside pointerdown asks the overlay manager to resolve *its own*
-    // captured restore target first; when that lookup instead falls through to handing focus to
-    // whatever overlay is now on top, the manager resolves that entry's own popup panel to find a
-    // focusable target inside it.
+  // Two simultaneously open pickers register as separate stacked overlay entries, `upper` on top.
+  async function openStackedPickers(): Promise<{
+    lower: LyraTimeInput;
+    upper: LyraTimeInput;
+    outside: HTMLButtonElement;
+  }> {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div>
         <lr-time-input id="lower" hour-format="24" value="09:00"></lr-time-input>
         <lr-time-input id="upper" hour-format="24" value="10:00"></lr-time-input>
+        <button id="outside" type="button">Outside</button>
       </div>
     `);
     const lower = wrapper.querySelector('#lower') as LyraTimeInput;
     const upper = wrapper.querySelector('#upper') as LyraTimeInput;
+    const outside = wrapper.querySelector('#outside') as HTMLButtonElement;
     await lower.show();
     await lower.updateComplete;
     await upper.show();
     await upper.updateComplete;
     expect(lower.open).to.equal(true);
     expect(upper.open).to.equal(true);
+    return { lower, upper, outside };
+  }
 
-    // Lands inside lower's own row (so lower stays open) but outside upper (so upper light-dismisses).
+  // Lands inside lower's own row (so lower stays open) but outside upper (so upper light-dismisses
+  // without restoring focus).
+  async function lightDismissUpperFromLowerRow(lower: LyraTimeInput, upper: LyraTimeInput): Promise<void> {
     const lowerRow = lower.shadowRoot!.querySelector('[part~="time-input"]')!;
     lowerRow.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
     await upper.updateComplete;
-
     expect(upper.open, 'the outside click only dismisses the instance it landed outside of').to.equal(false);
     expect(lower.open, 'the still-open lower picker is untouched').to.equal(true);
+  }
+
+  it('hands focus to the next open picker when a light-dismissed topmost instance held it', async () => {
+    // The dismissed popup held focus and does not restore it, so the overlay manager hands focus to
+    // whichever overlay is now on top, resolving that entry's own popup panel to find a focusable
+    // target inside it rather than stranding focus on a hidden option.
+    const { lower, upper } = await openStackedPickers();
+    const upperOption = upper.shadowRoot!.querySelector<HTMLElement>('[part~="column-item-selected"]')!;
+    upperOption.focus();
+    expect(upper.shadowRoot!.activeElement === upperOption, 'focus starts inside the upper popup').to.equal(true);
+
+    await lightDismissUpperFromLowerRow(lower, upper);
+
     expect(
       lower.shadowRoot!.activeElement?.getAttribute('role'),
       'focus lands inside the remaining open picker instead of nowhere',
     ).to.equal('option');
+  });
+
+  it('leaves outside focus alone when a light-dismissed topmost instance never held it', async () => {
+    // Focus sat on an unrelated control, so closing the upper popup must not pull it into the
+    // popup that happens to remain open beneath.
+    const { lower, upper, outside } = await openStackedPickers();
+    outside.focus();
+
+    await lightDismissUpperFromLowerRow(lower, upper);
+
+    expect(document.activeElement?.id ?? 'none', 'focus stays on the unrelated control').to.equal('outside');
+    expect(lower.shadowRoot!.activeElement === null, 'the popup beneath does not take focus').to.equal(true);
   });
 
   it('clips cross-axis column overflow instead of creating a phantom horizontal scrollbar', async () => {

@@ -50,7 +50,8 @@ precedence as `lr-progress-bar`'s `--lr-progress-indicator-variant-color`).
 
 `lr-dialog`, `lr-drawer`, `lr-popover`, `lr-dropdown` and `lr-tooltip` all open and close over the
 page, and as of 8.0.0 they do it through one contract. Each component's own section below documents
-what it _adds_ to that contract, not a private variant of it.
+what it _adds_ to that contract, not a private variant of it. `lr-context-menu` emits the same four
+events with the same timing and cancelability; the differences are noted below.
 
 **One way to open, one way to close.** All five expose `show()`, `hide()` and a reflected `open`
 boolean, and all three drive the same code path: `el.show()` is indistinguishable from
@@ -85,6 +86,10 @@ timing `wa-show`/`wa-hide` always had, so a mechanical `wa-*` → `lr-*` rename 
 with matching timing _and_ matching cancelability — which also means Lyra 7.x code that read
 `el.open` inside an `lr-show`/`lr-hide` handler, or treated the pair as purely informational, was
 relying on the opposite polarity and has to be re-read.
+
+`lr-context-menu` differs in three ways: its `lr-show` carries `LyraContextMenuShowDetail`; it has
+no `open` setter and no `show()` (a context menu needs a point, so it opens through a gesture or
+`showAt()`); and a close that a new gesture interrupts emits no `lr-after-hide`.
 
 `lr-dialog` and `lr-drawer` also expose cancelable `lr-initial-focus` and `lr-request-close` veto
 points, documented in their sections. Their cancelable `lr-close` fires **after** `lr-hide` and
@@ -895,7 +900,7 @@ footer rows, which are tighter than the body by default), `--lr-dialog-panel-dur
 `--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
 The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
 tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
-— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border)` — the panel edge and the
+— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border-subtle)` — the panel edge and the
 header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
 corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
 panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
@@ -1123,6 +1128,8 @@ relied on `<lr-chip selected>` to create an action.
 - `toggleable: boolean = false` (reflected) — sole opt-in into the toggle/pressed interactive mode,
   independent of `selected`'s current value. Pair it with `selected` for an initially pressed chip;
   leave `selected` unset for an initially unpressed chip.
+  For a pressed-state button in control chrome (with `appearance`, the size ladder and a grouped
+  single tab stop) rather than filter-pill chrome, use `lr-toggle` / `lr-toggle-group`.
 - `value?: string` — opaque consumer bookkeeping value, never read, validated, or rendered by this
   component itself, only ever echoed back verbatim (including `undefined` if never set) in
   `lr-remove`'s detail
@@ -1381,7 +1388,7 @@ absent.
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-color-surface`/
-`-border`/`-text`/`-text-quiet`, `--lr-radius`, `--lr-font`.
+`-border-subtle`/`-text`/`-text-quiet`, `--lr-radius`, `--lr-font`.
 
 **Optional peer deps:** none.
 
@@ -1647,6 +1654,9 @@ If the import fails, leave the native disclosure visible and usable.
   Note there is deliberately no `aria-haspopup="none"` — that is an invalid attribute value, not a
   neutral one, and axe reports it as a critical violation. `lr-dropdown` still pins `popupRole` to
   `menu`; the escape hatch lives on the general-purpose primitive.
+  For a whole bar of such flyouts — coordinated so one opens at a time, sharing one panel region,
+  with arrow keys between triggers and an optional collapsed layout — use `lr-navigation-menu`
+  (documented in `layout.md`) instead of several popovers.
 - `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
   keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
   closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either
@@ -1739,7 +1749,7 @@ fallbacks. Arrow size is half the square's width. Rendering the arrow switches `
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`var(--lr-color-border-subtle)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
 edge but never the radius — its corners are already cut by its clip path. None of the four is
 declared on `:host`, so a single declaration on `:root` retints every floating surface in the
@@ -1747,6 +1757,18 @@ application, and the same declaration on one component's own ancestor scopes the
 subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from the modal tier
 `--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
 dialogs.
+
+**Edge tier.** The `var(--lr-color-border-subtle)` edge default is the decorative tier, shared by
+every floating panel — popover, dropdown and menu, detail and preview cards, the selection
+toolbar, the dialog panel. A panel's outline is not what identifies a control (WCAG 2.2 SC 1.4.11):
+the panel itself is not operable, the anchored shadow lifts it off the page, and every item inside
+identifies itself, so a theme may set `--lr-theme-color-surface-border-subtle` below 3:1 for a
+hairline edge. Popups that belong to a form control — the listboxes of `lr-select`,
+`lr-combobox`, `lr-locale-picker`, `lr-model-select`, `lr-voice-picker` and `lr-mention-popover`,
+and the `lr-color-picker` and `lr-time-input` panels — instead default to the control tier,
+`var(--lr-color-border)`, keeping the 3:1 boundary of the field they open from. A consumer
+`--lr-overlay-border` wins on both kinds. While the subtle input is unset the two tiers resolve to
+the same colour.
 
 **`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
@@ -2050,7 +2072,9 @@ localized "Menu" fallback. A consumer-supplied menu keeps its own naming precede
 `aria-label` (including an explicit empty value), then an explicit nondefault `label`, then the
 dropdown fallback. Its `header` and `footer` slots remain rendered outside the inner
 `role="menu"` list while contained, including after live slot changes; Tab can therefore reach
-their controls without putting arbitrary content inside the menu role.
+their controls without putting arbitrary content inside the menu role. An open dropdown stays open
+when Tab moves focus out of it; `lr-context-menu` deliberately differs and closes when Tab leaves
+its surface.
 
 **Properties:**
 
@@ -2146,6 +2170,274 @@ default; style it only to debug the travel region.
     });
 </script>
 ```
+
+## `lr-context-menu`
+
+Turns any slotted region into a context-menu target. Each of these gestures opens the library's
+menu engine exactly once: a platform `contextmenu` (right-click, or Ctrl+click on macOS), a touch or
+pen press-and-hold, and Shift+F10 or the ContextMenu key while focus is inside the region. A pointer
+gesture opens the menu just beside the pointer (never under it); a keyboard gesture opens it below
+the focused element. It flips at the viewport edges, and mirrors under RTL. There is no Web
+Awesome or Shoelace counterpart; the behaviour follows the WAI-ARIA menu pattern.
+
+The menu content is exactly what `lr-dropdown` takes, so every row type composes unchanged:
+`lr-menu-item` / `lr-dropdown-item` rows (with `type="checkbox"`, `type="radio" group="…"`,
+`details` shortcut text, `variant="danger"`, `disabled` and `submenu` children), `lr-menu-label`,
+`<hr>` separators, or one consumer `<lr-menu>` with its `header` / `footer`. Import
+`lr-menu-label` and `lr-dropdown-item` yourself, as for `lr-dropdown`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.js';
+  import '@aceshooting/lyra-ui/components/layout/menu/menu-label.js';
+</script>
+
+<lr-context-menu label="File actions">
+  <div slot="trigger" class="file-card" tabindex="0">report.pdf</div>
+  <lr-menu-label>Edit</lr-menu-label>
+  <lr-menu-item value="copy">Copy<span slot="details">Ctrl+C</span></lr-menu-item>
+  <lr-menu-item value="wrap" type="checkbox" checked>Wrap lines</lr-menu-item>
+  <hr />
+  <lr-menu-item value="list" type="radio" group="view" checked>List</lr-menu-item>
+  <lr-menu-item value="grid" type="radio" group="view">Grid</lr-menu-item>
+  <lr-menu-item value="share">
+    Share
+    <lr-menu-item slot="submenu" value="email">Email</lr-menu-item>
+    <lr-menu-item slot="submenu" value="link">Copy link</lr-menu-item>
+  </lr-menu-item>
+  <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+</lr-context-menu>
+```
+
+**Properties:**
+
+- `label?: string` — accessible name of the generated menu. Name precedence: a consumer
+  `<lr-menu>`'s own `aria-label`, then its `label`; then a host `aria-label` on
+  `lr-context-menu`; then `label`; then the localized "Menu" (`menuLabel`, resolved with this
+  host's `.strings` / `lang`). An empty host `aria-label` and an empty `label` behave exactly like
+  unset, so the menu is never left unnamed. It is an accessible-name override, not form chrome.
+- `disabled: boolean = false` (reflected) — no gesture opens the menu, native events stay
+  un-prevented (so an enclosing region, or the platform menu, handles them), and a pending
+  press-and-hold is cancelled. Becoming disabled while open closes the menu through a cancelable
+  `lr-hide`.
+- `size: LyraSize = 'm'` (reflected) — propagated to the directly owned rows.
+- `open: boolean` — **read-only**. `true` from the moment the menu opens until a close commits, so
+  it still reads `true` inside `lr-hide` handlers. A context menu needs a point, so there is no
+  `open` setter and no argument-less `show()`: open it with a gesture or `showAt()`.
+
+**Methods:**
+
+- `showAt(point: LyraContextMenuPoint, options?: { returnFocusTo?: HTMLElement }): void` — opens
+  at a viewport point (`{ x, y, contextElement? }`), emitting a cancelable `lr-show` with
+  `source: 'programmatic'`. Focus returns to `options.returnFocusTo` when supplied; otherwise to the
+  element focused at call time **only if** it lies inside this region or inside `contextElement`;
+  otherwise nowhere. **When opening from a control outside the region** (a toolbar "more" button,
+  a map), pass `returnFocusTo`. `contextElement` is watched, so scrolling it away or removing it
+  closes the menu. Called while open, it silently re-anchors the menu (no lifecycle events) and
+  keeps the original return target unless a new one is passed. Non-finite coordinates, a disabled
+  instance and a disconnected host are ignored.
+- `hide(options?: { focusTrigger?: boolean }): Promise<void>` — closes and resolves after
+  `lr-after-hide` (or once a new open supersedes the close). `focusTrigger: false` skips focus
+  return. A no-op when closed.
+
+Every event below bubbles and is composed.
+
+**Events:**
+
+| Event | Detail | Cancelable | Fires |
+|---|---|---|---|
+| `lr-show` | `LyraContextMenuShowDetail` | **yes** | synchronously inside the gesture, only when the menu is closed |
+| `lr-after-show` | `null` | no | after placement and the enter animation |
+| `lr-hide` | `null` | yes | before closing, on every dismissal path except host removal; a veto keeps the menu open |
+| `lr-after-hide` | `null` | no | after the exit animation; **not** delivered for an interrupted close |
+| `lr-select` | `{ item }` | yes | the menu's own event bubbling through; preventing it keeps the menu open |
+
+```ts
+type LyraContextMenuSource = 'pointer' | 'long-press' | 'keyboard' | 'programmatic';
+interface LyraContextMenuShowDetail {
+  readonly source: LyraContextMenuSource;
+  readonly target: Element | null;   // innermost element; pierces open shadow roots
+  readonly path: readonly Element[]; // composed path, target up to the region element; frozen
+  readonly clientX: number;          // viewport point the menu is anchored to
+  readonly clientY: number;
+  readonly originalEvent: Event | null; // contextmenu / keydown / starting pointerdown; null for showAt()
+}
+```
+
+`source` is `'long-press'` for a press-and-hold and for a native `contextmenu` whose `pointerType`
+is `'touch'`; a native `contextmenu` whose point lies outside its target (keyboard or assistive
+technology synthesised) is element-anchored and reports `'keyboard'`. The detail, and its `path`
+array, are frozen; `target`, `originalEvent` and each `path` entry keep their identity.
+
+**The veto contract.** `lr-show` is a real veto: preventing it keeps the menu closed and leaves
+the native `contextmenu` / `keydown` **un-prevented**, so the platform's own menu appears, and it
+claims the gesture so no enclosing region asks. This is the opposite polarity from `lr-data-grid`'s
+`lr-cell-contextmenu`, where preventing the event *suppresses* the native menu: here preventing
+`lr-show` *allows* it. **iOS exception:** the region carries a static
+`-webkit-touch-callout: none` so a press-and-hold can open the menu; a vetoed press-and-hold on
+iOS therefore brings back no link or image callout unless you opt that element back in (recipe
+below).
+
+**Interrupted close.** A new gesture while the menu is open (a right-click or press-and-hold
+elsewhere in the region) closes it and reopens it at the new point. That cycle emits `lr-hide` and
+then the next `lr-show`, with **no** `lr-after-hide` between them; do not pair them one-to-one.
+
+**Closing and focus.** Escape (topmost overlay only), activating an item, an outside pointer,
+`disabled`, and `hide()` close the menu. Escape, activation and `hide()` return focus to the
+captured target: an element focused inside the region when the gesture arrived (a right-click
+that focused the clicked control, or the element Shift+F10 was pressed on), `showAt()`'s
+`returnFocusTo`, or an element inside its `contextElement`; a press-and-hold that left focus on an
+unrelated control elsewhere returns nowhere, so no virtual keyboard reopens and nothing scrolls. An
+outside pointer lets the pointer keep its own focus. **Tab or Shift+Tab out of the menu closes it
+without moving focus back**; this deliberately differs from `lr-dropdown`, which stays open when
+focus tabs away. Tab still moves between a consumer `lr-menu`'s header / footer controls and the
+rows without closing. Scrolling or a viewport resize that moves the anchor by more than 2 px, or
+removing the anchor, closes the menu (once, even if `lr-hide` is vetoed); focus then returns
+without scrolling, and only if it was inside the menu. Layout shift, the anchor's own resize and
+transforms (a hover lift, a press spring-back) never close it. The removal check observes the
+anchor's box, so an anchor with no box of its own (an inline text run, `display: contents`) is
+not noticed until the next scroll.
+
+**Keyboard.** In the region, Shift+F10 or the ContextMenu key (no Ctrl / Alt / Meta) opens the
+menu below the focused element and focuses the first enabled row; while open it silently
+re-anchors. Every other key is untouched. In the open menu the `lr-menu` engine applies: arrows,
+Home / End, type-ahead, Enter / Space, submenu keys that mirror under RTL, and Escape (innermost
+submenu first). Shift+F10 / ContextMenu inside the menu is swallowed.
+
+**Nesting and surfaces.** With nested regions the innermost **enabled** region wins; a disabled
+inner region lets the gesture reach the outer one, and a vetoed inner one blocks it. A gesture
+that starts inside an open menu, or inside an open `lr-dropdown` / `lr-popover` surface placed in
+the region, never opens a second menu (a gesture on such a dropdown's slotted trigger is handled
+normally). Right-clicks on rows, labels, separators and popup padding are prevented, so no native
+menu appears on top of the custom one; an editable header / footer field keeps its native menu.
+
+**Slots:** `trigger` — the region: any number of elements; every gesture that starts inside them,
+including inside their open shadow roots, is considered. Default — the menu content above. **Rows
+must be direct children** of `lr-context-menu` (or of the consumer `<lr-menu>`): a wrapper element
+around rows silently removes them from keyboard navigation and selection.
+
+**CSS parts:** `popup` — the positioned menu surface; `content` — its padding wrapper. **Custom
+state:** `:state(open)` while open, for example
+`lr-context-menu:state(open) [slot='trigger'] { outline: 2px solid var(--lr-color-brand); }`.
+The host and its region wrapper are `display: contents`, so the region lays out in the host's
+parent; set `lr-context-menu { display: block }` to get a box.
+
+**Themeable custom properties** (inherited into the composed surface; set them on
+`lr-context-menu` or any ancestor): `--max-width`
+(`var(--lr-overlay-max-inline-size, var(--lr-size-20rem))`), `--lr-overlay-surface`
+(`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (`var(--lr-color-border-subtle)`),
+`--lr-overlay-radius` (`var(--lr-radius)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
+`--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), and `--show-duration` / `--hide-duration`
+(`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
+The popup always uses fixed positioning (the anchor is a viewport point), so the cascading
+`--lr-positioning-strategy` is not consulted. It is not promoted to the top layer: it stacks exactly
+like `lr-dropdown` (`--lr-overlay-stack-index`). Motion uses the `dropdown.show` /
+`dropdown.hide` registry entries, flattened under `prefers-reduced-motion`; overriding those
+entries also affects context menus.
+
+**Accessibility.** The region gets no role or ARIA (there is no trigger control). For Shift+F10 to
+be reachable the region must contain a focusable element, or give one slotted element
+`tabindex="0"`. Offer every critical action through another visible path as well. The menu
+exposes `role="menu"` and the usual row roles; focus entering it announces it, so no live region
+is used.
+
+**shadcn Context Menu mapping:**
+
+| shadcn part | Lyra composition |
+|---|---|
+| Item | `lr-menu-item` / `lr-dropdown-item` |
+| CheckboxItem | the same with `type="checkbox"` |
+| RadioGroup / RadioItem | the same with `type="radio" group="…"` (the `group` attribute replaces the wrapper) |
+| Label | `lr-menu-label` |
+| Separator | `<hr>` |
+| Group | **no wrapper element**: place the rows directly and delimit the group with `lr-menu-label` and / or `<hr>` |
+| Shortcut | `<span slot="details">` on the row, plus your own `aria-keyshortcuts` |
+| Sub / SubTrigger / SubContent | a row with `slot="submenu"` children, or `<lr-menu slot="submenu">` |
+| destructive item | `variant="danger"` |
+| disabled item | `disabled` |
+
+**Recipe — per-target items.** Fill or filter the rows synchronously inside `lr-show`, reading the
+gesture's `path`. `target` can sit inside a component's shadow root (a right-click on an
+`lr-button` reports the button's internal element), where `target.closest()` stops at the shadow
+boundary, so search `path` instead:
+
+```html
+<lr-context-menu id="rows">
+  <div slot="trigger">
+    <div data-id="7"><lr-button>Invoice 7</lr-button></div>
+    <div data-id="8"><lr-button>Invoice 8</lr-button></div>
+  </div>
+  <lr-menu-item value="open">Open</lr-menu-item>
+  <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+</lr-context-menu>
+<script type="module">
+  const menu = document.querySelector('#rows');
+  let rowId;
+  menu.addEventListener('lr-show', (event) => {
+    const row = event.detail.path.find((el) => el.matches('[data-id]'));
+    if (!row) return event.preventDefault(); // not on a row: keep the platform menu
+    rowId = row.getAttribute('data-id');
+  });
+  menu.addEventListener('lr-select', (event) => {
+    console.log(event.detail.item.value, rowId);
+  });
+</script>
+```
+
+**Recipe — native menu for editable targets.** The component does not exempt text fields in the
+region automatically. Veto `lr-show` for them so the platform menu (paste, spelling) appears:
+
+```js
+menu.addEventListener('lr-show', (event) => {
+  const target = event.detail.target;
+  if (target?.matches('input, textarea, [contenteditable]') || target?.isContentEditable) {
+    event.preventDefault();
+  }
+});
+```
+
+**Recipe — iOS callout.** To keep the native link / image callout on specific elements, opt them
+back in and veto `lr-show` for the same targets:
+
+```css
+lr-context-menu a[href],
+lr-context-menu img {
+  -webkit-touch-callout: default;
+}
+```
+
+**Recipe — maps and canvases.** `lr-map`'s map peer prevents `contextmenu` for right-drag rotation
+(and whenever the map itself listens for `contextmenu`), and the component ignores an event that
+is already prevented, so a region over a map never opens on its own. Open it from the map's own
+event instead, registered after `lr-map-load` (`mapEl.map` is `undefined` until then):
+
+```js
+mapEl.addEventListener('lr-map-load', () => {
+  mapEl.map.on('contextmenu', (e) => {
+    menu.showAt(
+      { x: e.originalEvent.clientX, y: e.originalEvent.clientY, contextElement: mapEl },
+      { returnFocusTo: mapEl },
+    );
+  });
+});
+```
+
+The same pattern fits a `<canvas>`: call `showAt()` from its own `contextmenu` handler (and
+`preventDefault()` there).
+
+**Recipe — composing with `lr-data-grid`.** Wrap the grid in the region and leave
+`lr-cell-contextmenu` **un-prevented** (a prevented native event is ignored here). For a
+right-click and for Shift+F10 the grid's `lr-cell-contextmenu` arrives **before** `lr-show`, so
+store its `rowKey` and read it in `lr-show`. For the ContextMenu key the grid only emits
+`lr-cell-contextmenu` from the platform's follow-up `contextmenu`, which arrives **after**
+`lr-show` and not on every OS; update the rows again in `lr-cell-contextmenu` when the menu is
+already open (rows changed while open are repaired by the engine), or fall back to
+`selectedRowKeys`.
+
+**Limitations.** Gestures inside `<iframe>` content belong to the frame's document and are never
+seen. A scroller inside a closed shadow root is not observed by the anchor watcher. Two copies of
+the library on one page arbitrate an opened gesture through `defaultPrevented` and open surfaces by
+tag name, but a veto only claims the gesture within one copy.
 
 ## `lr-spinner`
 
@@ -2398,7 +2690,7 @@ _Palette — what `variant` chooses_ (new in 8.0.0): `--lr-badge-tint` (private 
 `var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
 variant's row of the semantic grid), `--lr-badge-solid` (private default
 `var(--lr-color-fill-loud)`, the loud fill used by `appearance="accent"`), `--lr-badge-edge`
-(private default `var(--lr-color-border)`, the border color), `--lr-badge-ink` (private default
+(private default `var(--lr-color-border-subtle)`, the border color), `--lr-badge-ink` (private default
 `var(--lr-color-text)`, the text color) and
 `--lr-badge-on-solid` (default `var(--lr-color-on-loud)`, the text color that stays legible on
 `--lr-badge-solid`). An inherited or direct public palette value remains authoritative. Neutral is
@@ -2934,6 +3226,23 @@ These named interfaces and helper signatures are available to typed integrations
   `ChipSelectDetail {
     value?: string;
     selected: boolean;
+  }`
+
+- **`components-overlays-context-menu-context-menu-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.class.js`.
+  `LyraContextMenuShowDetail {
+    readonly source: LyraContextMenuSource;
+    readonly target: Element | null;
+    readonly path: readonly Element[];
+    readonly clientX: number;
+    readonly clientY: number;
+    readonly originalEvent: Event | null;
+  }`
+  Import: `@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.class.js`.
+  `LyraContextMenuPoint {
+    x: number;
+    y: number;
+    contextElement?: Element;
   }`
 
 - **`components-overlays-dialog-confirm-contracts`** — Supporting data types and helpers for this component family.

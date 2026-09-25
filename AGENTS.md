@@ -222,9 +222,11 @@ Full rules, incidents, and patterns:
   vector otherwise). Never let `target` alone produce an anchor with no guard. The former rule —
   "never a settable `rel`" — over-fired: it also refused a same-tab link, which opens no new
   browsing context and needs no guard, while silently dropping every `nofollow`/`me`/`license` a
-  migrating `wa-*`/`sl-*` consumer wrote. `button.class.ts`/`breadcrumb-item.class.ts`'s
-  `resolvedRel` getters are the reference implementation; `app-rail-item.class.ts` still uses the
-  simpler derive-only shape, which remains correct for a control with no author `rel`.
+  migrating `wa-*`/`sl-*` consumer wrote. `resolveGuardedRel()` (`src/internal/link-rel.ts`) is
+  the one implementation: every `resolvedRel` getter (button, icon-button, breadcrumb-item, card,
+  menu-item) delegates to it, so a new author-`rel` anchor calls it rather than re-typing the merge;
+  `app-rail-item.class.ts` still uses the simpler derive-only shape, which remains correct for a
+  control with no author `rel`.
 - Resolve colors through `getComputedStyle` before `ctx.fillStyle`/`strokeStyle` — canvas
   silently ignores unparseable strings.
 - Resolve token units live (`rem` → root `fontSize`, `em` → own); never hardcode `* 16`.

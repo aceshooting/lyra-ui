@@ -14,6 +14,9 @@ Every `lr-*` component resolves its styling through this two-layer token system,
 
 For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once and put
 `class="lr-light"`/`class="lr-dark"` (or `data-lr-theme="light"`/`"dark"`) on an ancestor.
+For the shadcn/ui look, also import `@aceshooting/lyra-ui/themes/shadcn.css`: it layers over
+`theme.css` in any load order and answers to shadcn's `.dark`/`.light` classes too (see
+[The shadcn look](./shared.md#the-shadcn-look--themesshadcncss)).
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
@@ -63,7 +66,7 @@ the rest of `lr-icon-button`'s own (`-radius`, `-background`, `-color`, `-border
 `-hover`/`-active` variants) — is not re-declared anywhere in the shared layer and inherits
 normally from an ancestor.
 
-## Direct theme-backed tokens (270)
+## Direct theme-backed tokens (271)
 
 | Internal token | `--lr-theme-*` input | Light/default fallback | Mode overrides |
 |---|---|---|---|
@@ -72,6 +75,7 @@ normally from an ancestor.
 | `--lr-border-width-thin` | `--lr-theme-border-width-thin` | `1px` | — |
 | `--lr-color-border` | `--lr-theme-color-surface-border` | `#8a8a90` | dark: `var(--lr-theme-color-surface-border, #6b6b74)`<br>forcedColors: `ButtonText` |
 | `--lr-color-border-strong` | `--lr-theme-color-border-strong` | `#4b5563` | dark: `var(--lr-theme-color-border-strong, #c4c9d1)` |
+| `--lr-color-border-subtle` | `--lr-theme-color-surface-border-subtle` | `var(--lr-color-border)` | dark: `var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))`<br>forcedColors: `ButtonText` |
 | `--lr-color-brand-border-loud` | `--lr-theme-color-brand-border-loud` | `var(--lr-ramp-brand-40)` | dark: `var(--lr-theme-color-brand-border-loud, var(--lr-ramp-brand-70))` |
 | `--lr-color-brand-border-normal` | `--lr-theme-color-brand-border-normal` | `var(--lr-ramp-brand-60)` | dark: `var(--lr-theme-color-brand-border-normal, var(--lr-ramp-brand-60))` |
 | `--lr-color-brand-border-quiet` | `--lr-theme-color-brand-border-quiet` | `var(--lr-ramp-brand-80)` | dark: `var(--lr-theme-color-brand-border-quiet, var(--lr-ramp-brand-30))` |

@@ -124,7 +124,7 @@ the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default pe
 `max(var(--lr-space-l), <safe-area inset>)` — the fullscreen `[part="base"]` inset; the
 `fullscreen-inset` attribute overrides it), and `--lr-widget-backdrop-inset` (defaults to `0` so
 the modal backdrop covers the viewport; the `backdrop-inset` attribute overrides it), plus shared
-tokens (`--lr-space-*`, `--lr-color-border/-surface/-text-quiet`,
+tokens (`--lr-space-*`, `--lr-color-border/-border-subtle/-surface/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`, `--lr-focus-ring-*`).
 
 Three properties style the pressed view toggle: `--lr-widget-view-toggle-active-bg` (default

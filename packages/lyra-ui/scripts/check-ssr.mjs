@@ -1079,6 +1079,33 @@ assert.match(
   'lr-file-input SSR-hinted rich error content is not associated with its semantic dropzone'
 );
 
+// Tool Call Block restores header focus after a collapse, and its first update looks like one
+// (`expanded` defaults to false). The focus bookkeeping must never touch the render root on the
+// server, so render the expanded-with-payload state explicitly.
+const toolCallBlockHtml = await collectResult(
+  render(
+    html`<lr-tool-call-block
+      name="web_search"
+      call-id="call-1"
+      status="running"
+      expanded
+      .args=${{ query: 'lyra' }}
+      .result=${{ hits: 1 }}
+    ></lr-tool-call-block>`,
+    { elementRenderers: animatedImageContext.elementRenderers }
+  )
+);
+assert.match(
+  toolCallBlockHtml,
+  /aria-expanded="true"/,
+  'lr-tool-call-block SSR output is missing its expanded header state'
+);
+assert.match(
+  toolCallBlockHtml,
+  /<div(?=[^>]*\bpart="body")(?![^>]*\bhidden\b)[^>]*>/,
+  'lr-tool-call-block SSR output must render a visible body while expanded'
+);
+
 assert.equal(
   globalThis.window,
   undefined,

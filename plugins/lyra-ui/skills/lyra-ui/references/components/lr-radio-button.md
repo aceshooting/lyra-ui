@@ -18,6 +18,8 @@
 
 The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
 `sl-radio-button`.
+For exactly-one choices in button chrome, prefer this inside `lr-radio-group` over `lr-toggle-group`,
+whose `aria-pressed` toggles convey no exclusivity and can be cleared.
 
 An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
 For example, assigning `checked = false` to an already-unchecked radio prevents a later

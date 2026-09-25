@@ -103,9 +103,9 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
  *   ancestors.
  * @cssprop [--lr-timeline-rail-width=var(--lr-border-width-medium)] - Thickness of the
  *   connecting rail line. Inherits from theme ancestors.
- * @cssprop [--lr-timeline-rail-color=var(--lr-color-border)] - Color of the connecting rail
- *   line. A component-scoped property (not just inlining `var(--lr-color-border)` at every use
- *   site) so a consumer can retint just the rail without touching the library-wide border color
+ * @cssprop [--lr-timeline-rail-color=var(--lr-color-border-subtle)] - Color of the connecting rail
+ *   line. A component-scoped property (not just inlining `var(--lr-color-border-subtle)` at every
+ *   use site) so a consumer can retint just the rail without touching the library-wide border color
  *   elsewhere. Inherits from theme ancestors.
  * @cssprop [--lr-timeline-marker-color=var(--lr-color-text-quiet)] - Marker fill/accent color.
  *   Its private default changes per `variant` (see the class doc's variant table); a consumer can

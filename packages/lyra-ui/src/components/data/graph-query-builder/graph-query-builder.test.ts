@@ -1340,6 +1340,21 @@ describe('lr-graph-query-builder', () => {
     expect(getComputedStyle(remove).color).to.equal('rgb(22, 23, 24)');
   });
 
+  it('rules off the saved-queries section with the subtle border while controls keep the control border', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
+    const el = (await fixture(html`<lr-graph-query-builder
+      style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
+      .savedQueries=${saved}
+    ></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const section = el.shadowRoot!.querySelector('[part="saved-queries"]') as HTMLElement;
+    const save = el.shadowRoot!.querySelector('[part="save-button"]') as HTMLElement;
+    const item = el.shadowRoot!.querySelector('[part="saved-item"]') as HTMLElement;
+    expect(getComputedStyle(section).borderTopColor, 'section rule').to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(save).borderTopColor, 'save button').to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(item).borderTopColor, 'saved item').to.equal('rgb(4, 5, 6)');
+  });
+
   it('inherits independent hover and pressed action colors from an ancestor', async function () {
     this.timeout(15_000);
     const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];

@@ -23,7 +23,7 @@ export const styles = css`
     white-space: nowrap;
     text-overflow: ellipsis;
     padding-inline: var(--lr-space-2xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-file-icon-bg, var(--lr-color-brand-quiet));
     color: var(--lr-file-icon-color, var(--lr-color-brand));

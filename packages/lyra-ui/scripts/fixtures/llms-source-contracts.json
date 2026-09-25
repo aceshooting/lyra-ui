@@ -118,7 +118,7 @@
       "module": "src/ai/adapters/ai-sdk.ts",
       "exportName": "adaptAiSdkMessage",
       "kind": "function",
-      "fingerprint": "0b3a47e937f8205cdfab",
+      "fingerprint": "101528706718d0c26109",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -182,7 +182,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "AgentStreamState",
       "kind": "interface",
-      "fingerprint": "e65163b16b1348258bdb",
+      "fingerprint": "d8582b8b56febd39f05d",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -214,7 +214,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "createAgentStreamState",
       "kind": "function",
-      "fingerprint": "6ac76ac00627abb91974",
+      "fingerprint": "64947a61eae3c305eab4",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -246,7 +246,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "reduceAgentStream",
       "kind": "function",
-      "fingerprint": "de82ec24a0b1e0b91a06",
+      "fingerprint": "202efc0c070af31ce018",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -262,7 +262,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "reduceAgentStreamEvents",
       "kind": "function",
-      "fingerprint": "0b085da484338aecdbf8",
+      "fingerprint": "150e6d38b94363027168",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -478,7 +478,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ChatMessage",
       "kind": "interface",
-      "fingerprint": "b18f42ee8ac41579464c",
+      "fingerprint": "6dfb2d5f79cb4d79850e",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -878,7 +878,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ToolCallMessagePart",
       "kind": "interface",
-      "fingerprint": "21db94e44e80c73b86bf",
+      "fingerprint": "f938ffbae44bb0fcb373",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -898,7 +898,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ToolInvocation",
       "kind": "interface",
-      "fingerprint": "3456bc1e94e3edd502bb",
+      "fingerprint": "a4a0befeee41bfcfb290",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -978,7 +978,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "16c1b8a66033c1e2be4f",
+      "fingerprint": "3c198df6d6227f0f469a",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -994,7 +994,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "0d7ade4fa95dcdf3e187",
+      "fingerprint": "92e4a64a3e1e48e2718d",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1042,7 +1042,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "fb034fc865a625283a65",
+      "fingerprint": "05e8f420ce99230cf9fc",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1058,7 +1058,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "69f026ae322d4eb2ed60",
+      "fingerprint": "73ffb674859aa5e94f77",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1669,7 +1669,7 @@
       "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
       "exportName": "EvalExampleResult",
       "kind": "interface",
-      "fingerprint": "798a861d7a2324dd65a7",
+      "fingerprint": "54a1985486563389bc03",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
@@ -2329,6 +2329,52 @@
       }
     },
     {
+      "module": "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
+      "exportName": "ToolCallBlockRenderErrorDetail",
+      "kind": "interface",
+      "fingerprint": "fdadf7709d2f5ea38c8a",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
+        "src/components/agent-tools/tool-call-block/tool-call-block.ts",
+        "src/components/lr-tool-call-block.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-tool-call-block-tool-call-block-contracts",
+        "declaration": "ToolCallBlockRenderErrorDetail"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
+      "exportName": "ToolCallBlockToggleDetail",
+      "kind": "interface",
+      "fingerprint": "a7c17ff50f0443a45ab2",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
+        "src/components/agent-tools/tool-call-block/tool-call-block.ts",
+        "src/components/lr-tool-call-block.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-tool-call-block-tool-call-block-contracts",
+        "declaration": "ToolCallBlockToggleDetail"
+      }
+    },
+    {
       "module": "src/components/agent-tools/tool-call-chip/tool-call-chip.class.ts",
       "exportName": "ToolChipSelectDetail",
       "kind": "interface",
@@ -2633,7 +2679,7 @@
       "module": "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
       "exportName": "ToolTimelineEntry",
       "kind": "interface",
-      "fingerprint": "de0c278786f42346eb62",
+      "fingerprint": "5253e61b6b88255b5214",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -7553,6 +7599,52 @@
       }
     },
     {
+      "module": "src/components/forms/toggle-group/toggle-group.class.ts",
+      "exportName": "LyraToggleGroupToggleRequestDetail",
+      "kind": "interface",
+      "fingerprint": "b66f8eefb86dc0f57f4a",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/index.ts",
+        "src/components/forms/toggle-group/toggle-group.class.ts",
+        "src/components/forms/toggle-group/toggle-group.ts",
+        "src/components/lr-toggle-group.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-toggle-group",
+        "declaration": "LyraToggleGroupToggleRequestDetail"
+      }
+    },
+    {
+      "module": "src/components/forms/toggle/toggle.class.ts",
+      "exportName": "LyraToggleChangeDetail",
+      "kind": "interface",
+      "fingerprint": "9db5def3890bde1cae7c",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/index.ts",
+        "src/components/forms/toggle/toggle.class.ts",
+        "src/components/forms/toggle/toggle.ts",
+        "src/components/lr-toggle.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-toggle",
+        "declaration": "LyraToggleChangeDetail"
+      }
+    },
+    {
       "module": "src/components/layout/app-rail-group/app-rail-group.class.ts",
       "exportName": "LyraAppRailGroupToggleDetail",
       "kind": "interface",
@@ -8804,6 +8896,52 @@
         "kind": "utility",
         "name": "components-layout-multi-split-multi-split-contracts",
         "declaration": "LyraMultiSplitToggleDetail"
+      }
+    },
+    {
+      "module": "src/components/layout/navigation-menu-item/navigation-menu-item.class.ts",
+      "exportName": "LyraNavigationMenuToggleDetail",
+      "kind": "interface",
+      "fingerprint": "bbc07663691572227e84",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/index.ts",
+        "src/components/layout/navigation-menu-item/navigation-menu-item.class.ts",
+        "src/components/layout/navigation-menu-item/navigation-menu-item.ts",
+        "src/components/lr-navigation-menu-item.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-navigation-menu-item-navigation-menu-item-contracts",
+        "declaration": "LyraNavigationMenuToggleDetail"
+      }
+    },
+    {
+      "module": "src/components/layout/navigation-menu/navigation-menu.class.ts",
+      "exportName": "LyraNavigationMenuExpandedChangeDetail",
+      "kind": "interface",
+      "fingerprint": "e6a0cbd561b59fe2354c",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/index.ts",
+        "src/components/layout/navigation-menu/navigation-menu.class.ts",
+        "src/components/layout/navigation-menu/navigation-menu.ts",
+        "src/components/lr-navigation-menu.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-navigation-menu-navigation-menu-contracts",
+        "declaration": "LyraNavigationMenuExpandedChangeDetail"
       }
     },
     {
@@ -10682,6 +10820,52 @@
         "kind": "utility",
         "name": "components-overlays-chip-chip-contracts",
         "declaration": "ChipSelectDetail"
+      }
+    },
+    {
+      "module": "src/components/overlays/context-menu/context-menu.class.ts",
+      "exportName": "LyraContextMenuPoint",
+      "kind": "interface",
+      "fingerprint": "3fe25344ab515471cee7",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-context-menu.ts",
+        "src/components/overlays/context-menu/context-menu.class.ts",
+        "src/components/overlays/context-menu/context-menu.ts",
+        "src/components/overlays/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/overlays.md",
+      "family": "overlays",
+      "locator": {
+        "kind": "utility",
+        "name": "components-overlays-context-menu-context-menu-contracts",
+        "declaration": "LyraContextMenuPoint"
+      }
+    },
+    {
+      "module": "src/components/overlays/context-menu/context-menu.class.ts",
+      "exportName": "LyraContextMenuShowDetail",
+      "kind": "interface",
+      "fingerprint": "f7b26481fdc516bd67be",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-context-menu.ts",
+        "src/components/overlays/context-menu/context-menu.class.ts",
+        "src/components/overlays/context-menu/context-menu.ts",
+        "src/components/overlays/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/overlays.md",
+      "family": "overlays",
+      "locator": {
+        "kind": "utility",
+        "name": "components-overlays-context-menu-context-menu-contracts",
+        "declaration": "LyraContextMenuShowDetail"
       }
     },
     {
@@ -14317,7 +14501,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "e049c0250a861ee7cc66",
+      "fingerprint": "2ea6f7b96066dc8262b2",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15248,7 +15432,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "711c925cfd7e9882ed54",
+      "fingerprint": "a6f1ea0e1224aaef943f",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15389,7 +15573,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "8d6b400318050eee63f3",
+      "fingerprint": "f99ded06ebf540b21842",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15994,7 +16178,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "1694611bfdbf7989f40b",
+      "fingerprint": "246445b3101dcf242207",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16010,7 +16194,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "156f9d3a2a2da5fb379a",
+      "fingerprint": "8efd3a1a508087e9d086",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16026,7 +16210,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "c7eeb6856651a5acc8bc",
+      "fingerprint": "99dc04040d260582b178",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16675,7 +16859,7 @@
       "module": "src/utilities/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "762ba6c6e07cb29d2507",
+      "fingerprint": "35cfbcab080de3029ede",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/localization.ts"
@@ -16692,7 +16876,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "3349a212437a25707ea8",
+      "fingerprint": "d12b0a4901c32f63322d",
       "routes": [
         "src/vue.ts"
       ],

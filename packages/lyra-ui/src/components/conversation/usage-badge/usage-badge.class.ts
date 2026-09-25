@@ -57,8 +57,8 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilli
  * @csspart tooltip - The floating detail breakdown, only meaningful while open.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  * on the anchored breakdown tooltip.
- * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
- * the anchored breakdown tooltip.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
+ * colour, on the anchored breakdown tooltip.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  * anchored breakdown tooltip.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.

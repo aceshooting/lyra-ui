@@ -103,7 +103,7 @@ export const styles = css`
     flex-direction: column;
     inline-size: var(--lr-app-rail-width, var(--_lr-app-rail-width));
     block-size: 100%;
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(--lr-app-rail-background, var(--lr-color-surface));
     padding-block-end: var(--lr-safe-area-bottom);
     overflow-y: auto;
@@ -111,6 +111,12 @@ export const styles = css`
        can add a spurious horizontal scrollbar when slotted header/footer content is wide. */
     overflow-x: clip;
     transition: inline-size var(--lr-transition-base);
+  }
+  /* The resizer-track below is transparent at rest, so while the resizer renders this edge is the
+     only visible mark of that focusable separator (WCAG 2.2 SC 1.4.11) -- it stays on the
+     control-grade token, like lr-split-panel's and lr-multi-split's dividers. */
+  :host([resizable][mode="full"]) [part="base"] {
+    border-inline-end-color: var(--lr-color-border);
   }
   :host([mode="icon-only"]) [part="base"] {
     inline-size: var(--lr-app-rail-icon-width, var(--_lr-app-rail-icon-width));
@@ -245,7 +251,7 @@ export const styles = css`
        resizes asynchronously (e.g. an avatar image). Mirrors --lr-command-palette-search-min-
        height's identical auto-default shape. */
     min-block-size: var(--lr-app-rail-header-min-block-size, auto);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="header"][hidden] {
     display: none;
@@ -323,7 +329,7 @@ export const styles = css`
   }
   [part="footer"] {
     padding: var(--lr-app-rail-footer-padding, var(--lr-space-m));
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="footer"][hidden] {
     display: none;

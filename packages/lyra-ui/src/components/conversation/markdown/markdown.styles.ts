@@ -177,7 +177,7 @@ export const styles = css`
   }
   [part='table'] th,
   [part='table'] td {
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     padding: var(--lr-space-xs) var(--lr-space-s);
     text-align: start;
     overflow-wrap: break-word;

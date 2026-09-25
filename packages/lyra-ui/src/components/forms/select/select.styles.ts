@@ -3,7 +3,10 @@ import {
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
-import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import {
+  overlaySurface,
+  overlaySurfaceControlEdge,
+} from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -476,6 +479,7 @@ export const styles = css`
     /* The shared overlay-surface family (internal/overlay-surface.styles.ts): the listbox is a
        floating surface and retints with every other popup, not with the trigger it drops from. */
     ${overlaySurface}
+    ${overlaySurfaceControlEdge}
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     /* Retain layout during the outgoing transition. Once it settles, hidden removes the

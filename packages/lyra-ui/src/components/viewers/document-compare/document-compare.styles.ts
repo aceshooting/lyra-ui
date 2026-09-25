@@ -32,6 +32,8 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
+    /* The control border, not the decorative subtle tier: the pane is an unfilled tabindex='0'
+       scroll region, so this edge is the only resting boundary of a focusable widget. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);

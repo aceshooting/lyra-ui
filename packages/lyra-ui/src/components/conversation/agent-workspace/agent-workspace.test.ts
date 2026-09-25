@@ -95,6 +95,29 @@ it("uses a plain-frame fallback composer without changing a supplied composer", 
   expect(composerSlot.assignedElements().length).to.equal(1);
 });
 
+it("keeps the plain composer's dock edge on the control border while panel dividers take the subtle tier", async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(40, 50, 60);"
+    ></lr-agent-workspace>
+  `);
+  const part = (name: string): HTMLElement | null =>
+    el.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`);
+  const composer = part("composer");
+  const header = part("header");
+  const base = part("base");
+  expect(
+    composer !== null && header !== null && base !== null,
+    "the workspace renders its base, header and composer parts"
+  ).to.equal(true);
+  if (composer === null || header === null || base === null) return;
+  // The built-in composer is frame="plain" and draws no edge of its own, so this rule is the
+  // visible boundary of the text-entry control and must keep control-grade contrast.
+  expect(getComputedStyle(composer).borderTopColor).to.equal("rgb(10, 20, 30)");
+  expect(getComputedStyle(header).borderBottomColor).to.equal("rgb(40, 50, 60)");
+  expect(getComputedStyle(base).borderTopColor).to.equal("rgb(40, 50, 60)");
+});
+
 it('clears follow/showDetails/showComposer from plain HTML `="false"` attributes, not just property bindings', async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace

@@ -14,7 +14,7 @@ export const styles = css`
     display: block;
     max-block-size: var(--lr-notebook-viewer-max-height, none);
     overflow: auto;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
   }
   lr-virtual-list::part(base) {
@@ -34,7 +34,7 @@ export const styles = css`
     grid-template-columns: auto 1fr;
     gap: var(--lr-space-s);
     padding: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   lr-virtual-list::part(cell-active) {
     background: var(--lr-notebook-viewer-active-bg, var(--lr-color-brand-quiet));

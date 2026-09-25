@@ -33,16 +33,16 @@ and costs a few hundred tokens instead of the whole catalog. `llms/index.md` map
 family and entry point.
 
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
-- **Form controls & inputs** — 29 tags in `components/forms/`
+- **Form controls & inputs** — 31 tags in `components/forms/`
 - **Data display, dashboards & flow canvas** — 26 tags in `components/data/`
-- **Layout, navigation & structure** — 36 tags in `components/layout/`
-- **Overlays, status & feedback** — 21 tags in `components/overlays/`
+- **Layout, navigation & structure** — 38 tags in `components/layout/`
+- **Overlays, status & feedback** — 22 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
 - **Media, files & maps** — 22 tags in `components/media/`
 - **Charts** — 12 tags in `components/charts/`
 - **Document & file viewers** — 23 tags in `components/viewers/`
 - **Conversation & chat UI** — 34 tags in `components/conversation/`
-- **Agent tooling, tool calls & evaluation** — 35 tags in `components/agent-tools/`
+- **Agent tooling, tool calls & evaluation** — 36 tags in `components/agent-tools/`
 - **Retrieval, knowledge graph & grounding** — 30 tags in `components/retrieval/`
 - **Reference tables** — design tokens (`llms/tokens.md`), optional peers (`llms/peers.md`), `wa-*`/`sl-*` migration (`llms/migration.md`)
 
@@ -189,7 +189,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 272
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 278
   root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -218,6 +218,8 @@ The entry points, then:
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
+  `@aceshooting/lyra-ui/themes/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
+  [The shadcn look](#the-shadcn-look--themesshadcncss)),
   `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
   so your own components can read them),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
@@ -875,7 +877,7 @@ inside a Lyra UI without looking foreign:
 
 | Family                | Names                                                                                                                                                                                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ambient colour        | `--lr-color-surface`, `--lr-color-surface-raised`, `--lr-color-surface-overlay`, `--lr-color-overlay`, `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-strong`                         |
+| Ambient colour        | `--lr-color-surface`, `--lr-color-surface-raised`, `--lr-color-surface-overlay`, `--lr-color-overlay`, `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-strong`, `--lr-color-border-subtle` |
 | The semantic grid     | all 45 `--lr-color-{brand,success,warning,danger,neutral}-{fill,border,on}-{quiet,normal,loud}` slots                                                                                                                       |
 | Flat colour aliases   | `--lr-color-{brand,success,warning,danger,neutral}`, `--lr-color-{brand,success,warning,danger}-quiet`, `--lr-color-on-{brand,success,warning,danger,neutral}`                                                              |
 | Spacing               | `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-space-m`, `--lr-space-l`, `--lr-space-2xl`                                                                                                                        |
@@ -1089,12 +1091,14 @@ page you are on — that is what keeps two overlapping surfaces reading in the c
 `theme.css` declares its layer order up front, then puts all of its own tokens in `lr-theme`:
 
 ```css
-@layer lr-base, lr-theme, lr-utilities, lr-overrides;
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 ```
 
 - **`lr-base`** — contains the explicitly scoped native-element rules only when the optional
   `native.css` asset is imported.
 - **`lr-theme`** — where every `--lr-theme-*` token `theme.css` ships is declared.
+- **`lr-theme-preset`** — an optional look preset layered over those tokens, such as
+  [`themes/shadcn.css`](#the-shadcn-look--themesshadcncss). Empty unless one is imported.
 - **`lr-utilities`** — contains exact `lr-*` classes only when the optional `utilities.css` asset is
   imported.
 - **`lr-overrides`** — named so an application can opt its own rules into a defined position
@@ -1130,14 +1134,14 @@ flip in either direction on a change that only moves an `@import`, with nothing 
 looking wrong. Two fixes, either is fine:
 
 ```css
-/* 1. Unlayer them — an unlayered rule outranks all four Lyra layers unconditionally,
+/* 1. Unlayer them — an unlayered rule outranks all five Lyra layers unconditionally,
       whatever the load order. This is the one that cannot be broken by an import move. */
 :root {
   --lr-theme-color-brand-fill-loud: #7c3aed;
 }
 
 /* 2. Or keep your layer and pin it after Lyra's, once, before anything else loads. */
-@layer lr-base, lr-theme, lr-utilities, lr-overrides, app-theme;
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides, app-theme;
 @layer app-theme {
   :root {
     --lr-theme-color-brand-fill-loud: #7c3aed;
@@ -1147,8 +1151,111 @@ looking wrong. Two fixes, either is fine:
 
 The second form is the one to reach for when the application already has a layer architecture:
 re-declaring the order is additive, and the first occurrence of each name is what fixes its
-position — so stating all five names yourself pins `app-theme` last no matter when `theme.css`
-loads.
+position — so stating all six names yourself pins `app-theme` last no matter when `theme.css`
+loads. Name **every** Lyra layer when you do, `lr-theme-preset` included: a name missing from the
+first statement the browser sees is appended at the end, so an older four-name statement (without
+`lr-theme-preset`) would rank an imported look preset above `lr-overrides` and your own layer. Every Lyra stylesheet that declares an order repeats the same five names for exactly this
+reason.
+
+### The shadcn look — `themes/shadcn.css`
+
+One more import restyles every component after [shadcn/ui](https://ui.shadcn.com)'s default
+"new-york" style on its Neutral base colour:
+
+```ts
+import "@aceshooting/lyra-ui/theme.css";
+import "@aceshooting/lyra-ui/themes/shadcn.css";
+```
+
+The preset sets only `--lr-theme-*` inputs, so no component API changes. Every rule sits in the
+`lr-theme-preset` layer, and the file repeats `theme.css`'s layer statement, so:
+
+- **load order does not matter** — the preset beats `theme.css` whichever is emitted first;
+- **any unlayered rule of yours beats both**, exactly as it beats `theme.css` alone;
+- **`setLyraTheme({ accent })` still wins** — the runtime writes inline style on `<html>`, which beats
+  every layer.
+
+**Modes.** The light block applies to `:root, .lr-light, [data-lr-theme='light'], .light` and the
+dark block to `.lr-dark, [data-lr-theme='dark'], .dark` (declared after light, same specificity). An
+application that toggles `.dark` on `<html>` the shadcn way gets Lyra's dark mode with no extra
+wiring, and a nested `.dark` (or `.light`) region is themed on its own, native `color-scheme`
+included. Only the preset knows `.dark`/`.light`: `theme.css` never reads those class names, since an
+application may already use them for something else. That is why each preset block also repeats
+`theme.css`'s own value, for that mode, of every input the preset does not restyle — the success,
+warning and remaining danger slots, the scrims, and the chart, graph and terminal ramps — so a bare
+`.dark` switches those too instead of leaving light status tints and light chart colours on a dark
+page.
+
+| Input | Light | Dark | Notes |
+| --- | --- | --- | --- |
+| `color-surface-default` / `-raised` / `-overlay` | `#ffffff` / `#fafafa` / `#ffffff` | `#0a0a0a` / `#171717` / `#171717` | page, card/sidebar, popover |
+| `color-text-normal` / `-quiet` | `#0a0a0a` / `#737373` | `#fafafa` / `#a1a1a1` | |
+| `color-surface-border`, `color-border-strong` | `#919191` | `#646464` | control boundaries, 3:1 on page and raised surface |
+| `color-surface-border-subtle` | `#e5e5e5` | `rgb(255 255 255 / 0.1)` | decorative edges only |
+| `color-brand-*`, `color-neutral-*` | quiet `#f5f5f5`, normal `#e5e5e5`, loud `#171717` | quiet `#262626`, normal `#404040`, loud `#e5e5e5` | monochrome: primary and secondary are one family |
+| `color-danger-fill-loud` / `-on-loud` | `#d6000a` / `#ffffff` | `#ff6467` / `#0a0a0a` | other danger, success and warning slots keep Lyra's values |
+| `color-focus`, `focus-ring-width`, `focus-ring-offset` | `#8b8b8b`, `3px`, `0px` | `#787878`, `3px`, `0px` | |
+| `color-mix-partner` | `#737373` | `#737373` | hover/press mix toward a mid grey |
+| `border-radius-m` / `-xs` | `0.5rem` / `0.25rem` | same | |
+| `font-family-body` / `-mono` | `'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif` / `'Geist Mono', ui-monospace, …` | same | fonts are named, not shipped |
+| `font-size-m` | `0.875rem` | same | shadcn UI text is `text-sm` |
+| `form-control-height-s` / `-m` / `-l`, `icon-button-size` | `2rem` / `2.25rem` / `2.5rem`, `2.25rem` | same | the 44px coarse-pointer floor still applies |
+| `shadow-xs` … `shadow-xl` | Tailwind geometry, alpha 0.05 / 0.1 | same geometry, alphas ×3 | `--lr-theme-shadow-color` still tints them |
+
+Every name in the first column is `--lr-theme-` plus the cell. The default `<lr-button>`
+(`variant="neutral" appearance="accent"`) is shadcn's primary; `appearance="filled"` is secondary,
+`"outlined"` outline, `"plain"` ghost, `variant="danger"` destructive, `appearance="link"` link.
+
+**Deliberate deviations from shadcn**, each keeping a contrast guarantee shadcn does not make — the
+repository's contrast gate re-measures every value in both modes:
+
+- **Control borders** use the control grey above, not shadcn's `#e5e5e5` hairline (1.26:1 on white).
+  The hairline survives as `--lr-color-border-subtle`, for decoration only.
+- **Focus** is an opaque grey, 3.41:1 / 4.48:1 against the page. shadcn's half-transparent ring
+  measures about 1.5:1 / 1.9:1.
+- **Danger.** Components set text in the loud danger colour — error messages on the page, the body of
+  a danger callout on the quiet danger tint. shadcn's `#e7000b` measures 4.10:1 on that tint, so the
+  preset uses `#d6000a`, the same red a notch darker. Dark danger is a light red under near-black
+  text, not white on a dark red, for the same reason.
+- **Charts** keep Lyra's validated series ramp: two of shadcn's chart colours fall below 3:1 on
+  white, and the ramp is also checked for colour-blind separation.
+- **Hover and press** mix toward a mid grey. The default mixes toward the text colour, and shadcn's
+  primary _is_ the text colour, so the default button would show no hover or press state at all.
+
+**Accents.** `lr-button`'s default renders the `neutral` role, and a bare accent only re-derives
+`brand`, so the preset aliases neutral's loud slots to brand's in both modes
+(`--lr-theme-color-neutral-fill-loud: var(--lr-theme-color-brand-fill-loud)`, and likewise
+`on-loud` and `border-loud`). With no accent that is the brand literal, so nothing changes; with
+`setLyraTheme({ accent: GEMSTONES.emerald.fill })` the default button, checked checkboxes and
+radios, and the focus ring follow the accent, while neutral's quiet and normal tiers — shadcn's
+secondary and muted — stay grey. **Switch modes through `setLyraTheme({ mode })`** (or the
+no-flash bootstrap) in an application that uses accents: the runtime derives the accent ramp for the
+mode it resolved and writes `data-lr-theme`, which the preset honours. Toggling `.dark` alone would
+leave a light-mode accent ramp on a dark page. Tailwind users can point `dark:` at
+`[data-lr-theme=dark]` to share that one switch.
+
+**Overriding the preset.** An unlayered `:root { --lr-theme-… }` wins, as always. A mode-specific
+override must name the mode selectors, because the preset re-declares every input it sets on each of
+them — so a nested `.dark` region re-applies the preset's dark value over one you set on `:root`:
+
+```css
+:root, .lr-light, [data-lr-theme="light"], .light { --lr-theme-color-brand-fill-loud: #4f46e5; }
+.lr-dark, [data-lr-theme="dark"], .dark { --lr-theme-color-brand-fill-loud: #818cf8; }
+```
+
+Two document-scope conveniences re-derive only on Lyra's own mode selectors
+(`.lr-light`/`.lr-dark`/`data-lr-theme`), not on `.dark`/`.light`: the resolved layer published by
+[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss) and the
+`--lr-focus-ring` composite `theme.css` declares for your own `outline: var(--lr-focus-ring)` rules.
+A nested region whose _own_ light-DOM elements read either should carry `data-lr-theme="dark"`
+alongside `.dark`. Components are unaffected; they re-derive both on their own `:host`.
+
+**Component hooks are not part of the preset** — it sets theme inputs only. For shadcn's raised
+sidebar tone, opt `lr-app-rail` in with one line:
+
+```css
+lr-app-rail { --lr-app-rail-background: var(--lr-color-surface-raised); }
+```
 
 ### Where an override actually reaches
 
@@ -1251,6 +1358,19 @@ code. See each control's own reference page for its exact pair.
   or `pointer: coarse`) a resolved value below `2.75rem` is raised back to it, so the new subtree
   knob is not a way around WCAG 2.2 SC 2.5.8 — a deliberately dense desktop toolbar still becomes
   tappable on a phone.
+- **`--lr-color-border-subtle`** is the decorative border tier:
+  `var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))`. Components draw only purely
+  decorative edges with it — a divider or rule, a card, panel, table or section edge, a separator
+  between items, a gutter line — never the only visible boundary of an interactive control or of a
+  meaningful graphic, which WCAG 2.2 SC 1.4.11 holds to 3:1 and which therefore stay on
+  `--lr-color-border`. Form controls never read it (a build gate enforces that). The theme input is
+  unset by default, `theme.css` included, so the token is exactly `--lr-color-border` and nothing
+  renders differently until you opt in; set `--lr-theme-color-surface-border-subtle` to give
+  decoration a lighter tone without weakening a single control boundary — it may be well below 3:1,
+  or translucent (the shadcn preset uses white at 10% in dark). To change control borders, set
+  `--lr-theme-color-surface-border` instead and keep it at 3:1 against both the page and the raised
+  surface. Forced-colours mode maps both tokens to the same system colour. Use the same split in your
+  own components: `tokens-root.css` publishes `--lr-color-border-subtle` at `:root`.
 - **`--lr-color-surface-overlay` follows `--lr-theme-color-surface-default` in both modes.** It is
   the panel colour behind every floating surface — dropdowns, listboxes, menus, toasts, popovers,
   dialogs, and the `lr-app-rail` mobile drawer. In light mode it resolves straight to
@@ -1640,7 +1760,7 @@ stay in light DOM: they do not pierce a component's shadow root.
 
 `utilities.css` places exact, zero-specificity `:where(.lr-*)` classes in `lr-utilities`. It never
 uses a substring class selector, so a class such as `app-lr-flex-preview` does not opt in. Both
-assets repeat `@layer lr-base, lr-theme, lr-utilities, lr-overrides`; an ordinary unlayered
+assets repeat `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`; an ordinary unlayered
 application rule therefore beats them regardless of load order. A third opt-in asset,
 [`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), is not a
 style sheet in the same sense — it declares custom properties only, and exists so your own
@@ -2019,6 +2139,18 @@ import {
   vendor SDKs into the package. Feed AG-UI events through `new AgUiStreamAdapter().push(event)`.
   Adapter inputs are treated as untrusted data, recursively snapshotted, and rejected without
   throwing when malformed, non-serializable, or over their configured budgets.
+  `adaptAiSdkMessage()` maps AI SDK tool states structurally: `output-error` → `error`,
+  `output-available` → `success`, `approval-requested` → `pending`, `output-denied` → `denied`
+  (a complete part), `approval-responded` with `approval.approved === false` → `denied` (still
+  streaming until the SDK moves it on), and every other state, including an approved
+  `approval-responded`, → `running`. The denial reason is not mapped.
+- **Tool invocation timing and redaction** — `ToolInvocation` optionally carries `startedAt` and
+  `endedAt` (epoch milliseconds; together they derive the duration `<lr-message-parts
+  tool-display="block">` and `<lr-tool-timeline>` show) and `redactedFields` (dotted paths within
+  `args`/`result`/`error` masked wherever Lyra renders the invocation's payload). The stream runtime
+  validates them on `tool-upsert` events and `tool-call` parts: a non-finite or non-number time, or
+  a `redactedFields` that is not an array of at most 100 strings of at most 4,096 characters, fails
+  the event as `invalid_stream_event`.
 - **Resource limits** — pass a partial `AgentStreamLimits` to `createAgentStreamState()`, or adapter
   limit options to the relevant adapter. The exported `DEFAULT_AGENT_STREAM_LIMITS`,
   `DEFAULT_AI_SDK_ADAPTER_LIMITS`, `DEFAULT_AG_UI_ADAPTER_LIMITS`, and
@@ -2803,6 +2935,9 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
   `isActive()`, and `dismissBackdrop()`; the deactivate argument is the exported
   `OverlayDeactivateOptions` record, and its return value is the deferred scroll-lock release
   function (or `undefined`).
+  `deactivate({ restoreFocus: false })` on the topmost entry hands focus to the overlay now on top
+  only when the closing panel held focus or that overlay traps focus (a modal); focus that sat
+  elsewhere, such as a field the user moved to while a hover panel was open, stays put.
   Exact records are `OverlayActivationOptions { host: HTMLElement; panel: () => HTMLElement |
 null; modalRoot?: () => HTMLElement | null; onEscape: () => void; onBackdrop?: () => void;
 preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
@@ -3291,6 +3426,9 @@ These named interfaces and helper signatures are available to typed integrations
   status: unknown;
   result: unknown;
   error: unknown;
+  startedAt: unknown;
+  endedAt: unknown;
+  redactedFields: unknown;
 }`
   `ToolResultErrorMessagePart {
   error: unknown;
@@ -3415,6 +3553,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-confirm-bar": unknown;
   "lr-contact-viewer": unknown;
   "lr-context-inspector": unknown;
+  "lr-context-menu": unknown;
   "lr-context-meter": unknown;
   "lr-control-group": unknown;
   "lr-conversation-item": unknown;
@@ -3519,6 +3658,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-multi-split": unknown;
   "lr-mutation-observer": unknown;
   "lr-native-time-input": unknown;
+  "lr-navigation-menu": unknown;
+  "lr-navigation-menu-item": unknown;
   "lr-neighbor-list": unknown;
   "lr-node-palette": unknown;
   "lr-notebook-viewer": unknown;
@@ -3614,8 +3755,11 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-timeline-item": unknown;
   "lr-toast": unknown;
   "lr-toast-item": unknown;
+  "lr-toggle": unknown;
+  "lr-toggle-group": unknown;
   "lr-token-input": unknown;
   "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-block": unknown;
   "lr-tool-call-chip": unknown;
   "lr-tool-param-form": unknown;
   "lr-tool-result-dialog": unknown;
@@ -3826,6 +3970,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-confirm-bar": unknown;
   "lr-contact-viewer": unknown;
   "lr-context-inspector": unknown;
+  "lr-context-menu": unknown;
   "lr-context-meter": unknown;
   "lr-control-group": unknown;
   "lr-conversation-item": unknown;
@@ -3930,6 +4075,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-multi-split": unknown;
   "lr-mutation-observer": unknown;
   "lr-native-time-input": unknown;
+  "lr-navigation-menu": unknown;
+  "lr-navigation-menu-item": unknown;
   "lr-neighbor-list": unknown;
   "lr-node-palette": unknown;
   "lr-notebook-viewer": unknown;
@@ -4025,8 +4172,11 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-timeline-item": unknown;
   "lr-toast": unknown;
   "lr-toast-item": unknown;
+  "lr-toggle": unknown;
+  "lr-toggle-group": unknown;
   "lr-token-input": unknown;
   "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-block": unknown;
   "lr-tool-call-chip": unknown;
   "lr-tool-param-form": unknown;
   "lr-tool-result-dialog": unknown;
@@ -4116,6 +4266,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-confirm-bar": unknown;
   "lr-contact-viewer": unknown;
   "lr-context-inspector": unknown;
+  "lr-context-menu": unknown;
   "lr-context-meter": unknown;
   "lr-control-group": unknown;
   "lr-conversation-item": unknown;
@@ -4220,6 +4371,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-multi-split": unknown;
   "lr-mutation-observer": unknown;
   "lr-native-time-input": unknown;
+  "lr-navigation-menu": unknown;
+  "lr-navigation-menu-item": unknown;
   "lr-neighbor-list": unknown;
   "lr-node-palette": unknown;
   "lr-notebook-viewer": unknown;
@@ -4315,8 +4468,11 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-timeline-item": unknown;
   "lr-toast": unknown;
   "lr-toast-item": unknown;
+  "lr-toggle": unknown;
+  "lr-toggle-group": unknown;
   "lr-token-input": unknown;
   "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-block": unknown;
   "lr-tool-call-chip": unknown;
   "lr-tool-param-form": unknown;
   "lr-tool-result-dialog": unknown;
@@ -4475,6 +4631,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-confirm-bar": unknown;
   "lr-contact-viewer": unknown;
   "lr-context-inspector": unknown;
+  "lr-context-menu": unknown;
   "lr-context-meter": unknown;
   "lr-control-group": unknown;
   "lr-conversation-item": unknown;
@@ -4579,6 +4736,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-multi-split": unknown;
   "lr-mutation-observer": unknown;
   "lr-native-time-input": unknown;
+  "lr-navigation-menu": unknown;
+  "lr-navigation-menu-item": unknown;
   "lr-neighbor-list": unknown;
   "lr-node-palette": unknown;
   "lr-notebook-viewer": unknown;
@@ -4674,8 +4833,11 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-timeline-item": unknown;
   "lr-toast": unknown;
   "lr-toast-item": unknown;
+  "lr-toggle": unknown;
+  "lr-toggle-group": unknown;
   "lr-token-input": unknown;
   "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-block": unknown;
   "lr-tool-call-chip": unknown;
   "lr-tool-param-form": unknown;
   "lr-tool-result-dialog": unknown;
@@ -5362,7 +5524,9 @@ The listbox popup itself is a floating surface and paints from the **shared over
 `--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this popup together with every other floating surface, and none of
-it touches the trigger row the popup drops from.
+it touches the trigger row the popup drops from. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this popup belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-combobox-unknown-value-border-style` (default `dashed`) and
 `--lr-combobox-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
@@ -5851,6 +6015,9 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
 `<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
@@ -7045,6 +7212,9 @@ box no matter what tier or override is in play.
   a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
   are resolved onto the focused internal control through `ariaDescribedByElements`; external
   `aria-labelledby` is not copied across the shadow boundary.
+- For a toggle that owns its pressed state — a vetoable request, `lr-change`, and optional grouping
+  behind one tab stop — use `lr-toggle` / `lr-toggle-group` rather than flipping host `aria-pressed`
+  in a click handler.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
   For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
   BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support
@@ -7148,6 +7318,8 @@ the menu relationship and expanded state on the element that actually receives f
 browsers intentionally clear each serialized internal IDREF attribute after its explicit element
 list is assigned. Browsers without those APIs retain the forwarded string attributes as
 best-effort fallbacks.
+For an icon-only toggle that owns its pressed state (with a vetoable request and `lr-change`), use
+`lr-toggle` with a host `aria-label` instead of managing `aria-pressed` yourself.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native interactive root,
 activating the action button or a safe anchor through the same path as pointer/keyboard input.
@@ -8023,7 +8195,9 @@ and the raised tone is what separates it from the field's fill — `--lr-color-s
 resolves to the plain page surface in light mode and would erase that separation, while in dark
 mode the raised tone is already distinct from the page, so this panel never had the
 reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
-along with every other popup.
+along with every other popup. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the `popup` panel reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -9128,8 +9302,7 @@ WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s unchecked resting
 fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
-retint the pointer states (their defaults remain mixes from the current state's resting fill, so a
-checked switch mixes from `--lr-switch-checked-track-fill` even when the unchecked fill is set).
+retint the pointer states (their defaults remain mixes from the current resting fill).
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
 renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
 look) without affecting any other switch. `--lr-switch-checked-track-border` (default
@@ -9595,6 +9768,8 @@ and scale.
 
 The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
 `sl-radio-button`.
+For exactly-one choices in button chrome, prefer this inside `lr-radio-group` over `lr-toggle-group`,
+whose `aria-pressed` toggles convey no exclusivity and can be cleared.
 
 An explicit live `checked` assignment marks the state dirty even if its boolean value is unchanged.
 For example, assigning `checked = false` to an already-unchecked radio prevents a later
@@ -9902,6 +10077,10 @@ A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the ori
 axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
 horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
 
+For an exactly-one choice in button chrome (text alignment, view mode), prefer this group with
+`lr-radio-button` over `lr-toggle-group`: `role="radio"` conveys exclusivity and position, which
+`aria-pressed` cannot. A choice the user may clear belongs on `lr-toggle-group selection-mode="single"`.
+
 Host `aria-describedby` references resolve onto the internal `role="radiogroup"` before its local
 hint/error guidance. References track unresolved IDs, target replacement/removal/reinsertion,
 reconnect, and document adoption. Group descriptions remain on the group; child radios can carry
@@ -9983,6 +10162,8 @@ targets keep their own fixed hit-area floor while the surrounding text wraps.
 A form-associated collection of `<lr-checkbox>` children. Its readonly `value` is a defensive
 `string[]` snapshot; each
 selected value is submitted under `name` and `required` requires at least one selection.
+For zero-or-more choices in button chrome behind one tab stop that submit nothing, use
+`lr-toggle-group`.
 
 **Properties:** `label`, `hint`, `errorText`, `value`, `customError` (`custom-error`), `name`,
 `required`, `disabled`, `orientation: 'vertical' | 'horizontal' = 'vertical'`,
@@ -10652,7 +10833,9 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-color-picker-radius`, which still wins when set.
+`--lr-color-picker-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
 `<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the
@@ -10756,8 +10939,7 @@ label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji,
 shortcodes? }`; assignment captures a bounded frozen owned snapshot, including the current contents
 of reused source item objects. Earlier snapshots remain frozen and unchanged; in-place source edits
 become visible only after an explicit `groups` assignment. The search field matches
-`name` and every `shortcodes` entry, case-insensitively. Its accessible name and visible placeholder
-use the same localized `emojiPickerSearchLabel` string. Consumer group labels render verbatim.
+`name` and every `shortcodes` entry, case-insensitively. Consumer group labels render verbatim.
 Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
 headings follow `registerLyraLocale()`/`.strings` through filtering and windowed rendering, including
 same-locale `.strings` changes, without exposing localization keys as consumer data. Caller-authored
@@ -11158,6 +11340,9 @@ them declared on `:host`, so one declaration on `:root` — or on any ancestor, 
 this listbox together with every other floating surface. `--lr-overlay-radius` reaches the listbox
 only as the middle arm of this component's own `--lr-locale-picker-radius`, which still wins when
 set: a component-scoped override outranks the shared family, never the other way round.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the listbox reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
@@ -11470,6 +11655,234 @@ These named interfaces and helper signatures are available to typed integrations
     readonly end: number;
     readonly id?: string;
   }`
+
+## `lr-toggle`
+
+A two-state button that owns its `pressed` state — the self-managed counterpart of
+`<lr-button aria-pressed>`. It renders a native `<button type="button">` whose `aria-pressed` is
+always `"true"` or `"false"`, and takes the shared `variant`/`appearance`/`size` vocabulary. It is
+not a form control: it is not form-associated and submits nothing, so an ancestor
+`<fieldset disabled>` does not reach it and it is absent from `form.elements` (disable each toggle
+explicitly). A value that must be submitted belongs on `lr-switch`, `lr-checkbox`,
+`lr-checkbox-group` or `lr-radio-group`. For the same reason it renders no label/hint/error chrome:
+its content is its name. For a tri-state `mixed` button use `<lr-button aria-pressed="mixed">`.
+
+**Naming.** The accessible name comes from the host `aria-label` (forwarded by presence, including
+an explicitly empty value), the host `aria-labelledby` (resolved onto the internal button through
+`ariaLabelledByElements`, following same-ID replacement, reconnect and adoption, and winning over
+`aria-label` and content per ARIA), or the content. A host `aria-describedby` is resolved onto the
+internal button the same way. An **icon-only** toggle must be named by one of those — a labelled
+icon (`<lr-icon label="Bold">`) or visually hidden text also works — and there is deliberately no
+generic fallback name. **Keep the label constant while `pressed` changes** (WAI-ARIA APG toggle
+button): state is conveyed by `aria-pressed` alone, so a "Mute"/"Unmute" swap is wrong. A host
+`aria-pressed` is not supported — the host has no role; use `pressed`.
+
+**Properties:**
+
+- `pressed: boolean` (reflected, default `false`) — the toggle state. Programmatic writes are silent.
+- `disabled: boolean = false` (reflected) — an owning group's `disabled` is projected without
+  changing it.
+- `value: string = ''` — item identity inside an `lr-toggle-group`, echoed in event details; never
+  submitted.
+- `variant: LyraVariant` (reflected, default `'neutral'`) — the semantic row for the pressed fill and
+  indicator. Unsupported values fall back to `neutral`.
+- `appearance: LyraToggleAppearance` (reflected, default `'plain'`) — `plain` (text-only chrome with a
+  transparent border, so geometry matches) or `outlined` (a full `--lr-color-border` control
+  boundary). Unsupported values fall back to `plain`.
+- `size: LyraSize` (reflected, default `'m'`) — the shared ladder, accepting `2xs`/`xs`/`s`/`m`/`l`/`xl`
+  and `small`/`medium`/`large`. Unsupported values fall back to `m`.
+- `effectiveDisabled: boolean` (read-only) — `disabled` or an owning group's `disabled`.
+
+**Events:**
+
+- `lr-toggle-toggle-request` — cancelable; a user activation (click, Enter on keydown, Space on keyup, or host `click()`) is about to flip `pressed`.
+- `lr-change` — not cancelable; after a committed user toggle.
+- `lr-toolbar-actions-change` — no detail; the toggle joined or left an `lr-toggle-group`.
+- `focus` / `blur` — relayed once from the internal button, bubbling and composed.
+
+Both toggle events carry `detail: { pressed, value }` (`LyraToggleChangeDetail`). On the request,
+`pressed` is the proposed state while the property still holds the old one; `preventDefault()` keeps
+the current state and no `lr-change` follows, and a listener may instead resolve the request by
+assigning `pressed` itself during the dispatch, which suppresses the built-in commit the same way.
+Neither fires for a programmatic write or while disabled. The toggle never emits the library's
+disclosure events `lr-toggle` or `lr-toggle-request`; its own request is named by the boolean-control
+family rule (`lr-switch-toggle-request`, `lr-checkbox-toggle-request`). **Inside an
+`lr-toggle-group` the group consumes both toggle events** and republishes them under its own names,
+so listeners on an individual grouped toggle receive neither.
+
+**Types:**
+
+- `LyraToggleChangeDetail { readonly pressed: boolean; readonly value: string }` — the detail of
+  `lr-toggle-toggle-request` and `lr-change`.
+- `LyraToggleAppearance = 'plain' | 'outlined'` — the `appearance` set.
+- `LyraToggleEventMap` — the typed event map for `addEventListener`.
+
+**Methods:** `focus(options?)`, `blur()` and `click()` forward to the internal button; `click()` runs
+the full activation path (request, then `lr-change`), and `focus()`/`click()` are no-ops while
+disabled. `getToolbarActions()` implements the `lr-message-actions` logical-toolbar protocol: a
+standalone toggle returns one stable action (`id: 'toggle'`) that leases the internal button's
+`tabindex`, so a slotted pin or read-aloud toggle shares the toolbar's single roving tab stop. A
+grouped toggle returns `[]`, because the group owns that tab stop.
+
+**Slots:** default — the label or icon content; `start` — leading adornment; `end` — trailing
+adornment. `start` and `end` are hidden while empty.
+
+**CSS parts:** `base` / `button` (both on the native button), `start`, `label` (a long label
+ellipsizes), `end`. There are no state parts: style the reflected host attribute
+(`lr-toggle[pressed]::part(button)`).
+
+**Hit area.** Unlike `lr-icon-button`, the toggle keeps the size ladder, including for icon-only
+content. Every tier floors both axes at 1.5rem (24px, the WCAG 2.5.8 minimum) and an icon-only
+toggle is at least square; the default `m` tier equals the 2.5rem (40px) `--lr-icon-button-size`
+floor; under a coarse pointer every tier floors at 2.75rem (44px). Only fine-pointer `2xs`/`xs`/`s`
+sit below 40px — keep `m` or larger, or use `lr-icon-button` with a consumer-managed `aria-pressed`,
+where the compact 40px floor matters.
+
+**Pressed look.** The pressed state paints `--lr-color-fill-quiet` from the `variant` row plus a loud
+`--lr-color-border-loud` border. That border is the state's 3:1 non-text indicator (WCAG 1.4.11): a
+quiet fill alone is not. Override it through `--lr-toggle-pressed-border-color` if you accept that
+trade-off. Under forced colours the pressed state paints `Highlight`/`HighlightText`, unpressed hover
+and press get outline affordances, and disabled toggles read as `GrayText` at full opacity.
+
+**Themeable custom properties** (not declared on the host, so ancestor values win):
+`--lr-toggle-radius` (default `var(--lr-form-control-radius)`), `--lr-toggle-padding-inline`
+(default `var(--lr-space-s)`), `--lr-toggle-gap` (default `var(--lr-form-control-gap)`),
+`--lr-toggle-color` (default `var(--lr-color-text)`), `--lr-toggle-background` (default
+`transparent`), `--lr-toggle-border-color` (built-in default transparent for `plain`,
+`var(--lr-color-border)` for `outlined`), `--lr-toggle-hover-background` (default
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`),
+`--lr-toggle-pressed-background` (default `var(--lr-color-fill-quiet)`), `--lr-toggle-pressed-color`
+(default `var(--lr-color-on-quiet)`) and `--lr-toggle-pressed-border-color` (default
+`var(--lr-color-border-loud)`).
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/toggle/toggle.js';
+</script>
+
+<lr-toggle value="bold">Bold</lr-toggle>
+<lr-toggle aria-label="Pin message" value="pin" pressed>
+  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 7 4 3v2H6v-2l4-3z"></path></svg>
+</lr-toggle>
+```
+
+## `lr-toggle-group`
+
+A set of `lr-toggle` children behind **one tab stop**, with `multiple` or zero-or-one `single`
+selection. Owned toggles are the light-DOM `<lr-toggle>` descendants whose nearest group is this one
+and whose top-level wrapper sits in the default slot, so wrappers such as an `lr-tooltip` are allowed
+while a nested group keeps its own toggles. It is not form-associated and submits nothing.
+
+**Which selection control?**
+
+| Need | Use |
+|---|---|
+| Zero or more toggles in button chrome (text formatting, filters) | `lr-toggle-group` |
+| An optional single choice that can be cleared (highlight colour) | `lr-toggle-group selection-mode="single"` |
+| **Exactly one**, never empty (text alignment, view mode) | `lr-radio-group` + `lr-radio-button` |
+| A value submitted with a form | `lr-checkbox-group` or `lr-radio-group` |
+
+**Single mode is zero-or-one.** Pressing a toggle releases the others, and pressing the pressed
+toggle again clears the choice. Each toggle keeps its `aria-pressed` button semantics, which convey
+neither exclusivity nor position ("2 of 3") to assistive technology, and un-pressing a sibling is not
+announced. So a choice that must never be empty is a radio choice and belongs on `lr-radio-group` with
+`lr-radio-button`; when exclusivity matters in a zero-or-one group, say so in the group's name
+(`label="Highlight colour (optional, pick one)"`). To refuse clearing **temporarily** — while a
+dependent request is in flight, say — call `preventDefault()` on `lr-toggle-group-toggle-request`
+when `detail.value.length === 0`.
+
+**Properties:**
+
+- `selectionMode: LyraToggleGroupSelectionMode` (attribute `selection-mode`, reflected, default
+  `'multiple'`) — `'multiple'` or `'single'`. Unsupported values fall back to `multiple`. Switching to
+  `single` silently keeps only the first pressed toggle; switching back changes nothing.
+- `value: readonly string[]` (property only) — the distinct `value`s of the pressed owned toggles in
+  DOM order, as a frozen snapshot. Assigning presses the toggles it names and releases the rest,
+  silently; in `single` mode only the first owned toggle matching the first listed value that names
+  any toggle is pressed. An assignment made before any toggle exists is applied once they arrive.
+- `disabled: boolean` (reflected, default `false`) — disables every owned toggle without changing any
+  toggle's own `disabled`, leaving zero tab stops; re-enabling restores each toggle's own state.
+- `orientation: LyraOrientation` (reflected, default `'horizontal'`) — arrow-key axis and layout.
+  Vertical groups never join their toggles.
+- `size?: LyraSize` (reflected, opt-in) — when set, overrides every owned toggle's tier without
+  rewriting its `size`; unset (the default) leaves each toggle's own tier in charge.
+- `appearance?: LyraToggleAppearance` (reflected, opt-in) — when set, overrides every owned toggle's
+  appearance without rewriting it; unset leaves each toggle's own appearance in charge.
+- `label: string = ''` — accessible-name fallback when the host has no `aria-label` (the host
+  `aria-label` wins by presence, including an empty value).
+
+**Events:**
+
+- `lr-toggle-group-toggle-request` — cancelable; an owned toggle is about to flip.
+- `lr-change` — not cancelable; after a committed user change, with single-mode exclusivity applied.
+
+The request's `detail: { value, previousValue, option }` (`LyraToggleGroupToggleRequestDetail`) is
+the group value that **would** result, the value as it stands, and the toggle the user acted on (kept
+by identity). `preventDefault()` keeps every toggle unchanged and no `lr-change` follows; assigning the
+group's `value` from a listener resolves the request the same way. `lr-change` carries
+`detail: { value }`. Both details are detached, frozen snapshots. The group **consumes each owned
+toggle's `lr-toggle-toggle-request` and `lr-change`** and republishes them as these two events, so an
+ancestor never receives two differently shaped sequences for one interaction, and a listener on an
+individual grouped toggle receives neither. Programmatic `value`, `pressed` and `selection-mode`
+changes are silent.
+
+**Types:**
+
+- `LyraToggleGroupToggleRequestDetail { readonly value: readonly string[]; readonly previousValue:
+  readonly string[]; readonly option: LyraToggle }` — the request detail.
+- `LyraToggleGroupSelectionMode = 'single' | 'multiple'` — the `selectionMode` set.
+- `LyraToggleGroupEventMap` — the typed event map for `addEventListener`.
+
+**Keyboard and focus.** One owned toggle's internal button carries `tabindex="0"`: the last focused
+(or clicked) toggle, else the first pressed, else the first available; the rest carry `-1`, and no
+host ever gets a `tabindex`. ArrowRight/ArrowLeft (mirrored under RTL) or ArrowDown/ArrowUp when
+vertical move to the next/previous available toggle with wrap-around, Home/End to the first/last.
+Arrows only move focus — Enter and Space toggle the focused toggle. Disabled, `hidden`, `inert`
+(or inside an inert wrapper), `aria-hidden`, `aria-disabled` and CSS-hidden toggles are skipped. When
+the tab-stop toggle is removed or hidden the stop clamps to the next available toggle, else the
+previous one, and focus lost with a removed or hidden toggle moves to the new stop unless the user had
+already moved it elsewhere.
+
+**Methods:** `focus(options?)` focuses the current tab stop; `blur()` releases whichever owned toggle
+holds focus; `click()` toggles the current tab stop through its full activation path, so the request
+and `lr-change` fire and a veto still applies. All three are no-ops while disabled or when no toggle
+is available.
+
+**Joined runs.** Horizontally adjacent toggles join into one bordered run (inner corners squared,
+borders collapsed), measured from their rendered geometry after layout. A real
+`--lr-toggle-group-gap`, a wrapped line, a hidden toggle or a vertical group keeps every toggle's
+corners.
+
+**Inside `lr-message-actions`** the group stays one nested composite with its own tab stop: it does
+not implement `getToolbarActions()`, and its toggles contribute no actions while grouped.
+
+**Slots:** default — `lr-toggle` children, directly or inside wrappers. Give every toggle a distinct,
+non-empty `value`: the group warns once in development when it finds an empty or duplicate one, and
+lists each distinct value once.
+
+**CSS parts:** `base` (the `role="group"` flex container).
+
+**Themeable custom properties:** `--lr-toggle-group-gap` (built-in default `0` when horizontal, so
+toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wrap-gap` (default
+`var(--lr-space-2xs)`, between wrapped lines). Narrow allocations wrap intrinsically.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/toggle-group/toggle-group.js';
+  import '@aceshooting/lyra-ui/components/forms/toggle/toggle.js';
+</script>
+
+<lr-toggle-group label="Text formatting" appearance="outlined">
+  <lr-toggle value="bold">Bold</lr-toggle>
+  <lr-toggle value="italic" pressed>Italic</lr-toggle>
+  <lr-toggle value="underline">Underline</lr-toggle>
+</lr-toggle-group>
+
+<lr-toggle-group selection-mode="single" label="Highlight colour (optional, pick one)">
+  <lr-toggle value="yellow" pressed>Yellow</lr-toggle>
+  <lr-toggle value="green">Green</lr-toggle>
+</lr-toggle-group>
+```
 
 # Data display, dashboards & flow canvas (`components/data/`)
 
@@ -11957,6 +12370,17 @@ details and their owned collections are frozen. The toolbar search and active co
 re-dispatch `focus` and `blur` once from the grid host as bubbling, composed native `FocusEvent`s,
 preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
 crossing the shadow boundary.
+
+**Row context menus with `lr-context-menu`.** Wrap the grid in an `lr-context-menu` region and
+leave `lr-cell-contextmenu` **un-prevented**: preventing it suppresses the native menu, and the
+context menu ignores a native event that is already prevented (the opposite polarity from its own
+`lr-show`, where preventing *allows* the platform menu). For a right-click and for Shift+F10 the
+grid's `lr-cell-contextmenu` arrives **before** the context menu's `lr-show`, so store its `rowKey`
+and read it in `lr-show`. For the ContextMenu key the grid only emits `lr-cell-contextmenu` from the
+platform's follow-up `contextmenu`, which arrives **after** `lr-show` and not on every operating
+system, so rows computed from it would be stale: update the rows again in `lr-cell-contextmenu`
+when the menu is already open (rows changed while open are repaired by the menu), or fall back to
+`selectedRowKeys`.
 
 **Slots:** `empty`, `loading`, `no-results`, `error` (replaces the built-in failed-load state,
 including its retry button, while `error` is set).
@@ -14341,9 +14765,9 @@ icons; an item-level slot with the same name takes precedence.
 empty-state message shown when neither child model has any items.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
-`--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-text`, `--lr-radius`,
-`--lr-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)` since the host
-itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guide-color`,
+`--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-text`,
+`--lr-radius`, `--lr-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)`
+since the host itself is the focusable `role="treeitem"`), plus `--indent-size`, `--indent-guide-color`,
 `--indent-guide-offset`, `--indent-guide-style`, and `--indent-guide-width`.
 
 **Optional peer deps:** none.
@@ -14456,7 +14880,7 @@ parts at every rendered depth. Declarative children remain light-DOM hosts and c
 directly as `<lr-tree-item>` elements.
 
 **Themeable custom properties:** `--indent-size` (default `var(--lr-space-l)`, applied once per
-nesting depth), `--indent-guide-color` (default `var(--lr-color-border)`),
+nesting depth), `--indent-guide-color` (default `var(--lr-color-border-subtle)`),
 `--indent-guide-offset` (default `0`, the guide's block-axis inset at both ends),
 `--indent-guide-style` (default `solid`), and `--indent-guide-width` (default `0`); these mirrored
 properties are consumed directly by every `<lr-tree-item>` and may be set on an item or inherited
@@ -14968,7 +15392,7 @@ page gives it.
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
 `var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —
 `--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow-m`,
-`--lr-color-surface`, `--lr-color-border`, `--lr-radius`, `--lr-space-2xs`,
+`--lr-color-surface`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-space-2xs`,
 `--lr-focus-ring-width`/`-color`/`-offset`.
 
 **Optional peer deps:** none.
@@ -15427,7 +15851,7 @@ each horizontal-overflow edge fade; forced-colors mode removes the masks while r
 scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
-(default `var(--lr-color-border)`), `--lr-timeline-marker-color` (default
+(default `var(--lr-color-border-subtle)`), `--lr-timeline-marker-color` (default
 `var(--lr-color-text-quiet)`, with a private default that changes per `variant`), and
 `--lr-timeline-active-ring-color`
 (defaults to the effective marker color). All five item hooks inherit from theme
@@ -16479,11 +16903,6 @@ follows allocation and the actual divider geometry, including font-relative toke
 divider's own font context. Panel font sizes do not change that gutter budget; stored percentages,
 initialization precedence, and resize event values retain their existing meaning.
 
-In responsive `collapse="start"`/`"end"` mode, the divider beside the collapsing panel is hidden
-while that panel is in `data-collapse-state="floating"` and `open` is false. The divider and its
-gutter return when the floating panel opens; `rail` mode keeps its divider because both panels
-remain visible.
-
 Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
 `LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding
@@ -17030,7 +17449,7 @@ the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default pe
 `max(var(--lr-space-l), <safe-area inset>)` — the fullscreen `[part="base"]` inset; the
 `fullscreen-inset` attribute overrides it), and `--lr-widget-backdrop-inset` (defaults to `0` so
 the modal backdrop covers the viewport; the `backdrop-inset` attribute overrides it), plus shared
-tokens (`--lr-space-*`, `--lr-color-border/-surface/-text-quiet`,
+tokens (`--lr-space-*`, `--lr-color-border/-border-subtle/-surface/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`, `--lr-focus-ring-*`).
 
 Three properties style the pressed view toggle: `--lr-widget-view-toggle-active-bg` (default
@@ -17326,6 +17745,8 @@ on the item itself.
 
 Responsive semantic grouping primitive for related action controls. It preserves the slotted
 controls and exposes `role="group"` on its internal wrapper.
+It holds no state and handles no keys; for a row of toggles with pressed state behind one tab stop,
+use `lr-toggle-group`.
 
 **Properties:**
 
@@ -17611,7 +18032,7 @@ to opt out entirely), and `--lr-tab-group-panel-hover-outline-offset` (default
 `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal paint.
 
 Otherwise shared tokens — `--lr-space-xs/-s/-m`,
-`--lr-color-border/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
+`--lr-color-border/-border-subtle/-text-quiet/-text/-brand`, `--lr-transition-fast`, `--lr-radius`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
@@ -18153,6 +18574,8 @@ A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
 non-disabled items. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
+Re-picking the selected value never clears it; for an optional choice the user may clear, or for
+zero-or-more pressed buttons, use `lr-toggle-group`.
 Navigation starts from the segment that actually received the keyboard event, even when a
 controlled `value` write changed the selected or remembered roving item first.
 
@@ -18711,10 +19134,6 @@ presentation) and `[part="panel"]` (the mobile overlay) are the _same_ element p
 across modes (mirrors `<lr-widget>`'s fullscreen mode) — never both at once, and slotted nav
 content is never duplicated.
 
-In mobile mode the closed `[part="panel"]` has no shadow. It regains the existing
-`--lr-shadow-l` elevation while open, including in RTL, so the off-canvas closed panel does not
-paint into the viewport.
-
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
 `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist the fields
@@ -18925,10 +19344,13 @@ mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail
 `var(--lr-space-s)`/`var(--lr-space-xs)`, the values this rule hard-coded before either token
 existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm,
 previously reachable only through `::part(nav)`. Plus shared
-tokens (`--lr-color-border`,
+tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
-`--lr-focus-ring-*`, `--lr-transition-base`). `resizable`'s width is driven entirely by
+`--lr-focus-ring-*`, `--lr-transition-base`). The rail's inline-end edge and its header/footer rules
+use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
+`'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
+mark and stays on `--lr-color-border`. `resizable`'s width is driven entirely by
 `railWidthPx`'s inline `inline-size` style rather than a new custom property.
 The mobile toggle's hover/pressed background and foreground are independently inheritable through
 `--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
@@ -19343,7 +19765,7 @@ on the inline presentation),
 `--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
-they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
+they do not affect inline panels. Plus shared tokens (`--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).
 
 **Optional peer deps:** none.
@@ -19499,15 +19921,15 @@ style those on `<lr-dropdown>` when using the overlay composition.
 
 **Themeable custom properties:** the standalone menu surface and a submenu's own surface paint from
 the **shared overlay-surface family** (16.0.0) — `--lr-overlay-surface` (default
-`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
+`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border-subtle)`),
 `--lr-overlay-radius` (default `var(--lr-radius)`) and, on the submenu only,
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` (or on any ancestor, to scope it) retints this menu together with every other
 floating surface. A menu contained by `<lr-dropdown>` paints no surface of its own, so the family has
 no effect there — the dropdown's popup carries it. The header/footer dividing rules and a slotted
-`<hr>` deliberately stay on `--lr-color-border`: they separate content rather than draw the
-surface's edge. Otherwise shared spacing and motion tokens. Row chrome is controlled through the
-menu-item properties listed below.
+`<hr>` deliberately stay outside the family on the decorative `--lr-color-border-subtle`: they
+separate content rather than draw the surface's edge. Otherwise shared spacing and motion tokens.
+Row chrome is controlled through the menu-item properties listed below.
 
 Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
 `--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
@@ -19828,9 +20250,10 @@ exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
 `color-mix()` (background) for its pressed state; `--lr-dock-panel-handle-hover-color` (default
 `var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
 `--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
-being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--lr-color-brand`,
-`--lr-color-brand-quiet`, `--lr-color-text`, `--lr-radius`, `--lr-space-xs`,
-`--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`, `--lr-icon-button-size`.
+being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
+`--lr-color-border-subtle`, `--lr-color-brand`, `--lr-color-brand-quiet`, `--lr-color-text`,
+`--lr-radius`, `--lr-space-xs`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`,
+`--lr-icon-button-size`.
 
 **Optional peer deps:** none.
 
@@ -19972,11 +20395,13 @@ hidden entirely when empty), `body` (wrapper around the default slot), `footer` 
 `footer` and `footer-actions` slots, hidden entirely when both are empty).
 
 **Themeable custom properties:** `--spacing` (default `var(--lr-space-m)`) controls the padding and
-gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`,
-`--border-radius`, and `--border-width` control the outer and section borders. Otherwise shared
-tokens — `--lr-color-border`/`-surface`/`-brand`/
-`-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
-`--lr-focus-ring-*`.
+gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`
+(default `var(--lr-color-border-subtle)`), `--border-radius`, and `--border-width` control the outer
+and section borders. An `actionable` or linked (`href`) card is the exception: unset, its outer edge
+falls back to `--lr-color-border`, because that edge is then the whole-card control's only visible
+boundary (WCAG 2.2 SC 1.4.11); its header and footer rules stay on the subtle tier. Otherwise shared
+tokens — `--lr-color-border`/`-border-subtle`/`-surface`/`-brand`/`-brand-quiet`, `--lr-radius`,
+`--lr-space-s`/`-m`, `--lr-transition-fast`, `--lr-focus-ring-*`.
 Appearance and interaction paint can be rethemed independently through `--lr-card-outlined-bg`
 (the DEFAULT `outlined` appearance's background, and `accent`'s, which adds a stripe without
 restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-details>`'s
@@ -20421,10 +20846,10 @@ when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
-`var(--lr-color-border)`); `--lr-accordion-filled-bg` (default
+`var(--lr-color-border-subtle)`); `--lr-accordion-filled-bg` (default
 `var(--lr-color-surface-raised)`) and `--lr-accordion-filled-border-color` (default `transparent`);
 and `--lr-accordion-filled-outlined-bg` (default `var(--lr-color-surface-raised)`) plus
-`--lr-accordion-filled-outlined-border-color` (default `var(--lr-color-border)`). Direct item
+`--lr-accordion-filled-outlined-border-color` (default `var(--lr-color-border-subtle)`). Direct item
 surfaces have matching `--lr-accordion-item-outlined-bg`, `--lr-accordion-item-filled-bg`, and
 `--lr-accordion-item-filled-outlined-bg` hooks with the same surface fallbacks. Item trigger paint
 uses `--lr-accordion-item-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
@@ -21871,6 +22296,20 @@ These named interfaces and helper signatures are available to typed integrations
     readonly sizes: readonly number[];
   }`
 
+- **`components-layout-navigation-menu-item-navigation-menu-item-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/navigation-menu-item/navigation-menu-item.class.js`.
+  `LyraNavigationMenuToggleDetail {
+    open: boolean;
+    source: LyraDetailsToggleSource;
+  }`
+
+- **`components-layout-navigation-menu-navigation-menu-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/navigation-menu/navigation-menu.class.js`.
+  `LyraNavigationMenuExpandedChangeDetail {
+    expanded: boolean;
+    source: LyraNavigationMenuExpandedChangeSource;
+  }`
+
 - **`components-layout-reorder-list-reorder-list-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/reorder-list/reorder-list.class.js`.
   `LyraReorderDetail {
@@ -21960,6 +22399,232 @@ These named interfaces and helper signatures are available to typed integrations
     ariaLabel?: string;
   }`
 
+## `lr-navigation-menu`
+
+Site-header navigation following the WAI-ARIA **disclosure navigation** pattern (first-party, no
+`wa-*`/`sl-*` counterpart): a `nav` landmark holding a `role="list"` row of
+`<lr-navigation-menu-item>` links and disclosure buttons. A disclosure's flyout panel opens in one
+shared region below the bar. It never uses `menu`/`menubar` roles — application menus belong to
+`lr-menu`, and no arrow key ever opens or closes a panel.
+
+- **Opening.** Hovering a trigger opens its panel after `showDelay` (mouse only; touch and pen never
+  open on hover). While a panel is open, hovering another trigger switches immediately and the
+  shared region resizes to the new content. A click, Enter or Space opens a panel too. A click on a
+  hover-opened trigger *pins* it, so leaving no longer closes it; the next click closes it.
+  Opening one panel closes the other (`lr-toggle` with `source: 'peer'`).
+- **Hover grace.** A hover that arrives within `skipDelay` ms of a panel closing opens immediately.
+- **Closing.** Escape (focus returns to the trigger only when focus was inside the item), a press
+  outside the open item or on a non-trigger item, focus leaving the item, a hover-opened panel losing
+  the pointer after `hideDelay`, and activating a link — a plain primary click on an `a[href]` inside
+  a panel or on a link item, even when a router calls `preventDefault()`. Ctrl, Meta, Shift and
+  middle clicks close nothing. A panel that holds focus never switches away on hover.
+- **Focus repair.** Whenever a close or collapse would hide the focused element, focus first moves
+  to that item's trigger, or to the toggle when the collapsed list hides.
+- **Keyboard (bar layout).** Every top-level link or button stays in the Tab order and Tab from an
+  open trigger enters its panel. ArrowRight/ArrowLeft move to the next/previous item without
+  wrapping (swapped under right-to-left text); Home/End jump to the first/last. Hidden, `inert`
+  and `aria-hidden` items are skipped. ArrowDown on an *open* trigger focuses the first control in
+  its panel; on a closed trigger, a link or a plain button it does nothing. Inside a panel,
+  ArrowDown/ArrowUp/Home/End move between its links and buttons (text fields and composite widgets
+  keep their own keys). Keys with Alt, Ctrl or Meta are never handled.
+
+**Properties:**
+
+- `accessibleLabel?: string` (attribute `aria-label`) — names the `nav` landmark by attribute
+  presence; an explicitly empty `aria-label=""` leaves it unnamed. Unset, the landmark is named with
+  the localized `navigation` string ("Navigation"). Several menus on one page (for example a header
+  and a footer) need distinct labels, or axe reports `landmark-unique`.
+- `mobileBreakpoint?: string` (attribute `mobile-breakpoint`) — a bare number or a `px`, `rem` or
+  `em` length. The menu collapses while its own content-box inline size is at or below it (the same
+  `<=` comparison and name as `lr-page`). Unlike `lr-page` and `lr-app-rail` there is no default:
+  unset or unresolvable means the menu never collapses and its row wraps instead.
+- `expanded: boolean = false` (reflected) — whether the list shows in the collapsed layout. Kept
+  while the bar layout is active and applied at the next collapse; reset to `false` (with
+  `lr-expanded-change`, source `programmatic`) when the menu leaves the collapsed layout.
+- `indicator: boolean = false` (reflected) — shows a decorative notch under the trigger whose panel
+  is open.
+- `panelAnchor: LyraNavigationMenuPanelAnchor = 'menu'` (attribute `panel-anchor`, reflected) —
+  `menu` aligns every panel with the start edge of the item row, so switching panels resizes one
+  region in place; `item` aligns each panel with its own trigger (no resize animation). Unsupported
+  values, including untyped property writes, normalize to `menu` and repair the attribute.
+- `showDelay: number = 200` (attribute `show-delay`) — hover-open delay in ms.
+- `hideDelay: number = 150` (attribute `hide-delay`) — delay before a hover-opened panel closes once
+  the pointer leaves the item.
+- `skipDelay: number = 300` (attribute `skip-delay`) — the hover grace window; `0` disables it.
+- `distance: number = 6` — gap in px between the anchor and a floating panel.
+- `collapsed` (read-only boolean getter) — whether the collapsed layout is active; `false` on the
+  server and until the first measurement. Mirrored to the `collapsed` custom state.
+
+The three delays are JavaScript timer inputs, not CSS custom properties, and use the same
+`show-delay`/`hide-delay` vocabulary as `lr-tooltip`/`lr-popover`. Non-finite values fall back to
+the defaults and negative values clamp to `0` (a `0` show delay opens in the same turn).
+
+**Methods:** `close(): void` closes the open panel and collapses an expanded list (both announced
+with source `programmatic`), for single-page route changes. Focus moves only when the close would
+hide the focused element; a router's own later `focus()` still wins.
+
+**Events:** `lr-expanded-change` — `detail: LyraNavigationMenuExpandedChangeDetail`
+(`{ expanded, source: 'user' | 'programmatic' }`), not cancelable, fired after a change to
+`expanded` renders. `user` covers the toggle, Escape in the collapsed list, and a link or
+plain-button activation that collapses it. The menu never emits `lr-toggle` itself.
+
+**Slots:** default — `lr-navigation-menu-item` children only; `toggle-icon` — replaces the hamburger
+glyph (inert, `aria-hidden`). Every default-slot child renders inside the `role="list"`, so a
+non-item child fails axe and draws a one-time development warning: keep header chrome such as a
+logo, search or actions *outside* the menu.
+
+**CSS parts:** `base` (the `nav`), `list`, `toggle` (collapsed layout only), `toggle-icon`,
+`toggle-label`, `indicator` (with `indicator`, bar layout only) and `indicator-arrow`.
+
+**Custom state:** `collapsed`.
+
+**Custom properties:** `--lr-navigation-menu-gap` (default `var(--lr-space-xs)`, both layouts),
+`--lr-navigation-menu-indicator-size` (default `var(--lr-size-0-375rem)`),
+`--lr-navigation-menu-indicator-color` (default
+`var(--lr-overlay-border, var(--lr-color-border-subtle))`, matching the panel edge), and
+`--lr-positioning-strategy` (read by the items when positioning their panels). All are read through
+inline fallbacks, so they can be set on the menu or any ancestor.
+
+**Collapsed layout.** A "Menu" toggle (`aria-expanded`/`aria-controls` pointing at the list; the
+visible text is the localized `menuLabel`) shows and hides the items as a column. Items stretch to
+the full width and each panel opens in flow below its trigger, indented with a decorative subtle
+rule. Hover and arrow keys are off; Escape first closes an open panel (focus to its trigger), then
+collapses the list (focus to the toggle). The same nodes serve both layouts; nothing moves between
+containers, so the collapse never drops focus. Crossing the breakpoint closes the open panel
+(source `programmatic`) and repairs focus. For a drawer, place the menu inside `lr-drawer` or
+`lr-page`'s `navigation` slot.
+
+**Host allocation.** The host defaults to `display: block; flex: 1 1 0%; min-inline-size: 0`. In a
+flex-row header (including `lr-page`'s header) the menu therefore takes the remaining space rather
+than its content size; a content-sized collapsed menu could otherwise shrink to its toggle and never
+measure wide enough to leave the collapsed layout. Outside a flex parent the declaration is inert.
+In a column flex parent (for example `lr-page`'s navigation region) the host grows in the block axis
+instead — set `flex: none` there. Shrink-to-fit contexts (an `auto` grid track, inline-flex, floats,
+absolute positioning) can still latch collapsed: give the menu a definite inline size there.
+
+**Motion.** Panels open and close through the `navigation-menu.show` and `navigation-menu.hide`
+registry animations; a switch between panels resizes the shared region (timed by
+`--lr-navigation-menu-switch-duration`) while the new content slides in through
+`navigation-menu.enter-from-start` or `navigation-menu.enter-from-end`. The menu is the registry host
+for every owned item, so `setAnimation(menu, 'navigation-menu.show', null)` applies to all of them.
+Reduced motion flattens every transition and skips the resize.
+
+**SSR and hydration.** The server renders the bar layout with the landmark named. Every link item is
+an `<a>`; every other item renders as a trigger (caret visible, `aria-expanded="false"`) because slot
+content cannot be inspected on the server, and every panel renders hidden, even for `open` markup.
+The first browser update drops the caret and ARIA from plain buttons, sets `role="listitem"` on the
+item hosts, keeps only the first `open` item, and reveals and positions its panel.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/layout/navigation-menu/navigation-menu.js';
+</script>
+
+<header style="display: flex; align-items: center; justify-content: space-between">
+  <a href="/">Acme</a>
+  <lr-navigation-menu aria-label="Main" mobile-breakpoint="40rem">
+    <lr-navigation-menu-item>
+      Products
+      <ul slot="panel">
+        <li><a href="/analytics">Analytics</a></li>
+        <li><a href="/billing">Billing</a></li>
+      </ul>
+    </lr-navigation-menu-item>
+    <lr-navigation-menu-item href="/docs" current>Docs</lr-navigation-menu-item>
+    <lr-navigation-menu-item href="/pricing">Pricing</lr-navigation-menu-item>
+  </lr-navigation-menu>
+  <a href="/sign-in">Sign in</a>
+</header>
+```
+
+The registration module also registers `lr-navigation-menu-item`.
+
+### `lr-navigation-menu-item`
+
+One entry of the bar. The kind follows from the markup:
+
+1. A safe `href` makes a **link item**: a native `<a>` with `aria-current="page"` while `current`
+   (otherwise `"false"`). Its `panel` slot is never displayed. This is decided from attributes alone,
+   so it is stable without JavaScript. An unsafe scheme such as `javascript:` renders a button.
+2. Otherwise the item is a native `<button type="button">`: a **disclosure trigger** when the `panel`
+   slot has content (it gains `aria-expanded` in both states, `aria-controls` pointing at the panel
+   in the same shadow root, and the caret), or a **plain button** with no disclosure state when it
+   does not — useful for single-page routers. Activating a plain button closes the open panel (and
+   collapses the collapsed list).
+
+The panel has no role and no name; the lists and links inside own the semantics. Outside an
+`lr-navigation-menu` the item works as a plain in-flow disclosure: no positioning, no overlay, no
+hover opening.
+
+**Properties:**
+
+- `accessibleLabel?: string` (attribute `aria-label`) — forwarded by presence to the link or button,
+  including an explicitly empty value.
+- `href: string = ''` — link URL, sanitized; a safe value makes a link item.
+- `target: string = ''` — native link target. Any non-empty value forces `noopener noreferrer`.
+- `rel: string = ''` — author tokens are kept, `opener` is dropped in any letter case, duplicates
+  collapse, and `noopener noreferrer` is added whenever `target` is set; nothing left omits the
+  attribute.
+- `current: boolean = false` (reflected) — on a link, `aria-current="page"`; on a trigger or plain
+  button, only the `base-current` part (a disclosure is not the page — mark the current link inside
+  the panel instead).
+- `open: boolean = false` (reflected) — whether the panel is shown. A write is refused silently only
+  when the item cannot disclose: it is a link item, or its `panel` slot is empty once slot content can
+  be inspected. Within one menu only one item is open at a time.
+
+**Methods:** `focus(options?)` and `click()` forward to the link or button.
+
+**Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ open, source }`, where
+`source` is `'user' | 'programmatic' | 'peer'`, the same vocabulary as `lr-details`), not cancelable,
+fired after an accepted change renders and never for initial markup. `user` covers click, Enter,
+Space, hover, Escape, light dismiss, focus leaving and link activation; `programmatic` covers `open`
+writes, the menu's `close()`, a layout change and losing the panel content; `peer` means a sibling
+opened. Panel content such as `lr-details` also bubbles `lr-toggle`, so a delegated listener filters
+on `event.target.localName`.
+
+**Slots:** default — the label; `start`/`end` — adornments inside the link or button; `panel` —
+flyout content; `expand-icon` — replaces the caret (inert, `aria-hidden`).
+
+**CSS parts:** `base` (the `<a>` or `<button>`, also carrying `base-current` while `current` and
+`base-open` while its panel is open — state lives in the part name because only pseudo-classes may
+follow `::part()`), `base-current`, `base-open`, `start`, `label`, `end`, `expand-icon` and `panel`.
+
+**Custom properties:** `--lr-navigation-menu-item-padding-inline` (default `var(--lr-space-l)`),
+`--lr-navigation-menu-item-min-block-size` (default
+`var(--lr-form-control-height-m, var(--lr-theme-form-control-height-m, var(--lr-size-2-5rem)))`,
+never below `--lr-icon-button-size`), `--lr-navigation-menu-item-font-size` (default
+`var(--lr-font-size-m)`), `--lr-navigation-menu-item-font-weight` (default
+`var(--lr-font-weight-medium)`), `--lr-navigation-menu-item-hover-bg` (default
+`var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-hover-color` (default
+`var(--lr-color-brand)`), `--lr-navigation-menu-item-active-bg` (default a `color-mix()` of
+`--lr-color-brand-quiet` toward `--lr-color-mix-partner`), `--lr-navigation-menu-item-open-bg`
+(default `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-current-color` (default
+`var(--lr-color-brand)`), `--lr-navigation-menu-item-current-font-weight` (default
+`var(--lr-font-weight-semibold)`), `--lr-navigation-menu-panel-padding` (default `var(--lr-space-s)`),
+`--lr-navigation-menu-panel-max-inline-size` (default `var(--lr-size-48rem)`, also capped by the
+space the viewport leaves), `--lr-navigation-menu-panel-indent` (default `var(--lr-space-l)`,
+collapsed layout), `--lr-navigation-menu-show-duration` and `--lr-navigation-menu-hide-duration`
+(default `var(--lr-duration-fast)`), `--lr-navigation-menu-switch-duration` (default
+`var(--lr-duration-base)`), the shared floating-surface family `--lr-overlay-surface`,
+`--lr-overlay-border` (panels take the subtle edge tier), `--lr-overlay-radius` and
+`--lr-overlay-shadow-anchored`, and `--lr-positioning-strategy` (the floating panel is `fixed` by
+default). All are inline fallbacks, so they can be set on the item, on the menu or on any ancestor.
+The item does not take the `size` ladder.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/layout/navigation-menu-item/navigation-menu-item.js';
+</script>
+
+<lr-navigation-menu-item>
+  Products
+  <ul slot="panel">
+    <li><a href="/analytics">Analytics</a></li>
+  </ul>
+</lr-navigation-menu-item>
+<lr-navigation-menu-item href="https://example.com/" target="_blank" rel="external">Example</lr-navigation-menu-item>
+```
+
 # Overlays, status & feedback (`components/overlays/`)
 
 ## Breaking changes in 10.0.0
@@ -22014,7 +22679,8 @@ precedence as `lr-progress-bar`'s `--lr-progress-indicator-variant-color`).
 
 `lr-dialog`, `lr-drawer`, `lr-popover`, `lr-dropdown` and `lr-tooltip` all open and close over the
 page, and as of 8.0.0 they do it through one contract. Each component's own section below documents
-what it _adds_ to that contract, not a private variant of it.
+what it _adds_ to that contract, not a private variant of it. `lr-context-menu` emits the same four
+events with the same timing and cancelability; the differences are noted below.
 
 **One way to open, one way to close.** All five expose `show()`, `hide()` and a reflected `open`
 boolean, and all three drive the same code path: `el.show()` is indistinguishable from
@@ -22049,6 +22715,10 @@ timing `wa-show`/`wa-hide` always had, so a mechanical `wa-*` → `lr-*` rename 
 with matching timing _and_ matching cancelability — which also means Lyra 7.x code that read
 `el.open` inside an `lr-show`/`lr-hide` handler, or treated the pair as purely informational, was
 relying on the opposite polarity and has to be re-read.
+
+`lr-context-menu` differs in three ways: its `lr-show` carries `LyraContextMenuShowDetail`; it has
+no `open` setter and no `show()` (a context menu needs a point, so it opens through a gesture or
+`showAt()`); and a close that a new gesture interrupts emits no `lr-after-hide`.
 
 `lr-dialog` and `lr-drawer` also expose cancelable `lr-initial-focus` and `lr-request-close` veto
 points, documented in their sections. Their cancelable `lr-close` fires **after** `lr-hide` and
@@ -22858,7 +23528,7 @@ footer rows, which are tighter than the body by default), `--lr-dialog-panel-dur
 `--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
 The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
 tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
-— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border)` — the panel edge and the
+— the panel fill), `--lr-overlay-border` (default `var(--lr-color-border-subtle)` — the panel edge and the
 header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
 corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
 panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
@@ -23086,6 +23756,8 @@ relied on `<lr-chip selected>` to create an action.
 - `toggleable: boolean = false` (reflected) — sole opt-in into the toggle/pressed interactive mode,
   independent of `selected`'s current value. Pair it with `selected` for an initially pressed chip;
   leave `selected` unset for an initially unpressed chip.
+  For a pressed-state button in control chrome (with `appearance`, the size ladder and a grouped
+  single tab stop) rather than filter-pill chrome, use `lr-toggle` / `lr-toggle-group`.
 - `value?: string` — opaque consumer bookkeeping value, never read, validated, or rendered by this
   component itself, only ever echoed back verbatim (including `undefined` if never set) in
   `lr-remove`'s detail
@@ -23344,7 +24016,7 @@ absent.
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
 **Themeable custom properties:** shared tokens only — `--lr-space-xs`, `--lr-color-surface`/
-`-border`/`-text`/`-text-quiet`, `--lr-radius`, `--lr-font`.
+`-border-subtle`/`-text`/`-text-quiet`, `--lr-radius`, `--lr-font`.
 
 **Optional peer deps:** none.
 
@@ -23610,6 +24282,9 @@ If the import fails, leave the native disclosure visible and usable.
   Note there is deliberately no `aria-haspopup="none"` — that is an invalid attribute value, not a
   neutral one, and axe reports it as a critical violation. `lr-dropdown` still pins `popupRole` to
   `menu`; the escape hatch lives on the general-purpose primitive.
+  For a whole bar of such flyouts — coordinated so one opens at a time, sharing one panel region,
+  with arrow keys between triggers and an optional collapsed layout — use `lr-navigation-menu`
+  (documented in `layout.md`) instead of several popovers.
 - `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
   keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
   closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either
@@ -23702,7 +24377,7 @@ fallbacks. Arrow size is half the square's width. Rendering the arrow switches `
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`var(--lr-color-border-subtle)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
 edge but never the radius — its corners are already cut by its clip path. None of the four is
 declared on `:host`, so a single declaration on `:root` retints every floating surface in the
@@ -23710,6 +24385,18 @@ application, and the same declaration on one component's own ancestor scopes the
 subtree. `--lr-overlay-shadow-anchored` is deliberately a different name from the modal tier
 `--lr-overlay-shadow-modal` that `lr-dialog`/`lr-drawer` read, so raising popups never raises
 dialogs.
+
+**Edge tier.** The `var(--lr-color-border-subtle)` edge default is the decorative tier, shared by
+every floating panel — popover, dropdown and menu, detail and preview cards, the selection
+toolbar, the dialog panel. A panel's outline is not what identifies a control (WCAG 2.2 SC 1.4.11):
+the panel itself is not operable, the anchored shadow lifts it off the page, and every item inside
+identifies itself, so a theme may set `--lr-theme-color-surface-border-subtle` below 3:1 for a
+hairline edge. Popups that belong to a form control — the listboxes of `lr-select`,
+`lr-combobox`, `lr-locale-picker`, `lr-model-select`, `lr-voice-picker` and `lr-mention-popover`,
+and the `lr-color-picker` and `lr-time-input` panels — instead default to the control tier,
+`var(--lr-color-border)`, keeping the 3:1 boundary of the field they open from. A consumer
+`--lr-overlay-border` wins on both kinds. While the subtle input is unset the two tiers resolve to
+the same colour.
 
 **`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
@@ -23773,13 +24460,9 @@ later text renders normally.
   Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
   already closed, so a pending timer can't reopen it behind the caller's back.
 - `trigger: string = 'hover focus'` — **new in 8.0.0.** A _space-separated_ list of `hover`,
-  `focus`, `focus-visible`, `click` and `manual`. `focus` opens on any focus, preserving the default
-  and existing behavior; `focus-visible` opens only when the trigger's actual focus target matches
-  `:focus-visible`, including a focused control inside a shadow-root trigger. Use it when opening a
-  tooltip on programmatic or pointer focus would obscure nearby content. `manual` (or an empty list)
-  leaves the tooltip entirely under programmatic control. Note the name collision: this string
-  property and the `trigger` _slot_ are different things — the slot holds the element, this property
-  says which of its interactions count.
+  `focus`, `click` and `manual`. `manual` (or an empty list) leaves the tooltip entirely under
+  programmatic control. Note the name collision: this string property and the `trigger` _slot_ are
+  different things — the slot holds the element, this property says which of its interactions count.
 - `manual: boolean = false` — equivalent to including `manual` in `trigger`; kept because it reads
   better on a tooltip that is only ever driven from script
 - `showDelay: number = 150` (attribute `show-delay`) and `hideDelay: number = 0` (attribute
@@ -23979,13 +24662,6 @@ The inner menu list owns scrolling within the popup's height limit, keeping a co
 header and footer visible. The outer `popup` and `content` parts allow overflow so nested submenus
 remain clickable outside the parent menu in every supported browser. This works with either
 submenu authoring shape, with or without `hoist` or an arrow; no overflow override is required.
-When the resolved strategy is `fixed` (from `positioning-strategy="fixed"`, `hoist`, or an
-inherited `--lr-positioning-strategy: fixed`) and `showPopover()` is supported, an open popup is
-promoted to the browser's top layer. This lets a fixed dropdown inside a transformed virtual-list
-row escape that row's clipping and stacking context. The popup stays promoted through its hide
-transition and returns to its ordinary shadow-tree stacking context after `lr-after-hide`;
-disconnecting also removes it from the top layer. If the browser lacks the Popover API, fixed
-positioning remains in use without promotion.
 
 An open lr-dropdown repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.
@@ -24013,7 +24689,9 @@ localized "Menu" fallback. A consumer-supplied menu keeps its own naming precede
 `aria-label` (including an explicit empty value), then an explicit nondefault `label`, then the
 dropdown fallback. Its `header` and `footer` slots remain rendered outside the inner
 `role="menu"` list while contained, including after live slot changes; Tab can therefore reach
-their controls without putting arbitrary content inside the menu role.
+their controls without putting arbitrary content inside the menu role. An open dropdown stays open
+when Tab moves focus out of it; `lr-context-menu` deliberately differs and closes when Tab leaves
+its surface.
 
 **Properties:**
 
@@ -24109,6 +24787,274 @@ default; style it only to debug the travel region.
     });
 </script>
 ```
+
+## `lr-context-menu`
+
+Turns any slotted region into a context-menu target. Each of these gestures opens the library's
+menu engine exactly once: a platform `contextmenu` (right-click, or Ctrl+click on macOS), a touch or
+pen press-and-hold, and Shift+F10 or the ContextMenu key while focus is inside the region. A pointer
+gesture opens the menu just beside the pointer (never under it); a keyboard gesture opens it below
+the focused element. It flips at the viewport edges, and mirrors under RTL. There is no Web
+Awesome or Shoelace counterpart; the behaviour follows the WAI-ARIA menu pattern.
+
+The menu content is exactly what `lr-dropdown` takes, so every row type composes unchanged:
+`lr-menu-item` / `lr-dropdown-item` rows (with `type="checkbox"`, `type="radio" group="…"`,
+`details` shortcut text, `variant="danger"`, `disabled` and `submenu` children), `lr-menu-label`,
+`<hr>` separators, or one consumer `<lr-menu>` with its `header` / `footer`. Import
+`lr-menu-label` and `lr-dropdown-item` yourself, as for `lr-dropdown`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.js';
+  import '@aceshooting/lyra-ui/components/layout/menu/menu-label.js';
+</script>
+
+<lr-context-menu label="File actions">
+  <div slot="trigger" class="file-card" tabindex="0">report.pdf</div>
+  <lr-menu-label>Edit</lr-menu-label>
+  <lr-menu-item value="copy">Copy<span slot="details">Ctrl+C</span></lr-menu-item>
+  <lr-menu-item value="wrap" type="checkbox" checked>Wrap lines</lr-menu-item>
+  <hr />
+  <lr-menu-item value="list" type="radio" group="view" checked>List</lr-menu-item>
+  <lr-menu-item value="grid" type="radio" group="view">Grid</lr-menu-item>
+  <lr-menu-item value="share">
+    Share
+    <lr-menu-item slot="submenu" value="email">Email</lr-menu-item>
+    <lr-menu-item slot="submenu" value="link">Copy link</lr-menu-item>
+  </lr-menu-item>
+  <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+</lr-context-menu>
+```
+
+**Properties:**
+
+- `label?: string` — accessible name of the generated menu. Name precedence: a consumer
+  `<lr-menu>`'s own `aria-label`, then its `label`; then a host `aria-label` on
+  `lr-context-menu`; then `label`; then the localized "Menu" (`menuLabel`, resolved with this
+  host's `.strings` / `lang`). An empty host `aria-label` and an empty `label` behave exactly like
+  unset, so the menu is never left unnamed. It is an accessible-name override, not form chrome.
+- `disabled: boolean = false` (reflected) — no gesture opens the menu, native events stay
+  un-prevented (so an enclosing region, or the platform menu, handles them), and a pending
+  press-and-hold is cancelled. Becoming disabled while open closes the menu through a cancelable
+  `lr-hide`.
+- `size: LyraSize = 'm'` (reflected) — propagated to the directly owned rows.
+- `open: boolean` — **read-only**. `true` from the moment the menu opens until a close commits, so
+  it still reads `true` inside `lr-hide` handlers. A context menu needs a point, so there is no
+  `open` setter and no argument-less `show()`: open it with a gesture or `showAt()`.
+
+**Methods:**
+
+- `showAt(point: LyraContextMenuPoint, options?: { returnFocusTo?: HTMLElement }): void` — opens
+  at a viewport point (`{ x, y, contextElement? }`), emitting a cancelable `lr-show` with
+  `source: 'programmatic'`. Focus returns to `options.returnFocusTo` when supplied; otherwise to the
+  element focused at call time **only if** it lies inside this region or inside `contextElement`;
+  otherwise nowhere. **When opening from a control outside the region** (a toolbar "more" button,
+  a map), pass `returnFocusTo`. `contextElement` is watched, so scrolling it away or removing it
+  closes the menu. Called while open, it silently re-anchors the menu (no lifecycle events) and
+  keeps the original return target unless a new one is passed. Non-finite coordinates, a disabled
+  instance and a disconnected host are ignored.
+- `hide(options?: { focusTrigger?: boolean }): Promise<void>` — closes and resolves after
+  `lr-after-hide` (or once a new open supersedes the close). `focusTrigger: false` skips focus
+  return. A no-op when closed.
+
+Every event below bubbles and is composed.
+
+**Events:**
+
+| Event | Detail | Cancelable | Fires |
+|---|---|---|---|
+| `lr-show` | `LyraContextMenuShowDetail` | **yes** | synchronously inside the gesture, only when the menu is closed |
+| `lr-after-show` | `null` | no | after placement and the enter animation |
+| `lr-hide` | `null` | yes | before closing, on every dismissal path except host removal; a veto keeps the menu open |
+| `lr-after-hide` | `null` | no | after the exit animation; **not** delivered for an interrupted close |
+| `lr-select` | `{ item }` | yes | the menu's own event bubbling through; preventing it keeps the menu open |
+
+```ts
+type LyraContextMenuSource = 'pointer' | 'long-press' | 'keyboard' | 'programmatic';
+interface LyraContextMenuShowDetail {
+  readonly source: LyraContextMenuSource;
+  readonly target: Element | null;   // innermost element; pierces open shadow roots
+  readonly path: readonly Element[]; // composed path, target up to the region element; frozen
+  readonly clientX: number;          // viewport point the menu is anchored to
+  readonly clientY: number;
+  readonly originalEvent: Event | null; // contextmenu / keydown / starting pointerdown; null for showAt()
+}
+```
+
+`source` is `'long-press'` for a press-and-hold and for a native `contextmenu` whose `pointerType`
+is `'touch'`; a native `contextmenu` whose point lies outside its target (keyboard or assistive
+technology synthesised) is element-anchored and reports `'keyboard'`. The detail, and its `path`
+array, are frozen; `target`, `originalEvent` and each `path` entry keep their identity.
+
+**The veto contract.** `lr-show` is a real veto: preventing it keeps the menu closed and leaves
+the native `contextmenu` / `keydown` **un-prevented**, so the platform's own menu appears, and it
+claims the gesture so no enclosing region asks. This is the opposite polarity from `lr-data-grid`'s
+`lr-cell-contextmenu`, where preventing the event *suppresses* the native menu: here preventing
+`lr-show` *allows* it. **iOS exception:** the region carries a static
+`-webkit-touch-callout: none` so a press-and-hold can open the menu; a vetoed press-and-hold on
+iOS therefore brings back no link or image callout unless you opt that element back in (recipe
+below).
+
+**Interrupted close.** A new gesture while the menu is open (a right-click or press-and-hold
+elsewhere in the region) closes it and reopens it at the new point. That cycle emits `lr-hide` and
+then the next `lr-show`, with **no** `lr-after-hide` between them; do not pair them one-to-one.
+
+**Closing and focus.** Escape (topmost overlay only), activating an item, an outside pointer,
+`disabled`, and `hide()` close the menu. Escape, activation and `hide()` return focus to the
+captured target: an element focused inside the region when the gesture arrived (a right-click
+that focused the clicked control, or the element Shift+F10 was pressed on), `showAt()`'s
+`returnFocusTo`, or an element inside its `contextElement`; a press-and-hold that left focus on an
+unrelated control elsewhere returns nowhere, so no virtual keyboard reopens and nothing scrolls. An
+outside pointer lets the pointer keep its own focus. **Tab or Shift+Tab out of the menu closes it
+without moving focus back**; this deliberately differs from `lr-dropdown`, which stays open when
+focus tabs away. Tab still moves between a consumer `lr-menu`'s header / footer controls and the
+rows without closing. Scrolling or a viewport resize that moves the anchor by more than 2 px, or
+removing the anchor, closes the menu (once, even if `lr-hide` is vetoed); focus then returns
+without scrolling, and only if it was inside the menu. Layout shift, the anchor's own resize and
+transforms (a hover lift, a press spring-back) never close it. The removal check observes the
+anchor's box, so an anchor with no box of its own (an inline text run, `display: contents`) is
+not noticed until the next scroll.
+
+**Keyboard.** In the region, Shift+F10 or the ContextMenu key (no Ctrl / Alt / Meta) opens the
+menu below the focused element and focuses the first enabled row; while open it silently
+re-anchors. Every other key is untouched. In the open menu the `lr-menu` engine applies: arrows,
+Home / End, type-ahead, Enter / Space, submenu keys that mirror under RTL, and Escape (innermost
+submenu first). Shift+F10 / ContextMenu inside the menu is swallowed.
+
+**Nesting and surfaces.** With nested regions the innermost **enabled** region wins; a disabled
+inner region lets the gesture reach the outer one, and a vetoed inner one blocks it. A gesture
+that starts inside an open menu, or inside an open `lr-dropdown` / `lr-popover` surface placed in
+the region, never opens a second menu (a gesture on such a dropdown's slotted trigger is handled
+normally). Right-clicks on rows, labels, separators and popup padding are prevented, so no native
+menu appears on top of the custom one; an editable header / footer field keeps its native menu.
+
+**Slots:** `trigger` — the region: any number of elements; every gesture that starts inside them,
+including inside their open shadow roots, is considered. Default — the menu content above. **Rows
+must be direct children** of `lr-context-menu` (or of the consumer `<lr-menu>`): a wrapper element
+around rows silently removes them from keyboard navigation and selection.
+
+**CSS parts:** `popup` — the positioned menu surface; `content` — its padding wrapper. **Custom
+state:** `:state(open)` while open, for example
+`lr-context-menu:state(open) [slot='trigger'] { outline: 2px solid var(--lr-color-brand); }`.
+The host and its region wrapper are `display: contents`, so the region lays out in the host's
+parent; set `lr-context-menu { display: block }` to get a box.
+
+**Themeable custom properties** (inherited into the composed surface; set them on
+`lr-context-menu` or any ancestor): `--max-width`
+(`var(--lr-overlay-max-inline-size, var(--lr-size-20rem))`), `--lr-overlay-surface`
+(`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (`var(--lr-color-border-subtle)`),
+`--lr-overlay-radius` (`var(--lr-radius)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
+`--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), and `--show-duration` / `--hide-duration`
+(`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
+The popup always uses fixed positioning (the anchor is a viewport point), so the cascading
+`--lr-positioning-strategy` is not consulted. It is not promoted to the top layer: it stacks exactly
+like `lr-dropdown` (`--lr-overlay-stack-index`). Motion uses the `dropdown.show` /
+`dropdown.hide` registry entries, flattened under `prefers-reduced-motion`; overriding those
+entries also affects context menus.
+
+**Accessibility.** The region gets no role or ARIA (there is no trigger control). For Shift+F10 to
+be reachable the region must contain a focusable element, or give one slotted element
+`tabindex="0"`. Offer every critical action through another visible path as well. The menu
+exposes `role="menu"` and the usual row roles; focus entering it announces it, so no live region
+is used.
+
+**shadcn Context Menu mapping:**
+
+| shadcn part | Lyra composition |
+|---|---|
+| Item | `lr-menu-item` / `lr-dropdown-item` |
+| CheckboxItem | the same with `type="checkbox"` |
+| RadioGroup / RadioItem | the same with `type="radio" group="…"` (the `group` attribute replaces the wrapper) |
+| Label | `lr-menu-label` |
+| Separator | `<hr>` |
+| Group | **no wrapper element**: place the rows directly and delimit the group with `lr-menu-label` and / or `<hr>` |
+| Shortcut | `<span slot="details">` on the row, plus your own `aria-keyshortcuts` |
+| Sub / SubTrigger / SubContent | a row with `slot="submenu"` children, or `<lr-menu slot="submenu">` |
+| destructive item | `variant="danger"` |
+| disabled item | `disabled` |
+
+**Recipe — per-target items.** Fill or filter the rows synchronously inside `lr-show`, reading the
+gesture's `path`. `target` can sit inside a component's shadow root (a right-click on an
+`lr-button` reports the button's internal element), where `target.closest()` stops at the shadow
+boundary, so search `path` instead:
+
+```html
+<lr-context-menu id="rows">
+  <div slot="trigger">
+    <div data-id="7"><lr-button>Invoice 7</lr-button></div>
+    <div data-id="8"><lr-button>Invoice 8</lr-button></div>
+  </div>
+  <lr-menu-item value="open">Open</lr-menu-item>
+  <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+</lr-context-menu>
+<script type="module">
+  const menu = document.querySelector('#rows');
+  let rowId;
+  menu.addEventListener('lr-show', (event) => {
+    const row = event.detail.path.find((el) => el.matches('[data-id]'));
+    if (!row) return event.preventDefault(); // not on a row: keep the platform menu
+    rowId = row.getAttribute('data-id');
+  });
+  menu.addEventListener('lr-select', (event) => {
+    console.log(event.detail.item.value, rowId);
+  });
+</script>
+```
+
+**Recipe — native menu for editable targets.** The component does not exempt text fields in the
+region automatically. Veto `lr-show` for them so the platform menu (paste, spelling) appears:
+
+```js
+menu.addEventListener('lr-show', (event) => {
+  const target = event.detail.target;
+  if (target?.matches('input, textarea, [contenteditable]') || target?.isContentEditable) {
+    event.preventDefault();
+  }
+});
+```
+
+**Recipe — iOS callout.** To keep the native link / image callout on specific elements, opt them
+back in and veto `lr-show` for the same targets:
+
+```css
+lr-context-menu a[href],
+lr-context-menu img {
+  -webkit-touch-callout: default;
+}
+```
+
+**Recipe — maps and canvases.** `lr-map`'s map peer prevents `contextmenu` for right-drag rotation
+(and whenever the map itself listens for `contextmenu`), and the component ignores an event that
+is already prevented, so a region over a map never opens on its own. Open it from the map's own
+event instead, registered after `lr-map-load` (`mapEl.map` is `undefined` until then):
+
+```js
+mapEl.addEventListener('lr-map-load', () => {
+  mapEl.map.on('contextmenu', (e) => {
+    menu.showAt(
+      { x: e.originalEvent.clientX, y: e.originalEvent.clientY, contextElement: mapEl },
+      { returnFocusTo: mapEl },
+    );
+  });
+});
+```
+
+The same pattern fits a `<canvas>`: call `showAt()` from its own `contextmenu` handler (and
+`preventDefault()` there).
+
+**Recipe — composing with `lr-data-grid`.** Wrap the grid in the region and leave
+`lr-cell-contextmenu` **un-prevented** (a prevented native event is ignored here). For a
+right-click and for Shift+F10 the grid's `lr-cell-contextmenu` arrives **before** `lr-show`, so
+store its `rowKey` and read it in `lr-show`. For the ContextMenu key the grid only emits
+`lr-cell-contextmenu` from the platform's follow-up `contextmenu`, which arrives **after**
+`lr-show` and not on every OS; update the rows again in `lr-cell-contextmenu` when the menu is
+already open (rows changed while open are repaired by the engine), or fall back to
+`selectedRowKeys`.
+
+**Limitations.** Gestures inside `<iframe>` content belong to the frame's document and are never
+seen. A scroller inside a closed shadow root is not observed by the anchor watcher. Two copies of
+the library on one page arbitrate an opened gesture through `defaultPrevented` and open surfaces by
+tag name, but a veto only claims the gesture within one copy.
 
 ## `lr-spinner`
 
@@ -24361,7 +25307,7 @@ _Palette — what `variant` chooses_ (new in 8.0.0): `--lr-badge-tint` (private 
 `var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
 variant's row of the semantic grid), `--lr-badge-solid` (private default
 `var(--lr-color-fill-loud)`, the loud fill used by `appearance="accent"`), `--lr-badge-edge`
-(private default `var(--lr-color-border)`, the border color), `--lr-badge-ink` (private default
+(private default `var(--lr-color-border-subtle)`, the border color), `--lr-badge-ink` (private default
 `var(--lr-color-text)`, the text color) and
 `--lr-badge-on-solid` (default `var(--lr-color-on-loud)`, the text color that stays legible on
 `--lr-badge-solid`). An inherited or direct public palette value remains authoritative. Neutral is
@@ -24899,6 +25845,23 @@ These named interfaces and helper signatures are available to typed integrations
     selected: boolean;
   }`
 
+- **`components-overlays-context-menu-context-menu-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.class.js`.
+  `LyraContextMenuShowDetail {
+    readonly source: LyraContextMenuSource;
+    readonly target: Element | null;
+    readonly path: readonly Element[];
+    readonly clientX: number;
+    readonly clientY: number;
+    readonly originalEvent: Event | null;
+  }`
+  Import: `@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.class.js`.
+  `LyraContextMenuPoint {
+    x: number;
+    y: number;
+    contextElement?: Element;
+  }`
+
 - **`components-overlays-dialog-confirm-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/overlays/dialog/confirm.js`.
   `confirm(options: ConfirmOptions): Promise<boolean>`
@@ -25082,7 +26045,7 @@ shared-clamp note.
 
 The menu popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -25547,7 +26510,8 @@ current imperative search match; `--lr-json-viewer-string-color` (default
 `--lr-json-viewer-boolean-color` (default `var(--lr-color-warning)`), and
 `--lr-json-viewer-null-color` (default `var(--lr-color-text-quiet)`) — per-value-type color hooks.
 Plus shared
-tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
+tokens `--lr-color-border-subtle`,
+`--lr-color-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.
 
@@ -25960,6 +26924,9 @@ The popup is a floating surface and paints from the **shared overlay-surface fam
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: the listbox completes the
+value of the text field it is bound to and keeps that field's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the popup reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
@@ -26185,7 +27152,7 @@ inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`
 background of a `highlights` line by tone,
 `--lr-diff-view-highlight-active-outline` (default `var(--lr-color-brand)` — outline of the line
 whose covering highlight is `activeHighlightId`), plus
-shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
+shared tokens `--lr-color-border`/`-border-subtle`/`-surface`/`-success`/`-success-quiet`/`-danger`/
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.
 
@@ -26466,8 +27433,10 @@ A semantic separator: renders `<hr part="base" role="separator" aria-orientation
 
 **Events:** none. **Slots:** none. **CSS parts:** `base`.
 
-**Themeable custom properties:** `--color` (falls back to `--lr-color-border`), `--width` (falls
-back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied on the cross axis).
+**Themeable custom properties:** `--color` (falls back to `--lr-color-border-subtle`, the
+decorative-edge token, which itself resolves to `--lr-color-border` unless a theme sets a subtle
+border), `--width` (falls back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied
+on the cross axis).
 
 The host is `display: block` when horizontal and `display: inline-block; block-size: 100%` when
 vertical, so a vertical divider fills its flex/grid row's height with no extra CSS — but it needs a
@@ -27242,7 +28211,7 @@ leaves that content's presentation under the caller's control.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
-`--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
+`--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border-subtle` for the decorative inset ring.
 
 **Sizing.** The host has no intrinsic `width` — it sizes from `font-size` (`block-size: 1em`,
 `inline-size` derived from `--lr-flag-aspect-ratio` via CSS `aspect-ratio`), so it scales naturally
@@ -28107,8 +29076,9 @@ integration; there is no declarative controls property.
 var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
   `--lr-map-popup-close-button-active-color` (default `var(--lr-color-brand)`) — pressed
   background and foreground of `popup-close-button`.
-- Shared tokens — `--lr-space-xs/-s`, `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`,
-  `--lr-radius`.
+- Shared tokens — `--lr-space-xs/-s`, `--lr-color-surface`, `--lr-color-border` (the navigation
+  control group), `--lr-color-border-subtle` (popup, legend and legend-limit rule edges),
+  `--lr-shadow`, `--lr-radius`.
 
 **Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). `<lr-map>` styles MapLibre's
 generated canvas, marker, popup, and control DOM inside its shadow root; a page-level MapLibre
@@ -28397,12 +29367,7 @@ enabled buttons retain pointer feedback.
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
 - `label?: string` — form-control label. Omission uses the localized dropzone instruction
-  (`fileInputDefaultLabel`); an explicit empty string suppresses the form-label chrome too. The
-  dropzone independently keeps its localized instruction when a form label is supplied or empty,
-  so a short label such as “Reference files” does not replace the drop-or-browse text. Use the
-  `dropzone` slot when you want to replace that instruction. With no nonempty label, that localized
-  instruction also supplies the fallback accessible name unless `accessibleLabel` or host
-  `aria-label` is provided. `hint: string = ''`
+  (`fileInputDefaultLabel`); an explicit empty string suppresses that fallback. `hint: string = ''`
   remains empty when omitted and can be supplied through the named slot as well
 - `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
   it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
@@ -28584,7 +29549,8 @@ the content stacked on it. The shared field halo `--lr-form-control-focus-shadow
 paints a `box-shadow` while the dropzone holds focus; it is additive, so the
 `[part='base']:focus-visible` outline is untouched. Plus shared
 tokens — `--lr-space-xs`, `--lr-space-l`,
-`--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
+`--lr-color-border`, `--lr-color-border-subtle` (the selected-file rows' edge), `--lr-radius`,
+`--lr-color-surface`, `--lr-color-text-quiet`,
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 
@@ -28978,7 +29944,7 @@ already focused on the chip still hears an upload failure — goes to the librar
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
-`--lr-attachment-chip-border` (default `var(--lr-color-border)`) — the trio's private defaults
+`--lr-attachment-chip-border` (default `var(--lr-color-border-subtle)`) — the trio's private defaults
 change per `status` (`uploading` → brand/brand-quiet/transparent, `error` →
 danger/danger-quiet/transparent, `success` → success/success-quiet/transparent), while an inherited
 or direct public value remains authoritative; `--lr-attachment-chip-compact-thumbnail-size` (default
@@ -29086,11 +30052,6 @@ is an unknown attribute now: `bytes` stays `0` and the badge silently renders wi
 **CSS parts:** `base`, `icon`, `label`, `description` (consumer-authored registry metadata in label
 mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).
-
-In `mode="icon"`, the localized format label is rendered inside a constrained, logical-start-aligned
-text box so `text-overflow: ellipsis` can truncate multi-word labels cleanly at the badge size. The full
-localized label remains available as the accessible name; use `mode="label"` when the full visible
-format name is needed.
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size). `--lr-file-icon-bg` (default `var(--lr-color-brand-quiet)`)
@@ -31419,7 +32380,7 @@ it sizes the `plot` region and the host's minimum block size, while a visible ta
 legend grows the host in normal flow. The `height` property writes only a private fallback, so this
 public token wins across valid, invalid, and unset `height` updates. Set it on the host or an
 ancestor, not a shadow-tree descendant, since custom properties only cascade downward);
-`--lr-chart-grid-color` (default `var(--lr-color-border)`),
+`--lr-chart-grid-color` (default `var(--lr-color-border-subtle)`),
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
 `--lr-chart-tooltip-text` (default `var(--lr-color-text)`) — each resolved fresh via
@@ -31454,7 +32415,9 @@ declaration on a DOM element (the outline is painted by the stylesheet, not by C
 consumed directly with no `getComputedStyle` bridging; it is an inline `var()` fallback at the point
 of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
 `--lr-border-width-thin` it always was. `--lr-chart-canvas-hover-outline-color` (default
-`var(--lr-chart-grid-color)`) independently controls that outline's color.
+`var(--lr-chart-grid-color, var(--lr-color-border))`) independently controls that outline's color;
+it follows a set `--lr-chart-grid-color`, but left unset it stays on the control-grade
+`--lr-color-border` rather than the grid lines' decorative `--lr-color-border-subtle` default.
 
 `--lr-chart-pattern-step` (default `var(--lr-space-2xs)`) is the tile size of the texture painted on
 `[part="legend-swatch"]` while `forced-colors: active` matches — the legend half of the non-colour
@@ -32209,7 +33172,7 @@ sets the canvas box-outline stroke width in pixels — the same override mechani
 individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
-hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color)`) sets
+hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color, var(--lr-color-border))`) sets
 its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
 `lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather
@@ -32736,7 +33699,8 @@ defaults to `color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partn
 var(--lr-color-mix-hover))`; `--lr-document-preview-download-link-active-bg` uses the same mix with
 `var(--lr-color-mix-active)`, styling the native download action's hover and pressed backgrounds.
 Plus shared tokens
-`--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
+`--lr-color-border` (action buttons and the progress ring), `--lr-color-border-subtle` (the frame
+and header rule), `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
 
@@ -35427,11 +36391,8 @@ uses for its own `[part="body"]`.
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content.
 - `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
-  GFM task-list checkboxes stay disabled and take the bullet's place; each task item exposes
-  `part="task-item"` and `data-task="true"`, while a list containing only task items has
-  `data-task-list="true"`. The checkbox has a visible token-based border and checked fill rather
-  than relying on the browser's dim disabled appearance. A task's primary inline text supplies its
-  accessible name; nested task text is excluded, and a blank task receives no generated name.
+  GFM task-list checkboxes stay disabled. A task's primary inline text supplies its accessible name;
+  nested task text is excluded, and a blank task receives no generated name.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — `target` applied to every
   rendered `<a>`, with `rel="noopener noreferrer"` always added alongside it whenever a `target` is
   emitted. `'_blank'` (the default) preserves the original output; a falsy value (`null`, or the
@@ -35447,26 +36408,14 @@ uses for its own `[part="body"]`.
   than overflowing past the HTML heading levels. `0` (the default) preserves the original
   `<h${token.depth}>` output
 - `streaming: boolean = false` (reflected) — marks the host `aria-busy="true"` while partial Markdown
-  is still arriving and lets consumers target `lr-markdown[streaming]`. `streamingRender` selects
-  the streaming presentation. Setting `streaming=false` parses and renders the latest complete
-  content; busy state also remains true while parser dependencies are loading
-- `streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`,
-  reflected), where `MarkdownStreamingRenderMode = 'plain' | 'progressive'`. The default `plain`
-  preserves the existing behavior of showing accumulated source text while streaming. In
-  `progressive` mode, completed top-level blocks render as Markdown as they settle and only the
-  trailing in-progress block remains plain text. Settled block nodes keep their identity as new
-  chunks arrive, and syntax highlighting is deferred until a block settles. An unterminated fenced
-  block is shown as an open, unhighlighted code block. The final full-document parse still runs
-  when streaming ends, including reference links that need content from later blocks.
-- `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — opts fenced blocks into a
-  localized language label and copy button. Copy uses the raw fence source, not highlighted HTML.
-  In progressive streaming, the header appears only after its closing fence arrives; with the
-  default plain streaming mode, chrome appears after the stream settles. Indented code blocks do not
-  receive this chrome.
+  is still arriving and lets consumers target `lr-markdown[streaming]`. Both `lr-markdown` and
+  `lr-markdown-core` display accumulated plain text without parsing or highlighting while it is
+  true. Setting `streaming=false` parses and renders the latest complete content; busy state also
+  remains true while parser dependencies are loading
 - `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
   blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
-  peer is available; set `false` to keep plain output even when `shiki` is installed. In progressive
-  mode, a block can be highlighted after it settles; the mutable tail remains unhighlighted.
+  peer is available; set `false` to keep plain output even when `shiki` is installed. No effect
+  while `streaming` is `true`
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — same shape and purpose as
   `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
   shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded
@@ -35539,21 +36488,11 @@ placed first and preserved inside both ceilings.
 or a failed render — so a consumer can target `lr-markdown [part='content'][data-fallback]` to
 style it distinctly), `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
 anchor-jump message), `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`),
-`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`; a list made entirely of
-task items carries `data-task-list="true"`), `task-item` (each GFM task `<li>`, also marked
-`data-task="true"`), `code-block` (every rendered fenced/indented `<pre>`, isolated with LTR text
-direction even inside an RTL document), `inline-code` (every rendered inline `<code>` span —
-backtick spans, not fenced blocks; also isolated LTR), `link` (every rendered `<a>`),
-`table-wrapper` (the logical inline-scroll container for wide tables), `table` (every rendered `<table>`),
+`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every
+rendered fenced/indented `<pre>`), `inline-code` (every rendered inline `<code>` span — backtick
+spans, not fenced blocks), `link` (every rendered `<a>`), `table` (every rendered `<table>`),
 `blockquote` (every rendered `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered
-inline or block math span, carrying `data-display="inline"|"block"`), and, when
-`code-block-chrome` is enabled, `code-block-header`, `code-block-language`, and `code-block-copy`
-(the header, localized language label, and copy button for each closed fenced block)
-
-Wide GFM tables scroll horizontally inside `table-wrapper`, following the current text direction.
-Cell text wraps at word boundaries when possible and breaks a single word only when that word
-cannot fit the column. Inline code and code blocks keep LTR character order in RTL documents while
-their surrounding layout continues to follow the page direction.
+inline or block math span, carrying `data-display="inline"|"block"`)
 
 **Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
@@ -35571,8 +36510,9 @@ fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (defau
 `var(--lr-color-brand-quiet)` — background of every rendered `[part="table"]` header cell),
 `--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`,
-`--lr-color-text-quiet`, `--lr-radius`.
+`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`
+(blockquote bar), `--lr-color-border-subtle` (table cell rules), `--lr-color-text-quiet`,
+`--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
 `loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
@@ -35597,21 +36537,6 @@ after that lazy load resolves; each instance owns its configuration. Call `rende
     });
 </script>
 ```
-
-Progressive rendering and code-copy chrome are opt-in; the following keeps completed Markdown
-blocks visible while text streams and adds a localized language label plus source-copy button to
-closed fenced blocks:
-
-````html
-<lr-markdown id="reply" streaming streaming-render="progressive" code-block-chrome></lr-markdown>
-<script type="module">
-  import "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
-
-  const reply = document.querySelector("#reply");
-  reply.content = ['A settled paragraph.', '', '```js', 'const answer = 42;', '```'].join('\n');
-  reply.streaming = false;
-</script>
-````
 
 Rendering never ships unsanitized or broken markup silently. If `marked` fails to load, or throws
 while parsing malformed input, the component falls back to plain text (`white-space: pre-wrap`, no
@@ -35694,9 +36619,8 @@ A fenced code block whose language isn't a key in `languages` always renders the
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
 rendering path as `<lr-code-block-core>`'s identical contract. A block that _is_ highlighted follows the
 page's resolved theme through the same `[part="content"][data-dark-theme="true"]` hook `<lr-markdown>`
-documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables and task-list presentation (task items use `part="task-item"`, task-only lists carry `data-task-list="true"`, and wide tables scroll inside `part="table-wrapper"`),
-links, blockquotes, images, LTR-isolated code, progressive streaming and opt-in code-block chrome,
-heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
+documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables,
+links, blockquotes, images, heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
 support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highlight-activate`/
 `lr-text-select`/`lr-anchor-result` events), math via the optional `katex` peer, the sanitize/
 `htmlMode`/streaming fallback matrix and known gotchas — is identical to `<lr-markdown>`; see that
@@ -35711,8 +36635,6 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected),
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
@@ -35744,10 +36666,9 @@ as the full class; the core route exports its own `Marked` alias.
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
-anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`, `task-item`,
-`code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
-`table-wrapper`, `table`, `blockquote`, `img`, `math` —
-identical to `<lr-markdown>`'s own parts.
+anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`,
+`code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math` — identical to
+`<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
@@ -35899,7 +36820,7 @@ role/status colors or borders. The named hooks are the stable, narrow geometry c
 set once above a whole transcript. They are consumed as inline `var()` fallbacks rather than
 declared on `:host`, so the host cannot shadow an inherited value.
 
-Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
+Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
 `--lr-color-danger-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`,
 `--lr-transition-fast`, and `--lr-transition-ambient` (default `1.8s ease-in-out`) — the
@@ -36805,7 +37726,8 @@ without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity
 literal: set a length to retune it, or `none` to let the control fill its container the way
 `lr-select` does. Like every other name here it is read as a `var()` fallback and never declared on
 `:host`, so a value set on `:root` or any ancestor still reaches it. Plus shared tokens —
-`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`,
+`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
+`--lr-color-border-subtle` (the `provider-badge` separator), `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
 
@@ -36814,7 +37736,9 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-model-select-radius`, which still wins when set.
+`--lr-model-select-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 **Optional peer deps:** none.
 
@@ -36892,10 +37816,6 @@ properties existed:
   `<lr-markdown>`'s own `internalLinkPrefix`.
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
-- `streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected)
-  and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the composed
-  Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
-  `<lr-markdown>`; see its **Properties** section above.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
   `<lr-markdown>`'s own `highlightCode`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
@@ -36929,8 +37849,7 @@ never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
 `<lr-markdown>` documents forwarded verbatim (no aliasing — none collides with `base`/`cursor`)
 from the composed `<lr-markdown>` in Markdown mode via `exportparts`: `content`, `heading`,
-`paragraph`, `list`, `task-item`, `code-block`, `code-block-header`, `code-block-language`,
-`code-block-copy`, `inline-code`, `link`, `table-wrapper`, `table`, `blockquote`, `img`, `math`. A
+`paragraph`, `list`, `code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math`. A
 host-level `lr-streaming-text::part(link)`/`::part(img)` rule reaches the rendered `<a>`/`<img>`
 exactly as the same rule does applied directly to `<lr-markdown>`.
 
@@ -36952,16 +37871,8 @@ implementation contains the opt-in `katex` loader; this wrapper forwards its own
 sets `math` here.
 
 ```html
-<lr-streaming-text
-  id="out"
-  coalesce-ms="80"
-  streaming
-  streaming-render="progressive"
-  code-block-chrome
-></lr-streaming-text>
+<lr-streaming-text id="out" coalesce-ms="80" streaming></lr-streaming-text>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.js";
-
   const out = document.getElementById("out");
   let text = "";
   for await (const token of tokenStream) {
@@ -36983,10 +37894,9 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-  `streamingRender`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
-  configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
-  `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
-  see **Properties** above); plain-text mode
+`languages` verbatim, and the rest of `<lr-markdown>`'s configuration surface verbatim too
+(`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+`highlightCode`, `headingAnchors`, `math`, `maxHeight` — see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The
 blinking cursor degrades
 to a static, always-visible bar under `prefers-reduced-motion: reduce`. In plain-text mode it sits
@@ -37041,12 +37951,9 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected);
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
-(attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
-`math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
-the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
-progressive output, and `codeBlockChrome` enables the localized code label and source-copy action.
+`highlightCode: boolean = true` (attribute `highlight-code`); `headingAnchors: boolean = false`
+(attribute `heading-anchors`); `math: boolean = false`; `maxHeight: string = ''` (attribute
+`max-height`).
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
 `<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
@@ -37060,9 +37967,8 @@ share one implementation.
 
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
 `<lr-markdown-core>` documents forwarded verbatim from the composed `<lr-markdown-core>` in
-Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `task-item`,
-`code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
-`table-wrapper`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
+Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `code-block`,
+`inline-code`, `link`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
 `<lr-streaming-text>` documents, since `<lr-markdown>` and `<lr-markdown-core>` share the same
 documented part vocabulary.
 
@@ -37343,7 +38249,7 @@ line marked by `highlight-lines` or a `line-range` entry in `highlights`, in bot
 dark-theme rendering paths), `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-code-block-language-color` (default `var(--lr-color-brand)`) — the header `language` pill's
 background and text color, independent of the active-line outline above — plus shared tokens
-`--lr-color-border`, `--lr-radius`,
+`--lr-color-border-subtle`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in
@@ -37635,7 +38541,7 @@ card. `layout="compact"` uncaps the card by default and reads the same name, so 
 compact card too. The panel also sets `--lr-model-select-max-inline-size: none` on its own
 `[part="model-row"]`, so the nested selector fills the row rather than stopping at its standalone
 24rem ceiling — set that name on the row to re-cap it. Otherwise it consumes shared tokens
-`--lr-space-l/-m/-s/-xs`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
+`--lr-space-l/-m/-s/-xs`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-text-quiet`.
 
 **Optional peer deps:** none — it composes the library's own `<lr-model-select>` and `<lr-slider>`
@@ -37815,7 +38721,9 @@ invalid actions and later duplicates are omitted before roving focus ownership.
 
 **Slots:** default — additional controls (e.g. `lr-copy-button`, `lr-icon-button`,
 `lr-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key
-navigation.
+navigation. A standalone `lr-toggle` (pin, read aloud) is a `LyraToolbarActionProvider` and joins the
+toolbar's single roving stop through its internal button; an `lr-toggle-group` slotted here keeps its
+own tab stop, and its toggles contribute no actions while grouped.
 
 **CSS parts:** `base` (the toolbar, `role="toolbar"`), `copy-button` (the embedded
 `lr-copy-button`), `regenerate-button`, `edit-button`,
@@ -38337,10 +39245,8 @@ icon — the item has no default slot to receive one); unset renders the built-i
 `renderActions?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. an `lr-dropdown` containing `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
-the host normally and never trigger `lr-select`. When its resolved positioning strategy is `fixed`
-and the browser supports `showPopover()`, the popup escapes the transformed virtual row into the
-browser top layer, so the row cannot clip or cover its menu. Otherwise it retains fixed-position
-fallback behavior. Unset renders only the built-in
+the host normally and never trigger `lr-select`. An open nested `lr-dropdown` keeps its virtual row
+above later rows even if focus temporarily leaves the menu. Unset renders only the built-in
 `rowActions`.
 `renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`
@@ -38604,7 +39510,7 @@ describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`
 
 The anchored breakdown tooltip is a floating surface and paints from the **shared overlay-surface
 family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`),
-`--lr-overlay-border` (default `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-border` (default `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this surface together with every other floating surface in the
 library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
@@ -39005,7 +39911,8 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-overlay-surface` — Shared floating-surface fill, on the listbox. Default:
   `var(--lr-color-surface-overlay)`.
 - `--lr-overlay-border` — Shared floating-surface edge colour, on the listbox. Default:
-  `var(--lr-color-border)`.
+  `var(--lr-color-border)` — the control tier, not the decorative `var(--lr-color-border-subtle)`
+  floating panels default to, because the listbox belongs to the form control it opens from.
 - `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
   `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
@@ -39170,37 +40077,14 @@ wins over the shadow stylesheet regardless of specificity.
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
 Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint and displays
-accumulated plain text without parsing or highlighting by default. The `streaming-render` property
-can opt those parts into progressive Markdown. Replacing that same-id part with `state: 'complete'`
-parses and renders the final content.
+accumulated plain text without parsing or highlighting. Replacing that same-id part with
+`state: 'complete'` parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected)
-and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to built-in text
-and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
-blocks during a streaming part and preserves the `plain` fallback by default; code chrome adds the
-localized language label and raw-source copy action to fenced code. These settings do not replace
-the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
-`toolDisplay: MessagePartsToolDisplay = 'chip'` (attribute `tool-display`, reflected) — `'chip'`
-preserves the existing separate call chip and result part. `'disclosure'` pairs each rendered
-built-in tool call with the first result whose `invocationId` matches its call `invocation.id`, hides
-that result at its original position, and shows it inside a collapsed inline details panel at the
-call's position. Pending calls show their localized call status; when a paired result arrives, the
-summary shows localized success or error. Pairing uses the full effective parts list, so a visible
-call can find a result outside the `maxRenderedParts` window, while calls outside that window do not
-consume a visible result. A result is paired only once; duplicate results remain in their own rows.
-If `renderPart` is supplied, pairing occurs only when both the
-call and result are in the rendered window and both callbacks return `undefined` (built-in
-rendering); custom output keeps its part independent. Finite, nonnegative
-`call.metadata.durationMs` adds a localized duration;
-`call.metadata.redactedFields` may list dotted paths such as `args.apiKey`, `result.secret`, or
-`error.stack` to mask while the disclosure is expanded. Redaction is bounded; malformed or
-over-budget paths fail closed by showing the localized hidden-value placeholder. Unsupported values
-normalize to `'chip'`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -39215,16 +40099,50 @@ renderer would otherwise wire up for it (the `error` part's retry button's `lr-p
 `citation` part's activation `lr-citation-select`, and the composed `<lr-tool-call-chip>`/
 `<lr-tool-result-view>`/`<lr-attachment-chip>`/`<lr-widget-renderer>` children's own events) — a
 host overriding an interactive part type must reimplement whatever of that interaction it still
-wants; `accessibleLabel: string | null = null` (attribute `aria-label`).
+wants; `accessibleLabel: string | null = null` (attribute `aria-label`);
+`toolDisplay: MessagePartsToolDisplay = 'chip'` (attribute `tool-display`, reflected, including the
+default — every instance carries `tool-display="chip"` until set, like `content-mode="markdown"`).
+`renderPart` is called exactly once per rendered part, in order, in both tool displays, and its
+output is the host's own: it is never masked by `redactedFields`.
 
-Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`.
+Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`;
+unsupported `tool-display` values normalize and reflect as `chip`.
 
-`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
-'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
-`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is also exported from
-`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js` and the package
-root. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
-`lr-markdown-core` component modules. Tool results are a strict
+**Tool display.** `MessagePartsToolDisplay = 'chip' | 'block'` (exported from the class module).
+`chip` (the default, unchanged) renders a `tool-call` part as `<lr-tool-call-chip>` and a
+`tool-result` part as a separate `<lr-tool-result-view>`. `tool-display="block"` renders each
+`tool-call` through one collapsed `<lr-tool-call-block>` (header `Used web_search`, status glyph,
+duration; expanding shows arguments, error and result in place) and pairs it with its result:
+
+- The first rendered, non-custom `tool-call` per non-blank `invocation.id` pairs with the first
+  rendered, non-custom `tool-result` whose `invocationId` matches, wherever that result sits in the
+  window (a result before its call still folds into the call's position). The folded result part
+  renders nothing — no wrapper — but still counts toward `max-rendered-parts`.
+- Everything else renders as in chip display: unpaired results, a result whose call is outside the
+  rendered window, duplicate results after the first, and custom-rendered calls or results. A
+  second call part with the same invocation id renders its own unpaired block.
+- The block binds `name`, `callId` and `args` from the invocation, and `redactedFields` from the
+  invocation-level paths described under redaction below; `result` from
+  the paired part (else `invocation.result`); `error` from the paired part when it carries one (else
+  `invocation.error`); and `durationMs = endedAt - startedAt` when both are set (else no duration).
+  `expanded` is never bound, so a user-expanded block stays open across `parts` updates.
+- Block status, first match wins: invocation `denied` → `denied`; invocation `error` or a paired
+  error result → `error`; a paired result still `streaming` → `running`; any paired result →
+  `success`; otherwise the invocation's own status (an unknown value → `pending`), so a call still
+  waiting on its result keeps showing `pending`/`running`.
+- The tool-call wrapper stretches to the message width in block display.
+
+**Redaction in both displays.** An invocation's `redactedFields` (dotted paths rooted at
+`args`/`result`/`error`, see `<lr-tool-call-block>`) masks every built-in rendering of its payload
+with the localized `Value hidden`: in block display the block's details; in chip display, and for
+unfolded results in block display, the chip's `summary` (the invocation error) and a standalone
+result part's result and error text. The paths come from the first `tool-call` part for that
+invocation id in the full `parts` sequence — for blocks too — so a windowed-out call still masks its
+standalone result, and a later call part for the same id cannot unmask what the first one hid. With no `redactedFields` anywhere, nothing is cloned and every binding receives the
+original reference.
+
+`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
+discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
 retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
 and data parts carry exactly one of `data` or `widget`. Empty ids and later duplicate occurrences
@@ -39233,16 +40151,17 @@ are ignored so each rendered identity and announcement remains unambiguous.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
-`lr-tool-call-chip-select`, `lr-widget-action`,
+`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
+In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
+`lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
+emitted. Tool errors are never announced; only `error` parts are.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-disclosure`,
-`tool-header`, `tool-status`, `tool-duration`, `tool-args`, `tool-result` (also used for the paired
-result inside the disclosure), `tool-error` (paired error copy), `tool-result-error`, `code-block`,
-`code-block-header`, `code-block-language`, `code-block-copy` (forwarded from text and reasoning
-Markdown parts), `citation`, `attachment`, `data`, `audio`, `audio-control`, `audio-transcript`,
-`error`, `retry`.
+**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
+`tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
+`audio-transcript`, `error`, `retry`. Block display forwards five block parts:
+`tool-block-header`, `tool-block-body`, `tool-block-args`, `tool-block-result`,
+`tool-block-error`.
 
 **Themeable custom properties:** `--lr-message-parts-streaming-color` (default
 `var(--lr-color-text-quiet)`) controls a streaming wrapper's inherited text color.
@@ -39266,14 +40185,6 @@ error id and later adding it again creates a new announcement.
 import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
 ```
 
-```html
-<lr-message-parts
-  tool-display="disclosure"
-  streaming-render="progressive"
-  code-block-chrome
-></lr-message-parts>
-```
-
 **Additional API surface:**
 
 - `lr-anchor-result` event — Passthrough from rendered Markdown.
@@ -39284,11 +40195,12 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
   `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
 - `lr-remove` event — Passthrough from a rendered attachment.
-- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
+- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content, or
+  tool-call block (`callId` included).
 - `lr-retry` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
-- `lr-toggle` event — Passthrough from a rendered reasoning panel or tool disclosure.
+- `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
 - `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip. The
   `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
@@ -39480,7 +40392,7 @@ values fall back to the default and negative values clamp to `0`. Collision math
 
 The toolbar is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -40074,7 +40986,7 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 
 The anchored detail tooltip is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -40591,7 +41503,7 @@ tool list's mouse-hover preview on `[part="body"]` has its own four-longhand out
 `transparent` to opt out entirely), and `--lr-tool-select-dialog-body-hover-outline-offset`
 (default `calc(-1 * var(--lr-border-width-thin))`, kept inward so the ring isn't clipped by the
 body's own scrolling). Unset, all four resolve to the rule's previous literal paint. Plus shared
-`--lr-space-*`, `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`,
+`--lr-space-*`, `--lr-color-surface/-border/-border-subtle/-text/-text-quiet/-warning`, `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-checkbox>` and `<lr-switch>`, both bundled
@@ -40723,7 +41635,7 @@ pending duration/toggle accent without changing the shared brand token;
 padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
 `var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
 `--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
-`--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
+`--lr-thinking-panel-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
@@ -40733,7 +41645,7 @@ four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (def
 `transparent` to opt out entirely), and `--lr-thinking-panel-body-hover-outline-offset` (default
 `calc(-1 * var(--lr-focus-ring-offset))`). Unset, all four resolve to the rule's previous literal
 paint. Plus shared
-`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
+`--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
 
@@ -40874,10 +41786,10 @@ hover/focus, internal-toggle, and copy-button-hover accent, plus the two density
 `var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s while
 `compact`). The scoped color hooks avoid changing
 the shared quiet/brand tokens used by surrounding UI. `--lr-stack-trace-background` (default
-`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-stack-trace-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; `frame="plain"` still removes all three outright. Plus shared tokens
-`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
+`--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.
 
@@ -41021,8 +41933,8 @@ without changing error text or other danger-coloured surfaces), and
 `--lr-tool-approval-dialog-hover-border-color` (default `var(--lr-color-brand)` — border color of
 the raw-JSON args editor on hover, giving mouse users the same "this is editable" affordance every
 other text-entry surface in the library provides), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
-`--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
+`--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-color-border-subtle`,
+`--lr-radius`, `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-json-viewer>`, a bundled dependency of this
@@ -41407,12 +42319,12 @@ whenever the slot has no assigned content), `body`.
 than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
 not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
 `--lr-result-card-background` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
-(default `var(--lr-color-border)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
+(default `var(--lr-color-border-subtle)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
 the card chrome without a `::part(base)` override. The border-color hook also colors
 `[part="header"]`'s divider, so a retuned card doesn't strand a mismatched interior rule;
 `frame="plain"` still drops the outer chrome and that divider.
-Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
-`--lr-radius`.
+Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border-subtle`,
+`--lr-color-surface`/`-text`, `--lr-radius`.
 
 ### `lr-result-field`
 
@@ -41650,7 +42562,7 @@ var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
 status icons without changing shared status tokens. `--lr-task-list-background` (default
-`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
@@ -41733,7 +42645,7 @@ viewport's block size; not declared on `:host`, so it is inherited from the host
 `--lr-terminal-surface-color` (default `var(--lr-color-surface-raised)`) controls the card-frame
 background and the fallback foreground for inverse ANSI segments without an explicit background;
 `frame="plain"` remains transparent. `--lr-terminal-border-color` (default
-`var(--lr-color-border)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
+`var(--lr-color-border-subtle)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
 chrome — the border-color hook also colors the toolbar/log divider `frame="plain"` keeps.
 `--lr-terminal-surface-color` keeps its established name; nothing was renamed.
 `--lr-terminal-toolbar-button-hover-bg` (default
@@ -41969,7 +42881,7 @@ by selector from outside the shadow root it renders into (the plain or the inter
 `lr-table`'s identical `cell(row)`-anchor hook; set it to `revert` for the UA default link color.
 The card chrome itself is retunable the same way:
 `--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
-`--lr-activity-feed-border-color` (default `var(--lr-color-border)`) colors both its border and the
+`--lr-activity-feed-border-color` (default `var(--lr-color-border-subtle)`) colors both its border and the
 header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
 `var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
 `::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the
@@ -42043,7 +42955,7 @@ badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
 `[part="base"]` padding while `compact`. `--lr-commit-card-border-color` (default
-`var(--lr-color-border)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
+`var(--lr-color-border-subtle)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
 card's border and corner radius, and `--lr-commit-card-background` (default `transparent`) gives it
 a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
 you opt in. `frame="plain"` still removes the border and radius.
@@ -42571,7 +43483,7 @@ is unset. Like the other density/state properties in this family they are inline
 their point of use rather than `:host` declarations, so either can be set on the element _or on any
 ancestor_ — one rule on a run list retunes every compact run inside it.
 `--lr-agent-run-background` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
-(default `var(--lr-color-border)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
+(default `var(--lr-color-border-subtle)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
 `[part="base"]`'s card chrome without a `::part(base)` override; `frame="plain"` still removes all
 three outright.
 
@@ -43805,6 +44717,19 @@ These named interfaces and helper signatures are available to typed integrations
     expanded: boolean;
   }`
 
+- **`components-agent-tools-tool-call-block-tool-call-block-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`.
+  `ToolCallBlockRenderErrorDetail {
+    toolName: string;
+    error: unknown;
+    callId: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`.
+  `ToolCallBlockToggleDetail {
+    expanded: boolean;
+    callId: string;
+  }`
+
 - **`components-agent-tools-tool-call-chip-tool-call-chip-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js`.
   `ToolChipSelectDetail {
@@ -43928,6 +44853,100 @@ These named interfaces and helper signatures are available to typed integrations
   `normalizeLyraSpans(values: readonly unknown[], activeSpanId?: string | null): LyraSpanProjection`
   Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
   `normalizeLyraSpanStatus(value: unknown): LyraSpanStatus`
+
+## `lr-tool-call-block`
+
+One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware
+verb (`Used web_search`, `Failed to use web_search`, …) beside a status glyph and an optional
+duration; activating it expands the block in place to show the call's arguments, then its error,
+then its result. First-party invention (no Web Awesome equivalent). `<lr-message-parts
+tool-display="block">` renders each paired tool-call/tool-result through one of these blocks.
+
+Details are deferred: a collapsed block renders an empty `body` and never reads `args` or
+`result`. Expanded, `args` render through `<lr-json-viewer>` and `result` through
+`<lr-tool-result-view>`, so any renderer registered with `registerToolRenderer()` still applies.
+With no details yet the body reads the localized `Pending`/`Running` while the call is in
+progress, and `No data` only for a terminal status.
+
+**Properties:**
+
+- `name: string = ''` — tool name; an empty name renders the localized generic `Tool call` label
+- `callId: string = ''` (attribute `call-id`) — invocation id echoed in `lr-toggle` and
+  `lr-render-error` details
+- `status: ToolCallStatus = 'pending'` (reflected, including the default) —
+  `'pending'|'running'|'success'|'error'|'denied'`; selects the header verb, glyph and accent.
+  Values outside the set normalize and reflect as `pending`
+- `expanded: boolean = false` (reflected) — whether the details are shown
+- `label?: string` — header override, used verbatim (including `''`); when set, the localized
+  status text renders beside it in `status-text`. Unset renders the localized status verb
+- `durationMs?: number` (attribute `duration-ms`) — shown only when finite; negative values clamp
+  to `0`. Formatted in the effective locale (`820ms`, `1.5s`)
+- `args: unknown` (property only) — call arguments; the identity is kept and never snapshotted
+- `result: unknown` (property only) — call result; `undefined` means no result yet
+- `error?: string` — a non-empty string renders the error section (caller text, verbatim)
+- `redactedFields: readonly string[] = []` (property only) — dotted paths within
+  `args`/`result`/`error` to mask with the localized `Value hidden` placeholder. A bare
+  `'args'`/`'result'`/`'error'` masks the whole branch, arrays are walked by index
+  (`result.rows.0.ssn`), and a path with no match is a no-op. The same bounded rules as
+  `<lr-tool-timeline>`: more than 100 paths, a path over 4,096 characters or 64 segments, or a walk
+  past 10,000 nodes fails closed to the placeholder, as does an unreadable list. Clone-owned: assign
+  a new array to change it
+
+**Events:**
+
+- `lr-toggle` (`detail: ToolCallBlockToggleDetail = { expanded: boolean; callId: string }`) —
+  after a header activation changes `expanded`; never for programmatic writes. Not cancelable
+- `lr-render-error` (`detail: ToolCallBlockRenderErrorDetail = { toolName: string; error: unknown;
+  callId: string }`) — the composed result view's `lr-render-error`, contained and re-emitted from
+  the host with `callId` added. The result view fires it whenever no registered renderer matches
+  (not only when one fails), so an expanded block with an unregistered tool name emits it on each
+  expand and on each `result`/`args` identity change while expanded. A collapsed block renders no
+  result view and emits nothing
+- `lr-copy`, `lr-copy-error`, `lr-error`, `lr-search-change` — passthrough from the composed
+  arguments `<lr-json-viewer>`
+
+**Methods:** none. Focus lands natively on the header button.
+
+**Slots:** none.
+
+**Keyboard:** Tab reaches the header; Enter or Space toggles it. When expanded, Tab continues into
+the arguments viewer, then to the `result` section — which is a keyboard stop (`tabindex="0"`)
+only while a wide custom renderer overflows it, so it can be scrolled — then into the result's own
+controls. Collapsing while focus is inside the details returns focus to the header.
+
+**CSS parts:** `base` (the card), `header` (the disclosure `<button>`), `toggle` (the chevron,
+first in the header), `icon` (status glyph wrapper), `label`, `status-text` (only while `label` is
+set), `duration` (only while finite), `body` (the disclosed region), `args`, `args-label`,
+`result`, `result-label`, `error`, `error-label`, `empty` (the no-details message).
+
+**Themeable custom properties:**
+
+- `--lr-tool-call-block-background` (default `var(--lr-color-surface)`) — card fill
+- `--lr-tool-call-block-border-color` (default `var(--lr-color-border)`) — card edge and
+  header/body divider
+- `--lr-tool-call-block-radius` (default `var(--lr-radius)`) — card radius
+- `--lr-tool-call-block-accent` — status glyph colour; its private default follows `status`
+  (`--lr-color-text-quiet`, then brand while running, success, danger on error, warning when denied)
+- `--lr-tool-call-block-error-color` (default `var(--lr-color-danger)`) — error section text
+
+The running glyph spins and the pending glyph pulses at `--lr-transition-ambient`; both stop under
+`prefers-reduced-motion: reduce`.
+
+**Optional peer deps:** none.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.js';
+</script>
+
+<lr-tool-call-block name="web_search" call-id="call-1" status="success" duration-ms="1450"></lr-tool-call-block>
+<script type="module">
+  const block = document.querySelector('lr-tool-call-block');
+  block.args = { query: 'lyra', apiKey: 'sk-secret' };
+  block.result = { hits: 3 };
+  block.redactedFields = ['args.apiKey'];
+</script>
+```
 
 # Retrieval, knowledge graph & grounding (`components/retrieval/`)
 
@@ -44602,7 +45621,7 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 
 The anchored detail popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -45250,7 +46269,7 @@ public value remains authoritative in every status. Shared tokens include
 
 The anchored source-preview popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
@@ -45362,7 +46381,7 @@ while collapsed).
 (default `var(--lr-space-2xs)`) and `--lr-source-list-compact-list-padding` (default
 `var(--lr-space-s)`) — `[part="list"]` gap/padding while `compact`. All four are inline `var()`
 fallbacks at their point of use, so any can be set on the element or an ancestor. Otherwise shared
-tokens — `--lr-color-border`, `--lr-color-surface`,
+tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-brand` / `-brand-quiet`, `--lr-radius`, `--lr-space-xs`/`-s`/
 `-m`, `--lr-transition-fast`, `--lr-focus-ring-*`.
 
@@ -45436,7 +46455,7 @@ button — only rendered when the `full` slot has content).
 `[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
 `var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
 the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens
-elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
+elsewhere. Plus shared tokens — `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text` / `-text-quiet`, `--lr-color-brand`, `--lr-radius`, `--lr-space-xs`/`-s`,
 `--lr-focus-ring-*`.
 

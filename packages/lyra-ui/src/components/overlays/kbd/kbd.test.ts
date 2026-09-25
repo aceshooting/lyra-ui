@@ -469,3 +469,17 @@ it('is accessible in a populated multi-modifier state', async () => {
   const el = (await fixture(html`<lr-kbd keys="mod+shift+p"></lr-kbd>`)) as LyraKbd;
   await expect(el).to.be.accessible();
 });
+
+it('draws the key-cap border and its inset edge in the subtle border tier', async () => {
+  const el = (await fixture(html`
+    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+      <lr-kbd keys="mod"></lr-kbd>
+    </div>
+  `)) as HTMLDivElement;
+  const kbd = el.querySelector('lr-kbd') as LyraKbd;
+  await kbd.updateComplete;
+  const key = kbd.shadowRoot!.querySelector('[part="key"]') as HTMLElement;
+  expect(getComputedStyle(key).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(key).boxShadow).to.include('rgb(1, 2, 3)');
+  expect(getComputedStyle(key).boxShadow).to.not.include('rgb(7, 8, 9)');
+});

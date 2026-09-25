@@ -86,7 +86,7 @@ on the inline presentation),
 `--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
-they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr-color-surface`,
+they do not affect inline panels. Plus shared tokens (`--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).
 
 **Optional peer deps:** none.

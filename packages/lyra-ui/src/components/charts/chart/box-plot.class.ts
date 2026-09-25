@@ -325,7 +325,7 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @slot data-table - An optional consumer-provided complete/paginated accessible table alternative.
  * @cssprop [--lr-chart-height=var(--lr-size-280px)] - Consumer-owned chart height. The `height`
  *   property supplies only a private fallback, so this public token always wins when set.
- * @cssprop [--lr-chart-grid-color=var(--lr-color-border)] - Canvas grid-line color.
+ * @cssprop [--lr-chart-grid-color=var(--lr-color-border-subtle)] - Canvas grid-line color.
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Canvas tick and axis-title color.
  * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-xs)] - Canvas axis tick-label font size.
  *   Same token name and default as `lr-chart`'s equivalent, so theming either retunes both;
@@ -339,7 +339,7 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @cssprop --lr-chart-legend-item-active-bg - Legend-item pressed background.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
  *   `[part='canvas']` hover-state outline.
- * @cssprop [--lr-chart-canvas-hover-outline-color=var(--lr-chart-grid-color)] - Color of the
+ * @cssprop [--lr-chart-canvas-hover-outline-color=var(--lr-chart-grid-color, var(--lr-color-border))] - Color of the
  *   `[part='canvas']` hover-state outline. Same token and default as `<lr-chart>`.
  * @cssprop [--lr-chart-pattern-step=var(--lr-space-2xs)] - Tile size of the texture painted on
  *   `[part='legend-swatch']` while `forced-colors: active` matches, where the eight-color series

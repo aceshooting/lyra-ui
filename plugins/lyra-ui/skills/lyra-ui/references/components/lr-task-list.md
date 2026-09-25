@@ -85,7 +85,7 @@ var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
 status icons without changing shared status tokens. `--lr-task-list-background` (default
-`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.

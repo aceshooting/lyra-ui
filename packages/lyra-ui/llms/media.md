@@ -95,7 +95,7 @@ leaves that content's presentation under the caller's control.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
-`--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
+`--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border-subtle` for the decorative inset ring.
 
 **Sizing.** The host has no intrinsic `width` — it sizes from `font-size` (`block-size: 1em`,
 `inline-size` derived from `--lr-flag-aspect-ratio` via CSS `aspect-ratio`), so it scales naturally
@@ -960,8 +960,9 @@ integration; there is no declarative controls property.
 var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
   `--lr-map-popup-close-button-active-color` (default `var(--lr-color-brand)`) — pressed
   background and foreground of `popup-close-button`.
-- Shared tokens — `--lr-space-xs/-s`, `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`,
-  `--lr-radius`.
+- Shared tokens — `--lr-space-xs/-s`, `--lr-color-surface`, `--lr-color-border` (the navigation
+  control group), `--lr-color-border-subtle` (popup, legend and legend-limit rule edges),
+  `--lr-shadow`, `--lr-radius`.
 
 **Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). `<lr-map>` styles MapLibre's
 generated canvas, marker, popup, and control DOM inside its shadow root; a page-level MapLibre
@@ -1437,7 +1438,8 @@ the content stacked on it. The shared field halo `--lr-form-control-focus-shadow
 paints a `box-shadow` while the dropzone holds focus; it is additive, so the
 `[part='base']:focus-visible` outline is untouched. Plus shared
 tokens — `--lr-space-xs`, `--lr-space-l`,
-`--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-color-text-quiet`,
+`--lr-color-border`, `--lr-color-border-subtle` (the selected-file rows' edge), `--lr-radius`,
+`--lr-color-surface`, `--lr-color-text-quiet`,
 `--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 
@@ -1831,7 +1833,7 @@ already focused on the chip still hears an upload failure — goes to the librar
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
-`--lr-attachment-chip-border` (default `var(--lr-color-border)`) — the trio's private defaults
+`--lr-attachment-chip-border` (default `var(--lr-color-border-subtle)`) — the trio's private defaults
 change per `status` (`uploading` → brand/brand-quiet/transparent, `error` →
 danger/danger-quiet/transparent, `success` → success/success-quiet/transparent), while an inherited
 or direct public value remains authoritative; `--lr-attachment-chip-compact-thumbnail-size` (default

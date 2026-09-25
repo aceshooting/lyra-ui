@@ -413,6 +413,8 @@ function deactivateEntry(
   deferResourceRelease = false,
 ): (() => void) | undefined {
   if (!entry.active) return undefined;
+  // Read before any cleanup: unregistering can run consumer hooks and DOM writes that move focus.
+  const heldFocus = panelHoldsFocus(entry);
   rebaseReturnTargets(entry);
   const wasTopmost = unregisterEntry(entry, deferResourceRelease);
   const deferredResourceRelease = entry.deferredResourceRelease;
@@ -427,9 +429,18 @@ function deactivateEntry(
     restoreEntryFocus(entry);
     return deferredResourceRelease;
   }
+  // Hand focus to the surviving top overlay only when the closing one held it. An overlay that closes
+  // while focus sits elsewhere (a hover-closed tooltip or panel, with focus in an unrelated field) must
+  // leave that focus alone rather than pull it into an unrelated overlay beneath. A focus-trapping
+  // overlay beneath still reclaims focus, since keeping focus inside it is its contract.
   const next = entry.state.stack[entry.state.stack.length - 1];
-  if (next) focusEntry(next);
+  if (next && (heldFocus || next.options.trapFocus)) focusEntry(next);
   return deferredResourceRelease;
+}
+
+function panelHoldsFocus(entry: OverlayEntry): boolean {
+  const panel = entry.options.panel();
+  return panel !== null && composedContains(panel, deepActiveElement(entry.state.document));
 }
 
 /**

@@ -84,6 +84,8 @@ the menu relationship and expanded state on the element that actually receives f
 browsers intentionally clear each serialized internal IDREF attribute after its explicit element
 list is assigned. Browsers without those APIs retain the forwarded string attributes as
 best-effort fallbacks.
+For an icon-only toggle that owns its pressed state (with a vetoable request and `lr-change`), use
+`lr-toggle` with a host `aria-label` instead of managing `aria-pressed` yourself.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native interactive root,
 activating the action button or a safe anchor through the same path as pointer/keyboard input.

@@ -21,6 +21,8 @@ A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
 non-disabled items. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
+Re-picking the selected value never clears it; for an optional choice the user may clear, or for
+zero-or-more pressed buttons, use `lr-toggle-group`.
 Navigation starts from the segment that actually received the keyboard event, even when a
 controlled `value` write changed the selected or remembered roving item first.
 

@@ -21,6 +21,10 @@ A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the ori
 axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
 horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
 
+For an exactly-one choice in button chrome (text alignment, view mode), prefer this group with
+`lr-radio-button` over `lr-toggle-group`: `role="radio"` conveys exclusivity and position, which
+`aria-pressed` cannot. A choice the user may clear belongs on `lr-toggle-group selection-mode="single"`.
+
 Host `aria-describedby` references resolve onto the internal `role="radiogroup"` before its local
 hint/error guidance. References track unresolved IDs, target replacement/removal/reinsertion,
 reconnect, and document adoption. Group descriptions remain on the group; child radios can carry

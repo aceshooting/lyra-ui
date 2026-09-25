@@ -65,7 +65,7 @@ export const styles = css`
     padding: var(--lr-space-l);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* Modal tier, not the anchored-panel tier the popover name suggests: it sits on the modal
        layer above a full-viewport backdrop scrim, and centers itself like a dialog when

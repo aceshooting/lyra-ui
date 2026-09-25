@@ -114,7 +114,7 @@ export interface LyraCommitCardEventMap {
  * @cssprop [--lr-commit-card-background=transparent] - Fill of the outer card (`[part="base"]`)
  *   while `frame="card"`, unset by default so the card takes the surface it sits on.
  *   `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-commit-card-border-color=var(--lr-color-border)] - Colour of the outer card's
+ * @cssprop [--lr-commit-card-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border.
  * @cssprop [--lr-commit-card-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.

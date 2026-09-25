@@ -341,6 +341,9 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
+The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
 `<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the

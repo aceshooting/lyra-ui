@@ -92,7 +92,7 @@ viewport's block size; not declared on `:host`, so it is inherited from the host
 `--lr-terminal-surface-color` (default `var(--lr-color-surface-raised)`) controls the card-frame
 background and the fallback foreground for inverse ANSI segments without an explicit background;
 `frame="plain"` remains transparent. `--lr-terminal-border-color` (default
-`var(--lr-color-border)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
+`var(--lr-color-border-subtle)`) and `--lr-terminal-radius` (default `var(--lr-radius)`) complete that card
 chrome — the border-color hook also colors the toolbar/log divider `frame="plain"` keeps.
 `--lr-terminal-surface-color` keeps its established name; nothing was renamed.
 `--lr-terminal-toolbar-button-hover-bg` (default

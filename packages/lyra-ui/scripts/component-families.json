@@ -289,6 +289,12 @@
     "resize-observer": "utility",
     "tour": "utility",
     "visually-hidden": "utility",
-    "funnel": "data"
+    "funnel": "data",
+    "toggle": "forms",
+    "toggle-group": "forms",
+    "context-menu": "overlays",
+    "navigation-menu": "layout",
+    "navigation-menu-item": "layout",
+    "tool-call-block": "agent-tools"
   }
 }

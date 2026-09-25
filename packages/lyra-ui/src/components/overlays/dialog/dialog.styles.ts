@@ -164,7 +164,7 @@ export const styles = css`
        internal boundaries too -- a header rule in the base border colour against a retinted panel
        edge is the asymmetry this family exists to remove. */
     border-block-end: var(--lr-border-width-thin) solid
-      var(--lr-overlay-border, var(--lr-color-border));
+      var(--lr-overlay-border, var(--lr-color-border-subtle));
   }
   [part~="heading"] {
     flex: 1 1 auto;
@@ -265,7 +265,7 @@ export const styles = css`
     /* The exact mirror of the header rule above, and repointed with it: two panel-edge rules that
        disagree about which border token they read is a visible defect the moment either is set. */
     border-block-start: var(--lr-border-width-thin) solid
-      var(--lr-overlay-border, var(--lr-color-border));
+      var(--lr-overlay-border, var(--lr-color-border-subtle));
     overflow-wrap: anywhere;
   }
   /* Footer content is consumer-owned light DOM, which the wrapper's responsive rules do not select

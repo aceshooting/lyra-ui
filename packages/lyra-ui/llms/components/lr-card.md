@@ -109,11 +109,13 @@ hidden entirely when empty), `body` (wrapper around the default slot), `footer` 
 `footer` and `footer-actions` slots, hidden entirely when both are empty).
 
 **Themeable custom properties:** `--spacing` (default `var(--lr-space-m)`) controls the padding and
-gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`,
-`--border-radius`, and `--border-width` control the outer and section borders. Otherwise shared
-tokens — `--lr-color-border`/`-surface`/`-brand`/
-`-brand-quiet`, `--lr-radius`, `--lr-space-s`/`-m`, `--lr-transition-fast`,
-`--lr-focus-ring-*`.
+gap around card sections. Shoelace-compatible `--padding` is its fallback; `--border-color`
+(default `var(--lr-color-border-subtle)`), `--border-radius`, and `--border-width` control the outer
+and section borders. An `actionable` or linked (`href`) card is the exception: unset, its outer edge
+falls back to `--lr-color-border`, because that edge is then the whole-card control's only visible
+boundary (WCAG 2.2 SC 1.4.11); its header and footer rules stay on the subtle tier. Otherwise shared
+tokens — `--lr-color-border`/`-border-subtle`/`-surface`/`-brand`/`-brand-quiet`, `--lr-radius`,
+`--lr-space-s`/`-m`, `--lr-transition-fast`, `--lr-focus-ring-*`.
 Appearance and interaction paint can be rethemed independently through `--lr-card-outlined-bg`
 (the DEFAULT `outlined` appearance's background, and `accent`'s, which adds a stripe without
 restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-details>`'s

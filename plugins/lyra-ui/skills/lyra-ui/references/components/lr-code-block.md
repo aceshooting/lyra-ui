@@ -155,7 +155,7 @@ line marked by `highlight-lines` or a `line-range` entry in `highlights`, in bot
 dark-theme rendering paths), `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-code-block-language-color` (default `var(--lr-color-brand)`) — the header `language` pill's
 background and text color, independent of the active-line outline above — plus shared tokens
-`--lr-color-border`, `--lr-radius`,
+`--lr-color-border-subtle`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in

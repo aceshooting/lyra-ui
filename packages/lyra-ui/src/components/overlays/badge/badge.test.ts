@@ -274,8 +274,15 @@ describe('appearance', () => {
     const el = (await fixture(html`<lr-badge>Neutral</lr-badge>`)) as LyraBadge;
     const surface = getComputedStyle(base(el));
     expect(surface.backgroundColor).to.equal(resolvedColor(el, 'background-color', '--lr-color-surface'));
-    expect(surface.borderTopColor).to.equal(resolvedColor(el, 'color', '--lr-color-border'));
+    expect(surface.borderTopColor).to.equal(resolvedColor(el, 'color', '--lr-color-border-subtle'));
     expect(surface.color).to.equal(resolvedColor(el, 'color', '--lr-color-text'));
+  });
+
+  it('draws the neutral edge in the subtle border tier, not the control-grade border', async () => {
+    const el = (await fixture(html`<lr-badge
+      style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9);"
+    >Neutral</lr-badge>`)) as LyraBadge;
+    expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
   });
 
   it('fills solidly with on-loud text for appearance="accent"', async () => {

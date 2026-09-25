@@ -1274,3 +1274,20 @@ describe('attachment-chip defensive edges', () => {
     expect(previews).to.equal(0);
   });
 });
+
+it('draws the resting chip edge in the subtle border tier while the progress track stays control-grade', async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+      <lr-attachment-chip name="a.zip"></lr-attachment-chip>
+      <lr-attachment-chip name="b.zip" status="uploading" progress="42"></lr-attachment-chip>
+    </div>
+  `)) as HTMLElement;
+  const [pending, uploading] = [...wrapper.querySelectorAll<LyraAttachmentChip>('lr-attachment-chip')];
+  await pending!.updateComplete;
+  await uploading!.updateComplete;
+  const base = pending!.shadowRoot!.querySelector<HTMLElement>('[part="base"]');
+  const track = uploading!.shadowRoot!.querySelector<HTMLElement>('[part="progress"]');
+  expect(base === null || track === null, 'base or progress part missing').to.be.false;
+  expect(getComputedStyle(base!).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(track!).backgroundColor).to.equal('rgb(7, 8, 9)');
+});

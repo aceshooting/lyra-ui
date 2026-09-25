@@ -123,7 +123,7 @@ tool list's mouse-hover preview on `[part="body"]` has its own four-longhand out
 `transparent` to opt out entirely), and `--lr-tool-select-dialog-body-hover-outline-offset`
 (default `calc(-1 * var(--lr-border-width-thin))`, kept inward so the ring isn't clipped by the
 body's own scrolling). Unset, all four resolve to the rule's previous literal paint. Plus shared
-`--lr-space-*`, `--lr-color-surface/-border/-text/-text-quiet/-warning`, `--lr-radius`,
+`--lr-space-*`, `--lr-color-surface/-border/-border-subtle/-text/-text-quiet/-warning`, `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-checkbox>` and `<lr-switch>`, both bundled

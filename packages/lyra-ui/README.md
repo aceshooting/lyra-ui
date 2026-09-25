@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 288 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 294 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -153,7 +153,7 @@ import "@aceshooting/lyra-ui/all.js";
 > upgrade — `<lr-select>` renders as an unknown inert element with its light DOM showing through and
 > no console message. If elements stopped working after upgrading and nothing failed, this is why.
 
-`all.js` registers 272 tags — every component **except** the 16 inventory-designated
+`all.js` registers 278 tags — every component **except** the 16 inventory-designated
 optional-peer-family tags: `<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`,
 `<lr-histogram>`, `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>`, and
 `<lr-geojson-view>` and `<lr-geojson-viewer>` (see Install above). Those always require their own explicit subpath import,
@@ -166,7 +166,7 @@ import "@aceshooting/lyra-ui/components/lr-graph.js";
 ```
 
 Granular per-component imports remain the recommendation. `all.js` exists so a 7.x application can
-upgrade in one line, not because pulling 272 elements into a bundle to render four of them is a good
+upgrade in one line, not because pulling 278 elements into a bundle to render four of them is a good
 idea.
 
 `all.js` registers `<lr-flag>` without pulling in the optional flag asset graph. If a
@@ -427,12 +427,15 @@ meant two unrelated things. There is now one name per concept, library-wide.
 
 ### Tokens and theming
 
-- **`theme.css` now declares cascade layers**: `@layer lr-base, lr-theme, lr-utilities, lr-overrides`,
-  with the tokens in `lr-theme`. Any _unlayered_ declaration of yours now beats every Lyra one
-  regardless of specificity or load order, so a plain `:root { --lr-theme-… }` override always wins
-  with no `!important`. If you already wrap your overrides in your own `@layer`, they now sort
-  relative to `lr-theme` rather than losing to an unlayered `:root` — name your layer in an
-  `@layer` statement after importing `theme.css`, or move those rules out of a layer entirely.
+- **`theme.css` now declares cascade layers**:
+  `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`, with the tokens in
+  `lr-theme` (`lr-theme-preset`, which holds the optional `themes/shadcn.css` preset, joined the list
+  later; name all five if you declare the order yourself). Any _unlayered_ declaration of yours now
+  beats every Lyra one regardless of specificity or load order, so a plain `:root { --lr-theme-… }`
+  override always wins with no `!important`. If you already wrap your overrides in your own
+  `@layer`, they now sort relative to `lr-theme` rather than losing to an unlayered `:root` — name
+  your layer in an `@layer` statement after importing `theme.css`, or move those rules out of a
+  layer entirely.
 - **`--lr-font-size-md` is removed**; use `--lr-font-size-m`. The two were the same value under two
   names, which is why `<lr-button>` rendered `size="m"` and `size="l"` at identical text sizes.
 - **Compound motion tokens are split into duration and easing** (`--lr-duration-*` +
@@ -660,6 +663,18 @@ matching `data-lr-theme` attribute) on an ancestor:
 @import "@aceshooting/lyra-ui/theme.css";
 ```
 
+**shadcn/ui look.** Add one more import to restyle every component after shadcn/ui's default
+("new-york", Neutral) — monochrome primary, `0.5rem` radii, `text-sm`, `h-9` controls, a 3px focus
+ring. It layers over `theme.css` whatever the load order, also answers to shadcn's `.dark`/`.light`
+classes, and keeps gemstone accents working. A few values deliberately differ from shadcn to keep
+WCAG contrast (control borders, focus colour, danger red, chart colours); see
+[The shadcn look](./llms/shared.md#the-shadcn-look--themesshadcncss).
+
+```css
+@import "@aceshooting/lyra-ui/theme.css";
+@import "@aceshooting/lyra-ui/themes/shadcn.css";
+```
+
 Tooling can consume the canonical DTCG interchange document from
 `@aceshooting/lyra-ui/design-tokens.json`. The generated
 `@aceshooting/lyra-ui/design-tokens.css` entry supplies explicit light/dark fixture selectors for
@@ -691,11 +706,12 @@ Applications can override any `--lr-theme-*` input directly:
 }
 ```
 
-`theme.css` declares `@layer lr-base, lr-theme, lr-utilities, lr-overrides` and puts its own tokens
-in `lr-theme`, so an _unlayered_ rule of yours — like the `:root` block above — wins over every Lyra
-declaration regardless of specificity or which stylesheet the bundler emitted first. The optional
-`native.css` and `utilities.css` assets use `lr-base` and `lr-utilities`; `lr-overrides` remains
-available for application rules. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
+`theme.css` declares `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides` and
+puts its own tokens in `lr-theme`, so an _unlayered_ rule of yours — like the `:root` block above —
+wins over every Lyra declaration regardless of specificity or which stylesheet the bundler emitted
+first. The optional `themes/shadcn.css` preset uses `lr-theme-preset`, and the optional `native.css`
+and `utilities.css` assets use `lr-base` and `lr-utilities`; `lr-overrides` remains available for
+application rules. If you declare Lyra's layer order yourself, name all five. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
 Component-specific `--lr-*` custom properties remain available for local overrides.
 
 Canvas components automatically repaint after observable theme attributes, stylesheet/link nodes,
@@ -958,7 +974,7 @@ covers every published component, and is regenerated by `pnpm run registration-g
 
 ## Components
 
-The catalog below lists all 288 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 294 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -982,6 +998,7 @@ API details.
 | `<lr-token-input>`                           | — (extra)                                                                       | Editable, removable form-associated token list                                                                                                                                                                                                                      |
 | `<lr-icon>` + `<lr-icon-button>`             | `wa-icon` / `sl-icon` / `sl-icon-button`                                        | Dependency-free SVG icons and accessible icon-only actions; migrated icon names outside the eleven-name built-in set require a registered library                                                                                                                    |
 | `<lr-button>`                                | `wa-button` / `sl-button`                                                       | Generic action-button primitive (`variant`/`appearance`/`size`/`loading`), owns `type="submit"`/`"reset"` via its browser-resolved form owner, including an external owner named by `form`                                                                          |
+| `<lr-toggle>` + `<lr-toggle-group>`          | — (extra)                                                                       | Two-state pressed button and a one-tab-stop group with multiple or zero-or-one single selection                                                                                                                                                                     |
 | `<lr-radio>` + `<lr-radio-group>`            | `wa-radio` / `wa-radio-group` / `sl-radio` / `sl-radio-group`                   | Form-associated single-choice controls with roving arrow-key navigation and group validation; Lyra's group `name` defaults empty while Shoelace defaults to `option`, so the codemod inserts `name="option"` (set it for a manual rename)                                                                                         |
 | `<lr-radio-button>`                          | `sl-radio-button`                                                               | The same single-choice control rendered as a button; a `LyraRadio` subclass, so a `<lr-radio-group>` accepts either tag and consecutive siblings collapse into one segmented control                                                                                |
 | `<lr-otp-input>`                             | `wa-otp-input`                                                                  | Form-associated one-time-code field — presentational segments over one real input, so paste, SMS autofill and mobile keyboards work natively and the control stays one tab stop                                                                                     |
@@ -1138,6 +1155,7 @@ API details.
 | ------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `<lr-popover>` + `<lr-tooltip>` + `<lr-dropdown>` | `wa-popover` / `wa-tooltip` / `wa-dropdown` / `sl-tooltip` / `sl-dropdown` | Floating UI-positioned, RTL-aware overlay primitives with light dismiss and trigger ARIA wiring                                                                                  |
 | `<lr-popup>`                                      | `wa-popup` / `sl-popup`                                                    | The low-level anchored-positioning primitive the three above are built on — placement, flip/shift, arrow and virtual anchoring, with no dismiss, focus or ARIA policy of its own |
+| `<lr-context-menu>`                               | — (extra)                                                                  | Right-click, press-and-hold and Shift+F10 action menu over any region, built from `lr-menu` items                                                                                |
 
 **Charts**
 
@@ -1196,6 +1214,7 @@ each one-liner below.
 | `<lr-attachment-chip>`                                                                 | — (extra)                                                                               | Pre-send or sent file chip with thumbnail/size/upload-progress/retry; derives metadata from a real `File` or from persisted server metadata                                                                                                                                                                       |
 | `<lr-attachment-trigger>`                                                              | — (extra)                                                                               | Attach-file affordance for a composer's leading slot; a single icon button, or a `<lr-menu>` when more than one capability (`files`/`image`/`camera`/`audio`) is configured                                                                                                                                       |
 | `<lr-mention-popover>`                                                                 | — (extra)                                                                               | Caret-anchored `@`-mention/`/`-command autocomplete popover for a host-owned `<textarea>`/`<input>`; never takes DOM focus itself                                                                                                                                                                                 |
+| `<lr-tool-call-block>`                                                                 | — (extra)                                                                               | Inline collapsible tool call: status-aware "Used …" header with duration, expanding in place to arguments and result or error; used by `lr-message-parts` `tool-display="block"`                                                                                                                                  |
 | `<lr-tool-call-chip>`                                                                  | — (extra)                                                                               | Compact inline pill for one tool/function call mid-conversation; status-aware glyph/color, optional hover/focus detail tooltip                                                                                                                                                                                    |
 | `<lr-tool-result-view>` + `registerToolRenderer()`                                     | — (extra)                                                                               | Dispatches a tool call's result to a host-registered renderer (by tool name or shape `matches()`), falling back to `<lr-json-viewer>`                                                                                                                                                                             |
 | `<lr-tool-result-dialog>`                                                              | — (extra)                                                                               | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lr-tab-group>` of Input/Preview/JSON/Raw)                                                                                                                                                              |
@@ -1213,6 +1232,7 @@ each one-liner below.
 | `<lr-thread-list>`                                                                     | — (extra)                                                                               | Conversation sidebar — grouped, searchable chat-session list with pin/archive/delete/rename affordances; data mode renders `<lr-conversation-item>` rows through an internal `<lr-virtual-list>`, slotted mode renders host-supplied items as-is                                                                  |
 | `<lr-app-rail>` + `<lr-app-rail-item>` + `<lr-app-rail-group>`                                                 | — (extra)                                                                               | Responsive navigation rail: `full` ↔ `icon-only` ↔ `mobile` overlay, tracked off live viewport-width breakpoints; the item provides an accessible icon/label link or button, and the group gathers items under an optional collapsible heading                                                                                                                                       |
 | `<lr-page>`                                                                            | `wa-page`                                                                               | Responsive application shell with header, navigation, aside, main, footer, and mobile navigation state under one page-level layout contract                                                                                                                                                                       |
+| `<lr-navigation-menu>` + `<lr-navigation-menu-item>`                                   | — (extra)                                                                               | Disclosure-pattern site navigation bar with flyout panels                                                                                                                                                                                                                                                         |
 | `<lr-responsive-panel>`                                                                | — (extra)                                                                               | The same slotted content docked inline in normal layout flow (desktop) or as a fullscreen/bottom-sheet overlay (mobile)                                                                                                                                                                                           |
 | `<lr-dock-panel>`                                                                      | — (extra)                                                                               | Single panel docked to one edge of its container, drag/keyboard-resizable and collapsible — the single-edge counterpart to `<lr-multi-split>`'s multi-sibling-panel case                                                                                                                                          |
 | `<lr-model-select>`                                                                    | — (extra)                                                                               | Provider/model picker: closed dropdown over a fixed `catalog`, or a filterable free-text combobox when there isn't one (or `allow-custom` is set)                                                                                                                                                                 |

@@ -72,7 +72,7 @@ leaves that content's presentation under the caller's control.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
-`--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
+`--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border-subtle` for the decorative inset ring.
 
 **Sizing.** The host has no intrinsic `width` — it sizes from `font-size` (`block-size: 1em`,
 `inline-size` derived from `--lr-flag-aspect-ratio` via CSS `aspect-ratio`), so it scales naturally

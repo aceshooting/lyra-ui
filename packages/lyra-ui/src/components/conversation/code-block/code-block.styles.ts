@@ -39,7 +39,7 @@ export const styles = css`
        same reasoning file-input.styles.ts's own bordered [part~="base"] documents. */
     box-sizing: border-box;
     block-size: 100%;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
@@ -50,7 +50,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     /* --lr-color-surface, not -brand-quiet: --lr-color-text-quiet (the toggle/copy-button color
        below) fails WCAG AA against --lr-color-brand-quiet in this palette. -surface is the same
        header background lr-json-viewer's toolbar uses with that same text color. */

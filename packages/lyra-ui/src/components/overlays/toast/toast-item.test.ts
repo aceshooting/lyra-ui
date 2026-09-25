@@ -2108,3 +2108,14 @@ describe('lr-toast-item close-button name inside a hidden container', () => {
     expect(name).to.equal('Close: Wrapped Toast');
   });
 });
+
+it('draws the panel edge in the subtle border tier while the neutral accent keeps the control-grade border', async () => {
+  const el = (await fixture(html`<lr-toast-item
+    duration="0"
+    style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)"
+  >a</lr-toast-item>`)) as LyraToastItem;
+  const surface = el.shadowRoot!.querySelector('[part="toast-item"]') as HTMLElement;
+  const accent = el.shadowRoot!.querySelector('[part="accent"]') as HTMLElement;
+  expect(getComputedStyle(surface).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(accent).backgroundColor).to.equal('rgb(7, 8, 9)');
+});

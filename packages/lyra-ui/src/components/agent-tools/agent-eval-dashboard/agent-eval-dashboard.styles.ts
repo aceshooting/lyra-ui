@@ -46,7 +46,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='runs'] { display: flex; min-inline-size: 0; max-inline-size: 100%; flex-direction: column; gap: var(--lr-space-xs); }
-  [part='run'] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lr-space-xs); align-items: center; padding-block: var(--lr-space-xs); border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border); inline-size: 100%; background: transparent; color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }
+  [part='run'] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lr-space-xs); align-items: center; padding-block: var(--lr-space-xs); border: 0; border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); inline-size: 100%; background: transparent; color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }
   [part='run']:hover { background: var(--lr-color-surface-raised); }
   [part='run']:active {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));

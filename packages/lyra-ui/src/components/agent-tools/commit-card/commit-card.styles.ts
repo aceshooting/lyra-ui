@@ -15,7 +15,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     border: var(--lr-border-width-thin) solid
-      var(--lr-commit-card-border-color, var(--lr-color-border));
+      var(--lr-commit-card-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-commit-card-radius, var(--lr-radius));
     background: var(--lr-commit-card-background, transparent);
     padding: var(--lr-space-m);

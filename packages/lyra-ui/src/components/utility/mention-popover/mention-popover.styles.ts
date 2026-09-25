@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import {
+  overlaySurface,
+  overlaySurfaceControlEdge,
+} from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -34,6 +37,7 @@ export const styles = css`
     /* The shared overlay-surface family (internal/overlay-surface.styles.ts): a floating surface
        retints with every other popup, not with the page behind it. */
     ${overlaySurface}
+    ${overlaySurfaceControlEdge}
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     visibility: hidden;

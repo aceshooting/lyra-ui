@@ -568,6 +568,9 @@ const FORCED_COLOR_TOKENS = [
   ['--lr-color-text', 'CanvasText'],
   ['--lr-color-text-quiet', 'CanvasText'],
   ['--lr-color-border', 'ButtonText'],
+  // The decorative tier collapses onto the same system colour: a forced-colours theme has exactly
+  // one border colour, and a divider must not keep an application's low-contrast grey inside it.
+  ['--lr-color-border-subtle', 'ButtonText'],
   ['--lr-color-brand', 'LinkText'],
   ['--lr-color-neutral', 'ButtonText'],
   ['--lr-color-on-brand', 'Canvas'],
@@ -693,6 +696,65 @@ it('darkens the border fallback to clear WCAG 1.4.11 non-text 3:1 contrast again
   expect(await probeVar('--lr-color-border')).to.equal('#8a8a90');
 });
 
+// --- the decorative border tier -------------------------------------------------------
+//
+// --lr-color-border-subtle is the edge colour for decoration nothing has to be identified by: a
+// divider, a card or table edge, a separator between items. Its own input is declared nowhere by
+// default -- not even in theme.css -- so until an application opts in it must resolve to EXACTLY
+// --lr-color-border on every route into every mode. That is what lets stylesheets be re-pointed to
+// it without moving a single rendered pixel for anyone who never sets the input. It is never a
+// control boundary (WCAG 2.2 SC 1.4.11); check:border-subtle keeps it out of the form controls.
+
+const BORDER_TIERS = ['--lr-color-border', '--lr-color-border-subtle'] as const;
+
+it('resolves --lr-color-border-subtle to exactly --lr-color-border on every mode route while its input is unset', async () => {
+  const routes: DarkRoute[] = hostContextSupported
+    ? ['none', 'os-preference', 'attribute', 'ancestor']
+    : ['none', 'os-preference', 'attribute'];
+  const failures: string[] = [];
+  const borders = new Set<string>();
+  for (const route of routes) {
+    const values = await probeTokensUnder(BORDER_TIERS, route);
+    const border = values.get('--lr-color-border') ?? '';
+    const subtle = values.get('--lr-color-border-subtle') ?? '';
+    if (border === '') failures.push(`${route}: --lr-color-border resolved to nothing`);
+    if (subtle !== border) failures.push(`${route}: --lr-color-border-subtle is ${subtle}, --lr-color-border is ${border}`);
+    borders.add(border);
+  }
+  expect(failures.join('\n'), 'routes on which the unset decorative tier diverged').to.equal('');
+  // The routes really changed mode, so "equal" is not merely two copies of the light value.
+  expect([...borders]).to.include.members(['#8a8a90', '#6b6b74']);
+});
+
+it('keeps --lr-color-border-subtle following a retuned --lr-theme-color-surface-border until its own input is set', async () => {
+  expect(
+    await probeNestedVar('--lr-color-border-subtle', '--lr-theme-color-surface-border: rgb(7, 8, 9)'),
+  ).to.equal('rgb(7, 8, 9)');
+});
+
+it('lets --lr-theme-color-surface-border-subtle set on an ancestor reach a component nested below another host', async () => {
+  const inner = await nestedProbe('--lr-theme-color-surface-border-subtle: rgb(1, 2, 3)');
+  const read = (name: string) => getComputedStyle(inner).getPropertyValue(name).trim();
+  expect(read('--lr-color-border-subtle')).to.equal('rgb(1, 2, 3)');
+  // Decorative only: the control boundary must not move with it.
+  expect(read('--lr-color-border')).to.equal('#8a8a90');
+
+  // The dark declaration reads the same input; a literal there would silently ignore the theme.
+  inner.setAttribute('data-lr-theme', 'dark');
+  expect(read('--lr-color-border-subtle')).to.equal('rgb(1, 2, 3)');
+  expect(read('--lr-color-border')).to.equal('#6b6b74');
+});
+
+it('replaces a set --lr-theme-color-surface-border-subtle with the system border colour in forced colors', async function () {
+  if (!(await enterForcedColors())) this.skip();
+  try {
+    const inner = await nestedProbe('--lr-theme-color-surface-border-subtle: rgb(1, 2, 3)');
+    expect(getComputedStyle(inner).getPropertyValue('--lr-color-border-subtle').trim()).to.equal('ButtonText');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
 it('provides a dark-aware fallback under prefers-color-scheme: dark when no --lr-theme-* value is set', () => {
   const cssText = tokens.cssText;
   expect(cssText).to.match(/@media\s*\(prefers-color-scheme:\s*dark\)/);
@@ -766,6 +828,10 @@ it('chains filled-content and border tokens through the matching lyra theme-inpu
   const read = (name: string) => getComputedStyle(el).getPropertyValue(name).trim();
   const cases: Array<[input: string, reaches: string]> = [
     ['--lr-theme-color-surface-border', '--lr-color-border'],
+    // The decorative tier answers to its own input, and -- while that is unset -- to the control
+    // border's, so a theme that retunes only the border still moves every divider with it.
+    ['--lr-theme-color-surface-border-subtle', '--lr-color-border-subtle'],
+    ['--lr-theme-color-surface-border', '--lr-color-border-subtle'],
     ['--lr-theme-color-focus', '--lr-focus-ring-color'],
     ['--lr-theme-color-on-strong-overlay', '--lr-color-on-strong-overlay'],
     // `neutral` belongs here for the same reason as the other four: it declares a real
@@ -858,10 +924,36 @@ function bridgedThemeInputs(): string[] {
   return [...new Set([...layers.matchAll(/var\((--lr-theme-[\w-]+)/g)].map((match) => match[1]!))].sort();
 }
 
+/**
+ * Theme inputs deliberately NOT declared in theme.css, because their built-in fallback is another
+ * resolved token rather than a literal. A literal in theme.css would be substituted once at :root
+ * and inherited as a finished colour, freezing the derivation for every consumer who imports the
+ * file -- the reason theme.css already gives for leaving --lr-theme-form-control-radius out.
+ * --lr-theme-color-surface-border-subtle falls back to --lr-color-border, so declaring it there
+ * would stop every divider following a retuned --lr-theme-color-surface-border.
+ */
+const DERIVED_DEFAULT_THEME_INPUTS: readonly string[] = ['--lr-theme-color-surface-border-subtle'];
+
 it('declares every bridged theme input in theme.css', async () => {
   const { text } = await loadThemeCss();
-  const missing = bridgedThemeInputs().filter((name) => !new RegExp(`^\\s*${name}:`, 'm').test(text));
+  const missing = bridgedThemeInputs().filter(
+    (name) => !DERIVED_DEFAULT_THEME_INPUTS.includes(name) && !new RegExp(`^\\s*${name}:`, 'm').test(text),
+  );
   expect(missing.join('\n')).to.equal('');
+});
+
+it('leaves each derived-default theme input undeclared in theme.css, and derived from another token', async () => {
+  const { text } = await loadThemeCss();
+  const layers = `${tokens.cssText}\n${palette.cssText}\n${specialistTokens.cssText}`;
+  const failures = DERIVED_DEFAULT_THEME_INPUTS.flatMap((name) => [
+    ...(new RegExp(`^\\s*${name}:`, 'm').test(text) ? [`${name} is declared in theme.css`] : []),
+    // An exemption for an input nothing reads, or one that falls back to a literal after all, is a
+    // stale exemption hiding a genuinely undocumented input.
+    ...(new RegExp(`var\\(${name},\\s*var\\(--lr-`).test(layers)
+      ? []
+      : [`${name} is not read with another token as its fallback`]),
+  ]);
+  expect(failures.join('\n')).to.equal('');
 });
 
 it('names only theme inputs that a component token layer actually reads', async () => {
@@ -944,6 +1036,22 @@ it('mirrors every dark-mode fallback value in theme.css .lr-dark', async () => {
     expect(await probeVarUnder('lr-dark', '--lr-color-surface-raised')).to.equal('#22272e');
     expect(await probeVarUnder('lr-dark', '--lr-color-chart-1')).to.equal('#bbff94');
     expect(await probeVarUnder('lr-dark', '--lr-color-chart-8')).to.equal('#555de3');
+  });
+});
+
+it('keeps --lr-color-border-subtle equal to --lr-color-border in both modes when theme.css is imported', async () => {
+  await withThemeCss(async () => {
+    const failures: string[] = [];
+    for (const [themeClass, expected] of [
+      ['lr-light', '#8a8a90'],
+      ['lr-dark', '#6b6b74'],
+    ] as const) {
+      const values = await probeVarsUnder(themeClass, BORDER_TIERS);
+      for (const name of BORDER_TIERS) {
+        if (values.get(name) !== expected) failures.push(`${themeClass} ${name}: ${values.get(name)} !== ${expected}`);
+      }
+    }
+    expect(failures.join('\n')).to.equal('');
   });
 });
 

@@ -115,7 +115,7 @@ role/status colors or borders. The named hooks are the stable, narrow geometry c
 set once above a whole transcript. They are consumed as inline `var()` fallbacks rather than
 declared on `:host`, so the host cannot shadow an inherited value.
 
-Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
+Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
 `--lr-color-danger-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`,
 `--lr-transition-fast`, and `--lr-transition-ambient` (default `1.8s ease-in-out`) — the

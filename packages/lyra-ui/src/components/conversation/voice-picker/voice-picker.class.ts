@@ -309,7 +309,8 @@ export interface LyraVoicePickerEventMap {
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  * on the listbox.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
- * the listbox.
+ * the listbox. Unlike a floating panel's decorative edge, it defaults to
+ * the control tier: this popup belongs to the control it opens from.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, read by
  * the listbox only as the middle arm of `--lr-voice-picker-radius`, which still wins when set.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.

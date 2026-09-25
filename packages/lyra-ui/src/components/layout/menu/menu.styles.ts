@@ -115,10 +115,10 @@ export const styles = css`
   /* The divider only earns its keep when there are items on the other side -- a header above an
      empty list would otherwise draw a stray rule. */
   :host(:not([data-list-empty])) [part='header'] {
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   :host(:not([data-list-empty])) [part='footer'] {
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part='list'] {
     display: flex;
@@ -141,7 +141,7 @@ export const styles = css`
      attribute is needed. */
   ::slotted(hr) {
     border: none;
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     margin: var(--lr-space-xs) var(--lr-space-xs);
   }
 `;

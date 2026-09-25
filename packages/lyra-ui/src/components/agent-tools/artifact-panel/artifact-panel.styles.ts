@@ -12,7 +12,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     flex-direction: column;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     overflow: hidden;
     block-size: 100%;
@@ -26,7 +26,7 @@ export const styles = css`
     flex-wrap: wrap;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part='label'] {
     min-inline-size: 0;
@@ -40,7 +40,7 @@ export const styles = css`
     overflow-wrap: anywhere;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius-pill);
     padding: 0 var(--lr-space-xs);
   }

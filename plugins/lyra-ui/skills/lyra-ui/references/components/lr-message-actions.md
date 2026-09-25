@@ -74,7 +74,9 @@ invalid actions and later duplicates are omitted before roving focus ownership.
 
 **Slots:** default — additional controls (e.g. `lr-copy-button`, `lr-icon-button`,
 `lr-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key
-navigation.
+navigation. A standalone `lr-toggle` (pin, read aloud) is a `LyraToolbarActionProvider` and joins the
+toolbar's single roving stop through its internal button; an `lr-toggle-group` slotted here keeps its
+own tab stop, and its toggles contribute no actions while grouped.
 
 **CSS parts:** `base` (the toolbar, `role="toolbar"`), `copy-button` (the embedded
 `lr-copy-button`), `regenerate-button`, `edit-button`,

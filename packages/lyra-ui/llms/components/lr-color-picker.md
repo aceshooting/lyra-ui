@@ -272,7 +272,9 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-color-picker-radius`, which still wins when set.
+`--lr-color-picker-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) is the same cascading `absolute`/`fixed` override
 `<lr-popover>` (`llms/components/lr-popover.md`) documents, read from computed style each time the

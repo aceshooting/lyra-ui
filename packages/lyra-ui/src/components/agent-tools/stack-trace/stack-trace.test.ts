@@ -686,7 +686,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-stack-trace
         .trace=${trace}
-        style="--lr-stack-trace-background: var(--lr-color-surface); --lr-stack-trace-border-color: var(--lr-color-border); --lr-stack-trace-radius: var(--lr-radius)"
+        style="--lr-stack-trace-background: var(--lr-color-surface); --lr-stack-trace-border-color: var(--lr-color-border-subtle); --lr-stack-trace-radius: var(--lr-radius)"
       ></lr-stack-trace>
     `)) as LyraStackTrace;
     const unset = getComputedStyle(base(control));
@@ -695,5 +695,17 @@ describe('card chrome theming hooks', () => {
     expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
     expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
     expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('draws the card edge on the subtle tier while the copy button keeps the control border', async () => {
+    const el = (await fixture(html`
+      <lr-stack-trace
+        .trace=${trace}
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+      ></lr-stack-trace>
+    `)) as LyraStackTrace;
+    expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(7, 8, 9)');
+    const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+    expect(getComputedStyle(copy).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
 });

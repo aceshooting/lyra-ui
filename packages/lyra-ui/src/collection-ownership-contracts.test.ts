@@ -21,6 +21,7 @@ import './components/agent-tools/stack-trace/stack-trace.js';
 import './components/agent-tools/subagent-panel/subagent-panel.js';
 import './components/agent-tools/task-list/task-list.js';
 import './components/agent-tools/test-results/test-results.js';
+import './components/agent-tools/tool-call-block/tool-call-block.js';
 import './components/agent-tools/tool-param-form/tool-param-form.js';
 import './components/agent-tools/tool-select-dialog/tool-select-dialog.js';
 import './components/agent-tools/tool-timeline/tool-timeline.js';
@@ -119,6 +120,7 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-subagent-panel', property: 'runs' },
   { tag: 'lr-task-list', property: 'items' },
   { tag: 'lr-test-results', property: 'statusFilter' },
+  { tag: 'lr-tool-call-block', property: 'redactedFields' },
   { tag: 'lr-tool-select-dialog', property: 'tools' },
   { tag: 'lr-tool-select-dialog', property: 'selectedToolIds' },
   { tag: 'lr-lite-chart', property: 'labels' },

@@ -49,7 +49,7 @@ export const styles = css`
   /* Inline (docked) presentation: a normal panel in the page's layout flow, bordered like a card so
      it reads as a distinct region. */
   [part='base']:not(.overlay) [part='panel'] {
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     overflow: auto;
   }
@@ -128,7 +128,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     padding: var(--lr-space-m) var(--lr-space-l);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow-wrap: anywhere;
   }
   [part='header'][hidden] {
@@ -153,7 +153,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     padding: var(--lr-space-m) var(--lr-space-l);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     overflow-wrap: anywhere;
   }
   [part='footer'][hidden] {

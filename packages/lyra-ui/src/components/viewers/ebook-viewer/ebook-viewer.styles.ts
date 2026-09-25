@@ -11,7 +11,7 @@ export const styles = css`
     gap: var(--lr-space-s);
     box-sizing: border-box;
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
@@ -21,7 +21,7 @@ export const styles = css`
     justify-content: space-between;
     gap: var(--lr-space-s);
     padding: var(--lr-space-s) var(--lr-space-m);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="previous-button"],
   [part="next-button"] {

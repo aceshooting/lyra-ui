@@ -11,7 +11,7 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-size-1px) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     overflow: hidden;
   }
@@ -21,7 +21,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-size-1px) solid var(--lr-color-border);
+    border-block-end: var(--lr-size-1px) solid var(--lr-color-border-subtle);
     font-size: var(--lr-font-size-sm);
   }
   [part='url'] {

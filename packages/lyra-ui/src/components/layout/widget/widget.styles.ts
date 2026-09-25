@@ -19,7 +19,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
@@ -35,7 +35,7 @@ export const styles = css`
     min-inline-size: 0;
     gap: var(--lr-space-s);
     padding: var(--lr-space-s) var(--lr-space-m);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part="title"] {
     display: flex;

@@ -10,7 +10,7 @@ export const styles = css`
      and a transcript can retune the whole nested card without a ::part(base) override. */
   [part="base"] {
     border: var(--lr-border-width-thin) solid
-      var(--lr-activity-feed-border-color, var(--lr-color-border));
+      var(--lr-activity-feed-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-activity-feed-radius, var(--lr-radius));
     background: var(--lr-activity-feed-background, var(--lr-color-surface));
     overflow: hidden;
@@ -129,7 +129,7 @@ export const styles = css`
        it follows the border-colour hook rather than stranding a mismatched rule inside a retuned
        card. */
     border-block-start: var(--lr-border-width-thin) solid
-      var(--lr-activity-feed-border-color, var(--lr-color-border));
+      var(--lr-activity-feed-border-color, var(--lr-color-border-subtle));
   }
   [part="body"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

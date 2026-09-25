@@ -31,7 +31,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-2xs);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     padding-block: var(--lr-space-s);
   }
   [part='decision']:first-child {

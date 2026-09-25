@@ -176,7 +176,9 @@ and the raised tone is what separates it from the field's fill — `--lr-color-s
 resolves to the plain page surface in light mode and would erase that separation, while in dark
 mode the raised tone is already distinct from the page, so this panel never had the
 reads-as-a-hole problem the family exists to fix. Setting `--lr-overlay-surface` still repaints it
-along with every other popup.
+along with every other popup. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 `--lr-positioning-strategy` (16.0.0) — the `popup` panel reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to

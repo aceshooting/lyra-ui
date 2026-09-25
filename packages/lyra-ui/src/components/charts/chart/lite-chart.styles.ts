@@ -16,7 +16,7 @@ export const styles = css`
        (canvas-rendered, cannot consume var() directly), this one is plain
        SVG/DOM, so the CSS below reads them natively -- no getComputedStyle()
        or JS-side resolution needed. */
-    --_lr-chart-grid-color: var(--lr-color-border);
+    --_lr-chart-grid-color: var(--lr-color-border-subtle);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
     --_lr-chart-tick-font-size: var(--lr-font-size-2xs);
     --_lr-chart-legend-color: var(--lr-color-text);

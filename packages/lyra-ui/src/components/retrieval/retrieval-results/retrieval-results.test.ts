@@ -1798,7 +1798,7 @@ describe('row styling across both rendering paths', () => {
       parseFloat(getComputedStyle(header).borderBottomWidth)
     ).to.be.greaterThan(0);
     expect(getComputedStyle(header).borderBottomColor).to.equal(
-      resolvedInShadow(el, 'color: var(--lr-color-border)', 'color')
+      resolvedInShadow(el, 'color: var(--lr-color-border-subtle)', 'color')
     );
     expect(getComputedStyle(header).backgroundColor).to.equal(
       resolvedInShadow(

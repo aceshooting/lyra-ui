@@ -1872,7 +1872,7 @@ describe('card chrome theming hooks', () => {
       <lr-terminal
         downloadable
         .content=${CHROME_LOG}
-        style="--lr-terminal-border-color: var(--lr-color-border); --lr-terminal-radius: var(--lr-radius)"
+        style="--lr-terminal-border-color: var(--lr-color-border-subtle); --lr-terminal-radius: var(--lr-radius)"
       ></lr-terminal>
     `)) as LyraTerminal;
     const unset = getComputedStyle(part(control, 'base'));
@@ -1883,5 +1883,19 @@ describe('card chrome theming hooks', () => {
     expect(getComputedStyle(part(control, 'toolbar')).borderBottomColor).to.equal(
       getComputedStyle(part(tokened, 'toolbar')).borderBottomColor,
     );
+  });
+
+  it('draws the card edge and divider on the subtle tier while toolbar buttons keep the control border', async () => {
+    const el = (await fixture(html`
+      <lr-terminal
+        downloadable
+        .content=${CHROME_LOG}
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+      ></lr-terminal>
+    `)) as LyraTerminal;
+    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(part(el, 'toolbar')).borderBottomColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(part(el, 'copy-button')).borderTopColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(part(el, 'download-button')).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
 });

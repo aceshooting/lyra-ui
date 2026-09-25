@@ -20,6 +20,8 @@ export * from './menu/dropdown-item.js';
 export * from './menu/menu-item.js';
 export * from './menu/menu-label.js';
 export * from './menu/menu.js';
+export * from './navigation-menu/navigation-menu.js';
+export * from './navigation-menu-item/navigation-menu-item.js';
 export * from './page/page.js';
 export * from './reorder-list/reorder-item.js';
 export * from './reorder-list/reorder-list.js';

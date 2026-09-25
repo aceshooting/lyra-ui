@@ -96,7 +96,7 @@ is unset. Like the other density/state properties in this family they are inline
 their point of use rather than `:host` declarations, so either can be set on the element _or on any
 ancestor_ — one rule on a run list retunes every compact run inside it.
 `--lr-agent-run-background` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
-(default `var(--lr-color-border)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
+(default `var(--lr-color-border-subtle)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
 `[part="base"]`'s card chrome without a `::part(base)` override; `frame="plain"` still removes all
 three outright.
 

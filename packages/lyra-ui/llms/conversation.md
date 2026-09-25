@@ -221,8 +221,9 @@ fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (defau
 `var(--lr-color-brand-quiet)` — background of every rendered `[part="table"]` header cell),
 `--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`,
-`--lr-color-text-quiet`, `--lr-radius`.
+`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`
+(blockquote bar), `--lr-color-border-subtle` (table cell rules), `--lr-color-text-quiet`,
+`--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
 `loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
@@ -549,7 +550,7 @@ role/status colors or borders. The named hooks are the stable, narrow geometry c
 set once above a whole transcript. They are consumed as inline `var()` fallbacks rather than
 declared on `:host`, so the host cannot shadow an inherited value.
 
-Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
+Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
 `--lr-color-danger-quiet`, `--lr-radius`, `--lr-icon-button-size`, `--lr-focus-ring-*`,
 `--lr-transition-fast`, and `--lr-transition-ambient` (default `1.8s ease-in-out`) — the
@@ -1455,7 +1456,8 @@ without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity
 literal: set a length to retune it, or `none` to let the control fill its container the way
 `lr-select` does. Like every other name here it is read as a `var()` fallback and never declared on
 `:host`, so a value set on `:root` or any ancestor still reaches it. Plus shared tokens —
-`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lr-radius`,
+`--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
+`--lr-color-border-subtle` (the `provider-badge` separator), `--lr-radius`,
 `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
 
@@ -1464,7 +1466,9 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-model-select-radius`, which still wins when set.
+`--lr-model-select-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
+form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
 **Optional peer deps:** none.
 
@@ -1993,7 +1997,7 @@ line marked by `highlight-lines` or a `line-range` entry in `highlights`, in bot
 dark-theme rendering paths), `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-code-block-language-color` (default `var(--lr-color-brand)`) — the header `language` pill's
 background and text color, independent of the active-line outline above — plus shared tokens
-`--lr-color-border`, `--lr-radius`,
+`--lr-color-border-subtle`, `--lr-radius`,
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in
@@ -2285,7 +2289,7 @@ card. `layout="compact"` uncaps the card by default and reads the same name, so 
 compact card too. The panel also sets `--lr-model-select-max-inline-size: none` on its own
 `[part="model-row"]`, so the nested selector fills the row rather than stopping at its standalone
 24rem ceiling — set that name on the row to re-cap it. Otherwise it consumes shared tokens
-`--lr-space-l/-m/-s/-xs`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
+`--lr-space-l/-m/-s/-xs`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-text-quiet`.
 
 **Optional peer deps:** none — it composes the library's own `<lr-model-select>` and `<lr-slider>`
@@ -2465,7 +2469,9 @@ invalid actions and later duplicates are omitted before roving focus ownership.
 
 **Slots:** default — additional controls (e.g. `lr-copy-button`, `lr-icon-button`,
 `lr-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key
-navigation.
+navigation. A standalone `lr-toggle` (pin, read aloud) is a `LyraToolbarActionProvider` and joins the
+toolbar's single roving stop through its internal button; an `lr-toggle-group` slotted here keeps its
+own tab stop, and its toggles contribute no actions while grouped.
 
 **CSS parts:** `base` (the toolbar, `role="toolbar"`), `copy-button` (the embedded
 `lr-copy-button`), `regenerate-button`, `edit-button`,
@@ -3254,7 +3260,7 @@ describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`
 
 The anchored breakdown tooltip is a floating surface and paints from the **shared overlay-surface
 family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`),
-`--lr-overlay-border` (default `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-border` (default `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this surface together with every other floating surface in the
 library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
@@ -3655,7 +3661,8 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-overlay-surface` — Shared floating-surface fill, on the listbox. Default:
   `var(--lr-color-surface-overlay)`.
 - `--lr-overlay-border` — Shared floating-surface edge colour, on the listbox. Default:
-  `var(--lr-color-border)`.
+  `var(--lr-color-border)` — the control tier, not the decorative `var(--lr-color-border-subtle)`
+  floating panels default to, because the listbox belongs to the form control it opens from.
 - `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
   `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
@@ -3865,9 +3872,47 @@ renderer would otherwise wire up for it (the `error` part's retry button's `lr-p
 `citation` part's activation `lr-citation-select`, and the composed `<lr-tool-call-chip>`/
 `<lr-tool-result-view>`/`<lr-attachment-chip>`/`<lr-widget-renderer>` children's own events) — a
 host overriding an interactive part type must reimplement whatever of that interaction it still
-wants; `accessibleLabel: string | null = null` (attribute `aria-label`).
+wants; `accessibleLabel: string | null = null` (attribute `aria-label`);
+`toolDisplay: MessagePartsToolDisplay = 'chip'` (attribute `tool-display`, reflected, including the
+default — every instance carries `tool-display="chip"` until set, like `content-mode="markdown"`).
+`renderPart` is called exactly once per rendered part, in order, in both tool displays, and its
+output is the host's own: it is never masked by `redactedFields`.
 
-Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`.
+Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`;
+unsupported `tool-display` values normalize and reflect as `chip`.
+
+**Tool display.** `MessagePartsToolDisplay = 'chip' | 'block'` (exported from the class module).
+`chip` (the default, unchanged) renders a `tool-call` part as `<lr-tool-call-chip>` and a
+`tool-result` part as a separate `<lr-tool-result-view>`. `tool-display="block"` renders each
+`tool-call` through one collapsed `<lr-tool-call-block>` (header `Used web_search`, status glyph,
+duration; expanding shows arguments, error and result in place) and pairs it with its result:
+
+- The first rendered, non-custom `tool-call` per non-blank `invocation.id` pairs with the first
+  rendered, non-custom `tool-result` whose `invocationId` matches, wherever that result sits in the
+  window (a result before its call still folds into the call's position). The folded result part
+  renders nothing — no wrapper — but still counts toward `max-rendered-parts`.
+- Everything else renders as in chip display: unpaired results, a result whose call is outside the
+  rendered window, duplicate results after the first, and custom-rendered calls or results. A
+  second call part with the same invocation id renders its own unpaired block.
+- The block binds `name`, `callId` and `args` from the invocation, and `redactedFields` from the
+  invocation-level paths described under redaction below; `result` from
+  the paired part (else `invocation.result`); `error` from the paired part when it carries one (else
+  `invocation.error`); and `durationMs = endedAt - startedAt` when both are set (else no duration).
+  `expanded` is never bound, so a user-expanded block stays open across `parts` updates.
+- Block status, first match wins: invocation `denied` → `denied`; invocation `error` or a paired
+  error result → `error`; a paired result still `streaming` → `running`; any paired result →
+  `success`; otherwise the invocation's own status (an unknown value → `pending`), so a call still
+  waiting on its result keeps showing `pending`/`running`.
+- The tool-call wrapper stretches to the message width in block display.
+
+**Redaction in both displays.** An invocation's `redactedFields` (dotted paths rooted at
+`args`/`result`/`error`, see `<lr-tool-call-block>`) masks every built-in rendering of its payload
+with the localized `Value hidden`: in block display the block's details; in chip display, and for
+unfolded results in block display, the chip's `summary` (the invocation error) and a standalone
+result part's result and error text. The paths come from the first `tool-call` part for that
+invocation id in the full `parts` sequence — for blocks too — so a windowed-out call still masks its
+standalone result, and a later call part for the same id cannot unmask what the first one hid. With no `redactedFields` anywhere, nothing is cloned and every binding receives the
+original reference.
 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
 'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
@@ -3886,13 +3931,15 @@ events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`
 `lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
 `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
+In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
+`lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
+emitted. Tool errors are never announced; only `error` parts are.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-disclosure`,
-`tool-header`, `tool-status`, `tool-duration`, `tool-args`, `tool-result` (also used for the paired
-result inside the disclosure), `tool-error` (paired error copy), `tool-result-error`, `code-block`,
-`code-block-header`, `code-block-language`, `code-block-copy` (forwarded from text and reasoning
-Markdown parts), `citation`, `attachment`, `data`, `audio`, `audio-control`, `audio-transcript`,
-`error`, `retry`.
+**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
+`tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
+`audio-transcript`, `error`, `retry`. Block display forwards five block parts:
+`tool-block-header`, `tool-block-body`, `tool-block-args`, `tool-block-result`,
+`tool-block-error`.
 
 **Themeable custom properties:** `--lr-message-parts-streaming-color` (default
 `var(--lr-color-text-quiet)`) controls a streaming wrapper's inherited text color.
@@ -3934,11 +3981,12 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
   `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
 - `lr-remove` event — Passthrough from a rendered attachment.
-- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
+- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content, or
+  tool-call block (`callId` included).
 - `lr-retry` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
-- `lr-toggle` event — Passthrough from a rendered reasoning panel or tool disclosure.
+- `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
 - `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip. The
   `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
@@ -4130,7 +4178,7 @@ values fall back to the default and negative values clamp to `0`. Collision math
 
 The toolbar is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
+`var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 

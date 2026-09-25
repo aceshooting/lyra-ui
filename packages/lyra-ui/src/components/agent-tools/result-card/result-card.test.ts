@@ -326,7 +326,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-result-card
         heading="Result"
-        style="--lr-result-card-background: var(--lr-color-surface); --lr-result-card-border-color: var(--lr-color-border); --lr-result-card-radius: var(--lr-radius)"
+        style="--lr-result-card-background: var(--lr-color-surface); --lr-result-card-border-color: var(--lr-color-border-subtle); --lr-result-card-radius: var(--lr-radius)"
         >body</lr-result-card
       >
     `)) as LyraResultCard;
@@ -339,5 +339,17 @@ describe('card chrome theming hooks', () => {
     expect(getComputedStyle(part(control, 'header')).borderBottomColor).to.equal(
       getComputedStyle(part(tokened, 'header')).borderBottomColor,
     );
+  });
+
+  it('draws the card edge and header divider on the decorative --lr-color-border-subtle tier', async () => {
+    const el = (await fixture(html`
+      <lr-result-card
+        heading="Result"
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+        >body</lr-result-card
+      >
+    `)) as LyraResultCard;
+    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(part(el, 'header')).borderBottomColor).to.equal('rgb(7, 8, 9)');
   });
 });

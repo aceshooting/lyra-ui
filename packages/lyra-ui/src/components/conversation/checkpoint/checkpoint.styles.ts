@@ -15,7 +15,7 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: var(--lr-size-1rem);
     block-size: var(--lr-border-width-thin);
-    background: var(--lr-color-border);
+    background: var(--lr-color-border-subtle);
   }
   [part='icon'] {
     flex: 0 0 auto;

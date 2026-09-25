@@ -8,6 +8,8 @@ import {
   parseCreateComponentArgs,
   scaffoldComponent,
 } from './create-component.mjs';
+import { normalizeManifest } from './component-inventory.mjs';
+import { expandLyraInventoryManifest } from './generate-component-inventory.mjs';
 
 const temporaryDirectories = [];
 
@@ -98,14 +100,40 @@ function manifestFor({ family, name, className }) {
   };
 }
 
-function successfulRunner(packageDir, steps) {
+// The generated manifest is compact: a subclass omits every member it inherits unchanged and
+// names its base through `superclass`. This mirrors the real `LyraElement` base and its public
+// `locale` attribute/property, which every Lyra component inherits.
+function compactManifestWithBase({ family, name, className }) {
+  const manifest = manifestFor({ family, name, className });
+  manifest.modules[0].declarations[0].superclass = {
+    name: 'LyraElement',
+    module: '/src/internal/lyra-element.js',
+  };
+  manifest.modules.unshift({
+    kind: 'javascript-module',
+    path: 'src/internal/lyra-element.ts',
+    declarations: [
+      {
+        kind: 'class',
+        name: 'LyraElement',
+        members: [
+          { kind: 'field', name: 'locale', type: { text: 'string' }, attribute: 'locale', reflects: true },
+        ],
+        attributes: [{ name: 'locale', type: { text: 'string' }, fieldName: 'locale' }],
+      },
+    ],
+  });
+  return manifest;
+}
+
+function successfulRunner(packageDir, steps, { manifest, since = '8.0.0' } = {}) {
   return (step) => {
     steps.push(step);
     if (step.id === 'manifest') {
       writeFileSync(
         join(packageDir, 'custom-elements.json'),
         `${JSON.stringify(
-          manifestFor({ family: 'utility', name: 'status-panel', className: 'LyraStatusPanel' }),
+          manifest ?? manifestFor({ family: 'utility', name: 'status-panel', className: 'LyraStatusPanel' }),
           null,
           2,
         )}\n`,
@@ -117,7 +145,7 @@ function successfulRunner(packageDir, steps) {
       const entry = inventory.components.find((component) => component.tag === 'lr-status-panel');
       entry.maturity = {
         status: 'experimental',
-        since: '8.0.0',
+        since,
         deprecated: null,
         profile: 'new-component-experimental',
         rationale:
@@ -240,6 +268,41 @@ test('creates a complete populated component scaffold and runs focused three-eng
     steps.filter((step) => step.id.startsWith('test-')).map((step) => step.env.WTR_BROWSER),
     ['chromium', 'firefox', 'webkit'],
   );
+});
+
+test('records the inheritance-expanded surface that the strict inventory check validates', async () => {
+  const packageDir = fixturePackage();
+  const manifest = compactManifestWithBase({
+    family: 'utility',
+    name: 'status-panel',
+    className: 'LyraStatusPanel',
+  });
+
+  await scaffoldComponent({
+    packageDir,
+    family: 'utility',
+    name: 'status-panel',
+    runStep: successfulRunner(packageDir, [], { manifest }),
+  });
+
+  const inventory = JSON.parse(
+    readFileSync(join(packageDir, 'scripts/fixtures/component-inventory.json'), 'utf8'),
+  );
+  const entry = inventory.components.find((component) => component.tag === 'lr-status-panel');
+  // `check:component-inventory` compares the stored surface against the expanded manifest, so a
+  // surface recorded from the compact manifest alone drops every inherited member and fails.
+  const expected = normalizeManifest(expandLyraInventoryManifest(manifest), { ecosystem: 'lyra' }).find(
+    (component) => component.tag === 'lr-status-panel',
+  );
+  assert.deepEqual(
+    entry.surface.attributes.map((attribute) => attribute.name),
+    ['locale'],
+  );
+  assert.deepEqual(
+    entry.surface.properties.map((property) => property.name),
+    ['locale'],
+  );
+  assert.deepEqual(entry.surface, expected.surface);
 });
 
 test('rejects invalid, traversal, and already-prefixed names before writing', async () => {
@@ -384,4 +447,59 @@ test('rolls back every authored file when focused regeneration fails', async () 
     before.metadata,
   );
   assert.equal(readFileSync(join(packageDir, 'custom-elements.json'), 'utf8'), before.manifest);
+});
+
+test('removes the tag alias the registration step generated when a later verification fails', async () => {
+  const packageDir = fixturePackage();
+  const existingAlias = join(packageDir, 'src/components/lr-existing.ts');
+  write(existingAlias, '// existing generated alias\n');
+  const newAlias = join(packageDir, 'src/components/lr-status-panel.ts');
+  const inner = successfulRunner(packageDir, []);
+
+  await assert.rejects(
+    scaffoldComponent({
+      packageDir,
+      family: 'utility',
+      name: 'status-panel',
+      runStep(step) {
+        inner(step);
+        // `pnpm registrations` writes one alias module per inventory tag; the alias for the
+        // new tag is outside the component directory, so only the snapshot can remove it.
+        if (step.id === 'registrations') write(newAlias, '// generated alias\n');
+        if (step.id === 'component-inventory') throw new Error('simulated inventory failure');
+      },
+    }),
+    /simulated inventory failure/,
+  );
+
+  assert.equal(existsSync(join(packageDir, 'src/components/utility/status-panel')), false);
+  assert.equal(existsSync(newAlias), false, 'the new tag alias was removed on rollback');
+  assert.equal(readFileSync(existingAlias, 'utf8'), '// existing generated alias\n');
+});
+
+test('expects an unreleased since once the current package version is already tagged', async () => {
+  const packageDir = fixturePackage();
+  const metadataPath = join(packageDir, 'scripts/fixtures/component-metadata.json');
+  const metadata = JSON.parse(readFileSync(metadataPath, 'utf8'));
+  // After a release the package version stays at the tagged version until the next bump, so the
+  // metadata generator derives `since: 'unreleased'` for a tag that no release has shipped yet.
+  metadata.history = {
+    current: { version: '8.0.0', tags: [] },
+    taggedCurrent: { version: '8.0.0', tag: 'lyra-ui@8.0.0', tags: [] },
+    releases: [],
+  };
+  writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+
+  await scaffoldComponent({
+    packageDir,
+    family: 'utility',
+    name: 'status-panel',
+    runStep: successfulRunner(packageDir, [], { since: 'unreleased' }),
+  });
+
+  const inventory = JSON.parse(
+    readFileSync(join(packageDir, 'scripts/fixtures/component-inventory.json'), 'utf8'),
+  );
+  const entry = inventory.components.find((component) => component.tag === 'lr-status-panel');
+  assert.equal(entry.maturity.since, 'unreleased');
 });

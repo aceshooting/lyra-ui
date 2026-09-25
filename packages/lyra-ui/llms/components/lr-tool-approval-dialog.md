@@ -119,8 +119,8 @@ without changing error text or other danger-coloured surfaces), and
 `--lr-tool-approval-dialog-hover-border-color` (default `var(--lr-color-brand)` — border color of
 the raw-JSON args editor on hover, giving mouse users the same "this is editable" affordance every
 other text-entry surface in the library provides), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-radius`,
-`--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
+`--lr-space-xs/-s/-m/-l`, `--lr-color-surface`, `--lr-color-border`, `--lr-color-border-subtle`,
+`--lr-radius`, `--lr-shadow`, `--lr-color-brand`, `--lr-color-on-brand`, `--lr-color-danger`,
 `--lr-color-text`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lr-json-viewer>`, a bundled dependency of this

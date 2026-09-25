@@ -16,7 +16,7 @@ export const styles = css`
     gap: var(--lr-space-l);
     box-sizing: border-box;
     padding: var(--lr-space-l);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }

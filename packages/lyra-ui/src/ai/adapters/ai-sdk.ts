@@ -55,13 +55,19 @@ function stringValue(value: unknown): string | undefined {
 }
 
 function partState(value: unknown): MessagePartState {
-  return value === 'done' || value === 'output-available' || value === 'output-error' ? 'complete' : 'streaming';
+  return value === 'done' || value === 'output-available' || value === 'output-error' || value === 'output-denied'
+    ? 'complete'
+    : 'streaming';
 }
 
-function toolStatus(value: unknown): ToolCallStatus {
+/** AI SDK 6 tool states, read structurally. A denial -- `output-denied`, or `approval-responded`
+ *  with a rejected approval before the SDK moves it on -- is a policy outcome, not a running call. */
+function toolStatus(value: unknown, approval: unknown): ToolCallStatus {
   if (value === 'output-error') return 'error';
   if (value === 'output-available') return 'success';
   if (value === 'approval-requested') return 'pending';
+  if (value === 'output-denied') return 'denied';
+  if (value === 'approval-responded') return record(approval)?.['approved'] === false ? 'denied' : 'running';
   return 'running';
 }
 
@@ -72,7 +78,7 @@ function toolParts(part: Record<string, unknown>, index: number, messageId: stri
     : type.startsWith('tool-') ? type.slice('tool-'.length) : '';
   if (!name) return [];
   const invocationId = stringValue(part['toolCallId']) ?? `${messageId}:tool:${index}`;
-  const status = toolStatus(part['state']);
+  const status = toolStatus(part['state'], part['approval']);
   const input = record(part['input']) ?? {};
   const error = stringValue(part['errorText']);
   const call: MessagePart = {

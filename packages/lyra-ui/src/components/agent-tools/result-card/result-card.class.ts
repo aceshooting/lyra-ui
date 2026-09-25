@@ -47,7 +47,7 @@ export type ResultCardAppearance = LyraFrame;
  *   children while `compact`.
  * @cssprop [--lr-result-card-background=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-result-card-border-color=var(--lr-color-border)] - Colour of the outer card's
+ * @cssprop [--lr-result-card-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the `[part="header"]` divider.
  * @cssprop [--lr-result-card-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.

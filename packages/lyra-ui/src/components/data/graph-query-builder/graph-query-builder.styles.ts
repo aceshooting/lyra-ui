@@ -140,7 +140,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-s);
     padding-block-start: var(--lr-space-m);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
   [part='saved-queries-label'] {
     margin: 0;

@@ -51,7 +51,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     padding-block: var(--lr-space-xs);
     padding-inline-end: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     box-sizing: border-box;
   }
 

@@ -223,6 +223,30 @@ const coreRawBudget = {
   v10RemediationSweepAllowanceBytes: 0,
 };
 
+/**
+ * What the shadcnTheme canary requires in the emitted CSS. Every pattern occurs in exactly one of
+ * the two imported files, so the canary fails when EITHER is dropped: the layer-order statement,
+ * the `lr-theme-preset` name and the brand fill appear in both files, and a check built on them
+ * passes with the base theme alone. Patterns rather than substrings, because the consumer's
+ * minifier decides the whitespace around `{`, `:` and `,`.
+ */
+const SHADCN_THEME_RETENTION_MARKERS = Object.freeze({
+  preset: Object.freeze([
+    // The preset's own layer block. theme.css only NAMES that layer in its ordering statement.
+    /@layer\s+lr-theme-preset\s*\{/u,
+    // An input only the preset declares.
+    /--lr-theme-heading-letter-spacing\s*:/u,
+    // The shadcn-compatible dark selector. theme.css deliberately answers only to .lr-dark.
+    /(?:^|[\s,{}])\.dark\s*[,{]/u,
+  ]),
+  baseTheme: Object.freeze([
+    // theme.css's own layer block, which the preset never opens.
+    /@layer\s+lr-theme\s*\{/u,
+    // An input only theme.css declares.
+    /--lr-theme-duration-fast\s*:/u,
+  ]),
+});
+
 const bundleEntries = {
   core: {
     fixture: 'core',
@@ -393,6 +417,11 @@ const bundleEntries = {
   // so the assertions in runBundle prove a production tree-shaker kept the shipped CSS asset and
   // locale registration module from the packed tarball.
   theme: {
+    fixture: 'core',
+  },
+  // The opt-in look preset is a bare CSS import as well, and only meaningful alongside theme.css.
+  // Imported preset-first, so the canary also proves the preset's own layer survives bundling.
+  shadcnTheme: {
     fixture: 'core',
   },
   nativeStyles: {
@@ -1067,6 +1096,7 @@ export default defineConfig({
     anchoredPopover: `import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';\nexport const loaded = true;\n`,
     anchoredCombobox: `import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';\nexport const loaded = true;\n`,
     theme: `import '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
+    shadcnTheme: `import '@aceshooting/lyra-ui/themes/shadcn.css';\nimport '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
     nativeStyles: `import '@aceshooting/lyra-ui/native.css';\nexport const loaded = true;\n`,
     utilitiesStyles: `import '@aceshooting/lyra-ui/utilities.css';\nexport const loaded = true;\n`,
     reservationStyles: `import '@aceshooting/lyra-ui/reservations.css';\nexport const loaded = true;\n`,
@@ -1425,6 +1455,23 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
     const css = (await Promise.all(cssFiles.map((file) => readFile(file, 'utf8')))).join('\n');
     if (cssFiles.length === 0 || !css.includes('--lr-theme-color-brand-fill-loud')) {
       violations.push('the bare theme.css import emitted no retained Lyra theme asset');
+    }
+  }
+  if (entry === 'shadcnTheme') {
+    const cssFiles = output.files.filter((file) => file.endsWith('.css'));
+    const css = (await Promise.all(cssFiles.map((file) => readFile(file, 'utf8')))).join('\n');
+    const missing = (markers) => markers.filter((marker) => !marker.test(css)).map(String);
+    const missingPreset = missing(SHADCN_THEME_RETENTION_MARKERS.preset);
+    const missingBaseTheme = missing(SHADCN_THEME_RETENTION_MARKERS.baseTheme);
+    if (cssFiles.length === 0 || missingPreset.length > 0) {
+      violations.push(
+        `the bare themes/shadcn.css import emitted no retained preset (missing ${missingPreset.join(', ') || 'CSS output'})`,
+      );
+    }
+    if (cssFiles.length === 0 || missingBaseTheme.length > 0) {
+      violations.push(
+        `the theme.css imported beside the preset emitted no retained base theme (missing ${missingBaseTheme.join(', ') || 'CSS output'})`,
+      );
     }
   }
   if (entry === 'nativeStyles' || entry === 'utilitiesStyles' || entry === 'reservationStyles') {

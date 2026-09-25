@@ -15,7 +15,7 @@ export const styles = css`
     max-inline-size: 100%;
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-2xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     /* Overlay step: the cluster floats over a flow canvas as a toolbar, so the plain escape below

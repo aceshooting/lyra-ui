@@ -245,9 +245,9 @@ the PR checks list tells you which of these to reproduce locally:
    `docs-and-storybook` aggregate requires both. The split retains the complete Chromium checks
    while removing their former 214-second + 248-second serial chain from one runner.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
-   `packages/lyra-ui/visual-baselines/README.md`). The 93 stories expand to 268 axis-level
-   captures: 123 compare against tracked baselines and 145 are evidence-only. They are lexically
-   sorted and round-robin partitioned across a three-leg matrix (90/89/89 captures), so the
+   `packages/lyra-ui/visual-baselines/README.md`). The 97 stories expand to 280 axis-level
+   captures: 117 compare against tracked baselines and 163 are evidence-only. They are lexically
+   sorted and round-robin partitioned across a three-leg matrix (94/93/93 captures), so the
    historical ~3.5min sweep no longer sits on one runner's critical path. Each leg downloads the
    `storybook-static/` artifact `docs_build` (point 5) already built, runs
    `test:visual` with its one-based shard coordinates, and unconditionally uploads a uniquely
@@ -263,7 +263,7 @@ VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 \
 
 Sharding happens after an optional `--filter` and at capture-axis granularity, not story
 granularity. The unit test proves every capture is selected exactly once and shard sizes differ by
-at most one; an ordinary unsharded local run still exercises all 268 captures.
+at most one; an ordinary unsharded local run still exercises all 280 captures.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`) for
 Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Nine legs use the
@@ -679,6 +679,11 @@ Defer to `ci.yml` and `package.json#scripts` for when each runs:
   exact-measurement/maximum-ceiling proposal after the integrated source set is final; it never
   writes or loosens policy, and an existing tighter canary stays tighter unless separately reviewed.
 - `pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
+
+`check:border-subtle` (blocking, in `contract-policy` next to `check:hit-area`) fails any literal
+`--lr-color-border-subtle` or `--lr-theme-color-surface-border-subtle` in `src/components/forms/**`
+or `src/internal/form-control.styles.ts`: that tier is decorative and may sit below the 3:1 a
+control's boundary needs under WCAG 2.2 SC 1.4.11.
 
 `check:hit-area` (WCAG 2.5.8 tappable-size floor) and `check:numeric-guards` (finite-number guards
 on numeric properties) are now blocking parts of `contract-policy`; both currently pass with all

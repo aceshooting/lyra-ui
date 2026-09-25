@@ -77,8 +77,8 @@ interface ConsumerMenuSnapshot {
  * @cssprop --lr-overlay-arrow-size - Retained Lyra arrow-size fallback.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  *   inherited from the popover surface.
- * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour,
- *   inherited from the popover surface.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
+ *   colour, inherited from the popover surface.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius,
  *   inherited from the popover surface.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of an anchored,

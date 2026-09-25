@@ -176,6 +176,31 @@ it('retunes the nav/zoom control group border and internal divider from the shar
   expect(getComputedStyle(second).borderBlockStartWidth).to.equal('5px');
 });
 
+it('draws popup and legend edges in the subtle border tier but keeps the control group control-grade', async () => {
+  const { el } = await connectedMapWithoutMaplibre(
+    '--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)',
+  );
+  const popup = document.createElement('div');
+  popup.className = 'maplibregl-popup-content';
+  const legend = document.createElement('div');
+  legend.setAttribute('part', 'legend');
+  const limit = document.createElement('div');
+  limit.setAttribute('part', 'legend-limit');
+  const group = document.createElement('div');
+  group.className = 'maplibregl-ctrl-group';
+  const first = document.createElement('button');
+  const second = document.createElement('button');
+  group.append(first, second);
+  el.shadowRoot!.append(popup, legend, limit, group);
+
+  expect(getComputedStyle(popup).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(legend).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(limit).borderBlockStartColor).to.equal('rgb(1, 2, 3)');
+  // The group edge and the divider between its borderless buttons are those buttons' only boundary.
+  expect(getComputedStyle(group).borderTopColor).to.equal('rgb(7, 8, 9)');
+  expect(getComputedStyle(second).borderBlockStartColor).to.equal('rgb(7, 8, 9)');
+});
+
 it('retunes the scale-bar bracket border from the shared border-width-medium token', async () => {
   const { el } = await connectedMapWithoutMaplibre('--lr-theme-border-width-medium: 6px');
   const scale = document.createElement('div');

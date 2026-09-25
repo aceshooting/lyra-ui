@@ -230,6 +230,19 @@ describe('lr-video-playlist public contract', () => {
     expect(getComputedStyle(themedCurrent).backgroundColor).to.equal('rgb(26, 27, 28)');
   });
 
+  it('draws the playlist container edge in the subtle border tier', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+        <lr-video-playlist><lr-video title="First"></lr-video><lr-video title="Second"></lr-video></lr-video-playlist>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraVideoPlaylist>('lr-video-playlist')!;
+    await settle(el);
+    const playlist = el.shadowRoot!.querySelector<HTMLElement>('[part="playlist"]');
+    expect(playlist === null, 'playlist part missing').to.be.false;
+    expect(getComputedStyle(playlist!).borderTopColor).to.equal('rgb(1, 2, 3)');
+  });
+
   it('uses only direct video children and skips inert videos for activation and arrow-navigation focus', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>

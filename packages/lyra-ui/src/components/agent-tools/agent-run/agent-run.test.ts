@@ -800,7 +800,7 @@ describe('card chrome theming hooks', () => {
     )) as LyraAgentRun;
     const tokened = (await fixture(html`
       <lr-agent-run
-        style="--lr-agent-run-background: var(--lr-color-surface); --lr-agent-run-border-color: var(--lr-color-border); --lr-agent-run-radius: var(--lr-radius)"
+        style="--lr-agent-run-background: var(--lr-color-surface); --lr-agent-run-border-color: var(--lr-color-border-subtle); --lr-agent-run-radius: var(--lr-radius)"
         .run=${makeRun({ steps })}
       ></lr-agent-run>
     `)) as LyraAgentRun;
@@ -810,5 +810,15 @@ describe('card chrome theming hooks', () => {
     expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
     expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
     expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('draws the card edge on the decorative --lr-color-border-subtle tier', async () => {
+    const el = (await fixture(html`
+      <lr-agent-run
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+        .run=${makeRun({ steps })}
+      ></lr-agent-run>
+    `)) as LyraAgentRun;
+    expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(7, 8, 9)');
   });
 });

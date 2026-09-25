@@ -532,6 +532,17 @@ it('defaults to frame="card", rendering identically to that value restated', asy
   expect(chrome.boxShadow).to.not.equal('none');
 });
 
+it('draws the card frame with the decorative --lr-color-border-subtle token', async () => {
+  const el = (await fixture(
+    html`<lr-flow-run-status
+      style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
+      .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
+    ></lr-flow-run-status>`,
+  )) as LyraFlowRunStatus;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).borderTopColor).to.equal('rgb(1, 2, 3)');
+});
+
 it('drops border, background, shadow, padding and radius under frame="plain"', async () => {
   const el = (await fixture(
     html`<lr-flow-run-status

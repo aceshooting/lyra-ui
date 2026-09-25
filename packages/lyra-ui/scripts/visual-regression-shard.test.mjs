@@ -21,9 +21,9 @@ test('builds the complete retained-baseline/evidence plan without changing enrol
       axes.get(axisName)?.artifactPolicy === 'evidence-only',
   );
 
-  assert.equal(new Set(captures.map(({ story }) => story.id)).size, 93);
-  assert.equal(captures.length, 268);
-  assert.equal(evidenceOnly.length, 151);
+  assert.equal(new Set(captures.map(({ story }) => story.id)).size, 97);
+  assert.equal(captures.length, 280);
+  assert.equal(evidenceOnly.length, 163);
   assert.equal(captures.length - evidenceOnly.length, 117);
 });
 
@@ -68,7 +68,7 @@ test('creates deterministic, disjoint, exhaustive, balanced capture shards', () 
     shardVisualCaptures(captures, shardIndex, 3),
   );
 
-  assert.deepEqual(shards.map((shard) => shard.length), [90, 89, 89]);
+  assert.deepEqual(shards.map((shard) => shard.length), [94, 93, 93]);
   assert.equal(new Set(shards.flat().map(({ key }) => key)).size, captures.length);
   assert.deepEqual(
     shards.flat().map(({ key }) => key).sort(),

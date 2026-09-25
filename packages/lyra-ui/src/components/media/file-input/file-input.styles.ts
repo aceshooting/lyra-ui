@@ -281,7 +281,7 @@ export const styles = css`
     gap: var(--lr-space-s);
     min-inline-size: 0;
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
   }

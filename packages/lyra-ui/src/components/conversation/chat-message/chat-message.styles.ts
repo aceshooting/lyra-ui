@@ -12,7 +12,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     max-inline-size: var(--lr-chat-message-max-width, 80%);
     padding: var(--lr-chat-message-bubble-padding, var(--lr-space-m));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-chat-message-bubble-radius, var(--lr-radius));
     background: var(--lr-chat-message-bubble-bg, var(--lr-color-surface));
     color: var(--lr-chat-message-bubble-color, var(--lr-color-text));

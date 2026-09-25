@@ -13,7 +13,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-2xs) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     /* Resting chrome despite the element's name: an in-flow status strip (plain display:block

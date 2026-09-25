@@ -452,3 +452,16 @@ describe('file type metadata registry input validation', () => {
     expect(registry.resolve('', 'report.portable').label).to.equal('Portable Doc');
   });
 });
+
+it('frames the extension tile in the subtle border tier', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+      <lr-file-icon mime-type="application/pdf"></lr-file-icon>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraFileIcon>('lr-file-icon')!;
+  await el.updateComplete;
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]');
+  expect(icon === null, 'icon part missing').to.be.false;
+  expect(getComputedStyle(icon!).borderTopColor).to.equal('rgb(1, 2, 3)');
+});

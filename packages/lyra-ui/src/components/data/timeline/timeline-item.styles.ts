@@ -99,7 +99,7 @@ export const styles = css`
        creates (see the class doc's rail mechanism). One declaration covers both orientations. */
     inline-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium));
     block-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium));
-    background: var(--lr-timeline-rail-color, var(--lr-color-border));
+    background: var(--lr-timeline-rail-color, var(--lr-color-border-subtle));
     /* Suppressed for the last item by <lr-timeline>'s own ::slotted(:last-child) rule; visibility,
        not display, keeps the layout box every other item's track has, so marker alignment stays
        consistent down the list. */

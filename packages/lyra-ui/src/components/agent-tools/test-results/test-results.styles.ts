@@ -84,7 +84,7 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: baseline;
     column-gap: var(--lr-space-xs);
-    border-block-start: var(--lr-size-1px) solid var(--lr-color-border);
+    border-block-start: var(--lr-size-1px) solid var(--lr-color-border-subtle);
     padding-block: var(--lr-space-xs);
   }
   [part='test-status'] {

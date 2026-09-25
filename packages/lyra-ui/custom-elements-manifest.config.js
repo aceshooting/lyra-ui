@@ -345,6 +345,23 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     },
   ],
   [
+    'lr-toggle',
+    {
+      appearance: { default: "'plain'", attribute: 'appearance' },
+      pressed: { default: 'false', attribute: 'pressed' },
+      size: { default: "'m'", attribute: 'size' },
+      variant: { default: "'neutral'", attribute: 'variant' },
+    },
+  ],
+  [
+    'lr-toggle-group',
+    {
+      disabled: { default: 'false', attribute: 'disabled' },
+      orientation: { default: "'horizontal'", attribute: 'orientation' },
+      selectionMode: { default: "'multiple'", attribute: 'selection-mode' },
+    },
+  ],
+  [
     'lr-tooltip',
     {
       for: { default: "''", attribute: 'for' },
@@ -590,6 +607,8 @@ export const ATTRIBUTE_ONLY_CONTRACTS = new Map([
   // types it from the field. `aria-labelledby` cannot be: an IDREF string does not cross a shadow
   // boundary, so it is resolved imperatively onto `ariaLabelledByElements` with no field to read.
   ['lr-icon-button', { 'aria-labelledby': { type: 'string | null' } }],
+  // Same IDREF resolution as lr-icon-button: onto the internal button's `ariaLabelledByElements`.
+  ['lr-toggle', { 'aria-labelledby': { type: 'string | null' } }],
 ]);
 
 /** Reflected attributes that exist only as framework/hydration transport and must not be

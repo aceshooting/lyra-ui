@@ -536,6 +536,46 @@ const statefulProbeMarkup = new Map([
       )
     ),
   ],
+  [
+    'lr-navigation-menu',
+    await collectResult(
+      render(
+        html`<lr-navigation-menu data-ssr-probe="lr-navigation-menu"
+          ><lr-navigation-menu-item href="/docs" current data-ssr-light="lr-navigation-menu"
+            >Docs</lr-navigation-menu-item
+          ><lr-navigation-menu-item data-nav-probe="plain"
+            >Home</lr-navigation-menu-item
+          ><lr-navigation-menu-item data-nav-probe="trigger"
+            >Products<ul slot="panel">
+              <li><a href="/analytics">Analytics</a></li>
+            </ul></lr-navigation-menu-item
+          ><lr-navigation-menu-item data-nav-probe="first-open" open
+            >Resources<ul slot="panel">
+              <li><a href="/guides">Guides</a></li>
+            </ul></lr-navigation-menu-item
+          ><lr-navigation-menu-item data-nav-probe="second-open" open
+            >Company<ul slot="panel">
+              <li><a href="/about">About</a></li>
+            </ul></lr-navigation-menu-item
+          ></lr-navigation-menu
+        >`,
+        { elementRenderers }
+      )
+    ),
+  ],
+  [
+    'lr-context-menu',
+    await collectResult(
+      render(
+        html`<lr-context-menu data-ssr-probe="lr-context-menu"
+          ><button slot="trigger" data-ssr-light="lr-context-menu">Row</button
+          ><lr-menu-item value="a">Open</lr-menu-item
+          ><hr /><lr-menu-item value="b">Delete</lr-menu-item></lr-context-menu
+        >`,
+        { elementRenderers }
+      )
+    ),
+  ],
 ]);
 const progressiveSlotParts = {
   'lr-badge': ['start', 'end'],
@@ -571,6 +611,8 @@ const populatedHydrationTags = new Set([
   'lr-result-card',
   'lr-tab-group',
   'lr-multi-split',
+  'lr-navigation-menu',
+  'lr-context-menu',
 ]);
 for (const [tag, markup] of statefulProbeMarkup) {
   const entry = entries.find((candidate) => candidate.tag === tag);
@@ -754,6 +796,10 @@ const documentHtml = `<!doctype html>
             return host.shadowRoot?.querySelector('slot:not([name])');
           case 'lr-multi-split':
             return host.shadowRoot?.querySelector('[role="separator"]');
+          case 'lr-navigation-menu':
+            return host.shadowRoot?.querySelector('[part~="list"]');
+          case 'lr-context-menu':
+            return host.shadowRoot?.querySelector('.shell');
           case 'lr-badge':
           case 'lr-tag':
           case 'lr-chip':
@@ -1460,6 +1506,86 @@ try {
       tagHydration.tagRemoveLabel,
       'Remove Alpha',
       'hydrated tag must add its light-DOM context to the remove label'
+    );
+  }
+
+  if (shouldAssertHydrationTag('lr-navigation-menu')) {
+    // Server output: every panel hidden (even for open markup) and every non-link item a closed
+    // trigger, since slot content cannot be inspected before the browser resolves it.
+    const navServerMarkup = statefulProbeMarkup.get('lr-navigation-menu');
+    const navServerPanels = navServerMarkup.match(/<div[^>]*part="panel"[^>]*>/g) ?? [];
+    assert.equal(navServerPanels.length, 5, 'lr-navigation-menu probe must render five item panels');
+    assert.ok(
+      navServerPanels.every((panel) => /\shidden\b/.test(panel)),
+      'lr-navigation-menu server markup must render every panel hidden, even for open items'
+    );
+    const navServerButtons = navServerMarkup.match(/<button[^>]*part="base[^"]*"[^>]*>/g) ?? [];
+    assert.equal(navServerButtons.length, 4, 'lr-navigation-menu probe must render four non-link items');
+    assert.ok(
+      navServerButtons.every((button) => /aria-expanded="false"/.test(button)),
+      'lr-navigation-menu server markup must render every non-link item as a closed trigger'
+    );
+    const navHydrated = await page.evaluate(async () => {
+      const host = document.querySelector('[data-fixture-tag="lr-navigation-menu"] > *');
+      const items = [...host.children];
+      await Promise.all(items.map((item) => item.updateComplete));
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const probe = (name) => host.querySelector('[data-nav-probe="' + name + '"]');
+      const plain = probe('plain').shadowRoot;
+      const plainBase = plain.querySelector('[part~="base"]');
+      return {
+        plainExpanded: plainBase.getAttribute('aria-expanded'),
+        plainControls: plainBase.getAttribute('aria-controls'),
+        plainCaretHidden: plain.querySelector('[part="expand-icon"]').hasAttribute('hidden'),
+        open: items.filter((item) => item.hasAttribute('open')).map((item) => item.dataset.navProbe ?? 'link'),
+        firstPanelHidden: probe('first-open').shadowRoot.querySelector('[part="panel"]').hidden,
+        roles: items.map((item) => item.getAttribute('role')),
+      };
+    });
+    assert.deepEqual(
+      navHydrated,
+      {
+        plainExpanded: null,
+        plainControls: null,
+        plainCaretHidden: true,
+        open: ['first-open'],
+        firstPanelHidden: false,
+        roles: ['listitem', 'listitem', 'listitem', 'listitem', 'listitem'],
+      },
+      'lr-navigation-menu corrective render must drop plain-button disclosure state, keep only ' +
+        'the first open item and reveal its panel, and give every item host the listitem role'
+    );
+  }
+
+  if (shouldAssertHydrationTag('lr-context-menu')) {
+    // After hydration a right-click on the probe's region button must open the menu once and
+    // prevent the platform menu.
+    const contextMenuHydrated = await page.evaluate(async () => {
+      const host = document.querySelector('[data-fixture-tag="lr-context-menu"] > *');
+      await host.updateComplete;
+      const button = host.querySelector('[slot="trigger"]');
+      const rect = button.getBoundingClientRect();
+      let shows = 0;
+      host.addEventListener('lr-show', () => {
+        shows += 1;
+      });
+      const nativeAllowed = button.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        })
+      );
+      const result = { shows, open: host.open, nativeAllowed };
+      await host.hide({ focusTrigger: false });
+      return result;
+    });
+    assert.deepEqual(
+      contextMenuHydrated,
+      { shows: 1, open: true, nativeAllowed: false },
+      'lr-context-menu must open from a right-click on its hydrated region'
     );
   }
 

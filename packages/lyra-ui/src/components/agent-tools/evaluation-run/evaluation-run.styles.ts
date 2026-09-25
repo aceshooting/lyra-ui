@@ -15,7 +15,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-s) var(--lr-space-m);
     padding: var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
   }

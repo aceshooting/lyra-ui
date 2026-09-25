@@ -138,7 +138,7 @@ export const styles = css`
     inline-size: min(calc(var(--lr-tree-depth, 0) * var(--indent-size, var(--lr-space-l))), var(--lr-size-8rem));
     border-inline-end-width: var(--indent-guide-width, 0);
     border-inline-end-style: var(--indent-guide-style, solid);
-    border-inline-end-color: var(--indent-guide-color, var(--lr-color-border));
+    border-inline-end-color: var(--indent-guide-color, var(--lr-color-border-subtle));
   }
   [part='toggle']:disabled {
     cursor: default;

@@ -195,7 +195,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   hook it computes to the UA default link blue. Set `revert` for the UA default.
  * @cssprop [--lr-activity-feed-background=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-activity-feed-border-color=var(--lr-color-border)] - Colour of the outer card's
+ * @cssprop [--lr-activity-feed-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-activity-feed-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.

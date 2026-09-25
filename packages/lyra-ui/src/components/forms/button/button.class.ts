@@ -35,6 +35,7 @@ import {
 } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import {
   currentValidityValidator,
   type LyraFormValidator,
@@ -612,15 +613,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  `noopener noreferrer` guard whenever `target` is set. `undefined` when nothing remains, so the
    *  attribute is omitted rather than rendered empty. */
   private get resolvedRel(): string | undefined {
-    const authored = (this.rel ?? '')
-      .split(/\s+/)
-      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
-    const tokens = new Set(authored);
-    if (this.target) {
-      tokens.add('noopener');
-      tokens.add('noreferrer');
-    }
-    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
+    return resolveGuardedRel(this.rel, this.target);
   }
   /** Native anchor `download` attribute, used only while `href` resolves to a link. Ignored in
    *  `<button>` mode. */

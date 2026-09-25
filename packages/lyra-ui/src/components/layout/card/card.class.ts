@@ -7,6 +7,7 @@ import {
   bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -120,7 +121,9 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * can keep its own action buttons.
  * @cssprop [--spacing=var(--lr-space-m)] - Space around and between card sections.
  * @cssprop [--padding=var(--spacing,var(--lr-space-m))] - Shoelace-compatible section padding.
- * @cssprop [--border-color=var(--lr-color-border)] - Shoelace-compatible border color.
+ * @cssprop [--border-color=var(--lr-color-border-subtle)] - Shoelace-compatible border color.
+ *   Unset, an `actionable` or linked (`href`) card's outer edge falls back to `--lr-color-border`
+ *   instead: that edge is then the whole-card control's only visible boundary.
  * @cssprop [--border-radius=var(--lr-radius)] - Shoelace-compatible corner radius.
  * @cssprop [--border-width=var(--lr-border-width-thin)] - Shoelace-compatible border width.
  * @cssprop [--lr-card-outlined-bg=var(--lr-color-surface)] - Background of the DEFAULT
@@ -233,15 +236,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @property() rel?: string;
 
   private get resolvedRel(): string | undefined {
-    const authored = (this.rel ?? '')
-      .split(/\s+/)
-      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
-    const tokens = new Set(authored);
-    if (this.target) {
-      tokens.add('noopener');
-      tokens.add('noreferrer');
-    }
-    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
+    return resolveGuardedRel(this.rel, this.target);
   }
 
   @state() private hasHeaderSlot = false;

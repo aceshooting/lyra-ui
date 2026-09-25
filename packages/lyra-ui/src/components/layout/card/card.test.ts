@@ -1066,6 +1066,39 @@ it('inherits independent appearance and interactive-state paint from an ancestor
   }
 });
 
+it('keeps an actionable or linked card edge on the control-grade border while a passive card uses the subtle tier', async () => {
+  // Distinct theme inputs, so the two border tiers stop resolving to the same colour. An
+  // actionable or linked card is one whole-card control whose outer edge is its only visible
+  // boundary at rest (WCAG 2.2 SC 1.4.11); its header rule is still a decorative divider.
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="
+      --lr-transition-fast: 0ms;
+      --lr-theme-color-surface-border: rgb(4, 5, 6);
+      --lr-theme-color-surface-border-subtle: rgb(1, 2, 3);
+    ">
+      <lr-card><span slot="header">Passive</span>Passive</lr-card>
+      <lr-card actionable><span slot="header">Actionable</span>Actionable</lr-card>
+      <lr-card href="/x">Linked</lr-card>
+      <lr-card actionable style="--border-color: rgb(7, 8, 9)">Overridden</lr-card>
+      <lr-card actionable appearance="filled">Filled</lr-card>
+    </div>
+  `);
+  const cards = [...wrapper.querySelectorAll<LyraCard>('lr-card')];
+  await Promise.all(cards.map((card) => card.updateComplete));
+  const [passive, actionable, linked, overridden, filled] = cards;
+  const header = (card: LyraCard) =>
+    card.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+
+  expect(getComputedStyle(base(passive!)).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(header(passive!)).borderBottomColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(base(actionable!)).borderTopColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(header(actionable!)).borderBottomColor).to.equal('rgb(1, 2, 3)');
+  expect(base(linked!).localName).to.equal('a');
+  expect(getComputedStyle(base(linked!)).borderTopColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(base(overridden!)).borderTopColor).to.equal('rgb(7, 8, 9)');
+  expect(getComputedStyle(base(filled!)).borderTopColor).to.equal('rgba(0, 0, 0, 0)');
+});
+
 describe("a slotted [hidden] media child", () => {
   it("is removed from the rendered box, not just from the accessibility tree", async () => {
     const el = (await fixture(html`

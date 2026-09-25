@@ -9,7 +9,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-s);
     padding: var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* The RESTING frame's own hook, alongside the compact tier's existing padding/gap levers --
        the default tier every dossier list actually renders was the only one with no card-specific

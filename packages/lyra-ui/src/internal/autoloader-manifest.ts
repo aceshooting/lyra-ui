@@ -261,6 +261,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/agent-tools/context-inspector/context-inspector.class.js').then((module) => module.LyraContextInspector),
   },
+  'lr-context-menu': {
+    optionalPeers: [],
+    load: () => import('../components/overlays/context-menu/context-menu.class.js').then((module) => module.LyraContextMenu),
+  },
   'lr-context-meter': {
     optionalPeers: [],
     load: () => import('../components/data/context-meter/context-meter.class.js').then((module) => module.LyraContextMeter),
@@ -681,6 +685,14 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/forms/input/native-time-input.class.js').then((module) => module.LyraNativeTimeInput),
   },
+  'lr-navigation-menu': {
+    optionalPeers: [],
+    load: () => import('../components/layout/navigation-menu/navigation-menu.class.js').then((module) => module.LyraNavigationMenu),
+  },
+  'lr-navigation-menu-item': {
+    optionalPeers: [],
+    load: () => import('../components/layout/navigation-menu-item/navigation-menu-item.class.js').then((module) => module.LyraNavigationMenuItem),
+  },
   'lr-neighbor-list': {
     optionalPeers: [],
     load: () => import('../components/retrieval/neighbor-list/neighbor-list.class.js').then((module) => module.LyraNeighborList),
@@ -1057,6 +1069,14 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/overlays/toast/toast-item.class.js').then((module) => module.LyraToastItem),
   },
+  'lr-toggle': {
+    optionalPeers: [],
+    load: () => import('../components/forms/toggle/toggle.class.js').then((module) => module.LyraToggle),
+  },
+  'lr-toggle-group': {
+    optionalPeers: [],
+    load: () => import('../components/forms/toggle-group/toggle-group.class.js').then((module) => module.LyraToggleGroup),
+  },
   'lr-token-input': {
     optionalPeers: [],
     load: () => import('../components/forms/token-input/token-input.class.js').then((module) => module.LyraTokenInput),
@@ -1064,6 +1084,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-tool-approval-dialog': {
     optionalPeers: [],
     load: () => import('../components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js').then((module) => module.LyraToolApprovalDialog),
+  },
+  'lr-tool-call-block': {
+    optionalPeers: [],
+    load: () => import('../components/agent-tools/tool-call-block/tool-call-block.class.js').then((module) => module.LyraToolCallBlock),
   },
   'lr-tool-call-chip': {
     optionalPeers: [],

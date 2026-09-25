@@ -252,6 +252,21 @@ describe('lr-agent-eval-dashboard', () => {
     expect(getComputedStyle(metric).borderTopColor).to.equal('rgb(1, 2, 3)');
   });
 
+  it('draws each run row with only a top separator on the decorative --lr-color-border-subtle tier', async () => {
+    const el = (await fixture(html`
+      <lr-agent-eval-dashboard
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+        .runs=${[{ id: 'r1', label: 'Run 1', status: 'done' }]}
+      ></lr-agent-eval-dashboard>
+    `)) as LyraAgentEvalDashboard;
+    const row = getComputedStyle(el.shadowRoot!.querySelector('[part="run"]') as HTMLElement);
+    expect(row.borderTopStyle).to.equal('solid');
+    expect(row.borderTopColor).to.equal('rgb(7, 8, 9)');
+    // The row is a native <button>: without a reset, the UA's outset button border stays on the
+    // three sides the separator does not set, boxing every row in a heavy frame.
+    expect([row.borderRightWidth, row.borderBottomWidth, row.borderLeftWidth]).to.deep.equal(['0px', '0px', '0px']);
+  });
+
   it('contains long public dashboard, metric, and run labels at 320px', async () => {
     const token = 'unbroken'.repeat(80);
     const wrapper = (await fixture(html`

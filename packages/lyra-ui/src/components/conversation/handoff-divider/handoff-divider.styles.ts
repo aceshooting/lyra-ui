@@ -13,7 +13,7 @@ export const styles = css`
   [part='line'] {
     flex: 1 1 auto;
     block-size: var(--lr-border-width-thin);
-    background: var(--lr-color-border);
+    background: var(--lr-color-border-subtle);
   }
   [part='chip'] {
     display: inline-flex;
@@ -24,7 +24,7 @@ export const styles = css`
     max-inline-size: var(--lr-size-24rem);
     box-sizing: border-box;
     padding: var(--lr-space-2xs) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text-quiet);

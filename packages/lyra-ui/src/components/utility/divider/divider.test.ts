@@ -31,6 +31,46 @@ it('accepts the mapped width, color, and spacing CSS hooks', async () => {
   expect(computed.marginBottom).to.equal('11px');
 });
 
+/** Resolved separator colour of each divider in `wrapper`: block-start edge when horizontal,
+ *  inline-start edge when vertical. */
+function separatorColors(wrapper: HTMLElement): string[] {
+  return [...wrapper.querySelectorAll<LyraDivider>('lr-divider')].map((divider) => {
+    const base = divider.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const edge =
+      divider.getAttribute('orientation') === 'vertical'
+        ? 'border-inline-start-color'
+        : 'border-block-start-color';
+    return getComputedStyle(base).getPropertyValue(edge);
+  });
+}
+
+it('defaults to the decorative subtle border, which falls back to the control border when unset', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-color-surface-border: rgb(10, 20, 30)">
+      <lr-divider></lr-divider>
+      <lr-divider orientation="vertical"></lr-divider>
+    </div>
+  `);
+  expect(separatorColors(wrapper)).to.deep.equal(['rgb(10, 20, 30)', 'rgb(10, 20, 30)']);
+});
+
+it('follows a theme-level subtle border, and --color still wins over it', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div
+      style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(40, 50, 60)"
+    >
+      <lr-divider></lr-divider>
+      <lr-divider orientation="vertical"></lr-divider>
+      <lr-divider style="--color: rgb(1, 2, 3)"></lr-divider>
+    </div>
+  `);
+  expect(separatorColors(wrapper)).to.deep.equal([
+    'rgb(40, 50, 60)',
+    'rgb(40, 50, 60)',
+    'rgb(1, 2, 3)',
+  ]);
+});
+
 it('renders a semantic horizontal divider and supports vertical orientation', async () => {
   const el = await fixture(html`<lr-divider orientation="vertical"></lr-divider>`);
   const divider = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

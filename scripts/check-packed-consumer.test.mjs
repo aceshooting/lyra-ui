@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { compactBuildCss } from '../packages/lyra-ui/scripts/compact-build-css.mjs';
 
 const checkerSource = await readFile(
   new URL('check-packed-consumer.mjs', import.meta.url),
@@ -171,4 +175,59 @@ test('gates first-interaction registration without charging Lyra to the static s
     /<datalist id="country-options">/u,
     'the combobox fixture must use a native datalist fallback',
   );
+});
+
+/** The checker's shadcnTheme marker table, evaluated from its source (importing it runs the gate). */
+function shadcnThemeRetentionMarkers() {
+  const declaration = checkerSource.match(
+    /const SHADCN_THEME_RETENTION_MARKERS = (?<body>Object\.freeze\(\{[\s\S]*?\n\}\));/u,
+  );
+  assert.ok(declaration?.groups?.body, 'SHADCN_THEME_RETENTION_MARKERS must remain an inspectable top-level table');
+  const markers = new Function(`return ${declaration.groups.body};`)();
+  assert.ok(markers.preset.length > 0 && markers.baseTheme.length > 0, 'both marker lists must be non-empty');
+  for (const marker of [...markers.preset, ...markers.baseTheme]) assert.ok(marker instanceof RegExp);
+  return markers;
+}
+
+test('gates the shadcn preset canary on markers unique to each imported stylesheet', async () => {
+  assert.match(
+    checkerSource,
+    /shadcnTheme: `import '@aceshooting\/lyra-ui\/themes\/shadcn\.css';\\nimport '@aceshooting\/lyra-ui\/theme\.css';/u,
+    'the canary imports the preset first, then the base theme',
+  );
+  const branch = checkerSource.match(/if \(entry === 'shadcnTheme'\) \{(?<body>[\s\S]*?)\n {2}\}\n/u)?.groups?.body;
+  assert.ok(branch, 'the shadcnTheme bundle assertion must remain inspectable');
+  assert.match(branch, /SHADCN_THEME_RETENTION_MARKERS\.preset/u);
+  assert.match(branch, /SHADCN_THEME_RETENTION_MARKERS\.baseTheme/u);
+  // Present in BOTH files, so any one of them passes with the preset tree-shaken away.
+  assert.doesNotMatch(branch, /--lr-theme-color-brand-fill-loud|'lr-theme-preset'/u);
+
+  const markers = shadcnThemeRetentionMarkers();
+  const packageDir = fileURLToPath(new URL('../packages/lyra-ui/', import.meta.url));
+  const stripComments = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '');
+  const sources = {
+    preset: stripComments(await readFile(join(packageDir, 'src', 'themes', 'shadcn.css'), 'utf8')),
+    baseTheme: stripComments(await readFile(join(packageDir, 'src', 'theme.css'), 'utf8')),
+  };
+  // The tarball ships the build's minified copies, so check those forms too.
+  const scratch = await mkdtemp(join(tmpdir(), 'lyra-packed-theme-markers-'));
+  const minified = {};
+  try {
+    await copyFile(join(packageDir, 'src', 'themes', 'shadcn.css'), join(scratch, 'shadcn.css'));
+    await copyFile(join(packageDir, 'src', 'theme.css'), join(scratch, 'theme.css'));
+    await compactBuildCss(scratch);
+    minified.preset = await readFile(join(scratch, 'shadcn.css'), 'utf8');
+    minified.baseTheme = await readFile(join(scratch, 'theme.css'), 'utf8');
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
+
+  for (const [form, texts] of [['source', sources], ['minified', minified]]) {
+    for (const [owner, other] of [['preset', 'baseTheme'], ['baseTheme', 'preset']]) {
+      for (const marker of markers[owner]) {
+        assert.match(texts[owner], marker, `${form} ${owner}: ${marker} must occur in the file it vouches for`);
+        assert.doesNotMatch(texts[other], marker, `${form} ${other}: ${marker} must not occur in the other file`);
+      }
+    }
+  }
 });

@@ -5,7 +5,7 @@ export const styles = css`
   [part='base'] {
     border: 0;
     border-block-start: var(--width, var(--lr-border-width-thin)) solid
-      var(--color, var(--lr-color-border));
+      var(--color, var(--lr-color-border-subtle));
     margin-block: var(--spacing, 0);
     margin-inline: 0;
   }
@@ -14,7 +14,7 @@ export const styles = css`
     block-size: 100%;
     border-block-start: 0;
     border-inline-start: var(--width, var(--lr-border-width-thin)) solid
-      var(--color, var(--lr-color-border));
+      var(--color, var(--lr-color-border-subtle));
     margin-block: 0;
     margin-inline: var(--spacing, 0);
   }

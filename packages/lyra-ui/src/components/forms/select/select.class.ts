@@ -438,7 +438,8 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * on the listbox. The listbox is a floating surface, so it retints with every other popup rather
  * than with the trigger it drops from.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
- * the listbox.
+ * the listbox. Unlike a floating panel's decorative edge, it defaults to
+ * the control tier: this popup belongs to the control it opens from.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  * listbox.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored listbox.

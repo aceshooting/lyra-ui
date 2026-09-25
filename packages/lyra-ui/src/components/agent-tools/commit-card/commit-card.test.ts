@@ -714,7 +714,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-commit-card
         hash="abcdef1"
-        style="--lr-commit-card-border-color: var(--lr-color-border); --lr-commit-card-radius: var(--lr-radius)"
+        style="--lr-commit-card-border-color: var(--lr-color-border-subtle); --lr-commit-card-radius: var(--lr-radius)"
       ></lr-commit-card>
     `)) as LyraCommitCard;
     const unset = getComputedStyle(base(control));
@@ -724,6 +724,18 @@ describe('card chrome theming hooks', () => {
     expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
     expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
     expect(unset.borderTopLeftRadius).to.not.equal('0px');
+  });
+
+  it('draws the card edge on the subtle tier while the copy button keeps the control border', async () => {
+    const el = (await fixture(html`
+      <lr-commit-card
+        hash="abcdef1"
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(7, 8, 9)');
+    const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+    expect(getComputedStyle(copy).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
 
   it('still removes the fill under frame="plain" when the background hook is set', async () => {

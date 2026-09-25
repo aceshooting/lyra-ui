@@ -11,7 +11,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
