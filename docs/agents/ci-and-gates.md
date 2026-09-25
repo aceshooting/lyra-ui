@@ -124,6 +124,21 @@ internally by `registrations`), `component-metadata:history` (a manual git-histo
 and `coverage-floors` (reviewed limits, not derived output — already outside `contract-policy` for
 the same reason).
 
+**Theme presets and the token grammar.** `scripts/generate-theme-presets.mjs` turns each
+`src/themes/<name>.css` look into the committed runtime preset `src/theme/presets/<name>.ts`
+(`pnpm run theme-presets`, part of `regen`); its `--check` (`check:theme-presets`, in
+`contract-policy`) fails on a stale or orphaned module and on any stylesheet that breaks the file-shape
+contract (layer statement, one `lr-theme-preset` block, a light rule then a dark rule, `--lr-theme-*`
+only, grammar-valid single-line values, fill/on pairing, identical key sets per mode). The token
+grammar itself has one source, `scripts/fixtures/theme-token-grammar.json`: `theme.ts` carries two
+literal copies (runtime and self-contained bootstrap), and `scripts/theme-token-grammar.test.mjs`
+fails when either drifts from the fixture or when the fixture's mode-default reference colours
+drift from `theme.css` — edit all three together. The bootstrap's shipped bytes have their own
+ceiling, `scripts/theme-bootstrap-budget.json`, enforced by `check:theme-bootstrap` (chained into
+`build`) together with an inline-script safety check (`</`, `<!--`, `<script`, raw U+2028/U+2029);
+it is not in `bundle-budgets.json` because `check-bundle-size.mjs` re-minifies, and raising it needs
+a reviewed re-measurement.
+
 ## CI: `.github/workflows/ci.yml` is authoritative
 
 **`ci.yml` is the authoritative gate list and reproduction sequence.** Read it directly rather
@@ -245,9 +260,9 @@ the PR checks list tells you which of these to reproduce locally:
    `docs-and-storybook` aggregate requires both. The split retains the complete Chromium checks
    while removing their former 214-second + 248-second serial chain from one runner.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
-   `packages/lyra-ui/visual-baselines/README.md`). The 93 stories expand to 268 axis-level
-   captures: 123 compare against tracked baselines and 145 are evidence-only. They are lexically
-   sorted and round-robin partitioned across a three-leg matrix (90/89/89 captures), so the
+   `packages/lyra-ui/visual-baselines/README.md`). The 95 stories expand to 272 axis-level
+   captures: 114 compare against tracked baselines and 158 are evidence-only. They are lexically
+   sorted and round-robin partitioned across a three-leg matrix (91/91/90 captures), so the
    historical ~3.5min sweep no longer sits on one runner's critical path. Each leg downloads the
    `storybook-static/` artifact `docs_build` (point 5) already built, runs
    `test:visual` with its one-based shard coordinates, and unconditionally uploads a uniquely
@@ -263,7 +278,7 @@ VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 \
 
 Sharding happens after an optional `--filter` and at capture-axis granularity, not story
 granularity. The unit test proves every capture is selected exactly once and shard sizes differ by
-at most one; an ordinary unsharded local run still exercises all 268 captures.
+at most one; an ordinary unsharded local run still exercises all 272 captures.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`) for
 Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Nine legs use the

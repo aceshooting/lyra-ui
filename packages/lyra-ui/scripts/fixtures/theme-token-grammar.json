@@ -1,0 +1,190 @@
+{
+  "$comment": "Single source for the --lr-theme-* token-map grammar used by the runtime tokens field of setLyraTheme() and theme presets. Three consumers carry it: src/theme/theme.ts holds two literal copies (the module runtime, and the self-contained no-flash bootstrap), and scripts/theme-token-grammar.mjs builds the preset generator validator from this file. scripts/theme-token-grammar.test.mjs fails when either theme.ts copy drifts from these constants, or when modeDefaults drift from theme.css. The vectors are shared by the runtime, bootstrap, preset, generator and safe-css tests.",
+  "namePattern": {
+    "source": "^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "flags": ""
+  },
+  "nameMaxLength": 80,
+  "reservedNames": [
+    "--lr-theme-accent"
+  ],
+  "entryMax": 512,
+  "synthesizedMax": 16,
+  "valueMaxLength": 256,
+  "forbiddenPattern": {
+    "source": "[\\x00-\\x1f\\x7f\\\\;{}!<>@[\\]`$^|~=?&:\\u2028\\u2029]|\\/\\*|\\*\\/",
+    "flags": ""
+  },
+  "cssWidePattern": {
+    "source": "^(?:inherit|initial|revert(?:-layer)?|unset)$",
+    "flags": "i"
+  },
+  "functionTokenPattern": {
+    "source": "([a-z0-9_-]+)\\s*\\(",
+    "flags": "gi"
+  },
+  "allowedFunctions": [
+    "rgb",
+    "rgba",
+    "hsl",
+    "hsla",
+    "hwb",
+    "lab",
+    "lch",
+    "oklab",
+    "oklch",
+    "color",
+    "color-mix",
+    "light-dark",
+    "calc",
+    "min",
+    "max",
+    "clamp",
+    "var",
+    "cubic-bezier",
+    "steps",
+    "linear"
+  ],
+  "modeDefaults": {
+    "light": {
+      "surface": [
+        255,
+        255,
+        255
+      ],
+      "raised": [
+        246,
+        248,
+        250
+      ],
+      "text": [
+        26,
+        26,
+        26
+      ],
+      "overlayStrongAlpha": 0.92
+    },
+    "dark": {
+      "surface": [
+        26,
+        26,
+        26
+      ],
+      "raised": [
+        34,
+        39,
+        46
+      ],
+      "text": [
+        242,
+        242,
+        242
+      ],
+      "overlayStrongAlpha": 0.95
+    }
+  },
+  "names": {
+    "accept": [
+      "--lr-theme-color-brand-fill-loud",
+      "--lr-theme-font-size-m",
+      "--lr-theme-x",
+      "--lr-theme-a1-b2",
+      "--lr-theme-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "reject": [
+      "--lr-color-surface",
+      "color",
+      "--lr-theme-",
+      "--lr-theme-Bad",
+      "--lr-theme-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "--lr-theme-accent",
+      "__proto__",
+      "constructor",
+      "--lr-theme--double",
+      "--lr-theme-x-",
+      "--lr-theme-x y",
+      "--lr-theme-x_y",
+      " --lr-theme-x"
+    ]
+  },
+  "values": {
+    "accept": [
+      "#ff0000",
+      "  #abc  ",
+      "rgb(0 0 0 / 0.5)",
+      "oklch(0.7 0.1 200)",
+      "color-mix(in srgb, red 40%, blue)",
+      "light-dark(#ffffff, #000000)",
+      "var(--lr-theme-shadow-color, 0 0 0)",
+      "calc(1px + 2px * 3)",
+      "clamp(1rem, 2vw, 3rem)",
+      "min(10px, 5%)",
+      "0 1px 2px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.05)",
+      "'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif",
+      "\"Geist Mono\", monospace",
+      "cubic-bezier(0.2, 0, 0, 1)",
+      "steps(4, end)",
+      "linear(0, 0.5 50%, 1)",
+      "-0.025em",
+      "2.25rem",
+      "0px",
+      "transparent"
+    ],
+    "reject": [
+      "url(x)",
+      "URL(x)",
+      "url (x)",
+      "var(--a, url(x))",
+      "image-set('a.png' 1x)",
+      "-webkit-image-set('a.png' 1x)",
+      "image(red)",
+      "cross-fade(red, blue)",
+      "element(#a)",
+      "paint(x)",
+      "src(x)",
+      "attr(data-x)",
+      "expression(x)",
+      "env(safe-area-inset-top)",
+      "'a(b'",
+      "\\75 rl(x)",
+      "u/**/rl(x)",
+      "red; background:red",
+      "red !important",
+      "}",
+      "<b>",
+      "@import",
+      "javascript:x",
+      "inherit",
+      "initial",
+      "unset",
+      "revert-layer",
+      "REVERT",
+      "",
+      "   ",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "red\nblue",
+      "rgb(0 0 0",
+      "oklch(0.2 0 0",
+      "'abc",
+      "\"abc",
+      "(",
+      ")",
+      "var(--a",
+      "calc(1px))(",
+      "[a]",
+      "a=b",
+      "a b"
+    ]
+  },
+  "unbalanced": [
+    "rgb(0 0 0",
+    "calc(10px",
+    "'abc",
+    "\"abc",
+    "(",
+    ")",
+    "calc(1px))(",
+    "var(--a",
+    "calc(10px) )("
+  ]
+}

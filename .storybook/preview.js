@@ -1,3 +1,5 @@
+// First, so a layered reset in the docs-authoring CSS cannot outrank Lyra's light-DOM layers.
+import './layer-order.css';
 import { setCustomElementsManifest } from '@storybook/web-components';
 import { LyraDocsContainer } from './docs-container.js';
 import { LyraDocsPage } from './docs-page.js';

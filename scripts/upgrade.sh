@@ -156,6 +156,7 @@ pnpm --filter @aceshooting/lyra-ui run framework-types
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-chart-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.mjs
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-theme-presets.mjs
 pnpm --filter @aceshooting/lyra-ui run design-tokens
 pnpm --filter @aceshooting/lyra-ui run generate-reservation-styles
 

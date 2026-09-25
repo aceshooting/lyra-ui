@@ -159,6 +159,25 @@ the marker too.
 `defineLyraThemePreset()` validates the lowercase kebab-case id and field shapes, then freezes the
 preset; CSS color syntax is checked by the production runtime when it is applied.
 
+**Runtime token presets.** A preset can also carry a validated `tokens` map of `--lr-theme-*`
+inputs, each a CSS value or a `{ light, dark }` pair. The map is persisted, restored before first
+paint by the no-flash bootstrap, written inline on `<html>`, and contrast-floored against the same
+token families the static contrast gate checks. The [shadcn look](#the-shadcn-look) ships this way
+too, generated from `themes/shadcn.css`:
+
+```ts
+import { applyLyraThemePreset } from '@aceshooting/lyra-ui/theme/presets.js';
+import { LYRA_SHADCN_THEME_PRESET } from '@aceshooting/lyra-ui/theme/presets/shadcn.js';
+
+applyLyraThemePreset(LYRA_SHADCN_THEME_PRESET); // the look; mode, accent and surface are kept
+applyLyraThemePreset('sapphire'); // an accent on top of the look
+```
+
+A look is its own axis: the token preset never changes the mode, accent or surface, and the
+built-in presets never change the look, so applying `'sapphire'` then shadcn or shadcn then
+`'sapphire'` reaches the same state (only the `data-lr-theme-preset` marker, the last applied id,
+differs). Use the stylesheet instead for light/dark islands or an application-owned `.dark` class.
+
 For a no-flash boot, `lyraThemeBootstrap` is a self-contained IIFE **string** meant to be inlined
 into a `<script>` in `<head>` before any stylesheet, so the persisted theme lands on the root
 element before first paint.

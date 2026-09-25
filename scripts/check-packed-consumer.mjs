@@ -1479,7 +1479,7 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
     const css = (await Promise.all(cssFiles.map((file) => readFile(file, 'utf8')))).join('\n');
     const expectedByEntry = {
       nativeStyles: ['.lr-native', '--lr-native-control-min-block-size'],
-      utilitiesStyles: ['.lr-stack', '--lr-layout-gap'],
+      utilitiesStyles: ['.lr-stack', '--lr-layout-gap', '.lr-typography', '--lr-heading-letter-spacing'],
       // Reservations only ever style `:not(:defined)` inside their own cascade layer, so those two
       // markers are what prove the sheet survived bundling rather than being tree-shaken to
       // nothing.

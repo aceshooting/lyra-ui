@@ -1,4 +1,6 @@
 import { expect } from '@open-wc/testing';
+import { html, nothing, render } from 'lit';
+import { styleMap } from 'lit/directives/style-map.js';
 import {
   sanitizeCssColor,
   sanitizeCssInset,
@@ -129,5 +131,45 @@ describe('sanitizePercentRect', () => {
     expect(sanitizePercentRect(accessorBacked)).to.equal(undefined);
     expect(sanitizePercentRect(reflectionFailure)).to.equal(undefined);
     expect(getterCalls).to.equal(0);
+  });
+});
+
+describe('balanced CSS values', () => {
+  async function unbalancedVectors(): Promise<string[]> {
+    const url = new URL('../../scripts/fixtures/theme-token-grammar.json', import.meta.url).href;
+    const vectors = ((await import(url)) as { default: { unbalanced: string[] } }).default.unbalanced;
+    expect(vectors.length).to.be.greaterThan(0);
+    return vectors;
+  }
+
+  it('rejects an unclosed parenthesis or quote, and comment delimiters, before asking the browser', async () => {
+    expect(sanitizeCssColor('rgb(0 0 0')).to.equal(undefined);
+    expect(sanitizeCssColor('\'red')).to.equal(undefined);
+    expect(sanitizeCssLength('calc(10px')).to.equal(undefined);
+    expect(sanitizeCssLength('calc(10px) /* x')).to.equal(undefined);
+    expect(sanitizeCssInset('calc(1px')).to.equal(undefined);
+    expect(sanitizeCssColor('r/**/ed')).to.equal(undefined);
+    expect(sanitizeCssColor('[red]')).to.equal(undefined);
+    for (const value of await unbalancedVectors()) {
+      expect(sanitizeCssColor(value), value).to.equal(undefined);
+      expect(sanitizeCssLength(value), value).to.equal(undefined);
+      expect(sanitizeCssLength(value, 'height'), value).to.equal(undefined);
+      expect(sanitizeCssInset(value), value).to.equal(undefined);
+    }
+  });
+
+  it('keeps the next declaration intact on a styleMap first commit', () => {
+    const container = document.body.appendChild(document.createElement('div'));
+    try {
+      render(html`<span style=${styleMap({ background: sanitizeCssColor('rgb(0 0 0'), color: 'blue' })}></span>`, container);
+      const span = container.querySelector('span')!;
+      expect(span.style.getPropertyValue('color')).to.equal('blue');
+      const copy = document.createElement('span');
+      copy.setAttribute('style', span.getAttribute('style') ?? '');
+      expect(copy.style.getPropertyValue('color')).to.equal('blue');
+    } finally {
+      render(nothing, container);
+      container.remove();
+    }
   });
 });

@@ -4,6 +4,7 @@ import {
   setLyraTheme,
   getLyraTheme,
   lyraThemeBootstrap,
+  type LyraThemeTokenName,
 } from './theme.js';
 
 const STORAGE_KEY = 'lyra-theme';
@@ -45,14 +46,43 @@ const stateAfterImport = {
   stored: localStorage.getItem(STORAGE_KEY),
 };
 
+/** The shared token-ownership expando the runtime and the bootstrap keep on `<html>`. */
+const OWNERSHIP_KEY = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');
+
+function ownershipList(): string[] {
+  const list = (document.documentElement as unknown as Record<symbol, unknown>)[OWNERSHIP_KEY];
+  return Array.isArray(list) ? list.map(String) : [];
+}
+
+function deleteOwnershipList(): void {
+  delete (document.documentElement as unknown as Record<symbol, unknown>)[OWNERSHIP_KEY];
+}
+
+/** Every inline `--lr-theme-*` declaration on `<html>`, by name. */
+function inlineThemeProperties(): Record<string, string> {
+  const style = document.documentElement.style;
+  const result: Record<string, string> = {};
+  for (let index = 0; index < style.length; index += 1) {
+    const name = style.item(index);
+    if (name.startsWith('--lr-theme-')) result[name] = style.getPropertyValue(name);
+  }
+  return result;
+}
+
 function resetRoot(): void {
   // This also detaches a live prefers-color-scheme listener installed by mode="auto".
-  setLyraTheme({ mode: 'unset', accent: null, surface: null });
+  setLyraTheme({ mode: 'unset', accent: null, surface: null, tokens: null });
   localStorage.removeItem(STORAGE_KEY);
   document.documentElement.removeAttribute('data-theme');
   document.documentElement.removeAttribute('data-lr-theme');
   document.documentElement.style.removeProperty('--lr-theme-accent');
   for (const property of ALL_RAMP_PROPERTIES) {
+    document.documentElement.style.removeProperty(property);
+  }
+  for (const property of ownershipList()) document.documentElement.style.removeProperty(property);
+  deleteOwnershipList();
+  // A bootstrap test can leave names no runtime apply has since owned.
+  for (const property of Object.keys(inlineThemeProperties())) {
     document.documentElement.style.removeProperty(property);
   }
 }
@@ -981,6 +1011,790 @@ describe('lyraThemeBootstrap script-tag configuration', () => {
       withCurrentScript(script, () => new Function(lyraThemeBootstrap)());
       expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
       expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Token maps: `setLyraTheme({ tokens })`, the contrast floor, ownership, and the bootstrap mirror.
+// ---------------------------------------------------------------------------------------------
+
+interface TokenGrammarFixture {
+  names: { accept: string[]; reject: string[] };
+  values: { accept: string[]; reject: string[] };
+  unbalanced: string[];
+  modeDefaults: Record<'light' | 'dark', { surface: number[]; raised: number[]; text: number[]; overlayStrongAlpha: number }>;
+}
+
+let grammarFixturePromise: Promise<TokenGrammarFixture> | undefined;
+
+/**
+ * The shared grammar vectors, served from the package root like `../theme.css` elsewhere. The
+ * test server hands JSON out as a module, so it is imported rather than fetched as text.
+ */
+async function tokenGrammar(): Promise<TokenGrammarFixture> {
+  const url = new URL('../../scripts/fixtures/theme-token-grammar.json', import.meta.url).href;
+  grammarFixturePromise ??= (import(url) as Promise<{ default: TokenGrammarFixture }>).then((module) => module.default);
+  const fixture = await grammarFixturePromise;
+  // A 404 must fail loudly, never pass a vector loop vacuously.
+  expect(fixture.values.accept.length).to.be.greaterThan(0);
+  expect(fixture.values.reject.length).to.be.greaterThan(0);
+  expect(fixture.names.accept.length).to.be.greaterThan(0);
+  expect(fixture.names.reject.length).to.be.greaterThan(0);
+  return fixture;
+}
+
+const inline = (name: string): string => document.documentElement.style.getPropertyValue(name);
+const T = (name: string): LyraThemeTokenName => `--lr-theme-${name}`;
+
+function storedRecord(): Record<string, unknown> {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Record<string, unknown>;
+}
+
+function mockColorScheme(initiallyDark: boolean) {
+  const originalMatchMedia = window.matchMedia;
+  const listeners = new Set<(event: MediaQueryListEvent) => void>();
+  let matches = initiallyDark;
+  const media = {
+    get matches() {
+      return matches;
+    },
+    media: '(prefers-color-scheme: dark)',
+    onchange: null,
+    addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => listeners.add(listener),
+    removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener),
+    addListener: (listener: (event: MediaQueryListEvent) => void) => listeners.add(listener),
+    removeListener: (listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener),
+    dispatchEvent: () => true,
+  } as MediaQueryList;
+  window.matchMedia = (() => media) as typeof window.matchMedia;
+  return {
+    flip(dark: boolean) {
+      matches = dark;
+      for (const listener of [...listeners]) listener({ matches } as MediaQueryListEvent);
+    },
+    restore() {
+      window.matchMedia = originalMatchMedia;
+    },
+  };
+}
+
+function withCanvasFailure(kind: 'context' | 'pixels', run: () => void): void {
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+  if (kind === 'context') {
+    HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
+  } else {
+    CanvasRenderingContext2D.prototype.getImageData = () => {
+      throw new DOMException('Canvas pixels are unavailable', 'SecurityError');
+    };
+  }
+  try {
+    run();
+  } finally {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
+  }
+}
+
+/** A map with one failing entry in every floor row, plus both syntheses. */
+const FLOOR_MAP = {
+  [T('color-surface-default')]: '#ffffff',
+  [T('color-surface-raised')]: '#e0e0e0',
+  [T('color-text-normal')]: '#777777',
+  [T('color-text-quiet')]: '#999999',
+  [T('color-brand-fill-loud')]: '#1d4ed8',
+  [T('color-brand-on-loud')]: '#333333',
+  [T('color-success-fill-loud')]: '#0c7830',
+  [T('color-overlay-strong')]: 'rgb(255 255 255 / 0.9)',
+  [T('color-brand-border-normal')]: '#dddddd',
+  [T('color-surface-border')]: '#eeeeee',
+  [T('color-border-strong')]: '#e0e0e0',
+  [T('color-focus')]: '#f0f0f0',
+  [T('color-chart-3')]: '#ffeeee',
+  [T('terminal-color-red')]: '#ff9999',
+  [T('terminal-bg-black')]: '#555555',
+} as const;
+
+const hostileExpandos: Array<[string, (root: HTMLElement) => void]> = [
+  ['a string', (root) => Object.assign(root, { [OWNERSHIP_KEY]: '--lr-theme-x' })],
+  ['a number', (root) => Object.assign(root, { [OWNERSHIP_KEY]: 42 })],
+  ['a plain object', (root) => Object.assign(root, { [OWNERSHIP_KEY]: { 0: 'display', length: 1 } })],
+  ['foreign names', (root) => Object.assign(root, {
+    [OWNERSHIP_KEY]: ['display', 'color', '--lr-color-x', '--lr-theme-accent', 42, null, '--lr-theme-font-size-m'],
+  })],
+  ['10,000 valid names', (root) => Object.assign(root, {
+    [OWNERSHIP_KEY]: Array.from({ length: 10000 }, (_, index) => `--lr-theme-hostile-${index}`),
+  })],
+  ['a throwing getter', (root) => Object.defineProperty(root, OWNERSHIP_KEY, {
+    configurable: true,
+    get() {
+      throw new Error('hostile');
+    },
+  })],
+  ['a non-writable value', (root) => Object.defineProperty(root, OWNERSHIP_KEY, {
+    configurable: true,
+    writable: false,
+    value: Object.freeze(['display']),
+  })],
+];
+
+describe('theme token maps', () => {
+  afterEach(resetRoot);
+
+  it('leaves the snapshot, the record and the inline set unchanged when no map is used', () => {
+    setLyraTheme({ mode: 'light', accent: '#e63950' });
+    expect(getLyraTheme()).to.deep.equal({ mode: 'light', accent: '#e63950', surface: null });
+    expect(Object.keys(getLyraTheme())).to.not.include('tokens');
+    expect(Object.keys(storedRecord())).to.not.include('tokens');
+    const expectedNames = new Set<string>(['--lr-theme-accent', ...ALL_RAMP_PROPERTIES]);
+    for (const name of Object.keys(inlineThemeProperties())) expect(expectedNames.has(name), name).to.equal(true);
+    expect(ownershipList()).to.deep.equal([]);
+    // The ramp for the same input is byte-identical to the one the pre-token runtime derived.
+    expect(Object.fromEntries(BRAND_RAMP_PROPERTIES.map((name) => [name, inline(name)]))).to.deep.equal({
+      '--lr-theme-color-brand-fill-quiet': 'rgb(252 227 230)',
+      '--lr-theme-color-brand-fill-normal': 'rgb(241 146 159)',
+      '--lr-theme-color-brand-fill-loud': 'rgb(230 57 80)',
+      '--lr-theme-color-brand-border-quiet': 'rgb(246 180 189)',
+      '--lr-theme-color-brand-border-normal': 'rgb(213 101 116)',
+      '--lr-theme-color-brand-border-loud': 'rgb(184 46 64)',
+      '--lr-theme-color-brand-on-quiet': 'rgb(0 0 0)',
+      '--lr-theme-color-brand-on-normal': 'rgb(0 0 0)',
+      '--lr-theme-color-brand-on-loud': 'rgb(0 0 0)',
+      '--lr-theme-color-focus': 'rgb(230 57 80)',
+    });
+  });
+
+  it('writes bare values inline and round-trips them through the getter, storage and the event', async () => {
+    const tokens = { [T('font-size-m')]: '0.875rem', [T('border-radius-m')]: ' 0.5rem ' };
+    const event = new Promise<CustomEvent>((resolve) => {
+      window.addEventListener('lr-theme-change', (changed) => resolve(changed as CustomEvent), { once: true });
+    });
+    setLyraTheme({ mode: 'light', tokens });
+    const detail = (await event).detail as { tokens?: unknown };
+    const expected = { [T('font-size-m')]: '0.875rem', [T('border-radius-m')]: '0.5rem' };
+    expect(inline(T('font-size-m'))).to.equal('0.875rem');
+    expect(inline(T('border-radius-m'))).to.equal('0.5rem');
+    expect(getLyraTheme().tokens).to.deep.equal(expected);
+    expect(storedRecord()['tokens']).to.deep.equal(expected);
+    expect(detail.tokens).to.deep.equal(expected);
+    expect(ownershipList()).to.deep.equal([T('font-size-m'), T('border-radius-m')]);
+  });
+
+  it('writes the branch for the resolved mode and swaps it on an automatic flip', () => {
+    const tokens = { [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' } };
+    setLyraTheme({ mode: 'light', tokens });
+    expect(inline(T('color-surface-default'))).to.equal('#fafafa');
+    setLyraTheme({ mode: 'dark' });
+    expect(inline(T('color-surface-default'))).to.equal('#111111');
+
+    const scheme = mockColorScheme(false);
+    const details: Array<{ tokens?: unknown }> = [];
+    const onChange = (event: Event) => details.push((event as CustomEvent).detail);
+    window.addEventListener('lr-theme-change', onChange);
+    try {
+      setLyraTheme({ mode: 'auto' });
+      expect(inline(T('color-surface-default'))).to.equal('#fafafa');
+      scheme.flip(true);
+      expect(inline(T('color-surface-default'))).to.equal('#111111');
+      expect(details[details.length - 1]?.tokens).to.deep.equal({ [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' } });
+    } finally {
+      window.removeEventListener('lr-theme-change', onChange);
+      scheme.restore();
+    }
+  });
+
+  it('writes only bare values with mode unset, keeps per-mode entries in the snapshot, and applies no floor', () => {
+    setLyraTheme({
+      mode: 'unset',
+      tokens: {
+        [T('color-text-quiet')]: '#fafafa',
+        [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' },
+      },
+    });
+    expect(inline(T('color-text-quiet'))).to.equal('#fafafa');
+    expect(inline(T('color-surface-default'))).to.equal('');
+    expect(getLyraTheme().tokens).to.deep.equal({
+      [T('color-text-quiet')]: '#fafafa',
+      [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' },
+    });
+  });
+
+  it('keeps the map when tokens is omitted, and removes it for null, {} and an all-invalid map', () => {
+    for (const removal of [null, {}, { color: 'red', [T('x')]: 'url(x)' }] as const) {
+      setLyraTheme({ mode: 'light', tokens: { [T('x')]: '1px', [T('y')]: '2px' } });
+      setLyraTheme({ mode: 'dark' });
+      expect(inline(T('x'))).to.equal('1px');
+      setLyraTheme({ tokens: removal as never });
+      expect(inline(T('x')), JSON.stringify(removal)).to.equal('');
+      expect(inline(T('y'))).to.equal('');
+      expect(Object.keys(getLyraTheme())).to.not.include('tokens');
+      expect(Object.keys(storedRecord())).to.not.include('tokens');
+      expect(ownershipList()).to.deep.equal([]);
+    }
+  });
+
+  it('replaces the previous map wholesale', () => {
+    setLyraTheme({ mode: 'light', tokens: { [T('a')]: '1px', [T('b')]: '2px' } });
+    setLyraTheme({ tokens: { [T('b')]: '3px', [T('c')]: '4px' } });
+    expect(inline(T('a'))).to.equal('');
+    expect(inline(T('b'))).to.equal('3px');
+    expect(inline(T('c'))).to.equal('4px');
+    expect(getLyraTheme().tokens).to.deep.equal({ [T('b')]: '3px', [T('c')]: '4px' });
+  });
+
+  it('never touches an application-owned inline value that is not in a map', () => {
+    document.documentElement.style.setProperty(T('font-size-m'), '1.25rem');
+    try {
+      setLyraTheme({ mode: 'light', tokens: { [T('x')]: '1px' } });
+      setLyraTheme({ tokens: { [T('y')]: '1px' } });
+      setLyraTheme({ tokens: null, accent: '#e63950' });
+      setLyraTheme({ accent: null });
+      expect(inline(T('font-size-m'))).to.equal('1.25rem');
+    } finally {
+      document.documentElement.style.removeProperty(T('font-size-m'));
+    }
+  });
+
+  it('drops every rejected name while valid siblings survive', async () => {
+    const { names } = await tokenGrammar();
+    for (const name of names.reject) {
+      setLyraTheme({ mode: 'light', tokens: { [name]: '1px', [T('sibling')]: '2px' } as never });
+      expect(getLyraTheme().tokens, name).to.deep.equal({ [T('sibling')]: '2px' });
+      expect(inline(T('sibling'))).to.equal('2px');
+      if (name.startsWith('--')) expect(inline(name), name).to.equal('');
+    }
+    const accepted = Object.fromEntries(names.accept.map((name) => [name, '1px']));
+    setLyraTheme({ tokens: accepted });
+    expect(Object.keys(getLyraTheme().tokens ?? {})).to.deep.equal(names.accept);
+  });
+
+  it('drops every rejected value and non-string shape, writing nothing for them', async () => {
+    const { values } = await tokenGrammar();
+    for (const value of values.reject) {
+      setLyraTheme({ mode: 'light', tokens: { [T('hostile')]: value } });
+      expect(getLyraTheme().tokens, JSON.stringify(value)).to.equal(undefined);
+      expect(inlineThemeProperties(), JSON.stringify(value)).to.deep.equal({});
+    }
+    const shapes: unknown[] = [42, [], {}, { light: 'url(x)', dark: 'url(y)' }, { light: 'red', other: 'blue' }, null, true];
+    for (const shape of shapes) {
+      setLyraTheme({ tokens: { [T('hostile')]: shape } as never });
+      expect(getLyraTheme().tokens, JSON.stringify(shape)).to.equal(undefined);
+      expect(inlineThemeProperties()).to.deep.equal({});
+    }
+  });
+
+  it('caps a map at 512 entries', () => {
+    const map = (size: number) => Object.fromEntries(Array.from({ length: size }, (_, index) => [T(`cap-${index}`), '1px']));
+    setLyraTheme({ mode: 'unset', tokens: map(513) });
+    expect(getLyraTheme().tokens).to.equal(undefined);
+    expect(inline(T('cap-0'))).to.equal('');
+    setLyraTheme({ tokens: map(512) });
+    expect(Object.keys(getLyraTheme().tokens ?? {}).length).to.equal(512);
+    expect(inline(T('cap-511'))).to.equal('1px');
+  });
+
+  it('never throws for a hostile map, and rejects a map that is not a plain object', () => {
+    const hostile = new Proxy({ [T('x')]: '1px' }, {
+      getPrototypeOf() {
+        throw new Error('hostile prototype');
+      },
+      ownKeys() {
+        throw new Error('hostile keys');
+      },
+    });
+    expect(() => setLyraTheme({ mode: 'light', tokens: hostile })).to.not.throw();
+    expect(getLyraTheme().tokens).to.equal(undefined);
+    expect(inline(T('x'))).to.equal('');
+
+    const throwingValue = { get [T('x')]() {
+      throw new Error('hostile getter');
+    } };
+    expect(() => setLyraTheme({ tokens: throwingValue as never })).to.not.throw();
+    expect(getLyraTheme().tokens).to.equal(undefined);
+
+    class ForeignMap {
+      readonly [key: string]: string;
+    }
+    const instance = Object.assign(new ForeignMap(), { [T('x')]: '1px' });
+    setLyraTheme({ tokens: instance as never });
+    expect(getLyraTheme().tokens).to.equal(undefined);
+    expect(inline(T('x'))).to.equal('');
+    setLyraTheme({ tokens: { [T('x')]: Object.assign(new ForeignMap(), { light: '1px' }) } as never });
+    expect(getLyraTheme().tokens).to.equal(undefined);
+  });
+
+  it('floors body and quiet text against the page and the raised surface', () => {
+    setLyraTheme({ mode: 'light', tokens: { [T('color-surface-default')]: '#f0f0f0', [T('color-text-quiet')]: '#cccccc' } });
+    expect(contrast(inline(T('color-text-quiet')), '#f0f0f0')).to.be.at.least(4.5);
+    expect(getLyraTheme().tokens?.[T('color-text-quiet')]).to.equal('#cccccc');
+
+    setLyraTheme({
+      tokens: { [T('color-surface-default')]: '#ffffff', [T('color-surface-raised')]: '#e0e0e0', [T('color-text-quiet')]: '#767676' },
+    });
+    expect(contrast('#767676', '#ffffff')).to.be.at.least(4.5);
+    expect(inline(T('color-text-quiet'))).to.not.equal('#767676');
+    expect(contrast(inline(T('color-text-quiet')), '#ffffff')).to.be.at.least(4.5);
+    expect(contrast(inline(T('color-text-quiet')), '#e0e0e0')).to.be.at.least(4.5);
+
+    // No raised surface in the map: the mode default is the second reference.
+    setLyraTheme({ mode: 'light', tokens: { [T('color-text-quiet')]: '#757575' } });
+    expect(contrast(inline(T('color-text-quiet')), '#f6f8fa')).to.be.at.least(4.5);
+    setLyraTheme({ mode: 'dark', tokens: { [T('color-text-quiet')]: '#8a8a8a' } });
+    expect(contrast('#8a8a8a', '#1a1a1a')).to.be.at.least(4.5);
+    expect(inline(T('color-text-quiet'))).to.not.equal('#8a8a8a');
+    expect(contrast(inline(T('color-text-quiet')), '#22272e')).to.be.at.least(4.5);
+    expect(getLyraTheme().tokens?.[T('color-text-quiet')]).to.equal('#8a8a8a');
+  });
+
+  it('floors on-* against its fill and the strong-scrim foreground, synthesizing missing partners', () => {
+    setLyraTheme({ mode: 'light', tokens: { [T('color-brand-fill-loud')]: '#1d4ed8', [T('color-brand-on-loud')]: '#333333' } });
+    expect(inline(T('color-brand-on-loud'))).to.equal('rgb(255 255 255)');
+
+    setLyraTheme({ tokens: { [T('color-success-fill-loud')]: '#0c7830' } });
+    const synthesized = inline(T('color-success-on-loud'));
+    expect(contrast(synthesized, '#0c7830')).to.be.at.least(4.5);
+    expect(ownershipList()).to.include(T('color-success-on-loud'));
+    expect(getLyraTheme().tokens).to.deep.equal({ [T('color-success-fill-loud')]: '#0c7830' });
+    setLyraTheme({ tokens: null });
+    expect(inline(T('color-success-on-loud'))).to.equal('');
+
+    setLyraTheme({ tokens: { [T('color-overlay-strong')]: 'rgb(0 0 0 / 0.92)', [T('color-on-strong-overlay')]: '#333333' } });
+    expect(inline(T('color-on-strong-overlay'))).to.equal('rgb(255 255 255)');
+
+    setLyraTheme({ tokens: { [T('color-overlay-strong')]: 'rgb(255 255 255 / 0.9)' } });
+    expect(inline(T('color-on-strong-overlay'))).to.equal('rgb(0 0 0)');
+    expect(ownershipList()).to.include(T('color-on-strong-overlay'));
+  });
+
+  it('floors boundaries, chart series and terminal colours, and leaves decorative tokens verbatim', () => {
+    setLyraTheme({ mode: 'light', tokens: FLOOR_MAP });
+    for (const name of ['color-brand-border-normal', 'color-surface-border', 'color-border-strong', 'color-focus', 'color-chart-3']) {
+      expect(contrast(inline(T(name)), '#ffffff'), name).to.be.at.least(3);
+      expect(inline(T(name)), name).to.match(/^rgb\(/);
+    }
+    expect(contrast(inline(T('terminal-color-red')), '#e0e0e0')).to.be.at.least(4.5);
+    const text = inline(T('color-text-normal'));
+    expect(text).to.not.equal('#777777');
+    expect(contrast(inline(T('terminal-bg-black')), text)).to.be.at.least(4.5);
+
+    setLyraTheme({
+      tokens: {
+        [T('color-brand-border-quiet')]: '#fefefe',
+        [T('color-surface-border-subtle')]: '#fdfdfd',
+        [T('color-danger-on-quiet')]: '#fefefe',
+      },
+    });
+    expect(inline(T('color-brand-border-quiet'))).to.equal('#fefefe');
+    expect(inline(T('color-surface-border-subtle'))).to.equal('#fdfdfd');
+    expect(inline(T('color-danger-on-quiet'))).to.equal('#fefefe');
+  });
+
+  it('writes passing colours, var() and light-dark() values string-identical to the input', () => {
+    const tokens = {
+      [T('color-text-normal')]: '#111111',
+      [T('color-text-quiet')]: 'var(--application-quiet, #eeeeee)',
+      [T('color-focus')]: 'light-dark(#eeeeee, #111111)',
+      [T('color-chart-1')]: 'oklch(0.3 0.1 250)',
+    };
+    setLyraTheme({ mode: 'light', tokens });
+    for (const [name, value] of Object.entries(tokens)) expect(inline(name), name).to.equal(value);
+  });
+
+  it('writes a row verbatim when its reference does not resolve to a colour', () => {
+    const tokens = {
+      [T('color-surface-raised')]: 'var(--application-raised)',
+      [T('color-text-quiet')]: '#cccccc',
+      [T('terminal-color-red')]: '#ffeeee',
+      [T('color-text-normal')]: 'var(--application-text)',
+      [T('terminal-bg-black')]: '#fafafa',
+    };
+    setLyraTheme({ mode: 'light', tokens });
+    for (const [name, value] of Object.entries(tokens)) expect(inline(name), name).to.equal(value);
+  });
+
+  it('prefers an explicit surface over the map surface, and mixes the accent over the map surface otherwise', () => {
+    setLyraTheme({
+      mode: 'light',
+      surface: '#000000',
+      tokens: { [T('color-surface-default')]: '#ffffff', [T('color-text-normal')]: '#111111' },
+    });
+    expect(contrast(inline(T('color-text-normal')), '#000000')).to.be.at.least(4.5);
+
+    const capture = () => Object.fromEntries(BRAND_RAMP_PROPERTIES.map((name) => [name, inline(name)]));
+    setLyraTheme({ mode: 'dark', accent: '#e63950', surface: '#101418', tokens: null });
+    const expected = capture();
+    setLyraTheme({ surface: null, tokens: { [T('color-surface-default')]: '#101418' } });
+    expect(capture()).to.deep.equal(expected);
+    expect(expected['--lr-theme-color-brand-fill-quiet']).to.not.equal('');
+  });
+
+  it('lets an accent override the map ramp, and reveals the map again when the accent is cleared', () => {
+    setLyraTheme({ mode: 'light', accent: '#e63950', tokens: { [T('color-brand-fill-loud')]: '#123456' } });
+    expect(inline(T('color-brand-fill-loud'))).to.equal('rgb(230 57 80)');
+    setLyraTheme({ accent: null });
+    expect(inline(T('color-brand-fill-loud'))).to.equal('#123456');
+  });
+
+  for (const blocked of ['setItem', 'getItem'] as const) {
+    it(`keeps the map and the snapshot shape when Storage.${blocked} throws`, () => {
+      setLyraTheme({ mode: 'light', tokens: null });
+      const original = Storage.prototype[blocked];
+      (Storage.prototype as unknown as Record<string, unknown>)[blocked] = () => {
+        throw new Error('unavailable');
+      };
+      const details: Array<Record<string, unknown>> = [];
+      const onChange = (event: Event) => details.push((event as CustomEvent).detail);
+      window.addEventListener('lr-theme-change', onChange);
+      try {
+        setLyraTheme({ mode: 'light', tokens: { [T('x')]: '1px' } });
+        setLyraTheme({ mode: 'dark' });
+        expect(inline(T('x'))).to.equal('1px');
+        expect(getLyraTheme().tokens).to.deep.equal({ [T('x')]: '1px' });
+        setLyraTheme({ tokens: null });
+        expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: null, surface: null });
+        expect(Object.keys(details[details.length - 1] ?? {})).to.not.include('tokens');
+      } finally {
+        window.removeEventListener('lr-theme-change', onChange);
+        (Storage.prototype as unknown as Record<string, unknown>)[blocked] = original;
+        setLyraTheme({ mode: 'auto', accent: null, tokens: null });
+      }
+    });
+  }
+
+  it('dispatches the map on an automatic flip only while one is applied', () => {
+    const scheme = mockColorScheme(false);
+    const details: Array<Record<string, unknown>> = [];
+    const onChange = (event: Event) => details.push((event as CustomEvent).detail);
+    window.addEventListener('lr-theme-change', onChange);
+    try {
+      setLyraTheme({ mode: 'auto', tokens: null });
+      scheme.flip(true);
+      expect(Object.keys(details[details.length - 1] ?? {})).to.not.include('tokens');
+      setLyraTheme({ tokens: { [T('x')]: '1px' } });
+      scheme.flip(false);
+      expect(details[details.length - 1]?.['tokens']).to.deep.equal({ [T('x')]: '1px' });
+    } finally {
+      window.removeEventListener('lr-theme-change', onChange);
+      scheme.restore();
+    }
+  });
+
+  it('exposes only frozen maps, so a mutated event detail cannot change a later flip', () => {
+    const scheme = mockColorScheme(false);
+    let detail: { tokens?: Record<string, unknown> } | undefined;
+    const onChange = (event: Event) => {
+      detail ??= (event as CustomEvent).detail;
+    };
+    window.addEventListener('lr-theme-change', onChange);
+    try {
+      setLyraTheme({ mode: 'auto', tokens: { [T('x')]: { light: '1px', dark: '2px' }, [T('y')]: '3px' } });
+      const tokens = getLyraTheme().tokens as Record<string, unknown>;
+      expect(Object.isFrozen(tokens)).to.equal(true);
+      expect(Object.isFrozen(tokens[T('x')])).to.equal(true);
+      if (!detail?.tokens) throw new Error('Expected a detail map');
+      const map = detail.tokens;
+      expect(() => {
+        map[T('y')] = '9px';
+      }).to.throw(TypeError);
+      expect(() => {
+        (map[T('x')] as Record<string, string>)['dark'] = '9px';
+      }).to.throw(TypeError);
+      scheme.flip(true);
+      expect(inline(T('x'))).to.equal('2px');
+      expect(inline(T('y'))).to.equal('3px');
+    } finally {
+      window.removeEventListener('lr-theme-change', onChange);
+      scheme.restore();
+    }
+  });
+
+  it('normalizes corrupt stored tokens safely', () => {
+    for (const tokens of ['red', ['red'], { [T('x')]: 'url(x)', color: 'red' }, 42]) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: null, surface: null, tokens }));
+      expect(() => getLyraTheme()).to.not.throw();
+      expect(getLyraTheme(), JSON.stringify(tokens)).to.deep.equal({ mode: 'light', accent: null, surface: null });
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', tokens: { [T('x')]: '1px', [T('y')]: 'url(y)' } }));
+    expect(getLyraTheme().tokens).to.deep.equal({ [T('x')]: '1px' });
+  });
+
+  it('survives a style-attribute re-parse with every owned, ramp and accent value intact', async () => {
+    const { values } = await tokenGrammar();
+    const tokens = Object.fromEntries(values.accept.map((value, index) => [T(`round-trip-${index}`), value]));
+    setLyraTheme({ mode: 'light', accent: '#e63950', tokens });
+    const copy = document.createElement('div');
+    copy.setAttribute('style', document.documentElement.getAttribute('style') ?? '');
+    const names = [...ownershipList(), ...ALL_RAMP_PROPERTIES, '--lr-theme-accent'];
+    expect(ownershipList().length).to.equal(values.accept.length);
+    for (const name of names) expect(copy.style.getPropertyValue(name), name).to.equal(inline(name));
+  });
+
+  it('fails an unbalanced accent, surface or accent branch closed', () => {
+    setLyraTheme({ mode: 'light', accent: 'rgb(0 0 0' });
+    expect(getLyraTheme().accent).to.equal(null);
+    expect(inline('--lr-theme-accent')).to.equal('');
+    for (const name of ALL_RAMP_PROPERTIES) expect(inline(name), name).to.equal('');
+    setLyraTheme({ accent: null, surface: 'color-mix(in srgb, red, blue' });
+    expect(getLyraTheme().surface).to.equal(null);
+    setLyraTheme({ mode: 'dark', surface: null, accent: { brand: { light: 'rgb(0 0 0', dark: '#ffffff' } } });
+    expect(getLyraTheme().accent).to.deep.equal({ brand: { light: null, dark: '#ffffff' } });
+  });
+
+  for (const kind of ['context', 'pixels'] as const) {
+    it(`writes every token verbatim when the canvas ${kind === 'context' ? 'has no 2D context' : 'cannot read pixels'}`, () => {
+      const tokens = {
+        [T('color-text-quiet')]: '#cccccc',
+        [T('color-success-fill-loud')]: '#0c7830',
+        [T('font-size-m')]: '1rem',
+      };
+      withCanvasFailure(kind, () => {
+        setLyraTheme({ mode: 'light', accent: '#e63950', tokens });
+        for (const [name, value] of Object.entries(tokens)) expect(inline(name), name).to.equal(value);
+        expect(inline(T('color-success-on-loud'))).to.equal('');
+        expect(ownershipList()).to.deep.equal(Object.keys(tokens));
+        expect(getLyraTheme().accent).to.equal(null);
+        expect(inline('--lr-theme-accent')).to.equal('');
+        expect(getLyraTheme().tokens).to.deep.equal(tokens);
+        expect(storedRecord()['tokens']).to.deep.equal(tokens);
+      });
+    });
+  }
+
+  for (const [label, install] of hostileExpandos) {
+    it(`survives a hostile ownership expando: ${label}`, () => {
+      const root = document.documentElement;
+      root.style.setProperty('display', 'block');
+      root.style.setProperty('color', 'red');
+      root.style.setProperty('--lr-theme-font-size-m', '1.5rem');
+      root.style.setProperty('--lr-theme-hostile-0', '1px');
+      root.style.setProperty('--lr-theme-hostile-600', '1px');
+      install(root);
+      try {
+        expect(() => setLyraTheme({ mode: 'light', tokens: { [T('x')]: '1px' } })).to.not.throw();
+        expect(() => setLyraTheme({ tokens: null })).to.not.throw();
+        expect(root.style.getPropertyValue('display')).to.equal('block');
+        expect(root.style.getPropertyValue('color')).to.equal('red');
+        if (label === 'foreign names') expect(inline('--lr-theme-font-size-m')).to.equal('');
+        else expect(inline('--lr-theme-font-size-m')).to.equal('1.5rem');
+        if (label === '10,000 valid names') {
+          expect(inline('--lr-theme-hostile-0')).to.equal('');
+          expect(inline('--lr-theme-hostile-600')).to.equal('1px');
+        }
+      } finally {
+        delete (root as unknown as Record<symbol, unknown>)[OWNERSHIP_KEY];
+        for (const name of ['display', 'color', '--lr-theme-font-size-m', '--lr-theme-hostile-0', '--lr-theme-hostile-600']) {
+          root.style.removeProperty(name);
+        }
+      }
+    });
+  }
+
+  it('diff-writes: an identical re-apply mutates nothing, and a one-value change writes one property', async () => {
+    // A quoted value too: WebKit re-serializes it with double quotes, which must not read as a change.
+    const tokens = { [T('a')]: '1px', [T('b')]: '2px', [T('color-text-normal')]: '#111111', [T('font-family-body')]: '\'Geist\', sans-serif' };
+    setLyraTheme({ mode: 'light', accent: '#e63950', tokens });
+    const rootStyle = document.documentElement.style;
+    const originalSet = CSSStyleDeclaration.prototype.setProperty;
+    const originalRemove = CSSStyleDeclaration.prototype.removeProperty;
+    const calls = { set: 0, remove: 0 };
+    CSSStyleDeclaration.prototype.setProperty = function (this: CSSStyleDeclaration, ...args: Parameters<CSSStyleDeclaration['setProperty']>) {
+      if (this === rootStyle) calls.set += 1;
+      return originalSet.apply(this, args);
+    };
+    CSSStyleDeclaration.prototype.removeProperty = function (this: CSSStyleDeclaration, ...args: Parameters<CSSStyleDeclaration['removeProperty']>) {
+      if (this === rootStyle) calls.remove += 1;
+      return originalRemove.apply(this, args);
+    };
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver((batch) => records.push(...batch));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+    try {
+      setLyraTheme({ mode: 'light', accent: '#e63950', tokens });
+      await Promise.resolve();
+      records.push(...observer.takeRecords());
+      expect(calls).to.deep.equal({ set: 0, remove: 0 });
+      expect(records.length).to.equal(0);
+
+      setLyraTheme({ tokens: { ...tokens, [T('b')]: '3px' } });
+      expect(calls).to.deep.equal({ set: 1, remove: 0 });
+
+      calls.set = 0;
+      rootStyle.removeProperty(T('a'));
+      calls.remove = 0;
+      setLyraTheme({ tokens: null });
+      expect(calls).to.deep.equal({ set: 0, remove: 3 });
+    } finally {
+      observer.disconnect();
+      CSSStyleDeclaration.prototype.setProperty = originalSet;
+      CSSStyleDeclaration.prototype.removeProperty = originalRemove;
+    }
+  });
+});
+
+describe('lyraThemeBootstrap token maps', () => {
+  afterEach(resetRoot);
+
+  /** Applies `record` through the runtime, captures the inline state, then clears it for the bootstrap. */
+  function runtimeThenBootstrap(record: Parameters<typeof setLyraTheme>[0]) {
+    setLyraTheme(record);
+    const expected = { inline: inlineThemeProperties(), owned: ownershipList() };
+    for (const name of Object.keys(expected.inline)) document.documentElement.style.removeProperty(name);
+    deleteOwnershipList();
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('data-lr-theme');
+    new Function(lyraThemeBootstrap)();
+    return { expected, actual: { inline: inlineThemeProperties(), owned: ownershipList() } };
+  }
+
+  const records: Array<[string, Parameters<typeof setLyraTheme>[0]]> = [
+    ['bare values only', { mode: 'light', accent: null, tokens: { [T('font-size-m')]: '1rem', [T('border-radius-m')]: '4px' } }],
+    ['per-mode values (light)', { mode: 'light', accent: null, tokens: { [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' }, [T('x')]: { light: '1px', dark: null } } }],
+    ['per-mode values (dark)', { mode: 'dark', accent: null, tokens: { [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' }, [T('x')]: { light: '1px', dark: null } } }],
+    ['a map plus accent plus surface', {
+      mode: 'dark',
+      accent: { brand: '#e63950', danger: '#c81e3a' },
+      surface: '#101418',
+      tokens: { [T('color-brand-fill-loud')]: '#123456', [T('color-text-normal')]: '#eeeeee', [T('color-chart-1')]: '#202020' },
+    }],
+    ['repairs in every floor row, light', { mode: 'light', accent: null, tokens: FLOOR_MAP }],
+    ['repairs in every floor row, dark', { mode: 'dark', accent: '#4f8ff7', tokens: FLOOR_MAP }],
+    ['unresolved references', {
+      mode: 'light',
+      accent: null,
+      tokens: {
+        [T('color-surface-raised')]: 'var(--application-raised)',
+        [T('color-text-quiet')]: '#cccccc',
+        [T('terminal-color-red')]: '#ffeeee',
+        [T('color-text-normal')]: 'var(--application-text)',
+        [T('terminal-bg-black')]: '#fafafa',
+      },
+    }],
+    ['a strong scrim foreground repair', { mode: 'light', accent: null, tokens: { [T('color-overlay-strong')]: 'rgb(0 0 0 / 0.92)', [T('color-on-strong-overlay')]: '#333333' } }],
+    ['unset', { mode: 'unset', accent: '#e63950', tokens: { [T('x')]: '1px', [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' } } }],
+  ];
+
+  for (const [label, record] of records) {
+    it(`applies the same inline values as the runtime: ${label}`, () => {
+      const { expected, actual } = runtimeThenBootstrap(record);
+      expect(actual).to.deep.equal(expected);
+      expect(Object.keys(expected.inline).length).to.be.greaterThan(0);
+    });
+  }
+
+  it('includes the repaired and synthesized values (non-vacuous floor parity)', () => {
+    const { expected, actual } = runtimeThenBootstrap({ mode: 'light', accent: null, tokens: FLOOR_MAP });
+    expect(actual).to.deep.equal(expected);
+    expect(expected.inline[T('color-success-on-loud')]).to.match(/^rgb\(/);
+    expect(expected.inline[T('color-on-strong-overlay')]).to.equal('rgb(0 0 0)');
+    expect(expected.inline[T('color-text-quiet')]).to.not.equal('#999999');
+    expect(expected.owned).to.include(T('color-success-on-loud'));
+  });
+
+  it('writes nothing before paint for any rejected value or name', async () => {
+    const { names, values } = await tokenGrammar();
+    const cases = [
+      ...values.reject.map((value) => ({ [T('hostile')]: value })),
+      ...names.reject.map((name) => ({ [name]: '1px' })),
+    ];
+    for (const tokens of cases) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: null, tokens }));
+      new Function(lyraThemeBootstrap)();
+      expect(inlineThemeProperties(), JSON.stringify(tokens)).to.deep.equal({});
+      expect(ownershipList()).to.deep.equal([]);
+    }
+  });
+
+  it('writes nothing before paint for a stored map above the entry cap', () => {
+    const map = (size: number) => Object.fromEntries(Array.from({ length: size }, (_, index) => [T(`cap-${index}`), '1px']));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: null, tokens: map(513) }));
+    new Function(lyraThemeBootstrap)();
+    expect(inlineThemeProperties()).to.deep.equal({});
+    expect(ownershipList()).to.deep.equal([]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: null, tokens: map(512) }));
+    new Function(lyraThemeBootstrap)();
+    expect(Object.keys(inlineThemeProperties()).length).to.equal(512);
+  });
+
+  it('writes bare values only for a stored unset mode', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      mode: 'unset',
+      tokens: { [T('x')]: '1px', [T('color-text-quiet')]: '#fafafa', [T('y')]: { light: '1px', dark: '2px' } },
+    }));
+    new Function(lyraThemeBootstrap)();
+    expect(inlineThemeProperties()).to.deep.equal({ [T('x')]: '1px', [T('color-text-quiet')]: '#fafafa' });
+  });
+
+  it('hands its ownership list to the runtime, which removes every bootstrap-written name', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      mode: 'light',
+      tokens: { [T('x')]: '1px', [T('color-success-fill-loud')]: '#0c7830' },
+    }));
+    // No expando: a map stored by a previous page.
+    deleteOwnershipList();
+    new Function(lyraThemeBootstrap)();
+    expect(ownershipList()).to.deep.equal([T('x'), T('color-success-fill-loud'), T('color-success-on-loud')]);
+    expect(inline(T('color-success-on-loud'))).to.not.equal('');
+    // This module never wrote these names itself (the previous test cleared its own list), so only
+    // the handed-over list can remove them.
+    setLyraTheme({ tokens: null });
+    expect(inlineThemeProperties()).to.deep.equal({});
+  });
+
+  it('is inline-script safe', () => {
+    expect(lyraThemeBootstrap).to.not.match(/<\/|<!--|<script/i);
+    expect(lyraThemeBootstrap.includes(String.fromCharCode(0x2028))).to.equal(false);
+    expect(lyraThemeBootstrap.includes(String.fromCharCode(0x2029))).to.equal(false);
+  });
+
+  it('writes no accent and no ramp for a stored unbalanced accent', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: 'rgb(0 0 0' }));
+    new Function(lyraThemeBootstrap)();
+    expect(inlineThemeProperties()).to.deep.equal({});
+  });
+
+  for (const kind of ['context', 'pixels'] as const) {
+    it(`matches the runtime when the canvas ${kind === 'context' ? 'has no 2D context' : 'cannot read pixels'}`, () => {
+      withCanvasFailure(kind, () => {
+        const { expected, actual } = runtimeThenBootstrap({
+          mode: 'light',
+          accent: '#e63950',
+          tokens: { [T('color-text-quiet')]: '#cccccc', [T('color-success-fill-loud')]: '#0c7830' },
+        });
+        expect(actual).to.deep.equal(expected);
+        expect(expected.inline).to.deep.equal({ [T('color-text-quiet')]: '#cccccc', [T('color-success-fill-loud')]: '#0c7830' });
+      });
+    });
+  }
+
+  for (const [label, install] of hostileExpandos) {
+    it(`still applies the mode and the tokens with a hostile ownership expando: ${label}`, () => {
+      const root = document.documentElement;
+      root.style.setProperty('display', 'block');
+      root.style.setProperty('color', 'red');
+      root.style.setProperty('--lr-theme-font-size-m', '1.5rem');
+      root.style.setProperty('--lr-theme-hostile-0', '1px');
+      root.style.setProperty('--lr-theme-hostile-600', '1px');
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'dark', tokens: { [T('x')]: '1px' } }));
+      install(root);
+      try {
+        expect(() => new Function(lyraThemeBootstrap)()).to.not.throw();
+        expect(root.getAttribute('data-lr-theme')).to.equal('dark');
+        expect(inline(T('x'))).to.equal('1px');
+        expect(root.style.getPropertyValue('display')).to.equal('block');
+        expect(root.style.getPropertyValue('color')).to.equal('red');
+        if (label === 'foreign names') expect(inline('--lr-theme-font-size-m')).to.equal('');
+        else expect(inline('--lr-theme-font-size-m')).to.equal('1.5rem');
+        if (label === '10,000 valid names') {
+          expect(inline('--lr-theme-hostile-0')).to.equal('');
+          expect(inline('--lr-theme-hostile-600')).to.equal('1px');
+        }
+      } finally {
+        delete (root as unknown as Record<symbol, unknown>)[OWNERSHIP_KEY];
+        for (const name of ['display', 'color', '--lr-theme-font-size-m', '--lr-theme-hostile-0', '--lr-theme-hostile-600']) {
+          root.style.removeProperty(name);
+        }
+      }
     });
   }
 });

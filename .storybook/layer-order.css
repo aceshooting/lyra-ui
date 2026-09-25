@@ -1,0 +1,4 @@
+/* The documented consumer cascade order, declared before any other stylesheet so Tailwind's reset
+   (theme, base) sorts below Lyra's layers and the docs-authoring Tailwind utilities sort above
+   lr-utilities. Layer order is fixed by first appearance. */
+@layer theme, base, lr-base, lr-theme, lr-theme-preset, components, lr-utilities, utilities, lr-overrides;

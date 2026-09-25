@@ -602,7 +602,22 @@
     },
     {
       "id": "styles-native-and-utilities--layout-and-prose",
-      "profile": "standard"
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Preview layer order corrected so the docs-only CSS reset no longer overrides Lyra's light-DOM styles; the new capture awaits human visual review."
+    },
+    {
+      "id": "styles-typography--specimen",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New story; awaits human visual review before baselines are promoted."
+    },
+    {
+      "id": "styles-typography--narrow-allocation",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New story; awaits human visual review before baselines are promoted."
     },
     {
       "id": "utility-visually-hidden--skip-link",
@@ -872,7 +887,9 @@
     ]
   },
   "untaggedStories": {
-    "styles-native-and-utilities--layout-and-prose": "This fixture exercises authored native-element and utility CSS, not a custom element."
+    "styles-native-and-utilities--layout-and-prose": "This fixture exercises authored native-element and utility CSS, not a custom element.",
+    "styles-typography--specimen": "Exercises authored typography utility CSS, not a custom element.",
+    "styles-typography--narrow-allocation": "Exercises authored typography utility CSS, not a custom element."
   },
   "provenance": {
     "generator": "packages/lyra-ui/scripts/visual-regression.mjs",

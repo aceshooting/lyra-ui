@@ -23,10 +23,16 @@ import { isMainModule } from './is-main-module.mjs';
 // Called unconditionally from `scripts/build.mjs` immediately after JavaScript compaction, so
 // every `pnpm build` leaves this asset current; `--check` lets CI verify that invariant without
 // regenerating.
+//
+// `--check` also enforces scripts/theme-bootstrap-budget.json against the exact shipped string
+// (raw and zlib level 9 bytes) -- not bundle-budgets.json, whose measurement re-minifies and so never
+// sees the bytes a consumer inlines -- and fails when the string could break out of an inline
+// <script> element (`</`, `<!--`, `<script`) or carries a raw U+2028/U+2029.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { gzipSync } from 'node:zlib';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -34,7 +40,51 @@ function artifactPaths(packageDir) {
   return {
     builtModule: join(packageDir, 'dist', 'theme', 'theme.js'),
     asset: join(packageDir, 'dist', 'theme', 'theme-bootstrap.js'),
+    budget: join(packageDir, 'scripts', 'theme-bootstrap-budget.json'),
   };
+}
+
+const BUDGET_REMEDY = 'scripts/theme-bootstrap-budget.json caps the shipped bytes; raising a ceiling needs a reviewed re-measurement (the new reviewed size + 2%, rounded up).';
+
+/** Raw UTF-8 bytes and zlib level 9 gzip bytes of the exact bootstrap string. */
+export function measureThemeBootstrap(bootstrap) {
+  return {
+    rawBytes: Buffer.byteLength(bootstrap, 'utf8'),
+    gzipBytes: gzipSync(Buffer.from(bootstrap, 'utf8'), { level: 9 }).length,
+  };
+}
+
+/** Budget and inline-script-safety findings for a bootstrap string. */
+export function themeBootstrapSafetyFindings(bootstrap, budget) {
+  const findings = [];
+  if (!budget || typeof budget.maxRawBytes !== 'number' || typeof budget.maxGzipBytes !== 'number') {
+    findings.push(`scripts/theme-bootstrap-budget.json is missing or has no maxRawBytes/maxGzipBytes. ${BUDGET_REMEDY}`);
+  } else {
+    const { rawBytes, gzipBytes } = measureThemeBootstrap(bootstrap);
+    if (rawBytes > budget.maxRawBytes) {
+      findings.push(`lyraThemeBootstrap is ${rawBytes} raw bytes, over the ${budget.maxRawBytes}-byte ceiling. ${BUDGET_REMEDY}`);
+    }
+    if (gzipBytes > budget.maxGzipBytes) {
+      findings.push(`lyraThemeBootstrap is ${gzipBytes} gzip bytes, over the ${budget.maxGzipBytes}-byte ceiling. ${BUDGET_REMEDY}`);
+    }
+  }
+  if (/<\/|<!--|<script/i.test(bootstrap)) {
+    findings.push('lyraThemeBootstrap contains </, <!-- or <script, which can end or corrupt an inline <script> element');
+  }
+  if (bootstrap.includes(String.fromCharCode(0x2028)) || bootstrap.includes(String.fromCharCode(0x2029))) {
+    findings.push('lyraThemeBootstrap contains a raw U+2028/U+2029 line separator');
+  }
+  return findings;
+}
+
+function readBudget(packageDir) {
+  const { budget } = artifactPaths(packageDir);
+  if (!existsSync(budget)) return undefined;
+  try {
+    return JSON.parse(readFileSync(budget, 'utf8'));
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -64,6 +114,7 @@ export async function checkThemeBootstrapAsset(packageDir = defaultPackageDir) {
   if (!existsSync(asset) || readFileSync(asset, 'utf8') !== expected) {
     findings.push('dist/theme/theme-bootstrap.js is stale or missing relative to dist/theme/theme.js');
   }
+  findings.push(...themeBootstrapSafetyFindings(expected, readBudget(packageDir)));
   return { findings, expected };
 }
 

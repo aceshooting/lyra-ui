@@ -212,9 +212,10 @@ Beyond `components/*`, the package publishes a small set of focused entries:
 | `@aceshooting/lyra-ui/design-tokens.json`                        | Canonical DTCG token interchange for design and build tooling.                                                           |
 | `@aceshooting/lyra-ui/design-tokens.css`                         | Generated light/dark token fixture selectors for previews and design-tool validation; not a replacement for `theme.css`. |
 | `@aceshooting/lyra-ui/native.css`                                | Optional tokenized styles for native descendants of an explicit `.lr-native` scope.                                      |
-| `@aceshooting/lyra-ui/utilities.css`                             | Optional low-specificity `lr-*` layout, sizing, prose, text, visibility, and Page helper classes.                        |
-| `@aceshooting/lyra-ui/theme.js`                                  | Zero-dependency runtime for persisting and applying a theme mode/accent.                                                 |
+| `@aceshooting/lyra-ui/utilities.css`                             | Optional low-specificity `lr-*` layout, sizing, prose, typography, text, visibility, and Page helper classes.            |
+| `@aceshooting/lyra-ui/theme.js`                                  | Zero-dependency runtime for persisting and applying a theme mode, accent and `--lr-theme-*` token map.                   |
 | `@aceshooting/lyra-ui/theme/presets.js`                          | Built-in and application-defined theme presets.                                                                          |
+| `@aceshooting/lyra-ui/theme/presets/shadcn.js`                   | Generated runtime preset carrying the shadcn look as a token map (see [Theming](?path=/docs/guides-theming--docs)).      |
 | `@aceshooting/lyra-ui/localization.js`                           | Side-effect-free locale runtime. See [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs).              |
 | `@aceshooting/lyra-ui/translations/pseudo/en-XA.js` / `ar-XB.js` | Side-effect-only pseudo-locales for expansion and bidi testing.                                                          |
 | `@aceshooting/lyra-ui/autoloader.js`                             | Side-effect-free on-demand `discover()` / `start()` / `stop()` for rendered inventory tags.                              |
@@ -286,7 +287,9 @@ existing region an explicit boundary:
 
 `utilities.css` uses exact class selectors wrapped in `:where()`. Its main groups are display and
 composition (`lr-flex`, `lr-grid`, `lr-stack`, `lr-cluster`, `lr-grid-auto`), wrap/alignment/gap,
-logical sizing and overflow, text/prose, `lr-visually-hidden` / `lr-visually-hidden-focusable`,
+logical sizing and overflow, text/prose, typography (the `lr-typography` scope with its
+`lr-not-typography` boundary, and the `lr-heading-1`–`4` / `lr-inline-code` role classes),
+`lr-visually-hidden` / `lr-visually-hidden-focusable`,
 `lr-fouce-hidden`, and the `lr-page-mobile-only` / `lr-page-desktop-only` helpers. The Page helpers
 follow `<lr-page view="mobile|desktop">`, which is derived from that Page's allocated inline size;
 they do not consult the viewport.

@@ -96,6 +96,7 @@ type Story = StoryObj;
 export const LayoutAndProse: Story = {
   name: "Layout, prose, and native controls",
   render: () => html`
+    <link rel="stylesheet" href=${tokensRoot} />
     <link rel="stylesheet" href=${nativeStyles} />
     <link rel="stylesheet" href=${utilities} />
     <style>

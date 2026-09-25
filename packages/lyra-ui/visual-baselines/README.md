@@ -24,9 +24,9 @@ webfont swap-in, wall-clock reads, the browser's default timezone, and the defau
 `system-ui`/`ui-monospace` font stacks resolving to whatever substitution the capturing host
 happens to have installed are all pinned (see `../scripts/visual-regression.mjs`'s header
 comment). The font substitution gap alone once cascaded into a 3.6% diff for word-cloud's
-spiral-search layout. The configured v8 matrix is 93 stories and 268 live captures, spanning
+spiral-search layout. The configured v8 matrix is 95 stories and 272 live captures, spanning
 light, dark, and RTL plus targeted forced-colors and narrow axes. While human review is pending,
-117 captures compare with retained tracked baselines and 151 are semantic, nonblank, or
+114 captures compare with retained tracked baselines and 158 are semantic, nonblank, or
 painted-pixel evidence only. `manifest.json` computes
 that matrix and records every exemption. The CI step (`.github/workflows/ci.yml`) remains blocking:
 semantic errors, console errors, missing reviewed baselines, and mismatches outside an explicit
@@ -86,9 +86,9 @@ exemption. To extend coverage, add another `<title>--<name>` story id from
 blocking `new` result; an evidence-only capture runs its assertions and stays under
 `.visual-diff-output/evidence/` until a human explicitly promotes that axis.
 
-The runner expands the 93 stories into 268 capture axes before partitioning. Its three CI shards
-contain 90, 89, and 89 captures; the blocking unit/config tests prove the shards are deterministic,
-disjoint, exhaustive, and balanced without changing the 117 retained-baseline plus 151
+The runner expands the 95 stories into 272 capture axes before partitioning. Its three CI shards
+contain 91, 91, and 90 captures; the blocking unit/config tests prove the shards are deterministic,
+disjoint, exhaustive, and balanced without changing the 114 retained-baseline plus 158
 evidence-only policy.
 
 Before any PNG is compared or retained as evidence, the harness recursively checks rendered shadow

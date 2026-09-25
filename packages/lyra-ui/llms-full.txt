@@ -223,7 +223,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
   so your own components can read them),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
-  `@aceshooting/lyra-ui/utilities.css` (opt-in light-DOM layout/text utilities),
+  `@aceshooting/lyra-ui/utilities.css` (opt-in light-DOM layout/text/typography utilities),
   `@aceshooting/lyra-ui/theme.js` (the zero-dependency mode/accent runtime),
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
@@ -1447,12 +1447,19 @@ setLyraTheme({ accent: { danger: "#dc2626", success: "#16a34a" } }); // per-role
 setLyraTheme({ accent: { brand: { light: "#2563eb", dark: "#f59e0b" } } }); // per-mode base color
 setLyraTheme({ surface: "#0b0f1a" }); // mixes every ramp against this instead of the mode default
 setLyraTheme({ mode: "auto" }); // follows the OS, including later changes
-setLyraTheme({ mode: "unset", accent: null, surface: null }); // removes Lyra's overrides
+setLyraTheme({
+  tokens: {
+    "--lr-theme-border-radius-m": "0.5rem", // both modes
+    "--lr-theme-color-surface-default": { light: "#ffffff", dark: "#0a0a0a" }, // per mode
+  },
+}); // replaces any previous token map wholesale
+setLyraTheme({ tokens: null }); // back to whatever the stylesheets say
+setLyraTheme({ mode: "unset", accent: null, surface: null, tokens: null }); // removes Lyra's overrides
 ```
 
-- **`setLyraTheme({ mode?, accent?, surface? })`** persists to `localStorage['lyra-theme']`,
+- **`setLyraTheme({ mode?, accent?, surface?, tokens? })`** persists to `localStorage['lyra-theme']`,
   applies to `document.documentElement`, and dispatches `lr-theme-change` on `window` with
-  `detail: { mode, accent, surface }`. Fields you omit keep their current value; pass `null` to
+  `detail: { mode, accent, surface, tokens? }`. Fields you omit keep their current value; pass `null` to
   clear a field. It **never throws** — when `localStorage` is unavailable (private browsing,
   quota, a sandboxed iframe) it degrades to apply-without-persist, and the "fields you omit keep
   their current value" rule still holds across calls in that state: the merge falls back to the
@@ -1503,6 +1510,81 @@ setLyraTheme({ mode: "unset", accent: null, surface: null }); // removes Lyra's 
 
   These are `--lr-theme-*` inputs, so they reach every nested shadow root — see "Where an override
   actually reaches" above for why setting a `--lr-*` token instead would not.
+- **`tokens`** is a map of `--lr-theme-*` inputs written inline on `<html>`, persisted and restored
+  before first paint like the other fields. Each value is a CSS string for both modes or a
+  `{ light?, dark? }` pair; a `null` or omitted branch leaves that mode to the stylesheets. A map
+  always **replaces** the previous one wholesale — compose with object spread
+  (`{ ...LYRA_SHADCN_THEME_PRESET.theme.tokens, "--lr-theme-border-radius-m": "0" }`) — and
+  `tokens: null`, `{}` or a map with no valid entry removes it; omitting `tokens` keeps the current
+  map. Per-mode branches apply only while Lyra resolves a mode, so `mode: "unset"` writes the bare
+  values only (use the `themes/*.css` stylesheet instead when an application-owned `.dark` class
+  decides the mode). Inline `--lr-theme-*` values your application sets itself on `<html>` and that
+  are not in a map are never touched; a name that *is* in the map is owned by the runtime while the
+  map is applied, and an earlier inline value for it is not restored on removal.
+
+  **Grammar and limits.** Invalid entries are dropped one by one (`setLyraTheme()` never throws;
+  `defineLyraThemePreset()` throws `TypeError` for the same cases). A name must match
+  `--lr-theme-[a-z0-9]+(-[a-z0-9]+)*`, be at most 80 characters, and not be `--lr-theme-accent`
+  (owned by `accent`). A value is trimmed and must be 1–256 characters; it may not contain a
+  control character or line break, a backslash, a backtick, any of
+  `; { } ! < > @ [ ] $ ^ | ~ = ? & :`, U+2028/U+2029, or a
+  comment delimiter; it may not be a CSS-wide keyword (`inherit`, `initial`, `unset`, `revert`,
+  `revert-layer`); every function must be one of `rgb rgba hsl hsla hwb lab lch oklab oklch color
+  color-mix light-dark calc min max clamp var cubic-bezier steps linear` (so `url()`, `image-set()`,
+  `attr()`, `env()` and unknown functions are rejected); and parentheses and quotes must balance. A
+  map holds at most 512 entries (more normalizes to no map at all). The check is DOM-free, so
+  `defineLyraThemePreset()`, the runtime, the bootstrap and the preset generator apply it
+  identically.
+
+  **Contrast floor.** With a resolved mode, colour families the static contrast gate checks are
+  measured before they are written; a failing value is replaced by the nearest passing mix toward
+  black or white, serialized as `rgb(r g b)`, and a passing value is written verbatim. The snapshot
+  and the stored record always keep the value you supplied. The references are the explicit
+  `surface`, else the map's `--lr-theme-color-surface-default`, else the mode default (**S**:
+  `#ffffff` / `#1a1a1a`); the map's `color-surface-raised` else `#f6f8fa` / `#22272e` (**R**); the
+  painted `color-text-normal` else `#1a1a1a` / `#f2f2f2` (**T**); and the map's
+  `color-overlay-strong` else black at 0.92 / 0.95 over S (**O**). Names below omit `--lr-theme-`:
+
+  | Tokens | Against | Floor |
+  | --- | --- | --- |
+  | `color-text-normal`, `color-text-quiet` | S and R | 4.5 |
+  | `color-<role>-on-<tier>`, when its `color-<role>-fill-<tier>` is in the map (a missing on-* is synthesized) | its fill | 4.5 |
+  | `color-on-strong-overlay` (synthesized when only `color-overlay-strong` is in the map) | O | 4.5 |
+  | `color-<role>-border-normal`/`-loud`, `color-surface-border`, `color-border-strong`, `color-focus` | S | 3 |
+  | `color-chart-<n>` | S | 3 |
+  | `terminal-color-<name>` | R | 4.5 |
+  | `terminal-bg-<name>` | T | 4.5 |
+
+  **Unchecked, written verbatim:** `*-border-quiet` and `color-surface-border-subtle` (decorative by
+  contract); `color-<role>-fill-*` (measured through their on-* partner); an on-* whose fill-* is not
+  in the same map; `color-surface-default`, `-raised` and `-overlay` (references, not foregrounds —
+  text on `color-surface-overlay` is not measured); `color-overlay`, `color-no-data` and
+  `color-mix-partner`; chart-series colour-vision separation (the static gate only); every
+  non-colour token (fonts, radii, sizes, shadows, durations — including
+  `--lr-theme-icon-button-size`, whose target-size floor is yours to keep); and any value or
+  reference that does not resolve to a colour — `var()`, `light-dark()`, relative colours,
+  `currentColor`, system colours, and **every** value when a canvas is unavailable (no 2D context,
+  or pixel reads blocked). An unresolved row is written verbatim and synthesizes nothing; the accent
+  still fails closed as it always has. The runtime never reads computed styles, so a reference an
+  application stylesheet changes without the map carrying it is not seen.
+
+  **Precedence.** accent ramp (for the roles it paints) > runtime tokens (inline on `<html>`) >
+  your unlayered CSS > `lr-theme-preset` (`themes/shadcn.css`) > `lr-theme` (`theme.css`) >
+  component fallbacks. Runtime tokens therefore beat an unlayered `:root { --lr-theme-*: … }`
+  override, like the accent does; put your override in the map instead. An element that re-declares
+  a `--lr-theme-*` input itself — a `.lr-dark`/`data-lr-theme` island, a `data-lr-theme`-pinned
+  component, app-scoped CSS — keeps its own value inside that subtree (the accent ramp has the same
+  limitation).
+
+  **Snapshots.** `getLyraTheme()`, the stored record and the `lr-theme-change` /
+  `lr-theme-preset-change` details carry `tokens` **only while a map is applied** — the key is
+  absent, not `null`, otherwise, on every path including unwritable storage and the automatic mode
+  flip. The map is normalized and deep-frozen: trimmed strings, and every per-mode entry carries
+  both `light` and `dark` (`null` for a missing branch).
+- **Unbalanced colours fail closed.** An `accent` (any role or branch) or `surface` with an
+  unclosed parenthesis or quote, such as `rgb(0 0 0`, is rejected to `null` like every other
+  malformed value. The browser's own parser closes such a construct implicitly, but written raw
+  into an inline `style` it swallows the declarations after it when that attribute is re-parsed.
 
 **Theme presets.** `@aceshooting/lyra-ui/theme/presets.js` exports
 `LYRA_THEME_PRESETS`, `defineLyraThemePreset()` and `applyLyraThemePreset()`. Built-in keys are
@@ -1540,6 +1622,38 @@ snapshot. If runtime validation changes a field (for example, an invalid accent 
 because the resulting state is not exactly that named preset. A direct `setLyraTheme()` call also
 removes the preset marker.
 
+**Token presets: a look as its own axis.** A preset's `theme` may carry `tokens` (see `tokens`
+above). `defineLyraThemePreset()` validates the whole map against the same grammar the runtime
+applies and throws `TypeError` on any violation, so a map it accepts is never changed at run time and
+the preset still claims its marker — even where a canvas is unavailable. A look is independent of
+mode, accent and surface: a preset that omits those fields leaves them as they are, and the built-in
+presets never mention `tokens`, so `applyLyraThemePreset("sapphire")` or `"dark"` keeps the current
+look. Either order reaches the same state; only the marker (the last applied id) differs. The
+shadcn look ships as a generated runtime preset, built from `themes/shadcn.css` so the two can never
+drift:
+
+```ts
+import { applyLyraThemePreset, defineLyraThemePreset } from "@aceshooting/lyra-ui/theme/presets.js";
+import { LYRA_SHADCN_THEME_PRESET } from "@aceshooting/lyra-ui/theme/presets/shadcn.js";
+
+applyLyraThemePreset(LYRA_SHADCN_THEME_PRESET); // look on; mode, accent and surface kept
+applyLyraThemePreset("sapphire"); // an accent on top of the look
+
+// The exact stylesheet rendering (no accent ramp, default surface), keeping a marker:
+applyLyraThemePreset(
+  defineLyraThemePreset({
+    id: "shadcn-exact",
+    theme: { ...LYRA_SHADCN_THEME_PRESET.theme, accent: null, surface: null },
+  })
+);
+```
+
+Choose the carrier by need. The runtime preset persists, is restored by the no-flash bootstrap
+before first paint, needs no stylesheet swap, and is written inline, so it beats unlayered `:root`
+overrides. The `themes/shadcn.css` stylesheet is the one to use for light/dark **islands**, for an
+application-owned `.dark`/`.light` class, or for a page with no theme runtime. The runtime preset
+module is a separate subpath, so an application that only uses `presets.js` pays nothing for it.
+
 **No-flash bootstrap.** `lyraThemeBootstrap` is a self-contained IIFE **string** (not a function),
 meant to be inlined into a `<script>` in `<head>` **before any stylesheet**, so the persisted theme
 is on the root element before first paint. It reads `localStorage['lyra-theme']`.
@@ -1566,6 +1680,15 @@ can run before any module loads) rather than importing the runtime, but the two 
 drift. A missing or malformed record receives the runtime's
 `{ mode: 'auto', accent: null, surface: null }` default; blocked `localStorage` leaves the document
 untouched rather than throwing before your app loads.
+
+The stored record also carries `tokens` while a map is applied, and the bootstrap restores it
+before first paint: the same grammar, the same per-mode branch for the resolved mode, and the same
+contrast floor as the runtime. It records the names it wrote on `<html>`, so the runtime's first
+apply removes or rewrites exactly those. Token values are read from storage at run time and never
+serialized into the script string. **The bootstrap's bytes change with library releases** — this
+one included — so a deployment that pins a CSP hash for the inline script (or for
+`theme-bootstrap.js`) must regenerate that hash when upgrading, or the browser blocks the bootstrap
+and the first-paint flash returns.
 
 **External-file delivery for a strict CSP.** `@aceshooting/lyra-ui/theme-bootstrap.js` is a
 third, non-module way to ship the same bootstrap: a static script asset published alongside the
@@ -1636,6 +1759,10 @@ What changed is `LyraTheme` gaining a `surface` field alongside it — a strict 
 caller that only ever read/wrote `mode`/`accent`, since `getLyraTheme()` now also returns
 `surface: null` by default. Only code that structurally compares the whole returned record (for
 example `assert.deepEqual(getLyraTheme(), { mode, accent })`) needs the extra field added.
+
+**`tokens` is optional and absent unless used.** `LyraTheme` also gains an optional `tokens` field;
+`getLyraTheme()`, the stored record and both event details omit the key entirely until a token map
+is applied, so `assert.deepEqual(getLyraTheme(), { mode, accent, surface })` keeps passing.
 
 ### Invalidating canvas theme values
 
@@ -1780,6 +1907,7 @@ components can read the resolved `--lr-*` tokens these two are written against.
 | Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-quiet`                         |
 | Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`                                                                            |
 | Text flow                   | `lr-text-break`, `lr-text-nowrap`, `lr-truncate`, `lr-text-balance`, `lr-text-pretty`, `lr-prose`                                                                 |
+| Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-inline-code`                                           |
 | Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
 | Page allocation             | `lr-page-mobile-only`, `lr-page-desktop-only`                                                                                                                     |
 
@@ -1790,6 +1918,175 @@ focus or when a descendant receives focus, making it suitable for skip links.
 The Page helpers key off the reflected `view` state of their containing `<lr-page>`:
 `lr-page-mobile-only` is hidden for `view="desktop"`, and `lr-page-desktop-only` is hidden for
 `view="mobile"`. Page derives that state from its own allocated inline size, not the viewport.
+
+### Typography
+
+`utilities.css` also carries an opt-in typography look for light-DOM content. Nothing changes for
+markup that does not use these classes.
+
+- **Scope** — `lr-typography` styles bare `h1`–`h6`, `p`, `a[href]`, `blockquote`, `ul`/`ol`/`li`,
+  inline `code` (not `pre code`) and `table`/`th`/`td`/`tr` **descendants**, and spaces its direct
+  children. Use it for CMS or Markdown-rendered HTML you cannot annotate element by element.
+- **Roles** — `lr-heading-1` … `lr-heading-4` give any element a heading level's look without
+  changing its semantic level; `lr-inline-code` gives one element the inline-code chip. Role classes
+  apply anywhere, including inside a boundary, and an explicit role beats the element's own level
+  inside the scope (`<h3 class="lr-heading-1">` renders heading-1).
+- **Boundary** — `lr-not-typography` removes an element and its whole subtree from every element
+  look. Use it around layout lists (`<ul class="lr-cluster">` tag rows, nav), embedded widgets and
+  component clusters. A nested `lr-typography` inside a boundary is not re-enabled.
+- **Named-slot children are skipped.** A child with a `slot` attribute (`<lr-card><h2
+  slot="header">`) is component chrome and keeps the component's own styling; default-slot content
+  is styled.
+- **The scope element itself is never styled.** It sets no font, size, colour or margin, so it can
+  sit on an app region. `<blockquote class="lr-typography">` does nothing: wrap single elements.
+  Root font and colour come from the page, from `lr-prose` or from `lr-native`
+  (`class="lr-prose lr-typography"` is the usual pairing).
+
+Choose the element for the document outline and the class for the look: `<h2 class="lr-heading-1">`
+for a visually dominant section heading, never `<div class="lr-heading-1">`.
+
+| Element in `lr-typography` | Role class       | Look                                                                                   |
+| -------------------------- | ---------------- | -------------------------------------------------------------------------------------- |
+| `h1`                       | `lr-heading-1`   | `--lr-font-size-3xl`, bold, compact leading                                            |
+| `h2`                       | `lr-heading-2`   | `--lr-font-size-2xl`, semibold, subtle bottom rule with `--lr-space-s` padding         |
+| `h3`                       | `lr-heading-3`   | `--lr-font-size-xl`, semibold                                                          |
+| `h4`                       | `lr-heading-4`   | `--lr-font-size-lg`, semibold                                                          |
+| `h5` / `h6`                | —                | `--lr-font-size-m` / `--lr-font-size-sm`, semibold                                     |
+| `p`                        | —                | `--lr-line-height-loose`                                                               |
+| `a[href]`                  | —                | `--lr-color-brand`, always underlined; the underline thickens on hover                 |
+| `blockquote`               | —                | italic, subtle `--lr-border-width-medium` inline-start edge, inherited colour          |
+| `ul` / `ol`                | —                | `--lr-space-2xl` indent, markers restated (disc/circle/square, decimal), item rhythm   |
+| inline `code`              | `lr-inline-code` | mono chip on `--lr-color-neutral-fill-quiet`, `0.875em`, semibold; inherits link colour |
+| `table`                    | —                | full width, collapsed subtle cell borders, bold `th`, `--lr-color-surface-raised` zebra |
+
+Headings, role classes and quotes inherit their colour, so a role class inside a banner or alert
+keeps that surface's text colour. Heading tracking reads `--lr-heading-letter-spacing`, then the
+`--lr-theme-heading-letter-spacing` theme input, then `normal`.
+
+**Lead, large, small and muted** are compositions of existing utilities:
+
+| Look  | Classes                         |
+| ----- | ------------------------------- |
+| Lead  | `lr-text-xl lr-text-quiet`      |
+| Large | `lr-text-lg lr-font-semibold`   |
+| Small | `lr-text-sm lr-font-medium`     |
+| Muted | `lr-text-sm lr-text-quiet`      |
+
+For an exact 0.875rem muted/small size, use a class of your own with the token chain (resolved
+`--lr-*` tokens are undefined at document scope unless `tokens-root.css` is loaded):
+
+```css
+.app-muted {
+  font-size: var(--lr-font-size-md-sm, var(--lr-theme-font-size-md-sm, 0.875rem));
+}
+.app-small {
+  font-size: var(--lr-font-size-md-sm, var(--lr-theme-font-size-md-sm, 0.875rem));
+  line-height: var(--lr-line-height-none, var(--lr-theme-line-height-none, 1));
+}
+```
+
+Combine `.app-muted` with `lr-text-quiet`, and `.app-small` with `lr-font-medium`.
+
+**Precedence.** Every selector has zero specificity, so source order and layers decide:
+
+1. The typography element looks and role classes open the `lr-utilities` layer, so any other `lr-*`
+   utility on the same element wins: `class="lr-heading-2 lr-text-quiet"` is a quiet heading, and a
+   scope `<blockquote class="lr-center">` is centred.
+2. An explicit heading role class beats the element's own scope look (`<h2 class="lr-heading-4">`
+   has no bottom rule).
+3. In `class="lr-prose lr-typography"`, `lr-prose` keeps the measure, root type and colour, and the
+   typography element looks and heading-aware spacing win. Inside a boundary, or on a named-slot
+   child, `lr-prose` applies exactly as before. Plain `lr-prose` output is unchanged.
+4. `lr-utilities` beats `lr-base`, so the scope beats `lr-native` normalization, including its link,
+   quote and heading colours.
+5. A layered reset (such as Tailwind's `base` preflight) loses only when you declare the documented
+   layer order first — see [Using the light-DOM stylesheets with a CSS
+   reset](#using-the-light-dom-stylesheets-with-a-css-reset-tailwind-v4-preflight-and-similar).
+   Authored `type` (lists) and `align` (cells) attributes are presentational hints that any author
+   rule, including a reset, overrides.
+
+Any unlayered application rule beats all of the above.
+
+**Flow.** Every direct, non-slotted child of the scope has its block margins replaced by
+`--lr-prose-flow-space` (default `--lr-space-l`), and a heading gets twice that space before it.
+That includes wrappers, `hr`, `img`, `details`, `section` and `lr-*` elements, so a component's own
+host margin is overridden at that position (wrap it in a `<div>` to keep it). Flow counts the
+immediately preceding element sibling, including non-rendered ones (`<style>`, `<template>`,
+`[hidden]`), so keep those out of the scope's direct children. Blocks nested inside `li` or
+`blockquote` keep the page's own margins. Do not put `lr-stack`/`lr-cluster` on the scope element
+itself — gap and flow margins would add up (set `--lr-prose-flow-space: 0` if you must).
+
+**Wide tables** go in a focusable, labelled scroll region, labelled by the table's own caption:
+
+```html
+<div class="lr-overflow-auto" role="region" aria-labelledby="pricing-caption" tabindex="0">
+  <table>
+    <caption id="pricing-caption">Plans and prices</caption>
+    …
+  </table>
+</div>
+```
+
+**Differences from the shadcn/ui look.** Values come from Lyra's scale:
+
+| Element               | Lyra                                                          | shadcn/ui                               |
+| --------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| Heading sizes         | 2 / 1.75 / 1.25 / 1.125rem                                    | 2.25 / 1.875 / 1.5 / 1.25rem            |
+| h1 weight             | 700                                                           | 800                                     |
+| Tracking              | `normal` unless the hook or theme input sets it; `themes/shadcn.css` sets -0.025em | tight              |
+| Flow spacing          | 1rem (`--lr-prose-flow-space`)                                | 1.5rem                                  |
+| Space before headings | 2 × flow = 2rem for every level                               | 2.5rem before h2, 2rem before h3        |
+| Paragraph leading     | 1.6                                                           | 1.75rem                                 |
+| Quote and list indent | 1rem and 2rem                                                 | 1.5rem each                             |
+| Inline code size      | 0.875em (scales inside headings)                              | 0.875rem                                |
+| Inline code padding   | 0.25rem inline / 0.125rem block                               | 0.3rem / 0.2rem                         |
+| Table stripe          | `--lr-color-surface-raised` (matches `lr-data-grid`)          | muted fill                              |
+| Links                 | brand colour, inherited weight, underline                     | primary colour, medium weight, underline |
+| Muted and small size  | 0.8125rem via `lr-text-sm` (exact recipe above)               | 0.875rem                                |
+| Small line-height     | inherited (exact recipe above)                                | 1                                       |
+
+**Languages.** Only logical properties are used, so edges and indents mirror under `dir="rtl"`.
+Blockquotes under `:lang()` `ar`, `fa`, `ur`, `ps`, `ckb`, `sd`, `ug`, `syr`, `he`, `yi`, `ja`, `ko`
+and `zh` are not italic (those scripts have no true italic), and headings under `ar`, `fa`, `ur`,
+`ps`, `ckb`, `sd`, `ug` and `syr` reset `letter-spacing` to `normal` (negative tracking breaks
+cursive joins). To add a language to either list, or to opt back in, write an unlayered rule; it
+wins.
+
+**`lr-markdown`** renders into its own shadow root, which `utilities.css` cannot reach. For a
+similar look, use its existing parts and hooks:
+
+```css
+lr-markdown::part(inline-code) {
+  background: var(--lr-color-neutral-fill-quiet, var(--lr-theme-color-neutral-fill-quiet));
+  font-weight: var(--lr-font-weight-semibold, var(--lr-theme-font-weight-semibold, 600));
+}
+lr-markdown {
+  --lr-markdown-table-header-bg: transparent;
+}
+lr-markdown::part(blockquote) {
+  font-style: italic;
+}
+```
+
+The `blockquote` rule carries the same `:lang()` caveat as above.
+
+### Using the light-DOM stylesheets with a CSS reset (Tailwind v4 preflight and similar)
+
+A layered reset such as Tailwind v4's preflight lives in its own `base` layer. Layer order is fixed
+by first appearance, so if the reset's layers are declared first they sort **after** Lyra's and
+outrank `native.css` and `utilities.css`: headings shrink to body size, list markers and link
+underlines disappear. Declare the full order as the **first** CSS the page loads — for example a
+tiny `layers.css` imported before `tailwindcss` and before any Lyra CSS:
+
+```css
+/* layers.css — load first */
+@layer theme, base, lr-base, lr-theme, lr-theme-preset, components, lr-utilities, utilities, lr-overrides;
+```
+
+The reset then sorts before Lyra's layers, and Tailwind's own utilities after `lr-utilities`. List
+markers and link underlines inside `lr-typography` survive the reset because the scope restates
+them. An authored `type` on a list or `align` on a cell does not: presentational hints lose to every
+author rule, so under a reset set `list-style-type` (or `text-align`) with a class instead.
 
 ### Bundle-specific override hooks
 
@@ -1802,10 +2099,12 @@ and opacity tokens first. These additional hooks customize only the light-DOM bu
 | `--lr-grid-min-inline-size`               | `--lr-size-14rem`; minimum auto-grid item inline size                        |
 | `--lr-content-max-inline-size`            | `--lr-size-48rem`; `lr-center` content measure                               |
 | `--lr-prose-max-inline-size`              | `65ch`; `lr-prose` and `lr-max-inline-prose` measure                         |
-| `--lr-prose-flow-space`                   | `--lr-space-l`; flow spacing between direct prose blocks                     |
-| `--lr-prose-quote-padding`                | `--lr-space-l`; logical quote inset                                          |
-| `--lr-prose-quote-border-width`           | `--lr-border-width-thick`; logical quote edge                                |
-| `--lr-visually-hidden-size`               | `--lr-border-width-thin`; retained hidden box size                           |
+| `--lr-prose-flow-space`                   | `--lr-space-l`; flow spacing between direct blocks of `lr-prose` and `lr-typography`; the space before an `lr-typography` heading is twice this value |
+| `--lr-prose-quote-padding`                | `--lr-space-l`; logical quote inset in `lr-prose` and `lr-typography`        |
+| `--lr-prose-quote-border-width`           | `--lr-border-width-thick` in `lr-prose`, `--lr-border-width-medium` in `lr-typography`; logical quote edge |
+| `--lr-heading-letter-spacing`             | `--lr-theme-heading-letter-spacing`, then `normal`; heading tracking for `lr-heading-1`–`4` and `lr-typography` headings |
+| `--lr-theme-heading-letter-spacing`       | unset; theme input for heading tracking (no resolved `--lr-*` token); `themes/shadcn.css` sets it |
+| `--lr-visually-hidden-size`               | `--lr-size-1px` (1px); retained hidden box size                              |
 | `--lr-native-link-decoration-width`       | `--lr-border-width-thin`; resting underline thickness                        |
 | `--lr-native-link-underline-offset`       | `--lr-space-2xs`; underline offset                                           |
 | `--lr-native-link-hover-decoration-width` | `--lr-border-width-medium`; hovered underline thickness                      |
@@ -4527,6 +4826,7 @@ These named interfaces and helper signatures are available to typed integrations
   mode: unknown;
   accent: unknown;
   surface: unknown;
+  tokens: unknown;
 }`
   `setLyraTheme(/* public names: theme */): unknown`
 

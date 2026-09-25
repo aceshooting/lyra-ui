@@ -5,6 +5,170 @@
 @layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 
 @layer lr-utilities {
+  /* Typography. Role classes (.lr-heading-1..4, .lr-inline-code) style the element that carries
+     them. The .lr-typography scope styles bare descendants except named-slot children, anything
+     inside an .lr-not-typography boundary, and elements carrying a heading role class (the role
+     wins). These rules open the layer so every later lr-* utility on the same element wins. */
+  :where(.lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4),
+  :where(.lr-typography) :where(h1, h2, h3, h4, h5, h6):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    font-weight: var(--lr-font-weight-semibold, var(--lr-theme-font-weight-semibold, 600));
+    line-height: var(--lr-line-height-compact, var(--lr-theme-line-height-compact, 1.25));
+    letter-spacing: var(--lr-heading-letter-spacing, var(--lr-theme-heading-letter-spacing, normal));
+    overflow-wrap: anywhere;
+    /* Longhand on purpose: the text-wrap shorthand would also reset text-wrap-mode to wrap and
+       override an inherited white-space: nowrap. */
+    text-wrap-style: balance;
+    break-after: avoid;
+  }
+
+  :where(.lr-heading-1),
+  :where(.lr-typography) :where(h1):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    font-size: var(--lr-font-size-3xl, var(--lr-theme-font-size-3xl, 2rem));
+    font-weight: var(--lr-font-weight-bold, var(--lr-theme-font-weight-bold, 700));
+  }
+
+  :where(.lr-heading-2),
+  :where(.lr-typography) :where(h2):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    padding-block-end: var(--lr-space-s, var(--lr-theme-space-s, 0.5rem));
+    border-block-end: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px)) solid
+      var(--lr-color-border-subtle, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))));
+    font-size: var(--lr-font-size-2xl, var(--lr-theme-font-size-2xl, 1.75rem));
+  }
+
+  :where(.lr-heading-3),
+  :where(.lr-typography) :where(h3):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    font-size: var(--lr-font-size-xl, var(--lr-theme-font-size-xl, 1.25rem));
+  }
+
+  :where(.lr-heading-4),
+  :where(.lr-typography) :where(h4):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    font-size: var(--lr-font-size-lg, var(--lr-theme-font-size-lg, 1.125rem));
+  }
+
+  :where(.lr-typography) :where(h5):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    font-size: var(--lr-font-size-m, var(--lr-theme-font-size-m, 1rem));
+  }
+
+  :where(.lr-typography) :where(h6):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    font-size: var(--lr-font-size-sm, var(--lr-theme-font-size-sm, 0.8125rem));
+  }
+
+  /* Negative tracking breaks the joins of cursive scripts. */
+  :where(.lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4):where(:lang(ar), :lang(fa), :lang(ur), :lang(ps), :lang(ckb), :lang(sd), :lang(ug), :lang(syr)),
+  :where(.lr-typography) :where(h1, h2, h3, h4, h5, h6):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)):where(:lang(ar), :lang(fa), :lang(ur), :lang(ps), :lang(ckb), :lang(sd), :lang(ug), :lang(syr)) {
+    letter-spacing: normal;
+  }
+
+  :where(.lr-typography) :where(p):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    line-height: var(--lr-line-height-loose, var(--lr-theme-line-height-loose, 1.6));
+  }
+
+  :where(.lr-typography) :where(p, li, blockquote):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    overflow-wrap: anywhere;
+  }
+
+  :where(.lr-typography) :where(blockquote):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    margin-inline: 0;
+    padding-inline-start: var(--lr-prose-quote-padding, var(--lr-space-l, var(--lr-theme-space-l, 1rem)));
+    border-inline-start: var(--lr-prose-quote-border-width, var(--lr-border-width-medium, var(--lr-theme-border-width-medium, 2px))) solid
+      var(--lr-color-border-subtle, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))));
+    color: inherit;
+    font-style: italic;
+  }
+
+  /* Scripts without a true italic would get a synthetic oblique. */
+  :where(.lr-typography) :where(blockquote):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)):where(:lang(ar), :lang(fa), :lang(ur), :lang(ps), :lang(ckb), :lang(sd), :lang(ug), :lang(syr), :lang(he), :lang(yi), :lang(ja), :lang(ko), :lang(zh)) {
+    font-style: normal;
+  }
+
+  :where(.lr-typography) :where(ul, ol):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    padding-inline-start: var(--lr-space-2xl, var(--lr-theme-space-2xl, 2rem));
+  }
+
+  /* Markers restate the UA sequence so a layered reset cannot remove them; an authored type
+     attribute keeps its presentational hint. */
+  :where(.lr-typography) :where(ul):where(:not([type], [slot], .lr-not-typography, .lr-not-typography *)) {
+    list-style-type: disc;
+  }
+
+  :where(.lr-typography) :where(ul, ol) :where(ul):where(:not([type], [slot], .lr-not-typography, .lr-not-typography *)) {
+    list-style-type: circle;
+  }
+
+  :where(.lr-typography) :where(ul, ol) :where(ul, ol) :where(ul):where(:not([type], [slot], .lr-not-typography, .lr-not-typography *)) {
+    list-style-type: square;
+  }
+
+  :where(.lr-typography) :where(ol):where(:not([type], [slot], .lr-not-typography, .lr-not-typography *)) {
+    list-style-type: decimal;
+  }
+
+  :where(.lr-typography) :where(li) + :where(li):where(:not([slot], .lr-not-typography, .lr-not-typography *)),
+  :where(.lr-typography) :where(li) > :where(ul, ol):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    margin-block-start: var(--lr-space-s, var(--lr-theme-space-s, 0.5rem));
+  }
+
+  /* Links are identified by underline, not colour alone: brand against body text is below 3:1. */
+  :where(.lr-typography) :where(a[href]):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    color: var(--lr-color-brand, var(--lr-theme-color-brand-fill-loud, LinkText));
+    text-decoration-line: underline;
+    text-decoration-thickness: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px));
+    text-underline-offset: var(--lr-space-2xs, var(--lr-theme-space-2xs, 0.125rem));
+  }
+
+  :where(.lr-typography) :where(a[href]):where(:not([slot], .lr-not-typography, .lr-not-typography *)):where(:hover) {
+    text-decoration-thickness: var(--lr-border-width-medium, var(--lr-theme-border-width-medium, 2px));
+  }
+
+  :where(.lr-inline-code),
+  :where(.lr-typography) :where(code):where(:not(pre code, [slot], .lr-not-typography, .lr-not-typography *)) {
+    padding-block: var(--lr-space-2xs, var(--lr-theme-space-2xs, 0.125rem));
+    padding-inline: var(--lr-space-xs, var(--lr-theme-space-xs, 0.25rem));
+    border-radius: var(--lr-radius-xs, var(--lr-theme-border-radius-xs, 2px));
+    background: var(--lr-color-neutral-fill-quiet, var(--lr-theme-color-neutral-fill-quiet, Canvas));
+    color: var(--lr-color-text, var(--lr-theme-color-text-normal, CanvasText));
+    font-family: var(--lr-font-mono, var(--lr-theme-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace));
+    font-size: var(--lr-size-0-875em, 0.875em);
+    font-weight: var(--lr-font-weight-semibold, var(--lr-theme-font-weight-semibold, 600));
+    overflow-wrap: anywhere;
+  }
+
+  /* Inside a link the chip keeps the link colour (brand on the chip fill stays above 5:1). */
+  :where(a) :where(.lr-inline-code),
+  :where(.lr-typography) :where(a) :where(code):where(:not(pre code, [slot], .lr-not-typography, .lr-not-typography *)) {
+    color: inherit;
+  }
+
+  :where(.lr-typography) :where(table):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  :where(.lr-typography) :where(th, td):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    padding-block: var(--lr-space-s, var(--lr-theme-space-s, 0.5rem));
+    padding-inline: var(--lr-space-l, var(--lr-theme-space-l, 1rem));
+    border: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px)) solid
+      var(--lr-color-border-subtle, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))));
+  }
+
+  /* An authored align attribute is a presentational hint that any author rule would override;
+     only unaligned cells get the logical default. */
+  :where(.lr-typography) :where(th, td):where(:not([align], [slot], .lr-not-typography, .lr-not-typography *)) {
+    text-align: start;
+  }
+
+  :where(.lr-typography) :where(th):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    font-weight: var(--lr-font-weight-bold, var(--lr-theme-font-weight-bold, 700));
+  }
+
+  :where(.lr-typography) :where(tr):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    break-inside: avoid;
+  }
+
+  :where(.lr-typography) :where(tr):where(:nth-child(even)):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    background: var(--lr-color-surface-raised, var(--lr-theme-color-surface-raised, Canvas));
+  }
+
   :where(.lr-block) {
     display: block;
   }
@@ -408,7 +572,24 @@
     );
   }
 
-  :where(.lr-prose) :where(h1, h2, h3, h4, h5, h6) {
+  /* Typography flow. Every direct child of the scope takes part, not only the prose element list
+     above, so scroll wrappers, rules, figures and lr-* elements keep the rhythm. Named-slot
+     children are component chrome and keep their own spacing. A scope nested inside an
+     .lr-not-typography boundary stays off, flow included. Placed after the lr-prose flow so the
+     heading space also wins inside lr-prose lr-typography. */
+  :where(.lr-typography):where(:not(.lr-not-typography *)) > :where(*):where(:not([slot])) {
+    margin-block: 0;
+  }
+
+  :where(.lr-typography):where(:not(.lr-not-typography *)) > :where(*) + :where(*):where(:not([slot])) {
+    margin-block-start: var(--lr-prose-flow-space, var(--lr-space-l, var(--lr-theme-space-l, 1rem)));
+  }
+
+  :where(.lr-typography):where(:not(.lr-not-typography *)) > :where(*) + :where(h1, h2, h3, h4, h5, h6):where(:not([slot])) {
+    margin-block-start: calc(var(--lr-prose-flow-space, var(--lr-space-l, var(--lr-theme-space-l, 1rem))) * 2);
+  }
+
+  :where(.lr-prose) :where(h1, h2, h3, h4, h5, h6):where(:not(.lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)):where(:not(.lr-typography *), [slot], .lr-not-typography, .lr-not-typography *) {
     color: var(--lr-color-text, var(--lr-theme-color-text-normal, CanvasText));
     font-weight: var(
       --lr-font-weight-semibold,
@@ -420,15 +601,15 @@
     );
   }
 
-  :where(.lr-prose) :where(h1) {
+  :where(.lr-prose) :where(h1):where(:not(.lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)):where(:not(.lr-typography *), [slot], .lr-not-typography, .lr-not-typography *) {
     font-size: var(--lr-font-size-3xl, var(--lr-theme-font-size-3xl, 2rem));
   }
 
-  :where(.lr-prose) :where(h2) {
+  :where(.lr-prose) :where(h2):where(:not(.lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)):where(:not(.lr-typography *), [slot], .lr-not-typography, .lr-not-typography *) {
     font-size: var(--lr-font-size-2xl, var(--lr-theme-font-size-2xl, 1.75rem));
   }
 
-  :where(.lr-prose) :where(h3) {
+  :where(.lr-prose) :where(h3):where(:not(.lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)):where(:not(.lr-typography *), [slot], .lr-not-typography, .lr-not-typography *) {
     font-size: var(--lr-font-size-xl, var(--lr-theme-font-size-xl, 1.25rem));
   }
 
@@ -457,7 +638,7 @@
     );
   }
 
-  :where(.lr-prose) :where(blockquote) {
+  :where(.lr-prose) :where(blockquote):where(:not(.lr-typography *), [slot], .lr-not-typography, .lr-not-typography *) {
     padding-inline-start: var(
       --lr-prose-quote-padding,
       var(--lr-space-l, var(--lr-theme-space-l, 1rem))

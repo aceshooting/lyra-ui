@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard gzip budgets are KiB limits for bundled+minified ESM with optional peers externalized. The exact reviewed byte map was re-measured for the 16.0.0 release on the final integrated source set with Node 22.23.2, esbuild's production minifier, and gzip level 9, via `node scripts/check-bundle-size.mjs --print-budget-review`. Whole-byte ceilings are expressed in KiB; validation rejects a measurement above its reviewed byte count plus the 4% drift band, and these budgets deliberately take only 2% so ordinary growth still trips the gate. The 16.0.0 increase (+3.1% across the entries that moved, concentrated in data +11%, layout +8% and agent-tools +5%) is the reviewed cost of that release's added surface: the shared data-state renderer now used by table/data-grid/thread-list, lr-popover trigger modes with the hover bridge, lr-pagination's indeterminate server mode, lr-reorder-list's controlled mode, lr-menu-item type=radio, lr-responsive-panel side shapes, lr-chat-composer's stacked rail, and the eleventh built-in locale. Per-component routes are unaffected except where listed. The 2026-09-22 media-family review measured 205920 -> 206215 gzip bytes under Node 22.23.2 after the SVG clone resource guards and file-control corrections. Its ceiling increases by that same 295-byte implementation cost to 206442 bytes, retaining the previous 227-byte margin; all other ceilings retain their earlier review. The 2026-09-23 review for the 20.0.0 major remeasured every entry under Node 22.23.2 after the full-library remediation: settled-closed popups leave layout, render caps with localized notices, shared overlay-stack registration for floating previews, the lr-diff-view search/anchor surface, readonly/loading/appearance additions and the event renames with deprecated aliases. Each entry that moved above its ceiling now records its measured gzip bytes in $reviewedGzipBytes with a ceiling of that measurement plus 2%; untouched entries retain their earlier review.",
+  "$comment": "Hard gzip budgets are KiB limits for bundled+minified ESM with optional peers externalized. The exact reviewed byte map was re-measured for the 16.0.0 release on the final integrated source set with Node 22.23.2, esbuild's production minifier, and gzip level 9, via `node scripts/check-bundle-size.mjs --print-budget-review`. Whole-byte ceilings are expressed in KiB; validation rejects a measurement above its reviewed byte count plus the 4% drift band, and these budgets deliberately take only 2% so ordinary growth still trips the gate. The 16.0.0 increase (+3.1% across the entries that moved, concentrated in data +11%, layout +8% and agent-tools +5%) is the reviewed cost of that release's added surface: the shared data-state renderer now used by table/data-grid/thread-list, lr-popover trigger modes with the hover bridge, lr-pagination's indeterminate server mode, lr-reorder-list's controlled mode, lr-menu-item type=radio, lr-responsive-panel side shapes, lr-chat-composer's stacked rail, and the eleventh built-in locale. Per-component routes are unaffected except where listed. The 2026-09-22 media-family review measured 205920 -> 206215 gzip bytes under Node 22.23.2 after the SVG clone resource guards and file-control corrections. Its ceiling increases by that same 295-byte implementation cost to 206442 bytes, retaining the previous 227-byte margin; all other ceilings retain their earlier review. The 2026-09-23 review for the 20.0.0 major remeasured every entry under Node 22.23.2 after the full-library remediation: settled-closed popups leave layout, render caps with localized notices, shared overlay-stack registration for floating previews, the lr-diff-view search/anchor surface, readonly/loading/appearance additions and the event renames with deprecated aliases. Each entry that moved above its ceiling now records its measured gzip bytes in $reviewedGzipBytes with a ceiling of that measurement plus 2%; untouched entries retain their earlier review. The 2026-09-25 theme-token-presets review adds three new measured entries (bundled, minified, gzip 9): dist/theme/theme.js measured 6,266 gzip bytes (it now carries the pre-paint bootstrap string plus a runtime copy of the contrast floor for validated runtime token maps), ceiling 6,392; dist/theme/presets.js measured 7,410, ceiling 7,559; and the generated look preset dist/theme/presets/shadcn.js measured 6,463, ceiling 6,593 bytes (2% headroom each). The same 2026-09-25 review remeasured dist/components/forms/index.js at 236,764 gzip bytes after the shared CSS-value sanitizer its form controls import (internal/safe-css) gained balanced-parenthesis/quote scanning and escape, bracket and comment-delimiter rejection, so its reviewed ceiling is 241,500 bytes (2% headroom).",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "$componentMaxGzipKb": 209888,
@@ -15,7 +15,7 @@
     "dist/components/data/index.js": 323501,
     "dist/components/forms/button/button.js": 32035,
     "dist/components/forms/combobox/combobox.js": 70500,
-    "dist/components/forms/index.js": 232048,
+    "dist/components/forms/index.js": 236764,
     "dist/components/forms/select/select.js": 62417,
     "dist/components/layout/index.js": 311267,
     "dist/components/media/index.js": 207336,
@@ -30,7 +30,10 @@
     "dist/lyra.js": 1168110,
     "dist/ssr-loader.js": 1203070,
     "dist/ssr.js": 4417,
-    "dist/ssr/all.js": 1199053
+    "dist/ssr/all.js": 1199053,
+    "dist/theme/presets.js": 7410,
+    "dist/theme/presets/shadcn.js": 6463,
+    "dist/theme/theme.js": 6266
   },
   "$componentP95GzipKb": 101.078125,
   "$componentMaxGzipKb": 209.0673828125,
@@ -47,7 +50,7 @@
   "dist/components/charts/index.js": 75.1943359375,
   "dist/components/conversation/index.js": 336.4287109375,
   "dist/components/data/index.js": 322.2373046875,
-  "dist/components/forms/index.js": 231.1416015625,
+  "dist/components/forms/index.js": 235.83984375,
   "dist/components/layout/index.js": 310.05078125,
   "dist/components/media/index.js": 206.525390625,
   "dist/components/overlays/index.js": 124.6796875,
@@ -60,5 +63,8 @@
   "dist/components/overlays/overlay/popover.js": 49.642578125,
   "dist/components/data/gauge/gauge.js": 24.5703125,
   "dist/components/viewers/pdf-viewer/pdf-viewer.js": 59.7392578125,
-  "dist/components/data/flow-canvas/flow-canvas.js": 49.76171875
+  "dist/components/data/flow-canvas/flow-canvas.js": 49.76171875,
+  "dist/theme/theme.js": 6.2421875,
+  "dist/theme/presets.js": 7.3818359375,
+  "dist/theme/presets/shadcn.js": 6.4384765625
 }
