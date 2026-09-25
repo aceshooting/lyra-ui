@@ -272,19 +272,24 @@ it('keeps custom semantic cell targets separated and frozen until the next paint
   internals.canvasVisible = true;
 });
 
-it('leaves calendar pixels unchanged when matrix presentation properties change', async () => {
+it('leaves calendar pixels unchanged when the matrix-only column label interval changes', async () => {
   const el = await matrix();
   el.data = { kind: 'calendar', days: [{ date: '2026-09-07', value: 1 }] };
   await el.updateComplete;
   const drawCalendar = () => (el as unknown as { drawCalendar(): void }).drawCalendar();
   drawCalendar();
   const original = canvas(el).toDataURL();
-  el.cellGapX = 4;
-  el.cellGapY = 7;
-  el.cellRadius = 3;
   el.colLabelInterval = 2;
   await el.updateComplete;
   drawCalendar();
   expect(canvas(el).toDataURL() === original).to.equal(true);
   expect(el.matrixGeometry).to.equal(undefined);
+  // Explicit spacing is the calendar opt-in (see heatmap-calendar-spacing.test.ts).
+  el.cellGapX = 4;
+  el.cellGapY = 7;
+  el.cellRadius = 3;
+  await el.updateComplete;
+  drawCalendar();
+  expect(canvas(el).toDataURL() === original).to.equal(false);
+  expect(el.calendarGeometry).to.include({ cellGapX: 4, cellGapY: 7, cellRadius: 3 });
 });

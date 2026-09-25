@@ -497,6 +497,7 @@ export type {
   LyraHeatmapCellClickDetail,
   LyraHeatmapExportFormat,
   LyraHeatmapMatrixGeometryChangeDetail,
+  LyraHeatmapCalendarGeometry,
 } from './components/data/heatmap/heatmap.class.js';
 export {
   linearAlpha,

@@ -1,4 +1,4 @@
-import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type PropertyDeclaration, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -536,6 +536,35 @@ export type LyraHeatmapMatrixGeometryChangeDetail = {
   cellRadius?: number;
 };
 
+/**
+ * The painted calendar-mode geometry `LyraHeatmap.calendarGeometry` reports, in CSS pixels.
+ * `padLeft` is the weekday-label gutter and `padTop` the month-label band; `cellWidth`/`cellHeight`
+ * are the painted cell box (square in calendar mode); `cellGapX`/`cellGapY` are the resolved
+ * spacing between week columns and weekday rows; `cellRadius` is the painted corner radius.
+ * Caller-supplied `data.columnX`/`data.rowY` origins, when present, take precedence over
+ * `padLeft`/`padTop` plus the gaps for positioning individual columns and rows.
+ */
+export type LyraHeatmapCalendarGeometry = {
+  padLeft: number;
+  padTop: number;
+  cellSize: number;
+  cellWidth: number;
+  cellHeight: number;
+  cellGapX: number;
+  cellGapY: number;
+  cellRadius: number;
+  weekCount: number;
+  firstDayOfWeek: number;
+};
+
+/** Spacing properties whose calendar-mode effect is opt-in (see `cellGapX`). */
+type CalendarSpacingProperty = 'cellGapX' | 'cellGapY' | 'cellRadius';
+const CALENDAR_SPACING_PROPERTIES: ReadonlySet<PropertyKey> = new Set<CalendarSpacingProperty>([
+  'cellGapX',
+  'cellGapY',
+  'cellRadius',
+]);
+
 export interface LyraHeatmapEventMap {
   'lr-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
   'lr-matrix-geometry-change': CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>;
@@ -652,6 +681,13 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * `data.weekdayLabelWidth` controls that mode's weekday-axis gutter independently of the matrix
  * `rowLabelWidth`: a CSS-pixel number pins it, while `'auto'` measures localized or overridden
  * weekday labels. Labels that still exceed the resolved gutter are ellipsized rather than clipped.
+ *
+ * `cellGapX`, `cellGapY` and `cellRadius` shape calendar cells too, but only once explicitly set
+ * (property or attribute): a GitHub-style contribution graph with rounded, visibly spaced cells
+ * stays in calendar mode, keeping week columns, weekday and month labels, date selection,
+ * `lr-cell-click` and `cellText`. With none of them set, calendar geometry is unchanged. The
+ * read-only `calendarGeometry` snapshot reports the painted calendar layout, mirroring
+ * `matrixGeometry`.
  *
  * `cellSize`/`fitToWidth` (previously matrix-mode only) also drive calendar
  * mode's per-cell size: unset, calendar mode keeps today's original 11px
@@ -949,6 +985,29 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   /**
+   * The geometry the last calendar-mode draw actually painted with -- a frozen
+   * `LyraHeatmapCalendarGeometry` (`padLeft`, `padTop`, `cellSize`, `cellWidth`, `cellHeight`,
+   * `cellGapX`, `cellGapY`, `cellRadius`, `weekCount`, `firstDayOfWeek`), all lengths in CSS
+   * pixels. Lets a sibling chart align with the calendar's week columns without re-deriving the
+   * gutter, cell size, or spacing. `undefined` outside calendar mode and before the first calendar
+   * draw. Like `matrixGeometry`, this is the stored snapshot of the last paint rather than a fresh
+   * computation, and the same object is returned until the painted geometry changes. No change
+   * event is fired; read it after the draw that follows an update.
+   */
+  get calendarGeometry(): Readonly<LyraHeatmapCalendarGeometry> | undefined {
+    if (this.effectiveMode !== 'calendar') return undefined;
+    return this.lastPaintedCalendarGeometry;
+  }
+  /** Intentionally inert, for the same reason as the `matrixGeometry` setter: a stray assignment
+   *  or template binding must not throw from inside framework internals. */
+  set calendarGeometry(_value: Readonly<LyraHeatmapCalendarGeometry> | undefined) {
+    // Deliberate no-op; see getter doc comment above.
+  }
+
+  /** The geometry the last `drawCalendar()` pass painted with; `undefined` until that draw. */
+  private lastPaintedCalendarGeometry?: Readonly<LyraHeatmapCalendarGeometry>;
+
+  /**
    * Returns a spreadsheet-safe CSV snapshot (`format: 'csv'`) of the underlying matrix/calendar
    * values, or a PNG data URL (`format: 'png'`) for the most recently completed canvas paint. The
    * PNG snapshot includes the painted axes, cells, and canvas overlays, plus frozen label bands
@@ -1161,7 +1220,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // A non-finite, zero, or negative explicit size would divide-by-zero (or draw inverted
     // geometry) in every cell-position calculation derived from it -- calendar mode's
     // columnXFor()/weekAtX()/weekdayAtY()/calendarCellSize() and matrix mode's matrixCellSize()
-    // all divide by cellSize (directly or via + CAL_GAP). Clamp to a sane positive floor, falling
+    // all divide by cellSize (directly or via + the calendar gap). Clamp to a sane positive floor, falling
     // back to the current mode-appropriate default (mirroring the getter's own fallback) for a
     // non-finite input.
     this._cellSize =
@@ -1203,13 +1262,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * rest of a skewed dataset.
    */
   @property() scale: HeatmapScale = 'linear';
-  /** Matrix-only trailing horizontal separator in CSS pixels, subtracted from the square cell
-   * pitch. Clamped between zero and cellSize minus one; non-finite values use the default. */
+  /** Trailing horizontal separator in CSS pixels. In matrix mode it is subtracted from the square
+   * cell pitch, clamped between zero and cellSize minus one; non-finite values use the default.
+   * In calendar mode it is opt-in: only an explicitly set value (property or attribute) replaces
+   * the calendar's original 2px spacing between week columns, adding to the column pitch with the
+   * same bounds; a non-finite value, or removing the attribute, restores the original spacing. */
   @property({ type: Number, attribute: 'cell-gap-x' }) cellGapX = 1;
-  /** Matrix-only trailing vertical separator in CSS pixels, with the same bounds as cellGapX. */
+  /** Trailing vertical separator in CSS pixels, with the same bounds as cellGapX. In calendar mode
+   * an explicitly set value replaces the original 2px spacing between weekday rows. */
   @property({ type: Number, attribute: 'cell-gap-y' }) cellGapY = 1;
-  /** Matrix-only painted corner radius in CSS pixels, clamped to half the smaller painted side.
-   * Does not change cellSize, the matrix pitch, data labels, or calendar geometry. */
+  /** Painted corner radius in CSS pixels, clamped to half the smaller painted side. Does not change
+   * cellSize, the matrix pitch, or data labels. In calendar mode an explicitly set value rounds the
+   * calendar cells and their state rings; calendar cells stay square-cornered while it is unset. */
   @property({ type: Number, attribute: 'cell-radius' }) cellRadius = 0;
   /** Paint every Nth matrix column label, starting at column zero. Truncated to an integer of at
    * least one; non-finite values use one. Tooltips, keyboard labels, and data retain every label. */
@@ -1533,8 +1597,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * geometry and pointer hit-testing never disagree. Lets a consumer
    * pixel-align a calendar's week columns with a sibling chart's bars by
    * supplying that chart the same coordinate function. Unset (the default)
-   * keeps the evenly-spaced `calendarPadLeft + week * (cellSize + CAL_GAP)`
-   * formula, whose default `calendarPadLeft` remains the original 28px. Ignored in matrix mode.
+   * keeps the evenly-spaced `calendarPadLeft + week * (cellSize + gap)`
+   * formula, where `gap` is the original 2px unless `cellGapX` was set explicitly, and whose
+   * default `calendarPadLeft` remains the original 28px. Ignored in matrix mode.
    */
   private get calendarColumnX(): ((index: number) => number) | undefined {
     return this.calendarData?.columnX;
@@ -1552,7 +1617,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * size its width — so a function that spaces rows out further than the
    * default formula still gets a canvas tall enough to paint every row.
    * Unset (the default) keeps today's evenly-spaced `CAL_LABEL_H + weekday *
-   * (cellSize + CAL_GAP)` formula unchanged. Ignored in matrix mode.
+   * (cellSize + gap)` formula, where `gap` is the original 2px unless `cellGapY` was set
+   * explicitly. Ignored in matrix mode.
    */
   private get calendarRowY(): ((weekday: number) => number) | undefined {
     return this.calendarData?.rowY;
@@ -1573,6 +1639,39 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // Redraws when prefers-color-scheme flips or an ancestor's theme attribute mutates. The
     // controller registers itself with the host via addController().
     new ThemeWatcher(this, () => this.refreshTheme());
+    // Armed only after every field initializer has run, so the declared defaults of
+    // cellGapX/cellGapY/cellRadius (which reach requestUpdate() through Lit's accessors) never
+    // count as an explicit calendar-mode request. See `explicitCalendarSpacing()`.
+    this.calendarSpacingTrackingArmed = true;
+  }
+
+  /** Deliberately declared without an initializer: under `useDefineForClassFields: false` it stays
+   *  `undefined` until the constructor body arms it, after the property defaults were assigned. */
+  private calendarSpacingTrackingArmed?: boolean;
+  /** Spacing properties the consumer assigned (property or attribute) after construction. A
+   *  pre-upgrade instance property is replayed by Lit through the same setter, so it counts too. */
+  private explicitCalendarSpacingProperties?: Set<PropertyKey>;
+
+  override requestUpdate(
+    name?: PropertyKey,
+    oldValue?: unknown,
+    options?: PropertyDeclaration
+  ): void {
+    // `changed.has()` in willUpdate() also reports the first update's declared defaults, so it
+    // cannot tell an explicit assignment apart from the default; the setter call can.
+    if (this.calendarSpacingTrackingArmed && name !== undefined && CALENDAR_SPACING_PROPERTIES.has(name)) {
+      (this.explicitCalendarSpacingProperties ??= new Set()).add(name);
+    }
+    super.requestUpdate(name, oldValue, options);
+  }
+
+  /** The consumer's explicit spacing value for calendar mode, or `undefined` when the property
+   *  was never assigned (or was cleared back to `null`/`undefined`, e.g. by removing the
+   *  attribute) — in which case calendar mode keeps its own original spacing. */
+  private explicitCalendarSpacing(name: CalendarSpacingProperty): number | undefined {
+    if (!this.explicitCalendarSpacingProperties?.has(name)) return undefined;
+    const value = this[name] as number | null | undefined;
+    return value == null ? undefined : value;
   }
   /** The current value range, refreshed once per update cycle by `willUpdate()`. See `computeValueRange()`. */
   private cachedValueRange: [number, number] | null = null;
@@ -1652,12 +1751,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     callback: HeatmapCalendarData['columnX'];
     padLeft: number;
     cellSize: number;
+    gap: number;
     weekCount: number;
     positions: readonly number[];
   };
   private cachedRowGeometry?: {
     callback: HeatmapCalendarData['rowY'];
     cellSize: number;
+    gap: number;
     positions: readonly number[];
   };
   private cachedAccessiblePositions: readonly CellPos[] = [];
@@ -2508,7 +2609,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     state: 'annotation' | 'selected' | 'focus',
     color: string
   ): void {
-    const shape = this.effectiveMode === 'matrix' ? this.matrixCellShape(size) : undefined;
+    const shape = this.effectiveMode === 'matrix'
+      ? this.matrixCellShape(size)
+      : this.calendarCellShape(size);
     const width = shape?.custom ? shape.w : size;
     const height = shape?.custom ? shape.h : size;
     if (shape?.custom) {
@@ -2707,25 +2810,52 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * geometry as what's actually painted.
    */
   private calendarCellSize(): number {
+    return this.calendarSpacing().cellSize;
+  }
+
+  /**
+   * Resolved calendar cell size plus spacing. Unless the consumer explicitly set `cellGapX`,
+   * `cellGapY` or `cellRadius`, the gaps are calendar mode's original `CAL_GAP` and the radius
+   * is `0`, so an untouched calendar keeps exactly its original geometry. Explicit values use the
+   * matrix path's bounds: gaps are clamped between zero and the cell size minus one, the radius
+   * between zero and half the cell size, and a non-finite value falls back to the calendar's own
+   * unset value. Every calendar geometry path reads this one resolution.
+   */
+  private calendarSpacing(): {
+    cellSize: number;
+    gapX: number;
+    gapY: number;
+    radius: number;
+  } {
     const { weekCount } = this.cachedCalendarGrid;
+    const rawGapX = this.explicitCalendarSpacing('cellGapX');
+    const rawGapY = this.explicitCalendarSpacing('cellGapY');
+    const rawRadius = this.explicitCalendarSpacing('cellRadius');
+    const boundGap = (raw: number | undefined, size: number): number =>
+      raw === undefined ? CAL_GAP : finiteRange(raw, CAL_GAP, 0, Math.max(0, size - 1));
     let size: number;
     if (this.fitToWidth && weekCount > 0) {
       // Unlike matrix mode's contiguous cells, calendar columns are spaced
-      // `cellSize + CAL_GAP` apart (see `columnXFor()`), so the gap has to be
+      // `cellSize + gap` apart (see `columnXFor()`), so the gap has to be
       // subtracted back out here — otherwise the painted width would overshoot
-      // `hostWidth` by `weekCount * CAL_GAP` (every column's gap, once each).
+      // `hostWidth` by `weekCount * gap` (every column's gap, once each).
+      const fitGap = boundGap(rawGapX, this.cellSize);
       const hostWidth =
         this.clientWidth ||
-        this.calendarPadLeft + weekCount * (this.cellSize + CAL_GAP);
+        this.calendarPadLeft + weekCount * (this.cellSize + fitGap);
       size = this.clampFitCellSize(
-        (hostWidth - this.calendarPadLeft) / weekCount - CAL_GAP
+        (hostWidth - this.calendarPadLeft) / weekCount - fitGap
       );
     } else {
       size = this.cellSize;
     }
-    return this.accessibleCells
-      ? Math.max(size, this.accessibleTargetSizePx)
-      : size;
+    if (this.accessibleCells) size = Math.max(size, this.accessibleTargetSizePx);
+    return {
+      cellSize: size,
+      gapX: boundGap(rawGapX, size),
+      gapY: boundGap(rawGapY, size),
+      radius: rawRadius === undefined ? 0 : finiteRange(rawRadius, 0, 0, size / 2),
+    };
   }
 
   /**
@@ -2780,7 +2910,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private calendarColumnPositions(): readonly number[] {
-    const cellSize = this.calendarCellSize();
+    const { cellSize, gapX: gap } = this.calendarSpacing();
     const weekCount = this.cachedCalendarGrid.weekCount;
     const callback = this.calendarColumnX;
     const padLeft = this.calendarPadLeft;
@@ -2790,6 +2920,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       cached.callback === callback &&
       cached.padLeft === padLeft &&
       cached.cellSize === cellSize &&
+      cached.gap === gap &&
       cached.weekCount === weekCount
     ) {
       return cached.positions;
@@ -2797,7 +2928,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const positions: number[] = [];
     for (let index = 0; index <= weekCount; index++) {
       const fallback =
-        index === 0 ? padLeft : positions[index - 1]! + cellSize + CAL_GAP;
+        index === 0 ? padLeft : positions[index - 1]! + cellSize + gap;
       let candidate = fallback;
       if (callback) {
         try {
@@ -2815,25 +2946,26 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       }
       positions.push(candidate);
     }
-    this.cachedColumnGeometry = { callback, padLeft, cellSize, weekCount, positions };
+    this.cachedColumnGeometry = { callback, padLeft, cellSize, gap, weekCount, positions };
     return positions;
   }
 
   private calendarRowPositions(): readonly number[] {
-    const cellSize = this.calendarCellSize();
+    const { cellSize, gapY: gap } = this.calendarSpacing();
     const callback = this.calendarRowY;
     const cached = this.cachedRowGeometry;
     if (
       cached !== undefined &&
       cached.callback === callback &&
-      cached.cellSize === cellSize
+      cached.cellSize === cellSize &&
+      cached.gap === gap
     ) {
       return cached.positions;
     }
     const positions: number[] = [];
     for (let index = 0; index <= 7; index++) {
       const fallback =
-        index === 0 ? CAL_LABEL_H : positions[index - 1]! + cellSize + CAL_GAP;
+        index === 0 ? CAL_LABEL_H : positions[index - 1]! + cellSize + gap;
       let candidate = fallback;
       if (callback) {
         try {
@@ -2851,7 +2983,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       }
       positions.push(candidate);
     }
-    this.cachedRowGeometry = { callback, cellSize, positions };
+    this.cachedRowGeometry = { callback, cellSize, gap, positions };
     return positions;
   }
 
@@ -2963,7 +3095,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
     const autoGutterChanged =
       previousResolvedWeekdayWidth !== this.resolvedCalendarWeekdayLabelWidth;
-    const cellSize = this.calendarCellSize();
+    const spacing = this.calendarSpacing();
+    const cellSize = spacing.cellSize;
     const w = this.columnXFor(Math.max(1, weekCount));
     // Derived from `rowYFor(7)` (one past the last of the 7 weekday rows), the
     // vertical mirror of `w`'s `columnXFor(weekCount)` — so a custom `rowY`
@@ -3029,7 +3162,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
               quartileBucket(value, this.cachedCalendarSortedValues, buckets)
             ]!;
         }
-        ctx.fillRect(x, y, cellSize, cellSize);
+        this.fillCalendarCell(ctx, x, y, cellSize, spacing.radius);
       }
     }
 
@@ -3093,6 +3226,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
     this.paintCalendarAxisLabels(ctx, cellSize, cs, firstWeekStart, monthLabels);
     this.canvasHasContent = true;
+    this.recordCalendarGeometry(spacing, weekCount);
     if (autoGutterChanged && this.accessibleCells) {
       this.scheduleAfterUpdate(
         () => this.requestUpdate(),
@@ -3139,6 +3273,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const h = size - finiteRange(this.cellGapY, 1, 0, maxGap);
     const radius = finiteRange(this.cellRadius, 0, 0, Math.min(w, h) / 2);
     return { w, h, radius, custom: w !== size - 1 || h !== size - 1 || radius !== 0 };
+  }
+
+  /** Calendar ring clip shape: `undefined` (square, the original path) unless an explicit
+   *  `cellRadius` resolved above zero. */
+  private calendarCellShape(size: number): { w: number; h: number; radius: number; custom: boolean } | undefined {
+    const radius = this.calendarSpacing().radius;
+    return radius > 0 ? { w: size, h: size, radius: Math.min(radius, size / 2), custom: true } : undefined;
   }
 
   private fillMatrixCell(
@@ -3336,12 +3477,58 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           quartileBucket(value, this.cachedCalendarSortedValues, ramp.length)
         ]!;
     }
-    ctx.fillRect(
+    this.fillCalendarCell(
+      ctx,
       this.columnXFor(week),
       this.rowYFor(weekday),
       cellSize,
-      cellSize
+      this.calendarSpacing().radius
     );
+  }
+
+  /** Fills one calendar cell, rounded only when an explicit `cellRadius` resolved above zero. */
+  private fillCalendarCell(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number,
+    radius: number
+  ): void {
+    if (radius === 0) ctx.fillRect(x, y, size, size);
+    else {
+      ctx.beginPath();
+      ctx.roundRect(x, y, size, size, radius);
+      ctx.fill();
+    }
+  }
+
+  /** Stores the frozen snapshot `calendarGeometry` returns, reusing the previous object while the
+   *  painted geometry is unchanged. */
+  private recordCalendarGeometry(
+    spacing: ReturnType<LyraHeatmap['calendarSpacing']>,
+    weekCount: number
+  ): void {
+    const next: LyraHeatmapCalendarGeometry = {
+      padLeft: this.calendarPadLeft,
+      padTop: CAL_LABEL_H,
+      cellSize: spacing.cellSize,
+      cellWidth: spacing.cellSize,
+      cellHeight: spacing.cellSize,
+      cellGapX: spacing.gapX,
+      cellGapY: spacing.gapY,
+      cellRadius: spacing.radius,
+      weekCount,
+      firstDayOfWeek: this.normalizedFirstDayOfWeek,
+    };
+    const previous = this.lastPaintedCalendarGeometry;
+    if (
+      previous &&
+      (Object.keys(next) as (keyof LyraHeatmapCalendarGeometry)[]).every(
+        (key) => previous[key] === next[key]
+      )
+    )
+      return;
+    this.lastPaintedCalendarGeometry = Object.freeze(next);
   }
 
   private paintCalendarFocusOverlays(

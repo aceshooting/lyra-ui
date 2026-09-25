@@ -630,6 +630,25 @@ export const MatrixPresentation: Story = {
   `,
 };
 
+export const ContributionGraphRoundedSpacedCells: Story = {
+  name: 'Contribution graph with rounded spaced cells',
+  parameters: { docs: { description: { story: 'A GitHub-style contribution graph that stays in calendar mode: explicit `cell-gap-x`, `cell-gap-y` and `cell-radius` space and round the calendar cells while week columns, weekday and month labels, date tooltips, selection and `lr-cell-click` keep working. With none of those attributes set, calendar spacing is unchanged. `calendarGeometry` reports the painted layout.' } } },
+  render: () => {
+    const days: CalendarDay[] = [];
+    const start = Date.UTC(2026, 0, 4);
+    for (let i = 0; i < 26 * 7; i++) {
+      const date = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+      days.push({ date, value: Math.round(Math.abs(Math.sin(i / 5) * Math.cos(i / 17)) * 8) });
+    }
+    return html`
+      <lr-heatmap cell-size="11" cell-gap-x="3" cell-gap-y="3" cell-radius="2" bucket-count="5"
+        aria-label="Contributions" value-label="contributions"
+        .data=${{ kind: 'calendar', days }}
+      ></lr-heatmap>
+    `;
+  },
+};
+
 export const WithoutLegend: Story = {
   parameters: { docs: { description: { story: 'Set `without-legend` — the same name and polarity `lr-chart` uses — to drop the colour key entirely. The row leaves the DOM rather than being hidden, taking its swatches, endpoint labels, value caption, annotation entries and `legend` slot with it, so it contributes no layout box. Cells, tooltips, keyboard interaction and the generated accessible summary are untouched.' } } },
   render: () => html`
