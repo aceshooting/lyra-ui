@@ -8,6 +8,15 @@ const settleLayout = (): Promise<void> =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   });
 
+const dividersOf = (split: LyraMultiSplit): HTMLElement[] => [
+  ...split.shadowRoot!.querySelectorAll<HTMLElement>('[part="divider"]'),
+];
+
+/** Index of the focused divider inside the split's shadow root, or -1. Compared as a number so a
+ *  failing assertion never carries a DOM node. */
+const focusedDividerIndex = (split: LyraMultiSplit): number =>
+  dividersOf(split).indexOf(split.shadowRoot!.activeElement as HTMLElement);
+
 interface DecorationSample {
   state: string;
   /** `HTMLElement.hidden` is `boolean | 'until-found'` in the current DOM lib, and this samples
@@ -326,13 +335,21 @@ it('moves focus out of a pane collapsing into the closed floating drawer', async
 
   expect(panel.hidden, 'the drawer closed').to.equal(true);
   expect(panel.contains(document.activeElement), 'focus left the hidden drawer').to.equal(false);
-  // The only divider is adjacent to the collapsed pane and is removed from layout. Focus moves
-  // to the surviving pane as a programmatic-only stop instead of being lost to the body.
+  // Hiding the pane drops focus to the body on its own; the relocation is what puts it back on a
+  // real, reachable control, so assert the destination rather than merely the departure.
   expect(
-    document.activeElement === split.children[0],
-    'focus was relocated to the surviving pane',
-  ).to.be.true;
-  expect((split.children[0] as HTMLElement).getAttribute('tabindex')).to.equal('-1');
+    split.shadowRoot!.activeElement?.getAttribute('part'),
+    'focus was relocated, not merely dropped to the body',
+  ).to.equal('divider');
+  // The two-panel split's only divider is the one beside the drawer: it releases its gutter while
+  // floating, yet stays the focus target of last resort rather than dropping focus to the body.
+  expect(focusedDividerIndex(split), 'the only divider holds focus').to.equal(0);
+  expect(
+    dividersOf(split)[0]!.getBoundingClientRect().width,
+    'the focused divider takes no track beside the floating pane',
+  ).to.be.closeTo(0, 0.5);
+  await settleLayout();
+  expect(focusedDividerIndex(split), 'focus stays on the zero-track divider').to.equal(0);
 });
 
 it('leaves focus outside the collapsing pane strictly alone', async () => {
@@ -424,4 +441,375 @@ it('keeps a releasable pin across a disconnect and reconnect at the same band', 
   } finally {
     split.remove();
   }
+});
+
+describe('the divider beside a floating pane', () => {
+  const baseOf = (split: LyraMultiSplit): HTMLElement =>
+    split.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const lineContent = (divider: HTMLElement): string =>
+    getComputedStyle(divider, '::before').content;
+  const inlineSizeOf = (element: Element): number => element.getBoundingClientRect().width;
+  const blockSizeOf = (element: Element): number => element.getBoundingClientRect().height;
+
+  /** The resolved divider target size, measured from a divider in a split that is not collapsing. */
+  const resolvedTargetSize = async (): Promise<number> => {
+    const probe = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      style="inline-size:800px;block-size:120px"
+    >
+      <div>A</div>
+      <div>B</div>
+    </lr-multi-split>`);
+    await settleLayout();
+    return inlineSizeOf(dividersOf(probe)[0]!);
+  };
+
+  for (const collapse of ['start', 'end'] as const) {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      it(`releases its track and hairline while the drawer is closed (${collapse}, ${direction})`, async () => {
+        const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+          collapse=${collapse}
+          dir=${direction}
+          style="inline-size:300px;block-size:200px"
+        >
+          <div>A</div>
+          <div>B</div>
+        </lr-multi-split>`);
+        await waitUntil(() => split.collapseState === 'floating');
+        await settleLayout();
+        const survivor = split.children[collapse === 'start' ? 1 : 0] as HTMLElement;
+        const divider = dividersOf(split)[0]!;
+
+        expect(divider.getAttribute('aria-disabled')).to.equal('true');
+        expect(inlineSizeOf(survivor), 'the survivor fills the split').to.be.closeTo(
+          inlineSizeOf(baseOf(split)),
+          0.5,
+        );
+        expect(inlineSizeOf(divider), 'no gutter beside the floating pane').to.be.closeTo(0, 0.5);
+        expect(lineContent(divider), 'no hairline beside the floating pane').to.equal('none');
+      });
+
+      it(`keeps the track released while the drawer is open (${collapse}, ${direction})`, async () => {
+        const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+          collapse=${collapse}
+          dir=${direction}
+          style="inline-size:300px;block-size:200px"
+        >
+          <div>A</div>
+          <div>B</div>
+        </lr-multi-split>`);
+        await waitUntil(() => split.collapseState === 'floating');
+        await settleLayout();
+        const drawer = split.children[collapse === 'start' ? 0 : 1] as HTMLElement;
+        const survivor = split.children[collapse === 'start' ? 1 : 0] as HTMLElement;
+        const closedWidth = inlineSizeOf(survivor);
+
+        split.open = true;
+        await split.updateComplete;
+        await settleLayout();
+
+        const baseRect = baseOf(split).getBoundingClientRect();
+        const drawerRect = drawer.getBoundingClientRect();
+        expect(inlineSizeOf(survivor), 'opening does not reflow the survivor').to.be.closeTo(
+          closedWidth,
+          0.5,
+        );
+        expect(inlineSizeOf(survivor), 'the survivor fills the split').to.be.closeTo(
+          baseRect.width,
+          0.5,
+        );
+        expect(getComputedStyle(drawer).position, 'the drawer stays an overlay').to.equal(
+          'absolute',
+        );
+        const anchoredLeft = (collapse === 'start') === (direction === 'ltr');
+        expect(
+          anchoredLeft ? drawerRect.left - baseRect.left : baseRect.right - drawerRect.right,
+          'the drawer is flush with its anchor edge',
+        ).to.be.closeTo(0, 0.5);
+        expect(inlineSizeOf(dividersOf(split)[0]!), 'no gutter under the open drawer').to.be.closeTo(
+          0,
+          0.5,
+        );
+      });
+    }
+  }
+
+  it('keeps the enabled divider of a three-panel split at its full target size', async () => {
+    const target = await resolvedTargetSize();
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      style="inline-size:300px;block-size:200px"
+    >
+      <div>A</div>
+      <div>B</div>
+      <div>C</div>
+    </lr-multi-split>`);
+    await waitUntil(() => split.collapseState === 'floating');
+    await settleLayout();
+    const [enabled, disabled] = dividersOf(split);
+
+    expect(enabled!.getAttribute('aria-disabled')).to.equal('false');
+    expect(inlineSizeOf(enabled!), 'the enabled divider keeps its gutter').to.be.closeTo(
+      target,
+      0.5,
+    );
+    expect(lineContent(enabled!), 'the enabled divider keeps its hairline').to.not.equal('none');
+    expect(disabled!.getAttribute('aria-disabled')).to.equal('true');
+    expect(inlineSizeOf(disabled!)).to.be.closeTo(0, 0.5);
+    expect(
+      inlineSizeOf(split.children[0]!) + inlineSizeOf(split.children[1]!) + inlineSizeOf(enabled!),
+      'the survivors and the enabled divider fill the split',
+    ).to.be.closeTo(inlineSizeOf(baseOf(split)), 0.5);
+  });
+
+  it('releases the block-axis track under an authored vertical orientation', async () => {
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      orientation="vertical"
+      style="inline-size:300px;block-size:200px"
+    >
+      <div>A</div>
+      <div>B</div>
+    </lr-multi-split>`);
+    await waitUntil(() => split.collapseState === 'floating');
+    await settleLayout();
+
+    expect(blockSizeOf(dividersOf(split)[0]!), 'no block-axis gutter').to.be.closeTo(0, 0.5);
+    expect(blockSizeOf(split.children[0]!), 'the survivor fills the block axis').to.be.closeTo(
+      blockSizeOf(baseOf(split)),
+      0.5,
+    );
+    expect(lineContent(dividersOf(split)[0]!)).to.equal('none');
+  });
+
+  it('releases the block-axis track under an effective vertical orientation', async () => {
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      orientation-breakpoint="600"
+      style="inline-size:300px;block-size:200px"
+    >
+      <div>A</div>
+      <div>B</div>
+    </lr-multi-split>`);
+    await waitUntil(
+      () =>
+        split.collapseState === 'floating' &&
+        split.getAttribute('data-effective-orientation') === 'vertical',
+    );
+    await settleLayout();
+
+    expect(blockSizeOf(dividersOf(split)[0]!), 'no block-axis gutter').to.be.closeTo(0, 0.5);
+    expect(blockSizeOf(split.children[0]!), 'the survivor fills the block axis').to.be.closeTo(
+      blockSizeOf(baseOf(split)),
+      0.5,
+    );
+  });
+
+  it('releases the inline-axis minimum when an authored vertical split flips horizontal', async () => {
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      orientation="vertical"
+      orientation-breakpoint="600"
+      narrow-orientation="horizontal"
+      style="inline-size:300px;block-size:200px"
+    >
+      <div>A</div>
+      <div>B</div>
+    </lr-multi-split>`);
+    await waitUntil(
+      () =>
+        split.collapseState === 'floating' &&
+        split.getAttribute('data-effective-orientation') === 'horizontal',
+    );
+    await settleLayout();
+    const divider = dividersOf(split)[0]!;
+
+    expect(getComputedStyle(divider).minInlineSize, 'the main-axis minimum is reset').to.equal(
+      '0px',
+    );
+    expect(inlineSizeOf(divider), 'no inline-axis gutter').to.be.closeTo(0, 0.5);
+    expect(inlineSizeOf(split.children[0]!), 'the survivor fills the inline axis').to.be.closeTo(
+      inlineSizeOf(baseOf(split)),
+      0.5,
+    );
+  });
+
+  it('releases the track for a pinned floating state and restores it on auto', async () => {
+    const target = await resolvedTargetSize();
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      style="inline-size:800px;block-size:200px"
+    >
+      <div>A</div>
+      <div>B</div>
+    </lr-multi-split>`);
+    await waitUntil(() => split.collapseState === 'wide');
+
+    split.collapseState = 'floating';
+    await split.updateComplete;
+    await settleLayout();
+    expect(inlineSizeOf(dividersOf(split)[0]!), 'pinned floating releases the gutter').to.be.closeTo(
+      0,
+      0.5,
+    );
+
+    split.collapseState = 'auto';
+    await waitUntil(() => split.collapseState === 'wide');
+    await settleLayout();
+    const divider = dividersOf(split)[0]!;
+    expect(inlineSizeOf(divider), 'auto restores the gutter').to.be.closeTo(target, 0.5);
+    expect(lineContent(divider), 'auto restores the hairline').to.not.equal('none');
+  });
+
+  it('keeps the divider beside a rail-collapsed pane', async () => {
+    const target = await resolvedTargetSize();
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      style="inline-size:500px;block-size:200px"
+    >
+      <div>A</div>
+      <div>B</div>
+    </lr-multi-split>`);
+    await waitUntil(() => split.collapseState === 'rail');
+    await settleLayout();
+    const divider = dividersOf(split)[0]!;
+
+    expect(divider.getAttribute('aria-disabled')).to.equal('true');
+    expect(inlineSizeOf(divider), 'the rail keeps its gutter').to.be.closeTo(target, 0.5);
+    expect(lineContent(divider), 'the rail keeps its hairline').to.not.equal('none');
+    expect(inlineSizeOf(split.children[0]!), 'survivor = base - rail - divider').to.be.closeTo(
+      inlineSizeOf(baseOf(split)) - inlineSizeOf(split.children[1]!) - target,
+      0.5,
+    );
+  });
+
+  it('re-inflates the divider each time the state leaves floating', async () => {
+    const target = await resolvedTargetSize();
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      style="inline-size:800px;block-size:200px"
+    >
+      <div>A</div>
+      <div>B</div>
+      <div>C</div>
+    </lr-multi-split>`);
+    await waitUntil(() => split.collapseState === 'wide');
+    const sizes = (): number[] => dividersOf(split).map((divider) => inlineSizeOf(divider));
+    const painted = (): boolean[] =>
+      dividersOf(split).map((divider) => lineContent(divider) !== 'none');
+
+    split.style.inlineSize = '300px';
+    await waitUntil(() => split.collapseState === 'floating');
+    await settleLayout();
+    expect(sizes()[1], 'floating releases the gutter').to.be.closeTo(0, 0.5);
+
+    split.style.inlineSize = '500px';
+    await waitUntil(() => split.collapseState === 'rail');
+    await settleLayout();
+    expect(sizes()[1], 'rail restores the gutter').to.be.closeTo(target, 0.5);
+    expect(painted(), 'rail restores the hairline').to.eql([true, true]);
+
+    split.style.inlineSize = '800px';
+    await waitUntil(() => split.collapseState === 'wide');
+    await settleLayout();
+    expect(sizes()[1], 'wide keeps the gutter').to.be.closeTo(target, 0.5);
+
+    split.style.inlineSize = '300px';
+    await waitUntil(() => split.collapseState === 'floating');
+    await settleLayout();
+    expect(sizes()[1]).to.be.closeTo(0, 0.5);
+
+    split.collapse = 'none';
+    await waitUntil(() => split.collapseState === 'wide');
+    await settleLayout();
+    for (const size of sizes()) {
+      expect(size, 'collapse="none" restores every gutter').to.be.closeTo(target, 0.5);
+    }
+    expect(painted(), 'collapse="none" restores every hairline').to.eql([true, true]);
+  });
+
+  it('does not bring the gutter back through --lr-multi-split-divider-target-size', async () => {
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      style="inline-size:300px;block-size:200px;--lr-multi-split-divider-target-size:24px"
+    >
+      <div>A</div>
+      <div>B</div>
+    </lr-multi-split>`);
+    await waitUntil(() => split.collapseState === 'floating');
+    await settleLayout();
+
+    expect(inlineSizeOf(dividersOf(split)[0]!)).to.be.closeTo(0, 0.5);
+    expect(inlineSizeOf(split.children[0]!)).to.be.closeTo(inlineSizeOf(baseOf(split)), 0.5);
+  });
+
+  for (const [width, state] of [
+    ['300px', 'floating'],
+    ['500px', 'rail'],
+  ] as const) {
+    it(`relocates focus onto a divider that stays enabled (collapse="start", ${state})`, async () => {
+      const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+        collapse="start"
+        style="inline-size:800px;block-size:120px"
+      >
+        <div><button type="button" id="inside">Inside</button></div>
+        <div>B</div>
+        <div>C</div>
+      </lr-multi-split>`);
+      await waitUntil(() => split.collapseState === 'wide');
+      await settleLayout();
+      const wideWidth = inlineSizeOf(dividersOf(split)[1]!);
+      split.querySelector<HTMLButtonElement>('#inside')!.focus();
+
+      split.style.inlineSize = width;
+      await waitUntil(() => split.collapseState === state);
+      await settleLayout();
+
+      const index = focusedDividerIndex(split);
+      expect(index, 'focus prefers the divider that stays enabled').to.equal(1);
+      expect(dividersOf(split)[index]?.getAttribute('aria-disabled')).to.equal('false');
+      expect(inlineSizeOf(dividersOf(split)[1]!), 'the focused divider keeps its gutter').to.be.closeTo(
+        wideWidth,
+        0.5,
+      );
+    });
+
+    it(`relocates focus onto a divider that stays enabled (collapse="end", ${state})`, async () => {
+      const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+        collapse="end"
+        style="inline-size:800px;block-size:120px"
+      >
+        <div>A</div>
+        <div>B</div>
+        <div><button type="button" id="inside">Inside</button></div>
+      </lr-multi-split>`);
+      await waitUntil(() => split.collapseState === 'wide');
+      split.querySelector<HTMLButtonElement>('#inside')!.focus();
+
+      split.style.inlineSize = width;
+      await waitUntil(() => split.collapseState === state);
+      await settleLayout();
+
+      const index = focusedDividerIndex(split);
+      expect(index, 'focus prefers the divider that stays enabled').to.equal(0);
+      expect(dividersOf(split)[index]?.getAttribute('aria-disabled')).to.equal('false');
+    });
+  }
+
+  it('stays accessible while floating, closed and open', async () => {
+    const split = await fixture<LyraMultiSplit>(html`<lr-multi-split
+      collapse="end"
+      style="inline-size:300px;block-size:200px"
+    >
+      <div>A</div>
+      <div aria-label="Details">B</div>
+    </lr-multi-split>`);
+    await waitUntil(() => split.collapseState === 'floating');
+    await settleLayout();
+    await expect(split).to.be.accessible();
+
+    split.open = true;
+    await split.updateComplete;
+    await settleLayout();
+    await expect(split).to.be.accessible();
+  });
 });

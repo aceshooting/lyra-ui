@@ -195,7 +195,9 @@ export const ResponsiveCollapse: Story = {
         the <code>data-collapse-state</code> attribute + the
         <code>lr-multi-split-collapse-change</code> event) — below 640px the
         sidebar clamps to a fixed <code>rail-width</code>; below 400px it
-        instead becomes a floating overlay card. The sidebar's own content is
+        instead becomes a floating overlay card, and the divider beside it
+        releases its gutter and line so the main content fills the whole
+        width (the rail keeps its divider). The sidebar's own content is
         expected to adapt itself to the clamped width (e.g. via its own
         container query); this demo just swaps in a shorter label to keep it
         legible at rail width.

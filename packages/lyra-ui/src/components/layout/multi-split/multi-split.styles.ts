@@ -244,17 +244,30 @@ export const styles = css`
   }
   /* The divider beside a rail/floating-collapsed pane (isDividerDisabled()). The collapsing
      panel's live flex/order/inline-size are set inline by updated(); only the divider's drag/hover
-     affordance and the floating panel's elevation stay stylesheet rules. */
+     affordance and the floating panel's elevation stay stylesheet rules. Beside a 'floating' pane
+     (drawer open or closed) the divider also releases its track and hairline below, so the other
+     pane(s) take the full split; beside a 'rail' pane it keeps both. */
   [part="divider"][aria-disabled="true"] {
     cursor: default;
     pointer-events: none;
   }
-  /* A closed floating drawer removes only its own adjacent divider track. The same divider is
-     retained while the drawer is open and in the rail state, where it still separates visible
-     panes. */
-  :host(:where([data-collapse-state="floating"]:not([open])))
-    [part="divider"][aria-disabled="true"] {
-    display: none;
+  /* Keyed off the host's client-only data-collapse-state plus the divider's own aria-disabled, so
+     the server paint (which cannot hide the pane either) keeps today's gutter. At (0,4,0) this
+     must stay above every (0,2,0) orientation rule regardless of source order: never flatten any
+     part of it with :where(), since out-ranking those sibling rules is the point here. A zero flex
+     basis sets the main size on either axis, overriding every target-size variant, but not a
+     minimum, so keep BOTH minimum resets: an authored vertical split whose effective axis is
+     horizontal still carries a main-axis min-inline-size from the vertical rule. It sets no
+     cursor, so it does not interact with the :where() flattening of the orientation rules. The
+     divider stays focusable; its focus outline still draws around the zero-size box. */
+  :host([data-collapse-state="floating"]) [part="divider"][aria-disabled="true"] {
+    flex: 0 0 0;
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+  :host([data-collapse-state="floating"])
+    [part="divider"][aria-disabled="true"]::before {
+    content: none;
   }
   /* The 'floating' overlay card. flex and order stay inline, set by updated() from the live
      sizes[i] percent -- the value 'wide' renders at, so un-floating never jumps; retune via

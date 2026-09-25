@@ -489,6 +489,33 @@ assert.match(
   'two-panel lr-multi-split SSR emitted no divider'
 );
 
+// A pinned floating state already disables the divider on the server, but the collapsing pane
+// cannot be hidden there: its decoration and the host data-collapse-state are client-only. The
+// divider's floating track release is keyed off that host attribute, so the pre-hydration paint
+// keeps the ordinary gutter between two visible panes. If the server ever starts decorating, this
+// fails and the stylesheet's keying has to be revisited.
+const pinnedFloatingMultiSplitHtml = await collectResult(
+  render(
+    html`<lr-multi-split collapse="end" collapse-state="floating" .sizes=${[50, 50]}
+      ><section>One</section>
+      <section>Two</section></lr-multi-split
+    >`,
+    { elementRenderers: animatedImageContext.elementRenderers }
+  )
+);
+assert.match(
+  pinnedFloatingMultiSplitHtml,
+  /aria-disabled="true"/,
+  'pinned floating lr-multi-split SSR no longer disables the divider beside the pane'
+);
+// Whitespace-anchored so the shadow stylesheet's own selector text never counts: only a real
+// attribute on the host or a panel element does.
+assert.doesNotMatch(
+  pinnedFloatingMultiSplitHtml,
+  /\sdata-collapse-state=/,
+  'pinned floating lr-multi-split SSR decorated the host or pane; revisit the floating divider rule keying'
+);
+
 // A server cannot inspect light-DOM slot assignment. Presence-driven components therefore use a
 // progressive fallback: named/default slot wrappers stay visible in DSD so authored content works
 // without JavaScript, then browser hydration collapses only genuinely empty wrappers.

@@ -202,7 +202,13 @@ The component still renders no trigger of its own — wire these to your own con
 — are exposed as: a `data-collapse-state` attribute on both the host and the collapsing panel element
 itself (absent for `'wide'`/`collapse="none"`); and the `lr-multi-split-collapse-change` event below. The
 divider adjacent to the collapsed panel is drag/keyboard-disabled (`aria-disabled="true"`) while
-collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-collapse-feature behavior.
+collapsed. Beside a `'floating'` pane (drawer open or closed) that divider also takes no track and
+paints no hairline, so the other pane(s) fill the split; beside a `'rail'` pane it keeps both. A
+consumer `::part(divider)` or `::part(base)` rule that sets `flex`, a minimum size, padding, border,
+`gap` or `::before` content can re-open that gutter; scope such a rule with
+`lr-multi-split:not([data-collapse-state="floating"])`, which covers every divider of the split, not
+only the one beside the pane. `collapse="none"` (the default) is byte-for-byte identical to
+pre-collapse-feature behavior.
 
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
 localized accessible label generated for each auto-inserted divider.
@@ -221,8 +227,8 @@ panel is decorated for the new state — its `data-collapse-state` marker, the c
 flag and its owned inline sizing are all applied first — so a listener can read the panel
 synchronously inside its own handler instead of deferring past `updateComplete`. Focus is also moved
 out of a pane the new state hides (`'floating'` while closed) or clamps (`'rail'`) before the event
-fires, landing on the first surviving pane that can take it, otherwise on the split's own divider;
-focus anywhere other than the collapsing pane is untouched),
+fires, landing on the first surviving pane that can take it, otherwise on one of the split's own
+dividers, preferring one that stays enabled; focus anywhere other than the collapsing pane is untouched),
 `lr-toggle` (`detail: LyraMultiSplitToggleDetail = { open: boolean }`) — Escape/backdrop close
 proposals are cancelable and fire before `open` changes; preventing the event or making a synchronous
 reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
@@ -236,7 +242,9 @@ fired only when an enabled `orientationBreakpoint` actually changes `effectiveOr
 when `storage-key` is used).
 
 **CSS parts:** `base` (`position: relative`, so the `'floating'` state can anchor to it), `divider`
-(carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed),
+(carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed;
+while that panel is `'floating'` it takes no track and paints no line, but stays focusable as the
+collapse-focus fallback; beside a `'rail'` panel it keeps both),
 `backdrop` (the `'floating'` drawer's scrim — only rendered while `collapseState === 'floating'` and
 `open`)
 
@@ -244,7 +252,7 @@ when `storage-key` is used).
 the `'floating'` drawer's `[part='backdrop']` scrim; scoped to `[part='base']`, not the viewport.
 `--lr-multi-split-divider-target-size` (default
 `max(var(--lr-icon-button-size), var(--lr-size-3px))`) — the real flex track/gutter reserved for the
-divider along the resize axis. The visual rule is painted in its center; no pseudo-element
+divider along the resize axis, except beside a `'floating'` pane. The visual rule is painted in its center; no pseudo-element
 extends into either adjacent panel, so slotted controls retain pointer ownership up to their edge.
 Set it on an ancestor to retune a split subtree or directly on one component; either public value
 remains authoritative.

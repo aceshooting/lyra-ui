@@ -231,7 +231,9 @@ export interface LyraMultiSplitEventMap {
  * until it is again — except that leaving `'floating'` while `open` is
  * `true` (a breakpoint crossing back to `'wide'`/`'rail'`, or a forced
  * reassignment) also closes it, the same way `<lr-app-rail>` closes its
- * mobile overlay when leaving `'mobile'` while open.
+ * mobile overlay when leaving `'mobile'` while open. Whether the drawer is
+ * open or closed, the divider beside the floating pane releases its gutter
+ * and hairline, so the other pane(s) take the full track.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -274,12 +276,15 @@ export interface LyraMultiSplitEventMap {
  *   range, bounded by both adjacent panels' effective constraints and their current combined
  *   share (not whole-track bounds). Home/End move directly to those achievable extremes. Carries
  *   `aria-disabled="true"` and is drag/keyboard-inert
- *   while its adjacent panel is collapsed (`'rail'`/`'floating'`).
+ *   while its adjacent panel is collapsed (`'rail'`/`'floating'`). While that panel is `'floating'`
+ *   the divider also takes no track and paints no line, but stays focusable as the collapse-focus
+ *   fallback; beside a `'rail'` panel it keeps both.
  * @csspart backdrop - The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.
  * @cssprop [--lr-multi-split-overlay-color=var(--lr-color-overlay)] - The `'floating'` drawer scrim's color, applied to `[part="backdrop"]`.
  * @cssprop [--lr-multi-split-divider-target-size=max(var(--lr-icon-button-size),var(--lr-size-3px))] -
- *   The real layout gutter reserved for each divider along the resize axis. The narrow visual rule
- *   is centered inside this owned track, so the target never overlaps either adjacent panel.
+ *   The real layout gutter reserved for each divider along the resize axis, except beside a
+ *   `'floating'` pane. The narrow visual rule is centered inside this owned track, so the target
+ *   never overlaps either adjacent panel.
  * @cssprop [--lr-multi-split-divider-thickness=var(--lr-size-3px)] - The painted hairline's own
  *   thickness, independent of `--lr-multi-split-divider-target-size` above -- retuning either one
  *   never changes the other, so the WCAG 2.5.8 pointer target can never be shrunk by a thinner or
@@ -1040,35 +1045,28 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   /** Survivor first, then this component's own dividers. A surviving pane is usually a plain
    *  container that cannot take focus at all, in which case the shared repair moves on by itself
-   *  (it verifies focus actually landed) and a divider -- a real, labelled `role="separator"` --
-   *  takes it instead. The still-enabled dividers are preferred over the one the collapse just
-   *  disabled. A closed floating drawer removes its adjacent divider from layout, though, so a
-   *  two-panel split has no usable separator; in that case its surviving pane gets a programmatic
-   *  `tabindex="-1"` focus stop. De-duplicated so an enabled divider is never attempted twice by
-   *  the shared repair. */
+   *  (it verifies focus actually landed) and the divider -- a real, labelled `role="separator"` --
+   *  takes it instead. The dividers that stay enabled in the NEXT state are preferred over the one
+   *  the collapse is disabling. That split is read through `isDividerDisabled()`, never the
+   *  rendered `aria-disabled`: relocation runs before the render that updates the attribute, so
+   *  the attribute still describes the previous state (on a wide-to-collapsed transition every
+   *  divider still reads enabled, and DOM order alone would pick the one being disabled). The
+   *  disabled divider stays in the list as the last resort of a two-panel split: that split has
+   *  exactly one divider, and losing focus to `<body>` is worse than landing on a separator
+   *  announced as disabled, which is still a labelled, reachable, escapable stop inside the
+   *  component. It must stay last because it takes no track at all while its pane is
+   *  `'floating'`. `render()` emits the dividers in index order, and every relocation path still
+   *  holds `panelCount - 1` of them, so the index lines up with the DOM. De-duplicated so an
+   *  enabled divider is never attempted twice by the shared repair. */
   private collapseFocusFallbacks(collapsing: HTMLElement): HTMLElement[] {
-    const survivors = this.ownedPanels.filter((panel) => panel !== collapsing);
     const dividers = [
       ...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="divider"]') ??
         []),
     ];
-    const enabledDividers = dividers.filter(
-      (_divider, index) => !this.isDividerDisabled(index)
-    );
-    if (
-      this.collapseState === 'floating' &&
-      !this.open &&
-      enabledDividers.length === 0
-    ) {
-      const survivor = survivors[0];
-      if (survivor && !survivor.hasAttribute('tabindex')) {
-        survivor.tabIndex = -1;
-      }
-    }
     return [
       ...new Set([
-        ...survivors,
-        ...enabledDividers,
+        ...this.ownedPanels.filter((panel) => panel !== collapsing),
+        ...dividers.filter((_, index) => !this.isDividerDisabled(index)),
         ...dividers,
       ]),
     ];
@@ -2532,7 +2530,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         // flex flow the same way the open/floating branch below does, via
         // `hidden`'s UA `display: none` rather than `position: absolute`, so
         // the other pane below still grows to fill the space regardless of
-        // which of the two branches applied.
+        // which of the two branches applied. The divider beside it releases
+        // its own gutter and hairline in both branches too (the host-keyed
+        // floating rule in multi-split.styles.ts), so the survivor really
+        // does take the full track.
         this.applyOwnedPanelStyleValue(panel, snapshot, 'flex', 'none');
         this.applyOwnedPanelHidden(panel, snapshot, true);
       } else if (collapsingIndex === i && this.collapseState === 'floating') {
