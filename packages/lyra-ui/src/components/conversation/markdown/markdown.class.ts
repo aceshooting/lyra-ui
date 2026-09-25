@@ -25,6 +25,7 @@ import {
 import {
   createMarkdownVariantContext,
   MarkdownRuntimeBase,
+  type MarkdownStreamingRenderMode,
   type MarkdownHighlightAttempt,
   type MarkdownVariantContext,
 } from './markdown-base.class.js';
@@ -41,6 +42,7 @@ export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
 /** Peer-neutral public alias matching the upstream static `getMarked()` signature without
  *  importing the optional `marked` peer into the runtime graph. */
 export type Marked = LyraMarkedParser;
+export type { MarkdownStreamingRenderMode };
 
 /** This variant's own `katex` resolution state -- see `createMarkdownKatexState()` for why
  *  `<lr-markdown-core>` deliberately owns a separate one rather than sharing this instance. */
@@ -100,7 +102,11 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * remains the fallback. The very first render of any content is always plain
  * (identical to today's output); highlighting arrives as an asynchronous upgrade one render later,
  * once shiki resolves. No highlighting is attempted while `streaming` is `true` — it applies once a
- * stream settles, so there is no added per-chunk cost while content is still arriving.
+ * stream settles, so there is no added per-chunk cost while content is still arriving. The
+ * opt-in `streaming-render="progressive"` mode parses and sanitizes settled Markdown blocks as
+ * they arrive while keeping the mutable tail as text; its settled block nodes stay stable across
+ * ordinary appended chunks. The default `streaming-render="plain"` preserves the existing
+ * bounded-cost plain-text fallback.
  *
  * Highlighted blocks follow the page's resolved theme. Shiki emits both palettes at once, so
  * `[part="content"]` carries `data-dark-theme="true"` whenever the component's own resolved
@@ -166,6 +172,9 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * @csspart paragraph - Every rendered `<p>`.
  * @csspart list - Every rendered `<ul>`/`<ol>`.
  * @csspart code-block - Every rendered fenced/indented `<pre>`.
+ * @csspart code-block-header - Opt-in language and copy row above a fenced code block.
+ * @csspart code-block-language - The localized language label in the optional code-block header.
+ * @csspart code-block-copy - The `<lr-copy-button>` host in the optional code-block header.
  * @csspart inline-code - Every rendered inline `<code>` span (backtick spans, not fenced blocks).
  * @csspart link - Every rendered `<a>`.
  * @csspart table - Every rendered `<table>`.
@@ -296,6 +305,20 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
    *  Reflects so a consumer can also target `lr-markdown[streaming]`. */
   @property({ type: Boolean, reflect: true }) override streaming = false;
 
+  /** How content is displayed while `streaming` is true. `plain` (the default) keeps the current
+   * accumulated source as plain text. `progressive` parses complete top-level Markdown blocks as
+   * they settle, keeps only the mutable trailing block as text, and renders an open fenced block
+   * as unhighlighted code. Once `streaming` becomes false the component performs its regular full
+   * document parse, including cross-block reference links. */
+  @property({ attribute: 'streaming-render', reflect: true })
+  override streamingRender: MarkdownStreamingRenderMode = 'plain';
+
+  /** Shows a localized language label and an `lr-copy-button` above fenced code blocks. The button
+   * copies the source code. `false` (the default) preserves the existing code-block appearance;
+   * while streaming, chrome is added only after a fence has closed. */
+  @property({ type: Boolean, attribute: 'code-block-chrome' })
+  override codeBlockChrome = false;
+
   /** Syntax-highlights fenced code blocks via the same optional `shiki` peer `<lr-code-block>`
    *  uses. `true` (the default) upgrades every fenced block from plain `<pre><code>` once the peer
    *  is available -- a pure upgrade, not a behavior change gated on opt-in, since it's itself gated
@@ -381,7 +404,9 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
       highlighter = loaded ? base : null;
     }
     if (!isCurrent()) return undefined;
-    return highlighter ? tokenizeMarkdownHighlight(highlighter, pending) : null;
+    return highlighter
+      ? tokenizeMarkdownHighlight(highlighter, pending, this.codeBlockChrome)
+      : null;
   }
 }
 

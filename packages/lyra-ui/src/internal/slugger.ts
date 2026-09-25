@@ -30,6 +30,14 @@ export class Slugger {
    *  membership work linear in the number of admitted headings. */
   private readonly nextSuffix = new Map<string, number>();
 
+  /** Creates an independent continuation with the same document heading history. */
+  clone(): Slugger {
+    const clone = new Slugger();
+    for (const value of this.used) clone.used.add(value);
+    for (const [base, suffix] of this.nextSuffix) clone.nextSuffix.set(base, suffix);
+    return clone;
+  }
+
   slug(text: string): string {
     const base = baseSlug(text);
     if (base === '') return '';

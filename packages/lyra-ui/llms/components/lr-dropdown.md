@@ -29,6 +29,13 @@ The inner menu list owns scrolling within the popup's height limit, keeping a co
 header and footer visible. The outer `popup` and `content` parts allow overflow so nested submenus
 remain clickable outside the parent menu in every supported browser. This works with either
 submenu authoring shape, with or without `hoist` or an arrow; no overflow override is required.
+When the resolved strategy is `fixed` (from `positioning-strategy="fixed"`, `hoist`, or an
+inherited `--lr-positioning-strategy: fixed`) and `showPopover()` is supported, an open popup is
+promoted to the browser's top layer. This lets a fixed dropdown inside a transformed virtual-list
+row escape that row's clipping and stacking context. The popup stays promoted through its hide
+transition and returns to its ordinary shadow-tree stacking context after `lr-after-hide`;
+disconnecting also removes it from the top layer. If the browser lacks the Popover API, fixed
+positioning remains in use without promotion.
 
 An open lr-dropdown repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.

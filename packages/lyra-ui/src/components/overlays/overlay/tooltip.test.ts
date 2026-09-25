@@ -1,6 +1,8 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraTooltip } from './tooltip.class.js';
+import '../../forms/button/button.js';
 import './tooltip.js';
 
 const FORWARDER_TAG = 'test-tooltip-content-forwarder';
@@ -230,6 +232,52 @@ it('opens from keyboard focus and lets Escape dismiss it without moving focus', 
   expect(escape.defaultPrevented).to.be.true;
   expect(el.open).to.be.false;
   expect(trigger.ownerDocument.activeElement === trigger).to.be.true;
+});
+
+it('supports opt-in focus-visible activation for pointer, script, keyboard, and shadow triggers', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <button id="prior">Prior</button>
+      <lr-tooltip trigger="hover focus-visible" show-delay="0" hide-delay="0">
+        Keyboard help
+        <button id="direct" slot="trigger">Help</button>
+      </lr-tooltip>
+      <lr-tooltip trigger="focus-visible" show-delay="0" hide-delay="0">
+        Shadow help
+        <lr-button id="shadow" slot="trigger">Shadow</lr-button>
+      </lr-tooltip>
+    </div>
+  `)) as HTMLElement;
+  const prior = wrapper.querySelector<HTMLButtonElement>('#prior')!;
+  const direct = wrapper.querySelector<HTMLButtonElement>('#direct')!;
+  const shadow = wrapper.querySelector<HTMLElement>('#shadow')!;
+  const directTooltip = direct.closest('lr-tooltip') as LyraTooltip;
+  const shadowTooltip = shadow.closest('lr-tooltip') as LyraTooltip;
+
+  await resetMouse();
+  const priorRect = prior.getBoundingClientRect();
+  await sendMouse({ type: 'click', position: [Math.round(priorRect.x + 4), Math.round(priorRect.y + 4)] });
+  direct.focus();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(direct.matches(':focus-visible'), 'pointer focus is not keyboard-visible').to.be.false;
+  expect(directTooltip.open, 'programmatic focus does not open a focus-visible tooltip').to.be.false;
+
+  direct.blur();
+  prior.focus();
+  await sendKeys({ press: 'Tab' });
+  await waitUntil(() => direct.matches(':focus-visible'), 'keyboard Tab makes the trigger focus-visible');
+  await waitUntil(() => directTooltip.open, 'keyboard-visible focus opens the tooltip');
+  await directTooltip.hide();
+
+  const innerShadowButton = shadow.shadowRoot?.querySelector('button');
+  expect(innerShadowButton).to.exist;
+  await resetMouse();
+  const nextPriorRect = prior.getBoundingClientRect();
+  await sendMouse({ type: 'click', position: [Math.round(nextPriorRect.x + 4), Math.round(nextPriorRect.y + 4)] });
+  shadow.focus();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(innerShadowButton!.matches(':focus-visible'), 'programmatic focus inside a shadow trigger is not keyboard-visible').to.be.false;
+  expect(shadowTooltip.open, 'the focus-visible check reaches the actual shadow focus target').to.be.false;
 });
 
 it('keeps composed trigger and actionable-popup focus transitions inside the interaction', async () => {

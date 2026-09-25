@@ -1,4 +1,4 @@
-import { type PropertyValues, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -19,6 +19,8 @@ import {
 } from '../../../internal/text-highlights.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { Slugger } from '../../../internal/slugger.js';
+import { tag } from '../../../internal/prefix.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
@@ -29,6 +31,11 @@ import type {
   MarkdownDeps,
   MarkedModule,
 } from './markdown-loader.js';
+import {
+  MarkdownStreamingBuffer,
+  markdownOpenFence,
+  type MarkdownBlockToken,
+} from './markdown-streaming.js';
 import {
   addFailedHighlightKey,
   applyMarkdownAriaBusy,
@@ -63,7 +70,7 @@ import {
 } from './markdown-shared.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copyCode } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const HIGHLIGHT_FAILURE_WARNING_KEY = 'lyra-markdown-highlight-failed';
@@ -111,6 +118,9 @@ export interface MarkdownRuntimeEventMap extends LyraAnchorTargetEventMap {
   'lr-content-settled': CustomEvent<null>;
 }
 
+/** Markdown behavior while a Markdown source is still arriving. */
+export type MarkdownStreamingRenderMode = 'plain' | 'progressive';
+
 // The Lyra-prefixed owner is intentional: the default-string slice generator attributes helper
 // lookups in this `.class.ts` module to its sole Lyra class, and both concrete Markdown tags inherit
 // that generated slice through the runtime base below.
@@ -122,6 +132,9 @@ class LyraMarkdownRuntimeElement extends LyraElement<MarkdownRuntimeEventMap> {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    codeRegion: LYRA_DEFAULT_codeRegion,
+    codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
+    copyCode: LYRA_DEFAULT_copyCode,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 }
@@ -180,6 +193,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract internalLinkPrefix: string;
   abstract headingOffset: number;
   abstract streaming: boolean;
+  abstract streamingRender: MarkdownStreamingRenderMode;
+  abstract codeBlockChrome: boolean;
   abstract highlightCode: boolean;
   abstract languages?: Readonly<Record<string, ShikiLanguageSource>>;
   abstract headingAnchors: boolean;
@@ -202,6 +217,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   ): Promise<MarkdownHighlightAttempt>;
 
   @state() private renderedHtml: string | null = null;
+  @state() private renderedBlocks: Array<{ id: string; html: string }> = [];
+  @state() private streamingTail: string | TemplateResult = '';
   @state() private isDarkTheme = false;
 
   private deps?: MarkdownDeps;
@@ -225,6 +242,21 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     new MarkdownOwnedAnimationFrameController();
   private failedHighlightKeys = new Set<string>();
   private inFlightHighlightKeys = new Set<string>();
+  private readonly markdownStream = new MarkdownStreamingBuffer();
+  private streamSlugger = new Slugger();
+  private nextStreamBlockId = 0;
+  private readonly progressiveBlocks = new Map<string, {
+    id: string;
+    source: string;
+    headings: MarkdownHeadingItem[];
+    definitions: readonly string[];
+    highlightKeys: string[];
+    sluggerBefore: Slugger;
+  }>();
+  private copyButtonRegistration?: Promise<unknown>;
+  private progressiveFailed = false;
+  private renderingStreamFrame = false;
+  private readonly codeChromeHeaders = new WeakSet<Element>();
 
   private readonly handleKatexResolved = (): void => {
     if (this.isConnected) this.renderMarkdown();
@@ -247,6 +279,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.ensureCopyButtonRegistration();
     this.markdownVariant.connectedInstances.add(this);
     this.refreshTheme();
     beginMarkdownDepsLoad(this, (resolved) => {
@@ -266,6 +299,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
     this.textQuoteIndexCache = undefined;
+    this.resetProgressiveMarkdown();
   }
 
   override adoptedCallback(): void {
@@ -286,21 +320,40 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('math')) this.mathFailureReported = false;
-    if (!this.deps || !markdownNeedsReparse(changed)) return;
+    if (!this.deps || (!markdownNeedsReparse(changed) && !changed.has('streamingRender'))) return;
+    const streamConfigurationChanged =
+      changed.has('streamingRender') ||
+      changed.has('htmlMode') ||
+      changed.has('gfm') ||
+      changed.has('linkTarget') ||
+      changed.has('internalLinkPrefix') ||
+      changed.has('headingOffset') ||
+      changed.has('headingAnchors') ||
+      changed.has('math') ||
+      changed.has('tabSize') ||
+      markdownHighlightConfigChanged(changed);
+    if (streamConfigurationChanged) this.resetProgressiveMarkdown();
+    const previousContent = changed.get('content');
+    const appendedProgressiveContent =
+      this.streaming &&
+      this.streamingRender === 'progressive' &&
+      typeof previousContent === 'string' &&
+      this.content.startsWith(previousContent);
     const highlightGenerationChanged =
-      changed.has('content') ||
+      (changed.has('content') && !appendedProgressiveContent) ||
       changed.has('streaming') ||
       markdownHighlightConfigChanged(changed);
     if (highlightGenerationChanged) this.highlightToken++;
     if (markdownHighlightConfigChanged(changed)) {
       this.failedHighlightKeys.clear();
-      if (markdownLanguageSetChanged(changed)) this.highlightCache.clear();
+      if (markdownLanguageSetChanged(changed) || changed.has('codeBlockChrome')) this.highlightCache.clear();
     }
     if (this.streaming) {
       this.scheduleStreamingRender();
       return;
     }
     this.cancelStreamingRender();
+    this.resetProgressiveMarkdown();
     this.renderMarkdown();
   }
 
@@ -316,18 +369,27 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (this.streamingRenderRaf !== undefined) return;
     const view = this.ownerDocument.defaultView;
     if (!view) {
-      if (this.isConnected) this.renderMarkdown();
+      if (this.isConnected) this.renderStreamFrame();
       return;
     }
     const handle = this.streamingRenderFrames.request(view, () => {
       this.streamingRenderRaf = undefined;
       if (this.isConnected && this.ownerDocument.defaultView === view)
-        this.renderMarkdown();
+        this.renderStreamFrame();
     });
     if (handle === undefined) {
-      if (this.isConnected) this.renderMarkdown();
+      if (this.isConnected) this.renderStreamFrame();
     } else if (this.streamingRenderFrames.handle === handle) {
       this.streamingRenderRaf = handle;
+    }
+  }
+
+  private renderStreamFrame(): void {
+    this.renderingStreamFrame = true;
+    try {
+      this.renderMarkdown();
+    } finally {
+      this.renderingStreamFrame = false;
     }
   }
 
@@ -341,14 +403,19 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.ensureCopyButtonRegistration();
+    this.decorateFencedCodeBlocks();
     applyMarkdownAriaBusy(this, !this.deps || this.streaming);
     const locale = this.effectiveLocale;
     const localeChanged = this.textQuoteLocale !== undefined && this.textQuoteLocale !== locale;
     this.textQuoteLocale = locale;
-    if (localeChanged) this.textQuoteIndexCache = undefined;
-    if (changed.has('renderedHtml')) this.textQuoteIndexCache = undefined;
+    const renderedContentChanged =
+      changed.has('renderedHtml') || changed.has('renderedBlocks') || changed.has('streamingTail');
+    if (localeChanged || renderedContentChanged || changed.has('content')) {
+      this.textQuoteIndexCache = undefined;
+    }
     if (
-      changed.has('renderedHtml') ||
+      renderedContentChanged ||
       changed.has('highlights') ||
       changed.has('activeHighlightId') ||
       (localeChanged && this.highlights.length > 0)
@@ -366,7 +433,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     // inside a free-form container (e.g. `<lr-thinking-panel>`'s default slot) can listen for it to
     // drive auto-scroll, since a light-DOM `MutationObserver` on that container can never see a
     // property-driven update rendered entirely inside this element's own shadow root.
-    if ((changed.has('content') || changed.has('renderedHtml')) && this.isConnected) {
+    const sourceRenderedImmediately = changed.has('content') &&
+      !(this.streaming && this.streamingRender === 'progressive' && this.renderedHtml !== null);
+    if ((sourceRenderedImmediately || renderedContentChanged) && this.isConnected) {
       this.emit('lr-content-settled', null);
     }
   }
@@ -374,7 +443,14 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   /** Immediately refreshes the current source after parser configuration changes. */
   renderMarkdown(): void {
     if (this.streaming) {
+      if (this.streamingRender === 'progressive') {
+        if (!this.renderingStreamFrame) this.resetProgressiveMarkdown();
+        this.renderProgressiveMarkdown();
+        return;
+      }
       this.renderedHtml = null;
+      this.renderedBlocks = [];
+      this.streamingTail = '';
       this.headingTree = [];
       return;
     }
@@ -394,10 +470,14 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (outcome.headingTree) this.headingTree = outcome.headingTree;
     if (outcome.status === 'fallback') {
       this.renderedHtml = null;
+      this.renderedBlocks = [];
+      this.streamingTail = '';
       this.emit('lr-render-error', { error: outcome.error });
       return;
     }
     this.renderedHtml = outcome.html;
+    this.renderedBlocks = [];
+    this.streamingTail = '';
     if (outcome.mathFailed) this.reportMathFailure();
     if (
       outcome.pendingKeys.length > 0 &&
@@ -408,9 +488,181 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     }
   }
 
+  private resetProgressiveMarkdown(): void {
+    this.markdownStream.reset();
+    this.streamSlugger = new Slugger();
+    this.nextStreamBlockId = 0;
+    this.progressiveBlocks.clear();
+    this.progressiveFailed = false;
+    if (this.renderedBlocks.length > 0) this.renderedBlocks = [];
+    if (this.streamingTail !== '') this.streamingTail = '';
+  }
+
+  private renderProgressiveMarkdown(): void {
+    this.renderedHtml = '';
+    const source = this.content ?? '';
+    const parser = this.marked as (LyraMarkedParser & {
+      lexer?: (markdown: string, options?: { gfm?: boolean }) => MarkdownBlockToken[];
+    }) | undefined;
+    if (this.progressiveFailed) {
+      this.renderedBlocks = [];
+      this.streamingTail = source;
+      this.headingTree = [];
+      return;
+    }
+    const deps = this.deps;
+    if (!deps) {
+      this.renderedHtml = null;
+      this.renderedBlocks = [];
+      this.streamingTail = source;
+      return;
+    }
+    if (!parser || typeof parser.lexer !== 'function') {
+      this.progressiveFailed = true;
+      this.renderedHtml = null;
+      this.renderedBlocks = [];
+      this.streamingTail = source;
+      this.headingTree = [];
+      this.emit('lr-render-error', {
+        error: new TypeError('The loaded marked parser does not expose its block lexer.'),
+      });
+      return;
+    }
+
+    const snapshot = this.markdownStream.update(source, (tail) =>
+      parser.lexer!.call(parser, tail, { gfm: this.gfm })
+    );
+    if (snapshot.reset) {
+      this.streamSlugger = new Slugger();
+      this.nextStreamBlockId = 0;
+      this.headingTree = [];
+      this.renderedBlocks = [];
+      this.progressiveBlocks.clear();
+    }
+    const variant = this.markdownVariant;
+    const additions: Array<{ id: string; html: string }> = [];
+    for (const block of snapshot.newSettledBlocks) {
+      if (!block) continue;
+      const sluggerBefore = this.streamSlugger.clone();
+      const headingTree: MarkdownHeadingItem[] = [];
+      const outcome = renderMarkdownDocument({
+        tag: variant.tag,
+        deps,
+        htmlMode: normalizeMarkdownHtmlMode(this.htmlMode),
+        math: this.math,
+        parse: (marked, pendingKeys, headingTreeOut) =>
+          this.parseMarkdown(
+            marked,
+            pendingKeys,
+            headingTreeOut,
+            block,
+            this.streamSlugger,
+            snapshot.definitions
+          ),
+        onParsed: () => this.maybeLoadKatex(),
+        isKatexConfirmedMissing: () => variant.katexState.isConfirmedMissing(),
+      });
+      if (outcome.status === 'fallback') {
+        this.progressiveFailed = true;
+        this.renderedHtml = null;
+        this.renderedBlocks = [];
+        this.streamingTail = source;
+        this.headingTree = [];
+        this.emit('lr-render-error', { error: outcome.error });
+        return;
+      }
+      headingTree.push(...outcome.headingTree);
+      this.headingTree.push(...headingTree);
+      additions.push({ id: `stream-${this.nextStreamBlockId++}`, html: outcome.html });
+      const blockId = additions[additions.length - 1]!.id;
+      this.progressiveBlocks.set(blockId, {
+        id: blockId,
+        source: block,
+        headings: [...headingTree],
+        definitions: [...snapshot.definitions],
+        highlightKeys: outcome.pendingKeys.map(({ key }) => key),
+        sluggerBefore,
+      });
+      if (outcome.mathFailed) this.reportMathFailure();
+      if (outcome.pendingKeys.length > 0 && this.highlightCode) {
+        void this.highlightPending(outcome.pendingKeys);
+      }
+    }
+    if (additions.length > 0) this.renderedBlocks = [...this.renderedBlocks, ...additions];
+    const openFence = markdownOpenFence(snapshot.tail);
+    this.streamingTail = openFence
+      ? html`<pre part="code-block" data-open-fence="true" dir="ltr"><code>${openFence.code}</code></pre>`
+      : snapshot.tail;
+  }
+
   private maybeLoadKatex(): void {
     if (this.math)
       this.markdownVariant.katexState.startLoad(this.handleKatexResolved);
+  }
+
+  private ensureCopyButtonRegistration(): void {
+    if (!this.isConnected || !this.codeBlockChrome || this.copyButtonRegistration) return;
+    this.copyButtonRegistration = import('../../utility/copy-button/copy-button.js')
+      .then(() => {
+        if (this.isConnected) this.requestUpdate();
+      })
+      .catch((error: unknown) => {
+        this.emit('lr-render-error', { error });
+      });
+  }
+
+  private decorateFencedCodeBlocks(): void {
+    const root = this.contentRoot();
+    if (!root) return;
+    const copyTag = tag('copy-button');
+    if (!this.codeBlockChrome) {
+      for (const header of root.querySelectorAll<HTMLElement>('[part~="code-block-header"]')) {
+        if (this.codeChromeHeaders.has(header)) header.remove();
+      }
+      return;
+    }
+    if (!this.ownerDocument.defaultView?.customElements.get(copyTag)) return;
+    for (const pre of root.querySelectorAll<HTMLPreElement>('pre[data-fenced="true"]')) {
+      if (pre.previousElementSibling && this.codeChromeHeaders.has(pre.previousElementSibling)) {
+        const header = pre.previousElementSibling;
+        const code = pre.querySelector('code');
+        const source = code?.textContent ?? '';
+        const language = code?.className.match(/(?:^|\s)language-([^\s]+)/)?.[1] ?? '';
+        const label = header.querySelector<HTMLElement>('[part~="code-block-language"]');
+        const copy = header.querySelector<HTMLElement & { value?: string; copyLabel?: string }>(copyTag);
+        if (label) {
+          label.textContent = language
+            ? this.localize('codeRegionWithLanguage', undefined, { language })
+            : this.localize('codeRegion');
+        }
+        if (copy) {
+          copy.value = source;
+          copy.copyLabel = this.localize('copyCode');
+        }
+        continue;
+      }
+      const code = pre.querySelector('code');
+      const source = code?.textContent ?? '';
+      const language = code?.className.match(/(?:^|\s)language-([^\s]+)/)?.[1] ?? '';
+      const header = this.ownerDocument.createElement('div');
+      this.codeChromeHeaders.add(header);
+      header.setAttribute('part', 'code-block-header');
+      const label = this.ownerDocument.createElement('span');
+      label.setAttribute('part', 'code-block-language');
+      label.textContent = language
+        ? this.localize('codeRegionWithLanguage', undefined, { language })
+        : this.localize('codeRegion');
+      const copy = this.ownerDocument.createElement(copyTag) as HTMLElement & {
+        value: string;
+        copyLabel: string;
+      };
+      copy.setAttribute('part', 'code-block-copy');
+      copy.value = source;
+      copy.copyLabel = this.localize('copyCode');
+      copy.setAttribute('tooltip', 'none');
+      header.append(label, copy);
+      pre.parentNode?.insertBefore(header, pre);
+    }
   }
 
   private reportMathFailure(): void {
@@ -486,19 +738,66 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     } finally {
       for (const { key } of work) this.inFlightHighlightKeys.delete(key);
     }
-    if (this.isConnected) this.renderMarkdown();
+    if (!this.isConnected) return;
+    if (this.streaming && this.streamingRender === 'progressive') {
+      this.refreshProgressiveHighlights(work.map(({ key }) => key));
+    } else {
+      this.renderMarkdown();
+    }
+  }
+
+  /** Re-renders blocks whose Shiki cache changed while preserving unrelated settled blocks. */
+  private refreshProgressiveHighlights(keys: readonly string[]): void {
+    const keySet = new Set(keys);
+    const deps = this.deps;
+    if (!deps || keySet.size === 0) return;
+    const replacements = new Map<string, string>();
+    for (const block of this.progressiveBlocks.values()) {
+      if (!block.highlightKeys.some((key) => keySet.has(key))) continue;
+      const outcome = renderMarkdownDocument({
+        tag: this.markdownVariant.tag,
+        deps,
+        htmlMode: normalizeMarkdownHtmlMode(this.htmlMode),
+        math: this.math,
+        parse: (marked, pendingKeys, headingTreeOut) =>
+          this.parseMarkdown(
+            marked,
+            pendingKeys,
+            headingTreeOut,
+            block.source,
+            block.sluggerBefore.clone(),
+            block.definitions
+          ),
+        onParsed: () => this.maybeLoadKatex(),
+        isKatexConfirmedMissing: () => this.markdownVariant.katexState.isConfirmedMissing(),
+      });
+      if (outcome.status !== 'fallback') {
+        replacements.set(block.id, outcome.html);
+        block.headings = outcome.headingTree;
+        block.highlightKeys = outcome.pendingKeys.map(({ key }) => key);
+      }
+    }
+    if (replacements.size === 0) return;
+    this.renderedBlocks = this.renderedBlocks.map((block) => {
+      const html = replacements.get(block.id);
+      return html === undefined ? block : { ...block, html };
+    });
   }
 
   private parseMarkdown(
     marked: MarkedModule,
     pendingKeys: PendingHighlight[],
-    headingTreeOut: MarkdownHeadingItem[]
+    headingTreeOut: MarkdownHeadingItem[],
+    contentOverride?: string,
+    slugger?: Slugger,
+    referenceDefinitions: readonly string[] = []
   ): { html: string; hadMathFallback: boolean } {
     const variant = this.markdownVariant;
     return parseMarkdownDocument({
       marked,
+      slugger,
       content: normalizeMarkdownLeadingTabs(
-        this.content ?? '',
+        [...referenceDefinitions, contentOverride ?? this.content ?? ''].join('\n'),
         finiteInteger(this.tabSize, 4, 1, 32)
       ),
       markedConfigurations: [
@@ -510,7 +809,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
       escapeHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'escape',
       trustedHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'trusted',
-      highlightCodeOption: this.highlightCode && !this.streaming,
+      codeBlockChromeOption: this.codeBlockChrome,
+      highlightCodeOption:
+        this.highlightCode && (!this.streaming || contentOverride !== undefined),
       getCachedHighlight: (key) => this.getCachedHighlight(key),
       failedHighlightKeys: this.failedHighlightKeys,
       headingAnchorsOption: this.headingAnchors,
@@ -631,10 +932,14 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   };
 
   override render(): TemplateResult {
+    const progressiveRendering =
+      this.streaming && this.streamingRender === 'progressive' && this.renderedHtml !== null;
     return renderMarkdownContent({
       content: this.content ?? '',
       sanitized: normalizeMarkdownHtmlMode(this.htmlMode) === 'sanitize',
       renderedHtml: this.renderedHtml,
+      renderedBlocks: progressiveRendering ? this.renderedBlocks : undefined,
+      streamingTail: progressiveRendering ? this.streamingTail : undefined,
       hostAriaLabel: this.getAttribute('aria-label'),
       isDarkTheme: this.isDarkTheme,
       onClick: this.onContentClick,

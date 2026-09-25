@@ -249,6 +249,13 @@ export const styles = css`
     cursor: default;
     pointer-events: none;
   }
+  /* A closed floating drawer removes only its own adjacent divider track. The same divider is
+     retained while the drawer is open and in the rail state, where it still separates visible
+     panes. */
+  :host(:where([data-collapse-state="floating"]:not([open])))
+    [part="divider"][aria-disabled="true"] {
+    display: none;
+  }
   /* The 'floating' overlay card. flex and order stay inline, set by updated() from the live
      sizes[i] percent -- the value 'wide' renders at, so un-floating never jumps; retune via
      .sizes, since the live sync undoes a direct override of those two. inline-size is also set

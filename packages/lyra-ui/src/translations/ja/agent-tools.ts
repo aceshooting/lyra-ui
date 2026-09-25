@@ -192,7 +192,6 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'サブエージェントを再試行',
   subagentPanelCancelRun: '{name} をキャンセル',
   subagentPanelRetryRun: '{name} を再試行',
-  toolTimelineDetailsFor: '{name} の詳細',
   contextInspectorRedacted: '秘匿済み',
   contextInspectorTruncated: '切り詰め済み',
   contextInspectorLabel: 'コンテキストインスペクター',

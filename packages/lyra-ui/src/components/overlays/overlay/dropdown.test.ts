@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './dropdown.js';
+import '../dialog/dialog.js';
 import '../../layout/menu/dropdown-item.js';
 import '../../layout/menu/menu.js';
 import { LyraDropdown } from './dropdown.class.js';
@@ -110,6 +111,137 @@ it('keeps the positioning shell neutral while the generated menu owns role and n
   expect(engine?.localName).to.equal('lr-menu');
   expect(menuRole?.getAttribute('role')).to.equal('menu');
   expect(menuRole?.getAttribute('aria-label')).to.equal('Row actions');
+});
+
+for (const direction of ['ltr', 'rtl'] as const) {
+  it(`keeps a fixed dropdown menu at full size inside a transformed short virtual row (${direction})`, async () => {
+    const dropdownMarkup =
+      direction === 'ltr'
+        ? html`<lr-dropdown hoist style="--lr-transition-fast: 0ms">
+            <button slot="trigger">Actions</button>
+            <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+            <lr-dropdown-item value="delete">Delete</lr-dropdown-item>
+          </lr-dropdown>`
+        : html`<lr-dropdown positioning-strategy="fixed" style="--lr-transition-fast: 0ms">
+            <button slot="trigger">Actions</button>
+            <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+            <lr-dropdown-item value="delete">Delete</lr-dropdown-item>
+          </lr-dropdown>`;
+    const wrapper = (await fixture(html`
+      <div dir=${direction} style="block-size: 100px; inline-size: 240px; overflow: auto; position: relative">
+        <div style="block-size: 240px"></div>
+        <div style="block-size: 32px; transform: translateY(-180px)">${dropdownMarkup}</div>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-dropdown') as LyraDropdown;
+    const popup = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+
+    await el.show();
+    await waitUntil(() => popup.style.left !== '' && popup.getBoundingClientRect().height > 0);
+
+    expect(popup.matches(':popover-open'), 'fixed menus are promoted out of the transformed row').to.be.true;
+    expect(popup.getBoundingClientRect().height).to.be.greaterThan(48);
+    const hiding = el.hide({ focusTrigger: false });
+    expect(popup.matches(':popover-open'), 'the exit transition stays above the virtual row').to.be.true;
+    await hiding;
+    expect(popup.matches(':popover-open')).to.be.false;
+
+    await el.show();
+    expect(popup.matches(':popover-open'), 'reopening re-enters the top layer').to.be.true;
+    const parent = el.parentElement!;
+    el.remove();
+    expect(popup.matches(':popover-open'), 'disconnecting releases the top-layer popup').to.be.false;
+    parent.append(el);
+    await el.updateComplete;
+    await waitUntil(() => popup.matches(':popover-open'), 'an open dropdown reconnects into the top layer');
+    await el.hide({ focusTrigger: false });
+  });
+}
+
+it('honors a same-as-default hoist property over an inherited fixed strategy', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-positioning-strategy:fixed">
+      <lr-dropdown style="--lr-transition-fast:0ms">
+        <button slot="trigger">Actions</button>
+        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+      </lr-dropdown>
+    </div>
+  `);
+  const dropdown = wrapper.querySelector('lr-dropdown') as LyraDropdown;
+  const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+
+  dropdown.hoist = false;
+  expect(dropdown.hasAttribute('hoist')).to.be.false;
+  await dropdown.show();
+  await waitUntil(() => popup.style.left !== '');
+
+  expect(popup.style.position).to.equal('absolute');
+  expect(popup.matches(':popover-open'), 'the explicit default does not inherit top-layer positioning').to.be.false;
+  await dropdown.hide({ focusTrigger: false });
+});
+
+it('keeps a fixed dropdown in the top layer inside an open dialog', async () => {
+  const dialog = await fixture<HTMLElement>(html`
+    <lr-dialog label="Actions">
+      <lr-dropdown hoist style="--lr-transition-fast: 0ms">
+        <button slot="trigger">Actions</button>
+        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+        <lr-dropdown-item value="delete">Delete</lr-dropdown-item>
+      </lr-dropdown>
+    </lr-dialog>
+  `);
+  const dropdown = dialog.querySelector('lr-dropdown') as LyraDropdown;
+  const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  const close = (dialog as HTMLElement & { close(reason?: string): Promise<void> }).close.bind(dialog);
+  const show = (dialog as HTMLElement & { show(): Promise<void> }).show.bind(dialog);
+
+  try {
+    await show();
+    expect(dialog.matches(':popover-open')).to.be.true;
+    await dropdown.show();
+    await waitUntil(() => popup.matches(':popover-open'));
+    expect(dialog.matches(':popover-open'), 'the dropdown does not light-dismiss the containing dialog').to.be.true;
+    expect(popup.getBoundingClientRect().height).to.be.greaterThan(48);
+    await dropdown.hide({ focusTrigger: false });
+    expect(dialog.matches(':popover-open')).to.be.true;
+    expect(popup.matches(':popover-open')).to.be.false;
+  } finally {
+    await close('api');
+  }
+});
+
+it('keeps a parent dropdown top layer open for nested and canceled hide events', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-dropdown hoist style="--lr-transition-fast: 0ms; --hide-duration: 120ms">
+        <button slot="trigger">Outer</button>
+        <lr-dropdown hoist style="--lr-transition-fast: 0ms">
+          <button slot="trigger">Inner</button>
+          <lr-dropdown-item value="inner-action">Inner action</lr-dropdown-item>
+        </lr-dropdown>
+      </lr-dropdown>
+    </div>
+  `);
+  const dropdowns = [...wrapper.querySelectorAll('lr-dropdown')] as LyraDropdown[];
+  const outer = dropdowns[0]!;
+  const inner = dropdowns[1]!;
+  const outerPopup = outer.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  const innerPopup = inner.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+
+  await outer.show();
+  await inner.show();
+  expect(outerPopup.matches(':popover-open')).to.be.true;
+  expect(innerPopup.matches(':popover-open')).to.be.true;
+  await inner.hide({ focusTrigger: false });
+  expect(outerPopup.matches(':popover-open'), 'a nested lr-after-hide must not close its ancestor').to.be.true;
+
+  const staleHide = outer.hide({ focusTrigger: false });
+  await outer.updateComplete;
+  await outer.show();
+  await staleHide;
+  expect(outer.open).to.be.true;
+  expect(outerPopup.matches(':popover-open'), 'a stale hide cannot remove a reopened popup').to.be.true;
+  await outer.hide({ focusTrigger: false });
 });
 
 it('normalizes the additive inherited popup-role instead of corrupting dropdown semantics', async () => {

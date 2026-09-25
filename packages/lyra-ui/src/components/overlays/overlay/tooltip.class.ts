@@ -85,7 +85,7 @@ function safelyComposedContains(container: Element, candidate: unknown): boolean
 }
 
 /** One keyword of the space-separated `trigger` list. */
-export type LyraTooltipTrigger = 'hover' | 'focus' | 'click' | 'manual';
+export type LyraTooltipTrigger = 'hover' | 'focus' | 'focus-visible' | 'click' | 'manual';
 
 export type { LyraArrowPlacement, OverlayVirtualRect, PlaceStrategy };
 
@@ -142,8 +142,10 @@ export interface LyraTooltipEventMap {
  * live positioning anchor force-closes the tooltip, while a remaining slotted/`for` fallback is
  * rebound and keeps the tooltip open.
  *
- * `trigger` is a space-separated list of `hover`, `focus`, `click` and `manual`, defaulting to
- * `"hover focus"`. `manual` (in the list, or the standalone `manual` boolean) means only
+ * `trigger` is a space-separated list of `hover`, `focus`, `focus-visible`, `click` and `manual`,
+ * defaulting to `"hover focus"`. `focus` preserves the any-focus behavior; `focus-visible` opts
+ * into keyboard-visible focus only, including for a focus target inside a shadow trigger.
+ * `manual` (in the list, or the standalone `manual` boolean) means only
  * `show()`/`hide()`/`open` move it. `show-delay` and `hide-delay` are independent, so a tooltip
  * can linger after the pointer leaves without also being slow to appear.
  * Motion resolves through `tooltip.show`/`tooltip.hide` in the public animation registry.
@@ -1100,13 +1102,23 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.disabled) return;
     this.syncTriggerA11y();
     if (event.type === 'focusin') {
-      if (this.suppressTriggerFocusOpen || !this.opensOn('focus')) return;
+      if (
+        this.suppressTriggerFocusOpen ||
+        (!this.opensOn('focus') &&
+          (!this.opensOn('focus-visible') || !this.isTriggerFocusVisible()))
+      ) {
+        return;
+      }
     } else if (!this.opensOn('hover')) return;
     if (event.type !== 'focusin') this.openedByPointer = true;
     this.requestTransition(true);
   };
   private onLeave = (event: Event): void => {
-    if (event.type === 'focusout' ? !this.opensOn('focus') : !this.opensOn('hover')) return;
+    if (
+      event.type === 'focusout'
+        ? !this.opensOn('focus') && !this.opensOn('focus-visible')
+        : !this.opensOn('hover')
+    ) return;
     const next = (event as FocusEvent | MouseEvent).relatedTarget;
     if (
       next !== null &&
@@ -1119,6 +1131,17 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.interactiveContent && this.isPopupTarget(next)) return;
     this.requestTransition(false);
   };
+  /** `focus-visible` belongs to the node that actually receives focus, which can be inside a
+   *  consumer-supplied custom-element trigger's shadow root. */
+  private isTriggerFocusVisible(): boolean {
+    const target = this.accessibleTrigger ?? this.triggerElement;
+    if (!target) return false;
+    try {
+      return target.matches(':focus-visible');
+    } catch {
+      return false;
+    }
+  }
   private onTriggerClick = (): void => {
     if (this.disabled) return;
     if (!this.opensOn('click')) return;

@@ -235,6 +235,28 @@ function fireMobileChange(el: LyraAppRail, matches: boolean): void {
   });
 }
 
+it("paints mobile panel elevation only while open in LTR and RTL", async () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    const el = (await fixture<LyraAppRail>(html`
+      <lr-app-rail dir=${direction}></lr-app-rail>
+    `)) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+
+    expect(getComputedStyle(panel).boxShadow, `${direction}: closed panel`)
+      .to.equal("none");
+    el.open = true;
+    await el.updateComplete;
+    expect(getComputedStyle(panel).boxShadow, `${direction}: open panel`)
+      .not.to.equal("none");
+    el.open = false;
+    await el.updateComplete;
+    expect(getComputedStyle(panel).boxShadow, `${direction}: closed again`)
+      .to.equal("none");
+  }
+});
+
 // Resolves what `declaration` computes to *inside this element's shadow root*, where the
 // --lr-* design tokens the component's own hooks fall back to are declared -- used to assert an
 // unset hook's rendered output byte-for-byte against the token it falls back to, mirroring

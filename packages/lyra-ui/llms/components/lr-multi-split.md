@@ -28,6 +28,11 @@ follows allocation and the actual divider geometry, including font-relative toke
 divider's own font context. Panel font sizes do not change that gutter budget; stored percentages,
 initialization precedence, and resize event values retain their existing meaning.
 
+In responsive `collapse="start"`/`"end"` mode, the divider beside the collapsing panel is hidden
+while that panel is in `data-collapse-state="floating"` and `open` is false. The divider and its
+gutter return when the floating panel opens; `rail` mode keeps its divider because both panels
+remain visible.
+
 Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
 `LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding

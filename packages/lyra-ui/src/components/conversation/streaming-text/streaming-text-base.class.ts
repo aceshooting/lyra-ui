@@ -5,6 +5,7 @@ import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
 import type { MarkdownHtmlMode } from '../markdown/markdown-shared.js';
+import type { MarkdownStreamingRenderMode } from '../markdown/markdown-base.class.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styles } from './streaming-text.styles.js';
 
@@ -73,6 +74,16 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   /** Shows the blinking cursor after the rendered text. Reflects, so a host
    *  can also target `[streaming]` in CSS. */
   @property({ type: Boolean, reflect: true }) streaming = false;
+
+  /** Forwarded to the composed Markdown element. `plain` preserves the existing streaming
+   * fallback; `progressive` renders completed Markdown blocks while the final block is arriving. */
+  @property({ attribute: 'streaming-render', reflect: true })
+  streamingRender: MarkdownStreamingRenderMode = 'plain';
+
+  /** Forwarded to the composed Markdown element; opts into a localized language label and copy
+   * button on fenced code blocks. */
+  @property({ type: Boolean, attribute: 'code-block-chrome' })
+  codeBlockChrome = false;
 
   /** Trailing-edge coalesce window, in ms, for `content` updates -- see the
    *  class doc. */

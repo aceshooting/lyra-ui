@@ -326,12 +326,13 @@ it('moves focus out of a pane collapsing into the closed floating drawer', async
 
   expect(panel.hidden, 'the drawer closed').to.equal(true);
   expect(panel.contains(document.activeElement), 'focus left the hidden drawer').to.equal(false);
-  // Hiding the pane drops focus to the body on its own; the relocation is what puts it back on a
-  // real, reachable control, so assert the destination rather than merely the departure.
+  // The only divider is adjacent to the collapsed pane and is removed from layout. Focus moves
+  // to the surviving pane as a programmatic-only stop instead of being lost to the body.
   expect(
-    split.shadowRoot!.activeElement?.getAttribute('part'),
-    'focus was relocated, not merely dropped to the body',
-  ).to.equal('divider');
+    document.activeElement === split.children[0],
+    'focus was relocated to the surviving pane',
+  ).to.be.true;
+  expect((split.children[0] as HTMLElement).getAttribute('tabindex')).to.equal('-1');
 });
 
 it('leaves focus outside the collapsing pane strictly alone', async () => {

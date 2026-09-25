@@ -33,6 +33,15 @@ export const styles = css`
     text-transform: uppercase;
     flex: 0 0 auto;
   }
+  .badge-label {
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-align: start;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   [part='label'],
   [part='description'],
   [part='size'] {

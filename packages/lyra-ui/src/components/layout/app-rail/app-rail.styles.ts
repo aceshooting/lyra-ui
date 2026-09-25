@@ -205,9 +205,6 @@ export const styles = css`
        [part="base"] keeps --lr-color-surface: resting chrome, not an overlay. */
     background: var(--lr-app-rail-panel-background, var(--lr-color-surface-overlay));
     padding-block-end: var(--lr-safe-area-bottom);
-    /* Modal layer, lower step: an edge-anchored drawer flush with three viewport edges, matching
-       lr-drawer rather than a free-floating centered dialog. */
-    box-shadow: var(--lr-shadow-l);
     /* Both axes are tokenized together, unlike [part="base"]/[part="nav"]'s plain overflow-x:clip:
        a position: fixed descendant (a popup opened by a slotted/nav-item control, e.g. a slotted
        <lr-select>/<lr-menu>) is clipped by EITHER axis being anything other than visible,
@@ -236,6 +233,8 @@ export const styles = css`
      not the top layer). translateX(-100%) to none still interpolates: none is the identity. */
   :host([mode="mobile"][open]) [part="panel"] {
     transform: none;
+    /* Keep the modal elevation inside the viewport only while the drawer is visible. */
+    box-shadow: var(--lr-shadow-l);
   }
 
   [part="header"] {

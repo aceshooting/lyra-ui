@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,8 +33,9 @@ A fenced code block whose language isn't a key in `languages` always renders the
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
 rendering path as `<lr-code-block-core>`'s identical contract. A block that _is_ highlighted follows the
 page's resolved theme through the same `[part="content"][data-dark-theme="true"]` hook `<lr-markdown>`
-documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables,
-links, blockquotes, images, heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
+documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables and task-list presentation (task items use `part="task-item"`, task-only lists carry `data-task-list="true"`, and wide tables scroll inside `part="table-wrapper"`),
+links, blockquotes, images, LTR-isolated code, progressive streaming and opt-in code-block chrome,
+heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
 support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highlight-activate`/
 `lr-text-select`/`lr-anchor-result` events), math via the optional `katex` peer, the sanitize/
 `htmlMode`/streaming fallback matrix and known gotchas — is identical to `<lr-markdown>`; see that
@@ -49,6 +50,8 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
+`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected),
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
@@ -80,9 +83,10 @@ as the full class; the core route exports its own `Marked` alias.
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
-anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`,
-`code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math` — identical to
-`<lr-markdown>`'s own parts.
+anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`, `task-item`,
+`code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
+`table-wrapper`, `table`, `blockquote`, `img`, `math` —
+identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the

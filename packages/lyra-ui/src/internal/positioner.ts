@@ -538,7 +538,12 @@ async function correctedGetOffsetParent(
   const defaultOffsetParent = await platform.getOffsetParent(element, polyfill);
   if (!(element instanceof HTMLElement)) return defaultOffsetParent;
   const view = element.ownerDocument.defaultView;
-  if (!view || defaultOffsetParent !== view) return defaultOffsetParent;
+  if (!view) return defaultOffsetParent;
+  // Native top-layer elements are positioned against the viewport even though their DOM ancestor
+  // chain remains unchanged. In particular, a manual popover nested in a transformed virtual row
+  // must not inherit that row as the fixed-position containing block.
+  if (isNativeTopLayerElement(element)) return view;
+  if (defaultOffsetParent !== view) return defaultOffsetParent;
   if (view.getComputedStyle(element).position !== 'fixed') return defaultOffsetParent;
   return findFixedContainingBlockAncestor(element) ?? defaultOffsetParent;
 }

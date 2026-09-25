@@ -32,6 +32,22 @@ for (const property of ['label', 'hint'] as const) {
   });
 }
 
+it('keeps the localized dropzone instruction separate from the form-control label', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`
+    <lr-file-input label="Reference files"></lr-file-input>
+  `);
+  const formLabel = el.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!;
+  const dropzoneText = el.shadowRoot!.querySelector<HTMLElement>('[part="dropzone-text"]')!;
+
+  expect(formLabel.textContent).to.contain('Reference files');
+  expect(dropzoneText.textContent).to.contain('Drop files here or click to browse');
+  expect(dropzoneText.textContent).not.to.contain('Reference files');
+
+  el.strings = { fileInputDefaultLabel: 'Déposez les fichiers ou parcourez' };
+  await el.updateComplete;
+  expect(dropzoneText.textContent).to.contain('Déposez les fichiers ou parcourez');
+});
+
 it('retains native fieldset-disabled remove paint while preserving enabled pointer feedback', async () => {
   const host = await fixture<HTMLFieldSetElement>(html`<fieldset disabled><lr-file-input .files=${[new File(['a'], 'report.txt')]} style="--lr-transition-fast: 0s;"></lr-file-input></fieldset>`);
   const el = host.querySelector('lr-file-input')!;

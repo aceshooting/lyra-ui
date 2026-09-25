@@ -120,6 +120,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'システム',
   promptStudioRoleUser: 'ユーザー',
   promptStudioRoleAssistant: 'アシスタント',
+  toolTimelineDetailsFor: '{name} の詳細',
   moveUp: '上へ移動',
   moveDown: '下へ移動',
   reorderItemMoved: '{total} 件中 {index} 番目へ移動しました',

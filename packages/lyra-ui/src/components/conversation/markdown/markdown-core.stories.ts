@@ -64,6 +64,27 @@ export const Narrow320: Story = {
   `,
 };
 
+export const TasksTablesAndRtlCode: Story = {
+  name: 'Tasks, scrolling tables, and code in RTL prose',
+  render: () => html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-markdown-core
+        .languages=${{}}
+        .content=${`- [x] Review the task list
+- [ ] Finish the review
+
+| Check | Outcome | Detail |
+| --- | --- | --- |
+| Keyboard | Median | QuarterlyEnergyProductionForecastForRooftopInstallations keeps words intact and scrolls inline |
+
+\`\`\`js
+function moveLeft() { return 'left'; }
+\`\`\``}
+      ></lr-markdown-core>
+    </div>
+  `,
+};
+
 /** `tab-size` controls leading-tab expansion before Markdown parsing, independently of code paint. */
 export const LeadingTabParsing: Story = {
   parameters: {

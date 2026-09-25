@@ -31,9 +31,13 @@ later text renders normally.
   Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
   already closed, so a pending timer can't reopen it behind the caller's back.
 - `trigger: string = 'hover focus'` — **new in 8.0.0.** A _space-separated_ list of `hover`,
-  `focus`, `click` and `manual`. `manual` (or an empty list) leaves the tooltip entirely under
-  programmatic control. Note the name collision: this string property and the `trigger` _slot_ are
-  different things — the slot holds the element, this property says which of its interactions count.
+  `focus`, `focus-visible`, `click` and `manual`. `focus` opens on any focus, preserving the default
+  and existing behavior; `focus-visible` opens only when the trigger's actual focus target matches
+  `:focus-visible`, including a focused control inside a shadow-root trigger. Use it when opening a
+  tooltip on programmatic or pointer focus would obscure nearby content. `manual` (or an empty list)
+  leaves the tooltip entirely under programmatic control. Note the name collision: this string
+  property and the `trigger` _slot_ are different things — the slot holds the element, this property
+  says which of its interactions count.
 - `manual: boolean = false` — equivalent to including `manual` in `trigger`; kept because it reads
   better on a tooltip that is only ever driven from script
 - `showDelay: number = 150` (attribute `show-delay`) and `hideDelay: number = 0` (attribute

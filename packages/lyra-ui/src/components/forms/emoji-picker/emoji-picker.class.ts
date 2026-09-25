@@ -1295,6 +1295,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
     const invalid = this.touched && !this.internals.validity.valid;
     const gridLabel = hostAriaLabel(this);
+    const searchLabel = this.localize('emojiPickerSearchLabel');
     return html`
       <div part="form-control">
         <div part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>
@@ -1309,7 +1310,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
               aria-expanded="true"
               aria-autocomplete="list"
               .value=${this.queryText}
-              aria-label=${this.localize('emojiPickerSearchLabel')}
+              aria-label=${searchLabel}
+              placeholder=${searchLabel}
               aria-controls=${this.gridId}
               ?disabled=${this.effectiveDisabled}
               @input=${this.onSearchInput}

@@ -29,6 +29,10 @@ presentation) and `[part="panel"]` (the mobile overlay) are the _same_ element p
 across modes (mirrors `<lr-widget>`'s fullscreen mode) — never both at once, and slotted nav
 content is never duplicated.
 
+In mobile mode the closed `[part="panel"]` has no shadow. It regains the existing
+`--lr-shadow-l` elevation while open, including in RTL, so the off-canvas closed panel does not
+paint into the viewport.
+
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
 `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist the fields

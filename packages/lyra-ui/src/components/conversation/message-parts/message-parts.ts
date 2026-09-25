@@ -10,6 +10,7 @@ import '../../agent-tools/thinking-panel/thinking-panel.js';
 import '../../agent-tools/tool-call-chip/tool-call-chip.js';
 import '../../agent-tools/tool-result-view/tool-result-view.js';
 import '../../forms/button/button.js';
+import '../../layout/details/details.js';
 import '../../media/attachment-chip/attachment-chip.js';
 import '../../retrieval/citation-badge/citation-badge.js';
 import '../../utility/json-viewer/json-viewer.js';

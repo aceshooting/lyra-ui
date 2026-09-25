@@ -122,6 +122,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Sistem',
   promptStudioRoleUser: 'Utilizator',
   promptStudioRoleAssistant: 'Asistent',
+  toolTimelineDetailsFor: 'Detalii pentru {name}',
   moveUp: 'Deplasează mai sus',
   moveDown: 'Deplasează mai jos',
   reorderItemMoved: 'Deplasat la poziția {index} din {total}',

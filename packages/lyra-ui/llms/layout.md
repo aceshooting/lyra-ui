@@ -69,6 +69,11 @@ follows allocation and the actual divider geometry, including font-relative toke
 divider's own font context. Panel font sizes do not change that gutter budget; stored percentages,
 initialization precedence, and resize event values retain their existing meaning.
 
+In responsive `collapse="start"`/`"end"` mode, the divider beside the collapsing panel is hidden
+while that panel is in `data-collapse-state="floating"` and `open` is false. The divider and its
+gutter return when the floating panel opens; `rail` mode keeps its divider because both panels
+remain visible.
+
 Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
 `LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding
@@ -2295,6 +2300,10 @@ particular layout happens to give it. `[part="base"]` (the inline `'full'`/`'ico
 presentation) and `[part="panel"]` (the mobile overlay) are the _same_ element promoted in place
 across modes (mirrors `<lr-widget>`'s fullscreen mode) — never both at once, and slotted nav
 content is never duplicated.
+
+In mobile mode the closed `[part="panel"]` has no shadow. It regains the existing
+`--lr-shadow-l` elevation while open, including in RTL, so the off-canvas closed panel does not
+paint into the viewport.
 
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to

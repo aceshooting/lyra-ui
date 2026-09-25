@@ -6505,6 +6505,7 @@ export type LyraMarkdownSvelteProps = LyraSvelteElementProps<
   LyraMarkdown,
   | 'activeHighlightId'
   | 'anchor'
+  | 'codeBlockChrome'
   | 'content'
   | 'gfm'
   | 'headingAnchors'
@@ -6519,6 +6520,7 @@ export type LyraMarkdownSvelteProps = LyraSvelteElementProps<
   | 'math'
   | 'maxHeight'
   | 'streaming'
+  | 'streamingRender'
   | 'strings'
   | 'tabSize',
   {},
@@ -6547,6 +6549,7 @@ export type LyraMarkdownSvelteProps = LyraSvelteElementProps<
   | '--lr-markdown-table-header-bg',
   {
     'active-highlight-id'?: LyraMarkdown['activeHighlightId'];
+    'code-block-chrome'?: LyraMarkdown['codeBlockChrome'];
     'heading-anchors'?: LyraMarkdown['headingAnchors'];
     'heading-offset'?: LyraMarkdown['headingOffset'];
     'highlight-code'?: LyraMarkdown['highlightCode'];
@@ -6554,6 +6557,7 @@ export type LyraMarkdownSvelteProps = LyraSvelteElementProps<
     'internal-link-prefix'?: LyraMarkdown['internalLinkPrefix'];
     'link-target'?: LyraMarkdown['linkTarget'];
     'max-height'?: LyraMarkdown['maxHeight'];
+    'streaming-render'?: LyraMarkdown['streamingRender'];
     'tab-size'?: LyraMarkdown['tabSize'];
   }
 >;
@@ -6562,6 +6566,7 @@ export type LyraMarkdownCoreSvelteProps = LyraSvelteElementProps<
   LyraMarkdownCore,
   | 'activeHighlightId'
   | 'anchor'
+  | 'codeBlockChrome'
   | 'content'
   | 'gfm'
   | 'headingAnchors'
@@ -6576,6 +6581,7 @@ export type LyraMarkdownCoreSvelteProps = LyraSvelteElementProps<
   | 'math'
   | 'maxHeight'
   | 'streaming'
+  | 'streamingRender'
   | 'strings'
   | 'tabSize',
   {},
@@ -6604,6 +6610,7 @@ export type LyraMarkdownCoreSvelteProps = LyraSvelteElementProps<
   | '--lr-markdown-table-header-bg',
   {
     'active-highlight-id'?: LyraMarkdownCore['activeHighlightId'];
+    'code-block-chrome'?: LyraMarkdownCore['codeBlockChrome'];
     'heading-anchors'?: LyraMarkdownCore['headingAnchors'];
     'heading-offset'?: LyraMarkdownCore['headingOffset'];
     'highlight-code'?: LyraMarkdownCore['highlightCode'];
@@ -6611,6 +6618,7 @@ export type LyraMarkdownCoreSvelteProps = LyraSvelteElementProps<
     'internal-link-prefix'?: LyraMarkdownCore['internalLinkPrefix'];
     'link-target'?: LyraMarkdownCore['linkTarget'];
     'max-height'?: LyraMarkdownCore['maxHeight'];
+    'streaming-render'?: LyraMarkdownCore['streamingRender'];
     'tab-size'?: LyraMarkdownCore['tabSize'];
   }
 >;
@@ -6850,13 +6858,16 @@ export type LyraMessageFeedbackSvelteProps = LyraSvelteElementProps<
 export type LyraMessagePartsSvelteProps = LyraSvelteElementProps<
   LyraMessageParts,
   | 'accessibleLabel'
+  | 'codeBlockChrome'
   | 'contentMode'
   | 'locale'
   | 'maxRenderedParts'
   | 'parts'
   | 'renderPart'
   | 'showReasoning'
-  | 'strings',
+  | 'streamingRender'
+  | 'strings'
+  | 'toolDisplay',
   {},
   LyraMessagePartsEventMap,
   | 'lr-anchor-result'
@@ -6883,9 +6894,12 @@ export type LyraMessagePartsSvelteProps = LyraSvelteElementProps<
   | '--lr-message-parts-streaming-color',
   {
     'aria-label'?: LyraMessageParts['accessibleLabel'];
+    'code-block-chrome'?: LyraMessageParts['codeBlockChrome'];
     'content-mode'?: LyraMessageParts['contentMode'];
     'max-rendered-parts'?: LyraMessageParts['maxRenderedParts'];
     'show-reasoning'?: LyraMessageParts['showReasoning'];
+    'streaming-render'?: LyraMessageParts['streamingRender'];
+    'tool-display'?: LyraMessageParts['toolDisplay'];
   }
 >;
 
@@ -10006,6 +10020,7 @@ export type LyraStreamStatusSvelteProps = LyraSvelteElementProps<
 export type LyraStreamingTextSvelteProps = LyraSvelteElementProps<
   LyraStreamingText,
   | 'coalesceMs'
+  | 'codeBlockChrome'
   | 'content'
   | 'contentMode'
   | 'gfm'
@@ -10020,6 +10035,7 @@ export type LyraStreamingTextSvelteProps = LyraSvelteElementProps<
   | 'math'
   | 'maxHeight'
   | 'streaming'
+  | 'streamingRender'
   | 'strings'
   | 'tabSize',
   {},
@@ -10029,6 +10045,7 @@ export type LyraStreamingTextSvelteProps = LyraSvelteElementProps<
   | '--lr-inline-cursor-width',
   {
     'coalesce-ms'?: LyraStreamingText['coalesceMs'];
+    'code-block-chrome'?: LyraStreamingText['codeBlockChrome'];
     'content-mode'?: LyraStreamingText['contentMode'];
     'heading-anchors'?: LyraStreamingText['headingAnchors'];
     'heading-offset'?: LyraStreamingText['headingOffset'];
@@ -10037,6 +10054,7 @@ export type LyraStreamingTextSvelteProps = LyraSvelteElementProps<
     'internal-link-prefix'?: LyraStreamingText['internalLinkPrefix'];
     'link-target'?: LyraStreamingText['linkTarget'];
     'max-height'?: LyraStreamingText['maxHeight'];
+    'streaming-render'?: LyraStreamingText['streamingRender'];
     'tab-size'?: LyraStreamingText['tabSize'];
   }
 >;
@@ -10044,6 +10062,7 @@ export type LyraStreamingTextSvelteProps = LyraSvelteElementProps<
 export type LyraStreamingTextCoreSvelteProps = LyraSvelteElementProps<
   LyraStreamingTextCore,
   | 'coalesceMs'
+  | 'codeBlockChrome'
   | 'content'
   | 'contentMode'
   | 'gfm'
@@ -10058,6 +10077,7 @@ export type LyraStreamingTextCoreSvelteProps = LyraSvelteElementProps<
   | 'math'
   | 'maxHeight'
   | 'streaming'
+  | 'streamingRender'
   | 'strings'
   | 'tabSize',
   {},
@@ -10067,6 +10087,7 @@ export type LyraStreamingTextCoreSvelteProps = LyraSvelteElementProps<
   | '--lr-inline-cursor-width',
   {
     'coalesce-ms'?: LyraStreamingTextCore['coalesceMs'];
+    'code-block-chrome'?: LyraStreamingTextCore['codeBlockChrome'];
     'content-mode'?: LyraStreamingTextCore['contentMode'];
     'heading-anchors'?: LyraStreamingTextCore['headingAnchors'];
     'heading-offset'?: LyraStreamingTextCore['headingOffset'];
@@ -10075,6 +10096,7 @@ export type LyraStreamingTextCoreSvelteProps = LyraSvelteElementProps<
     'internal-link-prefix'?: LyraStreamingTextCore['internalLinkPrefix'];
     'link-target'?: LyraStreamingTextCore['linkTarget'];
     'max-height'?: LyraStreamingTextCore['maxHeight'];
+    'streaming-render'?: LyraStreamingTextCore['streamingRender'];
     'tab-size'?: LyraStreamingTextCore['tabSize'];
   }
 >;

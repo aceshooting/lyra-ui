@@ -72,6 +72,20 @@ function dataRow(el: LyraThreadList, id: string): LyraConversationItem {
   return dataRows(el).find((r) => r.conversationId === id)!;
 }
 
+function deepElementFromPoint(root: Document | ShadowRoot, x: number, y: number): Element[] {
+  const path: Element[] = [];
+  let current = root.elementFromPoint(x, y);
+  while (current && !path.includes(current)) {
+    path.push(current);
+    const shadowRoot = current.shadowRoot;
+    if (!shadowRoot) break;
+    const nested = shadowRoot.elementFromPoint(x, y);
+    if (!nested || nested === current) break;
+    current = nested;
+  }
+  return path;
+}
+
 // Every timestamp below is computed relative to the actual test-run time (never a hardcoded date) --
 // bucketFor()'s day-boundary math keys off the local calendar day, so a fixed-date fixture would
 // silently drift into the wrong bucket (or fail outright) on any day other than the one it was
@@ -1541,6 +1555,60 @@ describe("data mode", () => {
         topmost === firstMenu ||
           (topmost !== null && firstMenu.contains(topmost))
       ).to.equal(true);
+    });
+
+    it('keeps both renderActions menu items visible beyond a short virtual viewport', async () => {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style="block-size:112px; inline-size:280px; display:flex; flex-direction:column; --lr-positioning-strategy:fixed">
+          <nav style="block-size:80px; flex:none">Navigation above the thread list</nav>
+          <lr-thread-list
+            grouping="none"
+            style="flex:1; min-block-size:0"
+            .threads=${threads.filter((thread) => !thread.archived)}
+            .renderActions=${(thread: { id: string }) => html`
+              <lr-dropdown placement="bottom-end" style="--lr-transition-fast:0ms">
+                <button slot="trigger" type="button" aria-label="Actions for ${thread.id}">⋮</button>
+                <lr-menu label="Conversation actions">
+                  <lr-menu-item value="rename">Rename</lr-menu-item>
+                  <lr-menu-item value="delete">Delete</lr-menu-item>
+                </lr-menu>
+              </lr-dropdown>
+            `}
+          ></lr-thread-list>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+
+      const viewport = viewportEl(el);
+      const viewportRect = viewport.getBoundingClientRect();
+      expect(viewportRect.height).to.be.closeTo(32, 2);
+      const row = dataRow(el, 'p1');
+      const dropdown = row.querySelector('lr-dropdown') as LyraDropdown;
+      const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+      const items = [...dropdown.querySelectorAll('lr-menu-item')];
+      const trigger = dropdown.querySelector<HTMLElement>('[slot="trigger"]')!;
+      expect(items).to.have.length(2);
+      const triggerRect = trigger.getBoundingClientRect();
+      expect(Math.min(triggerRect.bottom, viewportRect.bottom)).to.be.greaterThan(
+        Math.max(triggerRect.top, viewportRect.top),
+        'the partially clipped row action trigger still intersects the short viewport',
+      );
+
+      await dropdown.show();
+      await waitUntil(() => popup.style.left !== '' && popup.getBoundingClientRect().height > 0);
+      expect(popup.matches(':popover-open'), 'the inherited fixed strategy enters the top layer').to.be.true;
+      expect(popup.getBoundingClientRect().height).to.be.greaterThan(48);
+
+      const deleteRect = items[1]!.getBoundingClientRect();
+      const hitX = deleteRect.left + deleteRect.width / 2;
+      const hitY = deleteRect.top + deleteRect.height / 2;
+      expect(hitY).to.be.greaterThan(viewportRect.bottom, 'Delete is painted below the short virtual viewport');
+      expect(hitY).to.be.lessThan(window.innerHeight);
+      const hitPath = deepElementFromPoint(document, hitX, hitY);
+      expect(hitPath).to.include(items[1], 'Delete remains hit-testable outside the clipped list viewport');
+      await dropdown.hide({ focusTrigger: false });
     });
 
     it("is re-invoked per row with the current thread on every render (not memoized)", async () => {

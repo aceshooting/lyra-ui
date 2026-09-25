@@ -181,10 +181,11 @@ export interface LyraFileInputEventMap {
  * where files ultimately get uploaded and processed anyway.
  *
  * @customElement lr-file-input
- * @slot - Custom drop-zone content, overrides the visible `label` text. The
- * accessible name comes from a host `aria-label` when present, then falls
- * back to `label`, so icon-only slot content remains announced correctly.
- * @slot dropzone - Named equivalent of the default dropzone-content slot.
+ * @slot - Custom dropzone instruction content, replacing the localized default instruction while
+ *   leaving the form-control label separate. The accessible name comes from a host `aria-label`
+ *   when present, then falls back to the form-control label or, when it is absent or empty, the
+ *   localized default instruction.
+ * @slot dropzone - Named equivalent of the default dropzone-instruction slot.
  * @slot label - Custom form-control label content.
  * @slot hint - Custom form-control hint content.
  * @slot error - Custom validation error content. Use `with-error` when this slot is populated in
@@ -434,8 +435,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Enables files pasted from the clipboard into the dropzone. `true`-defaulting, so a plain
    *  `paste="false"` attribute (not just a `.paste=${false}` property binding) actually disables it. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) paste = true;
-  /** Form-control label. When omitted, the localized dropzone instruction is used; an explicit
-   *  empty string intentionally suppresses that fallback. */
+  /** Optional visible form-control label. Omitting or emptying it does not suppress the dropzone's
+   *  localized default instruction, which can be replaced through the `dropzone` slot. */
   @property() label?: string;
   /** Optional hint copy. Removing the attribute removes its text and description association. */
   @property() hint = '';
@@ -1418,11 +1419,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return '';
   }
 
-  /** Resolves `label`'s effective text: an explicit override wins verbatim; omission routes
-   *  through `this.localize()` so a locale/`.strings` override applies without requiring
-   *  `label` itself to be set. */
+  /** Resolves the accessible-name fallback: a non-empty form label wins; omission or an explicit
+   *  empty label uses the localized default dropzone instruction. */
   private get effectiveLabel(): string {
-    return this.label == null ? this.localize('fileInputDefaultLabel') : this.label;
+    return this.label == null || this.label === ''
+      ? this.localize('fileInputDefaultLabel')
+      : this.label;
   }
 
   private removeFile(index: number): void {
@@ -1523,7 +1525,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
           ></button>
           <div class="dropzone-content">
             <span part="dropzone-icon" aria-hidden="true">${fileIcon()}</span>
-            <span part="dropzone-text"><slot name="dropzone"><slot>${label}</slot></slot></span>
+            <span part="dropzone-text"><slot name="dropzone"><slot>${this.localize('fileInputDefaultLabel')}</slot></slot></span>
           </div>
         </div>
         ${this._files.length

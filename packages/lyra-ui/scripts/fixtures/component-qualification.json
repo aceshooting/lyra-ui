@@ -1907,7 +1907,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 1609,
+              "line": 1631,
               "test": "is accessible with the mobile overlay open",
               "target": "el",
               "state": "open"
@@ -1963,14 +1963,14 @@
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 1596,
+              "line": 1618,
               "test": "is accessible in full mode with header/nav/footer content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3513,
+              "line": 3535,
               "test": "keeps the collapse toggle reachable and accessible in a populated rail",
               "target": "el",
               "state": "populated"
@@ -2012,7 +2012,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 2996,
+              "line": 3018,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2370,7 +2370,7 @@
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3513,
+              "line": 3535,
               "test": "keeps the collapse toggle reachable and accessible in a populated rail",
               "target": "el",
               "state": "populated"
@@ -2412,7 +2412,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 2996,
+              "line": 3018,
               "kind": "320px allocation test signal"
             }
           ]
@@ -16329,35 +16329,35 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 115,
+              "line": 247,
               "test": "normalizes the additive inherited popup-role instead of corrupting dropdown semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 446,
+              "line": 578,
               "test": "preserves a consumer menu header/list/footer, live regions, focus order, and supplied name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 608,
+              "line": 740,
               "test": "mirrors submenu arrows and preserves the safe pointer corridor under RTL",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 997,
+              "line": 1129,
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 997,
+              "line": 1129,
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"
@@ -16396,7 +16396,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 609,
+              "line": 116,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -16489,7 +16489,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1013,
+              "line": 1024,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18916,7 +18916,7 @@
             },
             {
               "file": "src/components/media/file-icon/file-icon.test.ts",
-              "line": 266,
+              "line": 296,
               "test": "hides the complete label badge subtree from accessibility APIs when decorative",
               "target": "el",
               "state": "populated"
@@ -18936,7 +18936,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-icon/file-icon.test.ts",
-              "line": 302,
+              "line": 256,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -19072,35 +19072,35 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1050,
+              "line": 1069,
               "test": "renders standard error chrome in the form-control frame and describes the semantic dropzone",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1575,
+              "line": 1594,
               "test": "is accessible with the visible rejection region populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1644,
+              "line": 1663,
               "test": "is accessible while compact",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1651,
+              "line": 1670,
               "test": "keeps arbitrary slotted controls outside the dropzone button and does not open the picker from them",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1970,
+              "line": 1989,
               "test": "uses with-error to render and associate rich slotted error content on the first SSR-hinted render",
               "target": "el",
               "state": "populated"
@@ -19114,7 +19114,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 627,
+              "line": 646,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -19137,7 +19137,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1724,
+              "line": 1743,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27455,7 +27455,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -27495,9 +27494,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/markdown/markdown-presentation.test.ts",
+              "line": 81,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -27614,7 +27618,6 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -27628,10 +27631,14 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/markdown/katex-loader.test.ts",
+          "src/components/conversation/markdown/markdown-code-chrome.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
+          "src/components/conversation/markdown/markdown-presentation.test.ts",
+          "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
+          "src/components/conversation/markdown/markdown-streaming.test.ts",
           "src/components/conversation/markdown/markdown.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -27648,7 +27655,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -27696,9 +27702,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/markdown/markdown-presentation.test.ts",
+              "line": 81,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -27804,7 +27815,6 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -27818,10 +27828,14 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/markdown/katex-loader.test.ts",
+          "src/components/conversation/markdown/markdown-code-chrome.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
+          "src/components/conversation/markdown/markdown-presentation.test.ts",
+          "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
+          "src/components/conversation/markdown/markdown-streaming.test.ts",
           "src/components/conversation/markdown/markdown.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -29591,7 +29605,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "rtl",
           "narrowAllocation",
           "peerFailure",
@@ -29607,7 +29620,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 865,
+              "line": 1194,
               "test": "is accessible with populated mixed content",
               "target": "el",
               "state": "populated"
@@ -29617,9 +29630,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/message-parts/message-parts.test.ts",
+              "line": 12,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -29723,7 +29741,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
@@ -30328,14 +30345,14 @@
             },
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 5142,
+              "line": 5215,
               "test": "is accessible with a viewport-basis breakpoint set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 5533,
+              "line": 5606,
               "test": "is accessible in the rail state under viewport basis",
               "target": "el",
               "state": "populated"
@@ -30349,7 +30366,7 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 324,
+              "line": 397,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30377,7 +30394,7 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 1512,
+              "line": 24,
               "kind": "320px allocation test signal"
             }
           ]
@@ -34066,7 +34083,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 609,
+              "line": 116,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -34157,7 +34174,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1013,
+              "line": 1024,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46746,63 +46763,63 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 748,
+              "line": 762,
               "test": "uses one string group-label contract and renders rich adornments outside the toggle",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 804,
+              "line": 818,
               "test": "self-manages group collapse via the lr-group-toggle-request/lr-group-toggle pair by default, removing collapsed rows from virtual-list measurement",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1933,
+              "line": 2001,
               "test": "renders a keyboard-reachable button with a localized accessible name once the field has a value",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2227,
+              "line": 2295,
               "test": "is accessible in both modes",
               "target": "dataMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2227,
+              "line": 2295,
               "test": "is accessible in both modes",
               "target": "slottedMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2808,
+              "line": 2876,
               "test": "is accessible with wrapped rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2969,
+              "line": 3037,
               "test": "is accessible with a part-styled dense row and a renderActions control",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3795,
+              "line": 3863,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3984,
+              "line": 4052,
               "test": "is accessible in the error state",
               "target": "el",
               "state": "populated"
@@ -46816,7 +46833,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 326,
+              "line": 340,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -49495,7 +49512,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 609,
+              "line": 116,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -49586,7 +49603,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1013,
+              "line": 1024,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

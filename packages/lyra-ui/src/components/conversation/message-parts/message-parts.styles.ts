@@ -39,6 +39,35 @@ export const styles = css`
     overflow: auto;
   }
 
+  [part='tool-disclosure'] {
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+
+  [part='tool-header'] {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    min-inline-size: 0;
+  }
+
+  [part='tool-status'] {
+    color: var(--lr-color-text-quiet);
+  }
+
+  [part='tool-args'],
+  [part='tool-result'] {
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+
+  [part='tool-error'] {
+    margin-block: var(--lr-space-xs) 0;
+    color: var(--lr-color-danger);
+    overflow-wrap: break-word;
+  }
+
   [part='tool-result-error'] {
     display: grid;
     gap: var(--lr-space-xs);

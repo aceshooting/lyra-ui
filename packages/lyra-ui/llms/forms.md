@@ -4422,7 +4422,8 @@ WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s unchecked resting
 fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
-retint the pointer states (their defaults remain mixes from the current resting fill).
+retint the pointer states (their defaults remain mixes from the current state's resting fill, so a
+checked switch mixes from `--lr-switch-checked-track-fill` even when the unchecked fill is set).
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
 renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
 look) without affecting any other switch. `--lr-switch-checked-track-border` (default
@@ -6049,7 +6050,8 @@ label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji,
 shortcodes? }`; assignment captures a bounded frozen owned snapshot, including the current contents
 of reused source item objects. Earlier snapshots remain frozen and unchanged; in-place source edits
 become visible only after an explicit `groups` assignment. The search field matches
-`name` and every `shortcodes` entry, case-insensitively. Consumer group labels render verbatim.
+`name` and every `shortcodes` entry, case-insensitively. Its accessible name and visible placeholder
+use the same localized `emojiPickerSearchLabel` string. Consumer group labels render verbatim.
 Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
 headings follow `registerLyraLocale()`/`.strings` through filtering and windowed rendering, including
 same-locale `.strings` changes, without exposing localization keys as consumer data. Caller-authored

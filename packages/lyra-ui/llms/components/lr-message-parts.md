@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,14 +19,37 @@
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
 Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint and displays
-accumulated plain text without parsing or highlighting. Replacing that same-id part with
-`state: 'complete'` parses and renders the final content.
+accumulated plain text without parsing or highlighting by default. The `streaming-render` property
+can opt those parts into progressive Markdown. Replacing that same-id part with `state: 'complete'`
+parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
+`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected)
+and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to built-in text
+and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
+blocks during a streaming part and preserves the `plain` fallback by default; code chrome adds the
+localized language label and raw-source copy action to fenced code. These settings do not replace
+the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
+`toolDisplay: MessagePartsToolDisplay = 'chip'` (attribute `tool-display`, reflected) — `'chip'`
+preserves the existing separate call chip and result part. `'disclosure'` pairs each rendered
+built-in tool call with the first result whose `invocationId` matches its call `invocation.id`, hides
+that result at its original position, and shows it inside a collapsed inline details panel at the
+call's position. Pending calls show their localized call status; when a paired result arrives, the
+summary shows localized success or error. Pairing uses the full effective parts list, so a visible
+call can find a result outside the `maxRenderedParts` window, while calls outside that window do not
+consume a visible result. A result is paired only once; duplicate results remain in their own rows.
+If `renderPart` is supplied, pairing occurs only when both the
+call and result are in the rendered window and both callbacks return `undefined` (built-in
+rendering); custom output keeps its part independent. Finite, nonnegative
+`call.metadata.durationMs` adds a localized duration;
+`call.metadata.redactedFields` may list dotted paths such as `args.apiKey`, `result.secret`, or
+`error.stack` to mask while the disclosure is expanded. Redaction is bounded; malformed or
+over-budget paths fail closed by showing the localized hidden-value placeholder. Unsupported values
+normalize to `'chip'`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -45,8 +68,12 @@ wants; `accessibleLabel: string | null = null` (attribute `aria-label`).
 
 Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`.
 
-`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
-discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath. Tool results are a strict
+`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
+'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
+`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is also exported from
+`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js` and the package
+root. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
+`lr-markdown-core` component modules. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
 retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
 and data parts carry exactly one of `data` or `widget`. Empty ids and later duplicate occurrences
@@ -55,12 +82,16 @@ are ignored so each rendered identity and announcement remains unambiguous.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`, `lr-widget-action`,
+`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
+`lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
-`tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
-`audio-transcript`, `error`, `retry`.
+**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-disclosure`,
+`tool-header`, `tool-status`, `tool-duration`, `tool-args`, `tool-result` (also used for the paired
+result inside the disclosure), `tool-error` (paired error copy), `tool-result-error`, `code-block`,
+`code-block-header`, `code-block-language`, `code-block-copy` (forwarded from text and reasoning
+Markdown parts), `citation`, `attachment`, `data`, `audio`, `audio-control`, `audio-transcript`,
+`error`, `retry`.
 
 **Themeable custom properties:** `--lr-message-parts-streaming-color` (default
 `var(--lr-color-text-quiet)`) controls a streaming wrapper's inherited text color.
@@ -84,6 +115,14 @@ error id and later adding it again creates a new announcement.
 import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
 ```
 
+```html
+<lr-message-parts
+  tool-display="disclosure"
+  streaming-render="progressive"
+  code-block-chrome
+></lr-message-parts>
+```
+
 **Additional API surface:**
 
 - `lr-anchor-result` event — Passthrough from rendered Markdown.
@@ -98,7 +137,7 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-retry` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
-- `lr-toggle` event — Passthrough from a rendered reasoning panel.
+- `lr-toggle` event — Passthrough from a rendered reasoning panel or tool disclosure.
 - `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip. The
   `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.

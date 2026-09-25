@@ -197,7 +197,6 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'إعادة محاولة الوكيل الفرعي',
   subagentPanelCancelRun: 'إلغاء {name}',
   subagentPanelRetryRun: 'إعادة محاولة {name}',
-  toolTimelineDetailsFor: 'تفاصيل {name}',
   contextInspectorRedacted: 'محجوب',
   contextInspectorTruncated: 'مقتطع',
   contextInspectorLabel: 'مفتّش السياق',

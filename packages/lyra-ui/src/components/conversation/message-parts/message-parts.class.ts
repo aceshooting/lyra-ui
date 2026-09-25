@@ -1,6 +1,6 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { CitationMessagePart, CitationSelectEventDetail, MessagePart } from '../../../ai/types.js';
 import type { LyraThinkingPanelEventMap } from '../../agent-tools/thinking-panel/thinking-panel.class.js';
@@ -11,16 +11,17 @@ import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/c
 import type { LyraJsonViewerEventMap } from '../../utility/json-viewer/json-viewer.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
+import type { LyraMarkdownEventMap, MarkdownStreamingRenderMode } from '../markdown/markdown.class.js';
 import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
 import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity.js';
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_toolTimelineDetailsFor } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -40,6 +41,9 @@ export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 /** Rendering mode for text and reasoning message parts. */
 export type MessagePartsContentMode = 'plain' | 'markdown';
 
+/** Presentation for tool calls inside a message. */
+export type MessagePartsToolDisplay = 'chip' | 'disclosure';
+
 const MESSAGE_PARTS_CONTENT_MODES = Object.freeze(['plain', 'markdown'] as const);
 
 function normalizeMessagePartsContentMode(value: unknown): MessagePartsContentMode {
@@ -47,6 +51,77 @@ function normalizeMessagePartsContentMode(value: unknown): MessagePartsContentMo
     MESSAGE_PARTS_CONTENT_MODES.includes(value as MessagePartsContentMode)
     ? value as MessagePartsContentMode
     : 'markdown';
+}
+
+const MESSAGE_PARTS_TOOL_DISPLAYS = Object.freeze(['chip', 'disclosure'] as const);
+
+function normalizeMessagePartsToolDisplay(value: unknown): MessagePartsToolDisplay {
+  return typeof value === 'string' &&
+    MESSAGE_PARTS_TOOL_DISPLAYS.includes(value as MessagePartsToolDisplay)
+    ? value as MessagePartsToolDisplay
+    : 'chip';
+}
+
+const MAX_TOOL_REDACTION_PATHS = 100;
+const MAX_TOOL_REDACTION_DEPTH = 64;
+const MAX_TOOL_REDACTION_NODES = 10_000;
+
+function redactToolBranch(
+  value: unknown,
+  path: string,
+  paths: readonly string[],
+  placeholder: string,
+  budget: { nodes: number },
+  depth: number,
+): unknown {
+  if (paths.includes(path)) return placeholder;
+  if (depth >= MAX_TOOL_REDACTION_DEPTH || budget.nodes >= MAX_TOOL_REDACTION_NODES) return placeholder;
+  budget.nodes += 1;
+  if (!paths.some((candidate) => candidate.startsWith(`${path}.`))) return value;
+  if (Array.isArray(value)) {
+    const clone: unknown[] = [];
+    for (let index = 0; index < value.length; index += 1) {
+      if (budget.nodes >= MAX_TOOL_REDACTION_NODES) return placeholder;
+      clone.push(redactToolBranch(value[index], `${path}.${index}`, paths, placeholder, budget, depth + 1));
+    }
+    return clone;
+  }
+  if (value !== null && typeof value === 'object') {
+    const clone = Object.create(null) as Record<string, unknown>;
+    try {
+      for (const key in value as Record<string, unknown>) {
+        if (!Object.prototype.propertyIsEnumerable.call(value, key)) continue;
+        if (budget.nodes >= MAX_TOOL_REDACTION_NODES) return placeholder;
+        clone[key] = redactToolBranch(
+          (value as Record<string, unknown>)[key],
+          `${path}.${key}`,
+          paths,
+          placeholder,
+          budget,
+          depth + 1,
+        );
+      }
+    } catch {
+      return placeholder;
+    }
+    return clone;
+  }
+  return value;
+}
+
+function redactToolField(value: unknown, root: string, sourcePaths: unknown, placeholder: string): unknown {
+  if (!Array.isArray(sourcePaths)) return value;
+  if (sourcePaths.length > MAX_TOOL_REDACTION_PATHS) return placeholder;
+  const paths: string[] = [];
+  for (const path of sourcePaths) {
+    if (typeof path !== 'string' || path.length > 4_096) return placeholder;
+    if (path !== root && !path.startsWith(`${root}.`)) continue;
+    if (path.split('.').length - 1 > MAX_TOOL_REDACTION_DEPTH) return placeholder;
+    paths.push(path);
+  }
+  return paths.length === 0
+    ? value
+    : redactToolBranch(value, root, paths, placeholder, { nodes: 0 }, 0);
 }
 
 export interface LyraMessagePartsEventMap
@@ -74,6 +149,9 @@ export interface LyraMessagePartsEventMap
  * parsing/highlighting coalesces until the same-id part becomes complete.
  * Streaming text and reasoning show accumulated plain text; Markdown parsing and syntax
  * highlighting wait until that part completes.
+ * In disclosure mode, `tool-call.metadata.redactedFields` may name dotted `args.*`, `result.*`,
+ * or `error.*` paths; those fields are masked only after the disclosure opens. A finite
+ * `tool-call.metadata.durationMs` adds a localized duration to the header.
  *
  * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
  *
@@ -83,7 +161,7 @@ export interface LyraMessagePartsEventMap
  * @customElement lr-message-parts
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
  * @event lr-part-retry - Retry was requested for a retryable error part. `detail: { part }`.
- * @event lr-toggle - Passthrough from a rendered reasoning panel.
+ * @event lr-toggle - Passthrough from a rendered reasoning panel or tool disclosure.
  * @event lr-tool-call-chip-select - Passthrough from a rendered tool-call chip. The
  * `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
  * @event lr-render-error - Passthrough from rendered Markdown, tool-result, or widget content.
@@ -102,10 +180,20 @@ export interface LyraMessagePartsEventMap
  * @csspart base - The ordered message-part list.
  * @csspart part - Every rendered part wrapper.
  * @csspart part-streaming - Additional part name on a streaming part.
+ * @csspart code-block - Forwarded Markdown code block.
+ * @csspart code-block-header - Forwarded code-block language and copy header.
+ * @csspart code-block-language - Forwarded localized code language label.
+ * @csspart code-block-copy - Forwarded copy-button host.
  * @csspart text - A text part.
  * @csspart reasoning - A reasoning part.
  * @csspart tool-call - A tool-call part.
- * @csspart tool-result - A tool-result part.
+ * @csspart tool-disclosure - The inline `<lr-details>` disclosure for a paired tool call.
+ * @csspart tool-header - The disclosure summary with the tool name and localized status.
+ * @csspart tool-status - The localized tool lifecycle status.
+ * @csspart tool-duration - A localized duration when call metadata supplies `durationMs`.
+ * @csspart tool-args - The arguments shown in an expanded tool disclosure.
+ * @csspart tool-result - A standalone result part or the paired result shown in an expanded disclosure.
+ * @csspart tool-error - Error copy for a failed paired tool result.
  * @csspart tool-result-error - Error copy for a failed tool-result part.
  * @csspart citation - A citation part.
  * @csspart attachment - An attachment part.
@@ -128,11 +216,20 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
+    envListValueHidden: LYRA_DEFAULT_envListValueHidden,
     messagePartError: LYRA_DEFAULT_messagePartError,
     messagePartRetry: LYRA_DEFAULT_messagePartRetry,
     messagePartsLabel: LYRA_DEFAULT_messagePartsLabel,
     retry: LYRA_DEFAULT_retry,
+    statusDenied: LYRA_DEFAULT_statusDenied,
+    statusError: LYRA_DEFAULT_statusError,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
     thinkingPanelLabel: LYRA_DEFAULT_thinkingPanelLabel,
+    toolTimelineDetailsFor: LYRA_DEFAULT_toolTimelineDetailsFor,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -174,6 +271,39 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     });
   }
 
+  /** Streaming Markdown render strategy. `plain` preserves the default raw-text streaming path. */
+  @property({ reflect: true, attribute: 'streaming-render' })
+  streamingRender: MarkdownStreamingRenderMode = 'plain';
+
+  /** Shows localized language labels and copy controls for closed fenced code blocks. */
+  @property({ type: Boolean, attribute: 'code-block-chrome' })
+  codeBlockChrome = false;
+
+  private toolDisplayValue: MessagePartsToolDisplay = 'chip';
+
+  /** Tool calls render as the original chip/result pair by default; `disclosure` pairs results
+   * by invocation id and puts them inside a collapsed inline disclosure. */
+  @property({ reflect: true, attribute: 'tool-display' })
+  get toolDisplay(): MessagePartsToolDisplay {
+    return this.toolDisplayValue;
+  }
+  set toolDisplay(value: MessagePartsToolDisplay) {
+    const previous = this.toolDisplayValue;
+    const normalized = normalizeMessagePartsToolDisplay(value);
+    this.toolDisplayValue = normalized;
+    if (
+      typeof value === 'string' &&
+      value !== normalized &&
+      this.getAttribute('tool-display') !== normalized
+    ) {
+      this.setAttribute('tool-display', normalized);
+    }
+    this.requestUpdate('toolDisplay', previous, {
+      reflect: true,
+      hasChanged: () => true,
+    });
+  }
+
   /** Include reasoning parts. */
   @property({
     type: Boolean,
@@ -199,6 +329,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** Accessible name override for the internal message-part group. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   private knownErrorIds = new Set<string>();
+  @state() private openedToolCallIds = new Set<string>();
   private errorAnnouncementSink?: AnnouncementSink;
   private suppressNextErrorAnnouncement = true;
 
@@ -223,6 +354,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     this.suppressNextErrorAnnouncement = true;
+    this.openedToolCallIds = new Set();
   }
 
   private get effectiveParts(): readonly MessagePart[] {
@@ -258,6 +390,16 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (changed.has('parts')) {
+      const callIds = new Set(
+        this.effectiveParts
+          .filter((part) => part.type === 'tool-call')
+          .map((part) => part.invocation.id),
+      );
+      if ([...this.openedToolCallIds].some((id) => !callIds.has(id))) {
+        this.openedToolCallIds = new Set([...this.openedToolCallIds].filter((id) => callIds.has(id)));
+      }
+    }
     if (!changed.has('parts')) return;
     const current = this.effectiveParts.filter((part) => part.type === 'error');
     // The `hasUpdated` half of this guard is a deliberate mount exclusion, not an oversight, and
@@ -284,6 +426,93 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   private selectCitation(event: Event, part: CitationMessagePart): void {
     event.stopPropagation();
     this.emit('lr-citation-select', { citation: part.citation });
+  }
+
+  private onToolDetailsToggle(
+    call: Extract<MessagePart, { type: 'tool-call' }>,
+    event: CustomEvent<{ open: boolean }>,
+  ): void {
+    if (event.target !== event.currentTarget) return;
+    const opened = new Set(this.openedToolCallIds);
+    if (event.detail.open) opened.add(call.invocation.id);
+    else opened.delete(call.invocation.id);
+    this.openedToolCallIds = opened;
+  }
+
+  private toolStatusLabel(status: string): string {
+    return this.localize(
+      status === 'running' ? 'statusRunning'
+        : status === 'success' ? 'statusSuccess'
+        : status === 'error' ? 'statusError'
+        : status === 'denied' ? 'statusDenied'
+        : 'statusPending',
+    );
+  }
+
+  private renderToolDisclosure(
+    call: Extract<MessagePart, { type: 'tool-call' }>,
+    result: Extract<MessagePart, { type: 'tool-result' }> | undefined,
+  ): TemplateResult {
+    const invocation = call.invocation;
+    const opened = this.openedToolCallIds.has(invocation.id);
+    const status = result
+      ? ('error' in result ? 'error' : 'success')
+      : invocation.status;
+    const redactedFields = opened ? call.metadata?.['redactedFields'] : undefined;
+    const hiddenValue = opened ? this.localize('envListValueHidden') : '';
+    const args = opened
+      ? redactToolField(invocation.args, 'args', redactedFields, hiddenValue)
+      : undefined;
+    const durationMs = call.metadata?.['durationMs'];
+    const durationLabel = typeof durationMs === 'number' &&
+      Number.isFinite(durationMs) && durationMs >= 0
+      ? (() => {
+          const unit = durationMs >= 1_000
+            ? { value: durationMs / 1_000, digits: 1 }
+            : { value: durationMs, digits: 0 };
+          return html`<span part="tool-duration">${this.localize(durationMs >= 1_000 ? 'durationSeconds' : 'durationMilliseconds', undefined, {
+            value: getNumberFormat(this.effectiveLocale, { maximumFractionDigits: unit.digits }).format(unit.value),
+          })}</span>`;
+        })()
+      : nothing;
+    const hasResultPayload = opened && result !== undefined && 'result' in result;
+    const sourceResult = hasResultPayload && result ? result.result : undefined;
+    const resultValue = sourceResult === undefined
+      ? undefined
+      : redactToolField(sourceResult, 'result', redactedFields, hiddenValue);
+    const errorValue = opened && result && 'error' in result
+      ? redactToolField(result.error, 'error', redactedFields, hiddenValue)
+      : undefined;
+
+    return html`<lr-details
+      part="tool-disclosure"
+      data-call-id=${invocation.id}
+      .open=${opened}
+      @lr-toggle=${(event: CustomEvent<{ open: boolean }>) => this.onToolDetailsToggle(call, event)}
+    >
+      <span slot="summary" part="tool-header">
+        <span>${this.localize('toolTimelineDetailsFor', undefined, { name: invocation.name })}</span>
+        <span part="tool-status" data-status=${status}>${this.toolStatusLabel(status)}</span>
+        ${durationLabel}
+      </span>
+      ${opened
+        ? html`<div part="tool-args">
+            <lr-json-viewer .data=${args}></lr-json-viewer>
+          </div>
+          ${result
+            ? html`<div part="tool-result">
+                ${hasResultPayload
+                  ? html`<lr-tool-result-view
+                      .toolName=${result.name ?? invocation.name}
+                      .args=${args}
+                      .result=${resultValue}
+                    ></lr-tool-result-view>`
+                  : nothing}
+                ${errorValue !== undefined ? html`<p part="tool-error">${errorValue}</p>` : nothing}
+              </div>`
+            : nothing}`
+        : nothing}
+    </lr-details>`;
   }
 
   private partNames(part: MessagePart): string {
@@ -321,11 +550,21 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     return parts.join(' ');
   }
 
-  private renderBuiltin(part: MessagePart, citationRank: number): unknown {
+  private renderBuiltin(
+    part: MessagePart,
+    citationRank: number,
+    pairedResult?: Extract<MessagePart, { type: 'tool-result' }>,
+  ): unknown {
     switch (part.type) {
       case 'text':
         return this.contentMode === 'markdown'
-          ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
+          ? html`<lr-markdown
+              exportparts="code-block,code-block-header,code-block-language,code-block-copy"
+              .content=${part.text}
+              .streaming=${part.state === 'streaming'}
+              .streamingRender=${this.streamingRender}
+              .codeBlockChrome=${this.codeBlockChrome}
+            ></lr-markdown>`
           : part.text;
       case 'reasoning':
         return html`<lr-thinking-panel
@@ -333,10 +572,17 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           .mode=${part.state === 'streaming' ? 'live' : 'post-hoc'}
           ?expanded=${part.collapsed === false}
           >${this.contentMode === 'markdown'
-            ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
+            ? html`<lr-markdown
+                exportparts="code-block,code-block-header,code-block-language,code-block-copy"
+                .content=${part.text}
+                .streaming=${part.state === 'streaming'}
+                .streamingRender=${this.streamingRender}
+                .codeBlockChrome=${this.codeBlockChrome}
+              ></lr-markdown>`
             : part.text}</lr-thinking-panel
         >`;
       case 'tool-call':
+        if (this.toolDisplay === 'disclosure') return this.renderToolDisclosure(part, pairedResult);
         return html`<lr-tool-call-chip
           .callId=${part.invocation.id}
           .name=${part.invocation.name}
@@ -405,11 +651,17 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     }
   }
 
-  private renderOne(part: MessagePart, index: number, citationRank: number): TemplateResult | typeof nothing {
+  private renderOne(
+    part: MessagePart,
+    citationRank: number,
+    pairedResult?: Extract<MessagePart, { type: 'tool-result' }>,
+    isPairedResult = false,
+    customOutput?: unknown,
+  ): TemplateResult | typeof nothing {
     if (part.type === 'reasoning' && !this.showReasoning) return nothing;
-    const custom = this.renderPart?.(part, index);
+    if (isPairedResult) return nothing;
     return html`<div part=${this.partNames(part)} data-type=${part.type} data-state=${part.state ?? 'complete'}>
-      ${custom === undefined ? this.renderBuiltin(part, citationRank) : custom}
+      ${customOutput === undefined ? this.renderBuiltin(part, citationRank, pairedResult) : customOutput}
     </div>`;
   }
 
@@ -424,11 +676,53 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       if (part.type === 'citation') citationRanks.set(part.id, ++citationRank);
     }
     const parts = this.renderedParts;
+    const renderedPartIds = new Set(parts.map((part) => part.id));
+    const customOutputs = new Map<string, unknown>();
+    if (this.renderPart) {
+      for (const [index, part] of parts.entries()) {
+        if (part.type === 'reasoning' && !this.showReasoning) continue;
+        customOutputs.set(part.id, this.renderPart(part, index));
+      }
+    }
+    const pairedResults = new Map<string, Extract<MessagePart, { type: 'tool-result' }>>();
+    const pairedResultPartIds = new Set<string>();
+    if (this.toolDisplay === 'disclosure') {
+      const effectiveCallParts = allParts.filter((part) => part.type === 'tool-call');
+      const firstCallPartByInvocationId = new Map<string, string>();
+      for (const call of effectiveCallParts) {
+        if (
+          renderedPartIds.has(call.id) &&
+          customOutputs.get(call.id) === undefined &&
+          !firstCallPartByInvocationId.has(call.invocation.id)
+        ) {
+          firstCallPartByInvocationId.set(call.invocation.id, call.id);
+        }
+      }
+      const resultCandidates = this.renderPart ? parts : allParts;
+      for (const part of resultCandidates) {
+        if (
+          part.type === 'tool-result' &&
+          firstCallPartByInvocationId.has(part.invocationId) &&
+          customOutputs.get(part.id) === undefined
+        ) {
+          const callPartId = firstCallPartByInvocationId.get(part.invocationId)!;
+          if (pairedResults.has(callPartId)) continue;
+          pairedResults.set(callPartId, part);
+          pairedResultPartIds.add(part.id);
+        }
+      }
+    }
     return html`<div part="base" role="group" aria-label=${label}>
       ${repeat(
         parts,
         (part) => part.id,
-        (part, index) => this.renderOne(part, index, citationRanks.get(part.id) ?? 0)
+        (part) => this.renderOne(
+          part,
+          citationRanks.get(part.id) ?? 0,
+          pairedResults.get(part.id),
+          pairedResultPartIds.has(part.id),
+          customOutputs.get(part.id),
+        )
       )}
     </div>`;
   }

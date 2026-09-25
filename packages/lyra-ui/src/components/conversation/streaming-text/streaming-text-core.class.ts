@@ -44,6 +44,9 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  *   rendered `<ul>`/`<ol>`.
  * @csspart code-block - Forwarded from the composed `<lr-markdown-core>` in Markdown mode -- every
  *   rendered fenced/indented `<pre>`.
+ * @csspart code-block-header - Forwarded from `<lr-markdown-core>` when code-block-chrome is enabled.
+ * @csspart code-block-language - Forwarded localized language label in the code-block header.
+ * @csspart code-block-copy - Forwarded copy-button host in the code-block header.
  * @csspart inline-code - Forwarded from the composed `<lr-markdown-core>` in Markdown mode -- every
  *   rendered inline `<code>` span (backtick spans, not fenced blocks).
  * @csspart link - Forwarded from the composed `<lr-markdown-core>` in Markdown mode -- every
@@ -71,9 +74,11 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
     // above. Every listed name is reused verbatim (no aliasing) since none collides with this
     // element's own base/cursor parts.
     return html`<lr-markdown-core
-      exportparts="content, heading, paragraph, list, code-block, inline-code, link, table, blockquote, img, math"
+      exportparts="content, heading, paragraph, list, code-block, code-block-header, code-block-language, code-block-copy, inline-code, link, table, blockquote, img, math"
       .content=${this.displayedContent}
       .streaming=${this.streaming}
+      .streamingRender=${this.streamingRender}
+      .codeBlockChrome=${this.codeBlockChrome}
       .languages=${this.languages ?? {}}
       .tabSize=${this.tabSize}
       .htmlMode=${this.htmlMode}

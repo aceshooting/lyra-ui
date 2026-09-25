@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,6 +53,10 @@ properties existed:
   `<lr-markdown>`'s own `internalLinkPrefix`.
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
+- `streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected)
+  and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the composed
+  Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
+  `<lr-markdown>`; see its **Properties** section above.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
   `<lr-markdown>`'s own `highlightCode`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
@@ -86,7 +90,8 @@ never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
 `<lr-markdown>` documents forwarded verbatim (no aliasing — none collides with `base`/`cursor`)
 from the composed `<lr-markdown>` in Markdown mode via `exportparts`: `content`, `heading`,
-`paragraph`, `list`, `code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math`. A
+`paragraph`, `list`, `task-item`, `code-block`, `code-block-header`, `code-block-language`,
+`code-block-copy`, `inline-code`, `link`, `table-wrapper`, `table`, `blockquote`, `img`, `math`. A
 host-level `lr-streaming-text::part(link)`/`::part(img)` rule reaches the rendered `<a>`/`<img>`
 exactly as the same rule does applied directly to `<lr-markdown>`.
 
@@ -108,8 +113,16 @@ implementation contains the opt-in `katex` loader; this wrapper forwards its own
 sets `math` here.
 
 ```html
-<lr-streaming-text id="out" coalesce-ms="80" streaming></lr-streaming-text>
+<lr-streaming-text
+  id="out"
+  coalesce-ms="80"
+  streaming
+  streaming-render="progressive"
+  code-block-chrome
+></lr-streaming-text>
 <script type="module">
+  import "@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.js";
+
   const out = document.getElementById("out");
   let text = "";
   for await (const token of tokenStream) {
@@ -131,9 +144,10 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-`languages` verbatim, and the rest of `<lr-markdown>`'s configuration surface verbatim too
-(`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
-`highlightCode`, `headingAnchors`, `math`, `maxHeight` — see **Properties** above); plain-text mode
+  `streamingRender`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
+  configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
+  `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
+  see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The
 blinking cursor degrades
 to a static, always-visible bar under `prefers-reduced-motion: reduce`. In plain-text mode it sits

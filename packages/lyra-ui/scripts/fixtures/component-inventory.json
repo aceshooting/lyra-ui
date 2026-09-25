@@ -34325,11 +34325,14 @@
           "lr-badge",
           "lr-button",
           "lr-card",
+          "lr-copy-button",
+          "lr-icon-button",
           "lr-markdown",
           "lr-media-card",
           "lr-result-card",
           "lr-result-field",
-          "lr-stat"
+          "lr-stat",
+          "lr-tooltip"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -75170,7 +75173,11 @@
       },
       "dependencies": {
         "direct": [],
-        "transitive": [],
+        "transitive": [
+          "lr-copy-button",
+          "lr-icon-button",
+          "lr-tooltip"
+        ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [
@@ -75192,6 +75199,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -75314,6 +75331,16 @@
             "default": false
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRenderMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tab-size",
             "property": "tabSize",
             "type": "number",
@@ -75354,6 +75381,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[ 'fragment', 'text-quote', ]"
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -75504,6 +75541,16 @@
             "default": false
           },
           {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRenderMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tabSize",
             "attribute": "tab-size",
             "type": "number",
@@ -75566,6 +75613,18 @@
           },
           {
             "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
             "deprecated": null
           },
           {
@@ -75805,7 +75864,11 @@
       },
       "dependencies": {
         "direct": [],
-        "transitive": [],
+        "transitive": [
+          "lr-copy-button",
+          "lr-icon-button",
+          "lr-tooltip"
+        ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],
@@ -75820,6 +75883,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -75942,6 +76015,16 @@
             "default": false
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRenderMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tab-size",
             "property": "tabSize",
             "type": "number",
@@ -75982,6 +76065,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[ 'fragment', 'text-quote', ]"
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -76133,6 +76226,16 @@
             "default": false
           },
           {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRenderMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tabSize",
             "attribute": "tab-size",
             "type": "number",
@@ -76195,6 +76298,18 @@
           },
           {
             "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
             "deprecated": null
           },
           {
@@ -79319,6 +79434,7 @@
           "lr-attachment-chip",
           "lr-button",
           "lr-citation-badge",
+          "lr-details",
           "lr-json-viewer",
           "lr-markdown",
           "lr-thinking-panel",
@@ -79352,6 +79468,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content-mode",
@@ -79391,6 +79517,25 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRenderMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
+            "name": "tool-display",
+            "property": "toolDisplay",
+            "type": "MessagePartsToolDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -79403,6 +79548,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "contentMode",
@@ -79461,6 +79616,25 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRenderMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
+            "name": "toolDisplay",
+            "attribute": "tool-display",
+            "type": "MessagePartsToolDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "slots": [],
@@ -79594,6 +79768,22 @@
             "deprecated": null
           },
           {
+            "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
+            "deprecated": null
+          },
+          {
             "name": "data",
             "deprecated": null
           },
@@ -79622,7 +79812,27 @@
             "deprecated": null
           },
           {
+            "name": "tool-args",
+            "deprecated": null
+          },
+          {
             "name": "tool-call",
+            "deprecated": null
+          },
+          {
+            "name": "tool-disclosure",
+            "deprecated": null
+          },
+          {
+            "name": "tool-duration",
+            "deprecated": null
+          },
+          {
+            "name": "tool-error",
+            "deprecated": null
+          },
+          {
+            "name": "tool-header",
             "deprecated": null
           },
           {
@@ -79631,6 +79841,10 @@
           },
           {
             "name": "tool-result-error",
+            "deprecated": null
+          },
+          {
+            "name": "tool-status",
             "deprecated": null
           }
         ],
@@ -84237,8 +84451,10 @@
           "lr-virtual-list"
         ],
         "transitive": [
+          "lr-copy-button",
           "lr-icon-button",
-          "lr-skeleton"
+          "lr-skeleton",
+          "lr-tooltip"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -103235,8 +103451,11 @@
         "transitive": [
           "lr-badge",
           "lr-claim-evidence",
+          "lr-copy-button",
           "lr-empty",
-          "lr-stat"
+          "lr-icon-button",
+          "lr-stat",
+          "lr-tooltip"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -118472,7 +118691,11 @@
         "direct": [
           "lr-markdown"
         ],
-        "transitive": [],
+        "transitive": [
+          "lr-copy-button",
+          "lr-icon-button",
+          "lr-tooltip"
+        ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],
@@ -118487,6 +118710,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 50
+          },
+          {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -118619,6 +118852,16 @@
             "default": false
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRenderMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tab-size",
             "property": "tabSize",
             "type": "number",
@@ -118639,6 +118882,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 50
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -118780,6 +119033,16 @@
             "default": false
           },
           {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRenderMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tabSize",
             "attribute": "tab-size",
             "type": "number",
@@ -118810,6 +119073,18 @@
           },
           {
             "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
             "deprecated": null
           },
           {
@@ -118936,7 +119211,11 @@
         "direct": [
           "lr-markdown-core"
         ],
-        "transitive": [],
+        "transitive": [
+          "lr-copy-button",
+          "lr-icon-button",
+          "lr-tooltip"
+        ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],
@@ -118951,6 +119230,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 50
+          },
+          {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -119083,6 +119372,16 @@
             "default": false
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRenderMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tab-size",
             "property": "tabSize",
             "type": "number",
@@ -119103,6 +119402,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 50
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -119244,6 +119553,16 @@
             "default": false
           },
           {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRenderMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tabSize",
             "attribute": "tab-size",
             "type": "number",
@@ -119274,6 +119593,18 @@
           },
           {
             "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
             "deprecated": null
           },
           {
@@ -141843,7 +142174,11 @@
           "lr-result-field",
           "lr-stat"
         ],
-        "transitive": [],
+        "transitive": [
+          "lr-copy-button",
+          "lr-icon-button",
+          "lr-tooltip"
+        ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],

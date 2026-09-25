@@ -120,6 +120,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: '系统',
   promptStudioRoleUser: '用户',
   promptStudioRoleAssistant: '助手',
+  toolTimelineDetailsFor: '{name}的详情',
   moveUp: '上移',
   moveDown: '下移',
   reorderItemMoved: '已移到第{index}位，共{total}位',

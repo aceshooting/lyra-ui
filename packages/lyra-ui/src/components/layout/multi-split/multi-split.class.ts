@@ -1040,24 +1040,35 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   /** Survivor first, then this component's own dividers. A surviving pane is usually a plain
    *  container that cannot take focus at all, in which case the shared repair moves on by itself
-   *  (it verifies focus actually landed) and the divider -- a real, labelled `role="separator"` --
+   *  (it verifies focus actually landed) and a divider -- a real, labelled `role="separator"` --
    *  takes it instead. The still-enabled dividers are preferred over the one the collapse just
-   *  disabled, which stays in the list as the last resort of a two-panel split: that split has
-   *  exactly one divider, and losing focus to `<body>` is worse than landing on a separator
-   *  announced as disabled, which is still a labelled, reachable, escapable stop inside the
-   *  component. De-duplicated so an enabled divider is never attempted twice by the shared
-   *  repair. */
+   *  disabled. A closed floating drawer removes its adjacent divider from layout, though, so a
+   *  two-panel split has no usable separator; in that case its surviving pane gets a programmatic
+   *  `tabindex="-1"` focus stop. De-duplicated so an enabled divider is never attempted twice by
+   *  the shared repair. */
   private collapseFocusFallbacks(collapsing: HTMLElement): HTMLElement[] {
+    const survivors = this.ownedPanels.filter((panel) => panel !== collapsing);
     const dividers = [
       ...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="divider"]') ??
         []),
     ];
+    const enabledDividers = dividers.filter(
+      (_divider, index) => !this.isDividerDisabled(index)
+    );
+    if (
+      this.collapseState === 'floating' &&
+      !this.open &&
+      enabledDividers.length === 0
+    ) {
+      const survivor = survivors[0];
+      if (survivor && !survivor.hasAttribute('tabindex')) {
+        survivor.tabIndex = -1;
+      }
+    }
     return [
       ...new Set([
-        ...this.ownedPanels.filter((panel) => panel !== collapsing),
-        ...dividers.filter(
-          (divider) => divider.getAttribute('aria-disabled') !== 'true'
-        ),
+        ...survivors,
+        ...enabledDividers,
         ...dividers,
       ]),
     ];

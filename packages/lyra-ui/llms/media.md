@@ -1250,7 +1250,12 @@ enabled buttons retain pointer feedback.
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
 - `label?: string` — form-control label. Omission uses the localized dropzone instruction
-  (`fileInputDefaultLabel`); an explicit empty string suppresses that fallback. `hint: string = ''`
+  (`fileInputDefaultLabel`); an explicit empty string suppresses the form-label chrome too. The
+  dropzone independently keeps its localized instruction when a form label is supplied or empty,
+  so a short label such as “Reference files” does not replace the drop-or-browse text. Use the
+  `dropzone` slot when you want to replace that instruction. With no nonempty label, that localized
+  instruction also supplies the fallback accessible name unless `accessibleLabel` or host
+  `aria-label` is provided. `hint: string = ''`
   remains empty when omitted and can be supplied through the named slot as well
 - `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
   it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
@@ -1934,6 +1939,11 @@ is an unknown attribute now: `bytes` stays `0` and the badge silently renders wi
 **CSS parts:** `base`, `icon`, `label`, `description` (consumer-authored registry metadata in label
 mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).
+
+In `mode="icon"`, the localized format label is rendered inside a constrained, logical-start-aligned
+text box so `text-overflow: ellipsis` can truncate multi-word labels cleanly at the badge size. The full
+localized label remains available as the accessible name; use `mode="label"` when the full visible
+format name is needed.
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size). `--lr-file-icon-bg` (default `var(--lr-color-brand-quiet)`)

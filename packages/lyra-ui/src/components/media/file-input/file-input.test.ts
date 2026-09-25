@@ -107,7 +107,7 @@ it("renders the label text by default", async () => {
   );
 });
 
-it('uses the localized label only when omitted and preserves an explicit empty label', async () => {
+it('uses the localized dropzone instruction when the form label is omitted or empty', async () => {
   const omitted = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
   expect(omitted.label).to.equal(undefined);
   expect(omitted.shadowRoot!.querySelector('[part="dropzone-text"]')!.textContent).to.contain(
@@ -124,8 +124,27 @@ it('uses the localized label only when omitted and preserves an explicit empty l
   const explicit = (await fixture(html`<lr-file-input label=""></lr-file-input>`)) as LyraFileInput;
   await explicit.updateComplete;
   expect(explicit.label).to.equal('');
-  expect(explicit.shadowRoot!.querySelector('[part="dropzone-text"]')!.textContent).to.equal('');
-  expect(explicit.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('');
+  expect(explicit.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!.hidden).to.equal(true);
+  expect(explicit.shadowRoot!.querySelector('[part="dropzone-text"]')!.textContent).to.contain(
+    'Drop files here or click to browse',
+  );
+  expect(explicit.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal(
+    'Drop files here or click to browse',
+  );
+
+  const named = (await fixture(
+    html`<lr-file-input label="" aria-label="Choose reference files"></lr-file-input>`,
+  )) as LyraFileInput;
+  expect(named.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal(
+    'Choose reference files',
+  );
+
+  const accessible = (await fixture(
+    html`<lr-file-input label="" accessible-label="Pick reference files"></lr-file-input>`,
+  )) as LyraFileInput;
+  expect(accessible.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal(
+    'Pick reference files',
+  );
 });
 
 it("emits lr-files with all files accepted when no mime restrictions are set", async () => {

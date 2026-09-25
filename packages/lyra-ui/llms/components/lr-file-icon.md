@@ -38,6 +38,11 @@ is an unknown attribute now: `bytes` stays `0` and the badge silently renders wi
 mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).
 
+In `mode="icon"`, the localized format label is rendered inside a constrained, logical-start-aligned
+text box so `text-overflow: ellipsis` can truncate multi-word labels cleanly at the badge size. The full
+localized label remains available as the accessible name; use `mode="label"` when the full visible
+format name is needed.
+
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size). `--lr-file-icon-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-file-icon-color` (default `var(--lr-color-brand)`) retint the `icon` badge — every file

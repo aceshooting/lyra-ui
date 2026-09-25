@@ -214,6 +214,8 @@ export const styles = css`
   }
   [part='virtual-spacer'] {
     position: relative;
+    inline-size: 100%;
+    min-inline-size: 0;
     min-block-size: 100%;
   }
   [part='virtual-row'] {

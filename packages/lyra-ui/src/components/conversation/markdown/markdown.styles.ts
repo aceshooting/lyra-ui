@@ -34,12 +34,16 @@ export const styles = css`
        to this surface rather than let it cover the surrounding app. */
     contain: paint;
   }
+  .streaming-tail {
+    white-space: pre-wrap;
+  }
   /* no-hover-state: both parts are scrollable prose surfaces, not pointer targets. The focus ring
      tells a keyboard user which overflowing region the arrow keys will scroll; a mouse user
      already scrolls by pointing, and tinting a block of rendered Markdown under the pointer would
      read as a selection, not an affordance. */
   [part='content']:focus-visible,
-  [part='code-block']:focus-visible {
+  [part='code-block']:focus-visible,
+  [part='table-wrapper']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
@@ -65,6 +69,8 @@ export const styles = css`
     margin-block: 0 var(--lr-space-s);
   }
   [part='content'] code {
+    direction: ltr;
+    unicode-bidi: isolate;
     font-family: var(--lr-markdown-font-mono, var(--lr-font-mono));
     font-size: var(--lr-size-0-875em);
     background: var(--lr-markdown-code-bg, var(--lr-color-brand-quiet));
@@ -72,6 +78,9 @@ export const styles = css`
     padding: var(--lr-markdown-code-padding, var(--lr-size-0-125rem) var(--lr-size-0-3125rem));
   }
   [part='code-block'] {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: start;
     margin-block: 0 var(--lr-space-s);
     padding: var(--lr-markdown-code-block-padding, var(--lr-space-s) var(--lr-space-m));
     border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
@@ -86,6 +95,34 @@ export const styles = css`
        part inherits pre-wrap from [part='content'] while that <pre> is white-space: pre, and tab
        stops measure from each visual line's start, so a wrapped line restarts them. */
     tab-size: var(--lr-code-block-tab-size, 2);
+  }
+  [part='code-block-header'] {
+    display: flex;
+    flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    margin-block-end: var(--lr-border-width-thin);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border-start-start-radius: var(--lr-radius);
+    border-start-end-radius: var(--lr-radius);
+    background: var(--lr-color-surface-raised);
+    color: var(--lr-color-text);
+    font-family: var(--lr-font-mono);
+    font-size: var(--lr-font-size-xs);
+  }
+  [part='code-block-language'] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  [part='code-block-copy'] {
+    flex: 0 0 auto;
+  }
+  [part='code-block-header'] + [part='code-block'] {
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
   }
   [part='code-block'] code {
     padding: 0;
@@ -129,19 +166,59 @@ export const styles = css`
   }
   [part='table'] {
     border-collapse: collapse;
-    margin-block: 0 var(--lr-space-s);
     inline-size: 100%;
+    max-inline-size: none;
+  }
+  [part='table-wrapper'] {
     max-inline-size: 100%;
+    overflow-inline: auto;
+    overflow-block: hidden;
+    margin-block-end: var(--lr-space-s);
   }
   [part='table'] th,
   [part='table'] td {
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     padding: var(--lr-space-xs) var(--lr-space-s);
     text-align: start;
+    overflow-wrap: break-word;
+    word-break: normal;
+    white-space: normal;
   }
   [part='table'] th {
     background: var(--lr-markdown-table-header-bg, var(--lr-color-brand-quiet));
     font-weight: var(--lr-font-weight-semibold);
+  }
+  [part='task-item'][data-task] {
+    list-style: none;
+    padding-inline-start: calc(var(--lr-size-1rem) + var(--lr-space-xs));
+    text-indent: calc(-1 * (var(--lr-size-1rem) + var(--lr-space-xs)));
+  }
+  [part='task-item'][data-task] input[type='checkbox'] {
+    appearance: none;
+    box-sizing: border-box;
+    display: inline-grid;
+    inline-size: var(--lr-size-1rem);
+    block-size: var(--lr-size-1rem);
+    place-items: center;
+    margin-inline-end: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-text-quiet);
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-surface);
+    vertical-align: middle;
+    opacity: 1;
+  }
+  [part='task-item'][data-task] input[type='checkbox']:checked {
+    background: var(--lr-color-brand);
+  }
+  [part='task-item'][data-task] input[type='checkbox']:checked::before {
+    direction: ltr;
+    content: '';
+    inline-size: var(--lr-size-0-25rem);
+    block-size: var(--lr-size-0-5rem);
+    border-inline-end: var(--lr-border-width-thick) solid var(--lr-color-surface);
+    border-block-end: var(--lr-border-width-thick) solid var(--lr-color-surface);
+    transform: rotate(45deg);
   }
   [part='math'][data-display='block'] {
     display: block;

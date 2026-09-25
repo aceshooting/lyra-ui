@@ -308,6 +308,38 @@ it('never reloads the built-in dataset once the consumer explicitly assigns grou
   expect(el.groups).to.deep.equal(samples);
 });
 
+it('keeps windowed rows at the grid width so group headings remain on one line', async () => {
+  const groups: EmojiPickerGroup[] = [{
+    key: '0',
+    label: 'Smileys & Emotion',
+    emojis: Array.from({ length: 240 }, (_, index) => ({ emoji: '😀', name: `face ${index}` })),
+  }];
+  const el = await picker(groups);
+  el.style.inlineSize = '360px';
+  await el.updateComplete;
+
+  const gridEl = grid(el);
+  const spacer = el.shadowRoot!.querySelector<HTMLElement>('[part="virtual-spacer"]')!;
+  const row = spacer.querySelector<HTMLElement>('[part="virtual-row"]')!;
+  const heading = row.querySelector<HTMLElement>('[part="group-label"]')!;
+  const headingText = document.createRange();
+  headingText.selectNodeContents(heading);
+  const gridWidth = gridEl.clientWidth;
+
+  expect(spacer.getBoundingClientRect().width).to.be.closeTo(gridWidth, 1);
+  expect(row.getBoundingClientRect().width).to.be.closeTo(gridWidth, 1);
+  expect(headingText.getClientRects().length).to.equal(1);
+});
+
+it('uses the localized search label as a visible search placeholder', async () => {
+  const el = await picker();
+  const searchInput = search(el);
+  expect(searchInput.placeholder).to.equal(searchInput.getAttribute('aria-label'));
+  el.strings = { emojiPickerSearchLabel: 'Rechercher des emojis' };
+  await el.updateComplete;
+  expect(searchInput.placeholder).to.equal('Rechercher des emojis');
+});
+
 it('does not reacquire external-description observers from a queued update after disconnect', async () => {
   const Original = window.MutationObserver;
   const active = new Map<MutationObserver, Node>();

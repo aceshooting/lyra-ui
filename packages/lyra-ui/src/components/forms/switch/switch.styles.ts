@@ -15,9 +15,8 @@ export const styles = css`
         1.8
     );
     --_lr-switch-thumb-offset: var(--lr-size-2px);
-    /* The track's resting fill, named so the hover and press mixes below have exactly one base in
-       BOTH states -- unchecked grey and checked brand -- not two rules restating a colour. */
-    --_lr-switch-track-fill: var(--lr-color-border);
+    /* The state-resolved track fill gives hover and press mixes one base in either state. */
+    --_lr-switch-track-fill: var(--lr-switch-track-fill, var(--lr-color-border));
   }
   .switch-layout {
     display: inline-flex;
@@ -49,7 +48,7 @@ export const styles = css`
       --lr-switch-track-hover-fill,
       color-mix(
         in oklab,
-        var(--lr-switch-track-fill, var(--_lr-switch-track-fill)),
+        var(--_lr-switch-track-fill),
         var(--lr-color-mix-partner) var(--lr-color-mix-hover)
       )
     );
@@ -59,7 +58,7 @@ export const styles = css`
       --lr-switch-track-active-fill,
       color-mix(
         in oklab,
-        var(--lr-switch-track-fill, var(--_lr-switch-track-fill)),
+        var(--_lr-switch-track-fill),
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
@@ -100,6 +99,7 @@ export const styles = css`
       --lr-switch-checked-track-fill,
       var(--lr-color-brand)
     );
+    background: var(--lr-switch-checked-track-fill, var(--lr-color-brand));
     /* Falls back through the same chain the unchecked track reads (--lr-switch-track-border, then
        the undeclared-equivalent 'none'), so an unset consumer renders byte-identical to today,
        where the border never varies by checked state at all. Redeclaring the whole shorthand --

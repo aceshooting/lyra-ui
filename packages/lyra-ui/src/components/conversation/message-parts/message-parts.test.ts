@@ -9,6 +9,7 @@ import type {
   MessagePartsContentMode,
 } from "./message-parts.class.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { sendKeys } from "@web/test-runner-commands";
 
 function assertiveSinkTexts(doc: Document = document): string[] {
   return Array.from(
@@ -30,6 +31,7 @@ const parts: MessagePart[] = [
   {
     id: "call",
     type: "tool-call",
+    metadata: { durationMs: 1_240 },
     invocation: {
       id: "call-1",
       name: "search",
@@ -95,6 +97,333 @@ it("renders ordered provider-neutral message parts through existing Lyra primiti
   expect(
     el.shadowRoot!.querySelectorAll("lr-attachment-chip")
   ).to.have.lengthOf(1);
+});
+
+it("keeps the default tool display as a separate chip and result view", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts .parts=${[
+      {
+        id: "call",
+        type: "tool-call",
+        invocation: {
+          id: "call-default",
+          name: "search",
+          args: { query: "Lyra" },
+          status: "success",
+        },
+      },
+      {
+        id: "result",
+        type: "tool-result",
+        invocationId: "call-default",
+        name: "search",
+        result: { hits: 2 },
+      },
+    ] satisfies MessagePart[]}></lr-message-parts>`
+  )) as LyraMessageParts;
+  expect(el.toolDisplay).to.equal("chip");
+  expect(el.shadowRoot!.querySelector("lr-tool-call-chip")).to.exist;
+  expect(el.shadowRoot!.querySelector("lr-tool-result-view")).to.exist;
+  expect(el.shadowRoot!.querySelector("lr-details[part='tool-disclosure']") === null).to.be
+    .true;
+});
+
+it("pairs a tool call and result in one collapsed disclosure and keeps it open when the result arrives", async () => {
+  const call: MessagePart = {
+    id: "call-part",
+    type: "tool-call",
+    metadata: { durationMs: 1_240 },
+    invocation: {
+      id: "invoke-1",
+      name: "search",
+      args: { query: "Lyra" },
+      status: "running",
+    },
+  };
+  const el = (await fixture(
+    html`<lr-message-parts tool-display="disclosure" .parts=${[call]}></lr-message-parts>`
+  )) as LyraMessageParts;
+  const disclosure = el.shadowRoot!.querySelector("lr-details[part='tool-disclosure']") as
+    | (HTMLElement & { open: boolean; updateComplete: Promise<unknown> })
+    | null;
+  expect(disclosure).to.exist;
+  expect(disclosure!.open).to.equal(false);
+  const summary = disclosure!.shadowRoot!.querySelector<HTMLElement>("[part='summary']")!;
+  expect(summary.getAttribute("aria-expanded")).to.equal("false");
+  expect(el.shadowRoot!.querySelector("[part='tool-status']")?.textContent).to.contain(
+    "Running"
+  );
+  expect(el.shadowRoot!.querySelector("[part='tool-duration']")?.textContent).to.contain(
+    "1.2s"
+  );
+  expect(el.shadowRoot!.querySelector("lr-tool-call-chip") === null).to.be.true;
+  expect(el.shadowRoot!.querySelector("lr-tool-result-view") === null).to.be.true;
+
+  disclosure!.open = true;
+  await disclosure!.updateComplete;
+  el.parts = [
+    call,
+    {
+      id: "result-part",
+      type: "tool-result",
+      invocationId: "invoke-1",
+      name: "search",
+      result: { hits: 3 },
+    },
+  ];
+  await el.updateComplete;
+  const updatedDisclosure = el.shadowRoot!.querySelector(
+    "lr-details[part='tool-disclosure']"
+  );
+  expect(updatedDisclosure === disclosure).to.be.true;
+  expect(disclosure!.open).to.equal(true);
+  expect(disclosure!.shadowRoot!.querySelector("[part='summary']")?.getAttribute("aria-expanded"))
+    .to.equal("true");
+  expect(el.shadowRoot!.querySelectorAll("[part~='part'][data-type='tool-result']")).to.have
+    .lengthOf(0);
+  expect(disclosure!.querySelector("[part='tool-result']")).to.exist;
+  expect(disclosure!.querySelector("lr-tool-result-view")).to.exist;
+});
+
+it("still pairs built-in tool parts when a renderer delegates them and customizes another part", async () => {
+  const rendered: string[] = [];
+  const el = (await fixture(
+    html`<lr-message-parts
+      tool-display="disclosure"
+      show-reasoning="false"
+      .parts=${[
+        { id: "answer", type: "text", text: "Answer" },
+        { id: "hidden-reasoning", type: "reasoning", text: "Hidden", state: "complete" },
+        {
+          id: "delegated-call",
+          type: "tool-call",
+          invocation: { id: "delegated", name: "lookup", args: {}, status: "success" },
+        },
+        {
+          id: "delegated-result",
+          type: "tool-result",
+          invocationId: "delegated",
+          name: "lookup",
+          result: { value: "found" },
+        },
+      ] satisfies MessagePart[]}
+      .renderPart=${(part: MessagePart) => {
+        rendered.push(part.id);
+        return part.id === "answer" ? html`<span>Custom answer</span>` : undefined;
+      }}
+    ></lr-message-parts>`
+  )) as LyraMessageParts;
+  expect(el.shadowRoot!.querySelector("lr-details[part='tool-disclosure']")).to.exist;
+  expect(el.shadowRoot!.querySelectorAll("[part~='part'][data-type='tool-result']")).to.have
+    .lengthOf(0);
+  expect(el.shadowRoot!.textContent).to.contain("Custom answer");
+  expect(rendered).to.deep.equal(["answer", "delegated-call", "delegated-result"]);
+});
+
+it("keeps explicitly customized call or result renderers visible instead of pairing them away", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts
+      tool-display="disclosure"
+      .parts=${[
+        {
+          id: "custom-call",
+          type: "tool-call",
+          invocation: { id: "custom-call-id", name: "call", args: {}, status: "success" },
+        },
+        {
+          id: "call-result",
+          type: "tool-result",
+          invocationId: "custom-call-id",
+          name: "call",
+          result: { value: "kept" },
+        },
+        {
+          id: "builtin-call",
+          type: "tool-call",
+          invocation: { id: "custom-result-id", name: "result", args: {}, status: "success" },
+        },
+        {
+          id: "custom-result",
+          type: "tool-result",
+          invocationId: "custom-result-id",
+          name: "result",
+          result: { value: "custom" },
+        },
+      ] satisfies MessagePart[]}
+      .renderPart=${(part: MessagePart) => {
+        if (part.id === "custom-call") return html`<span part="custom-call">Custom call</span>`;
+        if (part.id === "custom-result") return html`<span part="custom-result">Custom result</span>`;
+        return undefined;
+      }}
+    ></lr-message-parts>`
+  )) as LyraMessageParts;
+  expect(el.shadowRoot!.querySelector("[part='custom-call']")).to.exist;
+  expect(el.shadowRoot!.querySelector("[part='custom-result']")).to.exist;
+  expect(el.shadowRoot!.querySelector("[part~='part'][data-type='tool-result'] lr-tool-result-view"))
+    .to.exist;
+  expect(el.shadowRoot!.querySelectorAll("lr-details[part='tool-disclosure']")).to.have.lengthOf(1);
+});
+
+it("supports keyboard disclosure and exposes the call header, arguments, and result parts", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts tool-display="disclosure" .parts=${[
+      {
+        id: "call",
+        type: "tool-call",
+        invocation: {
+          id: "keyboard-call",
+          name: "lookup",
+          args: { term: "example" },
+          status: "success",
+        },
+      },
+      {
+        id: "result",
+        type: "tool-result",
+        invocationId: "keyboard-call",
+        name: "lookup",
+        result: { value: "found" },
+      },
+    ] satisfies MessagePart[]}></lr-message-parts>`
+  )) as LyraMessageParts;
+  const disclosure = el.shadowRoot!.querySelector("lr-details[part='tool-disclosure']") as
+    | (HTMLElement & { open: boolean; updateComplete: Promise<unknown> })
+    | null;
+  const summary = disclosure!.shadowRoot!.querySelector<HTMLElement>("[part='summary']")!;
+  summary.focus();
+  await sendKeys({ press: "Enter" });
+  await disclosure!.updateComplete;
+  expect(disclosure!.open).to.equal(true);
+  expect(summary.getAttribute("aria-expanded")).to.equal("true");
+  expect(disclosure!.querySelector("[part='tool-header']")).to.exist;
+  const argsViewer = disclosure!.querySelector("[part='tool-args'] lr-json-viewer") as
+    | (HTMLElement & { updateComplete: Promise<unknown> })
+    | null;
+  expect(argsViewer).to.exist;
+  await argsViewer!.updateComplete;
+  expect(argsViewer!.shadowRoot!.textContent).to.contain('"example"');
+  expect(disclosure!.querySelector("[part='tool-result']")).to.exist;
+});
+
+it("keeps unmatched results visible and renders paired failures inside the disclosure", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts tool-display="disclosure" .parts=${[
+      {
+        id: "call",
+        type: "tool-call",
+        invocation: {
+          id: "failed-call",
+          name: "lookup",
+          args: { term: "example" },
+          status: "error",
+        },
+      },
+      {
+        id: "failed-result",
+        type: "tool-result",
+        invocationId: "failed-call",
+        name: "lookup",
+        error: "Unavailable",
+      },
+      {
+        id: "unmatched-result",
+        type: "tool-result",
+        invocationId: "missing-call",
+        name: "search",
+        result: { hits: 1 },
+      },
+    ] satisfies MessagePart[]}></lr-message-parts>`
+  )) as LyraMessageParts;
+  const disclosure = el.shadowRoot!.querySelector("lr-details[part='tool-disclosure']")!;
+  expect(el.shadowRoot!.querySelectorAll("[part~='part'][data-type='tool-result']")).to.have
+    .lengthOf(1);
+  const details = disclosure as HTMLElement & { updateComplete: Promise<unknown> };
+  details.shadowRoot!.querySelector<HTMLElement>("[part='summary']")!.click();
+  await details.updateComplete;
+  await el.updateComplete;
+  expect(disclosure.querySelector("[part='tool-error']")?.textContent).to.contain("Unavailable");
+  expect(el.shadowRoot!.querySelectorAll("lr-tool-result-view")).to.have.lengthOf(1);
+});
+
+it("defers argument/result getters and redaction work until a disclosure expands", async () => {
+  let argsReads = 0;
+  let resultReads = 0;
+  const call = {
+    id: "call",
+    type: "tool-call",
+    metadata: { redactedFields: ["args.apiKey", "result.token"] },
+    invocation: {
+      id: "secret-call",
+      name: "request",
+      status: "running",
+      get args() {
+        argsReads += 1;
+        return { apiKey: "do-not-show", query: "safe" };
+      },
+    },
+  } as unknown as MessagePart;
+  const result = {
+    id: "result",
+    type: "tool-result",
+    invocationId: "secret-call",
+    name: "request",
+    get result() {
+      resultReads += 1;
+      return { token: "private-result", ok: true };
+    },
+  } as unknown as MessagePart;
+  const el = (await fixture(
+    html`<lr-message-parts tool-display="disclosure"></lr-message-parts>`
+  )) as LyraMessageParts;
+  const host = el as unknown as {
+    openedToolCallIds: Set<string>;
+    renderToolDisclosure: (call: MessagePart, result: MessagePart) => unknown;
+  };
+  const closedDetailsHost = await fixture(html`${host.renderToolDisclosure(call, result)}`);
+  expect(argsReads).to.equal(0);
+  expect(resultReads).to.equal(0);
+  expect(closedDetailsHost.querySelector("lr-details")?.getAttribute("open")).to.not.equal("true");
+
+  host.openedToolCallIds = new Set(["secret-call"]);
+  const openedDetailsHost = await fixture(html`${host.renderToolDisclosure(call, result)}`);
+  const argsViewer = openedDetailsHost.querySelector("lr-json-viewer") as
+    | (HTMLElement & { data: Record<string, unknown>; updateComplete: Promise<unknown> })
+    | null;
+  expect(argsViewer?.data).to.deep.equal({ apiKey: "Value hidden", query: "safe" });
+  expect(JSON.stringify(argsViewer?.data)).to.not.contain("do-not-show");
+  await argsViewer!.updateComplete;
+  expect(argsViewer!.shadowRoot!.textContent).to.contain('"safe"');
+  const resultView = openedDetailsHost.querySelector("[part='tool-result'] lr-tool-result-view") as
+    | (HTMLElement & { result: Record<string, unknown> })
+    | null;
+  expect(resultView?.result).to.deep.equal({ token: "Value hidden", ok: true });
+  expect(JSON.stringify(resultView?.result)).to.not.contain("private-result");
+  expect(argsReads).to.equal(1);
+  expect(resultReads).to.equal(1);
+});
+
+it("renders a paired success result even when its explicitly present value is undefined", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts tool-display="disclosure" .parts=${[
+      {
+        id: "call",
+        type: "tool-call",
+        invocation: { id: "empty-success", name: "lookup", args: {}, status: "success" },
+      },
+      {
+        id: "result",
+        type: "tool-result",
+        invocationId: "empty-success",
+        name: "lookup",
+        result: undefined,
+      },
+    ] satisfies MessagePart[]}></lr-message-parts>`
+  )) as LyraMessageParts;
+  const disclosure = el.shadowRoot!.querySelector("lr-details[part='tool-disclosure']")!;
+  disclosure.shadowRoot!.querySelector<HTMLElement>("[part='summary']")!.click();
+  await (disclosure as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  await el.updateComplete;
+  expect(disclosure.querySelector("[part='tool-result'] lr-tool-result-view")).to.exist;
 });
 
 it("forwards streaming state to text and reasoning Markdown until each same-id part completes", async () => {

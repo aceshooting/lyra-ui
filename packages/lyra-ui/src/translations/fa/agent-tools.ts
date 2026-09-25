@@ -193,7 +193,6 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'تلاش دوباره برای عامل فرعی',
   subagentPanelCancelRun: 'لغو {name}',
   subagentPanelRetryRun: 'تلاش دوباره برای {name}',
-  toolTimelineDetailsFor: 'جزئیات مربوط به {name}',
   contextInspectorRedacted: 'پوشانده‌شده',
   contextInspectorTruncated: 'کوتاه‌شده',
   contextInspectorLabel: 'بازرس زمینه',

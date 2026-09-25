@@ -123,6 +123,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Система',
   promptStudioRoleUser: 'Пользователь',
   promptStudioRoleAssistant: 'Ассистент',
+  toolTimelineDetailsFor: 'Подробности: {name}',
   moveUp: 'Переместить вверх',
   moveDown: 'Переместить вниз',
   reorderItemMoved: 'Перемещено на позицию {index} из {total}',

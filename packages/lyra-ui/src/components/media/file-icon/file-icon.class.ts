@@ -174,7 +174,7 @@ export class LyraFileIcon extends LyraElement {
         aria-describedby=${this.decorative || !descriptionId ? nothing : descriptionId}
         title=${this.mimeType || nothing}
       >
-        <span part="icon" aria-hidden="true">${metadata.provenance === 'consumer' ? metadata.label : this.localize(ICON_LABELS[metadata.icon])}</span>
+        <span part="icon" aria-hidden="true"><span class="badge-label">${metadata.provenance === 'consumer' ? metadata.label : this.localize(ICON_LABELS[metadata.icon])}</span></span>
         ${this.mode === 'label' ? html`<span part="label">${renderedLabel}</span>` : nothing}
         ${this.mode === 'label' && descriptionId
           ? html`<span id=${descriptionId} part="description">${metadata.description}</span>`

@@ -125,6 +125,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'النظام',
   promptStudioRoleUser: 'المستخدم',
   promptStudioRoleAssistant: 'المساعد',
+  toolTimelineDetailsFor: 'تفاصيل {name}',
   moveUp: 'تحريك لأعلى',
   moveDown: 'تحريك لأسفل',
   reorderItemMoved: 'تم النقل إلى الموضع {index} من {total}',

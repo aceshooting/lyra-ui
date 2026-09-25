@@ -12,6 +12,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
@@ -361,6 +362,10 @@ export interface ParseMarkdownOptions {
   /** Raw, possibly-unnormalized `headingOffset` property value -- `finiteInteger()`-guarded
    *  internally, same as before extraction. */
   headingOffset: number;
+  /** Optional document-level slugger reused when independently parsing progressive blocks. */
+  slugger?: Slugger;
+  /** Marks parser-owned fenced blocks for opt-in code chrome. */
+  codeBlockChromeOption?: boolean;
   escapeHtmlOption: boolean;
   /** `htmlMode === 'trusted'` -- a deliberate, fully-documented opt-out of every safety net this
    *  parser applies, `link()`/`image()`'s scheme allowlist included. `sanitize` and `escape` both
@@ -446,6 +451,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
     failedHighlightKeys,
     headingAnchorsOption,
     mathOption,
+    codeBlockChromeOption = false,
     cachedKatex,
     pendingKeys,
     headingTreeOut,
@@ -454,7 +460,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
   // `token.depth + headingOffset` below, producing a NaN heading depth and an invalid `<hNaN>`
   // tag -- finiteInteger() normalizes it back to the documented `0` (additive-only) default.
   const headingOffset = finiteInteger(options.headingOffset, 0);
-  const slugger = new Slugger();
+  const slugger = options.slugger ?? new Slugger();
   const activeHighlightKeys = new Set<string>();
   const pendingHighlightKeys = new Set(options.pendingKeys.map(({ key }) => key));
   const taskItemCheckboxLabels: Array<string | null> = [];
@@ -511,19 +517,25 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
       list(token) {
         const ordered = token.ordered;
         const start = token.start;
+        const taskItems = token.items as readonly { task?: unknown }[];
+        const allTaskItems = taskItems.length > 0 && taskItems.every((item) => item.task === true);
         let body = '';
         for (const item of token.items) body += this.listitem(item);
         const tag = ordered ? 'ol' : 'ul';
         const startAttr = ordered && start !== 1 ? ` start='${start}'` : '';
-        return `<${tag} part='list'${startAttr}>\n${body}</${tag}>\n`;
+        const taskListAttr = allTaskItems ? ` data-task-list='true'` : '';
+        return `<${tag} part='list'${startAttr}${taskListAttr}>\n${body}</${tag}>\n`;
       },
       listitem(token) {
+        const isTaskItem = token.task === true;
         const label = token.task === true
           ? taskItemCheckboxLabel(this, token.tokens)
           : null;
         taskItemCheckboxLabels.push(label);
         try {
-          return `<li>${this.parser.parse(token.tokens)}</li>\n`;
+          return isTaskItem
+            ? `<li part='task-item' data-task='true'>${this.parser.parse(token.tokens)}</li>\n`
+            : `<li>${this.parser.parse(token.tokens)}</li>\n`;
         } finally {
           taskItemCheckboxLabels.pop();
         }
@@ -536,6 +548,12 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
       },
       code(token) {
         const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
+        const raw = (token as unknown as { raw?: unknown }).raw;
+        const fencedAttr = codeBlockChromeOption &&
+          typeof raw === 'string' &&
+          /^ {0,3}(?:`{3,}|~{3,})/.test(raw)
+          ? ` data-fenced='true'`
+          : '';
         const body = `${token.text.replace(/\n$/, '')}\n`;
         const text = token.escaped ? body : escapeHtml(body);
         if (highlightCodeOption && lang) {
@@ -552,7 +570,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           }
         }
         const cls = lang ? ` class='language-${escapeHtml(lang)}'` : '';
-        return `<pre part='code-block' tabindex='0'><code${cls}>${text}</code></pre>\n`;
+        return `<pre part='code-block'${fencedAttr} tabindex='0'><code${cls}>${text}</code></pre>\n`;
       },
       codespan(token) {
         // Mirrors marked's own default codespan() renderer's escaping exactly (it does not
@@ -584,7 +602,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           text: headerRow,
         })}</thead>\n`;
         const tbody = bodyRows ? `<tbody>${bodyRows}</tbody>\n` : '';
-        return `<table part='table'>\n${thead}${tbody}</table>\n`;
+        return `<div part='table-wrapper' tabindex='0'><table part='table'>\n${thead}${tbody}</table></div>\n`;
       },
       link(token) {
         const text = this.parser.parseInline(token.tokens);
@@ -619,7 +637,10 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         return `<img part='img' src='${escapeHtml(safeHref)}' alt='${escapeHtml(altText)}'${titleAttr}>`;
       },
       html(token) {
-        return escapeHtmlOption ? escapeHtml(token.text) : token.text;
+        const source = codeBlockChromeOption
+          ? token.text.replace(/\sdata-fenced(?:\s*=\s*(?:\x22[^\x22]*\x22|\x27[^\x27]*\x27|[^\s>]+))?/gi, '')
+          : token.text;
+        return escapeHtmlOption ? escapeHtml(source) : source;
       },
     } as MarkdownRendererOverrides,
   });
@@ -721,12 +742,13 @@ export function createMarkdownKatexState(): MarkdownKatexState {
  * from `code-block-shared.ts`'s own `codeBlockLineTransformer` -- that one targets
  * `<lr-code-block>`'s `part="pre'`/`part='code"`/line-numbers contract, which doesn't apply here.
  */
-export function markdownCodeTransformer(lang: string): ShikiTransformer {
+export function markdownCodeTransformer(lang: string, includeFencedMarker = false): ShikiTransformer {
   return {
     name: 'lr-markdown-code-block',
     pre(node) {
       node.properties.part = ['code-block'];
       node.properties['tabindex'] = '0';
+      if (includeFencedMarker) node.properties['data-fenced'] = 'true';
     },
     code(node) {
       const classValue = node.properties['class'];
@@ -850,12 +872,16 @@ function enforceMarkdownAnchorRelGuard(markup: string): string {
  * block keeps its plain fallback permanently rather than being rediscovered as pending forever.
  * Shared by both variants' `highlightPending()`; only the *loading* half above it differs.
  */
-export function tokenizeMarkdownHighlight(hl: ShikiHighlighter, pending: PendingHighlight): string | null {
+export function tokenizeMarkdownHighlight(
+  hl: ShikiHighlighter,
+  pending: PendingHighlight,
+  includeFencedMarker = false,
+): string | null {
   try {
     const highlighted = hl.codeToHtml(pending.code, {
       lang: normalizeShikiLanguage(pending.lang),
       themes: SHIKI_THEMES,
-      transformers: [markdownCodeTransformer(pending.lang)],
+      transformers: [markdownCodeTransformer(pending.lang, includeFencedMarker)],
     }) as string;
     return `${encodeMarkdownHighlightStyles(highlighted)}\n`;
   } catch {
@@ -911,14 +937,15 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
     changed.has('headingAnchors') ||
     changed.has('math') ||
     changed.has('highlightCode') ||
-    changed.has('languages')
+    changed.has('languages') ||
+    changed.has('codeBlockChrome')
   );
 }
 
 /** Whether the *highlighting* configuration changed, invalidating in-flight work and the
  *  permanently-failed key set. */
 export function markdownHighlightConfigChanged(changed: Map<PropertyKey, unknown>): boolean {
-  return changed.has('highlightCode') || changed.has('languages');
+  return changed.has('highlightCode') || changed.has('languages') || changed.has('codeBlockChrome');
 }
 
 /** Whether the *grammar set* changed, additionally invalidating already-highlighted output. */
@@ -1324,6 +1351,10 @@ export interface MarkdownContentOptions {
    *  still loading, or a render attempt just fell back after a failure. The two states look
    *  identical on purpose -- a consumer distinguishes them via `lr-render-error`. */
   renderedHtml: string | null;
+  /** Sanitized settled blocks rendered as individually keyed HTML chunks for progressive output. */
+  renderedBlocks?: readonly { id: string; html: string }[];
+  /** Plain text for the one unsettled trailing block during progressive output. */
+  streamingTail?: string | TemplateResult;
   /** The host's own `aria-label`, forwarded to the element that actually owns `role="document"` --
    *  a host `aria-label` doesn't reach shadow internals on its own. */
   hostAriaLabel: string | null;
@@ -1344,15 +1375,9 @@ export interface MarkdownContentOptions {
  *  live region. Only non-empty content is focusable -- an empty document is not a scrollable region
  *  worth a tab stop. */
 export function renderMarkdownContent(options: MarkdownContentOptions): TemplateResult {
-  const isFallback = options.renderedHtml === null;
+  const isFallback = options.renderedHtml === null && options.renderedBlocks === undefined;
   const sanitizedMaxHeight = sanitizeCssLength(options.maxHeight);
-  // Indented two levels deeper than this function body on purpose. `[part='content'][data-fallback]`
-  // is `white-space: pre-wrap` (markdown.styles.ts), so the literal indentation around the binding
-  // below is *rendered* whitespace in the plain-text fallback state -- keeping the exact text both
-  // class files used before the extraction keeps that state pixel-identical.
-  // prettier-ignore
-  return html`
-      <div
+  return html`<div
         part="content"
         role="document"
         tabindex=${options.content.trim() ? '0' : nothing}
@@ -1371,11 +1396,11 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
             })
           : nothing}
         @click=${options.onClick}
-      >
-        ${isFallback ? options.content : unsafeHTML(options.renderedHtml)}
-      </div>
-      ${options.liveRegion}
-    `;
+      >${options.renderedBlocks
+        ? html`${repeat(options.renderedBlocks, (block) => block.id, (block) => unsafeHTML(block.html))}${typeof options.streamingTail === 'string'
+            ? html`<span class="streaming-tail">${options.streamingTail}</span>`
+            : options.streamingTail ?? ''}`
+        : isFallback ? options.content : unsafeHTML(options.renderedHtml)}</div>${options.liveRegion}`;
 }
 
 /**

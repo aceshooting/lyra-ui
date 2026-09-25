@@ -516,6 +516,17 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     return 'fixed';
   }
 
+  /** The strategy the positioner will use, including an authored same-as-default property value
+   *  and the inherited custom-property fallback. Subclasses that change positioning behavior must
+   *  use this resolver instead of inferring explicitness from reflected attributes. */
+  protected get resolvedPositioningStrategy(): PlaceStrategy {
+    return resolveEffectivePositioningStrategy(
+      this,
+      this._positioningStrategy,
+      this.defaultPositioningStrategy,
+    );
+  }
+
   /** Positioning hook for mapped overlays that expose Floating UI's sync surface. */
   protected get positioningSync(): PlaceSync | undefined {
     return undefined;
@@ -1020,11 +1031,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       }
       const cleanup = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
-        strategy: resolveEffectivePositioningStrategy(
-          this,
-          this._positioningStrategy,
-          this.defaultPositioningStrategy,
-        ),
+        strategy: this.resolvedPositioningStrategy,
         offset: finiteNumber(this.distance, this.defaultDistance),
         skidding: finiteNumber(this.skidding, 0),
         sync: this.positioningSync,

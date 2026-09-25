@@ -177,6 +177,48 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     return 'absolute';
   }
 
+  /** A fixed menu inside a transformed virtual row would otherwise inherit that row's containing
+   *  block and clipping. The native manual popover places only this popup in the browser top layer;
+   *  its DOM, menu ownership, and trigger relationships stay in this component's shadow tree. */
+  protected override positionPopup(): void {
+    const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
+    if (!popup) {
+      super.positionPopup();
+      return;
+    }
+    const strategy = this.resolvedPositioningStrategy;
+    if (this.open && strategy === 'fixed') this.enterPopupTopLayer(popup);
+    else this.leavePopupTopLayer(popup);
+    super.positionPopup();
+  }
+
+  private enterPopupTopLayer(popup: HTMLElement): void {
+    if (typeof popup.showPopover !== 'function') return;
+    if (popup.getAttribute('popover') !== 'manual') popup.setAttribute('popover', 'manual');
+    try {
+      if (!popup.matches(':popover-open')) popup.showPopover();
+    } catch {
+      // Keep the ordinary fixed-position fallback if the user agent rejects promotion.
+    }
+  }
+
+  private leavePopupTopLayer(popup: HTMLElement): void {
+    if (typeof popup.hidePopover === 'function') {
+      try {
+        if (popup.matches(':popover-open')) popup.hidePopover();
+      } catch {
+        // Already hidden, or never promoted.
+      }
+    }
+    if (popup.getAttribute('popover') === 'manual') popup.removeAttribute('popover');
+  }
+
+  private onDropdownAfterHide = (event: Event): void => {
+    if (event.target !== this || this.open) return;
+    const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
+    if (popup) this.leavePopupTopLayer(popup);
+  };
+
   /** Keeps the `hoist` half of the alias reflecting: Lit only writes an attribute for a property
    *  it saw change, and a `positioningStrategy` write changes `hoist`'s value without going
    *  through its own setter. */
@@ -261,6 +303,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('lr-after-hide', this.onDropdownAfterHide);
     // Both menu shapes reset transient open state while detached. Popover deliberately preserves
     // its own `open` value across a drag/drop reparent, so rejoin the contained controller to that
     // state even when reconnecting did not schedule a Lit update of its own.
@@ -370,6 +413,9 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.removeEventListener('lr-after-hide', this.onDropdownAfterHide);
+    const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
+    if (popup) this.leavePopupTopLayer(popup);
     this.releaseConsumerMenu(this.consumerMenu);
     super.disconnectedCallback();
   }

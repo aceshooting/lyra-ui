@@ -86,6 +86,42 @@ export const Default: Story = {
   render: () => html`<lr-message-parts .parts=${parts}></lr-message-parts>`,
 };
 
+export const ToolDisclosures: Story = {
+  name: 'Tool disclosures',
+  parameters: {
+    docs: {
+      description: {
+        story: 'Opting into `tool-display="disclosure"` pairs each tool result with its call by invocation id. Calls stay collapsed until opened, show a localized status while pending, and reveal arguments plus the eventual result or error in place.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-message-parts
+      tool-display="disclosure"
+      .parts=${[
+        {
+          id: 'web-call',
+          type: 'tool-call',
+          metadata: { durationMs: 1_420, redactedFields: ['args.apiKey'] },
+          invocation: {
+            id: 'web-search-1',
+            name: 'web_search',
+            args: { query: 'Lyra UI accessibility', apiKey: 'hidden' },
+            status: 'running',
+          },
+        },
+        {
+          id: 'web-result',
+          type: 'tool-result',
+          invocationId: 'web-search-1',
+          name: 'web_search',
+          result: { hits: 3 },
+        },
+      ] satisfies MessagePart[]}
+    ></lr-message-parts>
+  `,
+};
+
 export const StreamingTextAndReasoning: Story = {
   parameters: {
     docs: {

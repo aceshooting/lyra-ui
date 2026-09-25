@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,9 +45,12 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
-`highlightCode: boolean = true` (attribute `highlight-code`); `headingAnchors: boolean = false`
-(attribute `heading-anchors`); `math: boolean = false`; `maxHeight: string = ''` (attribute
-`max-height`).
+`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected);
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
+(attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
+`math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
+the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
+progressive output, and `codeBlockChrome` enables the localized code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
 `<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
@@ -61,8 +64,9 @@ share one implementation.
 
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
 `<lr-markdown-core>` documents forwarded verbatim from the composed `<lr-markdown-core>` in
-Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `code-block`,
-`inline-code`, `link`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
+Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `task-item`,
+`code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
+`table-wrapper`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
 `<lr-streaming-text>` documents, since `<lr-markdown>` and `<lr-markdown-core>` share the same
 documented part vocabulary.
 

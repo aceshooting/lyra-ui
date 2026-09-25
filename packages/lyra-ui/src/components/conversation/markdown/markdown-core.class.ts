@@ -23,6 +23,7 @@ import {
 import {
   createMarkdownVariantContext,
   MarkdownRuntimeBase,
+  type MarkdownStreamingRenderMode,
   type MarkdownHighlightAttempt,
   type MarkdownVariantContext,
 } from './markdown-base.class.js';
@@ -42,6 +43,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
 /** Peer-neutral public alias matching the full variant's `getMarked()` signature. */
 export type Marked = LyraMarkedParser;
+export type { MarkdownStreamingRenderMode };
 
 /** This variant's own `katex` resolution state, deliberately separate from `<lr-markdown>`'s --
  *  see `createMarkdownKatexState()` for why sharing one instance across the pair would change
@@ -170,6 +172,9 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @csspart paragraph - Every rendered `<p>`.
  * @csspart list - Every rendered `<ul>`/`<ol>`.
  * @csspart code-block - Every rendered fenced/indented `<pre>`.
+ * @csspart code-block-header - Opt-in language and copy row above a fenced code block.
+ * @csspart code-block-language - The localized language label in the optional code-block header.
+ * @csspart code-block-copy - The `<lr-copy-button>` host in the optional code-block header.
  * @csspart inline-code - Every rendered inline `<code>` span (backtick spans, not fenced blocks).
  * @csspart link - Every rendered `<a>`.
  * @csspart table - Every rendered `<table>`.
@@ -299,6 +304,20 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
    *  Reflects so a consumer can also target `lr-markdown-core[streaming]`. */
   @property({ type: Boolean, reflect: true }) override streaming = false;
 
+  /** How content is displayed while `streaming` is true. `plain` (the default) keeps the current
+   * accumulated source as plain text. `progressive` parses complete top-level Markdown blocks as
+   * they settle, keeps only the mutable trailing block as text, and renders an open fenced block
+   * as unhighlighted code. Once `streaming` becomes false the component performs its regular full
+   * document parse, including cross-block reference links. */
+  @property({ attribute: 'streaming-render', reflect: true })
+  override streamingRender: MarkdownStreamingRenderMode = 'plain';
+
+  /** Shows a localized language label and an `lr-copy-button` above fenced code blocks. The button
+   * copies the source code. `false` (the default) preserves the existing code-block appearance;
+   * while streaming, chrome is added only after a fence has closed. */
+  @property({ type: Boolean, attribute: 'code-block-chrome' })
+  override codeBlockChrome = false;
+
   /** Syntax-highlights fenced code blocks through the fine-grained Shiki core loader when
    *  `languages` supplies the matching grammar. The empty default language map means no fenced
    *  block is highlighted; set `false` to keep plain output even when grammars are supplied. No
@@ -366,7 +385,9 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
     if (!highlighter) return null;
     const loaded = await ensureShikiLanguageLoaded(highlighter, normalizedLang, source);
     if (!isCurrent()) return undefined;
-    return loaded ? tokenizeMarkdownHighlight(highlighter, pending) : null;
+    return loaded
+      ? tokenizeMarkdownHighlight(highlighter, pending, this.codeBlockChrome)
+      : null;
   }
 }
 

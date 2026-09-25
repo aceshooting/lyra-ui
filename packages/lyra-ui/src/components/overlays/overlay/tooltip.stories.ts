@@ -27,6 +27,24 @@ export const LyraIconButtonTrigger: Story = {
   `,
 };
 
+export const FocusVisibleTrigger: Story = {
+  name: 'Keyboard-visible focus trigger',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`focus-visible` opens on keyboard-visible focus while ignoring pointer- or script-focused controls. It also checks the real focused control inside a shadow trigger such as `<lr-icon-button>`. The default `focus` token keeps its existing any-focus behavior.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tooltip trigger="hover focus-visible" show-delay="0">
+      Opens on hover or keyboard-visible focus.
+      <lr-icon-button slot="trigger" icon="help" aria-label="Keyboard help"></lr-icon-button>
+    </lr-tooltip>
+  `,
+};
+
 export const ExternalOwner: Story = {
   name: 'Interaction ownership and external positioning',
   parameters: {
@@ -139,7 +157,7 @@ export const ClickTrigger: Story = {
     docs: {
       description: {
         story:
-          '`trigger` takes a space-separated list of `hover`, `focus`, `click` and `manual`, defaulting to `"hover focus"`. `show-delay` and `hide-delay` are independent, so a tooltip can appear instantly and linger on the way out.',
+          '`trigger` takes a space-separated list of `hover`, `focus`, `focus-visible`, `click` and `manual`, defaulting to `"hover focus"`. `focus-visible` is the opt-in keyboard-visible focus mode; `focus` preserves its any-focus behavior. `show-delay` and `hide-delay` are independent, so a tooltip can appear instantly and linger on the way out.',
       },
     },
   },

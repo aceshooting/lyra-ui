@@ -6503,6 +6503,7 @@ export type LyraMarkdownReactProps = LyraReactElementProps<
   LyraMarkdown,
   | 'activeHighlightId'
   | 'anchor'
+  | 'codeBlockChrome'
   | 'content'
   | 'gfm'
   | 'headingAnchors'
@@ -6517,6 +6518,7 @@ export type LyraMarkdownReactProps = LyraReactElementProps<
   | 'math'
   | 'maxHeight'
   | 'streaming'
+  | 'streamingRender'
   | 'strings'
   | 'tabSize',
   {},
@@ -6545,6 +6547,7 @@ export type LyraMarkdownReactProps = LyraReactElementProps<
   | '--lr-markdown-table-header-bg',
   {
     'active-highlight-id'?: LyraMarkdown['activeHighlightId'];
+    'code-block-chrome'?: LyraMarkdown['codeBlockChrome'];
     'heading-anchors'?: LyraMarkdown['headingAnchors'];
     'heading-offset'?: LyraMarkdown['headingOffset'];
     'highlight-code'?: LyraMarkdown['highlightCode'];
@@ -6552,6 +6555,7 @@ export type LyraMarkdownReactProps = LyraReactElementProps<
     'internal-link-prefix'?: LyraMarkdown['internalLinkPrefix'];
     'link-target'?: LyraMarkdown['linkTarget'];
     'max-height'?: LyraMarkdown['maxHeight'];
+    'streaming-render'?: LyraMarkdown['streamingRender'];
     'tab-size'?: LyraMarkdown['tabSize'];
   }
 >;
@@ -6560,6 +6564,7 @@ export type LyraMarkdownCoreReactProps = LyraReactElementProps<
   LyraMarkdownCore,
   | 'activeHighlightId'
   | 'anchor'
+  | 'codeBlockChrome'
   | 'content'
   | 'gfm'
   | 'headingAnchors'
@@ -6574,6 +6579,7 @@ export type LyraMarkdownCoreReactProps = LyraReactElementProps<
   | 'math'
   | 'maxHeight'
   | 'streaming'
+  | 'streamingRender'
   | 'strings'
   | 'tabSize',
   {},
@@ -6602,6 +6608,7 @@ export type LyraMarkdownCoreReactProps = LyraReactElementProps<
   | '--lr-markdown-table-header-bg',
   {
     'active-highlight-id'?: LyraMarkdownCore['activeHighlightId'];
+    'code-block-chrome'?: LyraMarkdownCore['codeBlockChrome'];
     'heading-anchors'?: LyraMarkdownCore['headingAnchors'];
     'heading-offset'?: LyraMarkdownCore['headingOffset'];
     'highlight-code'?: LyraMarkdownCore['highlightCode'];
@@ -6609,6 +6616,7 @@ export type LyraMarkdownCoreReactProps = LyraReactElementProps<
     'internal-link-prefix'?: LyraMarkdownCore['internalLinkPrefix'];
     'link-target'?: LyraMarkdownCore['linkTarget'];
     'max-height'?: LyraMarkdownCore['maxHeight'];
+    'streaming-render'?: LyraMarkdownCore['streamingRender'];
     'tab-size'?: LyraMarkdownCore['tabSize'];
   }
 >;
@@ -6848,13 +6856,16 @@ export type LyraMessageFeedbackReactProps = LyraReactElementProps<
 export type LyraMessagePartsReactProps = LyraReactElementProps<
   LyraMessageParts,
   | 'accessibleLabel'
+  | 'codeBlockChrome'
   | 'contentMode'
   | 'locale'
   | 'maxRenderedParts'
   | 'parts'
   | 'renderPart'
   | 'showReasoning'
-  | 'strings',
+  | 'streamingRender'
+  | 'strings'
+  | 'toolDisplay',
   {},
   LyraMessagePartsEventMap,
   | 'lr-anchor-result'
@@ -6881,9 +6892,12 @@ export type LyraMessagePartsReactProps = LyraReactElementProps<
   | '--lr-message-parts-streaming-color',
   {
     'aria-label'?: LyraMessageParts['accessibleLabel'];
+    'code-block-chrome'?: LyraMessageParts['codeBlockChrome'];
     'content-mode'?: LyraMessageParts['contentMode'];
     'max-rendered-parts'?: LyraMessageParts['maxRenderedParts'];
     'show-reasoning'?: LyraMessageParts['showReasoning'];
+    'streaming-render'?: LyraMessageParts['streamingRender'];
+    'tool-display'?: LyraMessageParts['toolDisplay'];
   }
 >;
 
@@ -10004,6 +10018,7 @@ export type LyraStreamStatusReactProps = LyraReactElementProps<
 export type LyraStreamingTextReactProps = LyraReactElementProps<
   LyraStreamingText,
   | 'coalesceMs'
+  | 'codeBlockChrome'
   | 'content'
   | 'contentMode'
   | 'gfm'
@@ -10018,6 +10033,7 @@ export type LyraStreamingTextReactProps = LyraReactElementProps<
   | 'math'
   | 'maxHeight'
   | 'streaming'
+  | 'streamingRender'
   | 'strings'
   | 'tabSize',
   {},
@@ -10027,6 +10043,7 @@ export type LyraStreamingTextReactProps = LyraReactElementProps<
   | '--lr-inline-cursor-width',
   {
     'coalesce-ms'?: LyraStreamingText['coalesceMs'];
+    'code-block-chrome'?: LyraStreamingText['codeBlockChrome'];
     'content-mode'?: LyraStreamingText['contentMode'];
     'heading-anchors'?: LyraStreamingText['headingAnchors'];
     'heading-offset'?: LyraStreamingText['headingOffset'];
@@ -10035,6 +10052,7 @@ export type LyraStreamingTextReactProps = LyraReactElementProps<
     'internal-link-prefix'?: LyraStreamingText['internalLinkPrefix'];
     'link-target'?: LyraStreamingText['linkTarget'];
     'max-height'?: LyraStreamingText['maxHeight'];
+    'streaming-render'?: LyraStreamingText['streamingRender'];
     'tab-size'?: LyraStreamingText['tabSize'];
   }
 >;
@@ -10042,6 +10060,7 @@ export type LyraStreamingTextReactProps = LyraReactElementProps<
 export type LyraStreamingTextCoreReactProps = LyraReactElementProps<
   LyraStreamingTextCore,
   | 'coalesceMs'
+  | 'codeBlockChrome'
   | 'content'
   | 'contentMode'
   | 'gfm'
@@ -10056,6 +10075,7 @@ export type LyraStreamingTextCoreReactProps = LyraReactElementProps<
   | 'math'
   | 'maxHeight'
   | 'streaming'
+  | 'streamingRender'
   | 'strings'
   | 'tabSize',
   {},
@@ -10065,6 +10085,7 @@ export type LyraStreamingTextCoreReactProps = LyraReactElementProps<
   | '--lr-inline-cursor-width',
   {
     'coalesce-ms'?: LyraStreamingTextCore['coalesceMs'];
+    'code-block-chrome'?: LyraStreamingTextCore['codeBlockChrome'];
     'content-mode'?: LyraStreamingTextCore['contentMode'];
     'heading-anchors'?: LyraStreamingTextCore['headingAnchors'];
     'heading-offset'?: LyraStreamingTextCore['headingOffset'];
@@ -10073,6 +10094,7 @@ export type LyraStreamingTextCoreReactProps = LyraReactElementProps<
     'internal-link-prefix'?: LyraStreamingTextCore['internalLinkPrefix'];
     'link-target'?: LyraStreamingTextCore['linkTarget'];
     'max-height'?: LyraStreamingTextCore['maxHeight'];
+    'streaming-render'?: LyraStreamingTextCore['streamingRender'];
     'tab-size'?: LyraStreamingTextCore['tabSize'];
   }
 >;

@@ -81,7 +81,7 @@ export const FormAssociatedSurface: Story = {
     docs: {
       description: {
         story:
-          'Complete form-associated surface with label/hint chrome, a named `dropzone` slot, required validity, repeated file submission, capture forwarding, reset support, and a writable `validationTarget` for custom validity anchoring.',
+          'Complete form-associated surface with separate label/hint chrome and a named `dropzone` instruction, required validity, repeated file submission, capture forwarding, reset support, and a writable `validationTarget` for custom validity anchoring.',
       },
     },
   },
@@ -155,9 +155,16 @@ export const SlottedErrorSsr: Story = {
 export const CustomSlotContent: Story = {
   render: () =>
     html`<lr-file-input multiple accept=".csv,.xlsx" label="Upload spreadsheets">
-      <strong>Drag spreadsheets here</strong>
-      <span>or click to browse (.csv, .xlsx)</span>
+      <span slot="dropzone"><strong>Drag spreadsheets here</strong> or click to browse (.csv, .xlsx)</span>
     </lr-file-input>`,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `label` property names the form-control label. Dropzone instructions stay separate and use the localized default unless the default or named `dropzone` slot supplies custom content.',
+      },
+    },
+  },
 };
 
 export const AccessibleNameOverride: Story = {

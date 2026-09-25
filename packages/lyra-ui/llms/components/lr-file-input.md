@@ -88,7 +88,12 @@ enabled buttons retain pointer feedback.
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
 - `label?: string` — form-control label. Omission uses the localized dropzone instruction
-  (`fileInputDefaultLabel`); an explicit empty string suppresses that fallback. `hint: string = ''`
+  (`fileInputDefaultLabel`); an explicit empty string suppresses the form-label chrome too. The
+  dropzone independently keeps its localized instruction when a form label is supplied or empty,
+  so a short label such as “Reference files” does not replace the drop-or-browse text. Use the
+  `dropzone` slot when you want to replace that instruction. With no nonempty label, that localized
+  instruction also supplies the fallback accessible name unless `accessibleLabel` or host
+  `aria-label` is provided. `hint: string = ''`
   remains empty when omitted and can be supplied through the named slot as well
 - `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
   it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation

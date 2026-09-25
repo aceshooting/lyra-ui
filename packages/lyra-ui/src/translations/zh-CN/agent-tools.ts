@@ -192,7 +192,6 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: '重试子智能体',
   subagentPanelCancelRun: '取消{name}',
   subagentPanelRetryRun: '重试{name}',
-  toolTimelineDetailsFor: '{name}的详情',
   contextInspectorRedacted: '已脱敏',
   contextInspectorTruncated: '已截断',
   contextInspectorLabel: '上下文检查器',

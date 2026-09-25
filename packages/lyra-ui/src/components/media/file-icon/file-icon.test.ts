@@ -251,6 +251,36 @@ describe('lr-file-icon', () => {
     expect(style.whiteSpace).to.equal('nowrap');
   });
 
+  it('truncates localized multi-word badge text from the inline end at default and small sizes', async () => {
+    for (const [language, label] of [['en', 'Code file'], ['fr', 'Fichier de code']] as const) {
+      for (const direction of ['ltr', 'rtl'] as const) {
+        for (const size of ['2rem', '1rem']) {
+          const el = await fixture<LyraFileIcon>(html`
+            <lr-file-icon
+              lang=${language}
+              dir=${direction}
+              mime-type="text/markdown"
+              style=${`--lr-file-icon-size: ${size}`}
+              .strings=${language === 'fr' ? { fileTypeCode: label } : {}}
+            ></lr-file-icon>
+          `);
+          const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+          const text = icon.querySelector<HTMLElement>('.badge-label');
+          expect(Boolean(text), 'badge text needs its own shrinkable overflow box').to.equal(true);
+          if (!text) continue;
+          const style = getComputedStyle(text);
+
+          expect(text.textContent, `${language}/${direction}/${size}`).to.equal(label);
+          expect(style.textOverflow).to.equal('ellipsis');
+          expect(style.textAlign).to.equal('start');
+          expect(text.scrollWidth).to.be.greaterThan(text.clientWidth);
+          expect(text.getBoundingClientRect().width).to.be.at.most(icon.clientWidth);
+          expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(label);
+        }
+      }
+    }
+  });
+
   it('--lr-file-icon-bg / --lr-file-icon-color retint the format badge independently of the shared brand tokens', async () => {
     const el = await fixture(html`
       <lr-file-icon

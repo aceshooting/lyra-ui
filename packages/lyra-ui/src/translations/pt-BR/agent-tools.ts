@@ -194,7 +194,6 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'Executar o subagente novamente',
   subagentPanelCancelRun: 'Cancelar {name}',
   subagentPanelRetryRun: 'Executar {name} novamente',
-  toolTimelineDetailsFor: 'Detalhes de {name}',
   contextInspectorRedacted: 'Ocultado',
   contextInspectorTruncated: 'Truncado',
   contextInspectorLabel: 'Inspetor de contexto',

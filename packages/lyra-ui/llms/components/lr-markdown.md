@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -79,8 +79,11 @@ uses for its own `[part="body"]`.
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content.
 - `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
-  GFM task-list checkboxes stay disabled. A task's primary inline text supplies its accessible name;
-  nested task text is excluded, and a blank task receives no generated name.
+  GFM task-list checkboxes stay disabled and take the bullet's place; each task item exposes
+  `part="task-item"` and `data-task="true"`, while a list containing only task items has
+  `data-task-list="true"`. The checkbox has a visible token-based border and checked fill rather
+  than relying on the browser's dim disabled appearance. A task's primary inline text supplies its
+  accessible name; nested task text is excluded, and a blank task receives no generated name.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — `target` applied to every
   rendered `<a>`, with `rel="noopener noreferrer"` always added alongside it whenever a `target` is
   emitted. `'_blank'` (the default) preserves the original output; a falsy value (`null`, or the
@@ -96,14 +99,26 @@ uses for its own `[part="body"]`.
   than overflowing past the HTML heading levels. `0` (the default) preserves the original
   `<h${token.depth}>` output
 - `streaming: boolean = false` (reflected) — marks the host `aria-busy="true"` while partial Markdown
-  is still arriving and lets consumers target `lr-markdown[streaming]`. Both `lr-markdown` and
-  `lr-markdown-core` display accumulated plain text without parsing or highlighting while it is
-  true. Setting `streaming=false` parses and renders the latest complete content; busy state also
-  remains true while parser dependencies are loading
+  is still arriving and lets consumers target `lr-markdown[streaming]`. `streamingRender` selects
+  the streaming presentation. Setting `streaming=false` parses and renders the latest complete
+  content; busy state also remains true while parser dependencies are loading
+- `streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`,
+  reflected), where `MarkdownStreamingRenderMode = 'plain' | 'progressive'`. The default `plain`
+  preserves the existing behavior of showing accumulated source text while streaming. In
+  `progressive` mode, completed top-level blocks render as Markdown as they settle and only the
+  trailing in-progress block remains plain text. Settled block nodes keep their identity as new
+  chunks arrive, and syntax highlighting is deferred until a block settles. An unterminated fenced
+  block is shown as an open, unhighlighted code block. The final full-document parse still runs
+  when streaming ends, including reference links that need content from later blocks.
+- `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — opts fenced blocks into a
+  localized language label and copy button. Copy uses the raw fence source, not highlighted HTML.
+  In progressive streaming, the header appears only after its closing fence arrives; with the
+  default plain streaming mode, chrome appears after the stream settles. Indented code blocks do not
+  receive this chrome.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
   blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
-  peer is available; set `false` to keep plain output even when `shiki` is installed. No effect
-  while `streaming` is `true`
+  peer is available; set `false` to keep plain output even when `shiki` is installed. In progressive
+  mode, a block can be highlighted after it settles; the mutable tail remains unhighlighted.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — same shape and purpose as
   `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
   shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded
@@ -176,11 +191,21 @@ placed first and preserved inside both ceilings.
 or a failed render — so a consumer can target `lr-markdown [part='content'][data-fallback]` to
 style it distinctly), `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
 anchor-jump message), `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`),
-`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every
-rendered fenced/indented `<pre>`), `inline-code` (every rendered inline `<code>` span — backtick
-spans, not fenced blocks), `link` (every rendered `<a>`), `table` (every rendered `<table>`),
+`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`; a list made entirely of
+task items carries `data-task-list="true"`), `task-item` (each GFM task `<li>`, also marked
+`data-task="true"`), `code-block` (every rendered fenced/indented `<pre>`, isolated with LTR text
+direction even inside an RTL document), `inline-code` (every rendered inline `<code>` span —
+backtick spans, not fenced blocks; also isolated LTR), `link` (every rendered `<a>`),
+`table-wrapper` (the logical inline-scroll container for wide tables), `table` (every rendered `<table>`),
 `blockquote` (every rendered `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered
-inline or block math span, carrying `data-display="inline"|"block"`)
+inline or block math span, carrying `data-display="inline"|"block"`), and, when
+`code-block-chrome` is enabled, `code-block-header`, `code-block-language`, and `code-block-copy`
+(the header, localized language label, and copy button for each closed fenced block)
+
+Wide GFM tables scroll horizontally inside `table-wrapper`, following the current text direction.
+Cell text wraps at word boundaries when possible and breaks a single word only when that word
+cannot fit the column. Inline code and code blocks keep LTR character order in RTL documents while
+their surrounding layout continues to follow the page direction.
 
 **Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
@@ -224,6 +249,21 @@ after that lazy load resolves; each instance owns its configuration. Call `rende
     });
 </script>
 ```
+
+Progressive rendering and code-copy chrome are opt-in; the following keeps completed Markdown
+blocks visible while text streams and adds a localized language label plus source-copy button to
+closed fenced blocks:
+
+````html
+<lr-markdown id="reply" streaming streaming-render="progressive" code-block-chrome></lr-markdown>
+<script type="module">
+  import "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
+
+  const reply = document.querySelector("#reply");
+  reply.content = ['A settled paragraph.', '', '```js', 'const answer = 42;', '```'].join('\n');
+  reply.streaming = false;
+</script>
+````
 
 Rendering never ships unsanitized or broken markup silently. If `marked` fails to load, or throws
 while parsing malformed input, the component falls back to plain text (`white-space: pre-wrap`, no

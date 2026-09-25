@@ -1601,6 +1601,7 @@ export type { KatexApi } from './components/conversation/markdown/katex-loader.j
 export type {
   MarkdownHighlightAttempt,
   MarkdownRuntimeEventMap,
+  MarkdownStreamingRenderMode,
   MarkdownVariantContext,
 } from './components/conversation/markdown/markdown-base.class.js';
 export type {

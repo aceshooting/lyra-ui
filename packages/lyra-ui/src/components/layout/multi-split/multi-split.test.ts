@@ -14,6 +14,79 @@ import type {
 } from './multi-split.js';
 import { styles } from "./multi-split.styles.js";
 
+it("removes only the closed floating pane's adjacent divider track in either orientation and collapse direction", async () => {
+  for (const orientation of ["horizontal", "vertical"] as const) {
+    for (const collapse of ["start", "end"] as const) {
+      const el = (await fixture<LyraMultiSplit>(html`
+        <lr-multi-split
+          .collapse=${collapse}
+          .orientation=${orientation}
+          style="inline-size: 600px; block-size: 320px;"
+        >
+          <div>One</div>
+          <div>Two</div>
+          <div>Three</div>
+          <div>Four</div>
+        </lr-multi-split>
+      `)) as LyraMultiSplit;
+      el.collapseState = "floating";
+      await el.updateComplete;
+
+      const dividers = [
+        ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="divider"]'),
+      ];
+      const adjacentDividerIndex = collapse === "start" ? 0 : dividers.length - 1;
+      expect(dividers).to.have.length(3);
+      for (const [index, divider] of dividers.entries()) {
+        const display = getComputedStyle(divider).display;
+        if (index === adjacentDividerIndex) {
+          expect(display, `${orientation}, collapse=${collapse}, adjacent divider`)
+            .to.equal("none");
+        } else {
+          expect(display, `${orientation}, collapse=${collapse}, divider ${index}`)
+            .not.to.equal("none");
+        }
+      }
+
+      // The remaining panels and dividers exactly fill the base after the adjacent track is
+      // removed; the closed floating pane contributes no layout size.
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const axisSize = (rect: DOMRect): number =>
+        orientation === "horizontal" ? rect.width : rect.height;
+      const visiblePanelSize = [...el.children]
+        .filter((panel) => !(panel as HTMLElement).hidden)
+        .reduce((total, panel) => total + axisSize(panel.getBoundingClientRect()), 0);
+      const dividerSize = dividers.reduce(
+        (total, divider) => total + axisSize(divider.getBoundingClientRect()),
+        0,
+      );
+      expect(
+        Math.abs(
+          axisSize(base.getBoundingClientRect()) - visiblePanelSize - dividerSize,
+        ),
+        `${orientation}, collapse=${collapse}: no unused gutter remains`,
+      ).to.be.lessThan(1);
+
+      // The adjacent gutter returns while the drawer is open, and remains in the rail state
+      // where both sides of the divider are still visible.
+      el.open = true;
+      await el.updateComplete;
+      expect(getComputedStyle(dividers[adjacentDividerIndex]!).display).not.to.equal(
+        "none",
+      );
+
+      el.open = false;
+      el.collapseState = "rail";
+      await el.updateComplete;
+      expect(dividers.map((divider) => getComputedStyle(divider).display)).to.eql([
+        "block",
+        "block",
+        "block",
+      ]);
+    }
+  }
+});
+
 function mockWidth(el: HTMLElement, width: number): void {
   Object.defineProperty(el, "clientWidth", {
     value: width,

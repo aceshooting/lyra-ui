@@ -195,7 +195,6 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'Повторить субагента',
   subagentPanelCancelRun: 'Отменить {name}',
   subagentPanelRetryRun: 'Повторить {name}',
-  toolTimelineDetailsFor: 'Подробности: {name}',
   contextInspectorRedacted: 'Скрыто',
   contextInspectorTruncated: 'Обрезано',
   contextInspectorLabel: 'Инспектор контекста',
