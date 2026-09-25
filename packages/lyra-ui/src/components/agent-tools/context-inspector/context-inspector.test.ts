@@ -4,6 +4,7 @@ import type { LyraContextInspector, ContextInspectorSegment } from './context-in
 import type { LyraContextMeter } from '../../data/context-meter/context-meter.js';
 import type { LyraCopyButton } from '../../utility/copy-button/copy-button.js';
 import type { LyraExportButton } from '../../utility/export-button/export-button.js';
+import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 
 const segments: ContextInspectorSegment[] = [
   { id: 's1', label: 'System prompt', text: 'You are helpful.', tokens: 100 },
@@ -386,4 +387,74 @@ it('caps rendered segment rows at the render ceiling and shows a localized limit
 it('renders no limit notice when segments stays within the render ceiling', async () => {
   const el = await fixture<LyraContextInspector>(html`<lr-context-inspector .segments=${segments}></lr-context-inspector>`);
   expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
+});
+
+describe('template whitespace', () => {
+  const plain: ContextInspectorSegment = { id: 'p', label: 'Plain', text: 'One line of segment text.', tokens: 5 };
+  const truncated: ContextInspectorSegment = {
+    id: 't',
+    label: 'Truncated',
+    text: 'One line before the boundary.',
+    tokens: 5,
+    truncated: true,
+  };
+
+  const segmentTexts = (el: LyraContextInspector): HTMLElement[] =>
+    Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="segment-text"]'));
+
+  /** The segment text with the truncation boundary removed. */
+  function textBeforeBoundary(part: HTMLElement): string {
+    const clone = part.cloneNode(true) as HTMLElement;
+    clone.querySelector('[part="truncation-boundary"]')?.remove();
+    return clone.textContent ?? '';
+  }
+
+  function lineHeightPx(element: HTMLElement): number {
+    const value = getComputedStyle(element).lineHeight;
+    if (value.endsWith('px')) return parseFloat(value);
+    return parseFloat(value) * parseFloat(getComputedStyle(element).fontSize);
+  }
+
+  async function mount(dir?: 'rtl'): Promise<LyraContextInspector> {
+    const el = await fixture<LyraContextInspector>(
+      html`<lr-context-inspector dir=${dir ?? 'ltr'} .segments=${[plain, truncated]}></lr-context-inspector>`,
+    );
+    await el.updateComplete;
+    return el;
+  }
+
+  it('renders segment text exactly, with the truncation boundary directly below one text line', async () => {
+    const el = await mount();
+    const [plainPart, truncatedPart] = segmentTexts(el);
+    expect(plainPart!.textContent).to.equal(plain.text);
+    expect(textBeforeBoundary(truncatedPart!)).to.equal(truncated.text);
+    expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
+
+    const boundary = truncatedPart!.querySelector<HTMLElement>('[part="truncation-boundary"]')!;
+    const boundaryBlock =
+      boundary.getBoundingClientRect().height + parseFloat(getComputedStyle(boundary).marginBlockStart);
+    expect(truncatedPart!.getBoundingClientRect().height).to.be.closeTo(
+      lineHeightPx(truncatedPart!) + boundaryBlock,
+      1,
+    );
+    await expect(el).to.be.accessible();
+  });
+
+  it('starts segment text at the inline-start edge under dir="rtl"', async () => {
+    const el = await mount('rtl');
+    expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
+    const [plainPart] = segmentTexts(el);
+    const walker = document.createTreeWalker(plainPart!, NodeFilter.SHOW_TEXT);
+    let textNode: Text | null = null;
+    while (!textNode && walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      if (node.data.includes(plain.text)) textNode = node;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(textNode!);
+    const partRect = plainPart!.getBoundingClientRect();
+    const textRect = range.getBoundingClientRect();
+    expect(partRect.right - textRect.right).to.be.at.most(1);
+    expect(textRect.top - partRect.top).to.be.lessThan(lineHeightPx(plainPart!));
+  });
 });

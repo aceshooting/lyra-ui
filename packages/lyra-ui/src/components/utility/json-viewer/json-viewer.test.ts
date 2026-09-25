@@ -7,6 +7,7 @@ import {
   aTimeout,
 } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import "./json-viewer.js";
@@ -1879,4 +1880,45 @@ it('copies the owned descriptor snapshot without rereading unsafe branches or la
     if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
     else Reflect.deleteProperty(navigator, 'clipboard');
   }
+});
+
+describe('template whitespace', () => {
+  const data = { name: 'Ada', spaced: 'a    b', tags: ['x', 'y'], nested: { ok: true } };
+
+  async function mount(wrapperStyle: string): Promise<LyraJsonViewer> {
+    const wrapper = await fixture<HTMLDivElement>(
+      html`<div style=${wrapperStyle}><lr-json-viewer .data=${data}></lr-json-viewer></div>`,
+    );
+    const el = wrapper.querySelector('lr-json-viewer') as LyraJsonViewer;
+    await el.updateComplete;
+    return el;
+  }
+
+  it('renders no template whitespace under an inherited pre-wrap and keeps its normal height', async () => {
+    const reference = await mount('');
+    const el = await mount('white-space: pre-wrap');
+    expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
+    expect(el.getBoundingClientRect().height).to.be.closeTo(reference.getBoundingClientRect().height, 1);
+  });
+
+  it('keeps pre-wrap on string values under the same wrapper', async () => {
+    const el = await mount('white-space: pre-wrap');
+    const value = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="value"]')).find(
+      (candidate) => candidate.textContent === '"a    b"',
+    )!;
+    const style = getComputedStyle(value) as CSSStyleDeclaration & { whiteSpaceCollapse?: string };
+    if (typeof style.whiteSpaceCollapse === 'string' && style.whiteSpaceCollapse !== '') {
+      expect(style.whiteSpaceCollapse).to.equal('preserve');
+    } else {
+      expect(style.whiteSpace).to.equal('pre-wrap');
+    }
+    const control = document.createElement('span');
+    control.style.whiteSpace = 'normal';
+    control.style.font = style.font;
+    control.textContent = '"a    b"';
+    el.shadowRoot!.appendChild(control);
+    const controlWidth = control.getBoundingClientRect().width;
+    control.remove();
+    expect(value.getBoundingClientRect().width).to.be.greaterThan(controlWidth);
+  });
 });

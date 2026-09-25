@@ -9479,7 +9479,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
           "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
@@ -9492,28 +9491,28 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 1173,
+              "line": 1174,
               "test": "is accessible in the plain-fallback path (no language set)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 1183,
+              "line": 1184,
               "test": "is accessible once shiki has highlighted the code",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 1201,
+              "line": 1202,
               "test": "is accessible when collapsible and collapsed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 2095,
+              "line": 2096,
               "test": "is accessible with a custom tab size on tab-indented code",
               "target": "el",
               "state": "populated"
@@ -9534,9 +9533,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/code-block/code-block-core.test.ts",
+              "line": 2152,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -9550,7 +9554,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 186,
+              "line": 187,
               "kind": "320px allocation test signal"
             }
           ]
@@ -9618,7 +9622,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 445,
+              "line": 446,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -9653,7 +9657,6 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -9690,7 +9693,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -9704,7 +9706,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 468,
+              "line": 469,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -9725,9 +9727,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/code-block/code-block-core.test.ts",
+              "line": 2152,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -9741,7 +9748,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 186,
+              "line": 187,
               "kind": "320px allocation test signal"
             }
           ]
@@ -9798,7 +9805,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 445,
+              "line": 446,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -9833,7 +9840,6 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -11740,15 +11746,22 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/context-inspector/context-inspector.test.ts",
-              "line": 281,
+              "line": 282,
               "test": "is accessible with a fully populated state (meter, citation, truncation, redaction)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/context-inspector/context-inspector.test.ts",
-              "line": 310,
+              "line": 311,
               "test": "remains functional and accessible under dir=\"rtl\"",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/context-inspector/context-inspector.test.ts",
+              "line": 426,
+              "test": "renders segment text exactly, with the truncation boundary directly below one text line",
               "target": "el",
               "state": "populated"
             }
@@ -11767,7 +11780,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/context-inspector/context-inspector.test.ts",
-              "line": 311,
+              "line": 312,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -11784,7 +11797,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/context-inspector/context-inspector.test.ts",
-              "line": 330,
+              "line": 331,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25197,14 +25210,14 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1013,
+              "line": 1014,
               "test": "is accessible with a populated, expanded tree",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1018,
+              "line": 1019,
               "test": "is accessible with copyable buttons and a collapsed root",
               "target": "el",
               "state": "populated"
@@ -25224,7 +25237,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 974,
+              "line": 975,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25235,7 +25248,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 48,
+              "line": 49,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -25246,7 +25259,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1625,
+              "line": 1626,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27467,14 +27480,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 140,
+              "line": 141,
               "test": "is accessible once populated, richly-formatted content has rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 2123,
+              "line": 2124,
               "test": "is accessible once a fenced code block has been highlighted",
               "target": "el",
               "state": "populated"
@@ -27511,7 +27524,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 165,
+              "line": 166,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27661,21 +27674,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 466,
+              "line": 467,
               "test": "is accessible with plain content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 758,
+              "line": 759,
               "test": "is accessible once highlighted via languages",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 2508,
+              "line": 2509,
               "test": "is accessible with a custom tab size on a tab-indented fenced block",
               "target": "el",
               "state": "populated"
@@ -27712,7 +27725,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 165,
+              "line": 166,
               "kind": "320px allocation test signal"
             }
           ]
@@ -31203,7 +31216,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1661,
+              "line": 1662,
               "test": "is accessible with a rendered notebook",
               "target": "el",
               "state": "populated"
@@ -31228,7 +31241,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1799,
+              "line": 1800,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31245,7 +31258,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1685,
+              "line": 1686,
               "kind": "320px allocation test signal"
             }
           ]
@@ -31313,7 +31326,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1005,
+              "line": 1006,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -43462,8 +43475,15 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 939,
+              "line": 940,
               "test": "is accessible while streaming, populated with Markdown content and a visible cursor",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
+              "line": 1032,
+              "test": "renders no template whitespace under an inherited pre-wrap",
               "target": "el",
               "state": "populated"
             }
@@ -43488,7 +43508,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 815,
+              "line": 816,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -43622,15 +43642,22 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text-core.test.ts",
-              "line": 291,
+              "line": 292,
               "test": "is accessible while streaming, populated with Markdown content and a visible cursor",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/streaming-text/streaming-text-core.test.ts",
-              "line": 302,
+              "line": 303,
               "test": "is accessible once content has settled after streaming ends, still rendering Markdown",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/streaming-text/streaming-text-core.test.ts",
+              "line": 398,
+              "test": "renders no template whitespace under an inherited pre-wrap",
               "target": "el",
               "state": "populated"
             }
@@ -43655,7 +43682,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 815,
+              "line": 816,
               "kind": "reduced-motion test signal"
             }
           ]

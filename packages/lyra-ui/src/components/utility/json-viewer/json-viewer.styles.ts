@@ -19,6 +19,11 @@ export const styles = css`
     font-family: var(--lr-json-viewer-font, var(--_lr-json-viewer-font));
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-loose);
+    /* The shadow templates are indented for readability. A preserving white-space value
+       inherited from an ancestor (a notebook output, a consumer pre-wrap container) would render
+       that indentation. A :host declaration only replaces the inherited value; a rule written on
+       lr-json-viewer itself still wins, and [part='value'] re-enables pre-wrap for values. */
+    white-space: normal;
   }
   [part="base"] {
     display: block;

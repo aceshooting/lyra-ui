@@ -907,7 +907,7 @@ jobs:
       # 11 legs total (down from 20 -- see docs/agents/ci-and-gates.md). Measured per-leg wall
       # time on the prior 20-leg matrix showed most Node 22 shards spending roughly half their
       # ~50-110s runtime on fixed per-job overhead (checkout/install/browser setup) rather than
-      # test execution, since the 26-file test:platform suite was split too finely. Halving
+      # test execution, since the then-26-file test:platform suite was split too finely. Halving
       # chromium/firefox and collapsing chrome/edge/safari-Node22 to one shard each keeps every
       # leg's worst case comfortably under the workflow's other long poles while cutting total
       # billed runner-minutes; max-parallel no longer needs to chase the 20-runner cap.

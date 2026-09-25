@@ -7,6 +7,7 @@ import { DEFAULT_MAX_RESOURCE_BYTES, LyraUserFacingError } from '../../../intern
 import type { LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 
 /** The search half of the shared viewer contract -- `lr-notebook-viewer` resolves its own anchor
  *  kinds rather than the mixin's, so only the search methods are asserted assignable. */
@@ -2112,5 +2113,24 @@ describe('hostile notebook snapshot boundaries', () => {
     const first = el.notebook;
     el.notebook = first;
     expect(el.notebook).to.equal(first);
+  });
+});
+
+describe('template whitespace', () => {
+  it('renders no template whitespace from a JSON output inside the pre-wrap output row', async () => {
+    const notebook: NotebookDocument = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code',
+        source: ['data'],
+        outputs: [{ output_type: 'display_data', data: { 'application/json': '{"count": 2, "ready": true}' } }],
+      }],
+    };
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`);
+    await waitUntil(() => rowRoot(el).querySelector('lr-json-viewer') !== null, 'the JSON output never rendered');
+    const viewer = rowRoot(el).querySelector('lr-json-viewer') as HTMLElement & { updateComplete: Promise<boolean> };
+    await viewer.updateComplete;
+    expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
   });
 });

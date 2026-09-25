@@ -1368,13 +1368,13 @@ export interface MarkdownContentOptions {
 export function renderMarkdownContent(options: MarkdownContentOptions): TemplateResult {
   const isFallback = options.renderedHtml === null;
   const sanitizedMaxHeight = sanitizeCssLength(options.maxHeight);
-  // Indented two levels deeper than this function body on purpose. `[part='content'][data-fallback]`
-  // is `white-space: pre-wrap` (markdown.styles.ts), so the literal indentation around the binding
-  // below is *rendered* whitespace in the plain-text fallback state -- keeping the exact text both
-  // class files used before the extraction keeps that state pixel-identical.
+  // Flush on purpose, and kept away from formatters. While [part='content'] shows the plain-text
+  // fallback it is white-space: pre-wrap (markdown.styles.ts), so template text between the tags
+  // and the binding would render: a blank first line, an indented first line and a blank last
+  // line. The fallback must show exactly `content`. The template carries no whitespace outside
+  // the tags either, so a host that inherits a preserving white-space value renders none of it.
   // prettier-ignore
-  return html`
-      <div
+  return html`<div
         part="content"
         role="document"
         tabindex=${options.content.trim() ? '0' : nothing}
@@ -1393,11 +1393,8 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
             })
           : nothing}
         @click=${options.onClick}
-      >
-        ${isFallback ? options.content : unsafeHTML(options.renderedHtml)}
-      </div>
-      ${options.liveRegion}
-    `;
+      >${isFallback ? options.content : unsafeHTML(options.renderedHtml)}</div
+      >${options.liveRegion}`;
 }
 
 /**

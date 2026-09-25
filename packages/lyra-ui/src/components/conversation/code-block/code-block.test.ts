@@ -14,6 +14,7 @@ import { __setShikiHighlighterCoreLoaderForTesting } from "./shiki-types.js";
 import { styles } from "./code-block.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
+import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 
 type Internals = {
   highlighter?: ShikiHighlighter | null;
@@ -2541,5 +2542,79 @@ describe("gutter line-button pointer feedback", () => {
       await sendMouse({ type: "up" });
       await resetMouse();
     }
+  });
+});
+
+describe('template whitespace', () => {
+  const TAG = 'lr-code-block';
+  type CodeBlockElement = LyraCodeBlock;
+  const source = '{\n  "answer": 42\n}';
+
+  async function mountPlain(attributes = ''): Promise<CodeBlockElement> {
+    const wrapper = await fixture<HTMLElement>(
+      `<div ${attributes}><${TAG} line-numbers activatable-lines></${TAG}></div>`,
+    );
+    const el = wrapper.firstElementChild as CodeBlockElement;
+    el.code = source;
+    await el.updateComplete;
+    return el;
+  }
+
+  async function mountHighlighted(): Promise<CodeBlockElement> {
+    const wrapper = await fixture<HTMLElement>(`<div><${TAG} line-numbers activatable-lines></${TAG}></div>`);
+    const el = wrapper.firstElementChild as CodeBlockElement;
+    el.code = source;
+    el.language = 'json';
+    await waitUntil(() => !!el.shadowRoot!.querySelector('pre.shiki'), 'real Shiki output', { timeout: 10000 });
+    await el.updateComplete;
+    return el;
+  }
+
+  const lineButtons = (el: CodeBlockElement): HTMLElement[] =>
+    Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="line-button"]'));
+
+  /** The resolved --lr-icon-button-size, in px, measured on a probe inside the host. */
+  function iconButtonSizePx(el: CodeBlockElement): number {
+    const probe = document.createElement('div');
+    probe.style.inlineSize = 'var(--lr-icon-button-size)';
+    el.shadowRoot!.appendChild(probe);
+    const size = probe.getBoundingClientRect().width;
+    probe.remove();
+    return size;
+  }
+
+  function sourceOffset(el: CodeBlockElement): number {
+    const line = el.shadowRoot!.querySelector<HTMLElement>('[data-line="1"]')!;
+    const lineSource = line.querySelector<HTMLElement>('.line-source')!;
+    return lineSource.getBoundingClientRect().left - line.getBoundingClientRect().left;
+  }
+
+  it('renders the plain activatable gutter with exact numbers and no template whitespace', async () => {
+    const el = await mountPlain();
+    expect(el.shadowRoot!.querySelector('pre.shiki') === null).to.be.true;
+    expect(lineButtons(el).map((button) => button.textContent)).to.deep.equal(['1', '2', '3']);
+    expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
+    expect(lineButtons(el)[0]!.getBoundingClientRect().width).to.be.closeTo(iconButtonSizePx(el), 1);
+    const plainOffset = sourceOffset(el);
+
+    const highlighted = await mountHighlighted();
+    expect(sourceOffset(highlighted)).to.be.closeTo(plainOffset, 1);
+  });
+
+  it('keeps the plain gutter exact under dir="rtl" with localized digits', async () => {
+    // Arabic-Indic digits through the English catalog: a locale with no registered catalog would
+    // log the partial-catalog fallback warning, which the strict-console lanes reject.
+    const locale = 'en-u-nu-arab';
+    const el = await mountPlain(`dir="rtl" lang="${locale}"`);
+    const digits = [1, 2, 3].map((line) => new Intl.NumberFormat(locale).format(line));
+    expect(digits[0]).to.equal('\u0661');
+    await waitUntil(
+      () => lineButtons(el)[0]!.textContent === digits[0],
+      'localized digits on the plain gutter',
+    );
+    expect(lineButtons(el).map((button) => button.textContent)).to.deep.equal(digits);
+    expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
+    expect(lineButtons(el)[0]!.getBoundingClientRect().width).to.be.closeTo(iconButtonSizePx(el), 1);
+    await expect(el).to.be.accessible();
   });
 });

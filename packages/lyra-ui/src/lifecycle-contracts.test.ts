@@ -1,13 +1,14 @@
 import { expect } from '@open-wc/testing';
 import './all.js';
 import { ROOT_BARREL_TAGS } from './internal/root-registration-allowlist.js';
+import { renderedTemplateWhitespace } from '../test/rendered-whitespace.js';
 
 /**
  * Universal lifecycle contracts, applied uniformly to every tag the all.js
  * compatibility entry registers (the optional-peer chart/map/graph families are excluded
  * because importing them requires peers this environment must not assume).
  *
- * Three contracts per tag, each in its default state (no attributes, no
+ * Four contracts per tag, each in its default state (no attributes, no
  * properties, no slotted content):
  *
  * 1. reconnect-smoke — an element survives disconnect + reconnect: no thrown
@@ -20,9 +21,16 @@ import { ROOT_BARREL_TAGS } from './internal/root-registration-allowlist.js';
  * 3. focusable-name-contract — every rendered shadow-tree element that is
  *    natively focusable (or opts into the tab order via `tabindex="0"`)
  *    exposes a role and at least one accessible-name source.
+ * 4. template-whitespace-contract — no template-formatting whitespace renders
+ *    inside a white-space-preserving context anywhere in the shadow tree
+ *    (`renderedTemplateWhitespace()` from `test/rendered-whitespace.ts`).
  */
 
-type ContractName = 'reconnect-smoke' | 'leak-contract' | 'focusable-name-contract';
+type ContractName =
+  | 'reconnect-smoke'
+  | 'leak-contract'
+  | 'focusable-name-contract'
+  | 'template-whitespace-contract';
 
 /**
  * Per-tag, per-contract opt-outs. Every entry needs a specific technical
@@ -501,6 +509,31 @@ describe('lifecycle contract: focusable-name-contract', () => {
         }
 
         expect(failures, `<${tag}> focusable-name violations:\n${failures.join('\n')}`).to.deep.equal([]);
+      } finally {
+        host.remove();
+      }
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Contract 4 — template-whitespace-contract
+// ---------------------------------------------------------------------------
+
+describe('lifecycle contract: template-whitespace-contract', () => {
+  for (const tag of ROOT_BARREL_TAGS) {
+    it(`<${tag}> renders no template whitespace in its default state`, async function () {
+      if (optOutReason(tag, 'template-whitespace-contract')) return this.skip();
+      const host = mountPoint();
+      try {
+        const el = document.createElement(tag);
+        prepareDefaultElement(tag, el);
+        host.appendChild(el);
+        await settle(el);
+        await flushAsyncWork();
+        await settle(el);
+        if (!el.shadowRoot) return;
+        expect(renderedTemplateWhitespace(el.shadowRoot), `<${tag}>`).to.deep.equal([]);
       } finally {
         host.remove();
       }

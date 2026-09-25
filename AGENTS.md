@@ -254,6 +254,11 @@ Full rules, incidents, and patterns:
   `--lr-button-padding-*/--lr-button-font-size` is enough to do it. Unlike the first two it leaves
   the backtick count unchanged, so a backtick audit misses it; only a rendered or parsed CSS
   comparison catches it.
+- Inside any element whose computed `white-space` preserves breaks (`pre`, `pre-wrap`, `pre-line`,
+  `break-spaces`), bind flush: `>${x}</tag>` or the `\n  >${x}</tag\n>` idiom. That includes
+  elements that only inherit the value (a `<button>` inside `<pre>`) and composed `lr-*` children,
+  because inheritance crosses shadow roots. Assert it with `renderedTemplateWhitespace()` from
+  `test/rendered-whitespace.ts`, never by reading template text.
 - **Composed-child `exportparts` is on-demand, not blanket.** `::part()` pierces exactly one shadow
   boundary, so a composed `lr-*` child's internals are unreachable unless the parent forwards them.
   Only ~34 of ~321 composed-child edges forward, and that is deliberate: forwarding invents new
