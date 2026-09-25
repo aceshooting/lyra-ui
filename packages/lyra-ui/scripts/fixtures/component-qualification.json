@@ -30321,7 +30321,21 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
-              "line": 85,
+              "line": 798,
+              "test": "stays accessible while floating, closed and open",
+              "target": "split",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
+              "line": 798,
+              "test": "stays accessible while floating, closed and open",
+              "target": "split",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
+              "line": 94,
               "test": "picks the floating drawer as the expand mechanism inside the floating band",
               "target": "split",
               "state": "populated"
@@ -30360,7 +30374,7 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
-              "line": 282,
+              "line": 291,
               "kind": "rendered RTL test signal"
             }
           ]
