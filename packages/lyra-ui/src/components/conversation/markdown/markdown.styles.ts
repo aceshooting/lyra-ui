@@ -47,8 +47,8 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  /* Shared by the still-loading and failure-fallback states -- see the renderedHtml field doc in
-     markdown.ts. */
+  /* Shared by the streaming, still-loading and failure-fallback states. The template keeps its
+     binding flush (markdown-shared.ts renderMarkdownContent), so this state shows exactly content. */
   [part='content'][data-fallback] {
     white-space: pre-wrap;
     font-family: inherit;

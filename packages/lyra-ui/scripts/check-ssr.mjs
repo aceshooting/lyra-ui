@@ -128,6 +128,25 @@ for (const disabled of [false, true]) {
   assert.match(colorPickerHtml, new RegExp(`aria-disabled="${disabled}"`));
 }
 
+// The Markdown plain-text fallback is what the server emits before the parser peers load. Its
+// content part must hold exactly the content, with no template indentation around the binding.
+for (const template of [
+  html`<lr-markdown content="Hello"></lr-markdown>`,
+  html`<lr-markdown-core streaming content="Hello"></lr-markdown-core>`,
+]) {
+  const markdownHtml = await collectResult(
+    render(template, { elementRenderers: animatedImageContext.elementRenderers })
+  );
+  const tagName = markdownHtml.match(/<(lr-markdown(?:-core)?)\b/)?.[1];
+  const inner = markdownHtml.match(/<div\b[^>]*part="content"[^>]*>([\s\S]*?)<\/div\s*>/)?.[1];
+  assert.notEqual(inner, undefined, `${tagName} SSR must render its content part`);
+  assert.equal(
+    inner.replace(/<!--[\s\S]*?-->/g, ''),
+    'Hello',
+    `${tagName} SSR fallback must be exactly the content`
+  );
+}
+
 // Checkbox seeds browser slot-presence state on its first connection. Keep that optimization from
 // making server rendering depend on a browser-owned render root or light-DOM child collections.
 const checkboxHtml = await renderSsrProbe(

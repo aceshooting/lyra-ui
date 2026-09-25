@@ -292,13 +292,16 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   protected abstract renderMarkdown(): TemplateResult;
 
   override render(): TemplateResult {
-    return html`
-      <div part="base">
-        ${this.effectiveMarkdown
-          ? this.renderMarkdown()
-          : html`<span class="plain">${this.displayedContent}</span>`}
-        ${this.streaming ? html`<span part="cursor" aria-hidden="true"></span>` : nothing}
-      </div>
-    `;
+    const cursor = this.streaming ? html`<span part="cursor" aria-hidden="true"></span>` : nothing;
+    // Flush on purpose, and kept away from formatters: a host placed under an inherited
+    // preserving white-space value (a pre-wrap chat bubble) would otherwise render this
+    // template's indentation. The single space before the plain-mode cursor is deliberate; it is
+    // the one space the collapsed indentation always produced there.
+    // prettier-ignore
+    return html`<div part="base"
+      >${this.effectiveMarkdown
+        ? html`${this.renderMarkdown()}${cursor}`
+        : html`<span class="plain">${this.displayedContent}</span> ${cursor}`}</div
+    >`;
   }
 }

@@ -77,7 +77,8 @@ uses for its own `[part="body"]`.
   authored HTML. `sanitize` passes the complete rendered document through DOMPurify and fails closed
   to plain text if the peer is unavailable; `escape` displays raw HTML source as text while ordinary
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
-  content.
+  content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
+  escaping and is the consumer's responsibility.
 - `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
   GFM task-list checkboxes stay disabled and take the bullet's place; each task item exposes
   `part="task-item"` and `data-task="true"`, while a list containing only task items has

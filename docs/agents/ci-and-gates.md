@@ -292,7 +292,7 @@ Chromium-channel jobs (`WTR_BROWSER=chrome` uses `channel: chrome`; `WTR_BROWSER
 Node 22 each run single-shard, as do Node 20 Firefox and Safari. Shard counts were tuned from
 measured per-leg wall time: the prior 20-leg matrix (8-way Firefox, 4-way Chromium, 2-way
 everything else) had most Node 22 legs finishing in 50-110s, of which roughly half was fixed
-per-job overhead (checkout/install/browser setup) rather than test execution against the 26-file
+per-job overhead (checkout/install/browser setup) rather than test execution against the then-26-file
 `test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
 gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
 uses `package.json#packageManager` (`pnpm@12.6.0`). The package's supported engine remains
@@ -321,7 +321,7 @@ again at 4 — pointer and paint timing degrades under CPU contention regardless
 the host has, which is the same reason `scripts/test.sh` pins its lane concurrency. Adding shards
 adds processes that each keep CI's per-process shape, so the critical path halves without changing
 any test's timing characteristics. This also differs from `platform-contracts`' deliberately
-*coarser* matrix: that job runs the 26-file `test:platform` subset, where finer splits lost to
+*coarser* matrix: that job runs the 27-file `test:platform` subset, where finer splits lost to
 fixed per-job overhead, whereas the complete suite is ~490 files and still leaves ~60 per shard.
 
 Every shard builds first because `package-entrypoints.test.ts` imports the package's built `dist/`
@@ -432,7 +432,7 @@ there. Locally every shard is another process on the SAME host, so the concurren
 one-page Firefox and four-page WebKit allocations request 40 pages for eight shards. The script
 budgets about half the host's CPUs as browser pages and clamps an over-large request with a warning
 rather than failing. On a 60-core host the current ceiling is six shards per engine, or 30 pages;
-all positive shard counts are supported. `test:platform`'s 26-file subset
+all positive shard counts are supported. `test:platform`'s 27-file subset
 is a strict subset of this run, so it is not run separately here.
 
 Because it's heavy (three full browser-engine sweeps), it is meant to run before publishing a

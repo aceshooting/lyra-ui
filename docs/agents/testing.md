@@ -111,6 +111,25 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
 - Native-wrapper tests cover relevant attribute forwarding, form/reset/validity behavior, public
   focus/editing methods, and the exact bubbling/composed event contract. A rendered private
   native element is not proof that the host API works.
+- **Rendered template whitespace: `renderedTemplateWhitespace(root, { allow })`** from
+  `packages/lyra-ui/test/rendered-whitespace.ts` returns one string descriptor per
+  template-formatting whitespace run that actually renders, walking `root` and every open shadow
+  root below it (strings, never nodes, so a failing assertion stays cheap). A `Text` node is
+  reported when all five criteria hold: (1) its style parent (assigned slot, else parent element,
+  else shadow host) computes a preserving `white-space-collapse` (`preserve`, `preserve-breaks`,
+  `preserve-spaces`, `break-spaces`; `white-space` `pre`/`pre-wrap`/`pre-line`/`break-spaces`
+  where the longhand is missing); (2) it contains a segment break and is whitespace-only or starts
+  or ends with a break run; (3) it has at least one client rect, so runs a flex or grid container
+  drops and `display: none` subtrees are skipped; (4) its previous sibling is not a Lit child-part
+  start marker (empty comment, `?lit$N$`, or SSR `lit-part`), so committed values that start or end
+  with a newline are never reported; (5) `allow` does not accept it. Known limits: `unsafeHTML`
+  output carries no marker, so Markdown assertions whose fixture has a fenced block pass
+  `{ allow: inMarkdownCodeBlock }` (text under `pre[part~="code-block"]`); static text directly
+  after a marker is skipped too; and only the rendered state under test is checked. Assert
+  `.to.deep.equal([])` on the state a change fixes, including under a
+  `<div style="white-space: pre-wrap">` wrapper for composers. The fourth lifecycle contract
+  (`template-whitespace-contract` in `src/lifecycle-contracts.test.ts`) runs it on every root-barrel
+  tag's default state.
 - **A *failing* assertion whose `actual`/`expected` is a DOM node, `NodeList`, or any other
   non-structured-cloneable value hangs the whole test file** under `wtr`. Root cause (verified
   empirically, 2026-07-20): `@web/test-runner-mocha`'s `collectTestResults` copies

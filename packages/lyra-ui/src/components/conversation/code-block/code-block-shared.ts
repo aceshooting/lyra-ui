@@ -670,9 +670,7 @@ export function renderCodeBlockPlainCode(
             @click=${() => options.onLineActivate(lineNumber)}
             @keydown=${(e: KeyboardEvent) =>
               options.onLineKeyDown(e, lineNumber)}
-          >
-            ${options.lineNumberText(lineNumber)}
-          </button>`
+          >${options.lineNumberText(lineNumber)}</button>`
         : options.lineNumbers
         ? html`<span class="line-number" aria-hidden="true"
             >${options.lineNumberText(lineNumber)}</span

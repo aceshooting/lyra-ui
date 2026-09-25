@@ -299,9 +299,9 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
               >`
             : nothing}
         </div>
-        <div part="segment-text">
-          ${this.renderSegmentText(segment)}${segment.truncated ? this.renderTruncationBoundary(segment) : nothing}
-        </div>
+        <div part="segment-text"
+          >${this.renderSegmentText(segment)}${segment.truncated ? this.renderTruncationBoundary(segment) : nothing}</div
+        >
       </div>
     `;
   }

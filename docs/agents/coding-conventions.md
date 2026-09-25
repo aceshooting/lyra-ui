@@ -201,6 +201,17 @@
   in a sentence is enough. It is quieter than the backtick and `${` traps because it does NOT
   change the file's backtick count, so the usual "confirm 2 backticks" check passes. Only a
   rendered result or a parsed-CSS comparison against the pre-edit file catches it.
+- **Bind flush inside any element whose computed `white-space` preserves breaks** (`pre`,
+  `pre-wrap`, `pre-line`, `break-spaces`): `>${x}</tag>`, or the `\n  >${x}</tag\n>` idiom when the
+  start tag carries attributes. An indented template puts whitespace-only text between the tags and
+  the binding; in a normal flow context it collapses away, but under a preserving value it renders
+  as a blank first line, an indented first line and a blank last line. This applies to elements
+  that only inherit the value (a `<button>` inside `<pre>` computes `white-space: pre`, because the
+  UA stylesheet gives `button` no reset) and to composed `lr-*` children, because inheritance
+  crosses shadow roots. Newlines inside a start tag's attribute list and before an end tag's `>`
+  are not text, so they stay safe. Assert the rendered result with `renderedTemplateWhitespace()`
+  from `test/rendered-whitespace.ts`, never by reading template text; the lifecycle suite runs it
+  on every tag's default state (`template-whitespace-contract`).
 - **Watch for silently-inert CSS.** A declaration that never applies looks identical to one that
   works, and nothing in the toolchain flags it — not `tsc`, not the style policy, not a test that
   greps stylesheet text. Four live instances were found in one pass: `:host(:has(> lr-x))`

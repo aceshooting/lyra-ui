@@ -164,6 +164,16 @@ export function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch] ?? ch);
 }
 
+/** Matches what marked's own escaping of ordinary text replaces: every markup-significant
+ *  character, and an ampersand only when it does not already start a character reference. */
+const TEXT_ESCAPE_PATTERN = /[<>"']|&(?!(?:#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g;
+
+/** Escapes text the way marked escapes ordinary (non-raw) text, so an existing character
+ *  reference such as the entity for a copyright sign still renders as its character. */
+function escapeMarkdownText(text: string): string {
+  return text.replace(TEXT_ESCAPE_PATTERN, (ch) => HTML_ESCAPES[ch] ?? ch);
+}
+
 /**
  * Mirrors marked's own default `link()` renderer's `cleanUrl()`: a malformed
  * percent-escape or lone UTF-16 surrogate in the raw href throws inside
@@ -402,6 +412,8 @@ interface MarkdownRendererOverrides extends Partial<MarkedRenderer> {
     token: { tokens: unknown[]; task?: boolean },
   ): string;
   checkbox(this: MarkedParserContext, token: { checked: boolean }): string;
+  /** Returns `false` to defer to marked's default text renderer. */
+  text(this: MarkedParserContext, token: { text: string; escaped?: boolean; tokens?: unknown[] }): string | false;
 }
 
 function taskItemCheckboxLabel(
@@ -641,6 +653,16 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           ? token.text.replace(/\sdata-fenced(?:\s*=\s*(?:\x22[^\x22]*\x22|\x27[^\x27]*\x27|[^\s>]+))?/gi, '')
           : token.text;
         return escapeHtmlOption ? escapeHtml(source) : source;
+      },
+      text(token) {
+        // After an unclosed raw-block opening tag (pre, code, kbd or script), marked lexes every
+        // later inline text token as already-escaped source and its default renderer emits it
+        // verbatim. Escape mode skips the sanitizer, so that text must be escaped here. Returning
+        // false keeps marked's default for every other token and for sanitize and trusted modes.
+        if (escapeHtmlOption && token.escaped === true && !token.tokens) {
+          return escapeMarkdownText(token.text);
+        }
+        return false;
       },
     } as MarkdownRendererOverrides,
   });
@@ -1377,6 +1399,12 @@ export interface MarkdownContentOptions {
 export function renderMarkdownContent(options: MarkdownContentOptions): TemplateResult {
   const isFallback = options.renderedHtml === null && options.renderedBlocks === undefined;
   const sanitizedMaxHeight = sanitizeCssLength(options.maxHeight);
+  // Flush on purpose, and kept away from formatters. While [part='content'] shows the plain-text
+  // fallback it is white-space: pre-wrap (markdown.styles.ts), so template text between the tags
+  // and the binding would render: a blank first line, an indented first line and a blank last
+  // line. The fallback must show exactly `content`. The template carries no whitespace outside
+  // the tags either, so a host that inherits a preserving white-space value renders none of it.
+  // prettier-ignore
   return html`<div
         part="content"
         role="document"
