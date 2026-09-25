@@ -398,8 +398,10 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'heading-anchors' })
   override headingAnchors = false;
 
-  /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. `false` (the
-   *  default) renders `$...$` literally, unparsed -- today's exact output. */
+  /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. An inline `$` opens
+   *  only before a non-space and closes only after a non-space when no digit follows, so prose
+   *  such as `$500 and $200` stays text; `\$` escapes a literal dollar. `false` (the default)
+   *  renders `$...$` literally, unparsed -- today's exact output. */
   @property({ type: Boolean }) override math = false;
 
   /** A CSS length (e.g. `"20rem"`); once set, the rendered document scrolls internally past this

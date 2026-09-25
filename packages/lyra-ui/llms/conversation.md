@@ -144,7 +144,9 @@ uses for its own `[part="body"]`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
-  lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
+  lazy-loaded the same way as `marked`/`dompurify`/`shiki`. Inline delimiters follow pandoc's rule:
+  the opening `$` must be followed by a non-space, and the closing `$` must follow a non-space and
+  not precede a digit, so prose such as `$500 and $200` stays text. `\$` escapes a literal dollar.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set,
   `[part="content"]` scrolls internally past this height instead of growing the page. Invalid
   values are ignored.

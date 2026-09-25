@@ -303,7 +303,10 @@ export function setCachedHighlight(
 
 // -- math (KaTeX) -----------------------------------------------------------------------------
 
-const MATH_INLINE_RE = /^\$((?:\\\$|[^$\s])(?:\\\$|[^$])*?)\$(?!\$)/;
+// Pandoc-style inline delimiters: the opening `$` is followed by a non-space, the closing `$` is
+// preceded by a non-space and not followed by a digit (or another `$`). This keeps prose such as
+// "$500 and $200" out of TeX while `\$` still escapes a literal dollar inside a span.
+const MATH_INLINE_RE = /^\$(?![\s$])((?:\\\$|[^$])*?(?:\\\$|[^$\s\\]))\$(?![$\d])/;
 
 interface MathToken {
   type: 'math';
