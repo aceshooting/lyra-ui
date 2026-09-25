@@ -657,11 +657,44 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
           continue;
         }
         this.knownProjectedNodes.add(node);
-        const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
-        if (text) sink.announce(text);
+        // A node added and removed again within one observer batch is still listed here.
+        if (node.parentNode !== this) continue;
+        this.announceProjectedNode(node, sink);
       }
     }
   };
+
+  /**
+   * Announces one newly projected node. A custom-element child observed before its own first
+   * render (a message created and appended in one step) exposes no accessible text yet: its
+   * slotted content is not part of the composed tree until its shadow root renders a slot. That
+   * node is already recorded as known, so retry exactly once after it is defined and has finished
+   * its pending update, provided it is still a direct child and announcements are still enabled.
+   */
+  private announceProjectedNode(node: Node, sink: AnnouncementSink): void {
+    const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
+    if (text) {
+      sink.announce(text);
+      return;
+    }
+    if (node instanceof Element && node.localName.includes('-')) void this.announceAfterRender(node);
+  }
+
+  private async announceAfterRender(node: Element): Promise<void> {
+    const registry = node.ownerDocument.defaultView?.customElements;
+    if (registry && !registry.get(node.localName)) await registry.whenDefined(node.localName);
+    const pending = (node as Element & { updateComplete?: unknown }).updateComplete;
+    if (!(pending instanceof Promise)) return;
+    try {
+      await pending;
+    } catch {
+      return;
+    }
+    const sink = this.announcementSink;
+    if (!sink || !this.isConnected || node.parentNode !== this) return;
+    const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
+    if (text) sink.announce(text);
+  }
 
   private announceNewProjectedNodes(): void {
     const sink = this.announcementSink;
@@ -669,8 +702,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       if (this.knownProjectedNodes.has(node)) continue;
       this.knownProjectedNodes.add(node);
       if (!sink || !this.hasUpdated) continue;
-      const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
-      if (text) sink.announce(text);
+      this.announceProjectedNode(node, sink);
     }
   }
 

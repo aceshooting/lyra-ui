@@ -355,6 +355,62 @@ it("announces only composed content from custom elements, closed details, and re
   ]);
 });
 
+it("announces a freshly created lr-chat-message exactly once, after its own first render", async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport live="polite"
+      ><lr-chat-message message-role="assistant" status="sent"
+        ><p>Restored history</p></lr-chat-message
+      ></lr-chat-viewport
+    >`
+  )) as LyraChatViewport;
+  await nextFrame();
+
+  // Created and appended in one go, the way a framework or a streaming host does it: the message
+  // has not rendered its own shadow tree yet when the insertion is observed, so its slotted
+  // paragraph is not part of the composed tree at that moment.
+  const message = document.createElement("lr-chat-message") as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  message.setAttribute("message-role", "assistant");
+  message.setAttribute("status", "sent");
+  const paragraph = document.createElement("p");
+  paragraph.textContent = "Fresh reply";
+  message.append(paragraph);
+  el.append(message);
+
+  await message.updateComplete;
+  await waitUntil(
+    () => sinkTexts("polite").length > 0,
+    "the new message was never announced"
+  );
+  await nextFrame();
+  expect(sinkTexts("polite")).to.deep.equal(["Assistant Fresh reply"]);
+
+  el.append(el.querySelector("lr-chat-message")!);
+  await message.updateComplete;
+  await nextFrame();
+  expect(
+    sinkTexts("polite"),
+    "reordering restored history stays silent"
+  ).to.deep.equal(["Assistant Fresh reply"]);
+});
+
+it("does not announce a deferred message that was removed before it rendered", async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport live="polite"></lr-chat-viewport>`
+  )) as LyraChatViewport;
+  const message = document.createElement("lr-chat-message") as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  message.textContent = "Withdrawn reply";
+  el.append(message);
+  message.remove();
+  await message.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await nextFrame();
+  expect(sinkTexts("polite")).to.deep.equal([]);
+});
+
 it("releases and re-acquires its opt-in announcement sink after cross-document adoption", async () => {
   const el = (await fixture(
     html`<lr-chat-viewport live="polite"
