@@ -487,6 +487,18 @@ export class ThemeWatcher implements ReactiveController {
   };
 
   private onStylesheetMutation = (mutationSubject?: unknown): void => {
+    // queueChange(true) would be a no-op in this state.
+    if (this.queued && this.mediaQueriesDirty) return;
+    const Declaration = this.realm?.CSSStyleDeclaration;
+    if (Declaration && mutationSubject instanceof Declaration && mutationSubject.parentRule === null) {
+      // An inline declaration can neither add a media query nor change which sheets apply, so it
+      // skips both the per-write sheet enumeration and the media-query refresh walk. The theme
+      // runtime's token maps write dozens of inline properties on <html> per apply.
+      if (!this.queued && isInlineDeclarationOnComposedAncestry(mutationSubject, this.host)) {
+        this.queueChange(false);
+      }
+      return;
+    }
     if (mutationSubject !== undefined && !this.mutationCanAffectHost(mutationSubject)) return;
     this.queueChange(true);
   };

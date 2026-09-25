@@ -4,7 +4,10 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from './data-descriptors.js';
 
-const UNSAFE_CSS_STRUCTURE = /[;{}]/;
+// Declaration/block breakout, brackets, escapes and comment delimiters. Escapes and comments are
+// banned because they can disguise any other token (for example a url() function) from the checks
+// below.
+const UNSAFE_CSS_STRUCTURE = /[;{}[\]\\]|\/\*|\*\//;
 const URL_FUNCTION = /url\s*\(/i;
 const SAFE_SWATCH_COLOR_FALLBACK =
   /^(?:#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\([^;{}]*\)|var\(--[\w-]+(?:\s*,[^;{}]+)?\))$/;
@@ -13,12 +16,33 @@ const SAFE_LENGTH_FALLBACK =
 const SAFE_INSET_FALLBACK =
   /^(?:(?:auto|[-+]?(?:\d+|\d*\.\d+)(?:px|em|rem|%|ch|vw|vh|vmin|vmax)|var\(--[\w-]+(?:\s*,[^;{}]+)?\))(?:\s+|$)){1,4}$/;
 
+/**
+ * Parentheses and quotes balance; nothing is interpreted inside a quoted string. A local copy of the
+ * theme runtime's scan (component bundles must not pull in the theme runtime): backslashes, and so
+ * escapes, are already rejected by `UNSAFE_CSS_STRUCTURE`.
+ */
+function isBalancedCssValue(value: string): boolean {
+  let depth = 0;
+  let quote = '';
+  for (const character of value) {
+    if (quote) {
+      if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '\'' || character === '"') quote = character;
+    else if (character === '(') depth += 1;
+    else if (character === ')' && (depth -= 1) < 0) return false;
+  }
+  return quote === '' && depth === 0;
+}
+
 function structurallySafe(value: unknown): value is string {
   return (
     typeof value === 'string' &&
     value.trim() !== '' &&
     !UNSAFE_CSS_STRUCTURE.test(value) &&
-    !URL_FUNCTION.test(value)
+    !URL_FUNCTION.test(value) &&
+    isBalancedCssValue(value)
   );
 }
 
@@ -36,7 +60,12 @@ function propertyAccepts(property: string, value: string, fallback: RegExp): boo
  * recognizable CSS color syntax -- both to stop it breaking out of the single declaration it is
  * assigned to (`;`, `{`, `}` terminate/reopen a declaration) and to stop non-color values such as
  * `url(...)` from being accepted, which `background` also parses and would fetch as soon as the
- * swatch renders. That matters even when the value is applied through Lit's `styleMap` directive
+ * swatch renders. `CSS.supports()` alone is not enough for the first half: it accepts an unclosed
+ * construct such as `rgb(0 0 0` (the parser closes it implicitly), yet the value is written, and in
+ * Chromium and WebKit serialized, verbatim, so re-parsing the `style` attribute folds every later
+ * declaration into the unclosed one. Every guard here therefore also requires balanced parentheses
+ * and quotes, and rejects brackets, escapes and comment delimiters, before asking the browser.
+ * That matters even when the value is applied through Lit's `styleMap` directive
  * rather than raw string interpolation: `styleMap`'s FIRST commit for a given attribute part
  * serializes the whole `style` value as one string (only later updates take the safe
  * `CSSStyleDeclaration.setProperty()` path), so an unsanitized value could still inject on that

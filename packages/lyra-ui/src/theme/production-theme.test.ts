@@ -48,7 +48,7 @@ describe('production theme rendering', () => {
     document.adoptedStyleSheets = [...originalSheets, sheet];
     try {
       for (const mode of ['light', 'dark'] satisfies LyraThemeMode[]) {
-        setLyraTheme({ mode, accent: null });
+        setLyraTheme({ mode, accent: null, tokens: null });
         const probe = await renderedProbe();
         const rootStyle = getComputedStyle(document.documentElement);
         const probeStyle = getComputedStyle(probe);
@@ -80,7 +80,7 @@ describe('production theme rendering', () => {
         expect(failures.join('\n')).to.equal('');
       }
     } finally {
-      setLyraTheme({ mode: 'unset', accent: null });
+      setLyraTheme({ mode: 'unset', accent: null, tokens: null });
       localStorage.removeItem('lyra-theme');
       document.adoptedStyleSheets = originalSheets;
     }
@@ -91,7 +91,7 @@ describe('production theme rendering', () => {
     const originalSheets = document.adoptedStyleSheets;
     document.adoptedStyleSheets = [...originalSheets, sheet];
     try {
-      setLyraTheme({ mode: 'dark', accent: '#e63950' });
+      setLyraTheme({ mode: 'dark', accent: '#e63950', tokens: null });
       const probe = await renderedProbe();
       const rootStyle = getComputedStyle(document.documentElement);
       const probeStyle = getComputedStyle(probe);
@@ -111,7 +111,7 @@ describe('production theme rendering', () => {
       }
       expect(failures.join('\n')).to.equal('');
     } finally {
-      setLyraTheme({ mode: 'unset', accent: null });
+      setLyraTheme({ mode: 'unset', accent: null, tokens: null });
       localStorage.removeItem('lyra-theme');
       document.adoptedStyleSheets = originalSheets;
     }
@@ -126,6 +126,7 @@ describe('production theme rendering', () => {
         mode: 'dark',
         accent: { danger: '#c81e3a', success: '#1f9d55' },
         surface: '#101418',
+        tokens: null,
       });
       const probe = await renderedProbe();
       const rootStyle = getComputedStyle(document.documentElement);
@@ -146,7 +147,7 @@ describe('production theme rendering', () => {
       }
       expect(failures.join('\n')).to.equal('');
     } finally {
-      setLyraTheme({ mode: 'unset', accent: null, surface: null });
+      setLyraTheme({ mode: 'unset', accent: null, surface: null, tokens: null });
       localStorage.removeItem('lyra-theme');
       document.adoptedStyleSheets = originalSheets;
     }
@@ -213,7 +214,7 @@ describe('focus-ring tokens at consumer scope', () => {
     const originalSheets = document.adoptedStyleSheets;
     document.adoptedStyleSheets = [...originalSheets, sheet];
     try {
-      setLyraTheme({ mode: 'light', accent: null });
+      setLyraTheme({ mode: 'light', accent: null, tokens: null });
       const probe = await renderedProbe();
       const probeStyle = getComputedStyle(probe);
 

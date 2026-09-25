@@ -147,6 +147,26 @@ for (const relative of layeredAssets) {
   }
 }
 assert.deepEqual(layerOrderMismatches, [], 'every layered Lyra stylesheet must declare theme.css\'s layer order verbatim');
+// The Storybook preview declares the full consumer order (a layered reset's theme/base before
+// Lyra's layers, docs-authoring utilities after lr-utilities) as the very first stylesheet it
+// imports. Its lr-* names must be theme.css's names in theme.css's order, or the docs site renders
+// a cascade no consumer gets.
+const storybookDir = path.join(packageDir, '..', '..', '.storybook');
+const lyraLayerNames = (statement) =>
+  statement.replace(/^@layer\s+/, '').replace(/;$/, '').split(/\s*,\s*/).filter((name) => name.startsWith('lr-'));
+const previewLayerStatements = layerOrderStatements(readFileSync(path.join(storybookDir, 'layer-order.css'), 'utf8'));
+assert.equal(previewLayerStatements.length, 1, '.storybook/layer-order.css must hold exactly one @layer statement');
+assert.deepEqual(
+  lyraLayerNames(previewLayerStatements[0]),
+  lyraLayerNames(themeLayerOrder),
+  '.storybook/layer-order.css must name the lr-* layers exactly as theme.css orders them',
+);
+const firstPreviewStylesheet = /^\s*import\s+['"]([^'"]+\.css(?:\?[^'"]*)?)['"]/m.exec(
+  readFileSync(path.join(storybookDir, 'preview.js'), 'utf8').replace(/^\s*\/\/.*$/gm, ''),
+)?.[1];
+assert.equal(firstPreviewStylesheet, './layer-order.css', '.storybook/preview.js must import layer-order.css before any other stylesheet');
+assert.deepEqual(lyraLayerNames('@layer theme, base, lr-b, components, lr-a;'), ['lr-b', 'lr-a']);
+
 // The helper is not vacuous: a stale four-name copy is reported as one, and prose never counts.
 assert.deepEqual(layerOrderStatements('/* @layer a, b; */\n@layer lr-base, lr-theme, lr-utilities, lr-overrides;'), [
   '@layer lr-base, lr-theme, lr-utilities, lr-overrides;',

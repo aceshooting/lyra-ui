@@ -9,7 +9,9 @@ import vm from 'node:vm';
 import {
   checkThemeBootstrapAsset,
   generateThemeBootstrapAsset,
+  measureThemeBootstrap,
   readBuiltThemeBootstrap,
+  themeBootstrapSafetyFindings,
 } from './generate-theme-bootstrap.mjs';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -95,6 +97,11 @@ try {
     join(fixtureRoot, 'scripts', 'is-main-module.mjs'),
     readFileSync(join(scriptDir, 'is-main-module.mjs'), 'utf8'),
   );
+  const writeBudget = (maxRawBytes, maxGzipBytes) => writeFileSync(
+    join(fixtureRoot, 'scripts', 'theme-bootstrap-budget.json'),
+    JSON.stringify({ reviewedRawBytes: 0, reviewedGzipBytes: 0, maxRawBytes, maxGzipBytes }),
+  );
+  writeBudget(100000, 100000);
 
   // 1. Missing built module fails closed (never emits a wrong/empty asset).
   await assert.rejects(
@@ -146,6 +153,41 @@ try {
     /Command failed/,
     'an unknown flag must fail closed',
   );
+
+  // 6b. The budget and inline-script safety findings: each fails --check, in process and
+  // over the CLI, with the asset otherwise fresh.
+  {
+    const { rawBytes, gzipBytes } = measureThemeBootstrap(FIRST_BOOTSTRAP);
+    writeBudget(rawBytes, gzipBytes);
+    assert.deepEqual((await checkThemeBootstrapAsset(fixtureRoot)).findings, [], 'exactly at the ceiling passes');
+
+    writeBudget(rawBytes - 1, gzipBytes);
+    assert.match((await checkThemeBootstrapAsset(fixtureRoot)).findings.join('\n'), /raw bytes, over the/);
+    assert.throws(() => execFileSync(process.execPath, [script, '--check'], { cwd: fixtureRoot, stdio: 'pipe' }), /Command failed/);
+
+    writeBudget(rawBytes, gzipBytes - 1);
+    assert.match((await checkThemeBootstrapAsset(fixtureRoot)).findings.join('\n'), /gzip bytes, over the/);
+    assert.throws(() => execFileSync(process.execPath, [script, '--check'], { cwd: fixtureRoot, stdio: 'pipe' }), /Command failed/);
+
+    rmSync(join(fixtureRoot, 'scripts', 'theme-bootstrap-budget.json'));
+    assert.match((await checkThemeBootstrapAsset(fixtureRoot)).findings.join('\n'), /budget\.json is missing/);
+    writeBudget(100000, 100000);
+
+    for (const [label, unsafe] of [
+      ['an HTML comment opener', '(function(){var a="<!--";})();'],
+      ['a closing tag', '(function(){var a="</x";})();'],
+      ['a script tag', '(function(){var a="<SCRIPT";})();'],
+      ['a raw line separator', `(function(){var a="${String.fromCharCode(0x2028)}";})();`],
+    ]) {
+      writeBuiltModule(unsafe);
+      await generateThemeBootstrapAsset(fixtureRoot);
+      assert.equal((await checkThemeBootstrapAsset(fixtureRoot)).findings.length, 1, label);
+      assert.throws(() => execFileSync(process.execPath, [script, '--check'], { cwd: fixtureRoot, stdio: 'pipe' }), /Command failed/, label);
+    }
+    assert.deepEqual(themeBootstrapSafetyFindings(FIRST_BOOTSTRAP, { maxRawBytes: 1e6, maxGzipBytes: 1e6 }), []);
+    writeBuiltModule(FIRST_BOOTSTRAP);
+    await generateThemeBootstrapAsset(fixtureRoot);
+  }
 
   // 7. The generated asset resolves script-tag configuration correctly once written to disk and
   // read back -- executing the GENERATED file, not the in-process source function.

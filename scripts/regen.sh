@@ -104,10 +104,11 @@ pnpm --filter @aceshooting/lyra-ui testing-event-registry
 step "framework type surfaces"
 pnpm --filter @aceshooting/lyra-ui framework-types
 
-step "semantic, chart, and terminal palette artifacts"
+step "semantic, chart, and terminal palette artifacts, and generated theme look presets"
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-chart-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.mjs
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-theme-presets.mjs
 
 step "design-token artifacts"
 pnpm --filter @aceshooting/lyra-ui design-tokens

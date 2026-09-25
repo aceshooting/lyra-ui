@@ -8,6 +8,7 @@ contract in `$lyra-ui` or the package reference before emitting markup.
 | Need | Start with | Add only when needed |
 |---|---|---|
 | Document structure | Native `main`, `nav`, `section`, headings, lists, and forms | `lr-page` or application-shell components when their named regions and responsive behavior fit |
+| Text hierarchy | Native headings, paragraphs, links, lists, and tables inside `lr-typography` (or `lr-prose`); `lr-not-typography` around embedded widgets | `lr-heading-1`…`lr-heading-4` when the look must differ from the outline level |
 | Flow and wrapping | `utilities.css` stack, cluster, grid, gap, alignment, and sizing classes | A stateful layout component for resizing, collapse, rails, or managed navigation |
 | Data entry | A form-associated Lyra control with visible label and hint | Grouping, validation summary, conditional fields, or confirmation around the real form owner |
 | Data display | Native text/list for small static content | Table, data grid, tree, virtual list, chart, or viewer when their interaction contract is required |

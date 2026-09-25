@@ -325,6 +325,9 @@ assert.deepEqual(reviewedCeilingKeys, [
   'dist/ssr-loader.js',
   'dist/ssr.js',
   'dist/ssr/all.js',
+  'dist/theme/presets.js',
+  'dist/theme/presets/shadcn.js',
+  'dist/theme/theme.js',
 ]);
 assert.ok(
   budgets['dist/autoloader.js'] >= budgets['dist/all.js'],

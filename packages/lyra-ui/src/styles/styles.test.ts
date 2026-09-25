@@ -397,7 +397,59 @@ it("declares stable layers without root selectors, physical geometry, or substri
   expect(`${native}\n${utilities}`).to.not.match(
     /^\s*(?:(?:margin|padding|border|inset)-(?:left|right)|left|right|width|height)\s*:/m
   );
+  expect(`${native}\n${utilities}`).to.not.match(/text-align\s*:\s*(?:left|right)\b/);
   expect(utilities).to.not.match(/\[class(?:\^|\$|\*)=/);
+});
+
+/** Removes every balanced :where(...) group, leaving whatever still carries specificity. */
+function withoutWhereGroups(selector: string): string {
+  let result = "";
+  let index = 0;
+  while (index < selector.length) {
+    if (selector.startsWith(":where(", index)) {
+      let depth = 0;
+      let cursor = index + ":where".length;
+      do {
+        if (selector[cursor] === "(") depth += 1;
+        if (selector[cursor] === ")") depth -= 1;
+        cursor += 1;
+      } while (depth > 0 && cursor < selector.length);
+      index = cursor;
+    } else {
+      result += selector[index];
+      index += 1;
+    }
+  }
+  return result;
+}
+
+it("keeps every lr-utilities selector at zero specificity", async () => {
+  const source = await fetch(new URL("./utilities.css", import.meta.url)).then((response) =>
+    response.text()
+  );
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(source);
+  const layer = [...sheet.cssRules].find(
+    (rule): rule is CSSLayerBlockRule => rule instanceof CSSLayerBlockRule && rule.name === "lr-utilities"
+  );
+  if (layer === undefined) throw new Error("utilities.css has no lr-utilities layer block");
+  const collect = (rules: CSSRuleList): CSSStyleRule[] =>
+    [...rules].flatMap((rule) =>
+      rule instanceof CSSStyleRule
+        ? [rule]
+        : "cssRules" in rule
+          ? collect((rule as CSSGroupingRule).cssRules)
+          : []
+    );
+  const styleRules = collect(layer.cssRules);
+  expect(styleRules.length, "utility rules parsed").to.be.greaterThan(100);
+  const specific = styleRules
+    .map((rule) => rule.selectorText)
+    .filter((selector) => !/^[\s>+~,]*$/.test(withoutWhereGroups(selector)));
+  expect(specific).to.deep.equal([]);
+  // The helper is not vacuous: a bare class or an element outside :where() is reported.
+  expect(withoutWhereGroups(":where(.a) > :where(b):where(:not(.c))")).to.equal(" > ");
+  expect(withoutWhereGroups(":where(.a) .b")).to.equal(" .b");
 });
 
 describe("reservations.css", () => {

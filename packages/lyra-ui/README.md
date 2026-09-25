@@ -675,6 +675,11 @@ WCAG contrast (control borders, focus colour, danger red, chart colours); see
 @import "@aceshooting/lyra-ui/themes/shadcn.css";
 ```
 
+The same look also ships as a runtime preset, `@aceshooting/lyra-ui/theme/presets/shadcn.js`
+(`applyLyraThemePreset(LYRA_SHADCN_THEME_PRESET)`), which persists, is restored before first paint
+by the no-flash bootstrap, and is written inline, so it beats unlayered `:root` overrides like the
+accent does; see [Theme presets](./llms/shared.md#theme-modeaccentsurface-runtime-aceshootinglyra-uithemejs).
+
 Tooling can consume the canonical DTCG interchange document from
 `@aceshooting/lyra-ui/design-tokens.json`. The generated
 `@aceshooting/lyra-ui/design-tokens.css` entry supplies explicit light/dark fixture selectors for
@@ -738,8 +743,9 @@ token vocabulary outside component shadow roots:
 
 `native.css` styles only native descendants of an explicit `.lr-native` scope; it has no root reset
 and does not style the scope marker itself. `utilities.css` provides exact, low-specificity `lr-*`
-classes for layout, logical sizing, gap/alignment/wrap, prose/text, accessible hiding, FOUCE, and
-`<lr-page>` mobile/desktop allocation helpers. Both are layered, tokenized, RTL-safe, and optional.
+classes for layout, logical sizing, gap/alignment/wrap, prose/text, typography roles and scope
+(`lr-typography`, `lr-heading-1`–`4`, `lr-inline-code`), accessible hiding, FOUCE, and `<lr-page>`
+mobile/desktop allocation helpers. Both are layered, tokenized, RTL-safe, and optional.
 See [`llms/shared.md`](./llms/shared.md#optional-native-styles-and-css-utilities) for the complete
 class inventory and override hooks.
 

@@ -179,7 +179,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  setLyraTheme({ mode: 'unset', accent: null });
+  setLyraTheme({ mode: 'unset', accent: null, tokens: null });
   localStorage.removeItem('lyra-theme');
   document.adoptedStyleSheets = originalSheets;
   for (const node of addedNodes.splice(0)) node.remove();
@@ -216,7 +216,7 @@ describe('shadcn look preset', () => {
     for (const order of ['base-first', 'preset-first'] as const) {
       await adoptTheme(order);
       for (const mode of MODES) {
-        setLyraTheme({ mode, accent: null });
+        setLyraTheme({ mode, accent: null, tokens: null });
         snapshots[order].push(...tokens.map((token) => `${mode} ${token} ${tokenColor(token)}`));
         snapshots[order].push(`${mode} button ${await buttonBackground()}`);
       }
@@ -354,11 +354,11 @@ describe('shadcn look preset', () => {
       const style = getComputedStyle(callout);
       return `${style.backgroundColor} / ${style.color}`;
     };
-    setLyraTheme({ mode: 'light', accent: null });
+    setLyraTheme({ mode: 'light', accent: null, tokens: null });
     const light = await calloutColors();
-    setLyraTheme({ mode: 'dark', accent: null });
+    setLyraTheme({ mode: 'dark', accent: null, tokens: null });
     const attributeDark = await calloutColors();
-    setLyraTheme({ mode: 'unset', accent: null });
+    setLyraTheme({ mode: 'unset', accent: null, tokens: null });
     document.documentElement.classList.add('dark');
     const classDark = await calloutColors();
     // Perturbation guard: the two modes really differ, so the equality below is about .dark.
@@ -370,7 +370,7 @@ describe('shadcn look preset', () => {
     await adoptTheme();
     const rendered: Record<string, string> = {};
     for (const mode of MODES) {
-      setLyraTheme({ mode, accent: null });
+      setLyraTheme({ mode, accent: null, tokens: null });
       const card = await fixture<LyraCard>(html`<lr-card>Card</lr-card>`);
       await card.updateComplete;
       rendered[`${mode} card`] = getComputedStyle(card.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!).borderTopColor;
@@ -413,7 +413,7 @@ describe('shadcn look preset', () => {
     await adoptTheme();
     const rendered: Record<string, string> = {};
     for (const mode of MODES) {
-      setLyraTheme({ mode, accent: null });
+      setLyraTheme({ mode, accent: null, tokens: null });
       rendered[`${mode} button`] = await buttonBackground();
       rendered[`${mode} input border`] = await inputBorderColor();
       rendered[`${mode} filled button`] = await buttonBackground(html`<lr-button appearance="filled">Save</lr-button>`);
@@ -430,7 +430,7 @@ describe('shadcn look preset', () => {
 
   it('draws a 3px focus ring flush against the control in the opaque focus grey', async () => {
     await adoptTheme();
-    setLyraTheme({ mode: 'light', accent: null });
+    setLyraTheme({ mode: 'light', accent: null, tokens: null });
     const { base } = await buttonBase();
     await sendKeys({ press: 'Tab' });
     base.focus();
@@ -464,7 +464,7 @@ describe('shadcn look preset', () => {
     };
     const shifts: Record<string, boolean> = {};
     for (const mode of MODES) {
-      setLyraTheme({ mode, accent: null });
+      setLyraTheme({ mode, accent: null, tokens: null });
       const { base } = await buttonBase();
       const style = getComputedStyle(base);
       const resting = style.backgroundColor;
@@ -482,7 +482,7 @@ describe('shadcn look preset', () => {
     const rendered: Record<string, string> = {};
     const expected: Record<string, string> = {};
     for (const mode of MODES) {
-      setLyraTheme({ mode, accent: GEMSTONES.emerald.fill });
+      setLyraTheme({ mode, accent: GEMSTONES.emerald.fill, tokens: null });
       const brandLoud = runtimeRootColor('--lr-theme-color-brand-fill-loud');
       const focus = runtimeRootColor('--lr-theme-color-focus');
       rendered[`${mode} button`] = await buttonBackground();
@@ -500,7 +500,7 @@ describe('shadcn look preset', () => {
       // Perturbation guard: the accent really differs from the preset's own primary.
       expect(brandLoud).to.not.equal(PRIMARY[mode]);
 
-      setLyraTheme({ accent: null });
+      setLyraTheme({ accent: null, tokens: null });
       rendered[`${mode} restored`] = await buttonBackground();
       expected[`${mode} restored`] = PRIMARY[mode];
     }

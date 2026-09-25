@@ -1237,3 +1237,81 @@ describe('ThemeWatcher', () => {
     }
   });
 });
+
+describe('ThemeWatcher inline root writes', () => {
+  it('coalesces many inline writes on the root without enumerating or walking any stylesheet', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    const root = document.documentElement;
+    const unrelated = document.body.appendChild(document.createElement('div'));
+    const sheetsDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'styleSheets')!;
+    const rulesDescriptor = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules')!;
+    const reads = { styleSheets: 0, cssRules: 0 };
+    try {
+      connect();
+      await aTimeout(0);
+      calls = 0;
+      Object.defineProperty(Document.prototype, 'styleSheets', {
+        ...sheetsDescriptor,
+        get(this: Document) {
+          reads.styleSheets += 1;
+          return sheetsDescriptor.get!.call(this);
+        },
+      });
+      Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', {
+        ...rulesDescriptor,
+        get(this: CSSStyleSheet) {
+          reads.cssRules += 1;
+          return rulesDescriptor.get!.call(this);
+        },
+      });
+      for (let index = 0; index < 90; index += 1) root.style.setProperty(`--lr-theme-watcher-probe-${index}`, `${index}px`);
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+      expect(reads).to.deep.equal({ styleSheets: 0, cssRules: 0 });
+
+      unrelated.style.setProperty('--lr-theme-watcher-probe', '1px');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      Object.defineProperty(Document.prototype, 'styleSheets', sheetsDescriptor);
+      Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', rulesDescriptor);
+      for (let index = 0; index < 90; index += 1) root.style.removeProperty(`--lr-theme-watcher-probe-${index}`);
+      unrelated.remove();
+      disconnect();
+    }
+  });
+
+  it('still refreshes media subscriptions for a stylesheet mutation queued behind an inline write', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    const originalSheets = document.adoptedStyleSheets;
+    const sheet = new CSSStyleSheet();
+    document.adoptedStyleSheets = [...originalSheets, sheet];
+    const originalMatchMedia = window.matchMedia;
+    const requested: string[] = [];
+    window.matchMedia = ((query: string) => {
+      requested.push(query);
+      return originalMatchMedia.call(window, query);
+    }) as typeof matchMedia;
+    try {
+      connect();
+      await aTimeout(0);
+      calls = 0;
+      requested.length = 0;
+      // Same microtask: an inline write queues without a media refresh, then a rule arrives.
+      document.documentElement.style.setProperty('--lr-theme-watcher-probe', '1px');
+      sheet.insertRule('@media (min-width: 12345px) { :root { --lr-theme-watcher-probe: 2px; } }');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+      expect(requested).to.include('(min-width: 12345px)');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+      document.documentElement.style.removeProperty('--lr-theme-watcher-probe');
+      document.adoptedStyleSheets = originalSheets;
+      disconnect();
+    }
+  });
+});

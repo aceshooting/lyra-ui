@@ -11,7 +11,7 @@
 const STORAGE_KEY = 'lyra-theme';
 
 export interface LyraThemeBootstrapOptions {
-  /** The localStorage key holding a `{ mode, accent, surface }` theme record. */
+  /** The localStorage key holding a `{ mode, accent, surface, tokens? }` theme record. */
   storageKey?: string;
 }
 
@@ -50,7 +50,26 @@ export type LyraThemeAccent =
   | null
   | { readonly [role in LyraThemeSemanticRole]?: LyraThemeAccentValue };
 
-/** Persisted theme selection, optional per-role accent, and optional surface reference. */
+/**
+ * A theme input a token map may set: a `--lr-theme-*` custom property name. At run time a name
+ * must also match `^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$`, be at most 80 characters long, and not be
+ * `--lr-theme-accent`, which the accent runtime owns.
+ */
+export type LyraThemeTokenName = `--lr-theme-${string}`;
+
+/**
+ * A token's CSS value for both resolved modes, or a `{ light?, dark? }` pair. A `null` or omitted
+ * branch leaves that mode to the stylesheets.
+ */
+export type LyraThemeTokenValue = string | { readonly light?: string | null; readonly dark?: string | null };
+
+/**
+ * Validated `--lr-theme-*` overrides, written inline on the document root. A map always replaces
+ * the previous one wholesale; compose maps with object spread.
+ */
+export type LyraThemeTokens = { readonly [name: LyraThemeTokenName]: LyraThemeTokenValue };
+
+/** Persisted theme selection, optional per-role accent, optional surface reference, and optional token map. */
 export interface LyraTheme {
   /** Requested selection mode; `auto` remains distinct from its resolved light/dark value. */
   mode: LyraThemeMode;
@@ -65,6 +84,13 @@ export interface LyraTheme {
    * the supplied color is composited against the default surface for that mode before use.
    */
   surface: string | null;
+  /**
+   * Validated `--lr-theme-*` token map applied inline on the document root, or `null` to leave
+   * every input to the stylesheets. Absent from every snapshot and stored record while no map is
+   * applied; when present it is the normalized, deep-frozen map (trimmed strings, and per-mode
+   * entries always carrying both `light` and `dark`, `null` for a missing branch).
+   */
+  tokens?: LyraThemeTokens | null;
 }
 
 /** Snapshot carried by the global `lr-theme-change` event. */
@@ -76,10 +102,56 @@ declare global {
   }
 }
 
-const DEFAULT_THEME: Readonly<LyraTheme> = Object.freeze({ mode: 'auto', accent: null, surface: null });
+/**
+ * The complete internal theme state. Unlike the public `LyraTheme` snapshot it always carries
+ * `tokens`; `toSnapshot`/`toRecord` are the only projections that build public values from it.
+ */
+interface ThemeState {
+  mode: LyraThemeMode;
+  accent: LyraThemeAccent;
+  surface: string | null;
+  tokens: LyraThemeTokens | null;
+}
+
+const DEFAULT_STATE: Readonly<ThemeState> = Object.freeze({ mode: 'auto', accent: null, surface: null, tokens: null });
 
 type ResolvedThemeMode = 'light' | 'dark';
 type Rgb = readonly [red: number, green: number, blue: number];
+
+// The token-map grammar. scripts/fixtures/theme-token-grammar.json is the single source of these
+// constants; this is one of its two literal copies in this file (the bootstrap carries the other,
+// because it must stay self-contained), and scripts/theme-token-grammar.test.mjs fails if either
+// drifts. The rule is DOM-free on purpose: CSS.supports() accepts every unclosed construct, which
+// then corrupts the rest of the inline style attribute when it is re-parsed.
+const TOKEN_NAME_PATTERN = /^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const TOKEN_NAME_MAX_LENGTH = 80;
+const TOKEN_RESERVED_NAME = '--lr-theme-accent';
+const TOKEN_ENTRY_MAX = 512;
+const TOKEN_SYNTHESIZED_MAX = 16;
+const TOKEN_VALUE_MAX_LENGTH = 256;
+const TOKEN_FORBIDDEN_PATTERN = /[\x00-\x1f\x7f\\;{}!<>@[\]`$^|~=?&:\u2028\u2029]|\/\*|\*\//;
+const TOKEN_CSS_WIDE_PATTERN = /^(?:inherit|initial|revert(?:-layer)?|unset)$/i;
+const TOKEN_FUNCTION_PATTERN = /([a-z0-9_-]+)\s*\(/gi;
+const TOKEN_ALLOWED_FUNCTIONS = 'rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix light-dark calc min max clamp var cubic-bezier steps linear'.split(' ');
+/** The ownership list's cap: every map entry plus the on-* partners the floor can synthesize. */
+const TOKEN_OWNERSHIP_MAX = TOKEN_ENTRY_MAX + TOKEN_SYNTHESIZED_MAX;
+/** `Symbol.for` key of the list of token names last written on `<html>`, shared with the bootstrap. */
+const TOKEN_OWNERSHIP_SYMBOL = '@aceshooting/lyra-ui.theme-tokens.v1';
+
+/**
+ * theme.css's own mode values the contrast floor measures against when a token map does not carry
+ * the reference itself: the page surface, the raised surface, the body text, and the strong scrim's
+ * black alpha.
+ */
+const MODE_DEFAULTS: Readonly<Record<ResolvedThemeMode, {
+  readonly surface: Rgb;
+  readonly raised: Rgb;
+  readonly text: Rgb;
+  readonly overlayStrongAlpha: number;
+}>> = {
+  light: { surface: [255, 255, 255], raised: [246, 248, 250], text: [26, 26, 26], overlayStrongAlpha: 0.92 },
+  dark: { surface: [26, 26, 26], raised: [34, 39, 46], text: [242, 242, 242], overlayStrongAlpha: 0.95 },
+};
 
 const COLOR_SCHEME_QUERY = '(prefers-color-scheme: dark)';
 
@@ -106,12 +178,27 @@ const ALL_RAMP_PROPERTIES: readonly string[] = [
  * The last theme this module applied. `localStorage` is the source of truth whenever it is
  * readable *and* writable; this is the fallback for the contexts where it is not (sandboxed
  * iframe, blocked third-party storage, private browsing, quota exhaustion). Without it every
- * `setLyraTheme` call would merge over `DEFAULT_THEME` and silently reset fields an earlier call
+ * `setLyraTheme` call would merge over `DEFAULT_STATE` and silently reset fields an earlier call
  * set -- breaking the documented "degrades to apply-without-persist" guarantee across two calls --
  * and `getLyraTheme()` would report a state the document does not actually have, so a toggle UI
  * bound to it would render the wrong position.
  */
-let lastApplied: LyraTheme = { ...DEFAULT_THEME };
+let lastApplied: ThemeState = { ...DEFAULT_STATE };
+
+/**
+ * The token names this module last wrote inline. The shared ownership expando on `<html>` records
+ * the same list for the bootstrap and other copies of the library; this module-local copy still
+ * covers this module's own writes when a hostile page makes that expando unwritable.
+ */
+let writtenTokenNames: readonly string[] = [];
+
+/**
+ * What this module last asked for per inline name, and what the engine then serialized it as.
+ * WebKit re-serializes a quoted string in a custom property value with double quotes, so comparing
+ * the requested value with `getPropertyValue()` alone would rewrite every font-family token on
+ * every apply there.
+ */
+const inlineWrites = new Map<string, { requested: string; serialized: string }>();
 
 /**
  * True once a persist attempt has thrown and has not since succeeded. Storage may still be
@@ -136,12 +223,139 @@ function isThemeMode(value: unknown): value is LyraThemeMode {
   return value === 'light' || value === 'dark' || value === 'auto' || value === 'unset';
 }
 
+/**
+ * Parentheses and quotes balance. DOM-free, and shared (as literal copies) by the token grammar, by
+ * `normalizeColor`, and by the bootstrap. Escapes and newlines need no handling because the token
+ * grammar bans the backslash and every control character, and `normalizeColor`'s probe rejects them; nothing
+ * is interpreted inside a quoted string.
+ */
+function isBalancedCssValue(value: string): boolean {
+  let depth = 0;
+  let quote = '';
+  for (const character of value) {
+    if (quote) {
+      if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '\'' || character === '"') quote = character;
+    else if (character === '(') depth += 1;
+    else if (character === ')' && (depth -= 1) < 0) return false;
+  }
+  return quote === '' && depth === 0;
+}
+
+/**
+ * @internal True for a settable `--lr-theme-*` input name: the token-name pattern, at most 80
+ * characters, and never the reserved `--lr-theme-accent`. Shared with `presets.ts`.
+ */
+export function isLyraThemeTokenName(name: unknown): name is LyraThemeTokenName {
+  return typeof name === 'string'
+    && name.length <= TOKEN_NAME_MAX_LENGTH
+    && TOKEN_NAME_PATTERN.test(name)
+    && name !== TOKEN_RESERVED_NAME;
+}
+
+/**
+ * @internal The DOM-free token-value grammar: 1-256 characters after trimming, none of the
+ * forbidden characters or comment delimiters, not a CSS-wide keyword, only allow-listed functions,
+ * and balanced parentheses and quotes. Shared with `presets.ts`, so a map `defineLyraThemePreset()`
+ * accepts is never dropped at run time.
+ */
+export function isSafeLyraThemeTokenValue(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > TOKEN_VALUE_MAX_LENGTH) return false;
+  if (TOKEN_FORBIDDEN_PATTERN.test(trimmed) || TOKEN_CSS_WIDE_PATTERN.test(trimmed)) return false;
+  for (const match of trimmed.matchAll(TOKEN_FUNCTION_PATTERN)) {
+    if (!TOKEN_ALLOWED_FUNCTIONS.includes((match[1] ?? '').toLowerCase())) return false;
+  }
+  return isBalancedCssValue(trimmed);
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value) as unknown;
+  return prototype === Object.prototype || prototype === null;
+}
+
+function normalizeTokenBranch(value: unknown): string | null {
+  return isSafeLyraThemeTokenValue(value) ? value.trim() : null;
+}
+
+/**
+ * Normalizes a raw token map: pure, DOM-free, and never throws (a hostile getter yields `null`).
+ * Bad names and unsafe values drop their entry; a per-mode value keeps each surviving branch and
+ * carries both `light` and `dark`. Returns `null` for a non-object, for 0 or more than 512 keys, and
+ * when no entry survives; otherwise a frozen map whose per-mode entries are frozen too.
+ */
+function normalizeTokens(raw: unknown): LyraThemeTokens | null {
+  try {
+    if (!isPlainRecord(raw)) return null;
+    const names = Object.keys(raw);
+    if (names.length === 0 || names.length > TOKEN_ENTRY_MAX) return null;
+    const result: Record<string, LyraThemeTokenValue> = {};
+    let kept = 0;
+    for (const name of names) {
+      if (!isLyraThemeTokenName(name)) continue;
+      const value = raw[name];
+      if (typeof value === 'string') {
+        const normalized = normalizeTokenBranch(value);
+        if (normalized === null) continue;
+        result[name] = normalized;
+        kept += 1;
+        continue;
+      }
+      if (!isPlainRecord(value)) continue;
+      const keys = Object.keys(value);
+      const hasLight = Object.prototype.hasOwnProperty.call(value, 'light');
+      const hasDark = Object.prototype.hasOwnProperty.call(value, 'dark');
+      if ((!hasLight && !hasDark) || keys.some((key) => key !== 'light' && key !== 'dark')) continue;
+      const light = normalizeTokenBranch(value['light']);
+      const dark = normalizeTokenBranch(value['dark']);
+      if (light === null && dark === null) continue;
+      result[name] = Object.freeze({ light, dark });
+      kept += 1;
+    }
+    return kept > 0 ? Object.freeze(result) as LyraThemeTokens : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @internal Structural equality for token maps: empty, `null` and `undefined` are equal, key sets
+ * and values are compared, and a missing per-mode branch counts as `null`. Used by `presets.ts` to
+ * decide whether the applied snapshot still matches a preset's requested map.
+ */
+export function tokensEqual(
+  left: LyraThemeTokens | null | undefined,
+  right: LyraThemeTokens | null | undefined,
+): boolean {
+  const leftNames = left ? Object.keys(left) : [];
+  const rightNames = right ? Object.keys(right) : [];
+  if (leftNames.length !== rightNames.length) return false;
+  if (leftNames.length === 0) return true;
+  const leftMap = left as Record<string, LyraThemeTokenValue>;
+  const rightMap = right as Record<string, LyraThemeTokenValue>;
+  return leftNames.every((name) => {
+    if (!Object.prototype.hasOwnProperty.call(rightMap, name)) return false;
+    const a = leftMap[name];
+    const b = rightMap[name];
+    if (typeof a === 'string' || typeof b === 'string') return a === b;
+    if (!a || !b) return false;
+    return (a.light ?? null) === (b.light ?? null) && (a.dark ?? null) === (b.dark ?? null);
+  });
+}
+
 /** Syntax-level validation shared by a bare accent string, a per-role accent value, and `surface`. */
 function normalizeColor(value: unknown): string | null {
   if (typeof value !== 'string' || !value.trim()) return null;
   const candidate = value.trim();
+  // An unclosed parenthesis or quote parses for the probe below in every engine, yet written raw
+  // it corrupts the rest of the inline style attribute when that attribute is re-parsed.
+  if (!isBalancedCssValue(candidate)) return null;
   // Relative and CSS-wide values cannot be converted into a deterministic semantic ramp.
-  if (/^(?:inherit|initial|revert(?:-layer)?|unset)$/i.test(candidate)) return null;
+  if (TOKEN_CSS_WIDE_PATTERN.test(candidate)) return null;
   if (/^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(candidate)) {
     return null;
   }
@@ -281,21 +495,28 @@ function contrastForeground(fill: Rgb): Rgb {
   return contrastRatio(fill, black) >= contrastRatio(fill, white) ? black : white;
 }
 
-function ensureSurfaceContrast(color: Rgb, background: Rgb): Rgb {
-  if (contrastRatio(color, background) >= 3) return color;
+/**
+ * Returns `color` itself when it clears `minimum` against both `background` and `alsoAgainst`;
+ * otherwise mixes it toward black or white (chosen from `background`) in tenths until a step clears
+ * both, falling back to that target.
+ */
+function ensureSurfaceContrast(color: Rgb, background: Rgb, minimum = 3, alsoAgainst: Rgb = background): Rgb {
+  const passes = (candidate: Rgb): boolean =>
+    contrastRatio(candidate, background) >= minimum && contrastRatio(candidate, alsoAgainst) >= minimum;
+  if (passes(color)) return color;
   const black: Rgb = [0, 0, 0];
   const white: Rgb = [255, 255, 255];
   const target = contrastRatio(background, black) >= contrastRatio(background, white) ? black : white;
   for (let step = 1; step <= 10; step += 1) {
     const candidate = mixRgb(color, target, step / 10);
-    if (contrastRatio(candidate, background) >= 3) return candidate;
+    if (passes(candidate)) return candidate;
   }
   return target;
 }
 
 /** The shipped light/dark surface default a ramp mixes against when no `surface` is supplied. */
 function defaultBackground(mode: ResolvedThemeMode): Rgb {
-  return mode === 'dark' ? [26, 26, 26] : [255, 255, 255];
+  return MODE_DEFAULTS[mode].surface;
 }
 
 /**
@@ -374,38 +595,29 @@ function writeResolvedMode(mode: ResolvedThemeMode | null): void {
 }
 
 /**
- * Clears every ramp property, then (re)derives whichever roles `accent` supplies against `surface`
- * (or the mode default). Returns the accent value actually applied -- `null` when nothing could be
+ * Derives whichever roles `accent` supplies against the resolved mix base `background`, without
+ * touching the document. Returns the accent value actually applied -- `null` when nothing could be
  * resolved, a bare string when the single brand ramp applied, or an object of only the roles that
  * resolved (or, for a `{ light, dark }` role value, still carry an unpainted branch for the other
  * mode), so callers can tell a total failure apart from what was requested and so a later mode
- * change can still resolve a branch that the active mode did not paint.
+ * change can still resolve a branch that the active mode did not paint -- plus the ramp properties
+ * and `--lr-theme-accent` to write. With no resolved mode nothing is painted and the accent is
+ * retained, since there is no known surface to contrast against.
  */
-function writeAccent(
+function paintAccent(
   accent: LyraThemeAccent,
-  surface: string | null,
   mode: ResolvedThemeMode | null,
-): LyraThemeAccent {
-  const rootStyle = document.documentElement.style;
-  for (const property of ALL_RAMP_PROPERTIES) rootStyle.removeProperty(property);
-  if (!accent) {
-    rootStyle.removeProperty('--lr-theme-accent');
-    return null;
-  }
-  if (!mode) {
-    rootStyle.removeProperty('--lr-theme-accent');
-    return accent;
-  }
-  const background = resolveBackground(mode, surface);
+  background: Rgb,
+): { applied: LyraThemeAccent; properties: Map<string, string> } {
+  const properties = new Map<string, string>();
+  if (!accent) return { applied: null, properties };
+  if (!mode) return { applied: accent, properties };
   if (typeof accent === 'string') {
     const ramp = createRoleRamp('brand', accent, mode, background);
-    if (!ramp) {
-      rootStyle.removeProperty('--lr-theme-accent');
-      return null;
-    }
-    rootStyle.setProperty('--lr-theme-accent', accent);
-    for (const [property, value] of Object.entries(ramp)) rootStyle.setProperty(property, value);
-    return accent;
+    if (!ramp) return { applied: null, properties };
+    properties.set('--lr-theme-accent', accent);
+    for (const [property, value] of Object.entries(ramp)) properties.set(property, value);
+    return { applied: accent, properties };
   }
   const applied: Partial<Record<LyraThemeSemanticRole, LyraThemeAccentValue>> = {};
   let appliedBrandColor: string | null = null;
@@ -418,7 +630,7 @@ function writeAccent(
     if (base) {
       const ramp = createRoleRamp(role, base, mode, background);
       if (ramp) {
-        for (const [property, propertyValue] of Object.entries(ramp)) rootStyle.setProperty(property, propertyValue);
+        for (const [property, propertyValue] of Object.entries(ramp)) properties.set(property, propertyValue);
         painted = true;
         if (role === 'brand') appliedBrandColor = base;
       }
@@ -429,12 +641,195 @@ function writeAccent(
     // instead of being silently dropped from persisted/reported state.
     if (painted || isPerMode) applied[role] = value;
   }
-  if (appliedBrandColor) rootStyle.setProperty('--lr-theme-accent', appliedBrandColor);
-  else rootStyle.removeProperty('--lr-theme-accent');
-  return Object.keys(applied).length > 0 ? applied : null;
+  if (appliedBrandColor) properties.set('--lr-theme-accent', appliedBrandColor);
+  return { applied: Object.keys(applied).length > 0 ? applied : null, properties };
 }
 
-function readStoredTheme(): LyraTheme {
+/** The values a token map writes for `mode`: every bare value, plus that mode's non-null branches. */
+function tokenEntries(tokens: LyraThemeTokens | null, mode: ResolvedThemeMode | null): Map<string, string> {
+  const entries = new Map<string, string>();
+  if (!tokens) return entries;
+  for (const [name, value] of Object.entries(tokens) as [string, LyraThemeTokenValue][]) {
+    if (typeof value === 'string') entries.set(name, value);
+    else if (mode) {
+      const branch = value[mode];
+      if (branch) entries.set(name, branch);
+    }
+  }
+  return entries;
+}
+
+/** A token value resolved to painted RGB over `background`, or `null` when it cannot be. */
+function resolveTokenColor(value: string | undefined, background: Rgb | null): Rgb | null {
+  if (value === undefined || !background || !normalizeColor(value)) return null;
+  return parseResolvedRgb(value, background);
+}
+
+/**
+ * Applies the contrast floor to a token map's entries for a resolved mode. Returns the map to
+ * paint: repaired values serialized as `rgb(r g b)`, passing and unchecked values verbatim, plus
+ * any synthesized on-* partner. A value (or a reference) that does not resolve is written verbatim
+ * and synthesizes nothing -- including every value when the canvas is unavailable.
+ */
+function floorTokenEntries(
+  entries: ReadonlyMap<string, string>,
+  mode: ResolvedThemeMode,
+  surface: Rgb,
+): Map<string, string> {
+  const painted = new Map(entries);
+  const prefix = '--lr-theme-';
+  const defaults = MODE_DEFAULTS[mode];
+  const reference = (name: string, fallback: Rgb): Rgb | null =>
+    entries.has(prefix + name) ? resolveTokenColor(entries.get(prefix + name), surface) : fallback;
+  const raised = reference('color-surface-raised', defaults.raised);
+  const floor = (name: string, over: Rgb | null, against: Rgb | null, minimum: number, alsoAgainst?: Rgb | null): void => {
+    const value = painted.get(name);
+    if (value === undefined || !against || alsoAgainst === null) return;
+    const color = resolveTokenColor(value, over);
+    if (!color) return;
+    const repaired = ensureSurfaceContrast(color, against, minimum, alsoAgainst ?? against);
+    if (repaired !== color) painted.set(name, serializeRgb(repaired));
+  };
+
+  // Row 1: body and quiet text against the page and the raised surface.
+  floor(`${prefix}color-text-normal`, surface, surface, 4.5, raised);
+  floor(`${prefix}color-text-quiet`, surface, surface, 4.5, raised);
+  const text = entries.has(`${prefix}color-text-normal`)
+    ? resolveTokenColor(painted.get(`${prefix}color-text-normal`), surface)
+    : defaults.text;
+
+  // Row 2: each on-* against its own fill, synthesized when the map carries only the fill.
+  const synthesized = new Map<string, string>();
+  const pairForeground = (onName: string, fill: Rgb | null): void => {
+    if (!fill) return;
+    const on = painted.get(onName);
+    if (on === undefined) {
+      synthesized.set(onName, serializeRgb(contrastForeground(fill)));
+      return;
+    }
+    const color = resolveTokenColor(on, fill);
+    if (color && contrastRatio(color, fill) < 4.5) painted.set(onName, serializeRgb(contrastForeground(fill)));
+  };
+  for (const role of SEMANTIC_ROLES) {
+    for (const tier of RAMP_TIERS) {
+      const fillName = `${prefix}color-${role}-fill-${tier}`;
+      if (!entries.has(fillName)) continue;
+      pairForeground(`${prefix}color-${role}-on-${tier}`, resolveTokenColor(entries.get(fillName), surface));
+    }
+  }
+
+  // Row 3: the strong scrim's foreground, synthesized when the map carries only the scrim.
+  const overlayName = `${prefix}color-overlay-strong`;
+  const overlay = entries.has(overlayName)
+    ? resolveTokenColor(entries.get(overlayName), surface)
+    : mixRgb(surface, [0, 0, 0], defaults.overlayStrongAlpha);
+  // With no scrim in the map, pairForeground only checks an on-strong-overlay that is present.
+  if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
+    pairForeground(`${prefix}color-on-strong-overlay`, overlay);
+  }
+
+  // Rows 4-7: boundaries, chart series and terminal colours.
+  const boundaries = [
+    ...SEMANTIC_ROLES.flatMap((role) => [`${prefix}color-${role}-border-normal`, `${prefix}color-${role}-border-loud`]),
+    `${prefix}color-surface-border`,
+    `${prefix}color-border-strong`,
+    `${prefix}color-focus`,
+  ];
+  for (const name of boundaries) floor(name, surface, surface, 3);
+  for (const name of entries.keys()) {
+    if (/^--lr-theme-color-chart-\d+$/.test(name)) floor(name, surface, surface, 3);
+    else if (/^--lr-theme-terminal-color-[a-z0-9-]+$/.test(name)) floor(name, raised, raised, 4.5);
+    else if (/^--lr-theme-terminal-bg-[a-z0-9-]+$/.test(name)) floor(name, raised, text, 4.5);
+  }
+
+  for (const [name, value] of synthesized) painted.set(name, value);
+  return painted;
+}
+
+/** The validated ownership list another copy of this runtime (or the bootstrap) left on `<html>`. */
+function readOwnershipList(): string[] {
+  try {
+    const list = (document.documentElement as unknown as Record<symbol, unknown>)[Symbol.for(TOKEN_OWNERSHIP_SYMBOL)];
+    if (!Array.isArray(list)) return [];
+    const names: string[] = [];
+    const length = Math.min(list.length, TOKEN_OWNERSHIP_MAX);
+    for (let index = 0; index < length; index += 1) {
+      const name: unknown = list[index];
+      if (isLyraThemeTokenName(name)) names.push(name);
+    }
+    return names;
+  } catch {
+    return [];
+  }
+}
+
+function writeOwnershipList(names: readonly string[]): void {
+  try {
+    (document.documentElement as unknown as Record<symbol, unknown>)[Symbol.for(TOKEN_OWNERSHIP_SYMBOL)] = Object.freeze([...names]);
+  } catch {
+    // A hostile page made the expando unwritable; `writtenTokenNames` still covers our own writes.
+  }
+}
+
+/**
+ * Writes the inline part of a theme state on `<html>`: the token map's entries for the resolved
+ * mode (contrast-floored), then the accent ramp over them. Only names that change are touched: a
+ * name this runtime (or the bootstrap) owned before and no longer wants is removed, a desired value
+ * that differs is set, and re-applying an identical state performs no mutation at all. Returns the
+ * accent value actually applied.
+ */
+function applyInlineTheme(state: ThemeState, mode: ResolvedThemeMode | null): LyraThemeAccent {
+  const rootStyle = document.documentElement.style;
+  const previous = new Set<string>([
+    ...ALL_RAMP_PROPERTIES,
+    '--lr-theme-accent',
+    ...writtenTokenNames,
+    ...readOwnershipList(),
+  ]);
+  const entries = tokenEntries(state.tokens, mode);
+  let painted = entries;
+  let background: Rgb = MODE_DEFAULTS.light.surface;
+  if (mode) {
+    // An explicit surface reference wins over the map's own page surface.
+    background = resolveBackground(mode, state.surface ?? normalizeColor(entries.get('--lr-theme-color-surface-default')));
+    painted = floorTokenEntries(entries, mode, background);
+  }
+  const accent = paintAccent(state.accent, mode, background);
+  const desired = new Map(painted);
+  for (const [name, value] of accent.properties) desired.set(name, value);
+
+  const owned = [...painted.keys()];
+  writtenTokenNames = owned;
+  writeOwnershipList(owned);
+
+  for (const name of previous) {
+    if (desired.has(name)) continue;
+    inlineWrites.delete(name);
+    if (rootStyle.getPropertyValue(name) !== '') rootStyle.removeProperty(name);
+  }
+  for (const [name, value] of desired) {
+    const current = rootStyle.getPropertyValue(name);
+    const written = inlineWrites.get(name);
+    if (current === value || (written?.requested === value && written.serialized === current)) continue;
+    rootStyle.setProperty(name, value);
+    inlineWrites.set(name, { requested: value, serialized: rootStyle.getPropertyValue(name) });
+  }
+  return accent.applied;
+}
+
+/** The public snapshot of a state: `tokens` appears only while a map is applied. */
+function toSnapshot(state: ThemeState): LyraTheme {
+  const snapshot: LyraTheme = { mode: state.mode, accent: state.accent, surface: state.surface };
+  if (state.tokens) snapshot.tokens = state.tokens;
+  return snapshot;
+}
+
+/** The persisted record of a state; the same shape as the snapshot. */
+function toRecord(state: ThemeState): LyraTheme {
+  return toSnapshot(state);
+}
+
+function readStoredState(): ThemeState {
   // Storage cannot be trusted to hold what we applied -- honour the session's own state instead.
   if (persistenceFailed) return { ...lastApplied };
 
@@ -449,36 +844,38 @@ function readStoredTheme(): LyraTheme {
 
   // Reachable storage with nothing in it is a genuine "unset" -- distinct from the cases above,
   // and the one case where the default really is correct.
-  if (!raw) return { ...DEFAULT_THEME };
+  if (!raw) return { ...DEFAULT_STATE };
 
   try {
-    const parsed = JSON.parse(raw) as Partial<LyraTheme>;
+    const parsed = JSON.parse(raw) as Partial<LyraTheme> | null;
+    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_STATE };
     return {
       mode: isThemeMode(parsed.mode) ? parsed.mode : 'auto',
       accent: normalizeAccent(parsed.accent),
       surface: normalizeColor(parsed.surface),
+      tokens: normalizeTokens(parsed.tokens),
     };
   } catch {
     // Readable storage holding garbage (another tool wrote the key, a truncated write): also a
     // genuine "nothing valid stored", so the default applies rather than `lastApplied`.
-    return { ...DEFAULT_THEME };
+    return { ...DEFAULT_STATE };
   }
 }
 
-function applyTheme(theme: LyraTheme): void {
+function applyTheme(state: ThemeState): void {
   detachAutoListener();
-  let resolvedMode = resolveThemeMode(theme.mode);
-  const accent = writeAccent(theme.accent, theme.surface, resolvedMode);
-  lastApplied = { ...theme, accent };
+  let resolvedMode = resolveThemeMode(state.mode);
+  const accent = applyInlineTheme(state, resolvedMode);
+  lastApplied = { ...state, accent };
   writeResolvedMode(resolvedMode);
 
-  if (theme.mode !== 'auto') return;
+  if (state.mode !== 'auto') return;
   autoMediaQuery = matchMedia(COLOR_SCHEME_QUERY);
   autoMediaListener = (event) => {
     resolvedMode = event.matches ? 'dark' : 'light';
     writeResolvedMode(resolvedMode);
-    writeAccent(lastApplied.accent, lastApplied.surface, resolvedMode);
-    window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: { ...lastApplied } }));
+    applyInlineTheme(lastApplied, resolvedMode);
+    window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: toSnapshot(lastApplied) }));
   };
   if (typeof autoMediaQuery.addEventListener === 'function') {
     autoMediaQuery.addEventListener('change', autoMediaListener);
@@ -488,13 +885,14 @@ function applyTheme(theme: LyraTheme): void {
 }
 
 /**
- * Sets the persisted theme mode/accent/surface, applies it to `document.documentElement` (via
- * `data-lr-theme`/`data-theme` and a complete `--lr-theme-color-<role>-*` ramp per role `accent`
- * supplies), and dispatches `lr-theme-change` on `window` with `detail: { mode, accent, surface }`.
- * Unspecified fields keep their current value. Never throws -- a `localStorage` failure (private
- * browsing, quota, sandboxed iframe) degrades to apply-without-persist, and unspecified fields
- * still keep their value across calls in that state, because the merge falls back to the last
- * applied theme rather than to the default.
+ * Sets the persisted theme mode/accent/surface/tokens, applies it to `document.documentElement`
+ * (via `data-lr-theme`/`data-theme`, the token map's inline `--lr-theme-*` values, and a complete
+ * `--lr-theme-color-<role>-*` ramp per role `accent` supplies), and dispatches `lr-theme-change`
+ * on `window` with `detail: { mode, accent, surface, tokens? }`. Unspecified fields keep their
+ * current value. Never throws -- a `localStorage` failure (private browsing, quota, sandboxed
+ * iframe) degrades to apply-without-persist, and unspecified fields still keep their value across
+ * calls in that state, because the merge falls back to the last applied theme rather than to the
+ * default.
  *
  * `accent` is either an absolute CSS color (shorthand for `{ brand: <color> }`), a per-role
  * `{ brand?, success?, warning?, danger?, neutral? }` map, or `null`. Each role's value is in turn
@@ -502,17 +900,25 @@ function applyTheme(theme: LyraTheme): void {
  * deriving that role's ramp from a *different* base color per resolved mode -- e.g.
  * `{ brand: { light: '#2563eb', dark: '#60a5fa' } }`. `surface` is an absolute CSS color used as
  * every ramp's mix base instead of the shipped light/dark defaults, or `null` to keep those
- * defaults. Malformed, CSS-wide, relative, and unresolved `var()` values fail closed to `null` at
- * the field (or, for a per-role/per-mode value, the individual role/branch) they appear in. Each
- * generated fill receives a black or white foreground with at least 4.5:1 contrast; normal/loud
- * borders and the brand focus color have at least 3:1 contrast against the resolved surface.
+ * defaults. Malformed (including an unclosed parenthesis or quote), CSS-wide, relative, and
+ * unresolved `var()` values fail closed to `null` at the field (or, for a per-role/per-mode value,
+ * the individual role/branch) they appear in. Each generated fill receives a black or white
+ * foreground with at least 4.5:1 contrast; normal/loud borders and the brand focus color have at
+ * least 3:1 contrast against the resolved surface.
+ *
+ * `tokens` is a map of `--lr-theme-*` inputs, each a CSS value or a `{ light?, dark? }` pair, that
+ * replaces the previous map wholesale; `null`, `{}` or a map with no valid entry removes it.
+ * Invalid names and values are dropped individually (see the package docs for the grammar), a
+ * per-mode branch applies only while Lyra resolves that mode (so `mode: 'unset'` writes bare values
+ * only), and colour families the static contrast gate checks are floored against the map's own
+ * surfaces before they are written. An accent ramp overrides the map for the roles it paints.
  */
 export function setLyraTheme(theme: Partial<LyraTheme>): void {
   // A direct mode/accent/surface edit is no longer exactly the named preset that may have produced
   // the previous state. applyLyraThemePreset() writes its marker back after this call completes.
   document.documentElement.removeAttribute('data-lr-theme-preset');
-  const current = readStoredTheme();
-  const next: LyraTheme = {
+  const current = readStoredState();
+  const next: ThemeState = {
     mode: theme.mode === undefined
       ? current.mode
       : isThemeMode(theme.mode)
@@ -520,9 +926,10 @@ export function setLyraTheme(theme: Partial<LyraTheme>): void {
         : 'auto',
     accent: theme.accent === undefined ? current.accent : normalizeAccent(theme.accent),
     surface: theme.surface === undefined ? current.surface : normalizeColor(theme.surface),
+    tokens: theme.tokens === undefined ? current.tokens : normalizeTokens(theme.tokens),
   };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toRecord(next)));
     persistenceFailed = false;
   } catch {
     // Persistence is best-effort; the theme still applies for this session. Latching the failure
@@ -536,27 +943,27 @@ export function setLyraTheme(theme: Partial<LyraTheme>): void {
   const applied = lastApplied;
   if (!accentsEqual(applied.accent, next.accent)) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(applied));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toRecord(applied)));
       persistenceFailed = false;
     } catch {
       persistenceFailed = true;
     }
   }
-  window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: { ...applied } }));
+  window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: toSnapshot(applied) }));
 }
 
 /**
- * Reads the current theme mode/accent/surface, defaulting to
- * `{ mode: 'auto', accent: null, surface: null }` when nothing has been set or the stored value is
- * malformed. Storage is re-read on every call -- there is no in-memory cache -- so a value written
- * by another tab or a previous session is picked up cold.
+ * Reads the current theme mode/accent/surface (plus `tokens` while a map is applied), defaulting
+ * to `{ mode: 'auto', accent: null, surface: null }` when nothing has been set or the stored value
+ * is malformed. Storage is re-read on every call -- there is no in-memory cache -- so a value
+ * written by another tab or a previous session is picked up cold.
  *
  * When `localStorage` is unreadable or unwritable this reports the theme this module last
  * applied, not the default: the returned value always describes what the document is actually
  * showing, so a toggle UI bound to it stays in sync even where nothing can be persisted.
  */
 export function getLyraTheme(): LyraTheme {
-  return readStoredTheme();
+  return toSnapshot(readStoredState());
 }
 
 /**
@@ -570,6 +977,10 @@ export function getLyraTheme(): LyraTheme {
  * `data-lr-theme-storage-key`/`data-lr-theme-attributes` (space-separated) -- read via
  * `document.currentScript` at parse time. Hostile or malformed values fail closed to the
  * caller-supplied default rather than throwing.
+ *
+ * It mirrors the runtime's token pipeline step for step (grammar, per-mode branch, contrast floor,
+ * ownership list) with literal copies, clears what the shared ownership list names, then writes the
+ * list before the values so the runtime's first apply can remove exactly what was written here.
  */
 function applyStoredThemeBeforePaint(
   defaultStorageKey: string,
@@ -629,12 +1040,12 @@ function applyStoredThemeBeforePaint(
     }
 
     const raw = localStorage.getItem(storageKey);
-    let theme: { mode?: unknown; accent?: unknown; surface?: unknown } = {};
+    let theme: { mode?: unknown; accent?: unknown; surface?: unknown; tokens?: unknown } = {};
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as unknown;
         if (parsed && typeof parsed === 'object') {
-          theme = parsed as { mode?: unknown; accent?: unknown; surface?: unknown };
+          theme = parsed as { mode?: unknown; accent?: unknown; surface?: unknown; tokens?: unknown };
         }
       } catch {
         // A corrupt record has the same automatic default as the module getter.
@@ -653,7 +1064,8 @@ function applyStoredThemeBeforePaint(
       else if (mode === 'unset') document.documentElement.removeAttribute(attribute);
     }
 
-    const style = document.documentElement.style;
+    const root = document.documentElement;
+    const style = root.style;
     const roles = ['brand', 'success', 'warning', 'danger', 'neutral'];
     const channels = ['fill', 'border', 'on'];
     const tiers = ['quiet', 'normal', 'loud'];
@@ -664,10 +1076,105 @@ function applyStoredThemeBeforePaint(
       }
     }
     properties.push('--lr-theme-color-focus');
-    for (const property of properties) style.removeProperty(property);
+
+    // Literal copy of the token-map grammar (scripts/fixtures/theme-token-grammar.json is the single
+    // source; scripts/theme-token-grammar.test.mjs keeps this copy identical to it).
+    const tokenNamePattern = /^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    const tokenNameMaxLength = 80;
+    const tokenReservedName = '--lr-theme-accent';
+    const tokenEntryMax = 512;
+    const tokenSynthesizedMax = 16;
+    const tokenValueMaxLength = 256;
+    const tokenForbiddenPattern = /[\x00-\x1f\x7f\\;{}!<>@[\]`$^|~=?&:\u2028\u2029]|\/\*|\*\//;
+    const tokenCssWidePattern = /^(?:inherit|initial|revert(?:-layer)?|unset)$/i;
+    const tokenFunctionPattern = /([a-z0-9_-]+)\s*\(/gi;
+    const tokenAllowedFunctions = 'rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix light-dark calc min max clamp var cubic-bezier steps linear'.split(' ');
+    const tokenOwnershipKey = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');
+    const modeDefaults = {
+      light: { surface: [255, 255, 255], raised: [246, 248, 250], text: [26, 26, 26], overlayStrongAlpha: 0.92 },
+      dark: { surface: [26, 26, 26], raised: [34, 39, 46], text: [242, 242, 242], overlayStrongAlpha: 0.95 },
+    };
+
+    const isBalanced = (value: string): boolean => {
+      let depth = 0;
+      let quote = '';
+      for (const character of value) {
+        if (quote) {
+          if (character === quote) quote = '';
+          continue;
+        }
+        if (character === '\'' || character === '"') quote = character;
+        else if (character === '(') depth += 1;
+        else if (character === ')' && (depth -= 1) < 0) return false;
+      }
+      return quote === '' && depth === 0;
+    };
+    const isTokenName = (name: unknown): name is string =>
+      typeof name === 'string'
+        && name.length <= tokenNameMaxLength
+        && tokenNamePattern.test(name)
+        && name !== tokenReservedName;
+    const safeTokenValue = (value: unknown): string | null => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      if (!trimmed || trimmed.length > tokenValueMaxLength) return null;
+      if (tokenForbiddenPattern.test(trimmed) || tokenCssWidePattern.test(trimmed)) return null;
+      for (const match of trimmed.matchAll(tokenFunctionPattern)) {
+        if (!tokenAllowedFunctions.includes((match[1] ?? '').toLowerCase())) return null;
+      }
+      return isBalanced(trimmed) ? trimmed : null;
+    };
+    const isPlain = (value: unknown): value is Record<string, unknown> => {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+      const prototype = Object.getPrototypeOf(value) as unknown;
+      return prototype === Object.prototype || prototype === null;
+    };
+
+    // Clear what a previous page (or another copy of the runtime) owned: every ramp property, the
+    // accent hook, and each validated name on the shared ownership list.
+    const ownedBefore: string[] = [];
+    try {
+      const list = (root as unknown as Record<symbol, unknown>)[tokenOwnershipKey];
+      if (Array.isArray(list)) {
+        const length = Math.min(list.length, tokenEntryMax + tokenSynthesizedMax);
+        for (let index = 0; index < length; index += 1) {
+          const name: unknown = list[index];
+          if (isTokenName(name)) ownedBefore.push(name);
+        }
+      }
+    } catch {
+      ownedBefore.length = 0;
+    }
+    for (const property of [...properties, '--lr-theme-accent', ...ownedBefore]) style.removeProperty(property);
+
+    // The stored token map's entries for the resolved mode, normalized exactly as the runtime does.
+    const entries = new Map<string, string>();
+    try {
+      const rawTokens = theme.tokens;
+      const names = isPlain(rawTokens) ? Object.keys(rawTokens) : [];
+      if (isPlain(rawTokens) && names.length <= tokenEntryMax) {
+        for (const name of names) {
+          if (!isTokenName(name)) continue;
+          const value = rawTokens[name];
+          if (typeof value === 'string') {
+            const normalized = safeTokenValue(value);
+            if (normalized !== null) entries.set(name, normalized);
+            continue;
+          }
+          if (!isPlain(value)) continue;
+          const hasLight = Object.prototype.hasOwnProperty.call(value, 'light');
+          const hasDark = Object.prototype.hasOwnProperty.call(value, 'dark');
+          if ((!hasLight && !hasDark) || Object.keys(value).some((key) => key !== 'light' && key !== 'dark')) continue;
+          const branch = resolvedMode ? safeTokenValue(value[resolvedMode]) : null;
+          if (branch !== null) entries.set(name, branch);
+        }
+      }
+    } catch {
+      entries.clear();
+    }
 
     const unsupported = (value: string) =>
-      /^(?:inherit|initial|revert(?:-layer)?|unset)$/i.test(value)
+      tokenCssWidePattern.test(value)
         || /^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(value)
         || /\bcurrentcolor\b/i.test(value)
         || /\bvar\s*\(/i.test(value)
@@ -677,7 +1184,7 @@ function applyStoredThemeBeforePaint(
     const normalize = (raw: unknown): string | null => {
       if (typeof raw !== 'string') return null;
       const trimmed = raw.trim();
-      if (!trimmed || unsupported(trimmed)) return null;
+      if (!trimmed || !isBalanced(trimmed) || unsupported(trimmed)) return null;
       const syntaxProbe = document.createElement('span');
       syntaxProbe.style.color = trimmed;
       return syntaxProbe.style.color ? trimmed : null;
@@ -706,29 +1213,28 @@ function applyStoredThemeBeforePaint(
       }
     }
 
-    if (!resolvedMode || Object.keys(accentRoles).length === 0) {
-      style.removeProperty('--lr-theme-accent');
-      return;
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 1;
-    canvas.height = 1;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) {
-      style.removeProperty('--lr-theme-accent');
-      return;
+    let context: CanvasRenderingContext2D | null = null;
+    if (resolvedMode && (entries.size > 0 || Object.keys(accentRoles).length > 0)) {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        context = canvas.getContext('2d', { willReadFrequently: true });
+      } catch {
+        context = null;
+      }
     }
 
     const paintRgb = (value: string, background: number[]): number[] | null => {
+      if (!context) return null;
       try {
         context.clearRect(0, 0, 1, 1);
         context.fillStyle = value;
         context.fillRect(0, 0, 1, 1);
         const channelsData = [...context.getImageData(0, 0, 1, 1).data];
         const alpha = (channelsData[3] ?? 0) / 255;
-        return channelsData.slice(0, 3).map((channel, index) =>
-          Math.round(channel * alpha + (background[index] ?? 0) * (1 - alpha)));
+        return [0, 1, 2].map((index) =>
+          Math.round((channelsData[index] ?? 0) * alpha + (background[index] ?? 0) * (1 - alpha)));
       } catch {
         return null;
       }
@@ -755,20 +1261,105 @@ function applyStoredThemeBeforePaint(
     const black = [0, 0, 0];
     const white = [255, 255, 255];
     const on = (fill: number[]) => contrast(fill, black) >= contrast(fill, white) ? black : white;
-    const ensureContrast = (value: number[], background: number[]) => {
-      if (contrast(value, background) >= 3) return value;
+    const ensureContrast = (value: number[], background: number[], minimum = 3, alsoAgainst = background) => {
+      const passes = (candidate: number[]) =>
+        contrast(candidate, background) >= minimum && contrast(candidate, alsoAgainst) >= minimum;
+      if (passes(value)) return value;
       const target = contrast(background, black) >= contrast(background, white) ? black : white;
       for (let step = 1; step <= 10; step += 1) {
         const candidate = mix(value, target, step / 10);
-        if (contrast(candidate, background) >= 3) return candidate;
+        if (passes(candidate)) return candidate;
       }
       return target;
     };
     const rgb = (value: number[]) => `rgb(${value.join(' ')})`;
 
-    const defaultSurface = resolvedMode === 'dark' ? [26, 26, 26] : [255, 255, 255];
-    const surface = normalize(theme.surface);
+    const defaults = modeDefaults[resolvedMode ?? 'light'];
+    const defaultSurface = defaults.surface;
+    const surface = normalize(theme.surface) ?? normalize(entries.get('--lr-theme-color-surface-default'));
     const background = (surface && paintRgb(surface, defaultSurface)) || defaultSurface;
+
+    // The contrast floor, row for row the runtime's: an unresolved value or reference is written
+    // verbatim and synthesizes nothing.
+    const painted = new Map(entries);
+    if (resolvedMode) {
+      const prefix = '--lr-theme-';
+      const resolveToken = (value: string | undefined, over: number[] | null): number[] | null =>
+        value !== undefined && over && normalize(value) ? paintRgb(value, over) : null;
+      const reference = (name: string, fallback: number[]): number[] | null =>
+        entries.has(prefix + name) ? resolveToken(entries.get(prefix + name), background) : fallback;
+      const raised = reference('color-surface-raised', defaults.raised);
+      const floor = (
+        name: string,
+        over: number[] | null,
+        against: number[] | null,
+        minimum: number,
+        alsoAgainst?: number[] | null,
+      ): void => {
+        const value = painted.get(name);
+        if (value === undefined || !against || alsoAgainst === null) return;
+        const color = resolveToken(value, over);
+        if (!color) return;
+        const repaired = ensureContrast(color, against, minimum, alsoAgainst ?? against);
+        if (repaired !== color) painted.set(name, rgb(repaired));
+      };
+      floor(`${prefix}color-text-normal`, background, background, 4.5, raised);
+      floor(`${prefix}color-text-quiet`, background, background, 4.5, raised);
+      const text = entries.has(`${prefix}color-text-normal`)
+        ? resolveToken(painted.get(`${prefix}color-text-normal`), background)
+        : defaults.text;
+      const synthesized = new Map<string, string>();
+      const pairForeground = (onName: string, fill: number[] | null): void => {
+        if (!fill) return;
+        const onValue = painted.get(onName);
+        if (onValue === undefined) {
+          synthesized.set(onName, rgb(on(fill)));
+          return;
+        }
+        const color = resolveToken(onValue, fill);
+        if (color && contrast(color, fill) < 4.5) painted.set(onName, rgb(on(fill)));
+      };
+      for (const role of roles) {
+        for (const tier of tiers) {
+          const fillName = `${prefix}color-${role}-fill-${tier}`;
+          if (!entries.has(fillName)) continue;
+          pairForeground(`${prefix}color-${role}-on-${tier}`, resolveToken(entries.get(fillName), background));
+        }
+      }
+      const overlayName = `${prefix}color-overlay-strong`;
+      const overlay = entries.has(overlayName)
+        ? resolveToken(entries.get(overlayName), background)
+        : mix(background, black, defaults.overlayStrongAlpha);
+      if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
+        pairForeground(`${prefix}color-on-strong-overlay`, overlay);
+      }
+      const boundaries = [
+        ...roles.flatMap((role) => [`${prefix}color-${role}-border-normal`, `${prefix}color-${role}-border-loud`]),
+        `${prefix}color-surface-border`,
+        `${prefix}color-border-strong`,
+        `${prefix}color-focus`,
+      ];
+      for (const name of boundaries) floor(name, background, background, 3);
+      for (const name of entries.keys()) {
+        if (/^--lr-theme-color-chart-\d+$/.test(name)) floor(name, background, background, 3);
+        else if (/^--lr-theme-terminal-color-[a-z0-9-]+$/.test(name)) floor(name, raised, raised, 4.5);
+        else if (/^--lr-theme-terminal-bg-[a-z0-9-]+$/.test(name)) floor(name, raised, text, 4.5);
+      }
+      for (const [name, value] of synthesized) painted.set(name, value);
+    }
+
+    // Ownership first, so a later runtime apply removes exactly these names; then the values.
+    try {
+      (root as unknown as Record<symbol, unknown>)[tokenOwnershipKey] = Object.freeze([...painted.keys()]);
+    } catch {
+      // An unwritable expando only costs the handoff; the values are still written.
+    }
+    for (const [name, value] of painted) style.setProperty(name, value);
+
+    if (!resolvedMode || !context) {
+      style.removeProperty('--lr-theme-accent');
+      return;
+    }
 
     let appliedBrand: string | null = null;
     for (const role of roles) {
@@ -821,8 +1412,9 @@ function serializeInlineScriptData(value: string | readonly string[]): string {
 
 /**
  * Creates a self-contained IIFE body, safe to inline into a `<script>` tag placed before any
- * stylesheet in `<head>`, that applies a persisted `{ mode, accent, surface }` theme before first
- * paint. Missing and malformed records use the runtime's automatic/no-accent default.
+ * stylesheet in `<head>`, that applies a persisted `{ mode, accent, surface, tokens? }` theme before
+ * first paint -- including the stored token map, validated and contrast-floored exactly as the runtime
+ * does. Missing and malformed records use the runtime's automatic/no-accent default.
  * The serialized options escape HTML script terminators and JavaScript line separators.
  * Pass an application-owned `storageKey` to reuse the no-flash bootstrap independently of this
  * module's `setLyraTheme()`/`getLyraTheme()` persistence key.
