@@ -39,6 +39,7 @@ test('models the raw core ceiling as the established baseline plus capability al
     devModeDiagnosticsAllowanceBytes: 20_000,
     publicContractV10AllowanceBytes: 10_000,
     v10RemediationSweepAllowanceBytes: 0,
+    shadcnV21ProgrammeAllowanceBytes: 120_000,
   });
   assert.equal(
       terms.establishedBaselineBytes +
@@ -52,12 +53,13 @@ test('models the raw core ceiling as the established baseline plus capability al
       terms.crossFamilyRemediationSweepAllowanceBytes +
       terms.devModeDiagnosticsAllowanceBytes +
       terms.publicContractV10AllowanceBytes +
-      terms.v10RemediationSweepAllowanceBytes,
-    4_685_000,
+      terms.v10RemediationSweepAllowanceBytes +
+      terms.shadcnV21ProgrammeAllowanceBytes,
+    4_805_000,
   );
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.establishedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.crossComponentContractAllowanceBytes\s*\+\s*coreRawBudget\.boundedDataResilienceAllowanceBytes\s*\+\s*coreRawBudget\.interactionAccessibilityAllowanceBytes\s*\+\s*coreRawBudget\.accessibilityStyleCorrectionAllowanceBytes\s*\+\s*coreRawBudget\.featureCapabilityAllowanceBytes\s*\+\s*coreRawBudget\.overlayHydrationContractAllowanceBytes\s*\+\s*coreRawBudget\.crossFamilyRemediationSweepAllowanceBytes\s*\+\s*coreRawBudget\.devModeDiagnosticsAllowanceBytes\s*\+\s*coreRawBudget\.publicContractV10AllowanceBytes\s*\+\s*coreRawBudget\.v10RemediationSweepAllowanceBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.establishedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.crossComponentContractAllowanceBytes\s*\+\s*coreRawBudget\.boundedDataResilienceAllowanceBytes\s*\+\s*coreRawBudget\.interactionAccessibilityAllowanceBytes\s*\+\s*coreRawBudget\.accessibilityStyleCorrectionAllowanceBytes\s*\+\s*coreRawBudget\.featureCapabilityAllowanceBytes\s*\+\s*coreRawBudget\.overlayHydrationContractAllowanceBytes\s*\+\s*coreRawBudget\.crossFamilyRemediationSweepAllowanceBytes\s*\+\s*coreRawBudget\.devModeDiagnosticsAllowanceBytes\s*\+\s*coreRawBudget\.publicContractV10AllowanceBytes\s*\+\s*coreRawBudget\.v10RemediationSweepAllowanceBytes\s*\+\s*coreRawBudget\.shadcnV21ProgrammeAllowanceBytes\s*,/u,
     'the core bundle entry must use every named term instead of a second unexplained ceiling',
   );
 });

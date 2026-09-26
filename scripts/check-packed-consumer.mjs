@@ -221,6 +221,19 @@ const coreRawBudget = {
   // run. Re-attributing bytes between adjacent terms is exactly the guesswork these named
   // allowances exist to prevent, so the slack is recorded here instead of hidden in a re-baseline.
   v10RemediationSweepAllowanceBytes: 0,
+  // The 21.0.0 shadcn-parity programme increased the measured bundle to 4676.8 KiB raw, about
+  // 101.6 KiB beyond the preceding 4575.2 KiB ceiling. It is new registered surface rather than a
+  // leak: lr-menubar/-item, lr-toggle/-group, lr-context-menu, lr-navigation-menu/-item and the
+  // tool-call block; the shared keyboard-focus modality gate for hover/focus disclosures; the
+  // trapped-surface top-layer escape (native popover promotion, fixed containing-block detection,
+  // zoom compensation and lease release) shared by every anchored overlay; Markdown GFM task
+  // items and tables, the fenced-code header, left-to-right code segmentation and progressive
+  // streaming; theme presets, typography utilities and the decorative border tier; and the
+  // deferred focus return shared by the app rail, page, responsive panel and dialog. The
+  // peer-exclusion graph still reports zero eager and zero bundled optional peers and every
+  // granular per-entry gzip budget plus the button canary stays green. Maintainer-approved
+  // 2026-09-26.
+  shadcnV21ProgrammeAllowanceBytes: 120_000,
 };
 
 /**
@@ -335,8 +348,9 @@ const bundleEntries = {
     // CSS comments from the emitted `css` templates (see `v10RemediationSweepAllowanceBytes`) took
     // the bundle from 4633.0 KiB to 4178.8 KiB raw / 948.4 KiB gzip across the same 7 output files
     // and 1073 eager modules, with zero eager and zero physically bundled optional peers. That term
-    // is now 0 and every other term is unchanged, so the ceiling below is 4,685,000 B (4575.2 KiB)
-    // against a 4178.8 KiB measurement.
+    // is now 0 and every other term is unchanged, so the ceiling was 4,685,000 B (4575.2 KiB)
+    // against a 4178.8 KiB measurement. The 21.0.0 programme term then raises it to 4,805,000 B
+    // (4692.4 KiB) against a 4676.8 KiB measurement.
     maxRawBytes:
       coreRawBudget.establishedBaselineBytes +
       coreRawBudget.stableRootRegistrationAllowanceBytes +
@@ -349,7 +363,8 @@ const bundleEntries = {
       coreRawBudget.crossFamilyRemediationSweepAllowanceBytes +
       coreRawBudget.devModeDiagnosticsAllowanceBytes +
       coreRawBudget.publicContractV10AllowanceBytes +
-      coreRawBudget.v10RemediationSweepAllowanceBytes,
+      coreRawBudget.v10RemediationSweepAllowanceBytes +
+      coreRawBudget.shadcnV21ProgrammeAllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
