@@ -503,18 +503,24 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  while focus is still inside the rail or has fallen to `<body>` -- focus moved elsewhere in the
    *  meantime is never taken back -- and focuses the first candidate that can hold focus: this
    *  trigger, then the element that held focus when the overlay opened, then the built-in
-   *  `[part="toggle"]` (unavailable under `hideToggle`), then this rail's host. The host receives
-   *  a temporary `tabindex="-1"` only when needed, removed on blur without changing an authored tabindex.
-   *  An external trigger needs this explicit association instead of relying
-   *  on whatever last held focus: a consumer's own JS-driven `open = true` (rather than a real
-   *  click) never focuses anything, and even a real click does not reliably focus its target in
-   *  every browser. Resolved when the overlay opens and again when it closes, so reassigning it
-   *  (or `for`) while the overlay is open changes where focus returns; when the association no
-   *  longer resolves at close, the target resolved at open still applies. Read alongside `for`; this direct
-   *  reference wins when both resolve to different elements. Unset (the default, `null`)
-   *  reproduces today's exact behavior: only the built-in toggle's own click supplies a return
-   *  target, for that interaction alone. With trigger-collapses, the same association manages
-   *  desktop disclosure state and shortcuts; wire the trigger to toggle(). */
+   *  `[part="toggle"]` (unavailable under `hideToggle`), then this rail's host; when even the host
+   *  cannot take focus (hidden, or inert -- under an inert ancestor or behind a stacked modal),
+   *  focus is left where it is. The host receives a temporary `tabindex="-1"` only when it has no
+   *  authored tabindex; that attribute is removed once focus moves off the host (a blur caused only
+   *  by the window or tab losing system focus leaves it in place) or the rail disconnects, and an
+   *  authored tabindex is never changed. An external trigger needs this explicit association
+   *  instead of relying on whatever last held focus: a consumer's own JS-driven `open = true`
+   *  (rather than a real click) never focuses anything, and even a real click does not reliably
+   *  focus its target in every browser. Resolved when the overlay opens and again when it closes,
+   *  so reassigning it (or `for`) while the overlay is open changes where focus returns; when the
+   *  association no longer resolves at close, the target resolved at open still applies. Read
+   *  alongside `for`; this direct reference wins when both resolve to different elements. Unset
+   *  (the default, `null`), no external element is a return candidate: a close still returns focus
+   *  to the built-in toggle when its own click opened the overlay, otherwise to the element that
+   *  held focus at open, and the second pass above still runs over its remaining candidates,
+   *  ending at this rail's host -- only the trigger candidate depends on this association. With
+   *  trigger-collapses, the same association manages desktop disclosure state and shortcuts; wire
+   *  the trigger to toggle(). */
   @property({ attribute: false }) trigger: HTMLElement | null = null;
 
   /** Id of an external element that opens this rail's mobile overlay, the label/`htmlFor`-style
@@ -1152,8 +1158,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  back. It then focuses the first candidate that can actually hold focus -- the return target
    *  (built-in toggle click, external `trigger`/`for`, or the element focused when the overlay
    *  opened), then the element focused when the overlay opened, then the built-in `[part="toggle"]`
-   *  (unavailable under `hideToggle`), then the rail host. A reopen, another
-   *  close, or a disconnect before the frame arrives abandons the pass. */
+   *  (unavailable under `hideToggle`), then the rail host; when even the host cannot take focus
+   *  (hidden, or inert -- under an inert ancestor or behind a stacked modal), focus is left where
+   *  it is. The pass runs whether or not `trigger`/`for` is set -- only the trigger candidate
+   *  depends on that association. A reopen, another close, or a disconnect before the frame
+   *  arrives abandons the pass. */
   private scheduleDeferredFocusReturn(): void {
     const candidates = [this.overlayReturnTarget, this.overlayOpener];
     this.deferredFocusReturn.schedule({
@@ -1167,13 +1176,26 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private focusHostFallback(): void {
     if (!this.hasAttribute('tabindex')) {
       this.setAttribute('tabindex', '-1');
+      // A window or tab losing system focus also fires blur at the focused element, yet the host
+      // stays the document's focused element. Removing the attribute then would make the engine
+      // blur the no-longer-focusable host, so focus would come back to `<body>`. Only focus that
+      // really moved off the host hands the attribute back; disconnect always does. The window
+      // regaining focus re-checks too, because engines fire no blur at the old element for a
+      // focus move made while the window lacks system focus.
+      const view = this.ownerDocument.defaultView;
+      const onFocusChange = (): void => {
+        if (deepActiveElement(this.ownerDocument) === this) return;
+        restore();
+      };
       const restore = (): void => {
-        this.removeEventListener('blur', restore);
+        this.removeEventListener('blur', onFocusChange);
+        view?.removeEventListener('focus', onFocusChange);
         if (this.getAttribute('tabindex') === '-1') this.removeAttribute('tabindex');
         this.restoreFallbackTabIndex = undefined;
       };
       this.restoreFallbackTabIndex = restore;
-      this.addEventListener('blur', restore);
+      this.addEventListener('blur', onFocusChange);
+      view?.addEventListener('focus', onFocusChange);
     }
     if (!focusFirstAvailable(this)) this.restoreFallbackTabIndex?.();
   }

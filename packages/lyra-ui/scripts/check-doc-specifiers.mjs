@@ -30,17 +30,10 @@ const defaultWorkspacePackageDirs = Object.freeze([
 /**
  * Specifiers that appear inside a real import statement in a shipped file and are nonetheless
  * expected NOT to resolve. Each needs a reason; "it's fine" is not one. Keep this list tiny -- an
- * entry here is a promise this check has agreed not to keep.
+ * entry here is a promise this check has agreed not to keep, so an entry no shipped file still
+ * documents is reported as stale.
  */
-export const DOC_SPECIFIER_EXCEPTIONS = Object.freeze([
-  {
-    specifier: '@aceshooting/lyra-ui/internal/positioner.js',
-    reason:
-      'Deliberately-dead path shown as the "before" half of the 8.0.0 internal/ -> utilities/ '
-      + 'migration example in README.md and llms/shared.md. The example exists precisely to say '
-      + 'this specifier no longer resolves, so resolving it would falsify the documentation.',
-  },
-]);
+export const DOC_SPECIFIER_EXCEPTIONS = Object.freeze([]);
 
 const SCANNED_ROOTS = Object.freeze(['llms', 'src']);
 const SCANNED_FILES = Object.freeze(['README.md', 'llms.txt', 'llms-full.txt']);
@@ -154,14 +147,17 @@ function resolvesThroughExports(specifier, exportsMap, packageName) {
   return false;
 }
 
-export function checkDocumentedSpecifiers(packageDir = defaultPackageDir) {
+export function checkDocumentedSpecifiers(
+  packageDir = defaultPackageDir,
+  exceptionList = DOC_SPECIFIER_EXCEPTIONS,
+) {
   const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
   const packageName = pkg.name;
   if (typeof packageName !== 'string' || packageName.length === 0) {
     throw new Error(`${join(packageDir, 'package.json')} has no package name.`);
   }
   const exportsMap = pkg.exports ?? {};
-  const exceptions = DOC_SPECIFIER_EXCEPTIONS.filter(
+  const exceptions = exceptionList.filter(
     (entry) => entry.specifier === packageName || entry.specifier.startsWith(`${packageName}/`),
   );
   const excused = new Set(exceptions.map((entry) => entry.specifier));
@@ -177,7 +173,19 @@ export function checkDocumentedSpecifiers(packageDir = defaultPackageDir) {
     );
   }
 
-  for (const [specifier, files] of [...collectDocumentedSpecifiers(packageDir)].sort()) {
+  const documented = collectDocumentedSpecifiers(packageDir);
+  for (const entry of exceptions) {
+    if (documented.has(entry.specifier)) continue;
+    // The resolve check above cannot see this case: the specifier is still dead, but the document
+    // that needed the exception is gone, so the entry would excuse the next edit that reintroduces
+    // the dead specifier.
+    findings.push(
+      `${entry.specifier} is listed in DOC_SPECIFIER_EXCEPTIONS but no shipped file documents it `
+      + '-- drop the exception',
+    );
+  }
+
+  for (const [specifier, files] of [...documented].sort()) {
     if (excused.has(specifier)) continue;
     if (resolvesThroughExports(specifier, exportsMap, packageName)) continue;
     findings.push(

@@ -168,18 +168,119 @@ describe('app rail mobile overlay focus return', () => {
     }
   });
 
-  it('returns to the rail host when the hidden toggle and opener cannot receive focus', async () => {
+  for (const path of closePaths) {
+    it(`returns to the rail host after ${path.name} when the hidden toggle and opener cannot receive focus`, async () => {
+      const { rail, trigger, navItem, cleanup } = await hostWithHidingTrigger({ reShow: false });
+      try {
+        await openFromTrigger(rail, trigger);
+        await path.close(rail, navItem);
+        await rail.updateComplete;
+        expect(rail.open).to.equal(false);
+        await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+        expect(rail.getAttribute('tabindex')).to.equal('-1');
+        trigger.style.visibility = '';
+        trigger.focus();
+        expect(rail.hasAttribute('tabindex')).to.equal(false);
+      } finally {
+        cleanup();
+      }
+    });
+  }
+
+  it('keeps the temporary host tabindex through a window-level blur that leaves the host focused', async () => {
     const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
     try {
       await openFromTrigger(rail, trigger);
       await sendKeys({ press: 'Escape' });
       await rail.updateComplete;
       await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+      // A window or tab losing system focus fires blur at the focused element while
+      // document.activeElement stays on it.
+      rail.dispatchEvent(new FocusEvent('blur'));
+      expect(rail.getAttribute('tabindex')).to.equal('-1');
+      for (let frame = 0; frame < 2; frame++) await nextFrame();
+      expect(deepActive() === rail, `focus moved to ${describeActive()}`).to.equal(true);
       expect(rail.getAttribute('tabindex')).to.equal('-1');
       trigger.style.visibility = '';
       trigger.focus();
+      await waitUntil(() => deepActive() === trigger, `focus stayed on ${describeActive()}`);
       expect(rail.hasAttribute('tabindex')).to.equal(false);
     } finally {
+      cleanup();
+    }
+  });
+
+  it('hands the temporary host tabindex back when focus left the host while the window was in the background', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    // Engines fire no blur at the old element for a focus move made while the window lacks
+    // system focus; suppress it here to model that move.
+    const suppressBlur = (event: Event): void => event.stopImmediatePropagation();
+    try {
+      await openFromTrigger(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+      rail.dispatchEvent(new FocusEvent('blur'));
+      trigger.style.visibility = '';
+      rail.addEventListener('blur', suppressBlur, { capture: true });
+      trigger.focus();
+      rail.removeEventListener('blur', suppressBlur, { capture: true });
+      await waitUntil(() => deepActive() === trigger, `focus stayed on ${describeActive()}`);
+      expect(rail.getAttribute('tabindex')).to.equal('-1');
+      window.dispatchEvent(new FocusEvent('focus'));
+      expect(rail.hasAttribute('tabindex')).to.equal(false);
+      expect(deepActive() === trigger, `focus moved to ${describeActive()}`).to.equal(true);
+    } finally {
+      rail.removeEventListener('blur', suppressBlur, { capture: true });
+      cleanup();
+    }
+  });
+
+  it('keeps the temporary host tabindex when the window regains focus with the host still focused', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    try {
+      await openFromTrigger(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+      rail.dispatchEvent(new FocusEvent('blur'));
+      window.dispatchEvent(new FocusEvent('focus'));
+      expect(rail.getAttribute('tabindex')).to.equal('-1');
+      expect(deepActive() === rail, `focus moved to ${describeActive()}`).to.equal(true);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('removes the temporary host tabindex when the rail disconnects while holding fallback focus', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const parent = rail.parentNode!;
+    // Not every engine fires blur at a focused element that is removed; suppress it here so only
+    // the disconnect cleanup can hand the attribute back.
+    const suppressBlur = (event: Event): void => event.stopImmediatePropagation();
+    try {
+      await openFromTrigger(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+      rail.addEventListener('blur', suppressBlur, { capture: true });
+      rail.remove();
+      rail.removeEventListener('blur', suppressBlur, { capture: true });
+      expect(rail.hasAttribute('tabindex')).to.equal(false);
+      parent.appendChild(rail);
+      await rail.updateComplete;
+      expect(rail.hasAttribute('tabindex')).to.equal(false);
+      // No listener left over from the removed fallback strips a tabindex authored after reconnect.
+      rail.setAttribute('tabindex', '-1');
+      rail.focus();
+      await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+      trigger.style.visibility = '';
+      trigger.focus();
+      await waitUntil(() => deepActive() === trigger, `focus stayed on ${describeActive()}`);
+      window.dispatchEvent(new FocusEvent('focus'));
+      expect(rail.getAttribute('tabindex')).to.equal('-1');
+    } finally {
+      rail.removeEventListener('blur', suppressBlur, { capture: true });
       cleanup();
     }
   });

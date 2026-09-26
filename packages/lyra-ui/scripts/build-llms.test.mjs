@@ -16,7 +16,10 @@ import {
   TYPE_ONLY_DECLARATION_PEERS,
   validateCompoundUsageRegistrations,
 } from './build-llms.mjs';
-import { packageAllowlistProblems } from './check-llms-artifacts.mjs';
+import {
+  packageAllowlistProblems,
+  unpublishedSourceReferenceProblems,
+} from './check-llms-artifacts.mjs';
 import { createManifestInheritanceFixture } from './fixtures/manifest-inheritance.mjs';
 import { compactManifest } from './manifest-compact.mjs';
 
@@ -40,6 +43,20 @@ const readmeReference = readFileSync(new URL('../README.md', import.meta.url), '
 const llmsIntroReference = readFileSync(
   new URL('../llms/00-llms-txt-intro.md', import.meta.url),
   'utf8',
+);
+assert.deepEqual(
+  unpublishedSourceReferenceProblems([['README.md', readmeReference]]),
+  [],
+  'the shipped package README must link published llms/components/<tag>.md pages, not authored family sources',
+);
+assert.deepEqual(
+  unpublishedSourceReferenceProblems([
+    ['README.md', '[Toggle group](llms/forms.md#lr-toggle-group) and [menu](./llms/components/lr-menu.md)'],
+  ]),
+  [
+    'README.md references `llms/forms.md`, which is an authored build input and is not published. Point at `llms/components/<tag>.md` or `llms/index.md` instead.',
+  ],
+  'an authored family source is reported; a published per-tag page is not',
 );
 assert.deepEqual(
   COMPOUND_USAGE_REGISTRATIONS,

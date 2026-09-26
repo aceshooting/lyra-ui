@@ -139,7 +139,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-app-rail-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 57.7 KiB (59105 bytes; bundle SHA-256 `83186abe6d2002255fc0c0d767537b400dbd1e7c13b852d44c43f4a2ab7bc31b`)
+- Standalone gzip: 57.7 KiB (59124 bytes; bundle SHA-256 `93a8bac1e5b0abdb30287d27ba873e4d11f7f16a2908a61a2297537851a14904`)
 
 </details>
 
@@ -2035,7 +2035,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 44.2 KiB (45248 bytes; bundle SHA-256 `852c2769c8c840637b8007933abe1a31e9ea84c32af25d453e069d3bc7f84623`)
+- Standalone gzip: 44.2 KiB (45260 bytes; bundle SHA-256 `0dae7773486ff843e94b36696b6e769aa7af18c8c002257afab25f262d18f950`)
 
 </details>
 

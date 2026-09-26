@@ -41,13 +41,13 @@ and no runtime dependency on either project.
 
 | Area | Features and reference |
 | --- | --- |
-| Looks and branding | Opt-in shadcn look as [CSS](llms/shared.md#the-shadcn-look--themesshadcncss) or a persistent [runtime token preset](llms/shared.md), with independent mode, accent, and surface settings. Decorative borders have their own token; control boundaries keep their contrast floor. |
-| Navigation | [Menubar and navigation menu](llms/layout.md), context menu, and app-rail sidebar controls with external launchers, shortcuts, resizing, and persistence. Multi-split exposes pane actions and optional launcher ARIA/focus association. |
-| Toggle controls | [Toggle and toggle group](llms/forms.md#lr-toggle-group) provide pressed-button state, single or multiple selection, keyboard navigation, and joined styling. |
-| Markdown and streaming | [Markdown](llms/conversation.md) supports optional code-block headers with exact-source copying, progressive streaming, GFM table scrollers and column alignment, and themed read-only task checkboxes. |
-| Tool results | [Tool-call blocks](llms/agent-tools.md) provide expandable summaries and result presentation with controlled disclosure state. |
-| Languages | 32 optional translation catalogs plus built-in English, including the new regional and European/Asian catalogs listed below. Load whole catalogs or family slices. |
-| Typography | [Typography utilities](llms/shared.md#typography) apply a shared scale and reading styles to native content alongside custom elements. |
+| Looks and branding | Opt-in shadcn look as [CSS](./llms/shared.md#the-shadcn-look--themesshadcncss) or a persistent [runtime token preset](./llms/shared.md#theme-modeaccentsurface-runtime-aceshootinglyra-uithemejs), with independent mode, accent, and surface settings. Decorative borders have their own token; control boundaries keep their contrast floor. |
+| Navigation | [Menubar](./llms/components/lr-menubar.md), [navigation menu](./llms/components/lr-navigation-menu.md), [context menu](./llms/components/lr-context-menu.md), and [app-rail](./llms/components/lr-app-rail.md) sidebar controls with external launchers, shortcuts, resizing, and persistence. [Multi-split](./llms/components/lr-multi-split.md) exposes pane actions and optional launcher ARIA/focus association. |
+| Toggle controls | [Toggle](./llms/components/lr-toggle.md) and [toggle group](./llms/components/lr-toggle-group.md) provide pressed-button state, single or multiple selection, keyboard navigation, and joined styling. |
+| Markdown and streaming | [Markdown](./llms/components/lr-markdown.md) supports optional code-block headers with exact-source copying, progressive streaming, GFM table scrollers and column alignment, and themed read-only task checkboxes. |
+| Tool results | [Tool-call blocks](./llms/components/lr-tool-call-block.md) provide expandable summaries and result presentation with controlled disclosure state. |
+| Languages | 32 optional translation catalogs plus built-in English. New in v21: `cs`, `da`, `de-CH`, `fi`, `hi`, `hr`, `hu`, `id`, `kk`, `ko`, `nb`, `nl`, `nn`, `pl`, `pt-PT`, `sl`, `sv`, `tr`, `uk`, and `zh-TW`, joining `ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`, `pt-BR`, `ro`, `ru`, and `zh-CN`. Import a [whole catalog](./llms/shared.md#ready-made-catalogs-aceshootinglyra-uitranslationslocalejs) (`@aceshooting/lyra-ui/translations/<locale>.js`) or only the [family slices](./llms/shared.md#smaller-catalogs-aceshootinglyra-uitranslationslocalefamilyjs) the application renders. |
+| Typography | [Typography utilities](./llms/shared.md#typography) apply a shared scale and reading styles to native content alongside custom elements. |
 
 Choose the original Lyra look by loading `theme.css`. To select shadcn through the runtime:
 
@@ -304,7 +304,7 @@ artifacts against `custom-elements.json` and the authored sources.
 Claude the same reference as a skill, plus the `/lyra-ui:review`, `/lyra-ui:migrate` and
 `/lyra-ui:update` commands.
 
-**Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
+**Contributing to this repo itself?** See [`AGENTS.md`](https://github.com/aceshooting/lyra-ui/blob/main/AGENTS.md) instead — that's a
 contributor guide for agents working _on_ lyra-ui, not the same document as the above.
 
 ## Migrating from Web Awesome or Shoelace
@@ -392,7 +392,7 @@ naming, keyboard, focus, state, announcements, and motion. It stores the exact m
 comparison and a rationale; an automatic mapping is rejected if its target profile drops a reviewed
 behavior. These profiles summarize published public contracts and Lyra's authored contract plus
 automated tests. They are not evidence of manual screen-reader, assistive-technology, or human
-accessibility review; see [the accessibility evidence statement](../../docs/accessibility.md).
+accessibility review; see [the accessibility evidence statement](https://github.com/aceshooting/lyra-ui/blob/main/docs/accessibility.md).
 
 Shoelace is now a historical predecessor to Web Awesome, but its component vocabulary remains
 familiar to many teams. The table below is a porting guide, not an automatic-rename allowlist; the

@@ -82,13 +82,42 @@ try {
       + 'export { KEY, PROTOCOL, place };\n'
   );
 
-  const { findings } = checkDocumentedSpecifiers(root);
+  const { findings } = checkDocumentedSpecifiers(root, []);
   assert.deepEqual(findings, [
     '@aceshooting/lyra-ui/components/data/flow/flow-types.js is documented as an import in '
       + 'llms/data.md but does not resolve through package.json#exports',
     '@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk.js is documented as an import in '
       + 'llms/media.md but does not resolve through package.json#exports',
   ]);
+
+  // An exception that a shipped file still needs excuses exactly that specifier and nothing else.
+  assert.deepEqual(
+    checkDocumentedSpecifiers(root, [
+      {
+        specifier: '@aceshooting/lyra-ui/components/data/flow/flow-types.js',
+        reason: 'fixture: documented on purpose',
+      },
+    ]).findings,
+    [
+      '@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk.js is documented as an import in '
+        + 'llms/media.md but does not resolve through package.json#exports',
+    ],
+  );
+
+  // An exception no shipped file needs any more is stale: it would silently excuse the next doc
+  // edit that reintroduces the dead specifier.
+  assert.deepEqual(
+    checkDocumentedSpecifiers(root, [
+      {
+        specifier: '@aceshooting/lyra-ui/internal/removed-example.js',
+        reason: 'fixture: the example that needed this was deleted',
+      },
+    ]).findings.filter((finding) => finding.includes('removed-example')),
+    [
+      '@aceshooting/lyra-ui/internal/removed-example.js is listed in DOC_SPECIFIER_EXCEPTIONS but '
+        + 'no shipped file documents it -- drop the exception',
+    ],
+  );
 
   // The `.json`/`.js` alternation must not report a `custom-elements.js` nobody wrote.
   const collected = [...collectDocumentedSpecifiers(root).keys()];
@@ -120,7 +149,7 @@ try {
       2
     )}\n`
   );
-  assert.deepEqual(checkDocumentedSpecifiers(root).findings, []);
+  assert.deepEqual(checkDocumentedSpecifiers(root, []).findings, []);
 
   // A stale exception is reported too: it excuses a specifier that no longer needs excusing, and
   // would go on excusing a genuinely-broken future namesake.
@@ -158,7 +187,7 @@ try {
     "import { flagUrl } from '@aceshooting/lyra-flags/compact';\n",
   );
 
-  assert.deepEqual(checkDocumentedSpecifiers(flagsRoot).findings, [
+  assert.deepEqual(checkDocumentedSpecifiers(flagsRoot, []).findings, [
     '@aceshooting/lyra-flags/compact is documented as an import in README.md but does not '
       + 'resolve through package.json#exports',
   ]);

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -119,4 +120,21 @@ test('groups inline and multiline story metadata while preserving the legacy met
   }).createIndex(fileName, { makeTitle: (title) => title });
   assert.equal(indexed.title, expectedTitle);
   assert.equal(indexed.metaId, expectedId);
+});
+
+test('guide pages link deployed files with a raw new-tab anchor, not a Markdown link', () => {
+  // The docs addon renders every Markdown link through its own anchor. Unless the target is an
+  // absolute http(s) URL or an in-page `#hash`, a left click is turned into manager navigation, so
+  // a Markdown link to a deployed file such as `./llms/migration.md` never opens that file. Story
+  // and guide links (`?path=...`) rely on exactly that navigation and stay Markdown links.
+  const guidesDir = new URL('../.storybook/', import.meta.url);
+  const intercepted = [];
+  for (const name of readdirSync(guidesDir).filter((file) => file.endsWith('.mdx')).sort()) {
+    const source = readFileSync(new URL(name, guidesDir), 'utf8');
+    for (const [, target] of source.matchAll(/\]\(([^)\s]+)\)/g)) {
+      if (/^(?:\?path=|#|https?:\/\/)/.test(target)) continue;
+      intercepted.push(`${name}: ${target}`);
+    }
+  }
+  assert.deepEqual(intercepted, []);
 });

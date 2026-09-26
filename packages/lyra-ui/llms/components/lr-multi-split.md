@@ -177,12 +177,19 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   collapsing pane. Takes precedence over `for`; wire its click to `togglePane()` yourself. The
   launcher receives `aria-controls` pointing to the pane and `aria-expanded`: `true` for wide or
   open floating panes, `false` for rail or closed floating panes. Closing the floating drawer returns
-  focus to the launcher, including a deferred retry after the close update. Existing author ARIA
-  is restored when the association is released, collapse is disabled, or the split disconnects.
-  A pane without an id receives a temporary one, removed when the association ends unless the
-  author changed it. Leaving both association properties unset preserves existing behavior.
+  focus to the launcher, including a deferred retry after the close update for a launcher re-shown
+  in response to it. The retry only reclaims focus still lost to the page (`<body>`), still on the
+  element the close first returned it to, or inside the closed pane; focus the application moves
+  elsewhere in the meantime — including into another pane of the split — is kept. Existing author
+  ARIA is restored when the association is released, collapse is disabled, or the split
+  disconnects. A pane without an id receives a temporary one, removed when the association ends
+  unless the author changed it; when the collapsing pane changes (a new `collapse` value, or panels
+  added or removed), the association moves to the new pane and the temporary id leaves the old one.
+  Leaving both association properties unset preserves existing behavior.
 - `for: string = ''` — id of an external launcher in the split's document or shadow root; resolved
-  on updates and when the drawer opens or closes. A direct `trigger` reference takes precedence.
+  on updates and when the drawer opens or closes. A direct `trigger` reference takes precedence. The
+  split does not watch its root for the id to appear: a launcher inserted after the split has
+  rendered is picked up on the split's next update, so call `requestUpdate()` after inserting it.
 - `releasePinOnBreakpoint: boolean = false` (attribute `release-pin-on-breakpoint`, reflected) — opts a
   pinned `collapseState` in to releasing itself when the layout it was made for is gone: either the
   measured collapse band changes to a different one than the pin was made in, or

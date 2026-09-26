@@ -7,7 +7,9 @@
 //     resolves to a real module. Stale paths were shipped for a whole major after the components
 //     moved into family directories, and a wrong path is a hard module-resolution failure for the
 //     consumer, so this is checked rather than assumed.
-//  3. `package.json`'s `files` allowlist covers every artifact the docs tell an agent to read.
+//  3. No generated artifact, and not the shipped package README, links an authored
+//     `llms/<family>.md` source, which is not published.
+//  4. `package.json`'s `files` allowlist covers every artifact the docs tell an agent to read.
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +29,26 @@ const REQUIRED_PACKAGE_FILES = Object.freeze([
   'llms/migration.md',
   'llms/components',
 ]);
+
+const AUTHORED_FAMILY_FILES = Object.freeze(FAMILIES.map(([family]) => `llms/${family}.md`));
+
+/**
+ * Reports every reference to an authored `llms/<family>.md` source in `documents`, an iterable of
+ * `[label, text]` pairs holding shipped text.
+ */
+export function unpublishedSourceReferenceProblems(documents) {
+  const found = [];
+  for (const [label, text] of documents) {
+    for (const familyFile of AUTHORED_FAMILY_FILES) {
+      if (text.includes(familyFile)) {
+        found.push(
+          `${label} references \`${familyFile}\`, which is an authored build input and is not published. Point at \`llms/components/<tag>.md\` or \`llms/index.md\` instead.`,
+        );
+      }
+    }
+  }
+  return found;
+}
 
 export function packageAllowlistProblems(packageFiles) {
   const files = packageFiles instanceof Set ? packageFiles : new Set(packageFiles ?? []);
@@ -88,20 +110,19 @@ for (const [specifier, doc] of seenPaths) {
 
 // 3. No shipped text points at a file consumers don't get. The authored `llms/<family>.md` sources
 //    are build inputs, not published artifacts — a cross-reference to one is a dead link for
-//    everyone reading the package or the skill.
-const familyFiles = FAMILIES.map(([family]) => `llms/${family}.md`);
-for (const [file, text] of expected) {
-  // The first line is the generated-file banner, which names its authored source on purpose so a
-  // contributor editing the repo knows where to go; it is a provenance note, not a reader link.
-  const body = text.split('\n').slice(1).join('\n');
-  for (const familyFile of familyFiles) {
-    if (body.includes(familyFile)) {
-      problems.push(
-        `${path.relative(packageDir, file)} references \`${familyFile}\`, which is an authored build input and is not published. Point at \`llms/components/<tag>.md\` or \`llms/index.md\` instead.`,
-      );
-    }
-  }
-}
+//    everyone reading the package or the skill. The package README ships too, and is read from
+//    node_modules and CDN file views where no link is rewritten to the repository.
+problems.push(
+  ...unpublishedSourceReferenceProblems([
+    // The first line is the generated-file banner, which names its authored source on purpose so a
+    // contributor editing the repo knows where to go; it is a provenance note, not a reader link.
+    ...[...expected].map(([file, text]) => [
+      path.relative(packageDir, file),
+      text.split('\n').slice(1).join('\n'),
+    ]),
+    ['README.md', readFileSync(path.join(packageDir, 'README.md'), 'utf8')],
+  ]),
+);
 
 // 4. The published allowlist covers what the docs point at.
 const pkg = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'));

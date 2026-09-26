@@ -4,6 +4,7 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   activateOverlay,
+  composedContains,
   deepActiveElement,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
@@ -511,11 +512,17 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   /** External launcher whose aria-expanded and aria-controls describe the collapsing pane.
    *  Takes precedence over `for`. Wire its click to `togglePane()`; this association does not
    *  add click handlers. Expanded means wide, or an open floating drawer; rail is collapsed.
-   *  Closing the drawer returns focus to the associated launcher. Author ARIA and panel IDs are
-   *  restored when the association is released, collapse is disabled, or this split disconnects. */
+   *  Closing the drawer returns focus to the associated launcher, retrying once after the close
+   *  update for a launcher re-shown in response to it. The retry only reclaims focus still lost
+   *  to the page, still where the close first returned it, or inside the closed pane; focus moved
+   *  elsewhere in the meantime, including into another pane, is kept. Author ARIA and panel IDs
+   *  are restored when the association is released, collapse is disabled, or this split
+   *  disconnects. */
   @property({ attribute: false }) trigger: HTMLElement | null = null;
   /** Id of an external launcher in this split's document or shadow root; ignored when `trigger`
-   *  is set. Resolved on updates and when the drawer opens or closes. */
+   *  is set. Resolved on updates and when the drawer opens or closes. The split does not watch its
+   *  root for the id to appear: a launcher inserted after the split has rendered is picked up on
+   *  its next update, so call `requestUpdate()` after inserting it. */
   @property() for = '';
   /** Overrides the auto-inserted divider's `aria-label` — receives the divider's 0-based index
    *  and the total panel count (`lr-multi-split` supports N panels, so a single fixed string can't
@@ -2198,6 +2205,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   private deactivateFloatingOverlay(): void {
     const trigger = this.resolveExternalTrigger();
+    // Captured before its dialog semantics are restored below: the deferred pass counts only focus
+    // still inside this closed panel as stranded. The split's other panes are light-DOM children of
+    // the host, so the helper's default host containment would take back focus the application
+    // deliberately moved into the surviving pane.
+    const panel = this.floatingDialogPanel;
+    this.floatingDialogPanel = null;
     if (trigger) this.overlayHandle?.updateRestoreFocusTo(trigger);
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
@@ -2205,11 +2218,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.deferredFocusReturn.schedule({
         host: this,
         candidates: () => [this.resolveExternalTrigger(), this.overlayReturnTarget, this.overlayOpener],
+        stranded: (active) => panel !== null && composedContains(panel, active),
         isCurrent: () => !this.overlayActive,
       });
     }
-    const panel = this.floatingDialogPanel;
-    this.floatingDialogPanel = null;
     if (!panel) return;
     if (this.floatingDialogPreviousRole === null) panel.removeAttribute('role');
     else panel.setAttribute('role', this.floatingDialogPreviousRole);
