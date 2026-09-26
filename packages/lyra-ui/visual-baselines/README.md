@@ -87,7 +87,7 @@ blocking `new` result; an evidence-only capture runs its assertions and stays un
 `.visual-diff-output/evidence/` until a human explicitly promotes that axis.
 
 The runner expands the 109 stories into 313 capture axes before partitioning. Its three CI shards
-contain 103, 102, and 102 captures; the blocking unit/config tests prove the shards are deterministic,
+contain 105, 104, and 104 captures; the blocking unit/config tests prove the shards are deterministic,
 disjoint, exhaustive, and balanced without changing the 111 retained-baseline plus 202
 evidence-only policy.
 
