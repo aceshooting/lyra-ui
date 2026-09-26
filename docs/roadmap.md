@@ -17,6 +17,122 @@ v22 is the next major release. Beyond the switchable-styling work below, it comm
 Planned for 21.1.0 ahead of v22: an opt-in `lr-app-rail` fallback focus target for when every
 built-in return target is hidden or inert.
 
+## 21.0.1 fixes
+
+- Script-aware regional locale fallback, so `zh-HK`, `zh-MO` and bare `zh-Hant` resolve to
+  Traditional Chinese instead of Simplified.
+- `lr-knowledge-graph-explorer` and `lr-agent-trace` stop leaking their inner legend's
+  `lr-visibility-change-request`.
+- pt-PT: replace the remaining Brazilian "o app interativo" wording.
+
+## v22 plan
+
+### Rename and removal policy
+
+Renames of Lyra-only names ship in v22 as the new canonical name plus a deprecated alias that keeps
+working through the v22 line, with a `--origin=lyra-v21` profile in the migration script that rewrites
+attributes, properties, events and `::part()` selectors. Aliases are removed in v23. Event-detail shape
+changes cannot be aliased; the migration script reports affected listeners. Names mirrored from Web
+Awesome or Shoelace, and their defaults, never change.
+
+### Themes and styling
+
+1. An RFC, then independent style axes: look, surface (glass), density, mode and accent as separate
+   persisted choices with their own attributes and cascade layer, replacing the single token-preset slot.
+2. Additive token foundations: a radius scale with button and container radius, a fill-relative
+   state-layer mix, tonal surface-container steps, a heading font input and a table row-height input.
+   Every new input resolves to today's value when unset.
+3. A Material-inspired look (M3 tonal direction) in stylesheet and runtime-preset forms, with its visual
+   scope documented (no ripple, no shape morphing).
+4. A regular glass surface on navigation, toolbar, menu, popover, toast and media-control components
+   through one shared mixin, with fallbacks for missing `backdrop-filter`, reduced transparency, forced
+   colors and high contrast, a nesting guard and fixed-containing-block tests; a clear variant limited
+   to media controls the component owns.
+5. Density presets (compact, comfortable, touch) that keep the 24px minimum hit area.
+6. A preset gallery in v22 and the full theme builder in 22.x.
+7. Further looks in 22.x: dense data (Carbon-inspired), terminal/monospace, and high-contrast; an
+   enterprise look informed by Fluent later, guided by demand.
+8. A validated categorical chart palette per look in v22; sequential and diverging palettes in 22.x.
+
+### Languages
+
+9. New catalogs, first tier: `es-419`, `vi`, `bn`, `th`, `ur`.
+10. Second tier: `en-GB`, `el`, `sk`, `ms`, `fil`, `sw`, `bg`, `lt`, `lv`, `et`.
+11. Third tier: `fr-CA`, `zh-HK`, `ca`, `ta`, `te`, `mr`, `sr` (Cyrillic and Latin), `ga`, `mt`.
+12. Localization infrastructure: delta catalogs for regional variants, a lazy locale-loader API used by
+    `lr-locale-picker`, per-script typography tokens (Thai, Urdu, Indic, CJK line breaking), native-digit
+    display and parsing coverage, pinned CLDR plural categories, reviewer tiers with a native-speaker
+    review channel, a generated locale manifest with coverage, pseudo-locale visual lanes, and flag-map
+    fixes for numeric regions and missing languages.
+
+### Cleanup and removals
+
+13. Remove the overdue deprecated events: the chart, box-plot, graph-legend and graph-query-builder
+    `lr-before-*` veto aliases and `lr-command-palette`'s `lr-open`.
+14. Remove the Lyra 7 migration profile and the unused interactive-transition stylesheet.
+15. Merge `lr-code-block` and `lr-code-block-core` onto a shared base class.
+16. Deprecate in 21.1.0 for removal in v23: the `lr-geojson-view` alias tag; `lr-mutation-observer`'s
+    `attributes` and `character-data` aliases; `code-block-chrome`; `lr-media-card`'s
+    `lr-before-media-download`; `lr-sparkline`'s `area` part and `--lr-sparkline-stroke-width`;
+    `lr-split-panel`'s `split-panel` part; `lr-stat`'s default-slot icon; `lr-icon`'s `fixed-width`;
+    non-item content in `lr-menu`'s default slot; the unprefixed `DocumentFile` and
+    `DocumentRendererDefinition` types; and one of the two overlapping localization entry points.
+
+### API harmonization (Lyra-only names)
+
+17. One veto grammar: a cancelable `lr-<noun>-request` fires before a change; `-change` notifications
+    are never cancelable.
+18. Close events carry an object detail with `reason` everywhere; `lr-lightbox-close` becomes `lr-close`.
+19. `lr-toggle` always carries `expanded`; `lr-expand`/`lr-collapse` are directional only; state
+    attributes converge on `expanded`.
+20. Resolve contradictory attribute pairs: `without-arrow` over `arrow`, `without-steppers` over
+    `steppers`, one legend-visibility spelling, and consistent `copyable`, `show-value` and `multiple`
+    defaults.
+21. Drop `accessible-label` in favour of the host `aria-label`, and normalise the `aria-label` default.
+22. Use "edge" consistently for graph connections (props, events, parts) and namespace graph tokens under
+    `--lr-graph-*`, ending the `lr-link-click` name clash with hyperlinks.
+23. Rename pointer-and-keyboard `-click` events to `-activate`.
+24. Boolean attributes default to false and use `with-`/`without-`; rename `lr-table`'s string labels
+    that look like booleans.
+25. Fold `compact` into `size`/density and normalise size defaults to `'m'`.
+26. Consistent search, filter, selection and tab event details that match their property names.
+27. One meaning per name: `error-text` for messages, `zoomable` for the chart zoom switch, and consistent
+    `pending` and `heading-level` types.
+28. Sizing inputs accept CSS lengths; `readonly` replaces `editable`/`locked`; one `positioning-strategy`
+    default; `-placement` suffixes; `heading` plus `heading-level` for section titles.
+29. Hyphenated forwarded part names instead of `__`, component-namespaced custom properties, and one
+    `-background`/`-color` suffix convention.
+
+### Architecture and packaging
+
+30. Declare design tokens once per document instead of on every element host, after a style-recalc spike.
+31. A package root with no component classes; classes come from their own subpaths.
+32. One registration import path per component.
+33. Remove the `ssr-loader.js` compatibility entry.
+34. Raise the supported Node floor to 22.
+35. Raise the browser floor to the Popover API (Firefox 125, Safari 17).
+36. Shrink the published tarball: stop shipping `llms-full.txt`, trim editor hover descriptions to a
+    summary plus a documentation link, and ship only the current major's changelog section.
+37. Make `LyraElement`'s collection-snapshot support opt-in, and move development-only diagnostics
+    behind a `development` export condition.
+38. Also: a shared decorator helper, a faster parallel lint chain, test-title-keyed quality evidence,
+    budget files without narrative history, optional scoped custom-element registries, and one shared
+    framework type map.
+
+### New components for agentic, chat and RAG interfaces
+
+39. v22 priorities: `lr-change-review` (multi-file diff with per-hunk keep or discard),
+    `lr-agent-question` (structured questions and MCP elicitation), message-part and stream
+    interrupt/resume extensions, `lr-permission-rules` with `lr-permission-grant`,
+    `lr-connector-manager` (MCP servers and connectors), `lr-background-runs`,
+    `lr-research-progress`, and `lr-budget-meter`.
+40. Next: `lr-conversation-tree`, `lr-state-history`, `lr-query-plan`, `lr-web-search-results`,
+    `lr-suggested-edits`, `lr-prompt-library`, `lr-agent-card` with `lr-agent-picker`,
+    `lr-diagram` (Mermaid), and `lr-guardrail-notice`.
+41. Later: `lr-schedule-editor`, `lr-share-dialog`, `lr-session-replay`, `lr-conversation-search`,
+    `lr-image-generation`, `lr-read-aloud`, `lr-agent-team`, and reasoning-effort controls in
+    `lr-model-settings-panel`.
+
 ## Switchable styling after v21
 
 Make choosing and switching an application's visual style straightforward while keeping the same
