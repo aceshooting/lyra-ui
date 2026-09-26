@@ -319,4 +319,8 @@ export const styles = css`
     white-space: normal;
     pointer-events: none;
   }
+  :host([icon-only]) [part="toggle"],
+  :host([icon-only]) [part="children"] {
+    display: none;
+  }
 `;

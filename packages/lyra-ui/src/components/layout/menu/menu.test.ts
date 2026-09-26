@@ -1408,3 +1408,19 @@ describe('collecting already-slotted items without relying on the initial slotch
     }
   });
 });
+
+
+it('keeps ordinary submenus beside their parent with the menubar attachment option unset', async () => {
+  const menu = await fixture<LyraMenu>(nested());
+  const share = byId<LyraMenuItem>(menu, 'share');
+  await share.openSubmenu('first');
+  const panel = byId<LyraMenu>(menu, 'share-menu');
+  await waitUntil(() => getComputedStyle(submenuSurface(panel)).visibility === 'visible');
+  // Fixed-position placement can round the two fractional edges in opposite directions; allow
+  // that one-device-pixel quantization while still requiring the submenu to remain beside its
+  // trigger rather than overlap it.
+  expect(submenuSurface(panel).getBoundingClientRect().left).to.be.at.least(share.getBoundingClientRect().right - 2);
+  const event = press(byId(panel, 'email'), 'ArrowLeft');
+  expect(event.defaultPrevented).to.equal(true);
+  expect(share.submenuOpen).to.equal(false);
+});

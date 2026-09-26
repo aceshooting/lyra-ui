@@ -331,7 +331,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     const location = `${frame.file}:${frame.line}${frame.column !== undefined ? `:${frame.column}` : ''}`;
     return html`
       <button part="frame" type="button" ?data-internal=${frame.internal} @click=${() => this.onFrameClick(frame)}>
-        ${frame.functionName ? html`<span part="frame-function">${frame.functionName}</span>` : nothing}
+        ${frame.functionName ? html`<span part="frame-function" dir="ltr">${frame.functionName}</span>` : nothing}
         <span part="frame-location" dir="ltr">${location}</span>
       </button>
     `;

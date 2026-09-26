@@ -747,6 +747,8 @@ interface CodeBlockHeaderOptions {
 function renderCodeBlockHeader(
   options: CodeBlockHeaderOptions
 ): TemplateResult {
+  // Keep direction inference inside bdi; changing the filename flex item's direction would
+  // change its automatic margin and move the header controls in an RTL interface.
   // Indented two levels deeper than this function body on purpose: the literal text between these
   // tags becomes real whitespace text nodes, so keeping the exact indentation both class files
   // used before the extraction keeps the rendered DOM byte-identical (see renderCodeBlockShell()
@@ -768,7 +770,7 @@ function renderCodeBlockHeader(
               </button>
             `
           : nothing}
-        ${options.filename ? html`<span part="filename">${options.filename}</span>` : nothing}
+        ${options.filename ? html`<span part="filename"><bdi>${options.filename}</bdi></span>` : nothing}
         ${options.language ? html`<span part="language">${options.language}</span>` : nothing}
         ${options.copyable
           ? html`

@@ -15,8 +15,6 @@ export const styles = css`
         1.8
     );
     --_lr-switch-thumb-offset: var(--lr-size-2px);
-    /* The state-resolved track fill gives hover and press mixes one base in either state. */
-    --_lr-switch-track-fill: var(--lr-switch-track-fill, var(--lr-color-border));
   }
   .switch-layout {
     display: inline-flex;
@@ -87,7 +85,10 @@ export const styles = css`
       var(--lr-switch-track-block-size, var(--_lr-switch-track-block-size))
     );
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-switch-track-fill, var(--_lr-switch-track-fill));
+    /* Resolve the public token on the paint node so a ::part(track) override remains local to
+       the track. The checked rule below replaces this base for every pointer state. */
+    --_lr-switch-track-fill: var(--lr-switch-track-fill, var(--lr-color-border));
+    background: var(--_lr-switch-track-fill);
     /* 'none' reproduces today's exact chrome: no border property was declared here at all, and an
        undeclared border already computes to style 'none'/width '0px', so this fallback is
        byte-identical when unset. */
@@ -99,7 +100,7 @@ export const styles = css`
       --lr-switch-checked-track-fill,
       var(--lr-color-brand)
     );
-    background: var(--lr-switch-checked-track-fill, var(--lr-color-brand));
+    background: var(--_lr-switch-track-fill);
     /* Falls back through the same chain the unchecked track reads (--lr-switch-track-border, then
        the undeclared-equivalent 'none'), so an unset consumer renders byte-identical to today,
        where the border never varies by checked state at all. Redeclaring the whole shorthand --

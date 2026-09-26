@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
@@ -212,7 +213,8 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     this.hovering = false;
     this.scheduleHidePreview();
   };
-  private onFocusIn = (): void => {
+  private onFocusIn = (event: FocusEvent): void => {
+    if (!isKeyboardFocusEvent(event)) return;
     this.focused = true;
     this.showPreview();
   };

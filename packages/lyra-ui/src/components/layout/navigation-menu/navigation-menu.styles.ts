@@ -72,6 +72,7 @@ export const styles = css`
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
+    color: var(--lr-navigation-menu-toggle-active-color, var(--lr-color-text));
   }
 
   [part='toggle']:where(:focus-visible) {

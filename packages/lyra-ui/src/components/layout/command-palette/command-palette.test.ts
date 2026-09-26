@@ -1881,3 +1881,23 @@ describe('RTL', () => {
     expect(group.matches(':dir(rtl)')).to.be.true;
   });
 });
+
+
+it('ignores a removed hotkey and key-less autofill keydown events', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette hotkey="mod+k"></lr-command-palette>`);
+  const errors: string[] = []; const record = (event: ErrorEvent) => errors.push(event.message);
+  window.addEventListener('error', record);
+  try {
+    window.dispatchEvent(new Event('keydown'));
+    el.removeAttribute('hotkey'); await el.updateComplete;
+    expect(el.hotkey).to.equal(null);
+    for (const init of [{ ctrlKey: true }, { metaKey: true }]) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ...init }));
+    expect(el.open).to.equal(false); expect(errors).to.deep.equal([]);
+  } finally { window.removeEventListener('error', record); }
+});
+
+it('matches a non-Latin shortcut through its physical letter code', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette hotkey="ctrl+k"></lr-command-palette>`);
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'л', code: 'KeyK', ctrlKey: true }));
+  await el.updateComplete; expect(el.open).to.equal(true);
+});

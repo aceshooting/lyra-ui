@@ -11,7 +11,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
@@ -521,7 +521,11 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   private summaryText(): string {
     const total = this.normalizedTotalItems;
-    const itemLabel = this.itemLabel || this.localize(total === 1 ? 'item' : 'items');
+    const itemLabel =
+      this.itemLabel ||
+      (getPluralRules(this.effectiveLocale).select(total) === 'one'
+        ? this.localize('item')
+        : this.localize('items', undefined, { count: total }));
     if (this.calculatedTotalPages === 0) {
       return this.localize('paginationEmptySummary', undefined, {
         total: this.formatNumber(0),

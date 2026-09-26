@@ -47,7 +47,7 @@
     "@arethetypeswrong/cli": "^0.18.5",
     "@changesets/cli": "^3.0.3",
     "@codecov/vite-plugin": "^2.0.1",
-    "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.6",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
     "@storybook/addon-a11y": "10.6.0",
     "@storybook/addon-docs": "10.6.0",
@@ -70,7 +70,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "remark-gfm": "^4.0.1",
-    "secretlint": "^13.0.5",
+    "secretlint": "^13.0.6",
     "storybook": "10.6.0",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.1"

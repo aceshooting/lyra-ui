@@ -197,6 +197,7 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'إعادة محاولة الوكيل الفرعي',
   subagentPanelCancelRun: 'إلغاء {name}',
   subagentPanelRetryRun: 'إعادة محاولة {name}',
+  toolTimelineDetailsFor: 'تفاصيل {name}',
   toolCallBlockHeaderPending: 'في انتظار استخدام {name}',
   toolCallBlockHeaderRunning: 'جارٍ استخدام {name}',
   toolCallBlockHeaderSuccess: 'تم استخدام {name}',

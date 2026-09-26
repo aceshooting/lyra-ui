@@ -193,6 +193,7 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'تلاش دوباره برای عامل فرعی',
   subagentPanelCancelRun: 'لغو {name}',
   subagentPanelRetryRun: 'تلاش دوباره برای {name}',
+  toolTimelineDetailsFor: 'جزئیات مربوط به {name}',
   toolCallBlockHeaderPending: 'در انتظار استفاده از {name}',
   toolCallBlockHeaderRunning: 'در حال استفاده از {name}',
   toolCallBlockHeaderSuccess: 'از {name} استفاده شد',

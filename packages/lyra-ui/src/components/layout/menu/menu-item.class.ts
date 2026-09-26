@@ -24,6 +24,8 @@ import type { LyraSize } from '../../../internal/variants.js';
 import {
   menuItemOwner,
   submenuPanelController,
+  syncOwnedAriaLabel,
+  type OwnedAriaLabel,
   type MenuFocusTarget,
   type MenuItemOwner,
   type SubmenuPanel,
@@ -166,8 +168,9 @@ export interface LyraMenuItemEventMap {
  *   assistive technology.
  * @slot prefix - Shoelace-compatible decorative alias for leading content. Its flattened subtree is
  *   inert and hidden from assistive technology.
- * @slot details - Decorative secondary WA-compatible detail text rendered after the label. Its
- *   flattened subtree is inert and hidden from assistive technology.
+ * @slot details - Decorative secondary WA-compatible detail content after the label. Any assigned
+ *   element counts as content, including a shadow-rendered `<lr-kbd keys>` chip. Its flattened
+ *   subtree is inert and hidden from assistive technology.
  * @slot suffix - Shoelace-compatible decorative trailing content. Its flattened subtree is inert and
  *   hidden from assistive technology.
  * @slot submenu - A nested `<lr-menu>` or direct mapped menu items that open beside this row.
@@ -376,10 +379,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   private announcedNativeState = '';
   private owningMenu: MenuItemOwner | null = null;
   // A consumer-authored name always wins; these record that the computed one was ours to update.
-  private ownsAriaLabel = false;
-  private ownedAriaLabelValue: string | null = null;
-  private ownsPanelAriaLabel = false;
-  private ownedPanelAriaLabelValue: string | null = null;
+  private readonly ownedName: OwnedAriaLabel = { owns: false, value: null };
+  private panelName: OwnedAriaLabel = { owns: false, value: null };
 
   /** Whether a nested `<lr-menu>` or direct mapped items are assigned to this item's `submenu`
    * slot, making it a submenu parent. */
@@ -666,7 +667,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     );
   };
 
-  // `hasDetailsSlot` is a content check (does the assigned node have real text), not a plain
+  // `hasDetailsSlot` counts assigned elements or non-whitespace text, not a plain
   // presence flag, so it stays on the live assigned-nodes snapshot rather than the light-DOM
   // attribute -- a light-DOM check cannot see text forwarded through a nested `<slot>` inside the
   // assigned element. Split into a thin event wrapper plus a slot-taking method so `firstUpdated()`
@@ -676,9 +677,15 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   };
 
   private syncDetailsSlot(slot: HTMLSlotElement): void {
-    this.hasDetailsSlot = slot
-      .assignedNodes({ flatten: true })
-      .some((node) => (node.textContent ?? '').trim() !== '');
+    const meaningful = (node: Node): boolean => {
+      if (node.nodeType === Node.TEXT_NODE) return (node.textContent ?? '').trim() !== '';
+      if (node.nodeType !== Node.ELEMENT_NODE) return false;
+      if (node instanceof HTMLSlotElement) {
+        return node.assignedNodes({ flatten: true }).some(meaningful);
+      }
+      return true;
+    };
+    this.hasDetailsSlot = slot.assignedNodes({ flatten: true }).some(meaningful);
   }
 
   private onSuffixSlotChange = (): void => {
@@ -872,8 +879,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.submenuPanelAttached = false;
     if (!samePanel) {
       this.submenuPanel = next;
-      this.ownsPanelAriaLabel = false;
-      this.ownedPanelAriaLabelValue = null;
+      this.panelName = { owns: false, value: null };
     }
     if (!this.submenuPanel) {
       this.submenuExpanded = false;
@@ -943,66 +949,13 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   /** Names the focusable host from its visual-only label text. This also prevents a submenu from
    *  leaking its open content into the parent item's name. */
   private applyComputedName(): void {
-    if (
-      this.ownsAriaLabel &&
-      this.getAttribute('aria-label') !== this.ownedAriaLabelValue
-    ) {
-      this.ownsAriaLabel = false;
-      this.ownedAriaLabelValue = null;
-    }
-    if (this.hasAttribute('aria-labelledby')) {
-      if (this.ownsAriaLabel) this.removeAttribute('aria-label');
-      this.ownsAriaLabel = false;
-      this.ownedAriaLabelValue = null;
-      return;
-    }
-    if (this.hasAttribute('aria-label') && !this.ownsAriaLabel) return;
-    this.ownsAriaLabel = true;
-    // An empty computed name is never written. `aria-label=""` is authoritative and suppresses the
-    // row's own content-derived name, so it leaves the row unnamed -- strictly worse than having no
-    // attribute at all. A null owned value records "owned, and correctly absent".
-    if (this.slottedLabel === '') {
-      this.ownedAriaLabelValue = null;
-      if (this.hasAttribute('aria-label')) this.removeAttribute('aria-label');
-      return;
-    }
-    this.ownedAriaLabelValue = this.slottedLabel;
-    if (this.getAttribute('aria-label') === this.slottedLabel) return;
-    this.setAttribute('aria-label', this.slottedLabel);
+    syncOwnedAriaLabel(this, this.slottedLabel, this.ownedName, this.hasAttribute('aria-labelledby'));
   }
 
-  /** Names the submenu's `role="menu"` after the row that opens it — the APG relationship, which
-   *  `aria-labelledby` cannot express here because an idref cannot cross a shadow boundary. */
+  /** Names the submenu after its row without replacing an author's explicit panel name. */
   private applyPanelName(): void {
     const panel = this.submenuPanel;
-    if (!panel) return;
-    if (
-      this.ownsPanelAriaLabel &&
-      panel.getAttribute('aria-label') !== this.ownedPanelAriaLabelValue
-    ) {
-      this.ownsPanelAriaLabel = false;
-      this.ownedPanelAriaLabelValue = null;
-    }
-    if (panel.hasAttribute('label')) {
-      if (this.ownsPanelAriaLabel) {
-        panel.removeAttribute('aria-label');
-        this.ownsPanelAriaLabel = false;
-        this.ownedPanelAriaLabelValue = null;
-      }
-      return;
-    }
-    if (panel.hasAttribute('aria-label') && !this.ownsPanelAriaLabel) return;
-    this.ownsPanelAriaLabel = true;
-    // Same rule as the host name above: an empty `aria-label` would leave the submenu's
-    // `role="menu"` unnamed rather than falling back to its own content.
-    if (this.slottedLabel === '') {
-      this.ownedPanelAriaLabelValue = null;
-      if (panel.hasAttribute('aria-label')) panel.removeAttribute('aria-label');
-      return;
-    }
-    this.ownedPanelAriaLabelValue = this.slottedLabel;
-    if (panel.getAttribute('aria-label') === this.slottedLabel) return;
-    panel.setAttribute('aria-label', this.slottedLabel);
+    if (panel) syncOwnedAriaLabel(panel, this.slottedLabel, this.panelName, panel.hasAttribute('label'));
   }
 
   /** Text label used by type-ahead and Shoelace-compatible integrations. */

@@ -64,6 +64,7 @@ export const styles = css`
       --lr-navigation-menu-item-active-bg,
       color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
+    color: var(--lr-navigation-menu-item-active-color, var(--lr-color-text));
   }
 
   [part~='base']:where(:focus-visible) {
@@ -87,6 +88,7 @@ export const styles = css`
       --lr-navigation-menu-item-active-bg,
       color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
+    color: var(--lr-navigation-menu-item-active-color, var(--lr-color-text));
   }
 
   [part~='base-open'] {
@@ -104,6 +106,7 @@ export const styles = css`
       --lr-navigation-menu-item-active-bg,
       color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
+    color: var(--lr-navigation-menu-item-active-color, var(--lr-color-text));
   }
 
   [part='start'],

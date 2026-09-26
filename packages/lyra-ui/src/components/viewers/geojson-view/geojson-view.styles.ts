@@ -48,6 +48,9 @@ export const styles = css`
   }
 
   [part='metadata'] {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: start;
     box-sizing: border-box;
     display: block;
     inline-size: 100%;

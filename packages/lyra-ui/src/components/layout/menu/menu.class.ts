@@ -54,6 +54,8 @@ export interface MenuItemSelectDetail {
 /** Where a submenu prefers to sit: beside its parent row, on the inline-end side. Resolved
  *  through `rtlAwarePlacement` and then flipped by `place()` when it does not fit. */
 const SUBMENU_PLACEMENT: Placement = 'right-start';
+// Floating UI mirrors bottom-start alignment from the floating element's direction.
+const MENUBAR_PLACEMENT: Placement = 'bottom-start';
 
 /** How long the pointer must rest on a submenu parent before its submenu opens, in ms. Short
  *  enough not to feel sticky, long enough that sweeping the cursor down a list opens nothing. */
@@ -347,6 +349,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private presentationPositioned = false;
   private itemStateObserver?: MutationObserver;
   private pointerDocument?: Document;
+  private menubarAnchored = false;
   private pendingFocus: MenuFocusTarget = 'first';
   private submenuOpenTimer?: OwnedTimeout;
   private submenuCloseTimer?: OwnedTimeout;
@@ -383,9 +386,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       get open(): boolean {
         return menu.submenuAnchor !== null && menu.presentationOpen;
       },
-      attach(anchor, onStateChange): void {
+      attach(anchor, onStateChange, options): void {
         if (menu.submenuAnchor && menu.submenuAnchor !== anchor)
           menu.closePresentation();
+        menu.menubarAnchored = options?.menubar === true;
         menu.submenuAnchor = anchor;
         menu.submenuStateChange = onStateChange;
         menu.syncPresentationState();
@@ -395,6 +399,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         if (menu.submenuAnchor !== anchor) return;
         menu.closePresentation();
         menu.submenuAnchor = null;
+        menu.menubarAnchored = false;
         menu.submenuStateChange = null;
         menu.cleanup?.();
         menu.cleanup = undefined;
@@ -578,7 +583,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       '.submenu-surface'
     ) as HTMLElement | null;
     if (this.submenuAnchor && popup) {
-      const placement = rtlAwarePlacement(SUBMENU_PLACEMENT, this);
+      const placement = this.menubarAnchored
+        ? MENUBAR_PLACEMENT
+        : rtlAwarePlacement(SUBMENU_PLACEMENT, this);
       this.cleanup = place(this.submenuAnchor, popup, {
         placement,
         strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
@@ -1112,7 +1119,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
             this.closeSubmenus(current);
             current.openSubmenu('first');
           }
-        } else if (this.submenuAnchor) {
+        } else if (this.submenuAnchor && !this.menubarAnchored) {
           // Only a submenu has anywhere to go back to; in a root menu this key stays untouched.
           e.preventDefault();
           this.closePresentation({ focusTrigger: true });

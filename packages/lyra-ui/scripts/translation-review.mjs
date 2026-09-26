@@ -162,6 +162,14 @@ export function validateTranslationReviews(
     if (!sameArray([...partition].sort(), [...union].sort())) {
       errors.push('releasePlan builtIn/shippedBeforeV8/v8ReleaseExpansion/deferred must partition the pinned union');
     }
+    if (plan.additionalCatalogs !== undefined && !sortedUniqueStrings(plan.additionalCatalogs)) {
+      errors.push('releasePlan.additionalCatalogs must be sorted, unique locale tags when present');
+    }
+    const additional = Array.isArray(plan.additionalCatalogs) ? plan.additionalCatalogs : [];
+    const planLocaleGroups = [...partition, ...additional];
+    if (new Set(planLocaleGroups).size !== planLocaleGroups.length) {
+      errors.push('releasePlan.additionalCatalogs must not overlap the pinned locale groups');
+    }
   }
 
   if (!Array.isArray(fixture.catalogs)) {
@@ -173,8 +181,13 @@ export function validateTranslationReviews(
   if (!sameArray(recordLocales, [...recordLocales].sort()) || new Set(recordLocales).size !== recordLocales.length) {
     errors.push('catalogs must be sorted by locale with no duplicates');
   }
-  if (!sameArray(recordLocales, plan?.v8ReleaseExpansion)) {
-    errors.push('catalogs must contain exactly the v8ReleaseExpansion locales');
+  const additionalCatalogs = Array.isArray(plan?.additionalCatalogs) ? plan.additionalCatalogs : [];
+  const expectedCatalogLocales = [
+    ...(Array.isArray(plan?.v8ReleaseExpansion) ? plan.v8ReleaseExpansion : []),
+    ...additionalCatalogs,
+  ].sort();
+  if (!sameArray(recordLocales, expectedCatalogLocales)) {
+    errors.push('catalogs must contain exactly the v8ReleaseExpansion and additionalCatalogs locales');
   }
 
   for (const record of records) {

@@ -57,7 +57,7 @@ export const styles = css`
   }
   [part='header']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-brand);
+    color: var(--lr-color-text);
   }
   [part='header']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -84,7 +84,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-s);
     padding: 0 var(--lr-space-m) var(--lr-space-m);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
     padding-block-start: var(--lr-space-m);
     min-inline-size: 0;
     overflow-wrap: anywhere;

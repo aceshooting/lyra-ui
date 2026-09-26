@@ -85,6 +85,12 @@ export const styles = css`
     box-shadow: 0 0 0 var(--lr-border-width-medium)
       var(--lr-checkbox-active-ring, var(--lr-color-brand-quiet));
   }
+  :host(:not(:disabled)) .checkbox-layout:hover [part~="box"]:is([part~="checked"], [part~="indeterminate"]) {
+    border-color: var(--lr-checkbox-hover-border, var(--lr-checkbox-checked-border, var(--lr-color-brand)));
+  }
+  :host(:not(:disabled)) .checkbox-layout:active [part~="box"]:is([part~="checked"], [part~="indeterminate"]) {
+    border-color: var(--lr-checkbox-active-border, var(--lr-checkbox-checked-border, var(--lr-color-brand)));
+  }
   [part~="checked"],
   [part~="indeterminate"] {
     /* Component-scoped indirection, mirroring lr-source-picker's identical

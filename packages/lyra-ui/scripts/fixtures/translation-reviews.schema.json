@@ -65,6 +65,9 @@
         "regionalExtensions": {
           "$ref": "#/$defs/localeList"
         },
+        "additionalCatalogs": {
+          "$ref": "#/$defs/localeList"
+        },
         "selectionRationale": {
           "type": "array",
           "minItems": 1,

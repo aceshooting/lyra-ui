@@ -67,14 +67,14 @@ export const styles = css`
   :where([part~='button']):not(:disabled):hover {
     background: var(
       --lr-toggle-hover-background,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      color-mix(in oklab, var(--lr-toggle-background, transparent), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
     );
   }
 
   :where([part~='button']):not(:disabled):active {
     background: color-mix(
       in oklab,
-      var(--lr-color-surface),
+      var(--lr-toggle-hover-background, var(--lr-toggle-background, transparent)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -82,7 +82,7 @@ export const styles = css`
   :host([pressed]) :where([part~='button']):not(:disabled):hover {
     background: color-mix(
       in oklab,
-      var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet)),
+      var(--lr-toggle-hover-background, var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet))),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
   }
@@ -90,7 +90,7 @@ export const styles = css`
   :host([pressed]) :where([part~='button']):not(:disabled):active {
     background: color-mix(
       in oklab,
-      var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet)),
+      var(--lr-toggle-hover-background, var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet))),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

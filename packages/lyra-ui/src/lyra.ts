@@ -1643,6 +1643,7 @@ export type {
 } from './components/conversation/markdown/markdown-base.class.js';
 export type {
   MarkdownKatexState,
+  MarkdownStreamingRender,
   PendingHighlight,
 } from './components/conversation/markdown/markdown-shared.js';
 export type {
@@ -1783,3 +1784,7 @@ export type * from './ai/types.js';
 // adds zero runtime bytes to the barrel -- but it pulls the `declare global` augmentation into any
 // program that imports the package root, which is what types `document.addEventListener('lr-...')`.
 export type { LyraGlobalEventMap } from './events.js';
+
+export { LyraMenubar } from './components/layout/menubar/menubar.class.js';
+export { LyraMenubarItem } from './components/layout/menubar/menubar-item.class.js';
+export type { LyraMenubarEventMap } from './components/layout/menubar/menubar.class.js';

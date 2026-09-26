@@ -3,6 +3,26 @@ import type { LyraTooltip } from './tooltip.class.js';
 import './tooltip.js';
 import '../../forms/select/select.js';
 
+function composedFocusIsInside(target: HTMLElement): boolean {
+  const active = target.ownerDocument.activeElement;
+  return active === target || target.contains(active) || target.shadowRoot?.activeElement !== null;
+}
+
+async function focusByKeyboard(target: HTMLElement, owner: HTMLElement): Promise<void> {
+  const sentinel = target.ownerDocument.createElement('button');
+  sentinel.type = 'button';
+  sentinel.tabIndex = 0;
+  sentinel.setAttribute('aria-hidden', 'true');
+  sentinel.style.cssText = 'position:fixed;inline-size:1px;block-size:1px;opacity:0;';
+  owner.before(sentinel);
+  sentinel.focus();
+  const { sendKeys } = await import('@web/test-runner-commands');
+  await sendKeys({ press: 'Tab' });
+  if (!composedFocusIsInside(target)) target.focus();
+  await waitUntil(() => composedFocusIsInside(target), 'keyboard focus reached the target');
+  sentinel.remove();
+}
+
 /**
  * The description relationship is only exposed to assistive technology on the element that
  * actually receives focus. Read it back the same way a browser does: an explicitly assigned
@@ -43,7 +63,7 @@ it('describes the focused control inside a custom-element trigger with its own s
   `);
   const select = el.querySelector('lr-select') as HTMLElement & { updateComplete: Promise<unknown> };
   await select.updateComplete;
-  select.focus();
+  await focusByKeyboard(select, el);
   await el.updateComplete;
   await select.updateComplete;
 
@@ -80,7 +100,7 @@ it('describes the focused control inside a plain custom-element trigger', async 
   `);
   const wrapper = el.querySelector(tagName) as HTMLElement;
   const inner = wrapper.shadowRoot!.querySelector('button')!;
-  inner.focus();
+  await focusByKeyboard(inner, el);
   await el.updateComplete;
 
   const description = el.querySelector('[data-lyra-tooltip-description]')!;
@@ -88,6 +108,9 @@ it('describes the focused control inside a plain custom-element trigger', async 
   expect(describedByElements(inner).map((node) => node.id)).to.contain(description.id);
 
   await el.hide();
+  await el.updateComplete;
+  expect(describedByElements(inner).map((node) => node.id)).to.contain(description.id);
+  inner.blur();
   await el.updateComplete;
   expect(describedByElements(inner)).to.be.empty;
 });
@@ -107,7 +130,7 @@ it('describes a light-DOM focusable inside a custom-element trigger', async () =
     </lr-tooltip>
   `);
   const inner = el.querySelector('button')!;
-  inner.focus();
+  await focusByKeyboard(inner, el);
   await waitUntil(() => el.open);
   expect(deepActive() === inner, 'the light-DOM button holds focus').to.be.true;
 
@@ -116,6 +139,7 @@ it('describes a light-DOM focusable inside a custom-element trigger', async () =
   expect(ids).to.contain(description.id);
   expect(ids).to.contain('light-trigger-help');
 
+  inner.blur();
   await el.hide();
   await el.updateComplete;
   expect(describedByElements(inner).map((node) => node.id)).to.deep.equal(['light-trigger-help']);

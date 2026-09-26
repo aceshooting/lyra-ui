@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { parseHotkey, matchesHotkey, isIgnorableKeyEvent, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from '../../../internal/hotkey.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
@@ -49,27 +50,6 @@ interface CommandResultModel {
   rows: CommandResultRow[];
   groups: CommandResultGroup[];
   totalHeight: number;
-}
-
-/** Last-connected matching palette owns a global chord in each browsing context. */
-const hotkeyOwners = new WeakMap<Window, LyraCommandPalette[]>();
-
-function registerHotkeyOwner(view: Window, palette: LyraCommandPalette): void {
-  const owners = hotkeyOwners.get(view) ?? [];
-  hotkeyOwners.set(view, [
-    ...owners.filter((candidate) => candidate !== palette),
-    palette,
-  ]);
-}
-
-function unregisterHotkeyOwner(
-  view: Window,
-  palette: LyraCommandPalette
-): void {
-  const owners =
-    hotkeyOwners.get(view)?.filter((candidate) => candidate !== palette) ?? [];
-  if (owners.length) hotkeyOwners.set(view, owners);
-  else hotkeyOwners.delete(view);
 }
 
 export interface LyraCommand {
@@ -564,7 +544,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     const view = this.ownerDocument.defaultView;
     this.runtimeWindow = view ?? undefined;
     if (view) {
-      registerHotkeyOwner(view, this);
+      registerHotkeyOwner(view, this, event => this.isConnected && this.matchesShortcut(event));
       view.addEventListener('keydown', this.onGlobalKeyDown);
     }
     const ResizeObserverCtor = view?.ResizeObserver;
@@ -690,50 +670,13 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     };
   }
   private matchesShortcut(event: KeyboardEvent): boolean {
-    const parts = this.hotkey
-      .toLowerCase()
-      .split('+')
-      .map((part) => part.trim());
-    const key = parts.pop();
-    if (!key || event.key.toLowerCase() !== key) return false;
-    const modifiers = new Set(parts);
-    if (
-      modifiers.size !== parts.length ||
-      [...modifiers].some(
-        (part) => !['alt', 'ctrl', 'meta', 'mod', 'shift'].includes(part)
-      ) ||
-      (modifiers.has('mod') && (modifiers.has('ctrl') || modifiers.has('meta')))
-    )
-      return false;
-    const isMac =
-      detectPlatform(
-        (this.runtimeWindow ?? this.ownerDocument.defaultView)?.navigator
-      ) === 'mac';
-    const expectedCtrl =
-      modifiers.has('ctrl') || (modifiers.has('mod') && !isMac);
-    const expectedMeta =
-      modifiers.has('meta') || (modifiers.has('mod') && isMac);
-    return (
-      event.ctrlKey === expectedCtrl &&
-      event.metaKey === expectedMeta &&
-      event.shiftKey === modifiers.has('shift') &&
-      event.altKey === modifiers.has('alt')
-    );
+    return matchesHotkey(parseHotkey(this.hotkey), event,
+      detectPlatform((this.runtimeWindow ?? this.ownerDocument.defaultView)?.navigator) === 'mac');
   }
   private onGlobalKeyDown = (event: KeyboardEvent): void => {
-    if (event.repeat || event.isComposing || event.keyCode === 229) return;
+    if (isIgnorableKeyEvent(event)) return;
     const view = this.runtimeWindow;
-    if (!view || !this.matchesShortcut(event)) return;
-    const owners = hotkeyOwners.get(view) ?? [];
-    let owner: LyraCommandPalette | undefined;
-    for (let index = owners.length - 1; index >= 0; index -= 1) {
-      const candidate = owners[index]!;
-      if (candidate.isConnected && candidate.matchesShortcut(event)) {
-        owner = candidate;
-        break;
-      }
-    }
-    if (owner !== this) return;
+    if (!view || !this.matchesShortcut(event) || resolveHotkeyOwner(view, event) !== this) return;
     event.preventDefault();
     this.openPalette();
   };

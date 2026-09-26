@@ -35,7 +35,7 @@ family and entry point.
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
 - **Form controls & inputs** — 31 tags in `components/forms/`
 - **Data display, dashboards & flow canvas** — 26 tags in `components/data/`
-- **Layout, navigation & structure** — 38 tags in `components/layout/`
+- **Layout, navigation & structure** — 40 tags in `components/layout/`
 - **Overlays, status & feedback** — 22 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
 - **Media, files & maps** — 22 tags in `components/media/`
@@ -189,7 +189,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 278
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 280
   root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -228,7 +228,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-ui/translations/<locale>.js` (the eleven shipped message catalogs),
+  `@aceshooting/lyra-ui/translations/<locale>.js` (the twenty-one shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
@@ -2208,7 +2208,8 @@ category selection walks the same chain, so the two can never disagree:
    unbounded prefix ladder; malformed over-complex inherited input goes directly to English.
 2. **Then any registered, well-formed BCP-47 catalog sharing the base language**, which is how a
    _regional-only_ catalog is reached from a less specific tag: `lang="zh"` and `lang="zh-Hans"`
-   both find the shipped `zh-CN` catalog, and `lang="pt"`/`lang="pt-PT"` both find `pt-BR`. Order within this
+   both find the shipped `zh-CN` catalog, while `lang="pt"` reaches `pt-BR` and an exact `lang="pt-PT"`
+   selects the European Portuguese catalog. Order within this
    step is deterministic and independent of import order — most shared subtags first
    (`zh-Hant-TW` prefers a registered `zh-TW` over `zh-CN`), then alphabetically as the tie-break
    (bare `zh` with both registered picks `zh-CN`). Register the regional tag you actually mean if
@@ -2286,8 +2287,8 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
 
-Twelve full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`,
-`pt-BR`, `ro`, `ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
+Twenty-one full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `hi`, `id`,
+`it`, `ja`, `ko`, `nl`, `pl`, `pt-BR`, `pt-PT`, `ro`, `ru`, `tr`, `uk`, `zh-CN`, `zh-TW`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
 **side-effect-only modules**: import one bare, read nothing from it, and it calls
 `registerLyraLocale()` for you.
 
@@ -2297,9 +2298,11 @@ import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direct
 import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/it.js"; // Italian
-import "@aceshooting/lyra-ui/translations/pt-BR.js"; // also serves pt and pt-PT
+import "@aceshooting/lyra-ui/translations/pt-BR.js"; // serves generic pt and pt-BR
+import "@aceshooting/lyra-ui/translations/pt-PT.js"; // European Portuguese
 import "@aceshooting/lyra-ui/translations/ro.js"; // Romanian
-import "@aceshooting/lyra-ui/translations/zh-CN.js"; // also serves zh, zh-Hans and zh-Hans-CN
+import "@aceshooting/lyra-ui/translations/zh-CN.js"; // serves zh, zh-Hans and zh-Hans-CN
+import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional Chinese
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
@@ -2310,10 +2313,10 @@ and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
-`pt-BR` and `zh-CN` are the only Portuguese and Chinese catalogs, and they are regional tags. Step 2
-of the lookup order above is what makes them reachable from `lang="pt"`, `lang="pt-PT"`,
-`lang="zh"`, `lang="zh-Hans"` and `lang="zh-Hans-CN"` — no separate `pt`/`zh` alias registration is
-needed. They are still listed under their real tags in `getRegisteredLyraLocales()`.
+`pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs. Step 2 of the lookup order above
+still makes each reachable from a less-specific language tag, while an exact `lang="pt-PT"` or
+`lang="zh-TW"` selects its dedicated regional catalog. They are listed under their real tags in
+`getRegisteredLyraLocales()`.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later
@@ -3947,6 +3950,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-mention-popover": unknown;
   "lr-menu": unknown;
   "lr-menu-item": unknown;
+  "lr-menubar": unknown;
+  "lr-menubar-item": unknown;
   "lr-menu-label": unknown;
   "lr-message-actions": unknown;
   "lr-message-feedback": unknown;
@@ -4364,6 +4369,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-mention-popover": unknown;
   "lr-menu": unknown;
   "lr-menu-item": unknown;
+  "lr-menubar": unknown;
+  "lr-menubar-item": unknown;
   "lr-menu-label": unknown;
   "lr-message-actions": unknown;
   "lr-message-feedback": unknown;
@@ -4660,6 +4667,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-mention-popover": unknown;
   "lr-menu": unknown;
   "lr-menu-item": unknown;
+  "lr-menubar": unknown;
+  "lr-menubar-item": unknown;
   "lr-menu-label": unknown;
   "lr-message-actions": unknown;
   "lr-message-feedback": unknown;
@@ -5026,6 +5035,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-mention-popover": unknown;
   "lr-menu": unknown;
   "lr-menu-item": unknown;
+  "lr-menubar": unknown;
+  "lr-menubar-item": unknown;
   "lr-menu-label": unknown;
   "lr-message-actions": unknown;
   "lr-message-feedback": unknown;
@@ -7159,6 +7170,9 @@ ordinary case (an unsized host) — `resize="auto"`'s own growth and its
 
 ## `lr-button`
 
+Host `aria-keyshortcuts` is forwarded reactively to the internal native button or link, including
+attribute removal and button/link presentation changes.
+
 A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
 `type="reset"` are handled by the component itself via its browser-resolved form owner (including
 an external owner named by `form`), since a shadow-internal native button doesn't participate in a
@@ -7549,6 +7563,9 @@ box no matter what tier or override is in play.
 ---
 
 ## `lr-icon-button`
+
+Host `aria-keyshortcuts` is forwarded reactively to the internal native button or link, including
+attribute removal and button/link presentation changes.
 
 An accessible icon-only action/link with a native `<button>` inside. It is deliberately not a
 form-associated submitter; use `<lr-button circle type="submit|reset">` with an icon-only default
@@ -9602,7 +9619,8 @@ WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s unchecked resting
 fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
-retint the pointer states (their defaults remain mixes from the current resting fill).
+retint the pointer states (their defaults remain mixes from the current state's resting fill, so a
+checked switch mixes from `--lr-switch-checked-track-fill` even when the unchecked fill is set).
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
 renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
 look) without affecting any other switch. `--lr-switch-checked-track-border` (default
@@ -11239,7 +11257,8 @@ label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji,
 shortcodes? }`; assignment captures a bounded frozen owned snapshot, including the current contents
 of reused source item objects. Earlier snapshots remain frozen and unchanged; in-place source edits
 become visible only after an explicit `groups` assignment. The search field matches
-`name` and every `shortcodes` entry, case-insensitively. Consumer group labels render verbatim.
+`name` and every `shortcodes` entry, case-insensitively. Its accessible name and visible placeholder
+use the same localized `emojiPickerSearchLabel` string. Consumer group labels render verbatim.
 Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
 headings follow `registerLyraLocale()`/`.strings` through filtering and windowed rendering, including
 same-locale `.strings` changes, without exposing localization keys as consumer data. Caller-authored
@@ -13608,7 +13627,7 @@ independent concepts.
   solid brand chip in all five, so the appearance never decides whether the current page is
   identifiable
 - `itemLabel: string = ''` (attribute `item-label`) — custom item noun used in the summary; empty
-  selects the localized singular `item` or plural `items` key
+  selects the localized singular `item` or the CLDR plural form of `items` for the active locale
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
 - `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
@@ -17203,6 +17222,10 @@ follows allocation and the actual divider geometry, including font-relative toke
 divider's own font context. Panel font sizes do not change that gutter budget; stored percentages,
 initialization precedence, and resize event values retain their existing meaning.
 
+In responsive `collapse="start"`/`"end"` mode, the divider beside a floating panel takes no
+layout track whether its drawer is open or closed. It remains a programmatically focusable
+separator for focus recovery. Rail mode keeps the divider track because both panes remain visible.
+
 Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
 `LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding
@@ -19430,7 +19453,7 @@ attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_R
 
 ## `lr-app-rail`
 
-A responsive navigation rail that adapts across three presentations as the _viewport_ narrows (not
+A responsive navigation rail, and the library's application sidebar, that adapts across three presentations as the _viewport_ narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
 focus-trapped floating overlay over the page). First-party invention (no `wa-*`/`sl-*` counterpart).
@@ -19441,6 +19464,14 @@ particular layout happens to give it. `[part="base"]` (the inline `'full'`/`'ico
 presentation) and `[part="panel"]` (the mobile overlay) are the _same_ element promoted in place
 across modes (mirrors `<lr-widget>`'s fullscreen mode) — never both at once, and slotted nav
 content is never duplicated.
+
+In mobile mode the closed `[part="panel"]` has no shadow and parks one pixel beyond the inline-start
+edge, including at fractional widths. The open-only `--lr-app-rail-panel-shadow` defaults to
+`var(--lr-shadow-l)`. Elevation snaps with the open state while the panel slides. Only real open/close
+changes animate: runtime direction changes and entering mobile mode leave a closed panel parked
+without a sweep. Closed content remains inert. Keep the rail outside ancestors establishing a fixed
+containing block (`transform`, `filter`, `will-change: transform`, or layout/paint containment),
+because geometric parking otherwise follows that ancestor's edge instead of the viewport.
 
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
@@ -19460,6 +19491,16 @@ observable the same way a live change is: it fires `lr-mode-change` too (see **E
 letting a consumer that syncs app chrome to the rail's mode pick up the restored value on load.
 
 **Properties:**
+
+- `frame?: LyraFrame` — optional `'card'` floating frame or `'plain'` edgeless inline surface.
+  Unset retains the flush rail. Unknown values clear the attribute. In mobile mode framing is inert.
+- `triggerCollapses: boolean = false` (attribute `trigger-collapses`) — extend the `trigger`/`for`
+  association to full/icon-only modes, managing `aria-expanded`, `aria-controls` and
+  `aria-keyshortcuts`. Wire the trigger's click to `toggle()`. Independent of `collapsible`, which
+  alone decides whether the built-in collapse control renders.
+- `hotkey: string = ''` — optional chord such as `mod+b`, `ctrl+b`, `meta+b`, or `alt+b`.
+  Requires a non-Shift modifier. Removing the attribute restores the empty default. See the shortcut
+  behavior below.
 
 - `mode: LyraAppRailMode` (custom accessor, reflected, read-only as of 9.0.0) — always resolves to
   one of the three real modes (`'full'|'icon-only'|'mobile'`), never `'auto'`; assigning it now
@@ -19522,8 +19563,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   overlay's state across the shadow boundary. Because a light-DOM element cannot hold a raw
   reference into another element's shadow tree, engines resolve `aria-controls` to the
   `<lr-app-rail>` host itself; either resolution is correct. The association applies while `mode` is
-  `'mobile'` and is released when the rail leaves that mode or disconnects, and it tracks live —
-  reassigning `trigger` moves the state to the new element.
+  `'mobile'`, or in full/icon-only when `trigger-collapses` is set; otherwise it is released.
+  Disconnect also releases it, and reassigning `trigger` moves the state to the new element.
 - `for: string = ''` — id of an external element that opens this rail's mobile overlay, the
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
   `for`). Resolved against this element's own root (shadow root or document) when the overlay opens.
@@ -19560,10 +19601,14 @@ Also settable as a plain `aria-label` attribute (not a reactive property): overr
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
-**Methods:** `toggleCollapse(): void` performs the same `'full'`/`'icon-only'` flip `collapsible`'s
+**Methods:** `toggle(): void` opens/closes the mobile overlay through cancelable `lr-toggle`, or
+flips the full/icon-only preference. It is a no-op while disconnected. While pinned, it records
+only the preference; releasing `forceMode` applies it.
+
+`toggleCollapse(): void` performs the same `'full'`/`'icon-only'` flip `collapsible`'s
 built-in control does, for a consumer rendering its own control (app chrome, a command palette, a
 keyboard shortcut). A no-op while `mode` is `'mobile'`. While `forceMode` pins the mode the
-preference is still recorded and takes effect once the pin is released.
+preference alternates relative to `preferredMode ?? mode` on every call and takes effect once the pin is released.
 
 **Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
 effective mode changed, whether from a breakpoint crossing, a `forceMode` assignment, or a
@@ -19610,11 +19655,22 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
 `appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the chevron wrapper, mirrored by its own
-`transform` under RTL). Collapsing to `'icon-only'` removes nothing from the accessibility tree — it
-clips each item's `label`/`meta` visually — so `aria-expanded` reports which of the two
+`transform` under RTL). Collapsing to `'icon-only'` keeps each item's own accessible name and
+clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
 
-**Themeable custom properties:** `--lr-app-rail-width` (default `15rem` — the inline rail width in
+**Themeable custom properties:**
+`--lr-app-rail-frame-gap` (default `var(--lr-space-s)`), `--lr-app-rail-frame-radius` (default
+`var(--lr-radius)`), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
+card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
+host `display` owns that formatting context. Plain frames default to a transparent background,
+while an explicit `--lr-app-rail-background` still wins. Forced colors restores the plain frame's
+boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-shadow-l)`) affects only the open mobile
+panel; no value can paint elevation while closed. Prefer that token over an unqualified
+`::part(panel)` shadow rule, which would also paint while closed; state-scope a part override with
+`lr-app-rail[mode="mobile"][open]::part(panel)`.
+
+Other hooks: `--lr-app-rail-width` (default `15rem` — the inline rail width in
 `'full'` mode), `--lr-app-rail-icon-width` (default `4rem` — the inline rail width in `'icon-only'`
 mode), `--lr-app-rail-mobile-width` (default `18rem`, capped at `85vw` — the mobile overlay panel
 width), `--lr-app-rail-overlay-color` (default `var(--lr-color-overlay)` — the mobile backdrop scrim
@@ -19737,9 +19793,9 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
   toggle-button clicks would miss this closure.
 - the mobile panel is also given `inert` whenever `mode === 'mobile'` and `open` is `false` — it's
   removed from the accessibility tree and tab order via `inert` at the same time it's hidden visually
-  via `transform: translateX(-100%)`, both applied simultaneously rather than one implying the other.
+  via `transform: translateX(calc(-100% - var(--lr-size-1px)))`, both applied simultaneously rather than one implying the other.
 - the offscreen slide direction for the mobile panel is flipped for RTL via a `:dir(rtl)` CSS
-  selector (`translateX(100%)`), not through the shared `internal/rtl.ts` JS helper used for pointer/
+  selector (`translateX(calc(100% + var(--lr-size-1px)))`), not through the shared `internal/rtl.ts` JS helper used for pointer/
   keyboard math elsewhere in this library — a physical `transform` isn't expressible with logical
   properties, so this one case is handled purely in CSS.
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
@@ -19766,7 +19822,99 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
   the toggle lives inside the panel as its structurally-first child. Tab still reaches it as part
   of the trap's normal cycle.
 
+### Building an app sidebar
+
+The rail's shortcut uses the same grammar and per-window owner registry as `lr-command-palette`.
+The last-connected eligible owner acts once. Rails ignore repeat/composition/key-less events,
+`defaultPrevented`, text-entry and contenteditable targets, invisible/inert rails, and pinned modes.
+A pinned rail still accepts explicit `toggle()` calls to record a preference. Chords match the
+printed key; ASCII letter/digit chords fall back to `event.code` only when the event key is
+non-ASCII, preserving Dvorak/AZERTY printed-letter behavior. Mod resolves to Meta on macOS and
+Control elsewhere. Built-in controls and applicable external triggers expose `aria-keyshortcuts`.
+`lr-button` and `lr-icon-button` forward this and `aria-expanded` to their focused control; other
+custom triggers must implement forwarding themselves. Cross-shadow element-reference
+`aria-controls` forwarding by those custom triggers is not claimed.
+
+A hidden rail is not a desktop-offcanvas mode: `toggle()` never clears `hidden`, hotkeys ignore it,
+and a `trigger-collapses` trigger reports the last inline presentation. Collapse normally preserves
+focus. A focused resizer returns focus to the rail, and a hidden nested control returns it to the
+visible parent item.
+
+**Standalone recipe: viewport offcanvas, one trigger.**
+
+```html
+<div class="shell">
+  <lr-app-rail id="sidebar" label="Workspace" frame="card" hide-toggle trigger-collapses
+    for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
+    <lr-app-rail-group heading="Platform">
+      <lr-app-rail-item href="/projects" current tooltip><span slot="icon">▦</span>Projects</lr-app-rail-item>
+    </lr-app-rail-group>
+    <lr-divider></lr-divider>
+  </lr-app-rail>
+  <main><button id="sidebar-trigger" type="button">Toggle sidebar</button></main>
+</div>
+```
+
+```css
+.shell { display: flex; block-size: 100dvh; }
+.shell main { flex: 1; min-inline-size: 0; }
+lr-app-rail lr-divider { align-self: stretch; }
+```
+
+```js
+const rail = document.getElementById('sidebar');
+document.getElementById('sidebar-trigger').addEventListener('click', () => rail.toggle());
+```
+
+Import the rail, group, item and divider from their granular `components/lr-*.js` entries. The
+rail owns mobile offcanvas at its viewport breakpoint (600px default). For an inset composition,
+use `frame="plain"` and style the sibling main region as a card with surface, radius, border and
+shadow tokens. A raised sidebar tint is opt-in with
+`--lr-app-rail-background: var(--lr-color-surface-raised)`.
+
+**Page recipe: allocation offcanvas, two view-scoped controls.**
+
+```html
+<lr-page id="workspace">
+  <lr-app-rail slot="navigation" id="workspace-nav" label="Workspace" frame="plain"
+    mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="mod+b"
+    storage-key="app" persist="preferred-mode">
+    <lr-app-rail-item href="/projects"><span slot="icon">▦</span>Projects</lr-app-rail-item>
+  </lr-app-rail>
+  <p>Main content</p>
+</lr-page>
+```
+
+```css
+lr-page[view='mobile'] lr-app-rail::part(collapse-toggle) { display: none; }
+lr-app-rail lr-divider { align-self: stretch; }
+```
+
+```js
+const page = document.getElementById('workspace');
+const nav = document.getElementById('workspace-nav');
+const syncRail = () => { nav.forceMode = page.view === 'mobile' ? 'full' : 'auto'; };
+const observer = new MutationObserver(syncRail);
+observer.observe(page, { attributes: true, attributeFilter: ['view'] });
+syncRail();
+// Call observer.disconnect() when disposing this application composition.
+```
+
+`lr-page` owns the sole drawer at narrow allocations and its built-in or slotted
+`navigation-toggle` owns mobile trigger ARIA. The rail's built-in collapse control owns desktop
+collapse. An external desktop control may use `trigger-collapses` if hidden in mobile view.
+The pin shows the full rail inside the drawer and preserves its desktop preference. The shortcut
+acts only on desktop; it cannot open the page drawer. Give the rail a distinct `label`, since the
+page and rail navigation landmarks nest. This recipe uses the page's default start-side placement.
+
 ### `lr-app-rail-item`
+
+In icon-only presentation the nested disclosure and children list are hidden while `expanded`
+is preserved. Returning full restores the list. If a disclosure or descendant had focus, it moves
+to the outermost visible parent item's base control. The parent link remains operable. The `end`
+slot stays visible; reserve an icon-only rail width of at least twice the nav padding plus the icon
+square, item gap and end content. A 1.5rem badge requires 5.5rem with default tokens. Keep end actions
+out of default-width compact rails, or use a rail that never collapses.
 
 An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
 set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
@@ -19841,10 +19989,9 @@ names the native control, which remains the sole action).
 
   `icon-only` forwards from this item onto every `<lr-app-rail-item>` it directly owns through
   `children` — including ones appended later — exactly how `<lr-app-rail-group>` forwards onto the
-  items and nested groups it owns. The disclosure itself never changes shape between
-  presentations: it is always a fixed icon-button-sized square beside `[part="base"]`, reusing the
-  same hover/active/focus tokens as the link/button (`--lr-app-rail-item-hover-bg` etc.) rather than
-  a second disclosure-only set. There is no ancestor-current treatment — `<lr-app-rail-group>` has
+  items and nested groups it owns. The disclosure is a fixed icon-button-sized square in full
+  presentation, sharing the link/button state tokens. Icon-only hides it and the nested list while
+  preserving expansion and recovering focus to the visible parent item. There is no ancestor-current treatment — `<lr-app-rail-group>` has
   no equivalent concept for a group containing the current item, so none is invented here either; a
   current descendant stays perceivable only through its own `current` property.
 
@@ -20382,6 +20529,11 @@ sets the row's minimum block size for a denser or roomier menu, replacing a `::p
 item. A value below the 24px floor is your call, exactly as it is when overriding the shared ladder
 itself.
 
+Any element assigned to `details` counts as content, including a shadow-rendered
+`<lr-kbd slot="details" keys="mod+t">` chip or an icon. An intentionally empty placeholder element
+also shows the part and reserves one `--lr-menu-item-gap`; whitespace-only text and empty forwarding
+slots keep the part hidden. This also applies to `lr-dropdown-item`.
+
 ### Nested submenus
 
 Both supported authoring shapes use the `submenu` slot:
@@ -20464,6 +20616,127 @@ Root overlay behavior moved from `<lr-menu>` to `<lr-dropdown>`. Migrate mechani
 
 Standalone mapped `<sl-menu>` markup needs no wrapper: the mechanical `sl-` → `lr-` tag rename
 continues to produce an inline menu.
+
+---
+
+## `lr-menubar` / `lr-menubar-item`
+
+A horizontal application menubar following the APG menubar pattern. Import
+`@aceshooting/lyra-ui/components/lr-menubar.js`; it registers the item and menu dependencies.
+Use only `lr-menubar-item` elements in the default slot. A title's `menu` slot takes exactly one
+`lr-menu`; without it the title is a plain action that dispatches native `click`.
+
+```html
+<lr-menubar label="Application">
+  <lr-menubar-item>
+    File
+    <lr-menu slot="menu">
+      <lr-menu-item value="new-tab" aria-keyshortcuts="Control+T Meta+T">
+        New tab <lr-kbd slot="details" keys="mod+t"></lr-kbd>
+      </lr-menu-item>
+      <lr-menu-item>Share<lr-menu slot="submenu"><lr-menu-item>Email link</lr-menu-item></lr-menu></lr-menu-item>
+      <hr />
+      <lr-menu-item value="print">Print…</lr-menu-item>
+    </lr-menu>
+  </lr-menubar-item>
+  <lr-menubar-item>Edit<lr-menu slot="menu"><lr-menu-item>Undo</lr-menu-item></lr-menu></lr-menubar-item>
+  <lr-menubar-item>Help</lr-menubar-item>
+</lr-menubar>
+```
+
+Import `@aceshooting/lyra-ui/components/lr-kbd.js` separately for shortcut chips. Displaying a
+shortcut does not bind it. `Control+T Meta+T` describes a handler accepting either `ctrlKey` or
+`metaKey`. If the app binds only its platform modifier, keep the ARIA value aligned with the chip:
+`item.setAttribute('aria-keyshortcuts', kbd.effectivePlatform === 'mac' ? 'Meta+T' : 'Control+T')`.
+The chip's decorative `details` subtree is hidden from assistive technology.
+
+### `lr-menubar`
+
+**Properties:**
+
+- `label?: string` — accessible name of the menubar. The host `aria-label` wins, including `""`;
+  an explicit `label=""` stays empty. When both are absent, no name attribute is rendered.
+- `size: LyraSize = 'm'` — shared control ladder, inherited by the titles.
+- `frame: LyraFrame = 'card'` — surface, subtle border and shadow; `'plain'` makes the same
+  geometry transparent. Other values use the card appearance.
+
+**Events:** `lr-select`, cancelable `CustomEvent<MenuItemSelectDetail>`, bubbles once from the
+owning menu with `detail.item`. Prevent default to keep the menu open. Checkbox/radio
+`lr-menu-item-change` also bubbles from its item. There are no menubar lifecycle events or public
+open/close methods.
+
+**Slots:** default, containing only `lr-menubar-item` elements. **CSS parts:** `base`.
+The menu width hooks `--lr-menu-min-inline-size` and `--lr-menu-max-inline-size` inherit from the
+menubar or an ancestor and apply to every slotted menu.
+
+### `lr-menubar-item`
+
+**Properties:** `disabled: boolean = false` — removes the title from traversal, closes its menu,
+and suppresses mouse, touch, keyboard and programmatic activation. Disabled `mousedown` does not
+move focus. Consumer capture listeners on a further ancestor can still observe a dispatched
+click, but listeners on the item and bubbling ancestor listeners do not receive it.
+
+**Slots:** default, the visual label; `menu`, exactly one `lr-menu` (the first assigned menu wins;
+other elements are ignored). **CSS parts:** `base`, `label`. No own custom events. Native `click`
+is the action contract for a title without a menu. **Methods:** `click(): void` does nothing while
+disabled, otherwise dispatches a native host click.
+
+The host owns `role="menuitem"`, literal `aria-disabled`, and, only with a menu,
+`aria-haspopup="menu"` plus literal `aria-expanded`. Its accessible name comes from the default
+slot, so open menu contents never leak into it; author `aria-label` or `aria-labelledby` wins.
+Menus inherit the title's name unless given their own `aria-label` or `label`. An empty title
+leaves the menu's localized `menuLabel` fallback intact.
+
+**Themeable custom properties:**
+
+- `--lr-menubar-item-hover-bg` (default `var(--lr-color-brand-quiet)`) paints hover, focus-visible
+  and the open title.
+- `--lr-menubar-item-active-bg` (default
+  `color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+  paints the pressed title, including when already open.
+
+Both hooks inherit from the item, menubar or any ancestor. Open titles receive an outline in
+forced colors. Reduced motion removes menu transitions and minimizes title transitions.
+
+### Keyboard and pointer behavior
+
+| Focus | Key | Result |
+|---|---|---|
+| Title | Left/Right | Previous/next enabled title, wrapping; directions reverse in RTL |
+| Title | Home/End | First/last enabled title |
+| Title | Down, Enter, Space | Open and focus first menu item; Enter/Space click a plain action |
+| Title | Up | Open and focus last menu item; unhandled on plain actions |
+| Title | Printable character | Case-insensitive typeahead with a 500ms buffer |
+| Expanded title | Traversal or matching typeahead | Carry the open menu along; focus stays on the title |
+| Menu leaf | Inline forward/back arrow | Carry to next/previous title; nested back closes only that submenu |
+| Menu | Up/Down, Home/End, Enter/Space | Existing menu navigation and activation |
+| Open menu/title | Escape | Close the innermost menu; menu focus returns to its title |
+| Open menu/title | Tab | Close and continue native traversal; Shift+Tab from the menu returns to its title |
+
+Handled keys prevent page scrolling. Escape/Tab while collapsed and unmatched typeahead remain
+unhandled. Header/footer inputs retain their own arrow behavior. Disabled, hidden, aria-hidden and
+inert titles are skipped. Moving onto a plain action collapses an open menu.
+
+Clicking a menu title toggles its menu and keeps focus on the title. While one menu is open,
+hovering another enabled menu title carries the menu immediately; hovering while collapsed,
+hovering plain actions, and touch pointer-over events do nothing. Clicking a title that hover just
+opened closes it. Outside pointers, focus leaving the menubar, removal or disablement close the
+menu. Selection closes and focuses its title unless canceled. Reconnecting resumes collapsed.
+Closing preserves the current focus even with another overlay beneath; if nothing remains focused
+because the menubar was removed, the shared overlay stack may focus its previous entry.
+
+### Sizing and narrow allocations
+
+Titles wrap, with no horizontal scrollbar or automatic overflow menu. The keyboard order stays
+linear. Long titles ellipsize while retaining their full accessible name. A single row measures
+`max(H, 24px + 2P + 2B)`, where H is `--lr-form-control-height`, P is
+`--lr-form-control-padding-block`, and B is `--lr-border-width-thin`. With default tokens this is
+26px at `xs`, 30px at `s`, 40px at `m`, and 48px at `l`; each title is at least 24px in both axes.
+Font, inline padding and radius follow the shared size ladder. Coarse-pointer size floors still
+apply. The shadcn theme gives 32px at `s` and 36px at `m`. Additional wrapped rows add their title
+height plus the shared gap. No container containment is imposed, so intrinsic sizing in a centered
+grid or shrink-to-fit header remains content-based. Both tags render and hydrate on the server;
+menu wrappers begin hidden and inert until connected client behavior attaches their menus.
 
 ---
 
@@ -20803,6 +21076,12 @@ card given only a resting shadow keeps that exact shadow on hover.
 ---
 
 ## `lr-command-palette`
+
+Hotkeys share last-connected eligible ownership with `lr-app-rail` in the same window. Removing the
+`hotkey` attribute disables the chord, and key-less browser autofill events are ignored. Non-ASCII
+layout keys may match a single ASCII letter/digit chord through `event.code`; printed ASCII keys
+remain authoritative. Existing palette behavior in editable content and for already-prevented events
+is unchanged.
 
 Searchable application command menu. Renders nothing at all while closed. Uses the same shared
 overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
@@ -22790,6 +23069,7 @@ logo, search or actions *outside* the menu.
 `--lr-navigation-menu-indicator-size` (default `var(--lr-size-0-375rem)`),
 `--lr-navigation-menu-indicator-color` (default
 `var(--lr-overlay-border, var(--lr-color-border-subtle))`, matching the panel edge), and
+`--lr-navigation-menu-toggle-active-color` (default `var(--lr-color-text)`), and
 `--lr-positioning-strategy` (read by the items when positioning their panels). All are read through
 inline fallbacks, so they can be set on the menu or any ancestor.
 
@@ -22906,7 +23186,8 @@ never below `--lr-icon-button-size`), `--lr-navigation-menu-item-font-size` (def
 `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-hover-color` (default
 `var(--lr-color-brand)`), `--lr-navigation-menu-item-active-bg` (default a `color-mix()` of
 `--lr-color-brand-quiet` toward `--lr-color-mix-partner`), `--lr-navigation-menu-item-open-bg`
-(default `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-current-color` (default
+(default `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-active-color` (default
+`var(--lr-color-text)`), `--lr-navigation-menu-item-current-color` (default
 `var(--lr-color-brand)`), `--lr-navigation-menu-item-current-font-weight` (default
 `var(--lr-font-weight-semibold)`), `--lr-navigation-menu-panel-padding` (default `var(--lr-space-s)`),
 `--lr-navigation-menu-panel-max-inline-size` (default `var(--lr-size-48rem)`, also capped by the
@@ -22932,6 +23213,10 @@ The item does not take the `size` ladder.
 </lr-navigation-menu-item>
 <lr-navigation-menu-item href="https://example.com/" target="_blank" rel="external">Example</lr-navigation-menu-item>
 ```
+
+- **`components-layout-menubar-contracts`** — Typed pass-through menu selection.
+  Import: `@aceshooting/lyra-ui/components/layout/menubar/menubar.class.js`.
+  `LyraMenubarEventMap { 'lr-select': CustomEvent<MenuItemSelectDetail>; }`
 
 # Overlays, status & feedback (`components/overlays/`)
 
@@ -24768,9 +25053,13 @@ later text renders normally.
   Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
   already closed, so a pending timer can't reopen it behind the caller's back.
 - `trigger: string = 'hover focus'` — **new in 8.0.0.** A _space-separated_ list of `hover`,
-  `focus`, `click` and `manual`. `manual` (or an empty list) leaves the tooltip entirely under
-  programmatic control. Note the name collision: this string property and the `trigger` _slot_ are
-  different things — the slot holds the element, this property says which of its interactions count.
+  `focus`, `focus-visible`, `click` and `manual`. `focus` opens on any focus, preserving the default
+  and existing behavior; `focus-visible` opens only when the trigger's actual focus target matches
+  `:focus-visible`, including a focused control inside a shadow-root trigger. Use it when opening a
+  tooltip on programmatic or pointer focus would obscure nearby content. `manual` (or an empty list)
+  leaves the tooltip entirely under programmatic control. Note the name collision: this string
+  property and the `trigger` _slot_ are different things — the slot holds the element, this property
+  says which of its interactions count.
 - `manual: boolean = false` — equivalent to including `manual` in `trigger`; kept because it reads
   better on a tooltip that is only ever driven from script
 - `showDelay: number = 150` (attribute `show-delay`) and `hideDelay: number = 0` (attribute
@@ -24970,6 +25259,13 @@ The inner menu list owns scrolling within the popup's height limit, keeping a co
 header and footer visible. The outer `popup` and `content` parts allow overflow so nested submenus
 remain clickable outside the parent menu in every supported browser. This works with either
 submenu authoring shape, with or without `hoist` or an arrow; no overflow override is required.
+When the resolved strategy is `fixed` (from `positioning-strategy="fixed"`, `hoist`, or an
+inherited `--lr-positioning-strategy: fixed`) and `showPopover()` is supported, an open popup is
+promoted to the browser's top layer. This lets a fixed dropdown inside a transformed virtual-list
+row escape that row's clipping and stacking context. The popup stays promoted through its hide
+transition and returns to its ordinary shadow-tree stacking context after `lr-after-hide`;
+disconnecting also removes it from the top layer. If the browser lacks the Popover API, fixed
+positioning remains in use without promotion.
 
 An open lr-dropdown repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.
@@ -29675,7 +29971,12 @@ enabled buttons retain pointer feedback.
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
 - `label?: string` — form-control label. Omission uses the localized dropzone instruction
-  (`fileInputDefaultLabel`); an explicit empty string suppresses that fallback. `hint: string = ''`
+  (`fileInputDefaultLabel`); an explicit empty string suppresses the form-label chrome too. The
+  dropzone independently keeps its localized instruction when a form label is supplied or empty,
+  so a short label such as “Reference files” does not replace the drop-or-browse text. Use the
+  `dropzone` slot when you want to replace that instruction. With no nonempty label, that localized
+  instruction also supplies the fallback accessible name unless `accessibleLabel` or host
+  `aria-label` is provided. `hint: string = ''`
   remains empty when omitted and can be supplied through the named slot as well
 - `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
   it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
@@ -30339,8 +30640,9 @@ previous entry, reassigning `file` several times before the next paint leaks not
 
 ## `lr-file-icon`
 
-Localized, tokenized file-format badge for surrounding upload rows, cards, selectors, and viewer
-headers. The companion `getFileTypeMetadata(mimeType, fileName?)` utility covers common document,
+File-format badge showing an unlocalized format token or generic glyph with a localized accessible
+name for surrounding upload rows, cards, selectors, and viewer headers. The companion
+`getFileTypeMetadata(mimeType, fileName?)` utility covers common document,
 spreadsheet, presentation, code, archive, image, audio, and video formats. An explicit known MIME
 type wins; filename extension fallback is used only for an empty or `application/octet-stream`
 MIME type. Unknown values return a generic file result.
@@ -30361,6 +30663,15 @@ is an unknown attribute now: `bytes` stays `0` and the badge silently renders wi
 mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).
 
+In `mode="icon"`, the badge shows a short unlocalized format token such as `PDF`, `DOCX`, or a
+filename-derived extension. The first qualifying extension (1–4 ASCII letters/digits/`+`, with at
+least one letter) is used when the MIME type is explicit; a filename's final extension is preferred
+when resolving an empty or `application/octet-stream` MIME type. A generic file glyph is used when
+no token applies, and replaces the token below about `1.25rem` (long tokens: about `1.75rem`).
+Tokens use logical-start ellipsis and scale with the badge. The full localized label remains only in
+the accessible name and in `mode="label"`; the host's baseline is the badge bottom edge in every
+rendered token or glyph state.
+
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size). `--lr-file-icon-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-file-icon-color` (default `var(--lr-color-brand)`) retint the `icon` badge — every file
@@ -30370,10 +30681,15 @@ category renders the same fill today, so either can be set without hijacking the
 **Exports:** `LyraFileTypeMetadata`, `LyraFileTypeMetadataEntry`, `LyraResolvedFileTypeMetadata`,
 `LyraFileTypeMetadataRegistry`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
 `createFileTypeMetadataRegistry(entries)`, `defaultFileTypeMetadataRegistry`, and the compatibility
-lookup `getFileTypeMetadata()`. Registries validate and deeply snapshot records, use deterministic
-longest registered-suffix matching (including multi-dot/punctuation suffixes), and isolate custom
-mappings per instance instead of mutating module-global state. Consumer labels/descriptions remain
-verbatim; built-in labels route through localization.
+lookup `getFileTypeMetadata()`. `LyraFileTypeMetadata` also accepts an optional `abbreviation` for a
+custom, unlocalized badge token. It is trimmed, blank values are absent, and a non-string or value
+longer than eight code points drops the record. Registries validate and deeply snapshot records, use
+deterministic longest registered-suffix matching (including multi-dot/punctuation suffixes), and
+isolate custom mappings per instance instead of mutating module-global state. Consumer
+labels/descriptions remain verbatim in the accessible name and `mode="label"`; built-in labels route
+through localization. `fileType*` string overrides therefore never change the badge token. A
+consumer record replacing a built-in MIME also owns that type's verbatim label, so an app that uses
+`abbreviation` must provide its own localized label.
 
 ```html
 <lr-file-icon
@@ -31821,6 +32137,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFileTypeMetadata {
     readonly label: string;
     readonly description?: string;
+    readonly abbreviation?: string;
     readonly icon: LyraFileTypeIcon;
     readonly category: LyraFileTypeCategory;
     readonly extensions?: readonly string[];
@@ -31835,6 +32152,7 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from LyraFileTypeMetadata.
     readonly label: string;
     readonly description?: string;
+    readonly abbreviation?: string;
     readonly icon: LyraFileTypeIcon;
     readonly category: LyraFileTypeCategory;
     readonly extensions?: readonly string[];
@@ -36700,8 +37018,11 @@ uses for its own `[part="body"]`.
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
 - `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
-  GFM task-list checkboxes stay disabled. A task's primary inline text supplies its accessible name;
-  nested task text is excluded, and a blank task receives no generated name.
+  GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
+  text with ordinary sibling items; ordered tasks keep their numerals. The hooks are `task-list`,
+  `task-item`, `task-item-checked` and `task-checkbox`. A task-only unordered list carries
+  `role="list"`. The checkbox has a visible token-based border and checked fill. A task's primary inline text supplies its
+  accessible name; nested task text is excluded, and a blank task receives no generated name.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — `target` applied to every
   rendered `<a>`, with `rel="noopener noreferrer"` always added alongside it whenever a `target` is
   emitted. `'_blank'` (the default) preserves the original output; a falsy value (`null`, or the
@@ -36717,14 +37038,36 @@ uses for its own `[part="body"]`.
   than overflowing past the HTML heading levels. `0` (the default) preserves the original
   `<h${token.depth}>` output
 - `streaming: boolean = false` (reflected) — marks the host `aria-busy="true"` while partial Markdown
-  is still arriving and lets consumers target `lr-markdown[streaming]`. Both `lr-markdown` and
-  `lr-markdown-core` display accumulated plain text without parsing or highlighting while it is
-  true. Setting `streaming=false` parses and renders the latest complete content; busy state also
-  remains true while parser dependencies are loading
+  is still arriving and lets consumers target `lr-markdown[streaming]`. `streamingRender` selects
+  the streaming presentation. Setting `streaming=false` parses and renders the latest complete
+  content; busy state also remains true while parser dependencies are loading
+- `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`,
+  not reflected), where `MarkdownStreamingRender = 'plain' | 'progressive'`. The default `plain`
+  preserves the existing behavior of showing accumulated source text while streaming. In
+  `progressive` mode, completed top-level blocks render as Markdown as they settle and only the
+  trailing in-progress block remains plain text. Settled block nodes keep their identity as new
+  chunks arrive, and syntax highlighting is deferred until a block settles. An unterminated fenced
+  block is shown as an open, unhighlighted code block. The final full-document parse still runs
+  when streaming ends, including reference links that need content from later blocks. Custom block
+  tokenizers, block extensions, parser hooks, pedantic mode, and asynchronous parser configuration
+  use plain streaming; inline extensions and renderer overrides remain supported. A text tail
+  follows the surrounding direction, while its open-fence preview uses code direction. Work is
+  bounded per animation frame; after 2,000 settled groups the remaining source stays plain until
+  completion. Large code blocks defer highlighting until completion.
+- `codeBlockHeader: boolean = false` (attribute `code-block-header`) — adds a language label and
+  an icon-only native copy button to the first 200 non-empty built-in code blocks, fenced or
+  indented. It copies source text without the renderer's terminal newline, preserving leading tabs
+  whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
+  code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
+  compatibility spelling; either property enables the header. Plain streaming defers headers until
+  settle; progressive streaming adds them to committed blocks. The button has a localized accessible
+  name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
+  the header also removes authored style elements and their CSS text to prevent visual copy
+  deception. Trusted mode provides no such guarantee.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
   blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
-  peer is available; set `false` to keep plain output even when `shiki` is installed. No effect
-  while `streaming` is `true`
+  peer is available; set `false` to keep plain output even when `shiki` is installed. In progressive
+  mode, a block can be highlighted after it settles; the mutable tail remains unhighlighted.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — same shape and purpose as
   `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
   shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded
@@ -36789,6 +37132,8 @@ placed first and preserved inside both ceilings.
   (e.g. `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since a
   light-DOM `MutationObserver` on that container can never see a property-driven update rendered
   entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
+- `lr-copy` and `lr-copy-error` — the fulfilled and failed clipboard outcomes from the optional
+  code-block copy chrome; both bubble and are composed.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -36797,11 +37142,28 @@ placed first and preserved inside both ceilings.
 or a failed render — so a consumer can target `lr-markdown [part='content'][data-fallback]` to
 style it distinctly), `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
 anchor-jump message), `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`),
-`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every
-rendered fenced/indented `<pre>`), `inline-code` (every rendered inline `<code>` span — backtick
-spans, not fenced blocks), `link` (every rendered `<a>`), `table` (every rendered `<table>`),
+`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`),
+`task-list` (an all-task list), `task-item` (each GFM task), `task-item-checked` (completed task),
+`task-checkbox` (disabled state graphic), `code-block` (every rendered fenced/indented `<pre>`, isolated with LTR text
+direction even inside an RTL document), `inline-code` (every rendered inline `<code>` span —
+backtick spans, not fenced blocks; also isolated LTR), `link` (every rendered `<a>`),
+`table-wrapper` (the logical inline-scroll container for wide tables), `table` (every rendered `<table>`),
 `blockquote` (every rendered `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered
-inline or block math span, carrying `data-display="inline"|"block"`)
+inline or block math span, carrying `data-display="inline"|"block"`), and, when
+`code-block-header` is enabled, `code-block-frame`, `code-block-header`, `code-block-language`,
+`code-block-copy`, `code-block-copy-success`, and `code-block-copy-error`. The language label uses
+CSS-generated content, so headers add no text to selection or text-quote anchoring. Each header
+adds at most eight elements toward the normal 20,000-node traversal bound.
+The `streaming-tail` part marks the stable text node used by progressive streaming updates.
+
+Wide GFM tables scroll horizontally inside `table-wrapper`, a keyboard-focusable group named by
+`markdownTableRegion` (English: "Table"). The label follows locale and `.strings` changes without
+reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignment. Raw authored
+HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
+and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore
+letter wrapping with `::part(table) { overflow-wrap: anywhere }`, or Korean/CJK word grouping with
+`::part(table) { word-break: keep-all }`. Inline code and code blocks keep LTR character order in RTL documents while
+their surrounding layout continues to follow the page direction.
 
 **Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
@@ -36817,6 +37179,9 @@ radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr
 fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (default `var(--lr-radius)`
 — the fenced `code-block` surface's border radius), `--lr-markdown-table-header-bg` (default
 `var(--lr-color-brand-quiet)` — background of every rendered `[part="table"]` header cell),
+`--lr-markdown-task-checkbox-size` (default `var(--lr-size-0-875em)` — checkbox and aligned gutter),
+`--lr-markdown-code-header-bg` (default `var(--lr-color-surface)`),
+`--lr-markdown-code-header-color` (default `var(--lr-color-text-quiet)`),
 `--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`
@@ -36847,6 +37212,21 @@ after that lazy load resolves; each instance owns its configuration. Call `rende
 </script>
 ```
 
+Progressive rendering and code-copy chrome are opt-in; the following keeps completed Markdown
+blocks visible while text streams and adds a source language label plus localized copy button to
+settled code blocks:
+
+````html
+<lr-markdown id="reply" streaming streaming-render="progressive" code-block-header></lr-markdown>
+<script type="module">
+  import "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
+
+  const reply = document.querySelector("#reply");
+  reply.content = ['A settled paragraph.', '', '```js', 'const answer = 42;', '```'].join('\n');
+  reply.streaming = false;
+</script>
+````
+
 Rendering never ships unsanitized or broken markup silently. If `marked` fails to load, or throws
 while parsing malformed input, the component falls back to plain text (`white-space: pre-wrap`, no
 HTML parsing at all — the raw `content` string itself) and fires `lr-render-error`. In the default
@@ -36866,9 +37246,7 @@ of use, never on `:host`** — a `:host` declaration is re-stamped on every inst
 inherited value, so a page- or container-level declaration could never reach it. This element carries
 its own copy of that fallback rather than inheriting `<lr-code-block>`'s because the two are
 **sibling** custom elements, not ancestor and descendant: no single declaration inside one of them
-can cover the other. The same value can still _look_ different between the two — a markdown code
-block inherits `white-space: pre-wrap` while `<lr-code-block>` is `white-space: pre`, and tab stops
-restart at the beginning of each visual line, so a wrapped line's tabs land differently.
+can cover the other. Both surfaces use `white-space: pre` and scroll horizontally, preserving the same tab stops.
 
 **Known gotchas:**
 
@@ -36928,8 +37306,9 @@ A fenced code block whose language isn't a key in `languages` always renders the
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
 rendering path as `<lr-code-block-core>`'s identical contract. A block that _is_ highlighted follows the
 page's resolved theme through the same `[part="content"][data-dark-theme="true"]` hook `<lr-markdown>`
-documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables,
-links, blockquotes, images, heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
+documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables and task-list presentation (task items expose `task-item`/`task-item-checked` and `task-checkbox`, task-only lists carry `task-list`, and wide tables scroll inside `part="table-wrapper"`),
+links, blockquotes, images, LTR-isolated code, progressive streaming and opt-in code-block chrome,
+heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
 support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highlight-activate`/
 `lr-text-select`/`lr-anchor-result` events), math via the optional `katex` peer, the sanitize/
 `htmlMode`/streaming fallback matrix and known gotchas — is identical to `<lr-markdown>`; see that
@@ -36944,6 +37323,8 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
@@ -36970,14 +37351,17 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
-`lr-anchor-result`, `lr-content-settled` — identical detail shapes to `<lr-markdown>`'s own.
+`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
+`<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
-anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`,
-`code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math` — identical to
-`<lr-markdown>`'s own parts.
+anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`, `task-item`,
+`code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
+`table-wrapper`, `table`, `blockquote`, `img`, `math`, `task-list`, `task-item-checked`,
+`task-checkbox`, `code-block-frame`, `code-block-copy-success`, `code-block-copy-error`,
+`streaming-tail` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
@@ -36992,9 +37376,7 @@ fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-r
 described under `<lr-markdown>` above: the same property name and default that
 `<lr-code-block>`/`<lr-code-editor>` read, declared as a `var()` fallback at the point of use rather
 than on `:host` so a page- or container-level value reaches it, and carried here in its own right
-because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown
-code blocks wrap (`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width
-can render differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by
+because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown and standalone code blocks preserve lines and scroll horizontally. `--lr-markdown-font-mono` is the monospace stack used by
 rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
@@ -37027,6 +37409,18 @@ const view = html`<lr-markdown-core
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
 ---
+
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.
+
+The shared `--lr-markdown-task-checkbox-size` hook defaults to `var(--lr-size-0-875em)` and
+keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-header-bg`
+(default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
+(default `var(--lr-color-text-quiet)`).
 
 ## `lr-chat-message`
 
@@ -38125,6 +38519,10 @@ properties existed:
   `<lr-markdown>`'s own `internalLinkPrefix`.
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
+- `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
+  and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the composed
+  Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
+  `<lr-markdown>`; see its **Properties** section above.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
   `<lr-markdown>`'s own `highlightCode`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
@@ -38152,13 +38550,18 @@ listener either way. A consumer composing this element inside a free-form contai
 `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since this component
 renders into its own shadow root and a plain light-DOM `MutationObserver` on the container can
 never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
+The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
+outcomes.
 
 **Slots:** none — content renders from `content`, not a slot.
 
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
 `<lr-markdown>` documents forwarded verbatim (no aliasing — none collides with `base`/`cursor`)
 from the composed `<lr-markdown>` in Markdown mode via `exportparts`: `content`, `heading`,
-`paragraph`, `list`, `code-block`, `inline-code`, `link`, `table`, `blockquote`, `img`, `math`. A
+`paragraph`, `list`, `task-item`, `code-block`, `code-block-header`, `code-block-language`,
+`code-block-copy`, `inline-code`, `link`, `table-wrapper`, `table`, `blockquote`, `img`, `math`,
+`task-list`, `task-item-checked`, `task-checkbox`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error`, `streaming-tail`. A
 host-level `lr-streaming-text::part(link)`/`::part(img)` rule reaches the rendered `<a>`/`<img>`
 exactly as the same rule does applied directly to `<lr-markdown>`.
 
@@ -38180,8 +38583,16 @@ implementation contains the opt-in `katex` loader; this wrapper forwards its own
 sets `math` here.
 
 ```html
-<lr-streaming-text id="out" coalesce-ms="80" streaming></lr-streaming-text>
+<lr-streaming-text
+  id="out"
+  coalesce-ms="80"
+  streaming
+  streaming-render="progressive"
+  code-block-chrome
+></lr-streaming-text>
 <script type="module">
+  import "@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.js";
+
   const out = document.getElementById("out");
   let text = "";
   for await (const token of tokenStream) {
@@ -38203,9 +38614,10 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-`languages` verbatim, and the rest of `<lr-markdown>`'s configuration surface verbatim too
-(`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
-`highlightCode`, `headingAnchors`, `math`, `maxHeight` — see **Properties** above); plain-text mode
+  `streamingRender`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
+  configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
+  `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
+  see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The
 blinking cursor degrades
 to a static, always-visible bar under `prefers-reduced-motion: reduce`. In plain-text mode it sits
@@ -38228,6 +38640,13 @@ happens to end with.
   `<lr-chat-message>`).
 
 ---
+
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.
 
 ## `lr-streaming-text-core`
 
@@ -38260,9 +38679,12 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
-`highlightCode: boolean = true` (attribute `highlight-code`); `headingAnchors: boolean = false`
-(attribute `heading-anchors`); `math: boolean = false`; `maxHeight: string = ''` (attribute
-`max-height`).
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
+(attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
+`math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
+the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
+progressive output, and `codeBlockChrome` enables the localized code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
 `<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
@@ -38271,13 +38693,18 @@ share one implementation.
 **Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — identical contract to
 `<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
 `<lr-markdown-core>` emits it instead of `<lr-markdown>`).
+The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
+outcomes.
 
 **Slots:** none — content renders from `content`, not a slot.
 
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`), plus every part
 `<lr-markdown-core>` documents forwarded verbatim from the composed `<lr-markdown-core>` in
-Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `code-block`,
-`inline-code`, `link`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
+Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `task-item`,
+`code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
+`table-wrapper`, `table`, `blockquote`, `img`, `math`, `task-list`, `task-item-checked`,
+`task-checkbox`, `code-block-frame`, `code-block-copy-success`, `code-block-copy-error`,
+`streaming-tail` — the identical forwarded list
 `<lr-streaming-text>` documents, since `<lr-markdown>` and `<lr-markdown-core>` share the same
 documented part vocabulary.
 
@@ -38302,6 +38729,13 @@ shared behavior.
 ```
 
 ---
+
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.
 
 ## `lr-generation-metrics`
 
@@ -38580,9 +39014,7 @@ also never written as an inline `tab-size`: `shiki` puts its own `style` attribu
 `<pre>`, and an inline declaration is the one thing a host override cannot beat. `<lr-markdown>` and
 `<lr-markdown-core>` carry the same fallback for their own `code-block` part because they are
 **sibling** custom elements rather than descendants of this one — no single declaration covers both.
-The identical value can still look different across the two: this component is `white-space: pre`
-while a markdown code block inherits `pre-wrap`, and tab stops restart at each visual line, so a
-wrapped line's tabs diverge.
+Both surfaces preserve lines with `white-space: pre` and scroll horizontally, keeping tab stops consistent.
 
 `--lr-code-block-active-line-outline-color` retints just the active line's outline and leaves every
 other `--lr-color-brand` surface in the component — hover states, the focus
@@ -39554,8 +39986,10 @@ icon — the item has no default slot to receive one); unset renders the built-i
 `renderActions?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. an `lr-dropdown` containing `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
-the host normally and never trigger `lr-select`. An open nested `lr-dropdown` keeps its virtual row
-above later rows even if focus temporarily leaves the menu. Unset renders only the built-in
+the host normally and never trigger `lr-select`. When its resolved positioning strategy is `fixed`
+and the browser supports `showPopover()`, the popup escapes the transformed virtual row into the
+browser top layer, so the row cannot clip or cover its menu. Otherwise it retains fixed-position
+fallback behavior. Unset renders only the built-in
 `rowActions`.
 `renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`
@@ -40381,19 +40815,30 @@ inside the workspace, and `overflow` makes the capped region scrollable instead 
 component-owned custom property duplicates this, because a `::part()` rule from your tree already
 wins over the shadow stylesheet regardless of specificity.
 
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not
+reflected) forwards to each message's `lr-message-parts`. The legacy message text route is unchanged.
+
 ## `lr-message-parts`
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
 Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint and displays
-accumulated plain text without parsing or highlighting. Replacing that same-id part with
-`state: 'complete'` parses and renders the final content.
+accumulated plain text without parsing or highlighting by default. The `streaming-render` property
+can opt those parts into progressive Markdown. Replacing that same-id part with `state: 'complete'`
+parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
+and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwarded to built-in text
+and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
+blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
+source language label and localized copy action to built-in code blocks.
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is an equivalent enabling alias. These settings do not replace
+the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -40450,8 +40895,12 @@ invocation id in the full `parts` sequence — for blocks too — so a windowed-
 standalone result, and a later call part for the same id cannot unmask what the first one hid. With no `redactedFields` anywhere, nothing is cloned and every binding receives the
 original reference.
 
-`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
-discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath. Tool results are a strict
+`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
+'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
+`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is also exported from
+`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js` and the package
+root. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
+`lr-markdown-core` component modules. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
 retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
 and data parts carry exactly one of `data` or `widget`. Empty ids and later duplicate occurrences
@@ -40460,7 +40909,8 @@ are ignored so each rendered identity and announcement remains unambiguous.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`, `lr-widget-action`,
+`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
+`lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
@@ -40494,6 +40944,14 @@ error id and later adding it again creates a new announcement.
 import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
 ```
 
+```html
+<lr-message-parts
+  tool-display="disclosure"
+  streaming-render="progressive"
+  code-block-chrome
+></lr-message-parts>
+```
+
 **Additional API surface:**
 
 - `lr-anchor-result` event — Passthrough from rendered Markdown.
@@ -40514,6 +40972,10 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
   `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
 - `lr-widget-state-change` event — Passthrough from a rendered controlled widget.
+
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) forwards to both built-in
+text and reasoning Markdown elements. A custom `renderPart` replaces the built-in renderer and
+its header. `lr-copy-error` passes through the immutable failed clipboard outcome.
 
 ## `lr-prompt-input`
 
@@ -41190,6 +41652,9 @@ These named interfaces and helper signatures are available to typed integrations
     label: string;
     disabled?: boolean;
   }`
+
+`MarkdownStreamingRender = 'plain' | 'progressive'` is the canonical streaming mode type;
+`MarkdownStreamingRenderMode` remains an equivalent compatibility export.
 
 # Agent tooling, tool calls & evaluation (`components/agent-tools/`)
 
@@ -41944,7 +42409,7 @@ pending duration/toggle accent without changing the shared brand token;
 padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
 `var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
 `--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
-`--lr-thinking-panel-border-color` (default `var(--lr-color-border-subtle)`) and
+`--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
@@ -42871,7 +43336,7 @@ var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
 status icons without changing shared status tokens. `--lr-task-list-background` (default
-`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border-subtle)`) and
+`var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
@@ -46283,6 +46748,9 @@ the tree follows that repair, while focus outside is preserved.
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
 string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
   a tree — presence of `children` makes a row a group/folder with tri-state select. Input is
+  rendered with a file badge for leaf rows only: a leaf without `name` uses its `label` as the
+  filename fallback, while group rows pass no filename. Set `name: ''` on a leaf to suppress a
+  label-derived badge token.
   normalized once into a deterministic nonblank first-id-wins model with identity/cycle detection,
   a depth ceiling of 64 and a 2,000-node ceiling; blank/whitespace ids, duplicate ids, and other
   rejected/truncated input fail closed with localized visible status rather than recursing or

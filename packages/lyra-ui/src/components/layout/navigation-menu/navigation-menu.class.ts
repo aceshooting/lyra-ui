@@ -126,6 +126,8 @@ function isAnchorWithHref(value: EventTarget): boolean {
  *   in the bar layout.
  * @csspart indicator-arrow - The notch inside the indicator.
  * @cssprop [--lr-navigation-menu-gap=var(--lr-space-xs)] - Gap between items, in both layouts.
+ * @cssprop [--lr-navigation-menu-toggle-active-color=var(--lr-color-text)] - Text colour of the
+ *   collapsed-layout toggle while it is pressed or open.
  * @cssprop [--lr-navigation-menu-indicator-size=var(--lr-size-0-375rem)] - Block size of the
  *   indicator.
  * @cssprop [--lr-navigation-menu-indicator-color=var(--lr-overlay-border,var(--lr-color-border-subtle))] -
@@ -295,6 +297,8 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     this.cancelShow();
     this.cancelHide();
     this.clearPress();
+    for (const item of this.items) this.releaseItem(item);
+    this.items = [];
     super.disconnectedCallback();
   }
 

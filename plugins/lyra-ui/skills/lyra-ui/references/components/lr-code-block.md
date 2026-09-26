@@ -177,9 +177,7 @@ also never written as an inline `tab-size`: `shiki` puts its own `style` attribu
 `<pre>`, and an inline declaration is the one thing a host override cannot beat. `<lr-markdown>` and
 `<lr-markdown-core>` carry the same fallback for their own `code-block` part because they are
 **sibling** custom elements rather than descendants of this one — no single declaration covers both.
-The identical value can still look different across the two: this component is `white-space: pre`
-while a markdown code block inherits `pre-wrap`, and tab stops restart at each visual line, so a
-wrapped line's tabs diverge.
+Both surfaces preserve lines with `white-space: pre` and scroll horizontally, keeping tab stops consistent.
 
 `--lr-code-block-active-line-outline-color` retints just the active line's outline and leaves every
 other `--lr-color-brand` surface in the component — hover states, the focus

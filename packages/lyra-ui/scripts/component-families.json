@@ -295,6 +295,7 @@
     "context-menu": "overlays",
     "navigation-menu": "layout",
     "navigation-menu-item": "layout",
-    "tool-call-block": "agent-tools"
+    "tool-call-block": "agent-tools",
+    "menubar": "layout"
   }
 }

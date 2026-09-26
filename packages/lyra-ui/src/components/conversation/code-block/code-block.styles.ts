@@ -116,6 +116,8 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   [part='language'] {
+    direction: ltr;
+    unicode-bidi: isolate;
     flex: 0 1 auto;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -182,6 +184,8 @@ export const styles = css`
     display: none;
   }
   [part='body'] {
+    /* The code scrollport starts at the first column, including inside an RTL document. */
+    direction: ltr;
     display: block;
     /* Continues the chain from [part='base'] -- a no-op default (see :host's comment); the
        max-block-size cap and overflow below are unaffected either way, and still apply on top of

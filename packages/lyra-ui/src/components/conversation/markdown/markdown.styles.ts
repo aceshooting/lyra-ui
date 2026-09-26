@@ -34,10 +34,11 @@ export const styles = css`
        to this surface rather than let it cover the surrounding app. */
     contain: paint;
   }
-  .streaming-tail {
+  [part='streaming-tail'] {
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
-  /* no-hover-state: both parts are scrollable prose surfaces, not pointer targets. The focus ring
+  /* no-hover-state: these parts are scrollable prose surfaces, not pointer targets. The focus ring
      tells a keyboard user which overflowing region the arrow keys will scroll; a mouse user
      already scrolls by pointing, and tinting a block of rendered Markdown under the pointer would
      read as a selection, not an affordance. */
@@ -68,9 +69,48 @@ export const styles = css`
   [part='content'] ol {
     margin-block: 0 var(--lr-space-s);
   }
-  [part='content'] code {
+  ul > [part~='task-item'] {
+    list-style: none;
+  }
+  [part~='task-checkbox'] {
+    --_lr-markdown-task-box: var(--lr-markdown-task-checkbox-size, var(--lr-size-0-875em));
+    appearance: none;
+    box-sizing: border-box;
+    display: inline-grid;
+    place-content: center;
+    inline-size: var(--_lr-markdown-task-box);
+    block-size: var(--_lr-markdown-task-box);
+    margin-block: 0;
+    margin-inline: 0 var(--lr-space-s);
+    vertical-align: middle;
+    font-size: inherit;
+    opacity: 1;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-color-surface);
+  }
+  ul > [part~='task-item'] > [part~='task-checkbox'],
+  ul > [part~='task-item'] > p:first-child > [part~='task-checkbox'] {
+    margin-inline-start: calc(-1 * (var(--_lr-markdown-task-box) + var(--lr-space-s)));
+  }
+  [part~='task-checkbox']:where(:checked) {
+    background: var(--lr-color-brand);
+    border-color: var(--lr-color-brand);
+  }
+  /* A check mark reads the same in both directions, so its strokes never mirror. */
+  [part~='task-checkbox']:where(:checked)::before {
+    content: '';
     direction: ltr;
-    unicode-bidi: isolate;
+    inline-size: var(--lr-size-0-3em);
+    block-size: var(--lr-size-0-5em);
+    border: 0 solid var(--lr-color-on-brand);
+    border-inline-end-width: var(--lr-border-width-medium);
+    border-block-end-width: var(--lr-border-width-medium);
+    transform: translateY(-10%) rotate(45deg);
+  }
+  [part='content'] code {
     font-family: var(--lr-markdown-font-mono, var(--lr-font-mono));
     font-size: var(--lr-size-0-875em);
     background: var(--lr-markdown-code-bg, var(--lr-color-brand-quiet));
@@ -78,51 +118,39 @@ export const styles = css`
     padding: var(--lr-markdown-code-padding, var(--lr-size-0-125rem) var(--lr-size-0-3125rem));
   }
   [part='code-block'] {
-    direction: ltr;
-    unicode-bidi: isolate;
-    text-align: start;
     margin-block: 0 var(--lr-space-s);
     padding: var(--lr-markdown-code-block-padding, var(--lr-space-s) var(--lr-space-m));
     border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
     background: var(--lr-markdown-code-bg, var(--lr-color-brand-quiet));
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+    overflow-y: hidden;
     overflow-inline: auto;
     /* See [part='content']'s identical overflow-block above -- same paired-axis rationale. */
     overflow-block: hidden;
     /* Deliberately the *shared* --lr-code-block-* name, not a --lr-markdown- one: one tab width
        should reach every code surface in the library. A var() fallback rather than a :host
        declaration, so a page- or container-level value can reach it; lr-code-block repeats it for
-       its own <pre>, being a sibling rather than an ancestor. Same value, different look: this
-       part inherits pre-wrap from [part='content'] while that <pre> is white-space: pre, and tab
-       stops measure from each visual line's start, so a wrapped line restarts them. */
+       its own <pre>, being a sibling rather than an ancestor. Every code surface preserves
+       lines and scrolls horizontally, so literal tab stops agree. */
     tab-size: var(--lr-code-block-tab-size, 2);
   }
-  [part='code-block-header'] {
-    display: flex;
-    flex-wrap: wrap;
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    align-items: center;
-    gap: var(--lr-space-xs);
-    margin-block-end: var(--lr-border-width-thin);
-    padding: var(--lr-space-xs) var(--lr-space-s);
-    border-start-start-radius: var(--lr-radius);
-    border-start-end-radius: var(--lr-radius);
-    background: var(--lr-color-surface-raised);
-    color: var(--lr-color-text);
-    font-family: var(--lr-font-mono);
-    font-size: var(--lr-font-size-xs);
+  [part='content'] :where(pre[part~='code-block']:not([dir]), code:not([dir], pre *)) {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: start;
   }
-  [part='code-block-language'] {
-    flex: 1 1 auto;
-    min-inline-size: 0;
-    overflow-wrap: anywhere;
+  [part='content'] :where(pre:not([part~='code-block'], [dir])) {
+    unicode-bidi: plaintext;
   }
-  [part='code-block-copy'] {
-    flex: 0 0 auto;
+  [part='content'][data-fallback] :where(.fallback-code, .fallback-inline-code) {
+    direction: ltr;
+    unicode-bidi: isolate;
   }
-  [part='code-block-header'] + [part='code-block'] {
-    border-start-start-radius: 0;
-    border-start-end-radius: 0;
+  [part='content'][data-fallback] .fallback-code {
+    display: block;
+    text-align: start;
   }
   [part='code-block'] code {
     padding: 0;
@@ -161,68 +189,46 @@ export const styles = css`
     margin-block: 0 var(--lr-space-s);
     margin-inline: 0;
     padding-inline-start: var(--lr-space-m);
-    border-inline-start: var(--lr-border-width-thick) solid var(--lr-color-border);
+    border-inline-start: var(--lr-border-width-thick) solid var(--lr-color-border-subtle);
     color: var(--lr-color-text-quiet);
+  }
+  [part='table-wrapper'] {
+    margin-block: 0 var(--lr-space-s);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overflow-inline: auto;
+    overflow-block: hidden;
   }
   [part='table'] {
     border-collapse: collapse;
+    margin-block: 0 var(--lr-space-s);
     inline-size: 100%;
-    max-inline-size: none;
   }
-  [part='table-wrapper'] {
-    max-inline-size: 100%;
-    overflow-inline: auto;
-    overflow-block: hidden;
-    margin-block-end: var(--lr-space-s);
+  [part='table-wrapper'] > [part='table'] {
+    margin-block: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   [part='table'] th,
   [part='table'] td {
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     padding: var(--lr-space-xs) var(--lr-space-s);
+  }
+  [part='table'] th:not([align]),
+  [part='table'] td:not([align]) {
     text-align: start;
-    overflow-wrap: break-word;
-    word-break: normal;
-    white-space: normal;
   }
   [part='table'] th {
     background: var(--lr-markdown-table-header-bg, var(--lr-color-brand-quiet));
     font-weight: var(--lr-font-weight-semibold);
   }
-  [part='task-item'][data-task] {
-    list-style: none;
-    padding-inline-start: calc(var(--lr-size-1rem) + var(--lr-space-xs));
-    text-indent: calc(-1 * (var(--lr-size-1rem) + var(--lr-space-xs)));
-  }
-  [part='task-item'][data-task] input[type='checkbox'] {
-    appearance: none;
-    box-sizing: border-box;
-    display: inline-grid;
-    inline-size: var(--lr-size-1rem);
-    block-size: var(--lr-size-1rem);
-    place-items: center;
-    margin-inline-end: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-text-quiet);
-    border-radius: var(--lr-radius-xs);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-surface);
-    vertical-align: middle;
-    opacity: 1;
-  }
-  [part='task-item'][data-task] input[type='checkbox']:checked {
-    background: var(--lr-color-brand);
-  }
-  [part='task-item'][data-task] input[type='checkbox']:checked::before {
-    direction: ltr;
-    content: '';
-    inline-size: var(--lr-size-0-25rem);
-    block-size: var(--lr-size-0-5rem);
-    border-inline-end: var(--lr-border-width-thick) solid var(--lr-color-surface);
-    border-block-end: var(--lr-border-width-thick) solid var(--lr-color-surface);
-    transform: rotate(45deg);
-  }
   [part='math'][data-display='block'] {
     display: block;
     margin-block: var(--lr-space-s) var(--lr-space-s);
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+    overflow-y: hidden;
     overflow-inline: auto;
     /* See [part='content']'s identical overflow-block above -- same paired-axis rationale. */
     overflow-block: hidden;
@@ -274,5 +280,83 @@ export const styles = css`
   [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
     outline: var(--lr-border-width-thin) solid var(--lr-markdown-highlight-active-outline-color, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part~='code-block-frame']:where([data-lr-code-chrome]) {
+    margin-block: 0 var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
+    overflow: clip;
+  }
+  [part~='code-block-frame']:where([data-lr-code-chrome]) > [part='code-block'] {
+    margin: 0;
+    border-radius: 0;
+  }
+  [part~='code-block-header']:where([data-lr-code-chrome]) {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    padding-inline: var(--lr-space-s) var(--lr-space-2xs);
+    background: var(--lr-markdown-code-header-bg, var(--lr-color-surface));
+    color: var(--lr-markdown-code-header-color, var(--lr-color-text-quiet));
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    font: var(--lr-font-size-xs)/var(--lr-line-height-normal) var(--lr-font);
+    user-select: none;
+  }
+  [part~='code-block-language']:where([data-lr-code-chrome]) {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  [part~='code-block-language']:where([data-lr-code-chrome])::before {
+    content: attr(data-language);
+  }
+  [part~='code-block-copy']:where([data-lr-code-chrome]) {
+    margin-inline-start: auto;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  [part~='code-block-copy']:where([data-lr-code-chrome]) svg {
+    inline-size: var(--lr-size-1em);
+    block-size: var(--lr-size-1em);
+  }
+  [part~='code-block-copy']:where([data-lr-code-chrome]:hover) {
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
+  [part~='code-block-copy']:where([data-lr-code-chrome]:active) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part~='code-block-copy']:where([data-lr-code-chrome]):focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+  }
+  @media (forced-colors: active) {
+    [part~='code-block-copy']:where([data-lr-code-chrome]) {
+      border: var(--lr-border-width-thin) solid ButtonText;
+    }
+  }
+  [part~='code-block-copy-success']:where([data-lr-code-chrome]) {
+    color: var(--lr-color-success);
+  }
+  [part~='code-block-copy-error']:where([data-lr-code-chrome]) {
+    color: var(--lr-color-danger);
   }
 `;

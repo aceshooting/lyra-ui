@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import {
@@ -65,9 +66,8 @@ export interface LyraAppRailItemEventMap {
  * `icon-only` forwards onto every `<lr-app-rail-item>` this item DIRECTLY owns through `children`,
  * exactly how `<lr-app-rail-group>` forwards onto the items and nested groups it owns -- so a
  * nested item's own icon/label presentation tracks the rail's presentation without the rail
- * reaching through two hosts. The disclosure itself never changes shape between presentations: it
- * is always a fixed icon-button-sized square beside `[part="base"]`, the same footprint `end` and
- * icon-only `[part="base"]` already use, so it needs no icon-only-specific styling of its own.
+ * reaching through two hosts. Icon-only presentation hides the disclosure and nested list while
+ * keeping expanded unchanged. If a hidden control held focus, the visible parent item receives it.
  * There is no ancestor-current treatment: `<lr-app-rail-group>` has no equivalent concept for a
  * group containing the current item, so none is invented here either -- a current descendant
  * stays perceivable only through its own `current` property, exactly as an unnested item would.
@@ -84,7 +84,8 @@ export interface LyraAppRailItemEventMap {
  *   sibling of the internal link/button (the same shape `<lr-details>` uses for its
  *   `header-actions`), so a slotted control keeps its own click, keyboard activation and focus
  *   order instead of being swallowed by the item's own activation target. Unlike `meta` it stays
- *   visible in `icon-only` mode, where it shares the narrow rail's width with the icon.
+ *   visible in `icon-only` mode. Reserve rail width for twice the nav padding plus the icon
+ *   square, item gap and end content; a 1.5rem end badge needs 5.5rem at default tokens.
  * @slot children - Nested `<lr-app-rail-item>`s disclosed beneath this item. Rendering anything
  *   into this slot grows a built-in disclosure button (`[part="toggle"]`) as a sibling of
  *   `[part="base"]`; leaving it empty renders neither the disclosure nor `[part="children"]`.
@@ -108,7 +109,7 @@ export interface LyraAppRailItemEventMap {
  *   an item without secondary text renders exactly as before the slot existed.
  * @csspart end - The wrapper around the `end` slot, following `[part="meta"]`. Hidden while empty
  *   for the same reason.
- * @csspart toggle - The disclosure control, rendered only while something is slotted into
+ * @csspart toggle - The disclosure control, hidden in icon-only and rendered only with content in
  *   `children`. A sibling of `[part="base"]`, never nested inside it, so activating one never
  *   triggers the other. Carries `aria-expanded` in both states and `aria-controls` pointing at
  *   `[part="children"]`'s id; its accessible name is a localized `this.localize()` template
@@ -116,7 +117,7 @@ export interface LyraAppRailItemEventMap {
  * @csspart toggle-icon - The wrapper around the disclosure chevron. Direction-aware through this
  *   wrapper's own `transform`, never a second mirrored glyph -- mirrors
  *   `<lr-app-rail-group>`'s `[part="toggle-icon"]`.
- * @csspart children - The wrapper around the `children` slot. Rendered only while something is
+ * @csspart children - The nested list, hidden in icon-only while preserving expanded. Rendered only while something is
  *   slotted into `children`; hidden (but present, so `aria-controls` keeps resolving) while
  *   `expanded` is `false`.
  * @csspart tooltip - The hover/focus label flyout, only rendered while `tooltip` is set, the item
@@ -255,6 +256,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   private stopPositioning?: () => void;
   private labelObserver?: MutationObserver;
   private childrenObserver?: MutationObserver;
+  private recoverFocusAfterIconOnly = false;
   private semanticFocusRepair?: ComposedFocusRepairSnapshot;
   private focusReturnTarget?: HTMLElement;
   private readonly childrenId = nextId('app-rail-item-children');
@@ -408,6 +410,12 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     super.attributeChangedCallback(name, oldValue, newValue);
     if (name !== 'icon-only' || oldValue === newValue) return;
     if (newValue === null) this.showTooltip = false;
+    else {
+      const active = deepActiveElement(this.ownerDocument);
+      const toggle = this.renderRoot?.querySelector('[part="toggle"]');
+      this.recoverFocusAfterIconOnly = active === toggle ||
+        Array.from(this.children).some(child => child.getAttribute('slot') === 'children' && composedContains(child, active));
+    }
     this.syncOwnedChildren();
     this.requestUpdate();
   }
@@ -447,6 +455,13 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.recoverFocusAfterIconOnly) {
+      this.recoverFocusAfterIconOnly = false;
+      this.scheduleAfterUpdate(() => {
+        const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+        if (base && isComposedFocusAvailable(base) && !composedContains(base, deepActiveElement(this.ownerDocument))) base.focus();
+      }, 'app-rail-item-icon-only-focus');
+    }
     const focusRepair = this.semanticFocusRepair;
     this.semanticFocusRepair = undefined;
     if (focusRepair) {

@@ -3826,6 +3826,16 @@
             "default": true
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRender",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "unread-start-index",
             "property": "unreadStartIndex",
             "type": "number | null",
@@ -4063,6 +4073,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRender",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
           },
           {
             "name": "tools",
@@ -5561,6 +5581,15 @@
             "hasDefault": false
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "hide-toggle",
             "property": "hideToggle",
             "type": "boolean",
@@ -5569,6 +5598,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "hotkey",
+            "property": "hotkey",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "icon-only-breakpoint",
@@ -5685,6 +5724,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "trigger-collapses",
+            "property": "triggerCollapses",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -5727,6 +5776,15 @@
             "hasDefault": false
           },
           {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "hideToggle",
             "attribute": "hide-toggle",
             "type": "boolean",
@@ -5735,6 +5793,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "hotkey",
+            "attribute": "hotkey",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "iconOnlyBreakpoint",
@@ -5870,6 +5938,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "triggerCollapses",
+            "attribute": "trigger-collapses",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -5995,6 +6073,24 @@
             "default": "var(--lr-space-m)"
           },
           {
+            "name": "--lr-app-rail-frame-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-app-rail-frame-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-app-rail-frame-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-s)"
+          },
+          {
             "name": "--lr-app-rail-header-min-block-size",
             "deprecated": null,
             "hasDefault": true,
@@ -6091,6 +6187,12 @@
             "default": "var(--lr-app-rail-panel-radius)"
           },
           {
+            "name": "--lr-app-rail-panel-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
+          },
+          {
             "name": "--lr-app-rail-resizer-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -6133,6 +6235,15 @@
         ],
         "cssStates": [],
         "methods": [
+          {
+            "name": "toggle",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
           {
             "name": "toggleCollapse",
             "overloads": [
@@ -14598,6 +14709,16 @@
             "name": "aria-haspopup",
             "property": "triggerHasPopup",
             "type": "| string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "aria-keyshortcuts",
+            "property": "triggerKeyShortcuts",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -64711,6 +64832,16 @@
             "default": null
           },
           {
+            "name": "aria-keyshortcuts",
+            "property": "triggerKeyShortcuts",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string",
@@ -75488,6 +75619,26 @@
             "default": null
           },
           {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "code-block-header",
+            "property": "codeBlockHeader",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "content",
             "property": "content",
             "type": "string",
@@ -75608,6 +75759,16 @@
             "default": false
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRenderMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tab-size",
             "property": "tabSize",
             "type": "number",
@@ -75648,6 +75809,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[ 'fragment', 'text-quote', ]"
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "codeBlockHeader",
+            "attribute": "code-block-header",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -75798,6 +75979,16 @@
             "default": false
           },
           {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRenderMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tabSize",
             "attribute": "tab-size",
             "type": "number",
@@ -75823,6 +76014,18 @@
             "constructor": "CustomEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-copy",
+            "type": "CustomEvent<LyraClipboardWriteSuccess>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-copy-error",
+            "type": "CustomEvent<LyraClipboardWriteFailure>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-highlight-activate",
@@ -75863,6 +76066,30 @@
             "deprecated": null
           },
           {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy-error",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy-success",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-frame",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
+            "deprecated": null
+          },
+          {
             "name": "content",
             "deprecated": null
           },
@@ -75895,7 +76122,31 @@
             "deprecated": null
           },
           {
+            "name": "streaming-tail",
+            "deprecated": null
+          },
+          {
             "name": "table",
+            "deprecated": null
+          },
+          {
+            "name": "table-wrapper",
+            "deprecated": null
+          },
+          {
+            "name": "task-checkbox",
+            "deprecated": null
+          },
+          {
+            "name": "task-item",
+            "deprecated": null
+          },
+          {
+            "name": "task-item-checked",
+            "deprecated": null
+          },
+          {
+            "name": "task-list",
             "deprecated": null
           }
         ],
@@ -75923,6 +76174,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-markdown-code-header-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-markdown-code-header-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
           },
           {
             "name": "--lr-markdown-code-padding",
@@ -75995,6 +76258,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-markdown-task-checkbox-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-875em)"
           }
         ],
         "cssStates": [],
@@ -76114,6 +76383,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "code-block-header",
+            "property": "codeBlockHeader",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -76236,6 +76525,16 @@
             "default": false
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRenderMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tab-size",
             "property": "tabSize",
             "type": "number",
@@ -76276,6 +76575,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[ 'fragment', 'text-quote', ]"
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "codeBlockHeader",
+            "attribute": "code-block-header",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -76427,6 +76746,16 @@
             "default": false
           },
           {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRenderMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tabSize",
             "attribute": "tab-size",
             "type": "number",
@@ -76452,6 +76781,18 @@
             "constructor": "CustomEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-copy",
+            "type": "CustomEvent<LyraClipboardWriteSuccess>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-copy-error",
+            "type": "CustomEvent<LyraClipboardWriteFailure>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-highlight-activate",
@@ -76492,6 +76833,30 @@
             "deprecated": null
           },
           {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy-error",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy-success",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-frame",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
+            "deprecated": null
+          },
+          {
             "name": "content",
             "deprecated": null
           },
@@ -76524,7 +76889,31 @@
             "deprecated": null
           },
           {
+            "name": "streaming-tail",
+            "deprecated": null
+          },
+          {
             "name": "table",
+            "deprecated": null
+          },
+          {
+            "name": "table-wrapper",
+            "deprecated": null
+          },
+          {
+            "name": "task-checkbox",
+            "deprecated": null
+          },
+          {
+            "name": "task-item",
+            "deprecated": null
+          },
+          {
+            "name": "task-item-checked",
+            "deprecated": null
+          },
+          {
+            "name": "task-list",
             "deprecated": null
           }
         ],
@@ -76552,6 +76941,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-markdown-code-header-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-markdown-code-header-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
           },
           {
             "name": "--lr-markdown-code-padding",
@@ -76624,6 +77025,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-markdown-task-checkbox-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-875em)"
           }
         ],
         "cssStates": [],
@@ -78831,6 +79238,319 @@
       }
     },
     {
+      "tag": "lr-menubar",
+      "family": "layout",
+      "classModule": "src/components/layout/menubar/menubar.class.ts",
+      "registrationModule": "src/components/layout/menubar/menubar.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-menubar-item"
+        ],
+        "transitive": [
+          "lr-menu",
+          "lr-menu-item"
+        ],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          }
+        ],
+        "properties": [
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-select",
+            "type": "CustomEvent<MenuItemSelectDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent",
+            "bubbles": true
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-menu-max-inline-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-menu-min-inline-size",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-menubar-item",
+      "family": "layout",
+      "classModule": "src/components/layout/menubar/menubar-item.class.ts",
+      "registrationModule": "src/components/layout/menubar/menubar-item.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-menu"
+        ],
+        "transitive": [
+          "lr-menu-item"
+        ],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "properties": [
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          },
+          {
+            "name": "menu",
+            "deprecated": null
+          }
+        ],
+        "events": [],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-menubar-item-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-menubar-item-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "disabled"
+          ],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": [
+            "click"
+          ]
+        }
+      }
+    },
+    {
       "tag": "lr-message-actions",
       "family": "conversation",
       "classModule": "src/components/conversation/message-actions/message-actions.class.ts",
@@ -79613,6 +80333,7 @@
           "lr-attachment-chip",
           "lr-button",
           "lr-citation-badge",
+          "lr-details",
           "lr-json-viewer",
           "lr-markdown",
           "lr-thinking-panel",
@@ -79647,6 +80368,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "code-block-header",
+            "property": "codeBlockHeader",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content-mode",
@@ -79688,6 +80429,16 @@
             "default": true
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRender",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tool-display",
             "property": "toolDisplay",
             "type": "MessagePartsToolDisplay",
@@ -79707,6 +80458,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "codeBlockHeader",
+            "attribute": "code-block-header",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "contentMode",
@@ -79765,6 +80536,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRender",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
           },
           {
             "name": "toolDisplay",
@@ -84359,6 +85140,12 @@
             "default": "var(--lr-size-0-375rem)"
           },
           {
+            "name": "--lr-navigation-menu-toggle-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
             "name": "--lr-positioning-strategy",
             "deprecated": null,
             "hasDefault": false
@@ -84646,6 +85433,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in oklab,var(--lr-color-brand-quiet),var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-navigation-menu-item-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
           },
           {
             "name": "--lr-navigation-menu-item-current-color",
@@ -119580,6 +120373,26 @@
             "default": 50
           },
           {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "code-block-header",
+            "property": "codeBlockHeader",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "content",
             "property": "content",
             "type": "string",
@@ -119710,6 +120523,16 @@
             "default": false
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRender",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tab-size",
             "property": "tabSize",
             "type": "number",
@@ -119730,6 +120553,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 50
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "codeBlockHeader",
+            "attribute": "code-block-header",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -119871,6 +120714,16 @@
             "default": false
           },
           {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRender",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tabSize",
             "attribute": "tab-size",
             "type": "number",
@@ -119888,6 +120741,18 @@
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-copy",
+            "type": "CustomEvent<LyraClipboardWriteSuccess>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-copy-error",
+            "type": "CustomEvent<LyraClipboardWriteFailure>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -119901,6 +120766,30 @@
           },
           {
             "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy-error",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy-success",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-frame",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
             "deprecated": null
           },
           {
@@ -119940,7 +120829,31 @@
             "deprecated": null
           },
           {
+            "name": "streaming-tail",
+            "deprecated": null
+          },
+          {
             "name": "table",
+            "deprecated": null
+          },
+          {
+            "name": "table-wrapper",
+            "deprecated": null
+          },
+          {
+            "name": "task-checkbox",
+            "deprecated": null
+          },
+          {
+            "name": "task-item",
+            "deprecated": null
+          },
+          {
+            "name": "task-item-checked",
+            "deprecated": null
+          },
+          {
+            "name": "task-list",
             "deprecated": null
           }
         ],
@@ -120044,6 +120957,26 @@
             "default": 50
           },
           {
+            "name": "code-block-chrome",
+            "property": "codeBlockChrome",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "code-block-header",
+            "property": "codeBlockHeader",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "content",
             "property": "content",
             "type": "string",
@@ -120174,6 +121107,16 @@
             "default": false
           },
           {
+            "name": "streaming-render",
+            "property": "streamingRender",
+            "type": "MarkdownStreamingRender",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tab-size",
             "property": "tabSize",
             "type": "number",
@@ -120194,6 +121137,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 50
+          },
+          {
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "codeBlockHeader",
+            "attribute": "code-block-header",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "content",
@@ -120335,6 +121298,16 @@
             "default": false
           },
           {
+            "name": "streamingRender",
+            "attribute": "streaming-render",
+            "type": "MarkdownStreamingRender",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "plain"
+          },
+          {
             "name": "tabSize",
             "attribute": "tab-size",
             "type": "number",
@@ -120352,6 +121325,18 @@
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-copy",
+            "type": "CustomEvent<LyraClipboardWriteSuccess>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-copy-error",
+            "type": "CustomEvent<LyraClipboardWriteFailure>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -120365,6 +121350,30 @@
           },
           {
             "name": "code-block",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy-error",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-copy-success",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-frame",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-header",
+            "deprecated": null
+          },
+          {
+            "name": "code-block-language",
             "deprecated": null
           },
           {
@@ -120404,7 +121413,31 @@
             "deprecated": null
           },
           {
+            "name": "streaming-tail",
+            "deprecated": null
+          },
+          {
             "name": "table",
+            "deprecated": null
+          },
+          {
+            "name": "table-wrapper",
+            "deprecated": null
+          },
+          {
+            "name": "task-checkbox",
+            "deprecated": null
+          },
+          {
+            "name": "task-item",
+            "deprecated": null
+          },
+          {
+            "name": "task-item-checked",
+            "deprecated": null
+          },
+          {
+            "name": "task-list",
             "deprecated": null
           }
         ],

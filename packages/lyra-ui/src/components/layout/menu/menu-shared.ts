@@ -46,7 +46,7 @@ export const submenuPanelController = Symbol('lyra-submenu-panel-controller');
 /** @internal */
 export interface SubmenuPanelController {
   readonly open: boolean;
-  attach(anchor: HTMLElement, onStateChange: (open: boolean) => void): void;
+  attach(anchor: HTMLElement, onStateChange: (open: boolean) => void, options?: SubmenuAttachOptions): void;
   detach(anchor: HTMLElement): void;
   show(focus?: MenuFocusTarget): Promise<void>;
   hide(options?: { focusTrigger?: boolean }): Promise<void>;
@@ -70,4 +70,44 @@ export interface ContainedMenuOwner {
   open: boolean;
   show(): void | Promise<void>;
   hide(options?: { focusTrigger?: boolean }): void | Promise<void>;
+}
+
+/** @internal The anchor is a menubar item: drop below it and leave the inline exit key
+ * unhandled so the menubar can move along. */
+interface SubmenuAttachOptions {
+  readonly menubar?: boolean;
+}
+
+/** @internal Tracks an accessible name owned by a component without replacing authored names. */
+export interface OwnedAriaLabel {
+  owns: boolean;
+  value: string | null;
+}
+
+/** @internal Keeps a computed name live while preserving author aria-label and override names. */
+export function syncOwnedAriaLabel(
+  target: Element,
+  computed: string,
+  state: OwnedAriaLabel,
+  authoredOverride: boolean,
+): void {
+  if (state.owns && target.getAttribute('aria-label') !== state.value) {
+    state.owns = false;
+    state.value = null;
+  }
+  if (authoredOverride) {
+    if (state.owns) target.removeAttribute('aria-label');
+    state.owns = false;
+    state.value = null;
+    return;
+  }
+  if (target.hasAttribute('aria-label') && !state.owns) return;
+  state.owns = true;
+  // An empty computed attribute would suppress the element's fallback accessible name.
+  state.value = computed === '' ? null : computed;
+  if (computed === '') {
+    if (target.hasAttribute('aria-label')) target.removeAttribute('aria-label');
+  } else if (target.getAttribute('aria-label') !== computed) {
+    target.setAttribute('aria-label', computed);
+  }
 }

@@ -194,6 +194,7 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'נסה שוב סוכן משנה',
   subagentPanelCancelRun: 'בטל {name}',
   subagentPanelRetryRun: 'נסה שוב {name}',
+  toolTimelineDetailsFor: 'פרטים עבור {name}',
   toolCallBlockHeaderPending: 'ממתין לשימוש ב-{name}',
   toolCallBlockHeaderRunning: 'משתמש ב-{name}',
   toolCallBlockHeaderSuccess: 'נעשה שימוש ב-{name}',

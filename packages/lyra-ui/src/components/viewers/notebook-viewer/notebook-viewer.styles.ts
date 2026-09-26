@@ -93,6 +93,9 @@ export const styles = css`
     min-inline-size: 0;
   }
   lr-virtual-list::part(raw-source) {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: start;
     box-sizing: border-box;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);

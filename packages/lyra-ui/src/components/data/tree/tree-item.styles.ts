@@ -50,7 +50,7 @@ export const styles = css`
      elsewhere, since the selected row's resting fill already resolves to that token. */
   [part~='item']:hover,
   :host(:where([aria-selected='true'])) [part~='item']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: color-mix(in oklab, var(--lr-tree-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   /* MUST stay after the selected-item rule above, and the second arm exists so it can: that rule
      matches a selected item at (0,3,0), out of reach of a bare [part~='item']:active ((0,2,0)), so
@@ -61,7 +61,7 @@ export const styles = css`
   :host(:where([aria-selected='true'])) [part~='item']:active {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-tree-selected-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -176,6 +176,18 @@ export const styles = css`
   }
   [part='checkbox']:active [part~='checkbox__control'] {
     border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='checkbox']:hover [part~='checkbox__control--checked'] {
+    border-color: var(--lr-tree-checkbox-checked-border-color, var(--lr-color-brand));
+  }
+  [part='checkbox']:hover [part~='checkbox__control--indeterminate'] {
+    border-color: var(--lr-tree-checkbox-indeterminate-border-color, var(--lr-color-brand));
+  }
+  [part='checkbox']:active [part~='checkbox__control--checked'] {
+    border-color: color-mix(in oklab, var(--lr-tree-checkbox-checked-border-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='checkbox']:active [part~='checkbox__control--indeterminate'] {
+    border-color: color-mix(in oklab, var(--lr-tree-checkbox-indeterminate-border-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   :host([aria-disabled='true']) [part='checkbox'] {
     cursor: default;

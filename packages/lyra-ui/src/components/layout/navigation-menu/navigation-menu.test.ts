@@ -19,6 +19,31 @@ import './navigation-menu.js';
 
 ignoreResizeObserverLoopErrors('collapse toggles host block size');
 
+it('releases ownership when a disconnected menu item is reparented outside the menu', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><lr-navigation-menu>
+    <lr-navigation-menu-item>Products<ul slot="panel"><li><a href="#product">Product</a></li></ul></lr-navigation-menu-item>
+  </lr-navigation-menu></div>`);
+  const menu = wrapper.querySelector<LyraNavigationMenu>('lr-navigation-menu')!;
+  const child = menu.querySelector<LyraNavigationMenuItem>('lr-navigation-menu-item')!;
+  await menu.updateComplete;
+  await child.updateComplete;
+  await waitUntil(() => child.getAttribute('role') === 'listitem');
+  menu.remove();
+  wrapper.append(child);
+  await child.updateComplete;
+  expect(child.hasAttribute('role'), 'the detached owner releases its list role').to.equal(false);
+  base(child).click();
+  await child.updateComplete;
+  await waitUntil(() => child.open);
+  expect(getComputedStyle(panel(child)).position, 'unowned disclosures stay in flow').to.equal('static');
+
+  menu.append(child);
+  wrapper.append(menu);
+  await menu.updateComplete;
+  await child.updateComplete;
+  await waitUntil(() => child.getAttribute('role') === 'listitem', 'reconnected menu did not reacquire its item');
+});
+
 const userAgent = navigator.userAgent;
 const isWebKit = /AppleWebKit/.test(userAgent) && !/Chrome|Chromium/.test(userAgent);
 

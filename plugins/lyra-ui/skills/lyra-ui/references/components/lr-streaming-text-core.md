@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,7 +45,7 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected);
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
 (attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
@@ -59,6 +59,8 @@ share one implementation.
 **Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — identical contract to
 `<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
 `<lr-markdown-core>` emits it instead of `<lr-markdown>`).
+The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
+outcomes.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -66,7 +68,9 @@ share one implementation.
 `<lr-markdown-core>` documents forwarded verbatim from the composed `<lr-markdown-core>` in
 Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `task-item`,
 `code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
-`table-wrapper`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
+`table-wrapper`, `table`, `blockquote`, `img`, `math`, `task-list`, `task-item-checked`,
+`task-checkbox`, `code-block-frame`, `code-block-copy-success`, `code-block-copy-error`,
+`streaming-tail` — the identical forwarded list
 `<lr-streaming-text>` documents, since `<lr-markdown>` and `<lr-markdown-core>` share the same
 documented part vocabulary.
 
@@ -91,3 +95,10 @@ shared behavior.
 ```
 
 ---
+
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.

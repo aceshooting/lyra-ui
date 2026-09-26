@@ -36,5 +36,3 @@ defineElement('result-field', LyraResultField);
 defineElement('markdown', LyraMarkdown);
 defineElement('media-card', LyraMediaCard);
 defineElement('widget-renderer', LyraWidgetRenderer);
-// policy-allow(component-dependency: lr-icon): Markdown's optional copy chrome uses the lean
-// copy-button entry, whose icon-button renders supplied SVG glyphs and never requests lr-icon.

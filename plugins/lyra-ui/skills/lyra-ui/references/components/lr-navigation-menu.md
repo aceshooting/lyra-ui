@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-navigation-menu-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -98,6 +98,7 @@ logo, search or actions *outside* the menu.
 `--lr-navigation-menu-indicator-size` (default `var(--lr-size-0-375rem)`),
 `--lr-navigation-menu-indicator-color` (default
 `var(--lr-overlay-border, var(--lr-color-border-subtle))`, matching the panel edge), and
+`--lr-navigation-menu-toggle-active-color` (default `var(--lr-color-text)`), and
 `--lr-positioning-strategy` (read by the items when positioning their panels). All are read through
 inline fallbacks, so they can be set on the menu or any ancestor.
 
@@ -214,7 +215,8 @@ never below `--lr-icon-button-size`), `--lr-navigation-menu-item-font-size` (def
 `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-hover-color` (default
 `var(--lr-color-brand)`), `--lr-navigation-menu-item-active-bg` (default a `color-mix()` of
 `--lr-color-brand-quiet` toward `--lr-color-mix-partner`), `--lr-navigation-menu-item-open-bg`
-(default `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-current-color` (default
+(default `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-active-color` (default
+`var(--lr-color-text)`), `--lr-navigation-menu-item-current-color` (default
 `var(--lr-color-brand)`), `--lr-navigation-menu-item-current-font-weight` (default
 `var(--lr-font-weight-semibold)`), `--lr-navigation-menu-panel-padding` (default `var(--lr-space-s)`),
 `--lr-navigation-menu-panel-max-inline-size` (default `var(--lr-size-48rem)`, also capped by the
@@ -240,3 +242,8 @@ The item does not take the `size` ladder.
 </lr-navigation-menu-item>
 <lr-navigation-menu-item href="https://example.com/" target="_blank" rel="external">Example</lr-navigation-menu-item>
 ```
+
+
+- **`components-layout-menubar-contracts`** — Typed pass-through menu selection.
+  Import: `@aceshooting/lyra-ui/components/layout/menubar/menubar.class.js`.
+  `LyraMenubarEventMap { 'lr-select': CustomEvent<MenuItemSelectDetail>; }`

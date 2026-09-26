@@ -146,3 +146,10 @@ export const CustomSlots: Story = {
     </div>
   `,
 };
+
+export const ProgressiveMarkdown: Story = {
+  render: () => html`<lr-agent-workspace streaming-render="progressive"
+    .messages=${[{ id: 'progressive-message', role: 'assistant', parts: [
+      { id: 'progressive-text', type: 'text', state: 'streaming', text: '# Answer\n\nA **settled paragraph**.\n\nThe response continues' },
+    ] }]}></lr-agent-workspace>`,
+};

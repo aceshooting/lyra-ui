@@ -224,23 +224,27 @@ export const styles = css`
        axis matching wide slotted content. */
     overflow-block: var(--lr-app-rail-panel-overflow-block, auto);
     overflow-inline: var(--lr-app-rail-panel-overflow-inline, clip);
-    transform: translateX(-100%);
+    /* A one-pixel overshoot keeps fractional-width rasterized edges outside the viewport. */
+    transform: translateX(calc(-100% - var(--lr-size-1px)));
+  }
+  [part="panel"][data-sliding] {
     transition: transform var(--lr-transition-base);
   }
   /* translateX is physical and CSS logical properties don't cover it, so RTL flips the offscreen
      direction with :dir() rather than internal/rtl.ts's JS helper -- that helper is for
      pointer/keyboard math CSS can't express at all. */
   :host(:dir(rtl)) [part="panel"] {
-    transform: translateX(100%);
+    transform: translateX(calc(100% + var(--lr-size-1px)));
   }
   /* Settled open is transform: none, NOT translateX(0): any non-none transform, identity included,
      is a containing block for position: fixed descendants and would trap consumer-slotted
      dropdowns/tooltips in the open panel (lyra-ui positions popups position: fixed via Floating UI,
-     not the top layer). translateX(-100%) to none still interpolates: none is the identity. */
+     with settled descendants free to use viewport positioning). The parked transform to none
+     still interpolates: none is the identity. */
   :host([mode="mobile"][open]) [part="panel"] {
     transform: none;
     /* Keep the modal elevation inside the viewport only while the drawer is visible. */
-    box-shadow: var(--lr-shadow-l);
+    box-shadow: var(--lr-app-rail-panel-shadow, var(--lr-shadow-l));
   }
 
   [part="header"] {
@@ -362,6 +366,31 @@ export const styles = css`
     [part="collapse-toggle"],
     [part="resizer-track"] {
       transition: none !important;
+    }
+  }
+
+  :host([frame="card"]:not([mode="mobile"])) {
+    display: flow-root;
+    --_lr-app-rail-frame-gap: var(--lr-app-rail-frame-gap, var(--lr-space-s));
+  }
+  :host([frame="card"]) [part="base"] {
+    margin: var(--_lr-app-rail-frame-gap);
+    block-size: calc(100% - 2 * var(--_lr-app-rail-frame-gap));
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-radius: var(--lr-app-rail-frame-radius, var(--lr-radius));
+    box-shadow: var(--lr-app-rail-frame-shadow, var(--lr-shadow-s));
+  }
+  :host([frame="card"]) [part="resizer"] {
+    inset-block: var(--_lr-app-rail-frame-gap);
+    inset-inline-end: calc(var(--_lr-app-rail-frame-gap) - var(--lr-icon-button-size) * 0.5);
+  }
+  :host([frame="plain"]) [part="base"] {
+    border-inline-end: 0;
+    background: var(--lr-app-rail-background, transparent);
+  }
+  @media (forced-colors: active) {
+    :host([frame="plain"]) [part="base"] {
+      border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     }
   }
 `;

@@ -19,14 +19,22 @@
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
 Built-in text and reasoning Markdown receives each part's `state === 'streaming'` hint and displays
-accumulated plain text without parsing or highlighting. Replacing that same-id part with
-`state: 'complete'` parses and renders the final content.
+accumulated plain text without parsing or highlighting by default. The `streaming-render` property
+can opt those parts into progressive Markdown. Replacing that same-id part with `state: 'complete'`
+parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
+and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwarded to built-in text
+and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
+blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
+source language label and localized copy action to built-in code blocks.
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is an equivalent enabling alias. These settings do not replace
+the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -83,8 +91,12 @@ invocation id in the full `parts` sequence — for blocks too — so a windowed-
 standalone result, and a later call part for the same id cannot unmask what the first one hid. With no `redactedFields` anywhere, nothing is cloned and every binding receives the
 original reference.
 
-`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
-discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath. Tool results are a strict
+`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
+'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
+`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is also exported from
+`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js` and the package
+root. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
+`lr-markdown-core` component modules. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
 retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
 and data parts carry exactly one of `data` or `widget`. Empty ids and later duplicate occurrences
@@ -93,7 +105,8 @@ are ignored so each rendered identity and announcement remains unambiguous.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`, `lr-widget-action`,
+`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
+`lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
@@ -127,6 +140,14 @@ error id and later adding it again creates a new announcement.
 import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
 ```
 
+```html
+<lr-message-parts
+  tool-display="disclosure"
+  streaming-render="progressive"
+  code-block-chrome
+></lr-message-parts>
+```
+
 **Additional API surface:**
 
 - `lr-anchor-result` event — Passthrough from rendered Markdown.
@@ -147,3 +168,7 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
   `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
 - `lr-widget-state-change` event — Passthrough from a rendered controlled widget.
+
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) forwards to both built-in
+text and reasoning Markdown elements. A custom `renderPart` replaces the built-in renderer and
+its header. `lr-copy-error` passes through the immutable failed clipboard outcome.

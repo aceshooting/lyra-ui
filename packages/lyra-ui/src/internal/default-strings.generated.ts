@@ -675,7 +675,10 @@ export const LYRA_DEFAULT_ingestionStageUploading: LyraMessage = 'Uploading';
 export const LYRA_DEFAULT_inputLabel: LyraMessage = 'Text';
 export const LYRA_DEFAULT_invalidJson: LyraMessage = 'Invalid JSON.';
 export const LYRA_DEFAULT_item: LyraMessage = 'item';
-export const LYRA_DEFAULT_items: LyraMessage = 'items';
+export const LYRA_DEFAULT_items: LyraMessage = {
+    one: 'item',
+    other: 'items',
+  };
 export const LYRA_DEFAULT_jsonArray: LyraMessage = 'array';
 export const LYRA_DEFAULT_jsonCollapseLabel: LyraMessage = 'Collapse {label}';
 export const LYRA_DEFAULT_jsonCopyLabel: LyraMessage = 'Copy {label}';
@@ -769,6 +772,7 @@ export const LYRA_DEFAULT_mapMissingLibrary: LyraMessage = 'This component needs
 export const LYRA_DEFAULT_mapResetNorth: LyraMessage = 'Reset bearing to north';
 export const LYRA_DEFAULT_mapStyleRequired: LyraMessage = 'Provide a map style to render the map.';
 export const LYRA_DEFAULT_mapWebglUnavailable: LyraMessage = 'This browser cannot provide the graphics support needed to render the map.';
+export const LYRA_DEFAULT_markdownTableRegion: LyraMessage = 'Table';
 export const LYRA_DEFAULT_matchMismatch: LyraMessage = 'The values do not match.';
 export const LYRA_DEFAULT_maximize: LyraMessage = 'Maximize';
 export const LYRA_DEFAULT_mcpAppLabel: LyraMessage = 'Interactive app';

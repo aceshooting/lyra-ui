@@ -240,3 +240,31 @@ export const MaxHeightScrolling: Story = {
     <lr-markdown .content=${longSample} max-height="10rem" style="max-width: 32rem;"></lr-markdown>
   `,
 };
+
+export const TaskLists: Story = {
+  render: () => html`<lr-markdown .content=${'- Ordinary item\n- [ ] Open task with enough text to wrap\n- [x] Completed task\n\n1. [x] Ordered task'}></lr-markdown>`,
+};
+export const WideGfmTables: Story = {
+  render: () => html`<div style="inline-size: 320px"><lr-markdown .content=${'| Name | Amount |\n| :--- | ---: |\n| LongUnbreakableColumnHeadingLongUnbreakableColumnHeading | 42 |'}></lr-markdown></div>`,
+};
+export const CodeBlockHeaders: Story = {
+  render: () => html`<lr-markdown code-block-header .content=${'```ts\nconst greeting = "Hello";\n```\n\n    indented code'}></lr-markdown>`,
+};
+export const RightToLeftCode: Story = {
+  render: () => html`<div dir="rtl"><lr-markdown code-block-header .content=${'نص عربي مع `--flag`\n\n```js\nconst answer = 42;\n```'}></lr-markdown></div>`,
+};
+
+export const ProgressiveStreaming: Story = {
+  render: () => html`<div>
+    <button type="button" @click=${(event: Event) => {
+      const element = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-markdown') as LyraMarkdown;
+      element.content += '\n\n## Next block\n\nAnother **settled** paragraph.\n\nStreaming tail';
+    }}>Append blocks</button>
+    <button type="button" @click=${(event: Event) => {
+      const element = (event.currentTarget as HTMLElement).parentElement!.querySelector('lr-markdown') as LyraMarkdown;
+      element.streaming = !element.streaming;
+    }}>Toggle completion</button>
+    <lr-markdown streaming streaming-render="progressive" code-block-header
+      .content=${'# Settled heading\n\nA **rendered paragraph**.\n\n```js\nconst answer = 42;\n```\n\nCurrent tail'}></lr-markdown>
+  </div>`,
+};

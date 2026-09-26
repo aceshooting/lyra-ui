@@ -16,6 +16,12 @@
 
 ## `lr-command-palette`
 
+Hotkeys share last-connected eligible ownership with `lr-app-rail` in the same window. Removing the
+`hotkey` attribute disables the chord, and key-less browser autofill events are ignored. Non-ASCII
+layout keys may match a single ASCII letter/digit chord through `event.code`; printed ASCII keys
+remain authoritative. Existing palette behavior in editable content and for already-prevented events
+is unchanged.
+
 Searchable application command menu. Renders nothing at all while closed. Uses the same shared
 overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
 dismissal, ref-counted document scroll lock).

@@ -133,6 +133,7 @@ import type { LyraFilterBarEventMap } from '../components/layout/filter-bar/filt
 import type { LyraDropdownItemEventMap } from '../components/layout/menu/dropdown-item.class.js';
 import type { LyraMenuItemEventMap } from '../components/layout/menu/menu-item.class.js';
 import type { LyraMenuEventMap } from '../components/layout/menu/menu.class.js';
+import type { LyraMenubarEventMap } from '../components/layout/menubar/menubar.class.js';
 import type { LyraMultiSplitEventMap } from '../components/layout/multi-split/multi-split.class.js';
 import type { LyraNavigationMenuItemEventMap } from '../components/layout/navigation-menu-item/navigation-menu-item.class.js';
 import type { LyraNavigationMenuEventMap } from '../components/layout/navigation-menu/navigation-menu.class.js';
@@ -387,6 +388,7 @@ export interface LyraTagEventTypes {
   'lr-mention-popover': LyraMentionPopoverEventMap;
   'lr-menu': LyraMenuEventMap;
   'lr-menu-item': LyraMenuItemEventMap;
+  'lr-menubar': LyraMenubarEventMap;
   'lr-message-actions': LyraMessageActionsEventMap;
   'lr-message-feedback': LyraMessageFeedbackEventMap;
   'lr-message-parts': LyraMessagePartsEventMap;
@@ -569,6 +571,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-media-card': { 'lr-before-media-download': true },
   'lr-menu': { 'lr-select': true },
   'lr-menu-item': { 'lr-menu-item-change': true },
+  'lr-menubar': { 'lr-select': true },
   'lr-message-actions': { 'lr-feedback-submit': true },
   'lr-message-feedback': { 'lr-feedback-submit': true },
   'lr-model-select': { 'lr-invalid': true },

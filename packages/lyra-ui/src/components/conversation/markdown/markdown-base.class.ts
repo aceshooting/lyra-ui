@@ -1,4 +1,4 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { type PropertyValues, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -10,6 +10,7 @@ import {
   buildQuoteAnchor,
   createTextQuoteIndex,
   scopeFromElement,
+  TEXT_QUOTE_LIMITS,
   type TextQuoteIndex,
 } from '../../../internal/text-quote.js';
 import {
@@ -19,8 +20,10 @@ import {
 } from '../../../internal/text-highlights.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
-import { Slugger } from '../../../internal/slugger.js';
-import { tag } from '../../../internal/prefix.js';
+import type { Slugger } from '../../../internal/slugger.js';
+import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
+import { MarkdownCodeHeaderController, renderMarkdownCodeHeader, type MarkdownCodeBlockRecord } from './markdown-code-header.js';
+import { MarkdownFallbackCodeScanner } from './markdown-fallback-code.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
@@ -31,11 +34,7 @@ import type {
   MarkdownDeps,
   MarkedModule,
 } from './markdown-loader.js';
-import {
-  MarkdownStreamingBuffer,
-  markdownOpenFence,
-  type MarkdownBlockToken,
-} from './markdown-streaming.js';
+import { MarkdownProgressiveSession, markdownProgressiveEligible, type MarkdownProgressiveStats } from './markdown-progressive.js';
 import {
   addFailedHighlightKey,
   applyMarkdownAriaBusy,
@@ -47,6 +46,8 @@ import {
   HIGHLIGHT_CACHE_MAX,
   internalLinkHrefFrom,
   markdownAnchorFromTarget,
+  markdownTableRegionLabel,
+  labelMarkdownTableWrappers,
   markdownHighlightConfigChanged,
   markdownLanguageSetChanged,
   markdownMathPeerError,
@@ -54,6 +55,11 @@ import {
   MarkdownOwnedAnimationFrameController,
   MarkdownParserController,
   normalizeMarkdownHtmlMode,
+  normalizeMarkdownStreamingRender,
+  createMarkdownRenderContext,
+  finishMarkdownHtml,
+  markdownSanitizerPolicy,
+  type ParseMarkdownOptions,
   normalizeMarkdownLeadingTabs,
   parseMarkdownDocument,
   processPendingHighlights,
@@ -70,7 +76,7 @@ import {
 } from './markdown-shared.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copyCode } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const HIGHLIGHT_FAILURE_WARNING_KEY = 'lyra-markdown-highlight-failed';
@@ -116,10 +122,12 @@ export interface MarkdownRuntimeEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-link-click': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
 /** Markdown behavior while a Markdown source is still arriving. */
-export type MarkdownStreamingRenderMode = 'plain' | 'progressive';
+export type MarkdownStreamingRenderMode = import('./markdown-shared.js').MarkdownStreamingRender;
 
 // The Lyra-prefixed owner is intentional: the default-string slice generator attributes helper
 // lookups in this `.class.ts` module to its sole Lyra class, and both concrete Markdown tags inherit
@@ -134,7 +142,10 @@ class LyraMarkdownRuntimeElement extends LyraElement<MarkdownRuntimeEventMap> {
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
+    copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
     copyCode: LYRA_DEFAULT_copyCode,
+    copyFailed: LYRA_DEFAULT_copyFailed,
+    markdownTableRegion: LYRA_DEFAULT_markdownTableRegion,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 }
@@ -195,6 +206,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract streaming: boolean;
   abstract streamingRender: MarkdownStreamingRenderMode;
   abstract codeBlockChrome: boolean;
+  abstract codeBlockHeader: boolean;
   abstract highlightCode: boolean;
   abstract languages?: Readonly<Record<string, ShikiLanguageSource>>;
   abstract headingAnchors: boolean;
@@ -218,9 +230,13 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   @state() private renderedHtml: string | null = null;
   @state() private renderedBlocks: Array<{ id: string; html: string }> = [];
-  @state() private streamingTail: string | TemplateResult = '';
+  @state() private streamingTail: { kind: 'text' | 'open-fence'; text: string } | null = null;
+  @state() private progressiveRevision = 0;
   @state() private isDarkTheme = false;
 
+  private readonly boundLocalize = this.localize.bind(this);
+  private tableRegionLabel: string | undefined;
+  private readonly fallbackCode = new MarkdownFallbackCodeScanner();
   private deps?: MarkdownDeps;
   private readonly parser = new MarkdownParserController();
   private headingTree: MarkdownHeadingItem[] = [];
@@ -241,30 +257,36 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   private readonly streamingRenderFrames =
     new MarkdownOwnedAnimationFrameController();
   private failedHighlightKeys = new Set<string>();
-  private inFlightHighlightKeys = new Set<string>();
-  private readonly markdownStream = new MarkdownStreamingBuffer();
-  private streamSlugger = new Slugger();
-  private nextStreamBlockId = 0;
-  private readonly progressiveBlocks = new Map<string, {
-    id: string;
-    source: string;
-    headings: MarkdownHeadingItem[];
-    definitions: readonly string[];
-    highlightKeys: string[];
-    sluggerBefore: Slugger;
-  }>();
-  private copyButtonRegistration?: Promise<unknown>;
-  private progressiveFailed = false;
-  private renderingStreamFrame = false;
-  private readonly codeChromeHeaders = new WeakSet<Element>();
+  private inFlightHighlightKeys = new Map<string, number>();
+  private progressiveSession?: MarkdownProgressiveSession;
+  private progressiveAdopted = false;
+  private progressiveRebuild = false;
+  private progressiveInputGeneration = 0;
+  private rememberedFocus?: { node: HTMLElement; index: number; selector: string };
+  private readonly codeHeader: MarkdownCodeHeaderController;
+  private codeBlocks: MarkdownCodeBlockRecord[] = [];
+
 
   private readonly handleKatexResolved = (): void => {
-    if (this.isConnected) this.renderMarkdown();
+    if (!this.isConnected) return;
+    if (this.progressiveSession && this.streaming) {
+      this.progressiveSession.invalidateMath();
+      this.scheduleStreamingRender();
+    } else this.renderMarkdown();
   };
 
   constructor() {
     super();
     new ThemeWatcher(this, () => this.refreshTheme());
+    this.codeHeader = new MarkdownCodeHeaderController(this, {
+      isEnabled: () => this.codeBlockHeader || this.codeBlockChrome,
+      contentVersion: () => this.progressiveSession ? this.renderedBlocks : this.renderedHtml,
+      getContentRoot: () => this.contentRoot(),
+      localize: this.boundLocalize,
+      buildHeader: (frame, language) => renderMarkdownCodeHeader(frame, language),
+      emitCopy: (outcome) => this.emit('lr-copy', outcome),
+      emitCopyError: (outcome) => this.emit('lr-copy-error', outcome),
+    });
   }
 
   /** This instance's configurable parser, once the optional parser peer is available. */
@@ -279,7 +301,6 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.ensureCopyButtonRegistration();
     this.markdownVariant.connectedInstances.add(this);
     this.refreshTheme();
     beginMarkdownDepsLoad(this, (resolved) => {
@@ -299,12 +320,14 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
     this.textQuoteIndexCache = undefined;
-    this.resetProgressiveMarkdown();
+    this.fallbackCode.reset();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.codeHeader.hostAdopted();
     this.cancelStreamingRender();
+    if (this.streaming && this.progressiveSession) this.scheduleStreamingRender();
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -319,42 +342,34 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    const selector = '[part~="code-block"], [part~="code-block-copy"], [part~="table-wrapper"]';
+    if (active?.matches(selector)) {
+      this.rememberedFocus = { node: active, index: [...this.renderRoot.querySelectorAll(selector)].indexOf(active), selector };
+    }
     if (changed.has('math')) this.mathFailureReported = false;
-    if (!this.deps || (!markdownNeedsReparse(changed) && !changed.has('streamingRender'))) return;
-    const streamConfigurationChanged =
-      changed.has('streamingRender') ||
-      changed.has('htmlMode') ||
-      changed.has('gfm') ||
-      changed.has('linkTarget') ||
-      changed.has('internalLinkPrefix') ||
-      changed.has('headingOffset') ||
-      changed.has('headingAnchors') ||
-      changed.has('math') ||
-      changed.has('tabSize') ||
-      markdownHighlightConfigChanged(changed);
-    if (streamConfigurationChanged) this.resetProgressiveMarkdown();
-    const previousContent = changed.get('content');
-    const appendedProgressiveContent =
-      this.streaming &&
-      this.streamingRender === 'progressive' &&
-      typeof previousContent === 'string' &&
-      this.content.startsWith(previousContent);
-    const highlightGenerationChanged =
-      (changed.has('content') && !appendedProgressiveContent) ||
-      changed.has('streaming') ||
-      markdownHighlightConfigChanged(changed);
-    if (highlightGenerationChanged) this.highlightToken++;
+    if (!this.deps || !markdownNeedsReparse(changed)) return;
+    const progressive = normalizeMarkdownStreamingRender(this.streamingRender) === 'progressive';
+    const configurationChanged = [...changed.keys()].some((key) =>
+      key !== 'content' && key !== 'streaming' && markdownNeedsReparse(new Map([[key, undefined]])));
+    if (markdownHighlightConfigChanged(changed) || (!progressive && (changed.has('content') || changed.has('streaming')))) this.highlightToken++;
     if (markdownHighlightConfigChanged(changed)) {
       this.failedHighlightKeys.clear();
-      if (markdownLanguageSetChanged(changed) || changed.has('codeBlockChrome')) this.highlightCache.clear();
+      if (markdownLanguageSetChanged(changed)) this.highlightCache.clear();
     }
+    if (!progressive) this.resetProgressiveMarkdown();
+    else if (configurationChanged) this.progressiveRebuild = true;
+    if (changed.has('content')) this.progressiveInputGeneration++;
     if (this.streaming) {
+      if (this.progressiveAdopted) { this.progressiveSession?.resume(); this.progressiveAdopted = false; }
+      this.progressiveSession?.update(this.content ?? '');
+      if (this.progressiveSession) this.syncProgressiveMarkdown();
       this.scheduleStreamingRender();
-      return;
+    } else {
+      this.cancelStreamingRender();
+      if (changed.has('content') && !changed.has('streaming') || configurationChanged) this.resetProgressiveMarkdown();
+      this.renderMarkdown();
     }
-    this.cancelStreamingRender();
-    this.resetProgressiveMarkdown();
-    this.renderMarkdown();
   }
 
   private cancelStreamingRender(): void {
@@ -369,48 +384,61 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (this.streamingRenderRaf !== undefined) return;
     const view = this.ownerDocument.defaultView;
     if (!view) {
-      if (this.isConnected) this.renderStreamFrame();
+      if (this.isConnected) this.runStreamingFrame();
       return;
     }
     const handle = this.streamingRenderFrames.request(view, () => {
       this.streamingRenderRaf = undefined;
       if (this.isConnected && this.ownerDocument.defaultView === view)
-        this.renderStreamFrame();
+        this.runStreamingFrame();
     });
     if (handle === undefined) {
-      if (this.isConnected) this.renderStreamFrame();
+      if (this.isConnected) this.runStreamingFrame();
     } else if (this.streamingRenderFrames.handle === handle) {
       this.streamingRenderRaf = handle;
     }
   }
 
-  private renderStreamFrame(): void {
-    this.renderingStreamFrame = true;
-    try {
-      this.renderMarkdown();
-    } finally {
-      this.renderingStreamFrame = false;
-    }
+  private runStreamingFrame(): void {
+    if (normalizeMarkdownStreamingRender(this.streamingRender) === 'progressive') this.renderProgressiveMarkdown();
+    else this.renderMarkdown();
   }
 
   protected override async getUpdateComplete(): Promise<boolean> {
-    const complete = await super.getUpdateComplete();
-    const settled = this.streamingRenderFrames.settled;
-    if (!settled) return complete;
-    await settled;
+    await super.getUpdateComplete();
+    const generation = this.progressiveInputGeneration;
+    const remaining = (this.content?.length ?? 0) - (this.progressiveSession?.end ?? 0);
+    const cap = Math.ceil(Math.max(0, remaining) / 65_536) + 2;
+    for (let frames = 0; frames < cap && this.streamingRenderRaf !== undefined; frames++) {
+      await this.streamingRenderFrames.settled;
+      await super.getUpdateComplete();
+      if (generation !== this.progressiveInputGeneration) break;
+    }
     return super.getUpdateComplete();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.ensureCopyButtonRegistration();
-    this.decorateFencedCodeBlocks();
     applyMarkdownAriaBusy(this, !this.deps || this.streaming);
+    const tableLabel = markdownTableRegionLabel(this.boundLocalize);
+    if (changed.has('renderedHtml') || changed.has('renderedBlocks') || tableLabel !== this.tableRegionLabel) {
+      this.tableRegionLabel = tableLabel;
+      labelMarkdownTableWrappers(this.contentRoot(), tableLabel);
+    }
+    const remembered = this.rememberedFocus;
+    this.rememberedFocus = undefined;
+    if (remembered && !remembered.node.isConnected) {
+      let active = this.ownerDocument.activeElement;
+      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+      if (!active || active === this.ownerDocument.body || active === this.ownerDocument.documentElement) {
+        this.renderRoot.querySelectorAll<HTMLElement>(remembered.selector)[remembered.index]?.focus({ preventScroll: true });
+      }
+    }
     const locale = this.effectiveLocale;
     const localeChanged = this.textQuoteLocale !== undefined && this.textQuoteLocale !== locale;
     this.textQuoteLocale = locale;
     const renderedContentChanged =
-      changed.has('renderedHtml') || changed.has('renderedBlocks') || changed.has('streamingTail');
+      changed.has('renderedHtml') || changed.has('renderedBlocks') || changed.has('streamingTail') || changed.has('progressiveRevision');
     if (localeChanged || renderedContentChanged || changed.has('content')) {
       this.textQuoteIndexCache = undefined;
     }
@@ -440,237 +468,140 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     }
   }
 
-  /** Immediately refreshes the current source after parser configuration changes. */
+  /** Immediately refreshes source, preserving unchanged settled groups during progressive rendering. */
   renderMarkdown(): void {
     if (this.streaming) {
-      if (this.streamingRender === 'progressive') {
-        if (!this.renderingStreamFrame) this.resetProgressiveMarkdown();
-        this.renderProgressiveMarkdown();
+      if (normalizeMarkdownStreamingRender(this.streamingRender) === 'progressive') {
+        this.progressiveRebuild = Boolean(this.progressiveSession);
+        this.scheduleStreamingRender();
         return;
       }
       this.renderedHtml = null;
-      this.renderedBlocks = [];
-      this.streamingTail = '';
+      this.resetProgressiveMarkdown();
       this.headingTree = [];
+      this.codeHeader.setBlocks([]);
       return;
     }
     const deps = this.deps;
     if (!deps) return;
-    const variant = this.markdownVariant;
+    const session = this.progressiveSession;
+    session?.update(this.content ?? '');
+    session?.step(true, true);
+    this.codeBlocks = [];
     const outcome = renderMarkdownDocument({
-      tag: variant.tag,
-      deps,
-      htmlMode: normalizeMarkdownHtmlMode(this.htmlMode),
-      math: this.math,
-      parse: (marked, pendingKeys, headingTreeOut) =>
-        this.parseMarkdown(marked, pendingKeys, headingTreeOut),
+      tag: this.markdownVariant.tag, deps, htmlMode: normalizeMarkdownHtmlMode(this.htmlMode), math: this.math,
+      codeBlockHeader: this.codeBlockHeader || this.codeBlockChrome,
+      parse: (marked, pendingKeys, headingTreeOut) => this.parseMarkdown(marked, pendingKeys, headingTreeOut),
       onParsed: () => this.maybeLoadKatex(),
-      isKatexConfirmedMissing: () => variant.katexState.isConfirmedMissing(),
+      isKatexConfirmedMissing: () => this.markdownVariant.katexState.isConfirmedMissing(),
     });
     if (outcome.headingTree) this.headingTree = outcome.headingTree;
     if (outcome.status === 'fallback') {
       this.renderedHtml = null;
-      this.renderedBlocks = [];
-      this.streamingTail = '';
+      this.resetProgressiveMarkdown();
+      this.codeHeader.setBlocks([]);
       this.emit('lr-render-error', { error: outcome.error });
       return;
     }
+    const mode = normalizeMarkdownHtmlMode(this.htmlMode);
+    const adopt = session && !session.failed && session.blocks.map((block) => block.html).join('') === outcome.html &&
+      (mode !== 'trusted' || !session.blocks.some((block) => block.hasRawHtml)) &&
+      (mode === 'sanitize' || session.blocks.slice(0, -1).every((block) => block.balanced));
+    if (adopt) { this.progressiveAdopted = true; this.syncProgressiveMarkdown(); }
+    else this.resetProgressiveMarkdown();
     this.renderedHtml = outcome.html;
-    this.renderedBlocks = [];
-    this.streamingTail = '';
+    this.codeHeader.setBlocks(this.codeBlocks);
     if (outcome.mathFailed) this.reportMathFailure();
-    if (
-      outcome.pendingKeys.length > 0 &&
-      this.highlightCode &&
-      !this.streaming
-    ) {
-      void this.highlightPending(outcome.pendingKeys);
-    }
+    if (outcome.pendingKeys.length > 0 && this.highlightCode) void this.highlightPending(outcome.pendingKeys);
   }
 
   private resetProgressiveMarkdown(): void {
-    this.markdownStream.reset();
-    this.streamSlugger = new Slugger();
-    this.nextStreamBlockId = 0;
-    this.progressiveBlocks.clear();
-    this.progressiveFailed = false;
-    if (this.renderedBlocks.length > 0) this.renderedBlocks = [];
-    if (this.streamingTail !== '') this.streamingTail = '';
+    this.progressiveSession = undefined;
+    this.progressiveAdopted = false;
+    this.progressiveRebuild = false;
+    if (this.renderedBlocks.length) this.renderedBlocks = [];
+    this.streamingTail = null;
+  }
+
+  private createProgressiveSession(previous?: MarkdownProgressiveSession): MarkdownProgressiveSession | undefined {
+    const deps = this.deps;
+    const mode = normalizeMarkdownHtmlMode(this.htmlMode);
+    if (!deps?.marked || mode === 'sanitize' && !deps.DOMPurify) return undefined;
+    const context = createMarkdownRenderContext(this.markdownParseOptions(deps.marked, '', [], [], undefined, []));
+    if (!markdownProgressiveEligible(context.instance, this.gfm)) {
+      devWarnOnce('lyra-markdown-progressive-unavailable', '<lr-markdown>: this parser configuration uses plain streaming.');
+      return undefined;
+    }
+    const policy = markdownSanitizerPolicy({ htmlMode: mode, math: this.math, codeBlockHeader: this.codeBlockHeader || this.codeBlockChrome });
+    const activeHighlightKeys = new Set<string>();
+    const session = new MarkdownProgressiveSession({
+      parser: context.instance, gfm: this.gfm, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
+      render: (source, rawSource, links, state, slugger, prefix) => {
+        const pendingKeys: PendingHighlight[] = [], headings: MarkdownHeadingItem[] = [];
+        const records: MarkdownCodeBlockRecord[] = [];
+        const options = this.markdownParseOptions(deps.marked!, source, pendingKeys, headings, slugger, records, rawSource);
+        options.codeBlockIndexOffset = prefix.length;
+        options.activeHighlightKeys = activeHighlightKeys;
+        options.highlightCodeOption = this.highlightCode;
+        const result = createMarkdownRenderContext(options).render(source, { links, state });
+        this.maybeLoadKatex();
+        return { ...result, rawHtml: result.html, html: finishMarkdownHtml(deps, policy, result.html), headings, codeBlocks: records, pendingKeys };
+      },
+    }, previous?.blocks);
+    session.update(this.content ?? '');
+    if (previous) session.step(false, true, previous.end);
+    return session;
   }
 
   private renderProgressiveMarkdown(): void {
+    const previous = this.progressiveSession;
+    if (!previous || this.progressiveRebuild) {
+      this.progressiveSession = this.createProgressiveSession(previous);
+      this.progressiveRebuild = false;
+    }
+    const session = this.progressiveSession;
+    if (!session) {
+      this.renderedHtml = null;
+      this.renderedBlocks = [];
+      this.streamingTail = null;
+      this.headingTree = [];
+      this.codeHeader.setBlocks([]);
+      return;
+    }
+    session.update(this.content ?? '');
+    session.step();
     this.renderedHtml = '';
-    const source = this.content ?? '';
-    const parser = this.marked as (LyraMarkedParser & {
-      lexer?: (markdown: string, options?: { gfm?: boolean }) => MarkdownBlockToken[];
-    }) | undefined;
-    if (this.progressiveFailed) {
-      this.renderedBlocks = [];
-      this.streamingTail = source;
-      this.headingTree = [];
-      return;
-    }
-    const deps = this.deps;
-    if (!deps) {
-      this.renderedHtml = null;
-      this.renderedBlocks = [];
-      this.streamingTail = source;
-      return;
-    }
-    if (!parser || typeof parser.lexer !== 'function') {
-      this.progressiveFailed = true;
-      this.renderedHtml = null;
-      this.renderedBlocks = [];
-      this.streamingTail = source;
-      this.headingTree = [];
-      this.emit('lr-render-error', {
-        error: new TypeError('The loaded marked parser does not expose its block lexer.'),
-      });
-      return;
-    }
-
-    const snapshot = this.markdownStream.update(source, (tail) =>
-      parser.lexer!.call(parser, tail, { gfm: this.gfm })
-    );
-    if (snapshot.reset) {
-      this.streamSlugger = new Slugger();
-      this.nextStreamBlockId = 0;
-      this.headingTree = [];
-      this.renderedBlocks = [];
-      this.progressiveBlocks.clear();
-    }
-    const variant = this.markdownVariant;
-    const additions: Array<{ id: string; html: string }> = [];
-    for (const block of snapshot.newSettledBlocks) {
-      if (!block) continue;
-      const sluggerBefore = this.streamSlugger.clone();
-      const headingTree: MarkdownHeadingItem[] = [];
-      const outcome = renderMarkdownDocument({
-        tag: variant.tag,
-        deps,
-        htmlMode: normalizeMarkdownHtmlMode(this.htmlMode),
-        math: this.math,
-        parse: (marked, pendingKeys, headingTreeOut) =>
-          this.parseMarkdown(
-            marked,
-            pendingKeys,
-            headingTreeOut,
-            block,
-            this.streamSlugger,
-            snapshot.definitions
-          ),
-        onParsed: () => this.maybeLoadKatex(),
-        isKatexConfirmedMissing: () => variant.katexState.isConfirmedMissing(),
-      });
-      if (outcome.status === 'fallback') {
-        this.progressiveFailed = true;
-        this.renderedHtml = null;
-        this.renderedBlocks = [];
-        this.streamingTail = source;
-        this.headingTree = [];
-        this.emit('lr-render-error', { error: outcome.error });
-        return;
-      }
-      headingTree.push(...outcome.headingTree);
-      this.headingTree.push(...headingTree);
-      additions.push({ id: `stream-${this.nextStreamBlockId++}`, html: outcome.html });
-      const blockId = additions[additions.length - 1]!.id;
-      this.progressiveBlocks.set(blockId, {
-        id: blockId,
-        source: block,
-        headings: [...headingTree],
-        definitions: [...snapshot.definitions],
-        highlightKeys: outcome.pendingKeys.map(({ key }) => key),
-        sluggerBefore,
-      });
-      if (outcome.mathFailed) this.reportMathFailure();
-      if (outcome.pendingKeys.length > 0 && this.highlightCode) {
-        void this.highlightPending(outcome.pendingKeys);
-      }
-    }
-    if (additions.length > 0) this.renderedBlocks = [...this.renderedBlocks, ...additions];
-    const openFence = markdownOpenFence(snapshot.tail);
-    this.streamingTail = openFence
-      ? html`<pre part="code-block" data-open-fence="true" dir="ltr"><code>${openFence.code}</code></pre>`
-      : snapshot.tail;
+    this.syncProgressiveMarkdown();
+    const pending = session.nextHighlight();
+    if (pending && this.highlightCode) void this.highlightPending([pending]);
+    if (session.pending) this.scheduleStreamingRender();
   }
+
+  private syncProgressiveMarkdown(): void {
+    const session = this.progressiveSession;
+    if (!session) return;
+    if (session.blocks.length !== this.renderedBlocks.length || session.blocks.some((block, index) => block.html !== this.renderedBlocks[index]?.html)) {
+      this.renderedBlocks = session.blocks.map((block, index) => ({ id: `stream-${index}`, html: block.html }));
+      this.progressiveRevision++;
+    }
+    const tail = session.tail;
+    if (tail?.kind !== this.streamingTail?.kind || tail?.text !== this.streamingTail?.text) this.streamingTail = tail;
+    this.headingTree = session.headings;
+    this.codeHeader.setBlocks(session.records);
+  }
+
+  /** @internal Deterministic counters for bounded progressive work. */
+  protected progressiveStats(): MarkdownProgressiveStats | undefined { return this.progressiveSession?.stats; }
 
   private maybeLoadKatex(): void {
     if (this.math)
       this.markdownVariant.katexState.startLoad(this.handleKatexResolved);
   }
 
-  private ensureCopyButtonRegistration(): void {
-    if (!this.isConnected || !this.codeBlockChrome || this.copyButtonRegistration) return;
-    this.copyButtonRegistration = import('../../utility/copy-button/copy-button.js')
-      .then(() => {
-        if (this.isConnected) this.requestUpdate();
-      })
-      .catch((error: unknown) => {
-        this.emit('lr-render-error', { error });
-      });
-  }
-
-  private decorateFencedCodeBlocks(): void {
-    const root = this.contentRoot();
-    if (!root) return;
-    const copyTag = tag('copy-button');
-    if (!this.codeBlockChrome) {
-      for (const header of root.querySelectorAll<HTMLElement>('[part~="code-block-header"]')) {
-        if (this.codeChromeHeaders.has(header)) header.remove();
-      }
-      return;
-    }
-    if (!this.ownerDocument.defaultView?.customElements.get(copyTag)) return;
-    for (const pre of root.querySelectorAll<HTMLPreElement>('pre[data-fenced="true"]')) {
-      if (pre.previousElementSibling && this.codeChromeHeaders.has(pre.previousElementSibling)) {
-        const header = pre.previousElementSibling;
-        const code = pre.querySelector('code');
-        const source = code?.textContent ?? '';
-        const language = code?.className.match(/(?:^|\s)language-([^\s]+)/)?.[1] ?? '';
-        const label = header.querySelector<HTMLElement>('[part~="code-block-language"]');
-        const copy = header.querySelector<HTMLElement & { value?: string; copyLabel?: string }>(copyTag);
-        if (label) {
-          label.textContent = language
-            ? this.localize('codeRegionWithLanguage', undefined, { language })
-            : this.localize('codeRegion');
-        }
-        if (copy) {
-          copy.value = source;
-          copy.copyLabel = this.localize('copyCode');
-        }
-        continue;
-      }
-      const code = pre.querySelector('code');
-      const source = code?.textContent ?? '';
-      const language = code?.className.match(/(?:^|\s)language-([^\s]+)/)?.[1] ?? '';
-      const header = this.ownerDocument.createElement('div');
-      this.codeChromeHeaders.add(header);
-      header.setAttribute('part', 'code-block-header');
-      const label = this.ownerDocument.createElement('span');
-      label.setAttribute('part', 'code-block-language');
-      label.textContent = language
-        ? this.localize('codeRegionWithLanguage', undefined, { language })
-        : this.localize('codeRegion');
-      const copy = this.ownerDocument.createElement(copyTag) as HTMLElement & {
-        value: string;
-        copyLabel: string;
-      };
-      copy.setAttribute('part', 'code-block-copy');
-      copy.value = source;
-      copy.copyLabel = this.localize('copyCode');
-      copy.setAttribute('tooltip', 'none');
-      header.append(label, copy);
-      pre.parentNode?.insertBefore(header, pre);
-    }
-  }
-
   private reportMathFailure(): void {
     if (this.mathFailureReported) return;
     this.mathFailureReported = true;
-    this.emit('lr-render-error', {
-      error: markdownMathPeerError(this.markdownVariant.tag),
-    });
+    this.emit('lr-render-error', { error: markdownMathPeerError(this.markdownVariant.tag) });
   }
 
   private getCachedHighlight(key: string): string | undefined {
@@ -690,11 +621,11 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     pendingKeys: PendingHighlight[]
   ): Promise<void> {
     const work = pendingKeys.filter(
-      ({ key }) => !this.inFlightHighlightKeys.has(key)
+      ({ key }) => this.inFlightHighlightKeys.get(key) !== this.highlightToken
     );
     if (work.length === 0) return;
-    for (const { key } of work) this.inFlightHighlightKeys.add(key);
     const token = this.highlightToken;
+    for (const { key } of work) this.inFlightHighlightKeys.set(key, token);
     const languages = this.languages;
     const isCurrent = (): boolean =>
       token === this.highlightToken && this.isConnected;
@@ -736,90 +667,38 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       for (const { key } of work) addFailedHighlightKey(this.failedHighlightKeys, key);
       devWarnOnce(HIGHLIGHT_FAILURE_WARNING_KEY, HIGHLIGHT_FAILURE_WARNING);
     } finally {
-      for (const { key } of work) this.inFlightHighlightKeys.delete(key);
+      for (const { key } of work) if (this.inFlightHighlightKeys.get(key) === token) this.inFlightHighlightKeys.delete(key);
     }
     if (!this.isConnected) return;
-    if (this.streaming && this.streamingRender === 'progressive') {
-      this.refreshProgressiveHighlights(work.map(({ key }) => key));
-    } else {
-      this.renderMarkdown();
-    }
+    if (this.progressiveSession) {
+      this.progressiveSession.invalidateHighlights(work.map(({ key }) => key));
+      if (this.streaming) this.scheduleStreamingRender();
+      else this.renderMarkdown();
+    } else this.renderMarkdown();
   }
 
-  /** Re-renders blocks whose Shiki cache changed while preserving unrelated settled blocks. */
-  private refreshProgressiveHighlights(keys: readonly string[]): void {
-    const keySet = new Set(keys);
-    const deps = this.deps;
-    if (!deps || keySet.size === 0) return;
-    const replacements = new Map<string, string>();
-    for (const block of this.progressiveBlocks.values()) {
-      if (!block.highlightKeys.some((key) => keySet.has(key))) continue;
-      const outcome = renderMarkdownDocument({
-        tag: this.markdownVariant.tag,
-        deps,
-        htmlMode: normalizeMarkdownHtmlMode(this.htmlMode),
-        math: this.math,
-        parse: (marked, pendingKeys, headingTreeOut) =>
-          this.parseMarkdown(
-            marked,
-            pendingKeys,
-            headingTreeOut,
-            block.source,
-            block.sluggerBefore.clone(),
-            block.definitions
-          ),
-        onParsed: () => this.maybeLoadKatex(),
-        isKatexConfirmedMissing: () => this.markdownVariant.katexState.isConfirmedMissing(),
-      });
-      if (outcome.status !== 'fallback') {
-        replacements.set(block.id, outcome.html);
-        block.headings = outcome.headingTree;
-        block.highlightKeys = outcome.pendingKeys.map(({ key }) => key);
-      }
-    }
-    if (replacements.size === 0) return;
-    this.renderedBlocks = this.renderedBlocks.map((block) => {
-      const html = replacements.get(block.id);
-      return html === undefined ? block : { ...block, html };
-    });
+  private parseMarkdown(marked: MarkedModule, pendingKeys: PendingHighlight[], headingTreeOut: MarkdownHeadingItem[]): { html: string; hadMathFallback: boolean } {
+    const source = this.content ?? '';
+    return parseMarkdownDocument(this.markdownParseOptions(marked,
+      normalizeMarkdownLeadingTabs(source, finiteInteger(this.tabSize, 4, 1, 32)), pendingKeys, headingTreeOut, undefined, this.codeBlocks, source));
   }
 
-  private parseMarkdown(
-    marked: MarkedModule,
-    pendingKeys: PendingHighlight[],
-    headingTreeOut: MarkdownHeadingItem[],
-    contentOverride?: string,
-    slugger?: Slugger,
-    referenceDefinitions: readonly string[] = []
-  ): { html: string; hadMathFallback: boolean } {
+  private markdownParseOptions(marked: MarkedModule, content: string, pendingKeys: PendingHighlight[], headingTreeOut: MarkdownHeadingItem[],
+    slugger?: Slugger, codeBlocksOut: MarkdownCodeBlockRecord[] = [], rawContent = content): ParseMarkdownOptions {
     const variant = this.markdownVariant;
-    return parseMarkdownDocument({
-      marked,
-      slugger,
-      content: normalizeMarkdownLeadingTabs(
-        [...referenceDefinitions, contentOverride ?? this.content ?? ''].join('\n'),
-        finiteInteger(this.tabSize, 4, 1, 32)
-      ),
-      markedConfigurations: [
-        variant.sharedParser.get(marked)?.defaults,
-        this.marked?.defaults,
-      ],
-      gfm: this.gfm,
-      linkTarget: this.linkTarget,
-      headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
+    return {
+      marked, slugger, content, pendingKeys, headingTreeOut, codeBlocksOut, rawContent,
+      markedConfigurations: [variant.sharedParser.get(marked)?.defaults, this.marked?.defaults],
+      gfm: this.gfm, linkTarget: this.linkTarget, headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
       escapeHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'escape',
       trustedHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'trusted',
-      codeBlockChromeOption: this.codeBlockChrome,
-      highlightCodeOption:
-        this.highlightCode && (!this.streaming || contentOverride !== undefined),
-      getCachedHighlight: (key) => this.getCachedHighlight(key),
-      failedHighlightKeys: this.failedHighlightKeys,
-      headingAnchorsOption: this.headingAnchors,
-      mathOption: this.math,
+      codeBlockHeaderOption: this.codeBlockHeader || this.codeBlockChrome,
+      codeFrameNonce: this.codeBlockHeader || this.codeBlockChrome ? this.codeHeader.nonce : undefined, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
+      highlightCodeOption: this.highlightCode && !this.streaming,
+      getCachedHighlight: (key) => this.getCachedHighlight(key), failedHighlightKeys: this.failedHighlightKeys,
+      headingAnchorsOption: this.headingAnchors, mathOption: this.math,
       cachedKatex: this.math ? variant.katexState.getIfLoaded() : null,
-      pendingKeys,
-      headingTreeOut,
-    });
+    };
   }
 
   /** Returns a defensive copy of the latest document-ordered heading outline. */
@@ -876,7 +755,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       }
       handle.setActive(null);
     }
-    const scope = scopeFromElement(root);
+    const markers = this.progressiveSession ? this.renderedBlocks.length * 2 + 8 : 0;
+    const scope = scopeFromElement(root, { maxTraversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes + markers });
     this.markdownTextScopeBuilds++;
     if (
       cached?.root === root
@@ -905,6 +785,16 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.resolvedHighlightRanges = [];
     const root = this.contentRoot();
     if (!root) return;
+    if (this.highlights.length === 0) {
+      this.highlightHandle?.release();
+      this.highlightHandle = undefined;
+      return;
+    }
+    if (this.streaming && this.progressiveSession && !supportsCustomHighlights(this.ownerDocument)) {
+      this.highlightHandle?.release();
+      this.highlightHandle = undefined;
+      return;
+    }
     const index = this.markdownTextIndex(root);
     this.resolvedHighlightRanges = repaintMarkdownHighlights({
       locale: this.effectiveLocale,
@@ -920,6 +810,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   }
 
   private readonly onContentClick = (event: MouseEvent): void => {
+    if (this.codeHeader.handleClick(event)) return;
     const href = internalLinkHrefFrom(event, this.internalLinkPrefix);
     if (href !== null) event.preventDefault();
     const highlightId = hitTestHighlightRanges(
@@ -933,13 +824,14 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   override render(): TemplateResult {
     const progressiveRendering =
-      this.streaming && this.streamingRender === 'progressive' && this.renderedHtml !== null;
+      Boolean(this.progressiveSession && (this.streaming || this.progressiveAdopted));
     return renderMarkdownContent({
       content: this.content ?? '',
       sanitized: normalizeMarkdownHtmlMode(this.htmlMode) === 'sanitize',
       renderedHtml: this.renderedHtml,
-      renderedBlocks: progressiveRendering ? this.renderedBlocks : undefined,
-      streamingTail: progressiveRendering ? this.streamingTail : undefined,
+      fallbackSegments: !progressiveRendering && this.renderedHtml === null
+        ? this.fallbackCode.segments(this.content ?? '') : null,
+      progressive: progressiveRendering ? { blocks: this.renderedBlocks, tail: this.streamingTail } : null,
       hostAriaLabel: this.getAttribute('aria-label'),
       isDarkTheme: this.isDarkTheme,
       onClick: this.onContentClick,

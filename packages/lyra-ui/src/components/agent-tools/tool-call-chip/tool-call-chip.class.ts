@@ -7,6 +7,7 @@ import {
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
@@ -346,7 +347,8 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     this.hideTooltip();
   };
 
-  private onFocus = (): void => {
+  private onFocus = (event: FocusEvent): void => {
+    if (!isKeyboardFocusEvent(event)) return;
     this.focused = true;
     this.showTooltip();
   };

@@ -1,3 +1,4 @@
+import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -179,6 +180,9 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   static override styles = [LyraElement.styles, styles];
 
   /** Accessible name and visible heading for the workspace. */
+  /** Forwarded to each message's parts to render settled blocks during a progressive stream. */
+  @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
+
   @property() label?: string;
 
   /** Host-level accessible-name override for the internal `role="region"` root. */
@@ -351,7 +355,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
         @lr-message-retry=${this.onMessageRetry}
       >
         ${message.parts?.length
-          ? html`<lr-message-parts .parts=${message.parts}></lr-message-parts>`
+          ? html`<lr-message-parts .parts=${message.parts} .streamingRender=${this.streamingRender}></lr-message-parts>`
           : html`<lr-markdown
               .content=${message.text ?? ''}
               @lr-render-error=${this.stopOwnedEvent}

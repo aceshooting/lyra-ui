@@ -36,3 +36,5 @@ export * from './tab-group/tab-panel.js';
 export * from './tab-group/tab.js';
 export * from './virtual-list/virtual-list.js';
 export * from './widget/widget.js';
+export * from './menubar/menubar.js';
+export * from './menubar/menubar-item.js';

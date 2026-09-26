@@ -101,5 +101,12 @@ export function releaseNavigationMenuItem(item: HTMLElement, owner: HTMLElement)
 }
 
 export function navigationMenuOwner(item: HTMLElement): NavigationMenuOwnerContext | undefined {
-  return owners.get(item);
+  const context = owners.get(item);
+  if (!context) return undefined;
+  if (!context.owner.isConnected || item.parentElement !== context.owner) {
+    owners.delete(item);
+    requestItemUpdate(item);
+    return undefined;
+  }
+  return context;
 }

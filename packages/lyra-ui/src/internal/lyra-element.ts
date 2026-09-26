@@ -98,6 +98,7 @@ import {
   subscribeLyraLocaleForHost,
 } from './localization-runtime.js';
 import type { LyraLocaleStrings } from './localization.js';
+import { trackInputModality } from './focus-modality.js';
 
 export interface LyraEmitOptions {
   /** Set only for events whose listener may veto an operation before it runs. */
@@ -1413,6 +1414,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
         .knownUnobservedAttributes ?? []
     );
     recordLyraOwnerDocumentConnection(this);
+    trackInputModality(this.ownerDocument);
     // A reconnected element may sit under a different `lang`/`dir` ancestor,
     // and Lit schedules no update for a pure DOM move — the memo from the
     // previous tree must not carry over.

@@ -59,7 +59,7 @@ for the page.
 | `marked` | `^18.0.11` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |
 | `papaparse` | `^5.7.0` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.3.289` | `lr-pdf-viewer` |
-| `postal-mime` | `^3.0.0` | `lr-email-viewer` |
+| `postal-mime` | `^3.0.1` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
 | `react` | `>=19 <20` | type-only `@aceshooting/lyra-ui/custom-elements-jsx` entry (no runtime import) |
 | `shiki` | `^4.4.3` | `lr-agent-workspace`, `lr-code-block`, `lr-code-block-core`, `lr-dashboard-grid`, `lr-diff-view`, `lr-document-compare`, `lr-eval-result`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |

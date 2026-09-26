@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   copiedToClipboard: 'در کلیپ‌بورد کپی شد',
   codeRegion: 'کد',
   codeRegionWithLanguage: 'کد {language}',
+  markdownTableRegion: 'جدول',
   codeBlockLineLabel: 'خط {line}',
   untitledConversation: 'گفت‌وگوی بدون عنوان',
   generationStatusElapsedSeconds: '{seconds} ثانیه',

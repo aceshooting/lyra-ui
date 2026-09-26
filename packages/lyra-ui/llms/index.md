@@ -2,7 +2,7 @@
 
 # Component index
 
-294 custom elements, grouped by the source family they live in.
+296 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -81,7 +81,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-graph-query-builder` · lr-graph-query-builder.js · `stable` since `4.1.0` — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-condition-builder` · lr-condition-builder.js · `stable` since `9.0.0` — a composable structured-condition builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with on...
 
-## Layout, navigation & structure — `components/layout/` (38)
+## Layout, navigation & structure — `components/layout/` (40)
 
 - `lr-multi-split` · lr-multi-split.js · `stable` since `9.0.0` — resizable panels for dashboard layouts.
 - `lr-split-panel` · lr-split-panel.js · `stable` since `8.0.0` — an accessible, draggable two-pane layout.
@@ -99,7 +99,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-reorder-item` · lr-reorder-item.js · `stable` since `6.0.0` — one row inside `<lr-reorder-list>`.
 - `lr-segmented` · lr-segmented.js · `stable` since `4.0.0` — a single-select button row with the WAI-ARIA APG `radiogroup` contract built in: `role="radiogroup"`/`role="radio"`, roving tabindex, aut...
 - `lr-virtual-list` · lr-virtual-list.js · `stable` since `4.0.0` — a generic windowed/virtualized list host.
-- `lr-app-rail` · lr-app-rail.js · `stable` since `4.0.0` — a responsive navigation rail that adapts across three presentations as the *viewport* narrows (not this element's own inline size — see t...
+- `lr-app-rail` · lr-app-rail.js · `stable` since `4.0.0` — the library's application sidebar, a responsive navigation rail across three presentations as the *viewport* narrows (not this element's...
 - `lr-app-rail-item` · lr-app-rail-item.js · `stable` since `4.0.0` — an explicit icon/label navigation item for `<lr-app-rail>`.
 - `lr-app-rail-group` · lr-app-rail-group.js · `experimental` since `16.0.0` — a titled section of navigation items inside `<lr-app-rail>`.
 - `lr-responsive-panel` · lr-responsive-panel.js · `stable` since `4.0.0` — the same slotted content either docked inline in the page's normal layout flow (desktop) or presented as a full-screen/ bottom-sheet over...
@@ -107,6 +107,8 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-menu` · lr-menu.js · `stable` since `4.0.0` — the inline semantic controller mapped from `<sl-menu>`.
 - `lr-menu-item` · lr-menu-item.js · `stable` since `4.0.0` — a single action row inside `<lr-menu>`'s default slot.
 - `lr-dropdown-item` · lr-dropdown-item.js · `stable` since `4.0.0` — the Web Awesome-compatible name for a menu item.
+- `lr-menubar` · lr-menubar.js · `experimental` since `unreleased` — Horizontal application menubar with roving focus, RTL-aware arrow navigation, typeahead and hover switching.
+- `lr-menubar-item` · lr-menubar-item.js · `experimental` since `unreleased` — A menu title or plain action in an application menubar.
 - `lr-dock-panel` · lr-dock-panel.js · `stable` since `4.0.0` — a single panel docked to one edge of whatever contains it, resizable by dragging its inner edge.
 - `lr-card` · lr-card.js · `stable` since `4.0.0` — a generic, styled bordered content container: the "small bordered surface with padding" idiom common to hero highlights, clickable grid t...
 - `lr-command-palette` · lr-command-palette.js · `stable` since `4.0.0` — searchable application command menu with keyboard navigation.
@@ -181,7 +183,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-zoomable-frame` · lr-zoomable-frame.js · `stable` since `4.0.0` — a sandboxed iframe preview with discrete zoom controls.
 - `lr-pan-zoom` · lr-pan-zoom.js · `stable` since `8.0.0` — a scrollable frame for inspecting slotted or image content at a bounded zoom level.
 - `lr-attachment-chip` · lr-attachment-chip.js · `stable` since `4.0.0` — a compact chip representing one file queued for (or already part of) a chat message: a composer's pre-send attachment tray, or a sent mes...
-- `lr-file-icon` · lr-file-icon.js · `stable` since `4.0.0` — Displays a localized, tokenized file-type badge from a MIME type.
+- `lr-file-icon` · lr-file-icon.js · `stable` since `4.0.0` — Displays a file-format badge from a MIME type: an unlocalized format token or generic glyph, with a localized accessible name.
 - `lr-media-card` · lr-media-card.js · `stable` since `4.0.0` — a lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message body (e.g.
 - `lr-attachment-trigger` · lr-attachment-trigger.js · `stable` since `4.0.0` — a compact attach affordance designed for a chat composer's start slot (see `<lr-chat-composer>`'s own `start` slot, which this drops stra...
 - `lr-avatar` · lr-avatar.js · `stable` since `4.0.0` — a small, fixed-size identity marker: an image, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order.

@@ -227,6 +227,11 @@ sets the row's minimum block size for a denser or roomier menu, replacing a `::p
 item. A value below the 24px floor is your call, exactly as it is when overriding the shared ladder
 itself.
 
+Any element assigned to `details` counts as content, including a shadow-rendered
+`<lr-kbd slot="details" keys="mod+t">` chip or an icon. An intentionally empty placeholder element
+also shows the part and reserves one `--lr-menu-item-gap`; whitespace-only text and empty forwarding
+slots keep the part hidden. This also applies to `lr-dropdown-item`.
+
 ### Nested submenus
 
 Both supported authoring shapes use the `submenu` slot:

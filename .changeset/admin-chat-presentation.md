@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': minor
+"@aceshooting/lyra-ui": minor
 ---
 
 Fixes several component presentation defects: emoji-picker rows now fill the grid and its search

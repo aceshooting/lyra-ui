@@ -87,6 +87,14 @@ export const styles = css`
       var(--lr-color-brand-fill-quiet)
     );
   }
+  [part='playlist-item']:where([aria-current='true']):hover {
+    border-color: var(--lr-video-playlist-item-current-border-color, var(--lr-color-brand));
+    background: color-mix(in oklab, var(--lr-video-playlist-item-current-background, var(--lr-color-brand-fill-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='playlist-item']:where([aria-current='true']):active {
+    border-color: var(--lr-video-playlist-item-current-border-color, var(--lr-color-brand));
+    background: color-mix(in oklab, var(--lr-video-playlist-item-current-background, var(--lr-color-brand-fill-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
 
   [part='playlist-item']:where(:disabled) {
     color: var(--lr-color-text-quiet);

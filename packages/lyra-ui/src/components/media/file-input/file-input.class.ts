@@ -1422,7 +1422,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Resolves the accessible-name fallback: a non-empty form label wins; omission or an explicit
    *  empty label uses the localized default dropzone instruction. */
   private get effectiveLabel(): string {
-    return this.label == null || this.label === ''
+    return this.label == null || this.label.trim() === ''
       ? this.localize('fileInputDefaultLabel')
       : this.label;
   }
@@ -1471,7 +1471,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   override render(): TemplateResult {
     const label = this.effectiveLabel;
-    const hasLabel = this.withLabel || this.slotPresence.has('label') || (this.label ?? '').length > 0;
+    const hasLabel = this.withLabel || this.slotPresence.has('label') || (this.label ?? '').trim().length > 0;
     const explicitHostLabel = hostAriaLabel(this);
     const explicitAccessibleLabel = this.hasAttribute('accessible-label') || this.accessibleLabel
       ? this.accessibleLabel

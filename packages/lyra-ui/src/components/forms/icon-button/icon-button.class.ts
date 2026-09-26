@@ -74,7 +74,7 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * `<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a
  * slotted `<lr-flag>`) is never run through it.
  *
- * Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
+ * Host `aria-haspopup`, `aria-expanded` and `aria-keyshortcuts` values are forwarded reactively to the shadow-internal
  * native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions (mute,
  * favorite, pin); `aria-current` (`page`, `step`, `location`, `date`, `time`, `true`, `false`)
  * supports current-item icon buttons. Both follow attribute changes, removal and button/link
@@ -252,6 +252,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   @property() src?: string;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @property({ attribute: 'aria-haspopup' }) private triggerHasPopup: string | null = null;
+  @property({ attribute: 'aria-keyshortcuts' }) private triggerKeyShortcuts: string | null = null;
   @property({ attribute: 'aria-expanded' }) private triggerExpanded: string | null = null;
   @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
   @property({ attribute: 'aria-describedby' }) private triggerDescribedBy: string | null = null;
@@ -540,6 +541,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
         aria-label=${label}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-keyshortcuts=${this.triggerKeyShortcuts ?? nothing}
         aria-current=${current}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
@@ -557,6 +559,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
       aria-label=${label}
       aria-haspopup=${this.triggerHasPopup ?? nothing}
       aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-keyshortcuts=${this.triggerKeyShortcuts ?? nothing}
       aria-pressed=${pressed}
       aria-current=${current}
       aria-controls=${this.triggerControls || nothing}

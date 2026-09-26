@@ -1991,6 +1991,9 @@ ordinary case (an unsized host) — `resize="auto"`'s own growth and its
 
 ## `lr-button`
 
+Host `aria-keyshortcuts` is forwarded reactively to the internal native button or link, including
+attribute removal and button/link presentation changes.
+
 A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
 `type="reset"` are handled by the component itself via its browser-resolved form owner (including
 an external owner named by `form`), since a shadow-internal native button doesn't participate in a
@@ -2381,6 +2384,9 @@ box no matter what tier or override is in play.
 ---
 
 ## `lr-icon-button`
+
+Host `aria-keyshortcuts` is forwarded reactively to the internal native button or link, including
+attribute removal and button/link presentation changes.
 
 An accessible icon-only action/link with a native `<button>` inside. It is deliberately not a
 form-associated submitter; use `<lr-button circle type="submit|reset">` with an icon-only default

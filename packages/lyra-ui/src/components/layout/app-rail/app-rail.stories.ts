@@ -1,3 +1,7 @@
+import { ref } from 'lit/directives/ref.js';
+import '../page/page.js';
+import '../../utility/divider/divider.js';
+import type { LyraPage } from '../page/page.class.js';
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import "./app-rail.js";
@@ -485,4 +489,48 @@ export const GroupedSections: Story = {
         </lr-app-rail-group>
       </lr-app-rail>
     `),
+};
+
+const sidebarItems = () => html`
+  <lr-app-rail-group heading="Platform">
+    <lr-app-rail-item href="#projects" current tooltip><span slot="icon">▦</span>Projects<span slot="meta">3</span></lr-app-rail-item>
+    <lr-app-rail-item href="#account" tooltip expanded><span slot="icon">○</span>Account<lr-app-rail-item slot="children" href="#profile">Profile</lr-app-rail-item><lr-app-rail-item slot="children" href="#security">Security</lr-app-rail-item></lr-app-rail-item>
+  </lr-app-rail-group>
+  <lr-divider style="align-self:stretch"></lr-divider>
+  <lr-app-rail-item href="#settings" tooltip><span slot="icon">⚙</span>Settings</lr-app-rail-item>`;
+
+export const SidebarFloating: Story = {
+  parameters: { docs: { description: { story: 'A floating sidebar frame with grouped navigation. Collapse preserves nested expansion and exposes compact item tooltips.' } } },
+  render: () => html`<div style="display:flex;block-size:28rem;background:var(--lr-color-surface-raised)"><lr-app-rail label="Workspace" frame="card" collapsible>${sidebarItems()}</lr-app-rail><main style="flex:1;padding:var(--lr-space-l)"><h2>Projects</h2><p>Use the rail collapse control or narrow the preview.</p></main></div>`,
+};
+
+export const SidebarInset: Story = {
+  parameters: { docs: { description: { story: 'An edgeless rail beside a main content card. End actions stay visible, so this composition keeps the full-width rail.' } } },
+  render: () => html`<div style="display:flex;block-size:28rem;background:var(--lr-color-surface-raised)"><lr-app-rail label="Workspace" frame="plain" icon-only-breakpoint="0px">${sidebarItems()}<lr-app-rail-item><span slot="icon">＋</span>Create project<button slot="end" aria-label="Project options">⋯</button></lr-app-rail-item></lr-app-rail><main style="flex:1;margin:var(--lr-space-s);padding:var(--lr-space-l);background:var(--lr-color-surface);border:var(--lr-border-width-thin) solid var(--lr-color-border-subtle);border-radius:var(--lr-radius);box-shadow:var(--lr-shadow-s)"><h2>Project overview</h2><p>The content owns its card presentation.</p></main></div>`,
+};
+
+export const SidebarTriggerAndShortcut: Story = {
+  parameters: { docs: { description: { story: 'One external trigger calls toggle() in every mode. The rail manages its disclosure state and shortcut; Mod+B toggles unless focus is editing text. Offcanvas follows viewport breakpoints.' } } },
+  render: () => html`<div style="display:flex;block-size:28rem"><lr-app-rail id="sidebar-nav" label="Workspace" frame="card" hide-toggle trigger-collapses for="sidebar-trigger" hotkey="mod+b" storage-key="sidebar-story" persist="preferred-mode">${sidebarItems()}</lr-app-rail><main style="flex:1;padding:var(--lr-space-l)"><button id="sidebar-trigger" type="button" @click=${(event: Event) => {
+    (event.currentTarget as HTMLElement).closest('main')?.parentElement?.querySelector<LyraAppRail>('lr-app-rail')?.toggle();
+  }}>Toggle sidebar</button><h2>Workspace</h2><p>Try Mod+B, or the same trigger at a mobile viewport width.</p></main></div>`,
+};
+
+export const SidebarInPage: Story = {
+  parameters: { docs: { description: { story: 'The page owns an allocation-based drawer. Mobile uses its navigation toggle; desktop uses the rail collapse control. The rail is pinned full in mobile view, and its shortcut only acts on desktop.' } } },
+  render: () => {
+    let observer: MutationObserver | undefined;
+    return html`<div style="inline-size:100%;block-size:30rem"><style>lr-page[view='mobile'] lr-app-rail::part(collapse-toggle) { display:none; }</style><lr-page ${ref(element => {
+      observer?.disconnect();
+      if (!element) return;
+      const page = element as LyraPage;
+      queueMicrotask(() => {
+        if (!page.isConnected) return;
+        const rail = page.querySelector<LyraAppRail>('lr-app-rail');
+        if (!rail) return;
+        const sync = () => { rail.forceMode = page.view === 'mobile' ? 'full' : 'auto'; };
+        observer = new MutationObserver(sync); observer.observe(page, { attributes: true, attributeFilter: ['view'] }); sync();
+      });
+    })}><lr-app-rail slot="navigation" label="Workspace" frame="plain" mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="mod+b">${sidebarItems()}</lr-app-rail><h2>Allocation-aware workspace</h2><p>Resize this story's container to reveal the page navigation toggle.</p></lr-page></div>`;
+  },
 };

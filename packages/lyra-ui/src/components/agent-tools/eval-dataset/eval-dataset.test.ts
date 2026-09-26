@@ -3,6 +3,7 @@ import './eval-dataset.js';
 import type { LyraEvalDataset, EvalExample } from './eval-dataset.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
+import type { LyraFileInput } from '../../media/file-input/file-input.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function examples(): EvalExample[] {
@@ -16,6 +17,20 @@ function examples(): EvalExample[] {
 function gridRowCount(el: LyraEvalDataset): number {
   return el.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelectorAll('tbody tr[part="row"]').length;
 }
+
+it('uses one compact localized import instruction with a matching accessible name', async () => {
+  const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset .strings=${{
+    evalDatasetImportLabel: 'Importer les exemples',
+  }}></lr-eval-dataset>`);
+  const picker = el.shadowRoot!.querySelector<LyraFileInput>('lr-file-input')!;
+  await picker.updateComplete;
+  expect(picker.compact).to.equal(true);
+  expect(picker.label).to.equal(undefined);
+  expect(picker.querySelector('[slot="dropzone"]')!.textContent).to.equal('Importer les exemples');
+  expect(picker.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!.hidden).to.equal(true);
+  expect(picker.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('Importer les exemples');
+  await expect(picker).to.be.accessible();
+});
 
 it('renders every example as a table row', async () => {
   const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;

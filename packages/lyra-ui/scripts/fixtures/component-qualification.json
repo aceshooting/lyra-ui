@@ -56,8 +56,8 @@
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
   ],
   "summary": {
-    "componentCount": 294,
-    "automatedAccessibility": 293,
+    "componentCount": 296,
+    "automatedAccessibility": 295,
     "accessibilityExemptions": 1,
     "accessibilityMissing": 0,
     "visualEnrolled": 87,
@@ -1906,8 +1906,15 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
+              "line": 59,
+              "test": "keeps closed content outside native focus traversal and is accessible",
+              "target": "el",
+              "state": "open"
+            },
+            {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 1609,
+              "line": 1631,
               "test": "is accessible with the mobile overlay open",
               "target": "el",
               "state": "open"
@@ -1962,15 +1969,64 @@
               "state": "populated"
             },
             {
+              "file": "src/components/layout/app-rail/app-rail-item.test.ts",
+              "line": 1671,
+              "test": "hides nested disclosure in icon-only while preserving its expansion and accessible item",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 93,
+              "test": "is accessible with populated ${frame} sidebar content",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 93,
+              "test": "is accessible with populated ${frame} sidebar content",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 213,
+              "test": "opens and closes mobile through the shared vetoable toggle path",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 222,
+              "test": "hides nested disclosure in icon-only, preserves expanded and recovers nested focus",
+              "target": "rail",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 243,
+              "test": "uses one allocation-owned drawer and restores the inline preference when returning wide",
+              "target": "page",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 243,
+              "test": "uses one allocation-owned drawer and restores the inline preference when returning wide",
+              "target": "page",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 1596,
+              "line": 1618,
               "test": "is accessible in full mode with header/nav/footer content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3561,
+              "line": 3583,
               "test": "keeps the collapse toggle reachable and accessible in a populated rail",
               "target": "el",
               "state": "populated"
@@ -2012,7 +2068,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3044,
+              "line": 3066,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2116,7 +2172,9 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/app-rail/app-rail-item.test.ts",
+          "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
+          "src/components/layout/app-rail/app-rail-sidebar.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts",
           "src/components/layout/app-rail/positioning-strategy.test.ts"
         ],
@@ -2369,8 +2427,50 @@
               "state": "populated"
             },
             {
+              "file": "src/components/layout/app-rail/app-rail-item.test.ts",
+              "line": 1671,
+              "test": "hides nested disclosure in icon-only while preserving its expansion and accessible item",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 93,
+              "test": "is accessible with populated ${frame} sidebar content",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 93,
+              "test": "is accessible with populated ${frame} sidebar content",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 222,
+              "test": "hides nested disclosure in icon-only, preserves expanded and recovers nested focus",
+              "target": "rail",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 243,
+              "test": "uses one allocation-owned drawer and restores the inline preference when returning wide",
+              "target": "page",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+              "line": 243,
+              "test": "uses one allocation-owned drawer and restores the inline preference when returning wide",
+              "target": "page",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3561,
+              "line": 3583,
               "test": "keeps the collapse toggle reachable and accessible in a populated rail",
               "target": "el",
               "state": "populated"
@@ -2412,7 +2512,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail.test.ts",
-              "line": 3044,
+              "line": 3066,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2505,7 +2605,9 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/app-rail/app-rail-item.test.ts",
+          "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
+          "src/components/layout/app-rail/app-rail-sidebar.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts",
           "src/components/layout/app-rail/positioning-strategy.test.ts"
         ],
@@ -16535,35 +16637,35 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 115,
+              "line": 247,
               "test": "normalizes the additive inherited popup-role instead of corrupting dropdown semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 446,
+              "line": 578,
               "test": "preserves a consumer menu header/list/footer, live regions, focus order, and supplied name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 608,
+              "line": 740,
               "test": "mirrors submenu arrows and preserves the safe pointer corridor under RTL",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 997,
+              "line": 1129,
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 997,
+              "line": 1129,
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"
@@ -16602,7 +16704,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 609,
+              "line": 116,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -16695,7 +16797,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1013,
+              "line": 1024,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17981,14 +18083,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/entity-chip/entity-chip.test.ts",
-              "line": 296,
+              "line": 297,
               "test": "is accessible with and without preview content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/entity-chip/entity-chip.test.ts",
-              "line": 296,
+              "line": 297,
               "test": "is accessible with and without preview content",
               "target": "el",
               "state": "populated"
@@ -18460,7 +18562,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/eval-dataset/eval-dataset.test.ts",
-              "line": 477,
+              "line": 21,
+              "test": "uses one compact localized import instruction with a matching accessible name",
+              "target": "picker",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/eval-dataset/eval-dataset.test.ts",
+              "line": 492,
               "test": "is accessible fully populated: searchable, tag filters, a selection, and rendered rows",
               "target": "el",
               "state": "populated"
@@ -18480,7 +18589,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/eval-dataset/eval-dataset.test.ts",
-              "line": 492,
+              "line": 507,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -18497,7 +18606,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/eval-dataset/eval-dataset.test.ts",
-              "line": 501,
+              "line": 516,
               "kind": "320px allocation test signal"
             }
           ]
@@ -19115,14 +19224,14 @@
             },
             {
               "file": "src/components/media/file-icon/file-icon.test.ts",
-              "line": 121,
+              "line": 122,
               "test": "references consumer metadata descriptions only while label mode renders their target",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-icon/file-icon.test.ts",
-              "line": 266,
+              "line": 311,
               "test": "hides the complete label badge subtree from accessibility APIs when decorative",
               "target": "el",
               "state": "populated"
@@ -19142,7 +19251,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-icon/file-icon.test.ts",
-              "line": 302,
+              "line": 257,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -19278,35 +19387,42 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1050,
+              "line": 150,
+              "test": "treats whitespace-only labels as absent through dynamic changes without changing their readback",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/file-input/file-input.test.ts",
+              "line": 1091,
               "test": "renders standard error chrome in the form-control frame and describes the semantic dropzone",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1575,
+              "line": 1616,
               "test": "is accessible with the visible rejection region populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1644,
+              "line": 1685,
               "test": "is accessible while compact",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1651,
+              "line": 1692,
               "test": "keeps arbitrary slotted controls outside the dropzone button and does not open the picker from them",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1970,
+              "line": 2011,
               "test": "uses with-error to render and associate rich slotted error content on the first SSR-hinted render",
               "target": "el",
               "state": "populated"
@@ -19320,7 +19436,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 627,
+              "line": 668,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -19343,7 +19459,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "line": 1724,
+              "line": 1765,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27661,7 +27777,7 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
+          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -27701,23 +27817,28 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/markdown/markdown-direction.test.ts",
+              "line": 11,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
         },
         "narrowAllocation": {
           "applicability": "applicable",
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 166,
+              "file": "src/components/conversation/markdown/markdown-tables.test.ts",
+              "line": 9,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27820,8 +27941,7 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
-        "No component-owned motion declaration or programmatic animation was detected.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -27834,10 +27954,20 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/markdown/katex-loader.test.ts",
+          "src/components/conversation/markdown/markdown-code-chrome.test.ts",
+          "src/components/conversation/markdown/markdown-code-header.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
+          "src/components/conversation/markdown/markdown-direction.test.ts",
+          "src/components/conversation/markdown/markdown-fallback-code.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
+          "src/components/conversation/markdown/markdown-presentation.test.ts",
+          "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
+          "src/components/conversation/markdown/markdown-streaming-render.test.ts",
+          "src/components/conversation/markdown/markdown-streaming.test.ts",
+          "src/components/conversation/markdown/markdown-tables.test.ts",
+          "src/components/conversation/markdown/markdown-task-items.test.ts",
           "src/components/conversation/markdown/markdown.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -27854,7 +27984,7 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
+          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -27902,23 +28032,28 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/markdown/markdown-direction.test.ts",
+              "line": 11,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
         },
         "narrowAllocation": {
           "applicability": "applicable",
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/markdown/markdown.test.ts",
-              "line": 166,
+              "file": "src/components/conversation/markdown/markdown-tables.test.ts",
+              "line": 9,
               "kind": "320px allocation test signal"
             }
           ]
@@ -28010,8 +28145,7 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
-        "No component-owned motion declaration or programmatic animation was detected.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -28024,10 +28158,20 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/markdown/katex-loader.test.ts",
+          "src/components/conversation/markdown/markdown-code-chrome.test.ts",
+          "src/components/conversation/markdown/markdown-code-header.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
+          "src/components/conversation/markdown/markdown-direction.test.ts",
+          "src/components/conversation/markdown/markdown-fallback-code.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
+          "src/components/conversation/markdown/markdown-presentation.test.ts",
+          "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
+          "src/components/conversation/markdown/markdown-streaming-render.test.ts",
+          "src/components/conversation/markdown/markdown-streaming.test.ts",
+          "src/components/conversation/markdown/markdown-tables.test.ts",
+          "src/components/conversation/markdown/markdown-task-items.test.ts",
           "src/components/conversation/markdown/markdown.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -29448,6 +29592,388 @@
       }
     },
     {
+      "tag": "lr-menubar",
+      "family": "layout",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "rtl",
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar-item.test.ts",
+              "line": 6,
+              "test": "is accessible as an open menu title and a plain action in the owning menubar",
+              "target": "file",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menubar/menubar-item.test.ts",
+              "line": 6,
+              "test": "is accessible as an open menu title and a plain action in the owning menubar",
+              "target": "help",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 95,
+              "test": "is accessible collapsed and populated with an open nested submenu and shortcut",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 95,
+              "test": "is accessible collapsed and populated with an open nested submenu and shortcut",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "No component-local rendered RTL assertion is recorded."
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 416,
+              "kind": "reduced-motion test signal"
+            }
+          ]
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 360,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": "aceshooting",
+          "reviewedAt": "2026-09-11",
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar-item.class.ts",
+              "line": 224,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "No component-local rendered RTL assertion is recorded.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "The component declares no optional peer dependencies.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/layout/menubar/menubar-item.test.ts",
+          "src/components/layout/menubar/menubar.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
+      "tag": "lr-menubar-item",
+      "family": "layout",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "rtl",
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar-item.test.ts",
+              "line": 6,
+              "test": "is accessible as an open menu title and a plain action in the owning menubar",
+              "target": "file",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menubar/menubar-item.test.ts",
+              "line": 6,
+              "test": "is accessible as an open menu title and a plain action in the owning menubar",
+              "target": "help",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 95,
+              "test": "is accessible collapsed and populated with an open nested submenu and shortcut",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 95,
+              "test": "is accessible collapsed and populated with an open nested submenu and shortcut",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "No component-local rendered RTL assertion is recorded."
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 416,
+              "kind": "reduced-motion test signal"
+            }
+          ]
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar.test.ts",
+              "line": 360,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": "aceshooting",
+          "reviewedAt": "2026-09-11",
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/menubar/menubar-item.class.ts",
+              "line": 224,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "No component-local rendered RTL assertion is recorded.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "The component declares no optional peer dependencies.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/layout/menubar/menubar-item.test.ts",
+          "src/components/layout/menubar/menubar.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
       "tag": "lr-message-actions",
       "family": "conversation",
       "maturity": "stable",
@@ -30555,14 +31081,14 @@
             },
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 5142,
+              "line": 5212,
               "test": "is accessible with a viewport-basis breakpoint set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 5533,
+              "line": 5603,
               "test": "is accessible in the rail state under viewport basis",
               "target": "el",
               "state": "populated"
@@ -30576,7 +31102,7 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 324,
+              "line": 394,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30604,7 +31130,7 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 1512,
+              "line": 24,
               "kind": "320px allocation test signal"
             }
           ]
@@ -31068,28 +31594,28 @@
           "evidence": [
             {
               "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "line": 235,
+              "line": 260,
               "test": "passes axe collapsed and expanded with an item open in flow",
               "target": "menu",
               "state": "open"
             },
             {
               "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "line": 208,
+              "line": 233,
               "test": "renders a named nav landmark with a list of listitem hosts and passes axe closed",
               "target": "menu",
               "state": "populated"
             },
             {
               "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "line": 226,
+              "line": 251,
               "test": "passes axe with a panel open",
               "target": "menu",
               "state": "populated"
             },
             {
               "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "line": 274,
+              "line": 299,
               "test": "passes landmark-unique with two distinctly labelled menus",
               "target": "container",
               "state": "populated"
@@ -31114,7 +31640,7 @@
           "evidence": [
             {
               "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "line": 507,
+              "line": 532,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31131,7 +31657,7 @@
           "evidence": [
             {
               "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "line": 237,
+              "line": 262,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32940,42 +33466,42 @@
           "evidence": [
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 574,
+              "line": 575,
               "test": "disables every control for empty data, disabled, and loading states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 814,
+              "line": 836,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 1965,
+              "line": 1987,
               "test": "is accessible as a populated page list, as links, and in the compact layout",
               "target": "standard",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 1965,
+              "line": 1987,
               "test": "is accessible as a populated page list, as links, and in the compact layout",
               "target": "links",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 1965,
+              "line": 1987,
               "test": "is accessible as a populated page list, as links, and in the compact layout",
               "target": "inline fixture",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 2358,
+              "line": 2380,
               "test": "is accessible with interactive ellipses, custom icons, and an RTL link surface",
               "target": "el",
               "state": "populated"
@@ -32989,7 +33515,7 @@
           "evidence": [
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 349,
+              "line": 350,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -33000,7 +33526,7 @@
           "evidence": [
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 760,
+              "line": 782,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -33017,7 +33543,7 @@
           "evidence": [
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 774,
+              "line": 796,
               "kind": "320px allocation test signal"
             }
           ]
@@ -34671,7 +35197,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 609,
+              "line": 116,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -34762,7 +35288,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1013,
+              "line": 1024,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42286,7 +42812,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 495,
+              "line": 515,
               "test": "is accessible with a mixed-selection tree",
               "target": "el",
               "state": "populated"
@@ -42311,7 +42837,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 766,
+              "line": 786,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -42328,7 +42854,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 1432,
+              "line": 1452,
               "kind": "320px allocation test signal"
             }
           ]
@@ -47365,63 +47891,63 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 748,
+              "line": 762,
               "test": "uses one string group-label contract and renders rich adornments outside the toggle",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 804,
+              "line": 818,
               "test": "self-manages group collapse via the lr-group-toggle-request/lr-group-toggle pair by default, removing collapsed rows from virtual-list measurement",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1933,
+              "line": 2001,
               "test": "renders a keyboard-reachable button with a localized accessible name once the field has a value",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2227,
+              "line": 2295,
               "test": "is accessible in both modes",
               "target": "dataMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2227,
+              "line": 2295,
               "test": "is accessible in both modes",
               "target": "slottedMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2808,
+              "line": 2876,
               "test": "is accessible with wrapped rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2969,
+              "line": 3037,
               "test": "is accessible with a part-styled dense row and a renderActions control",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3795,
+              "line": 3863,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3984,
+              "line": 4052,
               "test": "is accessible in the error state",
               "target": "el",
               "state": "populated"
@@ -47435,7 +47961,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 326,
+              "line": 340,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -50665,7 +51191,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 609,
+              "line": 116,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -50756,7 +51282,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1013,
+              "line": 1024,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

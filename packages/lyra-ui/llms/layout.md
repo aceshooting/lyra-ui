@@ -69,10 +69,9 @@ follows allocation and the actual divider geometry, including font-relative toke
 divider's own font context. Panel font sizes do not change that gutter budget; stored percentages,
 initialization precedence, and resize event values retain their existing meaning.
 
-In responsive `collapse="start"`/`"end"` mode, the divider beside the collapsing panel is hidden
-while that panel is in `data-collapse-state="floating"` and `open` is false. The divider and its
-gutter return when the floating panel opens; `rail` mode keeps its divider because both panels
-remain visible.
+In responsive `collapse="start"`/`"end"` mode, the divider beside a floating panel takes no
+layout track whether its drawer is open or closed. It remains a programmatically focusable
+separator for focus recovery. Rail mode keeps the divider track because both panes remain visible.
 
 Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
@@ -2301,7 +2300,7 @@ attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_R
 
 ## `lr-app-rail`
 
-A responsive navigation rail that adapts across three presentations as the _viewport_ narrows (not
+A responsive navigation rail, and the library's application sidebar, that adapts across three presentations as the _viewport_ narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
 focus-trapped floating overlay over the page). First-party invention (no `wa-*`/`sl-*` counterpart).
@@ -2313,9 +2312,13 @@ presentation) and `[part="panel"]` (the mobile overlay) are the _same_ element p
 across modes (mirrors `<lr-widget>`'s fullscreen mode) — never both at once, and slotted nav
 content is never duplicated.
 
-In mobile mode the closed `[part="panel"]` has no shadow. It regains the existing
-`--lr-shadow-l` elevation while open, including in RTL, so the off-canvas closed panel does not
-paint into the viewport.
+In mobile mode the closed `[part="panel"]` has no shadow and parks one pixel beyond the inline-start
+edge, including at fractional widths. The open-only `--lr-app-rail-panel-shadow` defaults to
+`var(--lr-shadow-l)`. Elevation snaps with the open state while the panel slides. Only real open/close
+changes animate: runtime direction changes and entering mobile mode leave a closed panel parked
+without a sweep. Closed content remains inert. Keep the rail outside ancestors establishing a fixed
+containing block (`transform`, `filter`, `will-change: transform`, or layout/paint containment),
+because geometric parking otherwise follows that ancestor's edge instead of the viewport.
 
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
@@ -2335,6 +2338,17 @@ observable the same way a live change is: it fires `lr-mode-change` too (see **E
 letting a consumer that syncs app chrome to the rail's mode pick up the restored value on load.
 
 **Properties:**
+
+- `frame?: LyraFrame` — optional `'card'` floating frame or `'plain'` edgeless inline surface.
+  Unset retains the flush rail. Unknown values clear the attribute. In mobile mode framing is inert.
+- `triggerCollapses: boolean = false` (attribute `trigger-collapses`) — extend the `trigger`/`for`
+  association to full/icon-only modes, managing `aria-expanded`, `aria-controls` and
+  `aria-keyshortcuts`. Wire the trigger's click to `toggle()`. Independent of `collapsible`, which
+  alone decides whether the built-in collapse control renders.
+- `hotkey: string = ''` — optional chord such as `mod+b`, `ctrl+b`, `meta+b`, or `alt+b`.
+  Requires a non-Shift modifier. Removing the attribute restores the empty default. See the shortcut
+  behavior below.
+
 
 - `mode: LyraAppRailMode` (custom accessor, reflected, read-only as of 9.0.0) — always resolves to
   one of the three real modes (`'full'|'icon-only'|'mobile'`), never `'auto'`; assigning it now
@@ -2397,8 +2411,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   overlay's state across the shadow boundary. Because a light-DOM element cannot hold a raw
   reference into another element's shadow tree, engines resolve `aria-controls` to the
   `<lr-app-rail>` host itself; either resolution is correct. The association applies while `mode` is
-  `'mobile'` and is released when the rail leaves that mode or disconnects, and it tracks live —
-  reassigning `trigger` moves the state to the new element.
+  `'mobile'`, or in full/icon-only when `trigger-collapses` is set; otherwise it is released.
+  Disconnect also releases it, and reassigning `trigger` moves the state to the new element.
 - `for: string = ''` — id of an external element that opens this rail's mobile overlay, the
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
   `for`). Resolved against this element's own root (shadow root or document) when the overlay opens.
@@ -2435,10 +2449,14 @@ Also settable as a plain `aria-label` attribute (not a reactive property): overr
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
-**Methods:** `toggleCollapse(): void` performs the same `'full'`/`'icon-only'` flip `collapsible`'s
+**Methods:** `toggle(): void` opens/closes the mobile overlay through cancelable `lr-toggle`, or
+flips the full/icon-only preference. It is a no-op while disconnected. While pinned, it records
+only the preference; releasing `forceMode` applies it.
+
+`toggleCollapse(): void` performs the same `'full'`/`'icon-only'` flip `collapsible`'s
 built-in control does, for a consumer rendering its own control (app chrome, a command palette, a
 keyboard shortcut). A no-op while `mode` is `'mobile'`. While `forceMode` pins the mode the
-preference is still recorded and takes effect once the pin is released.
+preference alternates relative to `preferredMode ?? mode` on every call and takes effect once the pin is released.
 
 **Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
 effective mode changed, whether from a breakpoint crossing, a `forceMode` assignment, or a
@@ -2485,11 +2503,22 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
 `appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the chevron wrapper, mirrored by its own
-`transform` under RTL). Collapsing to `'icon-only'` removes nothing from the accessibility tree — it
-clips each item's `label`/`meta` visually — so `aria-expanded` reports which of the two
+`transform` under RTL). Collapsing to `'icon-only'` keeps each item's own accessible name and
+clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
 
-**Themeable custom properties:** `--lr-app-rail-width` (default `15rem` — the inline rail width in
+**Themeable custom properties:**
+`--lr-app-rail-frame-gap` (default `var(--lr-space-s)`), `--lr-app-rail-frame-radius` (default
+`var(--lr-radius)`), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
+card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
+host `display` owns that formatting context. Plain frames default to a transparent background,
+while an explicit `--lr-app-rail-background` still wins. Forced colors restores the plain frame's
+boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-shadow-l)`) affects only the open mobile
+panel; no value can paint elevation while closed. Prefer that token over an unqualified
+`::part(panel)` shadow rule, which would also paint while closed; state-scope a part override with
+`lr-app-rail[mode="mobile"][open]::part(panel)`.
+
+Other hooks: `--lr-app-rail-width` (default `15rem` — the inline rail width in
 `'full'` mode), `--lr-app-rail-icon-width` (default `4rem` — the inline rail width in `'icon-only'`
 mode), `--lr-app-rail-mobile-width` (default `18rem`, capped at `85vw` — the mobile overlay panel
 width), `--lr-app-rail-overlay-color` (default `var(--lr-color-overlay)` — the mobile backdrop scrim
@@ -2612,9 +2641,9 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
   toggle-button clicks would miss this closure.
 - the mobile panel is also given `inert` whenever `mode === 'mobile'` and `open` is `false` — it's
   removed from the accessibility tree and tab order via `inert` at the same time it's hidden visually
-  via `transform: translateX(-100%)`, both applied simultaneously rather than one implying the other.
+  via `transform: translateX(calc(-100% - var(--lr-size-1px)))`, both applied simultaneously rather than one implying the other.
 - the offscreen slide direction for the mobile panel is flipped for RTL via a `:dir(rtl)` CSS
-  selector (`translateX(100%)`), not through the shared `internal/rtl.ts` JS helper used for pointer/
+  selector (`translateX(calc(100% + var(--lr-size-1px)))`), not through the shared `internal/rtl.ts` JS helper used for pointer/
   keyboard math elsewhere in this library — a physical `transform` isn't expressible with logical
   properties, so this one case is handled purely in CSS.
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
@@ -2641,7 +2670,100 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
   the toggle lives inside the panel as its structurally-first child. Tab still reaches it as part
   of the trap's normal cycle.
 
+### Building an app sidebar
+
+The rail's shortcut uses the same grammar and per-window owner registry as `lr-command-palette`.
+The last-connected eligible owner acts once. Rails ignore repeat/composition/key-less events,
+`defaultPrevented`, text-entry and contenteditable targets, invisible/inert rails, and pinned modes.
+A pinned rail still accepts explicit `toggle()` calls to record a preference. Chords match the
+printed key; ASCII letter/digit chords fall back to `event.code` only when the event key is
+non-ASCII, preserving Dvorak/AZERTY printed-letter behavior. Mod resolves to Meta on macOS and
+Control elsewhere. Built-in controls and applicable external triggers expose `aria-keyshortcuts`.
+`lr-button` and `lr-icon-button` forward this and `aria-expanded` to their focused control; other
+custom triggers must implement forwarding themselves. Cross-shadow element-reference
+`aria-controls` forwarding by those custom triggers is not claimed.
+
+A hidden rail is not a desktop-offcanvas mode: `toggle()` never clears `hidden`, hotkeys ignore it,
+and a `trigger-collapses` trigger reports the last inline presentation. Collapse normally preserves
+focus. A focused resizer returns focus to the rail, and a hidden nested control returns it to the
+visible parent item.
+
+**Standalone recipe: viewport offcanvas, one trigger.**
+
+```html
+<div class="shell">
+  <lr-app-rail id="sidebar" label="Workspace" frame="card" hide-toggle trigger-collapses
+    for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
+    <lr-app-rail-group heading="Platform">
+      <lr-app-rail-item href="/projects" current tooltip><span slot="icon">▦</span>Projects</lr-app-rail-item>
+    </lr-app-rail-group>
+    <lr-divider></lr-divider>
+  </lr-app-rail>
+  <main><button id="sidebar-trigger" type="button">Toggle sidebar</button></main>
+</div>
+```
+
+```css
+.shell { display: flex; block-size: 100dvh; }
+.shell main { flex: 1; min-inline-size: 0; }
+lr-app-rail lr-divider { align-self: stretch; }
+```
+
+```js
+const rail = document.getElementById('sidebar');
+document.getElementById('sidebar-trigger').addEventListener('click', () => rail.toggle());
+```
+
+Import the rail, group, item and divider from their granular `components/lr-*.js` entries. The
+rail owns mobile offcanvas at its viewport breakpoint (600px default). For an inset composition,
+use `frame="plain"` and style the sibling main region as a card with surface, radius, border and
+shadow tokens. A raised sidebar tint is opt-in with
+`--lr-app-rail-background: var(--lr-color-surface-raised)`.
+
+**Page recipe: allocation offcanvas, two view-scoped controls.**
+
+```html
+<lr-page id="workspace">
+  <lr-app-rail slot="navigation" id="workspace-nav" label="Workspace" frame="plain"
+    mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="mod+b"
+    storage-key="app" persist="preferred-mode">
+    <lr-app-rail-item href="/projects"><span slot="icon">▦</span>Projects</lr-app-rail-item>
+  </lr-app-rail>
+  <p>Main content</p>
+</lr-page>
+```
+
+```css
+lr-page[view='mobile'] lr-app-rail::part(collapse-toggle) { display: none; }
+lr-app-rail lr-divider { align-self: stretch; }
+```
+
+```js
+const page = document.getElementById('workspace');
+const nav = document.getElementById('workspace-nav');
+const syncRail = () => { nav.forceMode = page.view === 'mobile' ? 'full' : 'auto'; };
+const observer = new MutationObserver(syncRail);
+observer.observe(page, { attributes: true, attributeFilter: ['view'] });
+syncRail();
+// Call observer.disconnect() when disposing this application composition.
+```
+
+`lr-page` owns the sole drawer at narrow allocations and its built-in or slotted
+`navigation-toggle` owns mobile trigger ARIA. The rail's built-in collapse control owns desktop
+collapse. An external desktop control may use `trigger-collapses` if hidden in mobile view.
+The pin shows the full rail inside the drawer and preserves its desktop preference. The shortcut
+acts only on desktop; it cannot open the page drawer. Give the rail a distinct `label`, since the
+page and rail navigation landmarks nest. This recipe uses the page's default start-side placement.
+
 ### `lr-app-rail-item`
+
+In icon-only presentation the nested disclosure and children list are hidden while `expanded`
+is preserved. Returning full restores the list. If a disclosure or descendant had focus, it moves
+to the outermost visible parent item's base control. The parent link remains operable. The `end`
+slot stays visible; reserve an icon-only rail width of at least twice the nav padding plus the icon
+square, item gap and end content. A 1.5rem badge requires 5.5rem with default tokens. Keep end actions
+out of default-width compact rails, or use a rail that never collapses.
+
 
 An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
 set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
@@ -2716,10 +2838,9 @@ names the native control, which remains the sole action).
 
   `icon-only` forwards from this item onto every `<lr-app-rail-item>` it directly owns through
   `children` — including ones appended later — exactly how `<lr-app-rail-group>` forwards onto the
-  items and nested groups it owns. The disclosure itself never changes shape between
-  presentations: it is always a fixed icon-button-sized square beside `[part="base"]`, reusing the
-  same hover/active/focus tokens as the link/button (`--lr-app-rail-item-hover-bg` etc.) rather than
-  a second disclosure-only set. There is no ancestor-current treatment — `<lr-app-rail-group>` has
+  items and nested groups it owns. The disclosure is a fixed icon-button-sized square in full
+  presentation, sharing the link/button state tokens. Icon-only hides it and the nested list while
+  preserving expansion and recovering focus to the visible parent item. There is no ancestor-current treatment — `<lr-app-rail-group>` has
   no equivalent concept for a group containing the current item, so none is invented here either; a
   current descendant stays perceivable only through its own `current` property.
 
@@ -3257,6 +3378,11 @@ sets the row's minimum block size for a denser or roomier menu, replacing a `::p
 item. A value below the 24px floor is your call, exactly as it is when overriding the shared ladder
 itself.
 
+Any element assigned to `details` counts as content, including a shadow-rendered
+`<lr-kbd slot="details" keys="mod+t">` chip or an icon. An intentionally empty placeholder element
+also shows the part and reserves one `--lr-menu-item-gap`; whitespace-only text and empty forwarding
+slots keep the part hidden. This also applies to `lr-dropdown-item`.
+
 ### Nested submenus
 
 Both supported authoring shapes use the `submenu` slot:
@@ -3339,6 +3465,127 @@ Root overlay behavior moved from `<lr-menu>` to `<lr-dropdown>`. Migrate mechani
 
 Standalone mapped `<sl-menu>` markup needs no wrapper: the mechanical `sl-` → `lr-` tag rename
 continues to produce an inline menu.
+
+---
+
+## `lr-menubar` / `lr-menubar-item`
+
+A horizontal application menubar following the APG menubar pattern. Import
+`@aceshooting/lyra-ui/components/lr-menubar.js`; it registers the item and menu dependencies.
+Use only `lr-menubar-item` elements in the default slot. A title's `menu` slot takes exactly one
+`lr-menu`; without it the title is a plain action that dispatches native `click`.
+
+```html
+<lr-menubar label="Application">
+  <lr-menubar-item>
+    File
+    <lr-menu slot="menu">
+      <lr-menu-item value="new-tab" aria-keyshortcuts="Control+T Meta+T">
+        New tab <lr-kbd slot="details" keys="mod+t"></lr-kbd>
+      </lr-menu-item>
+      <lr-menu-item>Share<lr-menu slot="submenu"><lr-menu-item>Email link</lr-menu-item></lr-menu></lr-menu-item>
+      <hr />
+      <lr-menu-item value="print">Print…</lr-menu-item>
+    </lr-menu>
+  </lr-menubar-item>
+  <lr-menubar-item>Edit<lr-menu slot="menu"><lr-menu-item>Undo</lr-menu-item></lr-menu></lr-menubar-item>
+  <lr-menubar-item>Help</lr-menubar-item>
+</lr-menubar>
+```
+
+Import `@aceshooting/lyra-ui/components/lr-kbd.js` separately for shortcut chips. Displaying a
+shortcut does not bind it. `Control+T Meta+T` describes a handler accepting either `ctrlKey` or
+`metaKey`. If the app binds only its platform modifier, keep the ARIA value aligned with the chip:
+`item.setAttribute('aria-keyshortcuts', kbd.effectivePlatform === 'mac' ? 'Meta+T' : 'Control+T')`.
+The chip's decorative `details` subtree is hidden from assistive technology.
+
+### `lr-menubar`
+
+**Properties:**
+
+- `label?: string` — accessible name of the menubar. The host `aria-label` wins, including `""`;
+  an explicit `label=""` stays empty. When both are absent, no name attribute is rendered.
+- `size: LyraSize = 'm'` — shared control ladder, inherited by the titles.
+- `frame: LyraFrame = 'card'` — surface, subtle border and shadow; `'plain'` makes the same
+  geometry transparent. Other values use the card appearance.
+
+**Events:** `lr-select`, cancelable `CustomEvent<MenuItemSelectDetail>`, bubbles once from the
+owning menu with `detail.item`. Prevent default to keep the menu open. Checkbox/radio
+`lr-menu-item-change` also bubbles from its item. There are no menubar lifecycle events or public
+open/close methods.
+
+**Slots:** default, containing only `lr-menubar-item` elements. **CSS parts:** `base`.
+The menu width hooks `--lr-menu-min-inline-size` and `--lr-menu-max-inline-size` inherit from the
+menubar or an ancestor and apply to every slotted menu.
+
+### `lr-menubar-item`
+
+**Properties:** `disabled: boolean = false` — removes the title from traversal, closes its menu,
+and suppresses mouse, touch, keyboard and programmatic activation. Disabled `mousedown` does not
+move focus. Consumer capture listeners on a further ancestor can still observe a dispatched
+click, but listeners on the item and bubbling ancestor listeners do not receive it.
+
+**Slots:** default, the visual label; `menu`, exactly one `lr-menu` (the first assigned menu wins;
+other elements are ignored). **CSS parts:** `base`, `label`. No own custom events. Native `click`
+is the action contract for a title without a menu. **Methods:** `click(): void` does nothing while
+disabled, otherwise dispatches a native host click.
+
+The host owns `role="menuitem"`, literal `aria-disabled`, and, only with a menu,
+`aria-haspopup="menu"` plus literal `aria-expanded`. Its accessible name comes from the default
+slot, so open menu contents never leak into it; author `aria-label` or `aria-labelledby` wins.
+Menus inherit the title's name unless given their own `aria-label` or `label`. An empty title
+leaves the menu's localized `menuLabel` fallback intact.
+
+**Themeable custom properties:**
+
+- `--lr-menubar-item-hover-bg` (default `var(--lr-color-brand-quiet)`) paints hover, focus-visible
+  and the open title.
+- `--lr-menubar-item-active-bg` (default
+  `color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
+  paints the pressed title, including when already open.
+
+Both hooks inherit from the item, menubar or any ancestor. Open titles receive an outline in
+forced colors. Reduced motion removes menu transitions and minimizes title transitions.
+
+### Keyboard and pointer behavior
+
+| Focus | Key | Result |
+|---|---|---|
+| Title | Left/Right | Previous/next enabled title, wrapping; directions reverse in RTL |
+| Title | Home/End | First/last enabled title |
+| Title | Down, Enter, Space | Open and focus first menu item; Enter/Space click a plain action |
+| Title | Up | Open and focus last menu item; unhandled on plain actions |
+| Title | Printable character | Case-insensitive typeahead with a 500ms buffer |
+| Expanded title | Traversal or matching typeahead | Carry the open menu along; focus stays on the title |
+| Menu leaf | Inline forward/back arrow | Carry to next/previous title; nested back closes only that submenu |
+| Menu | Up/Down, Home/End, Enter/Space | Existing menu navigation and activation |
+| Open menu/title | Escape | Close the innermost menu; menu focus returns to its title |
+| Open menu/title | Tab | Close and continue native traversal; Shift+Tab from the menu returns to its title |
+
+Handled keys prevent page scrolling. Escape/Tab while collapsed and unmatched typeahead remain
+unhandled. Header/footer inputs retain their own arrow behavior. Disabled, hidden, aria-hidden and
+inert titles are skipped. Moving onto a plain action collapses an open menu.
+
+Clicking a menu title toggles its menu and keeps focus on the title. While one menu is open,
+hovering another enabled menu title carries the menu immediately; hovering while collapsed,
+hovering plain actions, and touch pointer-over events do nothing. Clicking a title that hover just
+opened closes it. Outside pointers, focus leaving the menubar, removal or disablement close the
+menu. Selection closes and focuses its title unless canceled. Reconnecting resumes collapsed.
+Closing preserves the current focus even with another overlay beneath; if nothing remains focused
+because the menubar was removed, the shared overlay stack may focus its previous entry.
+
+### Sizing and narrow allocations
+
+Titles wrap, with no horizontal scrollbar or automatic overflow menu. The keyboard order stays
+linear. Long titles ellipsize while retaining their full accessible name. A single row measures
+`max(H, 24px + 2P + 2B)`, where H is `--lr-form-control-height`, P is
+`--lr-form-control-padding-block`, and B is `--lr-border-width-thin`. With default tokens this is
+26px at `xs`, 30px at `s`, 40px at `m`, and 48px at `l`; each title is at least 24px in both axes.
+Font, inline padding and radius follow the shared size ladder. Coarse-pointer size floors still
+apply. The shadcn theme gives 32px at `s` and 36px at `m`. Additional wrapped rows add their title
+height plus the shared gap. No container containment is imposed, so intrinsic sizing in a centered
+grid or shrink-to-fit header remains content-based. Both tags render and hydrate on the server;
+menu wrappers begin hidden and inert until connected client behavior attaches their menus.
 
 ---
 
@@ -3678,6 +3925,12 @@ card given only a resting shadow keeps that exact shadow on hover.
 ---
 
 ## `lr-command-palette`
+
+Hotkeys share last-connected eligible ownership with `lr-app-rail` in the same window. Removing the
+`hotkey` attribute disables the chord, and key-less browser autofill events are ignored. Non-ASCII
+layout keys may match a single ASCII letter/digit chord through `event.code`; printed ASCII keys
+remain authoritative. Existing palette behavior in editable content and for already-prevented events
+is unchanged.
 
 Searchable application command menu. Renders nothing at all while closed. Uses the same shared
 overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
@@ -5665,6 +5918,7 @@ logo, search or actions *outside* the menu.
 `--lr-navigation-menu-indicator-size` (default `var(--lr-size-0-375rem)`),
 `--lr-navigation-menu-indicator-color` (default
 `var(--lr-overlay-border, var(--lr-color-border-subtle))`, matching the panel edge), and
+`--lr-navigation-menu-toggle-active-color` (default `var(--lr-color-text)`), and
 `--lr-positioning-strategy` (read by the items when positioning their panels). All are read through
 inline fallbacks, so they can be set on the menu or any ancestor.
 
@@ -5781,7 +6035,8 @@ never below `--lr-icon-button-size`), `--lr-navigation-menu-item-font-size` (def
 `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-hover-color` (default
 `var(--lr-color-brand)`), `--lr-navigation-menu-item-active-bg` (default a `color-mix()` of
 `--lr-color-brand-quiet` toward `--lr-color-mix-partner`), `--lr-navigation-menu-item-open-bg`
-(default `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-current-color` (default
+(default `var(--lr-color-brand-quiet)`), `--lr-navigation-menu-item-active-color` (default
+`var(--lr-color-text)`), `--lr-navigation-menu-item-current-color` (default
 `var(--lr-color-brand)`), `--lr-navigation-menu-item-current-font-weight` (default
 `var(--lr-font-weight-semibold)`), `--lr-navigation-menu-panel-padding` (default `var(--lr-space-s)`),
 `--lr-navigation-menu-panel-max-inline-size` (default `var(--lr-size-48rem)`, also capped by the
@@ -5807,3 +6062,8 @@ The item does not take the `size` ladder.
 </lr-navigation-menu-item>
 <lr-navigation-menu-item href="https://example.com/" target="_blank" rel="external">Example</lr-navigation-menu-item>
 ```
+
+
+- **`components-layout-menubar-contracts`** — Typed pass-through menu selection.
+  Import: `@aceshooting/lyra-ui/components/layout/menubar/menubar.class.js`.
+  `LyraMenubarEventMap { 'lr-select': CustomEvent<MenuItemSelectDetail>; }`

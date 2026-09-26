@@ -35,6 +35,26 @@ function popup(el: LyraTooltip): HTMLElement {
   return el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
 }
 
+function composedFocusIsInside(target: HTMLElement): boolean {
+  const active = target.ownerDocument.activeElement;
+  return active === target || target.contains(active) || target.shadowRoot?.activeElement !== null;
+}
+
+async function focusByKeyboard(target: HTMLElement, owner?: HTMLElement): Promise<void> {
+  const anchor = owner ?? target;
+  const sentinel = target.ownerDocument.createElement('button');
+  sentinel.type = 'button';
+  sentinel.tabIndex = 0;
+  sentinel.setAttribute('aria-hidden', 'true');
+  sentinel.style.cssText = 'position:fixed;inline-size:1px;block-size:1px;opacity:0;';
+  anchor.before(sentinel);
+  sentinel.focus();
+  await sendKeys({ press: 'Tab' });
+  if (!composedFocusIsInside(target)) target.focus();
+  await waitUntil(() => composedFocusIsInside(target), 'keyboard focus reached the target');
+  sentinel.remove();
+}
+
 it('tracks flattened forwarded text and actionability through mutation, reassignment, and fallback', async () => {
   const wrapper = (await fixture(html`
     <test-tooltip-content-forwarder>
@@ -221,7 +241,7 @@ it('opens from keyboard focus and lets Escape dismiss it without moving focus', 
   `)) as LyraTooltip;
   const trigger = el.querySelector('button')!;
 
-  trigger.focus();
+  await focusByKeyboard(trigger, el);
   await el.updateComplete;
   expect(el.open).to.be.true;
   expect(trigger.ownerDocument.activeElement === trigger).to.be.true;
@@ -299,7 +319,7 @@ it('keeps composed trigger and actionable-popup focus transitions inside the int
   const second = el.querySelector<HTMLButtonElement>('#second-trigger-action')!;
   const action = el.querySelector<HTMLButtonElement>('#tooltip-action')!;
 
-  first.focus();
+  await focusByKeyboard(first, el);
   await waitUntil(() => el.open);
   second.focus();
   await new Promise<void>((resolve) => queueMicrotask(resolve));
@@ -437,6 +457,11 @@ it('cancels a delayed transition in its scheduling window and uses the adopted o
   let topCancellations = 0;
   let frameSchedules = 0;
 
+  // Establish the browser's real keyboard-focus-visible state before replacing the timer APIs
+  // below; the assertions in this test count only tooltip transition timers.
+  await focusByKeyboard(trigger, el);
+  trigger.blur();
+
   window.setTimeout = ((handler: TimerHandler): number => {
     topSchedules++;
     const handle = ++nextHandle;
@@ -457,13 +482,15 @@ it('cancels a delayed transition in its scheduling window and uses the adopted o
   }) as typeof frameWindow.clearTimeout;
 
   try {
-    trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+    trigger.focus();
     expect(topSchedules).to.equal(1);
     frameDocument.body.append(el);
     await el.updateComplete;
     expect(topCancellations).to.equal(1);
 
-    trigger.dispatchEvent(new frameWindow.FocusEvent('focusin', { bubbles: true, composed: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+    trigger.focus();
     expect(frameSchedules + topSchedules).to.equal(2);
     for (const [handle, callback] of [...frameTimers, ...topTimers]) {
       frameTimers.delete(handle);
@@ -559,7 +586,7 @@ it('resolves show-delay from the --show-delay custom property when no attribute 
   expect(el.showDelay).to.equal(150);
 
   const trigger = el.querySelector('button')!;
-  trigger.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
+  await focusByKeyboard(trigger, el);
   await waitUntil(() => el.open, 'should open well before the 150ms default show-delay', {
     interval: 5,
     timeout: 120,
@@ -937,7 +964,7 @@ it('leaves a focus-opened tooltip alone when its anchor moves, since no pointer 
   const trigger = wrapper.querySelector<HTMLButtonElement>('#focus-trigger')!;
   await tooltip.updateComplete;
 
-  trigger.focus();
+  await focusByKeyboard(trigger);
   await waitUntil(() => tooltip.open, 'the tooltip opens on focus');
 
   wrapper.scrollTop = 400;

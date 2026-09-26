@@ -57,6 +57,8 @@
       "lr-context-menu",
       "lr-drop-zone",
       "lr-funnel",
+      "lr-menubar",
+      "lr-menubar-item",
       "lr-navigation-menu",
       "lr-navigation-menu-item",
       "lr-streaming-text-core",
@@ -20352,7 +20354,7 @@
     "current": {
       "version": "20.0.1",
       "sourceCommit": null,
-      "manifestSha256": "2d2b572c049dea85a10c677751885598d3f9e28d879f6c769a3da9f9125fe069",
+      "manifestSha256": "b63e8ea71ef9c98b0e48c09dc1ab50b702a9bc2fa7afcda4f9a57f38df6033a8",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -20514,6 +20516,8 @@
         "lr-menu",
         "lr-menu-item",
         "lr-menu-label",
+        "lr-menubar",
+        "lr-menubar-item",
         "lr-message-actions",
         "lr-message-feedback",
         "lr-message-parts",

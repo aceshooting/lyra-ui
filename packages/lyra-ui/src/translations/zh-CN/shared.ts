@@ -48,7 +48,9 @@ const strings: LyraLocaleStrings = {
   paginationSummary: '{start}–{end}，共{total}{itemLabel}',
   cancel: '取消',
   search: '搜索',
-  items: '项',
+  items: {
+    other: '项',
+  },
   item: '项',
   notInCatalog: '不在目录中',
   fileSizeUnitB: 'B',
@@ -120,7 +122,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: '系统',
   promptStudioRoleUser: '用户',
   promptStudioRoleAssistant: '助手',
-  toolTimelineDetailsFor: '{name}的详情',
   moveUp: '上移',
   moveDown: '下移',
   reorderItemMoved: '已移到第{index}位，共{total}位',

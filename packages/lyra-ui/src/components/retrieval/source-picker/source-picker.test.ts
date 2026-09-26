@@ -96,6 +96,26 @@ it('renders a role="tree" with one treeitem per visible entry (top-level collaps
   ).to.equal('true');
 });
 
+it('does not derive a file badge token from group labels', async () => {
+  const el = await fixture<LyraSourcePicker>(html`
+    <lr-source-picker .sources=${[
+      { id: 'folder', label: 'docs.python.org', children: [{ id: 'leaf', label: 'report.pdf' }] },
+    ] as LyraSourceEntry[]}></lr-source-picker>
+  `);
+  const icons = [...el.shadowRoot!.querySelectorAll('lr-file-icon')] as HTMLElement[];
+  expect(icons).to.have.length(1);
+  const groupIcon = icons[0]!;
+  expect(groupIcon.shadowRoot!.querySelector('.token') === null).to.be.true;
+
+  (el.shadowRoot!.querySelector('[part="disclosure"]') as HTMLElement).click();
+  await el.updateComplete;
+  await el.updateComplete;
+  const leafIcon = [...el.shadowRoot!.querySelectorAll('lr-file-icon')]
+    .find((icon) => icon !== groupIcon) as HTMLElement;
+  expect(leafIcon).to.exist;
+  expect(leafIcon.shadowRoot!.querySelector('.token')?.textContent).to.equal('PDF');
+});
+
 it('uses aria-checked as the sole false, true, and mixed treeitem selection state', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`

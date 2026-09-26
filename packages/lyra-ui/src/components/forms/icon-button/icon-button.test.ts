@@ -900,3 +900,16 @@ describe('collecting an already-slotted bare-geometry fallback without relying o
     }
   });
 });
+
+
+it('forwards host aria-keyshortcuts through button/link changes and removal', async () => {
+  const el = await fixture<LyraIconButton>(html`<lr-icon-button aria-keyshortcuts="Control+B" label="Toggle">Toggle</lr-icon-button>`);
+  const control = () => el.shadowRoot!.querySelector('button, a')!;
+  expect(control().getAttribute('aria-keyshortcuts')).to.equal('Control+B');
+  el.href = '/settings'; await el.updateComplete;
+  expect(control().localName).to.equal('a'); expect(control().getAttribute('aria-keyshortcuts')).to.equal('Control+B');
+  el.href = ''; await el.updateComplete;
+  expect(control().localName).to.equal('button'); expect(control().getAttribute('aria-keyshortcuts')).to.equal('Control+B');
+  el.removeAttribute('aria-keyshortcuts'); await el.updateComplete;
+  expect(control().hasAttribute('aria-keyshortcuts')).to.equal(false);
+});

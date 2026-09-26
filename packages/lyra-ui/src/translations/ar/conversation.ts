@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   copiedToClipboard: 'تم النسخ إلى الحافظة',
   codeRegion: 'شيفرة برمجية',
   codeRegionWithLanguage: 'شيفرة {language}',
+  markdownTableRegion: 'جدول',
   codeBlockLineLabel: 'السطر {line}',
   untitledConversation: 'محادثة بلا عنوان',
   generationStatusElapsedSeconds: '{seconds} ث',

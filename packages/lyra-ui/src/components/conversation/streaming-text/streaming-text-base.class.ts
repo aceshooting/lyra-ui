@@ -1,11 +1,11 @@
+import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
-import type { MarkdownHtmlMode } from '../markdown/markdown-shared.js';
-import type { MarkdownStreamingRenderMode } from '../markdown/markdown-base.class.js';
+import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styles } from './streaming-text.styles.js';
 
@@ -52,6 +52,8 @@ export type StreamingTextContentMode = 'auto' | 'plain' | 'markdown';
 
 export interface LyraStreamingTextEventMap {
   'lr-content-settled': CustomEvent<null>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
 /**
@@ -77,13 +79,15 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
 
   /** Forwarded to the composed Markdown element. `plain` preserves the existing streaming
    * fallback; `progressive` renders completed Markdown blocks while the final block is arriving. */
-  @property({ attribute: 'streaming-render', reflect: true })
-  streamingRender: MarkdownStreamingRenderMode = 'plain';
+  @property({ attribute: 'streaming-render' })
+  streamingRender: MarkdownStreamingRender = 'plain';
 
-  /** Forwarded to the composed Markdown element; opts into a localized language label and copy
-   * button on fenced code blocks. */
+  /** Compatibility spelling for source-copy headers in the composed Markdown element. */
   @property({ type: Boolean, attribute: 'code-block-chrome' })
   codeBlockChrome = false;
+
+  /** Enables source-copy headers in the composed Markdown element. */
+  @property({ type: Boolean, attribute: 'code-block-header' }) codeBlockHeader = false;
 
   /** Trailing-edge coalesce window, in ms, for `content` updates -- see the
    *  class doc. */

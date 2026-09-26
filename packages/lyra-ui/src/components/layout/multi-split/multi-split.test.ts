@@ -14,7 +14,7 @@ import type {
 } from './multi-split.js';
 import { styles } from "./multi-split.styles.js";
 
-it("removes only the closed floating pane's adjacent divider track in either orientation and collapse direction", async () => {
+it("removes only the floating pane's adjacent divider track in either orientation and collapse direction", async () => {
   for (const orientation of ["horizontal", "vertical"] as const) {
     for (const collapse of ["start", "end"] as const) {
       const el = (await fixture<LyraMultiSplit>(html`
@@ -38,13 +38,13 @@ it("removes only the closed floating pane's adjacent divider track in either ori
       const adjacentDividerIndex = collapse === "start" ? 0 : dividers.length - 1;
       expect(dividers).to.have.length(3);
       for (const [index, divider] of dividers.entries()) {
-        const display = getComputedStyle(divider).display;
+        const rect = divider.getBoundingClientRect();
+        const track = orientation === 'horizontal' ? rect.width : rect.height;
+        expect(getComputedStyle(divider).display, 'zero-track dividers remain focusable').not.to.equal('none');
         if (index === adjacentDividerIndex) {
-          expect(display, `${orientation}, collapse=${collapse}, adjacent divider`)
-            .to.equal("none");
+          expect(track, `${orientation}, collapse=${collapse}, adjacent divider`).to.be.closeTo(0, 0.5);
         } else {
-          expect(display, `${orientation}, collapse=${collapse}, divider ${index}`)
-            .not.to.equal("none");
+          expect(track, `${orientation}, collapse=${collapse}, divider ${index}`).to.be.greaterThan(0);
         }
       }
 
@@ -67,13 +67,10 @@ it("removes only the closed floating pane's adjacent divider track in either ori
         `${orientation}, collapse=${collapse}: no unused gutter remains`,
       ).to.be.lessThan(1);
 
-      // The adjacent gutter returns while the drawer is open, and remains in the rail state
-      // where both sides of the divider are still visible.
+      // Opening an out-of-flow drawer never reserves an in-flow divider gutter.
       el.open = true;
       await el.updateComplete;
-      expect(getComputedStyle(dividers[adjacentDividerIndex]!).display).not.to.equal(
-        "none",
-      );
+      expect(axisSize(dividers[adjacentDividerIndex]!.getBoundingClientRect())).to.be.closeTo(0, 0.5);
 
       el.open = false;
       el.collapseState = "rail";

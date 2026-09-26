@@ -78,10 +78,10 @@ uses for its own `[part="body"]`.
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
 - `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
-  GFM task-list checkboxes stay disabled and take the bullet's place; each task item exposes
-  `part="task-item"` and `data-task="true"`, while a list containing only task items has
-  `data-task-list="true"`. The checkbox has a visible token-based border and checked fill rather
-  than relying on the browser's dim disabled appearance. A task's primary inline text supplies its
+  GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
+  text with ordinary sibling items; ordered tasks keep their numerals. The hooks are `task-list`,
+  `task-item`, `task-item-checked` and `task-checkbox`. A task-only unordered list carries
+  `role="list"`. The checkbox has a visible token-based border and checked fill. A task's primary inline text supplies its
   accessible name; nested task text is excluded, and a blank task receives no generated name.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — `target` applied to every
   rendered `<a>`, with `rel="noopener noreferrer"` always added alongside it whenever a `target` is
@@ -101,19 +101,29 @@ uses for its own `[part="body"]`.
   is still arriving and lets consumers target `lr-markdown[streaming]`. `streamingRender` selects
   the streaming presentation. Setting `streaming=false` parses and renders the latest complete
   content; busy state also remains true while parser dependencies are loading
-- `streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`,
-  reflected), where `MarkdownStreamingRenderMode = 'plain' | 'progressive'`. The default `plain`
+- `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`,
+  not reflected), where `MarkdownStreamingRender = 'plain' | 'progressive'`. The default `plain`
   preserves the existing behavior of showing accumulated source text while streaming. In
   `progressive` mode, completed top-level blocks render as Markdown as they settle and only the
   trailing in-progress block remains plain text. Settled block nodes keep their identity as new
   chunks arrive, and syntax highlighting is deferred until a block settles. An unterminated fenced
   block is shown as an open, unhighlighted code block. The final full-document parse still runs
-  when streaming ends, including reference links that need content from later blocks.
-- `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — opts fenced blocks into a
-  localized language label and copy button. Copy uses the raw fence source, not highlighted HTML.
-  In progressive streaming, the header appears only after its closing fence arrives; with the
-  default plain streaming mode, chrome appears after the stream settles. Indented code blocks do not
-  receive this chrome.
+  when streaming ends, including reference links that need content from later blocks. Custom block
+  tokenizers, block extensions, parser hooks, pedantic mode, and asynchronous parser configuration
+  use plain streaming; inline extensions and renderer overrides remain supported. A text tail
+  follows the surrounding direction, while its open-fence preview uses code direction. Work is
+  bounded per animation frame; after 2,000 settled groups the remaining source stays plain until
+  completion. Large code blocks defer highlighting until completion.
+- `codeBlockHeader: boolean = false` (attribute `code-block-header`) — adds a language label and
+  an icon-only native copy button to the first 200 non-empty built-in code blocks, fenced or
+  indented. It copies source text without the renderer's terminal newline, preserving leading tabs
+  whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
+  code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
+  compatibility spelling; either property enables the header. Plain streaming defers headers until
+  settle; progressive streaming adds them to committed blocks. The button has a localized accessible
+  name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
+  the header also removes authored style elements and their CSS text to prevent visual copy
+  deception. Trusted mode provides no such guarantee.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
   blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
   peer is available; set `false` to keep plain output even when `shiki` is installed. In progressive
@@ -182,6 +192,8 @@ placed first and preserved inside both ceilings.
   (e.g. `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since a
   light-DOM `MutationObserver` on that container can never see a property-driven update rendered
   entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
+- `lr-copy` and `lr-copy-error` — the fulfilled and failed clipboard outcomes from the optional
+  code-block copy chrome; both bubble and are composed.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -190,20 +202,27 @@ placed first and preserved inside both ceilings.
 or a failed render — so a consumer can target `lr-markdown [part='content'][data-fallback]` to
 style it distinctly), `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
 anchor-jump message), `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`),
-`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`; a list made entirely of
-task items carries `data-task-list="true"`), `task-item` (each GFM task `<li>`, also marked
-`data-task="true"`), `code-block` (every rendered fenced/indented `<pre>`, isolated with LTR text
+`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`),
+`task-list` (an all-task list), `task-item` (each GFM task), `task-item-checked` (completed task),
+`task-checkbox` (disabled state graphic), `code-block` (every rendered fenced/indented `<pre>`, isolated with LTR text
 direction even inside an RTL document), `inline-code` (every rendered inline `<code>` span —
 backtick spans, not fenced blocks; also isolated LTR), `link` (every rendered `<a>`),
 `table-wrapper` (the logical inline-scroll container for wide tables), `table` (every rendered `<table>`),
 `blockquote` (every rendered `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered
 inline or block math span, carrying `data-display="inline"|"block"`), and, when
-`code-block-chrome` is enabled, `code-block-header`, `code-block-language`, and `code-block-copy`
-(the header, localized language label, and copy button for each closed fenced block)
+`code-block-header` is enabled, `code-block-frame`, `code-block-header`, `code-block-language`,
+`code-block-copy`, `code-block-copy-success`, and `code-block-copy-error`. The language label uses
+CSS-generated content, so headers add no text to selection or text-quote anchoring. Each header
+adds at most eight elements toward the normal 20,000-node traversal bound.
+The `streaming-tail` part marks the stable text node used by progressive streaming updates.
 
-Wide GFM tables scroll horizontally inside `table-wrapper`, following the current text direction.
-Cell text wraps at word boundaries when possible and breaks a single word only when that word
-cannot fit the column. Inline code and code blocks keep LTR character order in RTL documents while
+Wide GFM tables scroll horizontally inside `table-wrapper`, a keyboard-focusable group named by
+`markdownTableRegion` (English: "Table"). The label follows locale and `.strings` changes without
+reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignment. Raw authored
+HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
+and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore
+letter wrapping with `::part(table) { overflow-wrap: anywhere }`, or Korean/CJK word grouping with
+`::part(table) { word-break: keep-all }`. Inline code and code blocks keep LTR character order in RTL documents while
 their surrounding layout continues to follow the page direction.
 
 **Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
@@ -220,6 +239,9 @@ radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr
 fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (default `var(--lr-radius)`
 — the fenced `code-block` surface's border radius), `--lr-markdown-table-header-bg` (default
 `var(--lr-color-brand-quiet)` — background of every rendered `[part="table"]` header cell),
+`--lr-markdown-task-checkbox-size` (default `var(--lr-size-0-875em)` — checkbox and aligned gutter),
+`--lr-markdown-code-header-bg` (default `var(--lr-color-surface)`),
+`--lr-markdown-code-header-color` (default `var(--lr-color-text-quiet)`),
 `--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`
@@ -251,11 +273,11 @@ after that lazy load resolves; each instance owns its configuration. Call `rende
 ```
 
 Progressive rendering and code-copy chrome are opt-in; the following keeps completed Markdown
-blocks visible while text streams and adds a localized language label plus source-copy button to
-closed fenced blocks:
+blocks visible while text streams and adds a source language label plus localized copy button to
+settled code blocks:
 
 ````html
-<lr-markdown id="reply" streaming streaming-render="progressive" code-block-chrome></lr-markdown>
+<lr-markdown id="reply" streaming streaming-render="progressive" code-block-header></lr-markdown>
 <script type="module">
   import "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
 
@@ -284,9 +306,7 @@ of use, never on `:host`** — a `:host` declaration is re-stamped on every inst
 inherited value, so a page- or container-level declaration could never reach it. This element carries
 its own copy of that fallback rather than inheriting `<lr-code-block>`'s because the two are
 **sibling** custom elements, not ancestor and descendant: no single declaration inside one of them
-can cover the other. The same value can still _look_ different between the two — a markdown code
-block inherits `white-space: pre-wrap` while `<lr-code-block>` is `white-space: pre`, and tab stops
-restart at the beginning of each visual line, so a wrapped line's tabs land differently.
+can cover the other. Both surfaces use `white-space: pre` and scroll horizontally, preserving the same tab stops.
 
 **Known gotchas:**
 
@@ -346,7 +366,7 @@ A fenced code block whose language isn't a key in `languages` always renders the
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
 rendering path as `<lr-code-block-core>`'s identical contract. A block that _is_ highlighted follows the
 page's resolved theme through the same `[part="content"][data-dark-theme="true"]` hook `<lr-markdown>`
-documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables and task-list presentation (task items use `part="task-item"`, task-only lists carry `data-task-list="true"`, and wide tables scroll inside `part="table-wrapper"`),
+documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables and task-list presentation (task items expose `task-item`/`task-item-checked` and `task-checkbox`, task-only lists carry `task-list`, and wide tables scroll inside `part="table-wrapper"`),
 links, blockquotes, images, LTR-isolated code, progressive streaming and opt-in code-block chrome,
 heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
 support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highlight-activate`/
@@ -363,7 +383,7 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected),
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
@@ -391,15 +411,17 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
-`lr-anchor-result`, `lr-content-settled` — identical detail shapes to `<lr-markdown>`'s own.
+`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
+`<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
 anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`, `task-item`,
 `code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
-`table-wrapper`, `table`, `blockquote`, `img`, `math` —
-identical to `<lr-markdown>`'s own parts.
+`table-wrapper`, `table`, `blockquote`, `img`, `math`, `task-list`, `task-item-checked`,
+`task-checkbox`, `code-block-frame`, `code-block-copy-success`, `code-block-copy-error`,
+`streaming-tail` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
@@ -414,9 +436,7 @@ fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-r
 described under `<lr-markdown>` above: the same property name and default that
 `<lr-code-block>`/`<lr-code-editor>` read, declared as a `var()` fallback at the point of use rather
 than on `:host` so a page- or container-level value reaches it, and carried here in its own right
-because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown
-code blocks wrap (`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width
-can render differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by
+because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown and standalone code blocks preserve lines and scroll horizontally. `--lr-markdown-font-mono` is the monospace stack used by
 rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
@@ -449,6 +469,18 @@ const view = html`<lr-markdown-core
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
 ---
+
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.
+
+The shared `--lr-markdown-task-checkbox-size` hook defaults to `var(--lr-size-0-875em)` and
+keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-header-bg`
+(default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
+(default `var(--lr-color-text-quiet)`).
 
 ## `lr-chat-message`
 
@@ -1547,7 +1579,7 @@ properties existed:
   `<lr-markdown>`'s own `internalLinkPrefix`.
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
-- `streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected)
+- `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
   and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the composed
   Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
@@ -1578,6 +1610,8 @@ listener either way. A consumer composing this element inside a free-form contai
 `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since this component
 renders into its own shadow root and a plain light-DOM `MutationObserver` on the container can
 never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
+The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
+outcomes.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -1585,7 +1619,9 @@ never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms
 `<lr-markdown>` documents forwarded verbatim (no aliasing — none collides with `base`/`cursor`)
 from the composed `<lr-markdown>` in Markdown mode via `exportparts`: `content`, `heading`,
 `paragraph`, `list`, `task-item`, `code-block`, `code-block-header`, `code-block-language`,
-`code-block-copy`, `inline-code`, `link`, `table-wrapper`, `table`, `blockquote`, `img`, `math`. A
+`code-block-copy`, `inline-code`, `link`, `table-wrapper`, `table`, `blockquote`, `img`, `math`,
+`task-list`, `task-item-checked`, `task-checkbox`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error`, `streaming-tail`. A
 host-level `lr-streaming-text::part(link)`/`::part(img)` rule reaches the rendered `<a>`/`<img>`
 exactly as the same rule does applied directly to `<lr-markdown>`.
 
@@ -1665,6 +1701,13 @@ happens to end with.
 
 ---
 
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.
+
 ## `lr-streaming-text-core`
 
 A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `languages` map already
@@ -1696,7 +1739,7 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected);
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
 (attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
@@ -1710,6 +1753,8 @@ share one implementation.
 **Events:** `lr-content-settled` (`detail: null`, composed, bubbling) — identical contract to
 `<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
 `<lr-markdown-core>` emits it instead of `<lr-markdown>`).
+The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
+outcomes.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -1717,7 +1762,9 @@ share one implementation.
 `<lr-markdown-core>` documents forwarded verbatim from the composed `<lr-markdown-core>` in
 Markdown mode via `exportparts`: `content`, `heading`, `paragraph`, `list`, `task-item`,
 `code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
-`table-wrapper`, `table`, `blockquote`, `img`, `math` — the identical forwarded list
+`table-wrapper`, `table`, `blockquote`, `img`, `math`, `task-list`, `task-item-checked`,
+`task-checkbox`, `code-block-frame`, `code-block-copy-success`, `code-block-copy-error`,
+`streaming-tail` — the identical forwarded list
 `<lr-streaming-text>` documents, since `<lr-markdown>` and `<lr-markdown-core>` share the same
 documented part vocabulary.
 
@@ -1742,6 +1789,13 @@ shared behavior.
 ```
 
 ---
+
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.
 
 ## `lr-generation-metrics`
 
@@ -2020,9 +2074,7 @@ also never written as an inline `tab-size`: `shiki` puts its own `style` attribu
 `<pre>`, and an inline declaration is the one thing a host override cannot beat. `<lr-markdown>` and
 `<lr-markdown-core>` carry the same fallback for their own `code-block` part because they are
 **sibling** custom elements rather than descendants of this one — no single declaration covers both.
-The identical value can still look different across the two: this component is `white-space: pre`
-while a markdown code block inherits `pre-wrap`, and tab stops restart at each visual line, so a
-wrapped line's tabs diverge.
+Both surfaces preserve lines with `white-space: pre` and scroll horizontally, keeping tab stops consistent.
 
 `--lr-code-block-active-line-outline-color` retints just the active line's outline and leaves every
 other `--lr-color-brand` surface in the component — hover states, the focus
@@ -3823,6 +3875,9 @@ inside the workspace, and `overflow` makes the capped region scrollable instead 
 component-owned custom property duplicates this, because a `::part()` rule from your tree already
 wins over the shadow stylesheet regardless of specificity.
 
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not
+reflected) forwards to each message's `lr-message-parts`. The legacy message text route is unchanged.
+
 ## `lr-message-parts`
 
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
@@ -3837,28 +3892,13 @@ allocating every preceding part for each citation in a citation-heavy or growing
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected)
-and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to built-in text
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
+and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwarded to built-in text
 and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
-blocks during a streaming part and preserves the `plain` fallback by default; code chrome adds the
-localized language label and raw-source copy action to fenced code. These settings do not replace
+blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
+source language label and localized copy action to built-in code blocks.
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is an equivalent enabling alias. These settings do not replace
 the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
-`toolDisplay: MessagePartsToolDisplay = 'chip'` (attribute `tool-display`, reflected) — `'chip'`
-preserves the existing separate call chip and result part. `'disclosure'` pairs each rendered
-built-in tool call with the first result whose `invocationId` matches its call `invocation.id`, hides
-that result at its original position, and shows it inside a collapsed inline details panel at the
-call's position. Pending calls show their localized call status; when a paired result arrives, the
-summary shows localized success or error. Pairing uses the full effective parts list, so a visible
-call can find a result outside the `maxRenderedParts` window, while calls outside that window do not
-consume a visible result. A result is paired only once; duplicate results remain in their own rows.
-If `renderPart` is supplied, pairing occurs only when both the
-call and result are in the rendered window and both callbacks return `undefined` (built-in
-rendering); custom output keeps its part independent. Finite, nonnegative
-`call.metadata.durationMs` adds a localized duration;
-`call.metadata.redactedFields` may list dotted paths such as `args.apiKey`, `result.secret`, or
-`error.stack` to mask while the disclosure is expanded. Redaction is bounded; malformed or
-over-budget paths fail closed by showing the localized hidden-value placeholder. Unsupported values
-normalize to `'chip'`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -3992,6 +4032,10 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
   `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
 - `lr-widget-state-change` event — Passthrough from a rendered controlled widget.
+
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) forwards to both built-in
+text and reasoning Markdown elements. A custom `renderPart` replaces the built-in renderer and
+its header. `lr-copy-error` passes through the immutable failed clipboard outcome.
 
 ## `lr-prompt-input`
 
@@ -4668,3 +4712,6 @@ These named interfaces and helper signatures are available to typed integrations
     label: string;
     disabled?: boolean;
   }`
+
+`MarkdownStreamingRender = 'plain' | 'progressive'` is the canonical streaming mode type;
+`MarkdownStreamingRenderMode` remains an equivalent compatibility export.

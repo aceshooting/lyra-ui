@@ -2,11 +2,17 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { nextId } from '../../../internal/a11y.js';
+import { optionalLiteralSetConverter } from '../../../internal/converters.js';
+import type { LyraFrame } from '../../../internal/variants.js';
+export type { LyraFrame } from '../../../internal/variants.js';
+import { detectPlatform } from '../../../internal/platform.js';
+import { parseHotkey, hasNonShiftModifier, matchesHotkey, hotkeyAriaKeyShortcuts, isIgnorableKeyEvent, isEditableKeyEventTarget, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from '../../../internal/hotkey.js';
+import { nextId, isAccessibilityVisible } from '../../../internal/a11y.js';
 import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal/aria-ownership.js';
 import { chevronIcon, closeIcon, menuIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
@@ -37,6 +43,8 @@ export type LyraAppRailPreferredMode = Exclude<LyraAppRailMode, 'mobile'>;
 
 /** Whitespace-separated tokens accepted by the `persist` attribute. */
 export type LyraAppRailPersistField = 'open' | 'width' | 'preferred-mode';
+
+const APP_RAIL_FRAME = optionalLiteralSetConverter<LyraFrame>(['card', 'plain']);
 
 const APP_RAIL_PERSIST_FIELDS = new Set<LyraAppRailPersistField>([
   'open',
@@ -96,7 +104,7 @@ export interface LyraAppRailEventMap {
   'lr-rail-resize': CustomEvent<LyraAppRailResizeDetail>;
 }
 /**
- * `<lr-app-rail>` — a responsive navigation rail that adapts across three
+ * `<lr-app-rail>` — the library's application sidebar, a responsive navigation rail across three
  * presentations as the *viewport* narrows (not this element's own inline
  * size — see the `mode` getter doc for why): `'full'` (nav items show
  * icon + label, inline), `'icon-only'` (a narrower inline rail, icons only),
@@ -124,6 +132,10 @@ export interface LyraAppRailEventMap {
  * violation (verified against axe), whereas an explicit `role="navigation"`
  * on a generic element can be swapped for `role="dialog"` freely.
  *
+ * @cssprop [--lr-app-rail-panel-shadow=var(--lr-shadow-l)] - Mobile panel elevation, read only while open; closed panels never paint it.
+ * @cssprop [--lr-app-rail-frame-gap=var(--lr-space-s)] - Margin around a card frame.
+ * @cssprop [--lr-app-rail-frame-radius=var(--lr-radius)] - Card-frame corner radius.
+ * @cssprop [--lr-app-rail-frame-shadow=var(--lr-shadow-s)] - Card-frame elevation.
  * @customElement lr-app-rail
  * @slot - Nav items. Use `<lr-app-rail-item>` for the explicit icon/label
  *   contract that automatically hides labels in `'icon-only'` mode, and
@@ -248,7 +260,7 @@ export interface LyraAppRailEventMap {
  *   clips -- set `--lr-app-rail-panel-overflow-block` to `visible` too to actually stop the
  *   clipping, accepting that wide header/footer content can then scroll/bleed both ways instead.
  * @cssprop [--lr-app-rail-background=var(--lr-color-surface)] - `[part="base"]`'s background
- *   (the docked, non-overlay presentation).
+ *   (the docked, non-overlay presentation); the unset fallback is transparent under frame="plain".
  * @cssprop [--lr-app-rail-panel-background=var(--lr-color-surface-overlay)] - `[part="panel"]`'s
  *   background (the mobile overlay presentation) -- kept separate from
  *   `--lr-app-rail-background`/`--lr-app-rail-overlay-color` (the backdrop scrim) since the panel
@@ -342,6 +354,27 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  @default false */
   @property({ type: Boolean, reflect: true, noAccessor: true }) open!: boolean;
 
+  /** Floating card or edgeless plain inline presentation; unset preserves the flush rail. */
+  @property({ reflect: true, converter: APP_RAIL_FRAME })
+  get frame(): LyraFrame | undefined { return this._frame; }
+  set frame(next: LyraFrame | undefined) {
+    const value = APP_RAIL_FRAME.normalizeReflected(this, 'frame', next);
+    const old = this._frame;
+    if (value === old) return;
+    this._frame = value;
+    this.requestUpdate('frame', old);
+  }
+  private _frame?: LyraFrame;
+
+  /** Extends trigger/for association to desktop presentations with managed aria-expanded,
+   * aria-controls and aria-keyshortcuts. Wire the trigger's click to toggle(). Independent of
+   * collapsible, which alone decides whether the built-in collapse toggle renders. */
+  @property({ type: Boolean, reflect: true, attribute: 'trigger-collapses' }) triggerCollapses = false;
+
+  /** Optional keyboard chord. Requires ctrl, meta, mod or alt; editable targets and pinned or
+   * inaccessible rails are ignored. The last eligible palette or rail owns a shared chord. */
+  @property({ useDefault: true }) hotkey = '';
+
   /** Optional accessible name for the rail's navigation landmark and mobile dialog. Every
    *  nonempty supplied string is literal; only absence/empty uses the localized fallback. A
    *  host-level `aria-label` attribute takes precedence, including an explicit empty value. */
@@ -433,7 +466,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  return target for the overlay's remaining lifetime. Read alongside `for`; this direct
    *  reference wins when both resolve to different elements. Unset (the default, `null`)
    *  reproduces today's exact behavior: only the built-in toggle's own click supplies a return
-   *  target, for that interaction alone. */
+   *  target, for that interaction alone. With trigger-collapses, the same association manages
+   *  desktop disclosure state and shortcuts; wire the trigger to toggle(). */
   @property({ attribute: false }) trigger: HTMLElement | null = null;
 
   /** Id of an external element that opens this rail's mobile overlay, the label/`htmlFor`-style
@@ -553,6 +587,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // Whether matchMedia changes are currently ignored because a consumer
   // pinned a specific mode via `forceMode` -- see the `mode` getter doc.
   private forced = false;
+  private hotkeyWindow?: Window;
   private iconOnlyMatches = false;
   private mobileMatches = false;
   private mqIconOnly?: MediaQueryList;
@@ -568,6 +603,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
   private triggerAria?: AriaOwnershipLease;
+  // Repairs focus after a responsive mobile close or removal of a focused inline resizer.
   private recoverInlineFocusAfterResponsiveClose = false;
   private readonly navId = nextId('app-rail-nav');
   /** `[part="nav"]`'s own id, distinct from `navId`. `[part="collapse-toggle"]` lives inside the
@@ -815,6 +851,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (changed.has('open') || changed.has('mode')) {
       const next = this._mode === 'mobile' && this.open;
       if (next !== this.overlayActive) {
+        if (this.hasUpdated && this._mode === 'mobile' && !prefersReducedMotion(this.ownerDocument.defaultView)) {
+          this.baseEl?.toggleAttribute('data-sliding', true);
+        }
         this.overlayActive = next;
         // Before activate/deactivate -- see placeToggle()'s own doc for why this ordering is load
         // bearing on close (it must land before this same pass's render marks the toggle's old
@@ -867,6 +906,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // After the render that owns [part="panel"]'s identity, so the lease projects the element the
     // trigger really controls rather than the previous pass's [part="base"].
     this.syncExternalTriggerA11y();
+    this.syncBuiltInKeyShortcuts();
+    if (this.baseEl && (this._mode !== 'mobile' || !this.baseEl.getAnimations().some(animation =>
+      'transitionProperty' in animation && animation.transitionProperty === 'transform'))) {
+      this.baseEl.removeAttribute('data-sliding');
+    }
     if (this.recoverInlineFocusAfterResponsiveClose) {
       this.recoverInlineFocusAfterResponsiveClose = false;
       const active = deepActiveElement(this.ownerDocument);
@@ -889,20 +933,23 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.persistState();
     }
     this.persistReady = true;
-    if (
-      (changed.has('railWidthPx') || changed.has('resizable') || changed.has('mode') || !this.hasUpdated) &&
-      this.baseEl
-    ) {
+    if (this.baseEl) {
       if (this.resizable && this.railWidthPx != null && this._mode === 'full') {
         this.baseEl.style.setProperty('inline-size', `${this.effectiveRailWidthPx}px`);
       } else {
         this.baseEl.style.removeProperty('inline-size');
       }
     }
+    this.syncResizerPosition();
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.hotkeyWindow = this.ownerDocument.defaultView ?? undefined;
+    if (this.hotkeyWindow) {
+      registerHotkeyOwner(this.hotkeyWindow, this, this.acceptsHotkey);
+      this.hotkeyWindow.addEventListener('keydown', this.onHotkeyKeyDown);
+    }
     // `forceMode`'s own setter applies synchronously (see its doc) -- including for an initial
     // `force-mode` attribute, whose attributeChangedCallback reaction runs during upgrade, before
     // connectedCallback -- so `forced`/`_mode` are already correct by the time setupMediaQueries()
@@ -937,6 +984,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   override disconnectedCallback(): void {
+    if (this.hotkeyWindow) {
+      this.hotkeyWindow.removeEventListener('keydown', this.onHotkeyKeyDown);
+      unregisterHotkeyOwner(this.hotkeyWindow, this);
+      this.hotkeyWindow = undefined;
+    }
+    this.baseEl?.removeAttribute('data-sliding');
     super.disconnectedCallback();
     this.teardownMediaQueries();
     this.overlayHandle?.suspend();
@@ -1128,10 +1181,20 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private setEffectiveMode(next: LyraAppRailMode, options?: { silent?: boolean }): void {
     if (this._mode === next) return;
     const old = this._mode;
+    const resizer = this.renderRoot?.querySelector<HTMLElement>('[part="resizer"]');
+    if (old === 'full' && next === 'icon-only' && resizer && composedContains(resizer, deepActiveElement(this.ownerDocument))) {
+      this.recoverInlineFocusAfterResponsiveClose = true;
+    }
+    if (next !== 'mobile') this.baseEl?.removeAttribute('data-sliding');
     if (old === 'mobile' && next !== 'mobile' && this.open) {
       this.recoverInlineFocusAfterResponsiveClose = true;
     }
     this._mode = next;
+    if (this.baseEl) {
+      if (!(this.resizable && this.railWidthPx != null && next === 'full')) {
+        this.baseEl.style.removeProperty('inline-size');
+      }
+    }
     this.requestUpdate('mode', old);
     // `silent` is set only by setupMediaQueries()'s very first, pre-render call (see
     // `pendingInitialModeAnnouncement`'s doc) -- queue instead of emitting immediately so a
@@ -1193,12 +1256,54 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    * A no-op while `mode` is `'mobile'`: there is no inline rail to collapse, and flipping the
    * preference from there would silently arm a presentation the user never chose for whenever the
    * viewport widened again. While `forceMode` pins the mode the preference is still recorded, and
-   * takes effect the moment the pin is released -- `preferredMode`'s own documented priority.
+   * alternates from the recorded preference and takes effect once the pin is released.
    */
   toggleCollapse(): void {
     if (this._mode === 'mobile') return;
-    this.preferredMode = this._mode === 'icon-only' ? 'full' : 'icon-only';
+    this.preferredMode = (this.preferredMode ?? this._mode) === 'icon-only' ? 'full' : 'icon-only';
   }
+
+  /** Opens/closes the mobile overlay or toggles the inline full/icon-only preference.
+   * Does nothing while disconnected. A pinned mode records the preference for later use. */
+  toggle(): void {
+    if (!this.isConnected) return;
+    if (this._mode === 'mobile') this.setOpen(!this.open);
+    else this.toggleCollapse();
+  }
+
+  private acceptsHotkey = (event: KeyboardEvent): boolean => {
+    const parsed = parseHotkey(this.hotkey);
+    return this.isConnected && !this.forced && parsed !== null && hasNonShiftModifier(parsed) &&
+      matchesHotkey(parsed, event, detectPlatform(this.hotkeyWindow?.navigator) === 'mac') &&
+      !isEditableKeyEventTarget(event) && isAccessibilityVisible(this);
+  };
+
+  private onHotkeyKeyDown = (event: Event): void => {
+    if (event.defaultPrevented || isIgnorableKeyEvent(event) || !this.hotkeyWindow) return;
+    const keyboard = event as KeyboardEvent;
+    if (!this.acceptsHotkey(keyboard) || resolveHotkeyOwner(this.hotkeyWindow, keyboard) !== this) return;
+    event.preventDefault();
+    this.toggle();
+  };
+
+  private get resolvedHotkeyShortcuts(): string | null {
+    const parsed = parseHotkey(this.hotkey);
+    return hotkeyAriaKeyShortcuts(parsed && hasNonShiftModifier(parsed) ? parsed : null,
+      detectPlatform(this.ownerDocument.defaultView?.navigator) === 'mac');
+  }
+
+  private syncBuiltInKeyShortcuts(): void {
+    const value = this.resolvedHotkeyShortcuts;
+    for (const control of [this.toggleEl, this.renderRoot.querySelector('[part="collapse-toggle"]')]) {
+      if (!control || control.getAttribute('aria-keyshortcuts') === value) continue;
+      if (value === null) control.removeAttribute('aria-keyshortcuts');
+      else control.setAttribute('aria-keyshortcuts', value);
+    }
+  }
+
+  private onPanelTransition = (event: TransitionEvent): void => {
+    if (event.target === event.currentTarget && event.propertyName === 'transform') this.baseEl?.removeAttribute('data-sliding');
+  };
 
   private onCollapseToggleClick = (): void => {
     this.toggleCollapse();
@@ -1211,20 +1316,23 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  falls back to the `ariaControlsElements` element-reference form, which crosses the boundary,
    *  and restores whatever the consumer had written itself once released.
    *
-   *  Applied only while `mode` is `'mobile'`. Outside it there is no overlay for the trigger to
-   *  expand, and a permanent `aria-expanded="false"` on a control that can never expand anything
-   *  announces a disclosure that does not exist. Unlike the focus-return association (resolved
+   *  Applied in mobile mode, or on desktop when triggerCollapses explicitly opts in. Without
+   *  that option an inline rail publishes no external disclosure. Unlike focus return (resolved
    *  once, when the overlay opens), this tracks live: reassigning `trigger` moves the state to the
    *  new element and clears it from the old one on the next update. */
   private syncExternalTriggerA11y(): void {
-    const trigger = this._mode === 'mobile' ? this.resolveExternalTrigger() : null;
+    const mobile = this._mode === 'mobile';
+    const trigger = mobile || this.triggerCollapses ? this.resolveExternalTrigger() : null;
     if (!trigger) {
       this.releaseExternalTriggerA11y();
       return;
     }
     const panel = this.baseEl ?? null;
     const contribution = {
-      attributes: { 'aria-expanded': this.open ? 'true' : 'false' },
+      attributes: {
+        'aria-expanded': (mobile ? this.open : this._mode === 'full') ? 'true' : 'false',
+        'aria-keyshortcuts': this.resolvedHotkeyShortcuts,
+      },
       controls: panel ? [panel] : [],
     };
     if (this.triggerAria) this.triggerAria.update(trigger, contribution);
@@ -1335,7 +1443,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private onResizerKeyDown = (e: KeyboardEvent): void => {
-    const rtl = isRtl(this);
+    const rtl = this.getAttribute('dir') === 'rtl' || isRtl(this);
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     const step = 8;
@@ -1353,6 +1461,18 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       }
     }
   };
+
+  private syncResizerPosition(): void {
+    const resizer = this.renderRoot.querySelector<HTMLElement>('[part="resizer"]');
+    if (!resizer || !this.baseEl || this._mode !== 'full' || !this.resizable) return;
+    const hostRect = this.getBoundingClientRect();
+    const baseRect = this.baseEl.getBoundingClientRect();
+    const half = resizer.getBoundingClientRect().width / 2;
+    const rtl = this.getAttribute('dir') === 'rtl' || isRtl(this);
+    const offset = rtl ? hostRect.right - baseRect.left : baseRect.right - hostRect.left;
+    resizer.style.setProperty('inset-inline-start', `${offset - half}px`);
+    resizer.style.removeProperty('inset-inline-end');
+  }
 
   override render(): TemplateResult {
     const mobile = this._mode === 'mobile';
@@ -1381,6 +1501,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         aria-modal=${this.overlayActive ? 'true' : nothing}
         tabindex=${this.overlayActive || !mobile ? '-1' : nothing}
         ?inert=${mobile && !this.open}
+        @transitionend=${this.onPanelTransition}
+        @transitioncancel=${this.onPanelTransition}
       >
         <div part="header" ?hidden=${!this.hasHeaderSlot && !showCollapse}>
           <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>

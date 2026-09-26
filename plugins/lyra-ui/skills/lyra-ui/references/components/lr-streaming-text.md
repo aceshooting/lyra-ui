@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,7 +53,7 @@ properties existed:
   `<lr-markdown>`'s own `internalLinkPrefix`.
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
-- `streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected)
+- `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
   and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the composed
   Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
@@ -84,6 +84,8 @@ listener either way. A consumer composing this element inside a free-form contai
 `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since this component
 renders into its own shadow root and a plain light-DOM `MutationObserver` on the container can
 never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
+The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
+outcomes.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -91,7 +93,9 @@ never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms
 `<lr-markdown>` documents forwarded verbatim (no aliasing — none collides with `base`/`cursor`)
 from the composed `<lr-markdown>` in Markdown mode via `exportparts`: `content`, `heading`,
 `paragraph`, `list`, `task-item`, `code-block`, `code-block-header`, `code-block-language`,
-`code-block-copy`, `inline-code`, `link`, `table-wrapper`, `table`, `blockquote`, `img`, `math`. A
+`code-block-copy`, `inline-code`, `link`, `table-wrapper`, `table`, `blockquote`, `img`, `math`,
+`task-list`, `task-item-checked`, `task-checkbox`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error`, `streaming-tail`. A
 host-level `lr-streaming-text::part(link)`/`::part(img)` rule reaches the rendered `<a>`/`<img>`
 exactly as the same rule does applied directly to `<lr-markdown>`.
 
@@ -170,3 +174,10 @@ happens to end with.
   `<lr-chat-message>`).
 
 ---
+
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.

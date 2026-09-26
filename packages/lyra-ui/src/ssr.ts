@@ -412,6 +412,8 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-menu',
   'lr-menu-item',
   'lr-menu-label',
+  'lr-menubar',
+  'lr-menubar-item',
   'lr-message-actions',
   'lr-message-feedback',
   'lr-message-parts',

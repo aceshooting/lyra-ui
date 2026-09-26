@@ -109,6 +109,15 @@ export const styles = css`
     box-shadow: 0 0 0 var(--lr-border-width-medium)
       var(--lr-radio-active-ring-color, var(--lr-color-brand-quiet));
   }
+  [part~="base"]:not([part~="disabled"]):hover [part~="circle"][part~="checked"] {
+    border-color: var(--lr-radio-hover-border-color, var(--lr-radio-checked-border-color, var(--lr-color-brand)));
+  }
+  [part~="base"]:not([part~="disabled"]):active [part~="circle"][part~="checked"] {
+    border-color: var(
+      --lr-radio-active-border-color,
+      var(--lr-radio-hover-border-color, var(--lr-radio-checked-border-color, var(--lr-color-brand)))
+    );
+  }
   [part~="circle"][part~="checked"] {
     /* Component-scoped indirection (mirrors lr-checkbox's --lr-checkbox-checked-bg/-border pair)
        so a consumer can retint this control's checked ring without hijacking the shared

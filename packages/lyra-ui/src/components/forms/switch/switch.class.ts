@@ -151,11 +151,15 @@ export interface LyraSwitchEventMap {
  *   it minus twice `--lr-switch-thumb-offset`.
  * @cssprop [--lr-switch-thumb-offset=var(--lr-size-2px)] - Inset of the thumb from the track's
  *   edges.
- * @cssprop [--lr-switch-track-fill=var(--lr-color-border)] - Resting fill of `[part='track']`,
- *   used as the source for the hover and press fallbacks.
- * @cssprop [--lr-switch-checked-track-fill=var(--lr-color-brand)] - Track fill while checked.
- * @cssprop [--lr-switch-track-hover-fill=color-mix(...)] - Track fill while hovered.
- * @cssprop [--lr-switch-track-active-fill=color-mix(...)] - Track fill while pressed.
+ * @cssprop [--lr-switch-track-fill=var(--lr-color-border)] - Resting fill of `[part='track']`
+ *   while unchecked and the base for unchecked hover/press fallbacks. It never paints the checked
+ *   track.
+ * @cssprop [--lr-switch-checked-track-fill=var(--lr-color-brand)] - Track fill while checked and
+ *   the base for checked hover/press fallbacks. It is independent of the unchecked fill.
+ * @cssprop [--lr-switch-track-hover-fill=color-mix(...)] - Track fill while hovered in either
+ *   state. When unset, the current state's fill is mixed toward the color-mix partner.
+ * @cssprop [--lr-switch-track-active-fill=color-mix(...)] - Track fill while pressed in either
+ *   state. When unset, the current state's fill is mixed toward the color-mix partner.
  * @cssprop --lr-switch-track-border - Border of `[part='track']`, and the checked-state fallback
  *   when `--lr-switch-checked-track-border` is unset. Undeclared by default (no border renders at
  *   all), matching today's chrome.

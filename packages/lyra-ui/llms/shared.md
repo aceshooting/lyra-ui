@@ -137,7 +137,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 278
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 280
   root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -176,7 +176,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-ui/translations/<locale>.js` (the eleven shipped message catalogs),
+  `@aceshooting/lyra-ui/translations/<locale>.js` (the twenty-one shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
@@ -2156,7 +2156,8 @@ category selection walks the same chain, so the two can never disagree:
    unbounded prefix ladder; malformed over-complex inherited input goes directly to English.
 2. **Then any registered, well-formed BCP-47 catalog sharing the base language**, which is how a
    _regional-only_ catalog is reached from a less specific tag: `lang="zh"` and `lang="zh-Hans"`
-   both find the shipped `zh-CN` catalog, and `lang="pt"`/`lang="pt-PT"` both find `pt-BR`. Order within this
+   both find the shipped `zh-CN` catalog, while `lang="pt"` reaches `pt-BR` and an exact `lang="pt-PT"`
+   selects the European Portuguese catalog. Order within this
    step is deterministic and independent of import order — most shared subtags first
    (`zh-Hant-TW` prefers a registered `zh-TW` over `zh-CN`), then alphabetically as the tie-break
    (bare `zh` with both registered picks `zh-CN`). Register the regional tag you actually mean if
@@ -2234,8 +2235,8 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
 
-Twelve full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`,
-`pt-BR`, `ro`, `ru`, `zh-CN`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
+Twenty-one full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `hi`, `id`,
+`it`, `ja`, `ko`, `nl`, `pl`, `pt-BR`, `pt-PT`, `ro`, `ru`, `tr`, `uk`, `zh-CN`, `zh-TW`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
 **side-effect-only modules**: import one bare, read nothing from it, and it calls
 `registerLyraLocale()` for you.
 
@@ -2245,9 +2246,11 @@ import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direct
 import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/it.js"; // Italian
-import "@aceshooting/lyra-ui/translations/pt-BR.js"; // also serves pt and pt-PT
+import "@aceshooting/lyra-ui/translations/pt-BR.js"; // serves generic pt and pt-BR
+import "@aceshooting/lyra-ui/translations/pt-PT.js"; // European Portuguese
 import "@aceshooting/lyra-ui/translations/ro.js"; // Romanian
-import "@aceshooting/lyra-ui/translations/zh-CN.js"; // also serves zh, zh-Hans and zh-Hans-CN
+import "@aceshooting/lyra-ui/translations/zh-CN.js"; // serves zh, zh-Hans and zh-Hans-CN
+import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional Chinese
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
@@ -2258,10 +2261,10 @@ and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
-`pt-BR` and `zh-CN` are the only Portuguese and Chinese catalogs, and they are regional tags. Step 2
-of the lookup order above is what makes them reachable from `lang="pt"`, `lang="pt-PT"`,
-`lang="zh"`, `lang="zh-Hans"` and `lang="zh-Hans-CN"` — no separate `pt`/`zh` alias registration is
-needed. They are still listed under their real tags in `getRegisteredLyraLocales()`.
+`pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs. Step 2 of the lookup order above
+still makes each reachable from a less-specific language tag, while an exact `lang="pt-PT"` or
+`lang="zh-TW"` selects its dedicated regional catalog. They are listed under their real tags in
+`getRegisteredLyraLocales()`.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later
@@ -3895,6 +3898,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-mention-popover": unknown;
   "lr-menu": unknown;
   "lr-menu-item": unknown;
+  "lr-menubar": unknown;
+  "lr-menubar-item": unknown;
   "lr-menu-label": unknown;
   "lr-message-actions": unknown;
   "lr-message-feedback": unknown;
@@ -4312,6 +4317,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-mention-popover": unknown;
   "lr-menu": unknown;
   "lr-menu-item": unknown;
+  "lr-menubar": unknown;
+  "lr-menubar-item": unknown;
   "lr-menu-label": unknown;
   "lr-message-actions": unknown;
   "lr-message-feedback": unknown;
@@ -4608,6 +4615,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-mention-popover": unknown;
   "lr-menu": unknown;
   "lr-menu-item": unknown;
+  "lr-menubar": unknown;
+  "lr-menubar-item": unknown;
   "lr-menu-label": unknown;
   "lr-message-actions": unknown;
   "lr-message-feedback": unknown;
@@ -4974,6 +4983,8 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-mention-popover": unknown;
   "lr-menu": unknown;
   "lr-menu-item": unknown;
+  "lr-menubar": unknown;
+  "lr-menubar-item": unknown;
   "lr-menu-label": unknown;
   "lr-message-actions": unknown;
   "lr-message-feedback": unknown;

@@ -102,3 +102,8 @@ export const ForwardedMarkdownConfiguration: Story = {
     ></lr-streaming-text-core>
   `,
 };
+
+export const ProgressiveMarkdown: Story = {
+  render: () => html`<lr-streaming-text-core content-mode="markdown" streaming streaming-render="progressive" code-block-header
+    .content=${'# Settled response\n\nA **formatted paragraph**.\n\n```js\nconst ready = true;\n```\n\nThe response continues'}></lr-streaming-text-core>`,
+};

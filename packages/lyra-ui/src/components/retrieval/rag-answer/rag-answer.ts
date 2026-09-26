@@ -9,5 +9,3 @@ import '../../forms/button/button.js';
 import { LyraRagAnswer } from './rag-answer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 defineElement('rag-answer', LyraRagAnswer);
-// policy-allow(component-dependency: lr-icon): Markdown's optional copy chrome uses the lean
-// copy-button entry, whose icon-button renders supplied SVG glyphs and never requests lr-icon.

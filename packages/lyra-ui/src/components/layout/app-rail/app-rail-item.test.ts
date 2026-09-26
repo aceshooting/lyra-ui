@@ -209,7 +209,7 @@ describe("host aria-label precedence", () => {
     `)) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
 
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
 
     expect(
@@ -229,7 +229,7 @@ it('renders a stable initial tooltip label when MutationObserver is unavailable'
       <lr-app-rail-item tooltip icon-only>Static dashboard</lr-app-rail-item>
     `);
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
-    base.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
 
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')?.textContent?.trim()).to.equal(
@@ -432,12 +432,12 @@ describe("tooltip", () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     let flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
     expect((flyout) == null).to.equal(true);
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
     expect((flyout) != null).to.equal(true);
     expect(flyout!.textContent!.trim()).to.equal("Dashboard");
-    base.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="tooltip"]')) == null).to.be.true;
   });
@@ -447,7 +447,7 @@ describe("tooltip", () => {
       html`<lr-app-rail-item icon-only>Dashboard</lr-app-rail-item>`
     )) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="tooltip"]')) == null).to.be.true;
   });
@@ -457,7 +457,7 @@ describe("tooltip", () => {
       html`<lr-app-rail-item tooltip>Dashboard</lr-app-rail-item>`
     )) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="tooltip"]')) == null).to.be.true;
   });
@@ -467,7 +467,7 @@ describe("tooltip", () => {
       html`<lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item>`
     )) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="tooltip"]').length).to.equal(
       1
@@ -485,7 +485,7 @@ describe("tooltip", () => {
       html`<lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item>`
     )) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="tooltip"]').length).to.equal(
       1
@@ -505,7 +505,7 @@ describe("tooltip", () => {
       </lr-app-rail-item>
     `)) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     const flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
     expect(flyout!.textContent!.trim()).to.equal("Dashboard");
@@ -518,7 +518,7 @@ describe("tooltip", () => {
       <lr-app-rail-item tooltip icon-only><span>Inbox</span></lr-app-rail-item>
     `)) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     const label = el.querySelector("span")!;
     label.textContent = "Archive";
@@ -547,7 +547,7 @@ describe("tooltip", () => {
       await el.updateComplete;
 
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-      base.dispatchEvent(new frameWindow.FocusEvent("focus", { bubbles: true }));
+      base.dispatchEvent(new frameWindow.MouseEvent('mouseenter', { bubbles: true }));
       await el.updateComplete;
 
       expect(
@@ -564,7 +564,7 @@ describe("tooltip", () => {
       <lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item>
     `)) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="tooltip"]').length).to.equal(
       1
@@ -587,7 +587,7 @@ describe("tooltip", () => {
       </lr-app-rail-item>
     `)) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
     await new Promise((resolve) => setTimeout(resolve, 30));
 
@@ -1666,4 +1666,18 @@ describe('collecting already-slotted meta/end content without relying on the ini
       el.remove();
     }
   });
+});
+
+it('hides nested disclosure in icon-only while preserving its expansion and accessible item', async () => {
+  const rail = await fixture<import('./app-rail.class.js').LyraAppRail>(html`<lr-app-rail force-mode="icon-only" label="Workspace"><lr-app-rail-item expanded><span slot="icon">A</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`);
+  const el = rail.querySelector<LyraAppRailItem>('lr-app-rail-item')!;
+  await el.updateComplete;
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]')!).display).to.equal('none');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="children"]')!).display).to.equal('none');
+  expect(el.expanded).to.equal(true);
+  await expect(el).to.be.accessible();
+  rail.forceMode = 'full'; await rail.updateComplete; await el.updateComplete;
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]')!).display).not.to.equal('none');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="children"]')!).display).not.to.equal('none');
+  expect(el.expanded).to.equal(true);
 });

@@ -252,3 +252,8 @@ export const ReducedMotion: Story = {
   },
   render: () => html`<lr-streaming-text streaming .content=${'Still working on it'}></lr-streaming-text>`,
 };
+
+export const ProgressiveMarkdown: Story = {
+  render: () => html`<lr-streaming-text content-mode="markdown" streaming streaming-render="progressive" code-block-header
+    .content=${'# Settled response\n\nA **formatted paragraph**.\n\n```js\nconst ready = true;\n```\n\nThe response continues'}></lr-streaming-text>`,
+};

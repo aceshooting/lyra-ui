@@ -1,3 +1,4 @@
+import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -19,6 +20,7 @@ import {
   type PendingHighlight,
   type MarkdownHeadingItem as SharedMarkdownHeadingItem,
   type MarkdownHtmlMode,
+  type MarkdownStreamingRender,
 } from './markdown-shared.js';
 import {
   createMarkdownVariantContext,
@@ -35,7 +37,7 @@ import { styles } from './markdown.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Re-exported so `markdown-core.ts`'s `export *` keeps exposing this from the same public path as
@@ -44,6 +46,7 @@ export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
 /** Peer-neutral public alias matching the full variant's `getMarked()` signature. */
 export type Marked = LyraMarkedParser;
 export type { MarkdownStreamingRenderMode };
+export type { MarkdownStreamingRender } from './markdown-shared.js';
 
 /** This variant's own `katex` resolution state, deliberately separate from `<lr-markdown>`'s --
  *  see `createMarkdownKatexState()` for why sharing one instance across the pair would change
@@ -59,6 +62,8 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-link-click': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
 /**
@@ -112,9 +117,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * block's language is a key in `languages`, since there is no default highlighter here to gate on
  * "is shiki installed at all"). The very first render of any content is always plain (identical to
  * `<lr-markdown>`'s own output); highlighting arrives as an asynchronous upgrade one render
- * later, once the fine-grained highlighter resolves. No highlighting is attempted while
- * `streaming` is `true` — it applies once a stream settles, so there is no added per-chunk cost
- * while content is still arriving.
+ * later, once the fine-grained highlighter resolves. Plain streaming defers highlighting until completion; progressive streaming highlights settled blocks.
  *
  * Highlighted blocks follow the page's resolved theme. Shiki emits both palettes at once, so
  * `[part="content"]` carries `data-dark-theme="true"` whenever the component's own resolved
@@ -172,9 +175,9 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @csspart paragraph - Every rendered `<p>`.
  * @csspart list - Every rendered `<ul>`/`<ol>`.
  * @csspart code-block - Every rendered fenced/indented `<pre>`.
- * @csspart code-block-header - Opt-in language and copy row above a fenced code block.
- * @csspart code-block-language - The localized language label in the optional code-block header.
- * @csspart code-block-copy - The `<lr-copy-button>` host in the optional code-block header.
+ * @csspart code-block-header - Opt-in language and copy row above a built-in code block.
+ * @csspart code-block-language - The source language label in the optional code-block header.
+ * @csspart code-block-copy - The native source-copy button in the optional code-block header.
  * @csspart inline-code - Every rendered inline `<code>` span (backtick spans, not fenced blocks).
  * @csspart link - Every rendered `<a>`.
  * @csspart table - Every rendered `<table>`.
@@ -209,9 +212,21 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @cssprop [--lr-code-block-tab-size=2] - Tab width for a rendered fenced/indented `code-block`.
  *   Deliberately the same token (and default) `lr-code-block` and `lr-code-editor` use, so a
  *   consumer sets one tab width for every code surface — it is declared here rather than
- *   inherited because `lr-code-block` is a sibling element, not an ancestor. A markdown code
- *   block wraps (`white-space: pre-wrap`) while `lr-code-block` does not, so the same value can
- *   render differently on a wrapped line, where tab stops restart.
+ *   inherited because `lr-code-block` is a sibling element, not an ancestor. All code blocks preserve lines (`white-space: pre`) and scroll horizontally when needed.
+ * @csspart task-list - A list consisting entirely of read-only task items.
+ * @csspart task-item - A read-only task list item.
+ * @csspart task-item-checked - Additional state token on a completed task item.
+ * @csspart task-checkbox - The disabled checkbox of a task list item.
+ * @csspart table-wrapper - The named, keyboard-focusable horizontal table scroller.
+ * @cssprop [--lr-markdown-task-checkbox-size=var(--lr-size-0-875em)] - Checkbox size, including its aligned list gutter.
+ * @csspart code-block-frame - The named group around a code header and its code block.
+ * @csspart code-block-copy-success - Additional copy-button token during successful confirmation.
+ * @csspart code-block-copy-error - Additional copy-button token during failed confirmation.
+ * @cssprop [--lr-markdown-code-header-bg=var(--lr-color-surface)] - Code header background.
+ * @cssprop [--lr-markdown-code-header-color=var(--lr-color-text-quiet)] - Code header foreground.
+ * @event lr-copy - Fired after a code-header clipboard write succeeds, with its immutable outcome.
+ * @event lr-copy-error - Fired after a code-header clipboard write fails, with its immutable outcome.
+ * @csspart streaming-tail - The current uncommitted text during progressive streaming.
  * @status stable
  * @since 4.0.0
  */
@@ -223,6 +238,12 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    codeRegion: LYRA_DEFAULT_codeRegion,
+    codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
+    copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
+    copyCode: LYRA_DEFAULT_copyCode,
+    copyFailed: LYRA_DEFAULT_copyFailed,
+    markdownTableRegion: LYRA_DEFAULT_markdownTableRegion,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -298,8 +319,8 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ type: Number, attribute: 'heading-offset' })
   override headingOffset = 0;
 
-  /** Signals that `content` is still arriving incrementally. While true, content renders as
-   *  bounded-cost plain text and Markdown parsing resumes only for the final false transition;
+  /** Signals that `content` is still arriving incrementally. The default plain mode keeps
+   *  accumulated source as text; progressive mode renders settled Markdown groups;
    *  the host remains `aria-busy="true"` so assistive technology knows the rendered document is
    *  not final.
    *  Reflects so a consumer can also target `lr-markdown-core[streaming]`. */
@@ -310,19 +331,22 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
    * they settle, keeps only the mutable trailing block as text, and renders an open fenced block
    * as unhighlighted code. Once `streaming` becomes false the component performs its regular full
    * document parse, including cross-block reference links. */
-  @property({ attribute: 'streaming-render', reflect: true })
-  override streamingRender: MarkdownStreamingRenderMode = 'plain';
+  @property({ attribute: 'streaming-render' })
+  override streamingRender: MarkdownStreamingRender = 'plain';
 
-  /** Shows a localized language label and an `lr-copy-button` above fenced code blocks. The button
-   * copies the source code. `false` (the default) preserves the existing code-block appearance;
-   * while streaming, chrome is added only after a fence has closed. */
+  /** Adds a language label and source-copy button to the first 200 non-empty built-in code blocks.
+   * Custom code renderers and pre-escaped code bypass the header. In sanitize mode this also strips
+   * authored style elements; trusted mode has no guarantee against authored visual copy deception. */
+  @property({ type: Boolean, attribute: 'code-block-header' })
+  override codeBlockHeader = false;
+
+  /** Compatibility spelling for enabling the code-block header. Either property enables it. */
   @property({ type: Boolean, attribute: 'code-block-chrome' })
   override codeBlockChrome = false;
 
   /** Syntax-highlights fenced code blocks through the fine-grained Shiki core loader when
    *  `languages` supplies the matching grammar. The empty default language map means no fenced
-   *  block is highlighted; set `false` to keep plain output even when grammars are supplied. No
-   *  effect while `streaming` is `true` -- see that property's own doc. */
+   *  block is highlighted; set `false` to keep plain output even when grammars are supplied. Plain streaming defers highlighting until completion; progressive mode highlights settled blocks. */
   @property({
     attribute: 'highlight-code',
     converter: trueDefaultBooleanConverter,
@@ -387,7 +411,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
     const loaded = await ensureShikiLanguageLoaded(highlighter, normalizedLang, source);
     if (!isCurrent()) return undefined;
     return loaded
-      ? tokenizeMarkdownHighlight(highlighter, pending, this.codeBlockChrome)
+      ? tokenizeMarkdownHighlight(highlighter, pending, (this.codeBlockHeader || this.codeBlockChrome))
       : null;
   }
 }

@@ -1,3 +1,4 @@
+import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -290,6 +291,14 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
    *  part's own interactive wiring (retry/citation/tool-call/widget events). */
   @property({ attribute: false }) renderPart?: MessagePartRenderer;
 
+  /** Rendering mode forwarded to built-in text and reasoning Markdown parts. */
+  @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
+  /** Adds source-copy headers to built-in text and reasoning Markdown parts. Custom renderers replace this surface. */
+  @property({ type: Boolean, attribute: 'code-block-header' }) codeBlockHeader = false;
+  /** Compatibility spelling for enabling built-in Markdown code headers. */
+  @property({ type: Boolean, attribute: 'code-block-chrome' }) codeBlockChrome = false;
+
+
   /** `0` (the default) renders every part -- unbounded, matching every prior release. A positive
    *  value windows rendering to the newest N parts (host `parts` data is untouched); citation
    *  ranks are still computed against the full sequence first, so a badge's number stays stable
@@ -506,11 +515,17 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     return { custom, results, folded };
   }
 
+  private renderPartMarkdown(part: Extract<MessagePart, { type: 'text' | 'reasoning' }>): TemplateResult {
+    return html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}
+      .streamingRender=${this.streamingRender} .codeBlockHeader=${this.codeBlockHeader}
+      .codeBlockChrome=${this.codeBlockChrome}></lr-markdown>`;
+  }
+
   private renderBuiltin(part: MessagePart, citationRank: number, pairing?: ToolPairing): unknown {
     switch (part.type) {
       case 'text':
         return this.contentMode === 'markdown'
-          ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
+          ? this.renderPartMarkdown(part)
           : part.text;
       case 'reasoning':
         return html`<lr-thinking-panel
@@ -518,7 +533,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           .mode=${part.state === 'streaming' ? 'live' : 'post-hoc'}
           ?expanded=${part.collapsed === false}
           >${this.contentMode === 'markdown'
-            ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
+            ? this.renderPartMarkdown(part)
             : part.text}</lr-thinking-panel
         >`;
       case 'tool-call': {
@@ -614,9 +629,8 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   ): TemplateResult | typeof nothing {
     if (part.type === 'reasoning' && !this.showReasoning) return nothing;
     if (pairing?.folded.has(part.id)) return nothing;
-    return html`<div part=${this.partNames(part)} data-type=${part.type} data-state=${part.state ?? 'complete'}>
-      ${custom.has(part.id) ? custom.get(part.id) : this.renderBuiltin(part, citationRank, pairing)}
-    </div>`;
+    return html`<div part=${this.partNames(part)} data-type=${part.type} data-state=${part.state ?? 'complete'}
+      >${custom.has(part.id) ? custom.get(part.id) : this.renderBuiltin(part, citationRank, pairing)}</div>`;
   }
 
   override render(): TemplateResult {

@@ -54,8 +54,8 @@ export const styles = css`
      follows the text colour), so the press reads deeper than hover. It must stay after the
      [aria-pressed='true'] rule: both are (0,2,0), so source order alone decides whether pressing
      an already-selected filter shows any feedback. */
-  [part='filter-toggle']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part='filter-toggle']:where([aria-pressed='true']):active {
+    background: color-mix(in oklab, var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='filter-toggle']:focus-visible,
   [part='test-name']:focus-visible,
@@ -141,6 +141,7 @@ export const styles = css`
     display: none;
   }
   [part='failure-message'] {
+    unicode-bidi: plaintext;
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
     white-space: pre-wrap;

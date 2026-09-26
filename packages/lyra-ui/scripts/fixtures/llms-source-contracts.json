@@ -978,7 +978,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "3c198df6d6227f0f469a",
+      "fingerprint": "95359c313f2d1f54bb97",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -994,7 +994,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "92e4a64a3e1e48e2718d",
+      "fingerprint": "f3539800cbb6829d80cd",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1042,7 +1042,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "05e8f420ce99230cf9fc",
+      "fingerprint": "de315f2d63059ffc3bb1",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1058,7 +1058,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "73ffb674859aa5e94f77",
+      "fingerprint": "3193dd8807889022c0c2",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -9593,7 +9593,7 @@
       "module": "src/components/media/file-icon/file-type-metadata.ts",
       "exportName": "createFileTypeMetadataRegistry",
       "kind": "function",
-      "fingerprint": "c4a9295318538a35a855",
+      "fingerprint": "2484d9114f2fe17316cb",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-icon.ts",
@@ -9615,7 +9615,7 @@
       "module": "src/components/media/file-icon/file-type-metadata.ts",
       "exportName": "getFileTypeMetadata",
       "kind": "function",
-      "fingerprint": "6faa682c95b9a56d835c",
+      "fingerprint": "c5a19f40ded60c8b455e",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-icon.ts",
@@ -9637,7 +9637,7 @@
       "module": "src/components/media/file-icon/file-type-metadata.ts",
       "exportName": "LyraFileTypeMetadata",
       "kind": "interface",
-      "fingerprint": "ac81447e50088f164f28",
+      "fingerprint": "5e27ce7605de992529d9",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-icon.ts",
@@ -9659,7 +9659,7 @@
       "module": "src/components/media/file-icon/file-type-metadata.ts",
       "exportName": "LyraFileTypeMetadataEntry",
       "kind": "interface",
-      "fingerprint": "eb3217c8fc0060976e1b",
+      "fingerprint": "5c9ed85412abcc4e0a68",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-icon.ts",
@@ -9681,7 +9681,7 @@
       "module": "src/components/media/file-icon/file-type-metadata.ts",
       "exportName": "LyraFileTypeMetadataRegistry",
       "kind": "interface",
-      "fingerprint": "1e311f0162481b53d869",
+      "fingerprint": "4e812b2a31cdbb5a9d8b",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-icon.ts",
@@ -9703,7 +9703,7 @@
       "module": "src/components/media/file-icon/file-type-metadata.ts",
       "exportName": "LyraResolvedFileTypeMetadata",
       "kind": "interface",
-      "fingerprint": "b7ce225707176d8a0c90",
+      "fingerprint": "2cf044802c7af95d72dd",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-icon.ts",
@@ -14501,7 +14501,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "2ea6f7b96066dc8262b2",
+      "fingerprint": "291dd5d36504c68a9297",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15432,7 +15432,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "a6f1ea0e1224aaef943f",
+      "fingerprint": "98e7731f47f4e457ebb8",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15573,7 +15573,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "f99ded06ebf540b21842",
+      "fingerprint": "91ab52dfae484b31de1e",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16178,7 +16178,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "246445b3101dcf242207",
+      "fingerprint": "20e8381f4023690603a3",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16194,7 +16194,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "8efd3a1a508087e9d086",
+      "fingerprint": "59454a49342c9fc84498",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16210,7 +16210,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "99dc04040d260582b178",
+      "fingerprint": "1cad12d0793edbca2bc1",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16859,7 +16859,7 @@
       "module": "src/utilities/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "35cfbcab080de3029ede",
+      "fingerprint": "e1d7a42c2ba8dab3897a",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/localization.ts"
@@ -16876,7 +16876,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "d12b0a4901c32f63322d",
+      "fingerprint": "4fc7fd290d6a39568cdb",
       "routes": [
         "src/vue.ts"
       ],

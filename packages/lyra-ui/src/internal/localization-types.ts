@@ -200,6 +200,7 @@ export type LyraMessageKey =
   | 'copiedToClipboard'
   | 'codeRegion'
   | 'codeRegionWithLanguage'
+  | 'markdownTableRegion'
   | 'codeBlockLineLabel'
   | 'copyDiff'
   | 'diffViewOldLabel'

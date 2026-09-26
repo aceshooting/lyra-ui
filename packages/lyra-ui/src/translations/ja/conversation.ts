@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   copiedToClipboard: 'クリップボードにコピーしました',
   codeRegion: 'コード',
   codeRegionWithLanguage: '{language} のコード',
+  markdownTableRegion: '表',
   codeBlockLineLabel: '{line} 行目',
   untitledConversation: '無題の会話',
   generationStatusElapsedSeconds: '{seconds} 秒',

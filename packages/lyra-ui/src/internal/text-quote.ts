@@ -48,6 +48,8 @@ export const TEXT_QUOTE_LIMITS: Readonly<TextQuoteLimits> = Object.freeze({
   maxCacheEntries: 64,
 });
 
+export const TEXT_QUOTE_TRAVERSAL_ALLOWANCE_MAX = 4096;
+
 function resolvedLimits(overrides?: Partial<TextQuoteLimits>): TextQuoteLimits {
   const boundedInteger = (value: number | undefined, hardMaximum: number): number =>
     Number.isFinite(value)
@@ -57,8 +59,8 @@ function resolvedLimits(overrides?: Partial<TextQuoteLimits>): TextQuoteLimits {
     maxCorpusCodeUnits: boundedInteger(overrides?.maxCorpusCodeUnits, TEXT_QUOTE_LIMITS.maxCorpusCodeUnits),
     maxNodes: boundedInteger(overrides?.maxNodes, TEXT_QUOTE_LIMITS.maxNodes),
     maxTraversalNodes: boundedInteger(
-      overrides?.maxTraversalNodes,
-      TEXT_QUOTE_LIMITS.maxTraversalNodes,
+      overrides?.maxTraversalNodes ?? TEXT_QUOTE_LIMITS.maxTraversalNodes,
+      TEXT_QUOTE_LIMITS.maxTraversalNodes + TEXT_QUOTE_TRAVERSAL_ALLOWANCE_MAX,
     ),
     maxNodeCodeUnits: boundedInteger(overrides?.maxNodeCodeUnits, TEXT_QUOTE_LIMITS.maxNodeCodeUnits),
     maxNormalizationWorkCodeUnits: boundedInteger(
@@ -137,6 +139,7 @@ interface TextOffsetMapping {
 }
 
 interface TrackedScopeRoot {
+  readonly traversalLimit: number;
   readonly root: Node;
   readonly textInterval: readonly Text[];
   readonly textValues: readonly string[];
@@ -152,6 +155,7 @@ function trackScopeRoot(
   root: Node,
   includesRootPrefix = false,
   includesRootSuffix = false,
+  traversalLimit: number = TEXT_QUOTE_LIMITS.maxTraversalNodes,
 ): TextQuoteScope {
   const first = scope.segments[0]?.node;
   const last = scope.segments.at(-1)?.node;
@@ -163,7 +167,7 @@ function trackScopeRoot(
   let traversed = 0;
   let reachedLast = false;
   let unexpectedItemText = false;
-  while (node && traversed++ < TEXT_QUOTE_LIMITS.maxTraversalNodes) {
+  while (node && traversed++ < traversalLimit) {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node as Text;
       textInterval.push(text);
@@ -185,6 +189,7 @@ function trackScopeRoot(
   }
   scopeRoots.set(scope, {
     root,
+    traversalLimit,
     textInterval,
     valid: reachedLast
       && segmentIndex === scope.segments.length
@@ -564,7 +569,7 @@ export function scopeFromElement(
     node = next;
   }
   const scope = normalizeScopeGlobally({ text: textChunks.join(''), segments, truncated });
-  return trackScopeRoot(scope, root, true, !scope.truncated);
+  return trackScopeRoot(scope, root, true, !scope.truncated, limits.maxTraversalNodes);
 }
 
 function firstTextNode(
@@ -716,6 +721,7 @@ export function scopeFromItems(
       valid: false,
       includesRootPrefix: false,
       includesRootSuffix: false,
+      traversalLimit: TEXT_QUOTE_LIMITS.maxTraversalNodes,
     });
   }
   return scope;
@@ -1152,7 +1158,7 @@ function scopeStructureIsFresh(scope: TextQuoteScope): boolean {
     : first;
   let textIndex = 0;
   let traversed = 0;
-  while (node && traversed++ < TEXT_QUOTE_LIMITS.maxTraversalNodes) {
+  while (node && traversed++ < tracked.traversalLimit) {
     if (node.nodeType === Node.TEXT_NODE) {
       if (
         node !== tracked.textInterval[textIndex]

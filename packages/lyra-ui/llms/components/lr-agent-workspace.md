@@ -148,3 +148,6 @@ The same applies to `::part(composer)`. Both declarations are needed: the cap ke
 inside the workspace, and `overflow` makes the capped region scrollable instead of spilling. No
 component-owned custom property duplicates this, because a `::part()` rule from your tree already
 wins over the shadow stylesheet regardless of specificity.
+
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not
+reflected) forwards to each message's `lr-message-parts`. The legacy message text route is unchanged.

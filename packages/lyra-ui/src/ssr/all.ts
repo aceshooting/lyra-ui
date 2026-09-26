@@ -162,6 +162,8 @@ import '../components/utility/mention-popover/mention-popover.js';
 import '../components/layout/menu/menu.js';
 import '../components/layout/menu/menu-item.js';
 import '../components/layout/menu/menu-label.js';
+import '../components/layout/menubar/menubar.js';
+import '../components/layout/menubar/menubar-item.js';
 import '../components/conversation/message-actions/message-actions.js';
 import '../components/conversation/message-feedback/message-feedback.js';
 import '../components/conversation/message-parts/message-parts.js';

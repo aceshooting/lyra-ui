@@ -507,7 +507,7 @@ describe('escape-mode raw-block text', () => {
   const escapeOpener = (opener: string): string => `&lt;${opener.slice(1, -1)}&gt;`;
   const introHtml = (opener: string): string => `<p part='paragraph'>Intro ${opener} run</p>\n`;
   /** The parse output's table markup around `inner` (both pinned table fragments below use it). */
-  const tableHtml = (inner: string): string => `<table part='table'>\n${inner}</table>\n`;
+  const tableHtml = (inner: string): string => `<div part='table-wrapper' role='group' tabindex='0'><table part='table'>\n${inner}</table></div>\n`;
 
   /** Where the text follows the opener, with the exact parse output for a rendered opener `o`
    *  and follow-up text `p`. */

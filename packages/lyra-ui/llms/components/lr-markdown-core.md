@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,7 +33,7 @@ A fenced code block whose language isn't a key in `languages` always renders the
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
 rendering path as `<lr-code-block-core>`'s identical contract. A block that _is_ highlighted follows the
 page's resolved theme through the same `[part="content"][data-dark-theme="true"]` hook `<lr-markdown>`
-documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables and task-list presentation (task items use `part="task-item"`, task-only lists carry `data-task-list="true"`, and wide tables scroll inside `part="table-wrapper"`),
+documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables and task-list presentation (task items expose `task-item`/`task-item-checked` and `task-checkbox`, task-only lists carry `task-list`, and wide tables scroll inside `part="table-wrapper"`),
 links, blockquotes, images, LTR-isolated code, progressive streaming and opt-in code-block chrome,
 heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
 support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highlight-activate`/
@@ -50,7 +50,7 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
-`streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`, reflected),
+`streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
@@ -78,15 +78,17 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
-`lr-anchor-result`, `lr-content-settled` — identical detail shapes to `<lr-markdown>`'s own.
+`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
+`<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
 anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`, `list`, `task-item`,
 `code-block`, `code-block-header`, `code-block-language`, `code-block-copy`, `inline-code`, `link`,
-`table-wrapper`, `table`, `blockquote`, `img`, `math` —
-identical to `<lr-markdown>`'s own parts.
+`table-wrapper`, `table`, `blockquote`, `img`, `math`, `task-list`, `task-item-checked`,
+`task-checkbox`, `code-block-frame`, `code-block-copy-success`, `code-block-copy-error`,
+`streaming-tail` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
@@ -101,9 +103,7 @@ fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-r
 described under `<lr-markdown>` above: the same property name and default that
 `<lr-code-block>`/`<lr-code-editor>` read, declared as a `var()` fallback at the point of use rather
 than on `:host` so a page- or container-level value reaches it, and carried here in its own right
-because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown
-code blocks wrap (`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width
-can render differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by
+because this element is a **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown and standalone code blocks preserve lines and scroll horizontally. `--lr-markdown-font-mono` is the monospace stack used by
 rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
@@ -136,3 +136,15 @@ const view = html`<lr-markdown-core
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
 ---
+
+The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
+`task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
+`code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
+(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
+outcome, bubbling and composed.
+
+The shared `--lr-markdown-task-checkbox-size` hook defaults to `var(--lr-size-0-875em)` and
+keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-header-bg`
+(default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
+(default `var(--lr-color-text-quiet)`).

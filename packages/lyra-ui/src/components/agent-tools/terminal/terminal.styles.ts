@@ -157,6 +157,7 @@ export const styles = css`
     box-sizing: border-box;
   }
   :host(:not([wrap])) lr-virtual-list::part(base) {
+    direction: ltr;
     overflow-x: auto;
   }
   [part='jump-to-latest'] {

@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import type { TextQuoteScope } from './text-quote.js';
 import {
   TEXT_QUOTE_LIMITS,
+  TEXT_QUOTE_TRAVERSAL_ALLOWANCE_MAX,
   TEXT_SELECTION_RECT_LIMIT,
   boundedSelectionRects,
   boundedSelectionText,
@@ -19,6 +20,25 @@ import {
 } from './text-quote.js';
 
 describe('bounded text quote indexing', () => {
+  it('retains a bounded traversal allowance for template markers during freshness checks', () => {
+    const root = document.createElement('div');
+    const markers = TEXT_QUOTE_LIMITS.maxTraversalNodes + 32;
+    for (let index = 0; index < markers; index++) root.appendChild(document.createComment(''));
+    root.append('late needle');
+    document.body.append(root);
+    try {
+      expect(scopeFromElement(root).text).to.equal('');
+      const scope = scopeFromElement(root, { maxTraversalNodes: markers + 2 });
+      expect(scope.text).to.equal('late needle');
+      expect(resolveTextQuote(scope, { quote: 'needle' })?.toString()).to.equal('needle');
+      root.lastChild!.textContent = 'changed';
+      expect(resolveTextQuote(scope, { quote: 'needle' }) === null).to.equal(true);
+      root.replaceChildren();
+      for (let index = 0; index < TEXT_QUOTE_LIMITS.maxTraversalNodes + TEXT_QUOTE_TRAVERSAL_ALLOWANCE_MAX + 1; index++) root.appendChild(document.createComment(''));
+      root.append('beyond cap');
+      expect(scopeFromElement(root, { maxTraversalNodes: Number.MAX_SAFE_INTEGER }).text).to.equal('');
+    } finally { root.remove(); }
+  });
   it('bounds a multi-megabyte text node without retaining one JavaScript number per character', () => {
     const root = document.createElement('div');
     root.textContent = 'a'.repeat(TEXT_QUOTE_LIMITS.maxCorpusCodeUnits + 1);

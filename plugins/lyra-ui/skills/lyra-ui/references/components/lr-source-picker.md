@@ -30,6 +30,9 @@ the tree follows that repair, while focus outside is preserved.
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
 string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
   a tree — presence of `children` makes a row a group/folder with tri-state select. Input is
+  rendered with a file badge for leaf rows only: a leaf without `name` uses its `label` as the
+  filename fallback, while group rows pass no filename. Set `name: ''` on a leaf to suppress a
+  label-derived badge token.
   normalized once into a deterministic nonblank first-id-wins model with identity/cycle detection,
   a depth ceiling of 64 and a 2,000-node ceiling; blank/whitespace ids, duplicate ids, and other
   rejected/truncated input fail closed with localized visible status rather than recursing or

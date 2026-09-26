@@ -408,7 +408,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
         <lr-file-input
           part="import"
           accept=${this.accept}
-          label=${this.localize('evalDatasetImportLabel')}
+          compact
+          accessible-label=${this.localize('evalDatasetImportLabel')}
           ?disabled=${this.disabled}
           @input=${this.stopOwnedEvent}
           @change=${this.stopOwnedEvent}
@@ -416,7 +417,9 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           @blur=${this.stopOwnedEvent}
           @lr-invalid=${this.stopOwnedEvent}
           @lr-files=${this.onFiles}
-        ></lr-file-input>
+        >
+          <span slot="dropzone">${this.localize('evalDatasetImportLabel')}</span>
+        </lr-file-input>
         <lr-export-button
           part="export"
           .formats=${this.exportFormats}

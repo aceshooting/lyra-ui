@@ -29,6 +29,7 @@ import {
 } from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { activeElementIn, composedParentElement } from '../../../internal/active-element.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
   omittedEmptyStringConverter,
@@ -396,6 +397,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private readonly tooltipId = nextId('tooltip');
   private readonly descriptionId = nextId('tooltip-description');
   private descriptionProxy?: HTMLSpanElement;
+  private focusDescribesTrigger = false;
   private contentObserver?: MutationObserver;
   private triggerSyncGeneration = 0;
   private stopLabelReferenceIdentityObservation?: () => void;
@@ -613,6 +615,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       this.unbindTrigger(this.triggerElement);
     }
     this.releaseTriggerA11y();
+    this.focusDescribesTrigger = false;
     this.triggerElement = undefined;
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
@@ -949,7 +952,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
   private syncTriggerA11y(): void {
     const trigger = this.triggerElement ?? null;
-    const proxy = this.open ? this.descriptionProxy : undefined;
+    const proxy = this.open || this.focusDescribesTrigger ? this.descriptionProxy : undefined;
     const contribution = { descriptions: proxy ? [proxy] : [] };
     if (this.triggerAria) this.triggerAria.update(trigger, contribution);
     else this.triggerAria = acquireAriaOwnership(trigger, contribution);
@@ -1037,6 +1040,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     trigger.removeEventListener('focusout', this.onLeave);
     trigger.removeEventListener('click', this.onTriggerClick);
     trigger.removeEventListener('keydown', this.onTriggerKeyDown);
+    this.focusDescribesTrigger = false;
   }
   /** Whether `trigger` is currently held open by a real user interaction -- the pointer resting
    *  over it, or focus sitting inside it. `:hover` is the browser's own post-layout hover state,
@@ -1102,13 +1106,18 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.disabled) return;
     this.syncTriggerA11y();
     if (event.type === 'focusin') {
-      if (
-        this.suppressTriggerFocusOpen ||
-        (!this.opensOn('focus') &&
-          (!this.opensOn('focus-visible') || !this.isTriggerFocusVisible()))
-      ) {
+      if (this.opensOn('focus')) {
+        this.focusDescribesTrigger = true;
+      }
+      if (this.suppressTriggerFocusOpen) {
         return;
       }
+      if (this.opensOn('focus')) {
+        this.requestTransition(true);
+        return;
+      }
+      if (!this.opensOn('focus-visible') || !this.isTriggerFocusVisible()) return;
+      if (!isKeyboardFocusEvent(event)) return;
     } else if (!this.opensOn('hover')) return;
     if (event.type !== 'focusin') this.openedByPointer = true;
     this.requestTransition(true);
@@ -1127,6 +1136,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       composedContains(this.triggerElement, next as Element)
     ) {
       return;
+    }
+    if (event.type === 'focusout') {
+      this.focusDescribesTrigger = false;
+      this.syncTriggerA11y();
     }
     if (this.interactiveContent && this.isPopupTarget(next)) return;
     this.requestTransition(false);

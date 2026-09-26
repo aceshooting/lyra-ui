@@ -147,6 +147,28 @@ it('uses the localized dropzone instruction when the form label is omitted or em
   );
 });
 
+it('treats whitespace-only labels as absent through dynamic changes without changing their readback', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input .label=${' \t\n '} .strings=${{
+    fileInputDefaultLabel: 'Déposer les fichiers',
+  }}></lr-file-input>`);
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!;
+  const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+  expect(el.label).to.equal(' \t\n ');
+  expect(label.hidden).to.equal(true);
+  expect(base.getAttribute('aria-label')).to.equal('Déposer les fichiers');
+  expect(base.hasAttribute('aria-labelledby')).to.equal(false);
+  el.label = 'Reference files';
+  await el.updateComplete;
+  expect(label.hidden).to.equal(false);
+  expect(base.getAttribute('aria-labelledby')).to.equal('file-input-label');
+  expect(el.shadowRoot!.querySelector('[part="dropzone-text"]')!.textContent).to.contain('Déposer les fichiers');
+  el.label = '   ';
+  await el.updateComplete;
+  expect(label.hidden).to.equal(true);
+  expect(base.getAttribute('aria-label')).to.equal('Déposer les fichiers');
+  await expect(el).to.be.accessible();
+});
+
 it("emits lr-files with all files accepted when no mime restrictions are set", async () => {
   const el = (await fixture(
     html`<lr-file-input multiple></lr-file-input>`

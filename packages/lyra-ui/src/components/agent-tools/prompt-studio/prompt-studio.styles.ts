@@ -87,7 +87,7 @@ export const styles = css`
   [part='version']:where([aria-pressed='true']):where(:hover:not(:disabled)) {
     background: var(
       --lr-prompt-studio-version-selected-hover-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      color-mix(in oklab, var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
     );
   }
   [part='version']:where([aria-pressed='true']):where(:active:not(:disabled)) {
@@ -95,7 +95,7 @@ export const styles = css`
       in oklab,
       var(
         --lr-prompt-studio-version-selected-hover-bg,
-        color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+        color-mix(in oklab, var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
       ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );

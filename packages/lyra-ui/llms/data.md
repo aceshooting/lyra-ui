@@ -1420,7 +1420,7 @@ independent concepts.
   solid brand chip in all five, so the appearance never decides whether the current page is
   identifiable
 - `itemLabel: string = ''` (attribute `item-label`) — custom item noun used in the summary; empty
-  selects the localized singular `item` or plural `items` key
+  selects the localized singular `item` or the CLDR plural form of `items` for the active locale
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
 - `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied

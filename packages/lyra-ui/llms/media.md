@@ -1920,8 +1920,9 @@ previous entry, reassigning `file` several times before the next paint leaks not
 
 ## `lr-file-icon`
 
-Localized, tokenized file-format badge for surrounding upload rows, cards, selectors, and viewer
-headers. The companion `getFileTypeMetadata(mimeType, fileName?)` utility covers common document,
+File-format badge showing an unlocalized format token or generic glyph with a localized accessible
+name for surrounding upload rows, cards, selectors, and viewer headers. The companion
+`getFileTypeMetadata(mimeType, fileName?)` utility covers common document,
 spreadsheet, presentation, code, archive, image, audio, and video formats. An explicit known MIME
 type wins; filename extension fallback is used only for an empty or `application/octet-stream`
 MIME type. Unknown values return a generic file result.
@@ -1942,10 +1943,14 @@ is an unknown attribute now: `bytes` stays `0` and the badge silently renders wi
 mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).
 
-In `mode="icon"`, the localized format label is rendered inside a constrained, logical-start-aligned
-text box so `text-overflow: ellipsis` can truncate multi-word labels cleanly at the badge size. The full
-localized label remains available as the accessible name; use `mode="label"` when the full visible
-format name is needed.
+In `mode="icon"`, the badge shows a short unlocalized format token such as `PDF`, `DOCX`, or a
+filename-derived extension. The first qualifying extension (1–4 ASCII letters/digits/`+`, with at
+least one letter) is used when the MIME type is explicit; a filename's final extension is preferred
+when resolving an empty or `application/octet-stream` MIME type. A generic file glyph is used when
+no token applies, and replaces the token below about `1.25rem` (long tokens: about `1.75rem`).
+Tokens use logical-start ellipsis and scale with the badge. The full localized label remains only in
+the accessible name and in `mode="label"`; the host's baseline is the badge bottom edge in every
+rendered token or glyph state.
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size). `--lr-file-icon-bg` (default `var(--lr-color-brand-quiet)`)
@@ -1956,10 +1961,15 @@ category renders the same fill today, so either can be set without hijacking the
 **Exports:** `LyraFileTypeMetadata`, `LyraFileTypeMetadataEntry`, `LyraResolvedFileTypeMetadata`,
 `LyraFileTypeMetadataRegistry`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
 `createFileTypeMetadataRegistry(entries)`, `defaultFileTypeMetadataRegistry`, and the compatibility
-lookup `getFileTypeMetadata()`. Registries validate and deeply snapshot records, use deterministic
-longest registered-suffix matching (including multi-dot/punctuation suffixes), and isolate custom
-mappings per instance instead of mutating module-global state. Consumer labels/descriptions remain
-verbatim; built-in labels route through localization.
+lookup `getFileTypeMetadata()`. `LyraFileTypeMetadata` also accepts an optional `abbreviation` for a
+custom, unlocalized badge token. It is trimmed, blank values are absent, and a non-string or value
+longer than eight code points drops the record. Registries validate and deeply snapshot records, use
+deterministic longest registered-suffix matching (including multi-dot/punctuation suffixes), and
+isolate custom mappings per instance instead of mutating module-global state. Consumer
+labels/descriptions remain verbatim in the accessible name and `mode="label"`; built-in labels route
+through localization. `fileType*` string overrides therefore never change the badge token. A
+consumer record replacing a built-in MIME also owns that type's verbatim label, so an app that uses
+`abbreviation` must provide its own localized label.
 
 ```html
 <lr-file-icon
@@ -3407,6 +3417,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFileTypeMetadata {
     readonly label: string;
     readonly description?: string;
+    readonly abbreviation?: string;
     readonly icon: LyraFileTypeIcon;
     readonly category: LyraFileTypeCategory;
     readonly extensions?: readonly string[];
@@ -3421,6 +3432,7 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from LyraFileTypeMetadata.
     readonly label: string;
     readonly description?: string;
+    readonly abbreviation?: string;
     readonly icon: LyraFileTypeIcon;
     readonly category: LyraFileTypeCategory;
     readonly extensions?: readonly string[];

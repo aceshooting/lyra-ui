@@ -1,3 +1,5 @@
+import { streamingTailText } from './markdown-streaming-tail.js';
+import { MARKDOWN_CODE_HEADER_MAX, sanitizeCodeLanguageLabel, type MarkdownCodeBlockRecord } from './markdown-code-header.js';
 /**
  * Pure parsing, rendering, cache, anchor, and highlight helpers shared by `<lr-markdown>` and
  * `<lr-markdown-core>`. Their common reactive lifecycle and DOM orchestration live in
@@ -9,10 +11,10 @@
  * its own module graph never reaching that call, and this module is in that graph.
  */
 
+import type { MarkdownFallbackSegment } from './markdown-fallback-code.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { repeat } from 'lit/directives/repeat.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
@@ -376,6 +378,12 @@ export interface ParseMarkdownOptions {
   slugger?: Slugger;
   /** Marks parser-owned fenced blocks for opt-in code chrome. */
   codeBlockChromeOption?: boolean;
+  codeBlockHeaderOption?: boolean;
+  codeFrameNonce?: string;
+  codeBlocksOut?: MarkdownCodeBlockRecord[];
+  codeBlockIndexOffset?: number;
+  rawContent?: string;
+  tabSize?: number;
   escapeHtmlOption: boolean;
   /** `htmlMode === 'trusted'` -- a deliberate, fully-documented opt-out of every safety net this
    *  parser applies, `link()`/`image()`'s scheme allowlist included. `sanitize` and `escape` both
@@ -388,6 +396,8 @@ export interface ParseMarkdownOptions {
    *  recency, exactly as before extraction. */
   getCachedHighlight: (key: string) => string | undefined;
   failedHighlightKeys: Set<string>;
+  /** Shared admission set when several groups belong to the same document. */
+  activeHighlightKeys?: Set<string>;
   headingAnchorsOption: boolean;
   mathOption: boolean;
   /** Already-resolved katex module (or `null`) -- each component keeps its own katex-loading
@@ -409,11 +419,15 @@ function warnMarkdownSanitizerUnavailable(): void {
 interface MarkdownRendererOverrides extends Partial<MarkedRenderer> {
   listitem(
     this: MarkedParserContext,
-    token: { tokens: unknown[]; task?: boolean },
+    token: { tokens: unknown[]; task?: boolean; checked?: boolean },
   ): string;
   checkbox(this: MarkedParserContext, token: { checked: boolean }): string;
   /** Returns `false` to defer to marked's default text renderer. */
   text(this: MarkedParserContext, token: { text: string; escaped?: boolean; tokens?: unknown[] }): string | false;
+}
+
+function isTaskListItem(item: unknown): boolean {
+  return typeof item === 'object' && item !== null && (item as { task?: unknown }).task === true;
 }
 
 function taskItemCheckboxLabel(
@@ -447,13 +461,50 @@ function taskItemCheckboxLabel(
  * `internal-link-prefix`-driven behavior, and the math-token extension are documented on
  * `LyraMarkdown`'s own class doc -- this function's contract is exactly that doc.
  */
-export function parseMarkdownDocument(options: ParseMarkdownOptions): {
+export interface MarkdownLexicalState { inLink: boolean; inRawBlock: boolean }
+export interface MarkdownDefinition { href: string; title?: string | null }
+export interface MarkdownLexToken {
+  type: string; raw: string; text?: string; lang?: string; title?: string | null;
+  [key: string]: unknown;
+}
+export type MarkdownLexTokens = MarkdownLexToken[] & { links: Record<string, MarkdownDefinition> };
+export interface MarkdownBlockLexer {
+  tokens: MarkdownLexTokens;
+  state: MarkdownLexicalState;
+  options: { tokenizer?: { def?: (source: string) => MarkdownLexToken | undefined } };
+  blockTokens(source: string, tokens: MarkdownLexTokens): MarkdownLexTokens;
+  lex(source: string): MarkdownLexTokens;
+}
+export interface MarkdownParserCapabilities extends LyraMarkedParser {
+  Lexer: new (options: Record<string, unknown>) => MarkdownBlockLexer;
+  Tokenizer: new (...args: unknown[]) => object;
+  Hooks: new (...args: unknown[]) => object;
+  parser(tokens: MarkdownLexTokens, options: Record<string, unknown>): string;
+  walkTokens(tokens: unknown[], visit: unknown): unknown;
+}
+export interface MarkdownGroupSeed {
+  links: Record<string, MarkdownDefinition>;
+  state: MarkdownLexicalState;
+}
+export interface MarkdownGroupResult {
   html: string;
   hadMathFallback: boolean;
-} {
+  hasRawHtml: boolean;
+  state: MarkdownLexicalState;
+}
+export interface MarkdownRenderContext {
+  instance: MarkdownParserCapabilities;
+  render(source: string, seed?: MarkdownGroupSeed): MarkdownGroupResult;
+}
+
+export function parseMarkdownDocument(options: ParseMarkdownOptions): MarkdownGroupResult {
+  return createMarkdownRenderContext(options).render(options.content);
+}
+
+/** A fresh configured renderer used by both whole documents and independently settled groups. */
+export function createMarkdownRenderContext(options: ParseMarkdownOptions): MarkdownRenderContext {
   const {
     marked,
-    content,
     gfm,
     linkTarget,
     escapeHtmlOption,
@@ -463,7 +514,6 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
     failedHighlightKeys,
     headingAnchorsOption,
     mathOption,
-    codeBlockChromeOption = false,
     cachedKatex,
     pendingKeys,
     headingTreeOut,
@@ -473,10 +523,22 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
   // tag -- finiteInteger() normalizes it back to the documented `0` (additive-only) default.
   const headingOffset = finiteInteger(options.headingOffset, 0);
   const slugger = options.slugger ?? new Slugger();
-  const activeHighlightKeys = new Set<string>();
+  const activeHighlightKeys = options.activeHighlightKeys ?? new Set<string>();
   const pendingHighlightKeys = new Set(options.pendingKeys.map(({ key }) => key));
   const taskItemCheckboxLabels: Array<string | null> = [];
   let hadMathFallback = false;
+  let hasRawHtml = false;
+  let codeInvocations = 0;
+  const headerEnabled = options.codeBlockHeaderOption === true && Boolean(options.codeFrameNonce && options.codeBlocksOut);
+  const wrapCode = (inner: string, token: { text: string; escaped: boolean }, lang: string): string => {
+    const ordinal = codeInvocations++;
+    const source = token.text.replace(/\n$/, '');
+    const records = options.codeBlocksOut;
+    if (!headerEnabled || !records || !source || token.escaped || records.length + (options.codeBlockIndexOffset ?? 0) >= MARKDOWN_CODE_HEADER_MAX) return inner;
+    const index = records.length + (options.codeBlockIndexOffset ?? 0);
+    records.push({ language: sanitizeCodeLanguageLabel(lang), source, ordinal });
+    return `<div part='code-block-frame' data-lr-code-frame='${options.codeFrameNonce}:${index}'>${inner.replace(/\n$/, '')}</div>\n`;
+  };
   const instance = new marked.Marked();
   if (mathOption) {
     instance.use({
@@ -529,14 +591,14 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
       list(token) {
         const ordered = token.ordered;
         const start = token.start;
-        const taskItems = token.items as readonly { task?: unknown }[];
-        const allTaskItems = taskItems.length > 0 && taskItems.every((item) => item.task === true);
+        const allTaskItems = token.items.length > 0 && token.items.every(isTaskListItem);
         let body = '';
         for (const item of token.items) body += this.listitem(item);
         const tag = ordered ? 'ol' : 'ul';
         const startAttr = ordered && start !== 1 ? ` start='${start}'` : '';
-        const taskListAttr = allTaskItems ? ` data-task-list='true'` : '';
-        return `<${tag} part='list'${startAttr}${taskListAttr}>\n${body}</${tag}>\n`;
+        const listAttrs = !allTaskItems ? ` part='list'`
+          : ordered ? ` part='list task-list'` : ` part='list task-list' role='list'`;
+        return `<${tag}${listAttrs}${startAttr}>\n${body}</${tag}>\n`;
       },
       listitem(token) {
         const isTaskItem = token.task === true;
@@ -546,7 +608,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         taskItemCheckboxLabels.push(label);
         try {
           return isTaskItem
-            ? `<li part='task-item' data-task='true'>${this.parser.parse(token.tokens)}</li>\n`
+            ? `<li${token.checked === true ? ` part='task-item task-item-checked'` : ` part='task-item'`}>${this.parser.parse(token.tokens)}</li>\n`
             : `<li>${this.parser.parse(token.tokens)}</li>\n`;
         } finally {
           taskItemCheckboxLabels.pop();
@@ -556,16 +618,10 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         const label = taskItemCheckboxLabels.at(-1);
         const checked = token.checked ? ` checked=''` : '';
         const labelAttr = label ? ` aria-label='${escapeHtml(label)}'` : '';
-        return `<input${checked} disabled='' type='checkbox'${labelAttr}> `;
+        return `<input part='task-checkbox'${checked} disabled='' type='checkbox'${labelAttr}>`;
       },
       code(token) {
         const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
-        const raw = (token as unknown as { raw?: unknown }).raw;
-        const fencedAttr = codeBlockChromeOption &&
-          typeof raw === 'string' &&
-          /^ {0,3}(?:`{3,}|~{3,})/.test(raw)
-          ? ` data-fenced='true'`
-          : '';
         const body = `${token.text.replace(/\n$/, '')}\n`;
         const text = token.escaped ? body : escapeHtml(body);
         if (highlightCodeOption && lang) {
@@ -574,7 +630,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           if (admitted) {
             activeHighlightKeys.add(key);
             const cached = getCached(key);
-            if (cached !== undefined) return cached;
+            if (cached !== undefined) return wrapCode(cached, token, lang);
             if (!failedHighlightKeys.has(key) && !pendingHighlightKeys.has(key)) {
               pendingHighlightKeys.add(key);
               pendingKeys.push({ key, lang, code: body });
@@ -582,7 +638,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           }
         }
         const cls = lang ? ` class='language-${escapeHtml(lang)}'` : '';
-        return `<pre part='code-block'${fencedAttr} tabindex='0'><code${cls}>${text}</code></pre>\n`;
+        return wrapCode(`<pre part='code-block' tabindex='0'><code${cls}>${text}</code></pre>\n`, token, lang);
       },
       codespan(token) {
         // Mirrors marked's own default codespan() renderer's escaping exactly (it does not
@@ -614,7 +670,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           text: headerRow,
         })}</thead>\n`;
         const tbody = bodyRows ? `<tbody>${bodyRows}</tbody>\n` : '';
-        return `<div part='table-wrapper' tabindex='0'><table part='table'>\n${thead}${tbody}</table></div>\n`;
+        return `<div part='table-wrapper' role='group' tabindex='0'><table part='table'>\n${thead}${tbody}</table></div>\n`;
       },
       link(token) {
         const text = this.parser.parseInline(token.tokens);
@@ -649,10 +705,8 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         return `<img part='img' src='${escapeHtml(safeHref)}' alt='${escapeHtml(altText)}'${titleAttr}>`;
       },
       html(token) {
-        const source = codeBlockChromeOption
-          ? token.text.replace(/\sdata-fenced(?:\s*=\s*(?:\x22[^\x22]*\x22|\x27[^\x27]*\x27|[^\s>]+))?/gi, '')
-          : token.text;
-        return escapeHtmlOption ? escapeHtml(source) : source;
+        hasRawHtml = true;
+        return escapeHtmlOption ? escapeHtml(token.text) : token.text;
       },
       text(token) {
         // After an unclosed raw-block opening tag (pre, code, kbd or script), marked lexes every
@@ -679,10 +733,55 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
     const configuredDefaults = Object.fromEntries(Object.entries(configuration).filter(([, value]) => value != null));
     if (Object.keys(configuredDefaults).length > 0) instance.use(configuredDefaults as never);
   }
+  const capable = instance as MarkdownParserCapabilities;
   return {
-    html: instance.parse(content, { gfm, async: false }),
-    hadMathFallback,
+    instance: capable,
+    render(source, seed) {
+      let html: string;
+      let state: MarkdownLexicalState = { inLink: false, inRawBlock: false };
+      if (seed) {
+        const defaults = { ...instance.defaults, gfm, async: false };
+        const lexer = new capable.Lexer(defaults);
+        Object.assign(lexer.tokens.links, seed.links);
+        Object.assign(lexer.state, seed.state);
+        const tokens = lexer.lex(source);
+        state = { inLink: lexer.state.inLink, inRawBlock: lexer.state.inRawBlock };
+        if (instance.defaults['walkTokens']) capable.walkTokens(tokens, instance.defaults['walkTokens'] as never);
+        html = capable.parser(tokens, defaults);
+      } else html = instance.parse(source, { gfm, async: false });
+      if (typeof html !== 'string') throw new TypeError('The Markdown parser returned non-string markup.');
+      if (headerEnabled && options.rawContent !== undefined && options.tabSize !== undefined && /^[\t ]*\t/m.test(options.rawContent)) {
+        restoreMarkdownCodeTabs(instance, options, codeInvocations);
+      }
+      return { html, hadMathFallback, hasRawHtml, state };
+    },
   };
+}
+
+function restoreMarkdownCodeTabs(instance: LyraMarkedParser, options: ParseMarkdownOptions, invocations: number): void {
+  const parser = instance as LyraMarkedParser & {
+    lexer?: (source: string, options: Record<string, unknown>) => unknown;
+    walkTokens?: (tokens: unknown[], visit: (token: { type?: string; text?: string }) => void) => unknown;
+  };
+  if (typeof parser.lexer !== 'function' || typeof parser.walkTokens !== 'function') return;
+  try {
+    const defaults: Record<string, unknown> = { ...instance.defaults, gfm: options.gfm, async: false };
+    const hooks = defaults['hooks'] as { preprocess?: (source: string) => unknown; processAllTokens?: (tokens: unknown) => unknown } | undefined;
+    const source = hooks?.preprocess ? hooks.preprocess(options.rawContent!) : options.rawContent!;
+    if (typeof source !== 'string') return;
+    let tokens = parser.lexer(source, defaults);
+    if (hooks?.processAllTokens) tokens = hooks.processAllTokens(tokens);
+    if (!Array.isArray(tokens)) return;
+    const originals: string[] = [];
+    parser.walkTokens(tokens, (token) => {
+      if (token.type === 'code' && typeof token.text === 'string') originals.push(token.text.replace(/\n$/, ''));
+    });
+    if (originals.length !== invocations) return;
+    for (const record of options.codeBlocksOut ?? []) {
+      const candidate = originals[record.ordinal];
+      if (candidate !== undefined && normalizeMarkdownLeadingTabs(candidate, options.tabSize!) === record.source) record.source = candidate;
+    }
+  } catch { /* A custom parser can decline source pairing; displayed text remains the safe source. */ }
 }
 
 // -- katex resolution state -------------------------------------------------------------------
@@ -960,7 +1059,7 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
     changed.has('math') ||
     changed.has('highlightCode') ||
     changed.has('languages') ||
-    changed.has('codeBlockChrome')
+    changed.has('codeBlockChrome') || changed.has('codeBlockHeader') || changed.has('streamingRender')
   );
 }
 
@@ -997,6 +1096,10 @@ export type MarkdownRenderOutcome =
     };
 
 export type MarkdownHtmlMode = 'sanitize' | 'escape' | 'trusted';
+export type MarkdownStreamingRender = 'plain' | 'progressive';
+export function normalizeMarkdownStreamingRender(value: unknown): MarkdownStreamingRender {
+  return value === 'progressive' ? 'progressive' : 'plain';
+}
 
 export function normalizeMarkdownHtmlMode(value: unknown): MarkdownHtmlMode {
   return value === 'escape' || value === 'trusted' ? value : 'sanitize';
@@ -1008,6 +1111,7 @@ export interface RenderMarkdownOptions {
   deps: MarkdownDeps;
   htmlMode: MarkdownHtmlMode;
   math: boolean;
+  codeBlockHeader?: boolean;
   /** The instance's own `parseMarkdown()` -- see `ParseMarkdownOptions` for what it resolves. */
   parse: (
     marked: MarkedModule,
@@ -1029,6 +1133,16 @@ export interface RenderMarkdownOptions {
  * missing/throwing `dompurify` in `sanitize` mode both fall back to plain text plus
  * `lr-render-error`.
  */
+export function markdownSanitizerPolicy(options: { htmlMode: MarkdownHtmlMode; math: boolean; codeBlockHeader: boolean }): Record<string, unknown> | null {
+  if (options.htmlMode !== 'sanitize') return null;
+  return {
+    ADD_ATTR: ['target'],
+    FORBID_ATTR: ['style', 'data-lr-code-chrome'],
+    ...(options.codeBlockHeader ? { FORBID_TAGS: ['style'] } : {}),
+    ...(options.math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
+  };
+}
+
 export function renderMarkdownDocument(options: RenderMarkdownOptions): MarkdownRenderOutcome {
   const { deps, tag } = options;
   if (!deps.marked) {
@@ -1054,7 +1168,8 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
   options.onParsed();
   const mathFailed = hadMathFallback && options.isKatexConfirmedMissing();
 
-  if (options.htmlMode !== 'sanitize') {
+  const policy = markdownSanitizerPolicy({ ...options, codeBlockHeader: options.codeBlockHeader ?? false });
+  if (policy === null) {
     // Shiki palette data is trusted output from Lyra's highlighter, not authored HTML. Restore its
     // strict color-only declarations in both escape and trusted modes as well as after DOMPurify.
     // `enforceMarkdownAnchorRelGuard` is this branch's only `rel`/`target` guard: it is the sole
@@ -1078,30 +1193,9 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
     return { status: 'fallback', error, headingTree };
   }
 
-  // `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
-  // already are) -- without ADD_ATTR here, every rendered link's target="..." would be silently
-  // stripped even though the anchor itself survives sanitization. Every `style` is forbidden:
-  // Shiki's trusted palette was converted to strict, inert data attributes before this shared pass
-  // and is restored below; raw authored CSS must never gain the same privilege. `semantics`/
-  // `annotation` join only when `math` is on -- the only KaTeX MathML output elements outside the
-  // default allowlist. `annotation-xml` is deliberately never added: KaTeX's own MathML output
-  // never emits it, and DOMPurify already treats it as a namespace-switching element worth
-  // keeping stripped.
   let sanitized: string;
   try {
-    const result = deps.DOMPurify.sanitize(rawHtml, {
-      ADD_ATTR: ['target'],
-      FORBID_ATTR: ['style'],
-      ...(options.math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
-    });
-    if (typeof result !== 'string') {
-      throw new TypeError('The HTML sanitizer returned non-string markup.');
-    }
-    // DOMPurify itself has no `rel`/`target` policy -- `ADD_ATTR: ['target']` above only stops
-    // `target` from being stripped; it never adds a missing `rel`. `enforceMarkdownAnchorRelGuard`
-    // is what forces the guard onto a raw-HTML anchor that reached this pass via the `html(token)`
-    // renderer, which the `link()` override's own forced `rel` never sees.
-    sanitized = enforceMarkdownAnchorRelGuard(restoreMarkdownHighlightStyles(result));
+    sanitized = finishMarkdownHtml(deps, policy, rawHtml);
   } catch (error) {
     warnMarkdownSanitizerUnavailable();
     return { status: 'fallback', error, headingTree };
@@ -1116,6 +1210,19 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 }
 
 /** The `lr-render-error` payload for a permanently-missing `katex` peer while `math` is set. */
+/** Applies the same sanitizer, Shiki palette restoration, and link guard to every render path. */
+export function finishMarkdownHtml(deps: MarkdownDeps, policy: Record<string, unknown> | null, rawHtml: string): string {
+  if (typeof rawHtml !== 'string') throw new TypeError('The Markdown parser returned non-string markup.');
+  let result = rawHtml;
+  if (policy !== null) {
+    if (!deps.DOMPurify) throw new Error('The HTML sanitizer is unavailable.');
+    const sanitized = deps.DOMPurify.sanitize(rawHtml, policy);
+    if (typeof sanitized !== 'string') throw new TypeError('The HTML sanitizer returned non-string markup.');
+    result = sanitized;
+  }
+  return enforceMarkdownAnchorRelGuard(restoreMarkdownHighlightStyles(result));
+}
+
 export function markdownMathPeerError(tag: 'lr-markdown' | 'lr-markdown-core'): Error {
   return new Error(
     `<${tag}> needs the optional peer dependency \`katex\` to render math (the \`math\` property is set) — install it with \`pnpm add katex\`.`,
@@ -1363,7 +1470,21 @@ export function internalLinkHrefFrom(e: MouseEvent, prefix: string): string | nu
   return href.startsWith(prefix) ? href : null;
 }
 
+/** Resolves the shared accessible name without baking locale into parsed HTML. */
+export function markdownTableRegionLabel(localize: (key: string) => string): string {
+  return localize('markdownTableRegion');
+}
+
+/** Names only the exact styled wrapper whose group role allows an accessible name. */
+export function labelMarkdownTableWrappers(root: ParentNode | null, label: string): void {
+  if (!root) return;
+  for (const wrapper of root.querySelectorAll<HTMLElement>('[part="table-wrapper"][role="group"]')) {
+    if (wrapper.getAttribute('aria-label') !== label) wrapper.setAttribute('aria-label', label);
+  }
+}
+
 export interface MarkdownContentOptions {
+  fallbackSegments?: readonly MarkdownFallbackSegment[] | null;
   /** The Markdown source -- also the plain-text fallback rendering when `renderedHtml` is `null`. */
   content: string;
   /** Whether the rendered document passed through DOMPurify. Unsanitized content gets an explicit
@@ -1373,10 +1494,11 @@ export interface MarkdownContentOptions {
    *  still loading, or a render attempt just fell back after a failure. The two states look
    *  identical on purpose -- a consumer distinguishes them via `lr-render-error`. */
   renderedHtml: string | null;
-  /** Sanitized settled blocks rendered as individually keyed HTML chunks for progressive output. */
-  renderedBlocks?: readonly { id: string; html: string }[];
-  /** Plain text for the one unsettled trailing block during progressive output. */
-  streamingTail?: string | TemplateResult;
+  /** Independently sanitized settled groups and one append-only text tail. */
+  progressive?: {
+    blocks: readonly { html: string }[];
+    tail: { kind: 'text' | 'open-fence'; text: string } | null;
+  } | null;
   /** The host's own `aria-label`, forwarded to the element that actually owns `role="document"` --
    *  a host `aria-label` doesn't reach shadow internals on its own. */
   hostAriaLabel: string | null;
@@ -1397,7 +1519,8 @@ export interface MarkdownContentOptions {
  *  live region. Only non-empty content is focusable -- an empty document is not a scrollable region
  *  worth a tab stop. */
 export function renderMarkdownContent(options: MarkdownContentOptions): TemplateResult {
-  const isFallback = options.renderedHtml === null && options.renderedBlocks === undefined;
+  const isFallback = !options.progressive && options.renderedHtml === null;
+  const tail = options.progressive?.tail;
   const sanitizedMaxHeight = sanitizeCssLength(options.maxHeight);
   // Flush on purpose, and kept away from formatters. While [part='content'] shows the plain-text
   // fallback it is white-space: pre-wrap (markdown.styles.ts), so template text between the tags
@@ -1424,11 +1547,13 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
             })
           : nothing}
         @click=${options.onClick}
-      >${options.renderedBlocks
-        ? html`${repeat(options.renderedBlocks, (block) => block.id, (block) => unsafeHTML(block.html))}${typeof options.streamingTail === 'string'
-            ? html`<span class="streaming-tail">${options.streamingTail}</span>`
-            : options.streamingTail ?? ''}`
-        : isFallback ? options.content : unsafeHTML(options.renderedHtml)}</div>${options.liveRegion}`;
+      >${options.progressive
+        ? html`${options.progressive.blocks.map((block) => unsafeHTML(block.html))}${!tail ? nothing
+            : tail.kind === 'open-fence' ? html`<pre part="code-block" tabindex="0"><code>${streamingTailText(tail.text)}</code></pre>`
+            : html`<div part="streaming-tail">${streamingTailText(tail.text)}</div>`}`
+        : isFallback ? options.fallbackSegments?.map((segment) => segment.kind === 'prose' ? segment.text
+          : segment.kind === 'block' ? html`<span class="fallback-code">${segment.text}</span>`
+          : html`<span class="fallback-inline-code">${segment.text}</span>`) ?? options.content : unsafeHTML(options.renderedHtml)}</div>${options.liveRegion}`;
 }
 
 /**

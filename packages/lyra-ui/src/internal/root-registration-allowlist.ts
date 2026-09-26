@@ -152,6 +152,8 @@ export const ROOT_BARREL_TAGS = [
   'lr-menu',
   'lr-menu-item',
   'lr-menu-label',
+  'lr-menubar',
+  'lr-menubar-item',
   'lr-message-actions',
   'lr-message-feedback',
   'lr-message-parts',

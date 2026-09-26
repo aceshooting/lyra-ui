@@ -133,7 +133,7 @@ function isVisuallyHidden(element: Element): boolean {
  * across the shadow boundary.
  * Description targets follow same-ID replacement, removal, reinsertion, reconnection and document
  * adoption, including transitions between the native button and anchor.
- * Host `aria-haspopup` and `aria-expanded` values are likewise forwarded to the internal semantic
+ * Host `aria-haspopup`, `aria-expanded` and `aria-keyshortcuts` values are likewise forwarded to the internal semantic
  * control. `aria-pressed` (`true`, `false`, `mixed`) supports button toggles; `aria-current`
  * (`page`, `step`, `location`, `date`, `time`, `true`, `false`) supports current navigation.
  * These states follow attribute changes, removal and button/link replacement without changing
@@ -444,6 +444,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   @property({ attribute: 'aria-haspopup' }) private triggerHasPopup:
     | string
     | null = null;
+  @property({ attribute: 'aria-keyshortcuts' }) private triggerKeyShortcuts: string | null = null;
   @property({ attribute: 'aria-expanded' }) private triggerExpanded:
     | string
     | null = null;
@@ -1131,6 +1132,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         aria-label=${this.accessibleLabel ?? nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-keyshortcuts=${this.triggerKeyShortcuts ?? nothing}
         aria-current=${current}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
@@ -1152,6 +1154,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         aria-label=${this.accessibleLabel ?? nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-keyshortcuts=${this.triggerKeyShortcuts ?? nothing}
         aria-pressed=${pressed}
         aria-current=${current}
         aria-controls=${this.triggerControls || nothing}

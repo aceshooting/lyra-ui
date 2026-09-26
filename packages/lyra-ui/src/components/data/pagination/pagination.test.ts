@@ -3,6 +3,7 @@ import "./pagination.js";
 import type { LyraPagination } from "./pagination.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import "../../../translations/pl/shared.js";
 
 function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -636,6 +637,27 @@ it("uses singular item text and accepts localized label overrides", async () => 
     (el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement)
       .ariaLabel
   ).to.equal("Result page");
+});
+
+it("uses CLDR plural categories for localized item labels", async () => {
+  const expected = new Map([
+    [1, "1–1 z 1 element"],
+    [2, "1–2 z 2 elementy"],
+    [5, "1–5 z 5 elementów"],
+  ]);
+
+  for (const [total, summary] of expected) {
+    const el = await pagination(html`
+      <lr-pagination
+        locale="pl"
+        .total=${total}
+        with-summary
+      ></lr-pagination>
+    `);
+    expect(
+      el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()
+    ).to.equal(summary);
+  }
 });
 
 it("distinguishes omitted pagination labels from explicit English and empty overrides", async () => {

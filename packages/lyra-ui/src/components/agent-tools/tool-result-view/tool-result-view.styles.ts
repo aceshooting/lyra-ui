@@ -17,6 +17,7 @@ export const styles = css`
     display: block;
   }
   [part="fallback-text"] {
+    unicode-bidi: plaintext;
     margin: 0;
     white-space: pre-wrap;
     word-break: break-word;

@@ -126,6 +126,7 @@ import type { LyraDrilldownPanelEventMap } from './components/layout/drilldown-p
 import type { LyraFilterBarEventMap } from './components/layout/filter-bar/filter-bar.class.js';
 import type { LyraMenuItemEventMap } from './components/layout/menu/menu-item.class.js';
 import type { LyraMenuEventMap } from './components/layout/menu/menu.class.js';
+import type { LyraMenubarEventMap } from './components/layout/menubar/menubar.class.js';
 import type { LyraMultiSplitEventMap } from './components/layout/multi-split/multi-split.class.js';
 import type { LyraNavigationMenuItemEventMap } from './components/layout/navigation-menu-item/navigation-menu-item.class.js';
 import type { LyraNavigationMenuEventMap } from './components/layout/navigation-menu/navigation-menu.class.js';
@@ -932,13 +933,14 @@ export type LyraContentSettledEvent =
   | LyraStreamingTextEventMap['lr-content-settled'];
 
 /**
- * `lr-copy` — dispatched by 18 components: `<lr-artifact-panel>`, `<lr-code-block-core>`,
+ * `lr-copy` — dispatched by 22 components: `<lr-artifact-panel>`, `<lr-code-block-core>`,
  * `<lr-code-block>`, `<lr-commit-card>`, `<lr-context-inspector>`, `<lr-copy-button>`,
  * `<lr-data-grid>`, `<lr-diff-view>`, `<lr-document-compare>`, `<lr-env-list>`,
- * `<lr-json-viewer>`, `<lr-message-actions>`, `<lr-message-parts>`, `<lr-selection-toolbar>`,
- * `<lr-stack-trace>`, `<lr-terminal>`, `<lr-tool-call-block>`, `<lr-xml-viewer>`.
+ * `<lr-json-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-actions>`,
+ * `<lr-message-parts>`, `<lr-selection-toolbar>`, `<lr-stack-trace>`, `<lr-streaming-text-core>`,
+ * `<lr-streaming-text>`, `<lr-terminal>`, `<lr-tool-call-block>`, `<lr-xml-viewer>`.
  *
- * A union of 15 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 18 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraArtifactPanelEventMap['lr-copy']`.
  */
 export type LyraCopyEvent =
@@ -952,20 +954,24 @@ export type LyraCopyEvent =
   | LyraDocumentCompareEventMap['lr-copy']
   | LyraEnvListEventMap['lr-copy']
   | LyraJsonViewerEventMap['lr-copy']
+  | LyraMarkdownCoreEventMap['lr-copy']
+  | LyraMarkdownEventMap['lr-copy']
   | LyraMessageActionsEventMap['lr-copy']
   | LyraSelectionToolbarEventMap['lr-copy']
   | LyraStackTraceEventMap['lr-copy']
+  | LyraStreamingTextEventMap['lr-copy']
   | LyraTerminalEventMap['lr-copy']
   | LyraXmlViewerEventMap['lr-copy'];
 
 /**
- * `lr-copy-error` — dispatched by 17 components: `<lr-artifact-panel>`, `<lr-code-block-core>`,
+ * `lr-copy-error` — dispatched by 21 components: `<lr-artifact-panel>`, `<lr-code-block-core>`,
  * `<lr-code-block>`, `<lr-commit-card>`, `<lr-context-inspector>`, `<lr-copy-button>`,
  * `<lr-data-grid>`, `<lr-diff-view>`, `<lr-document-compare>`, `<lr-env-list>`,
- * `<lr-json-viewer>`, `<lr-message-actions>`, `<lr-selection-toolbar>`, `<lr-stack-trace>`,
+ * `<lr-json-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-actions>`,
+ * `<lr-selection-toolbar>`, `<lr-stack-trace>`, `<lr-streaming-text-core>`, `<lr-streaming-text>`,
  * `<lr-terminal>`, `<lr-tool-call-block>`, `<lr-xml-viewer>`.
  *
- * A union of 15 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 18 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraArtifactPanelEventMap['lr-copy-error']`.
  */
@@ -980,9 +986,12 @@ export type LyraCopyErrorEvent =
   | LyraDocumentCompareEventMap['lr-copy-error']
   | LyraEnvListEventMap['lr-copy-error']
   | LyraJsonViewerEventMap['lr-copy-error']
+  | LyraMarkdownCoreEventMap['lr-copy-error']
+  | LyraMarkdownEventMap['lr-copy-error']
   | LyraMessageActionsEventMap['lr-copy-error']
   | LyraSelectionToolbarEventMap['lr-copy-error']
   | LyraStackTraceEventMap['lr-copy-error']
+  | LyraStreamingTextEventMap['lr-copy-error']
   | LyraTerminalEventMap['lr-copy-error']
   | LyraXmlViewerEventMap['lr-copy-error'];
 
@@ -2952,11 +2961,11 @@ export type LyraSearchChangeEvent =
 export type LyraSegmentActivateEvent = LyraContextMeterEventMap['lr-segment-activate'];
 
 /**
- * `lr-select` — dispatched by 8 components: `<lr-command-palette>`, `<lr-context-menu>`,
- * `<lr-conversation-item>`, `<lr-dropdown>`, `<lr-menu>`, `<lr-node-palette>`,
+ * `lr-select` — dispatched by 9 components: `<lr-command-palette>`, `<lr-context-menu>`,
+ * `<lr-conversation-item>`, `<lr-dropdown>`, `<lr-menu>`, `<lr-menubar>`, `<lr-node-palette>`,
  * `<lr-retrieval-results>`, `<lr-thread-list>`.
  *
- * A union of 8 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 9 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraCommandPaletteEventMap['lr-select']`.
  */
@@ -2965,6 +2974,7 @@ export type LyraSelectEvent =
   | LyraContextMenuEventMap['lr-select']
   | LyraConversationItemEventMap['lr-select']
   | LyraDropdownEventMap['lr-select']
+  | LyraMenubarEventMap['lr-select']
   | LyraMenuEventMap['lr-select']
   | LyraNodePaletteEventMap['lr-select']
   | LyraRetrievalResultsEventMap['lr-select']

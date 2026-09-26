@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { fileIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
@@ -13,6 +14,7 @@ import {
   type LyraFileTypeMetadataRegistry,
   type LyraResolvedFileTypeMetadata,
 } from './file-type-metadata.js';
+import { usesFileNameFallback } from './mime-type.js';
 import { styles } from './file-icon.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -39,16 +41,53 @@ export type LyraFileIconMode = 'icon' | 'label';
 
 const FILE_ICON_MODE = literalSetConverter<LyraFileIconMode>(['icon', 'label'], 'icon');
 
+function qualifyingToken(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const token = value.trim().replace(/^\./, '').toLowerCase();
+  return /^(?=[a-z0-9+]*[a-z])[a-z0-9+]{1,4}$/.test(token) ? token.toUpperCase() : '';
+}
+
+function fileNameExtension(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const segment = value.trim().split(/[\\/]/).pop() ?? '';
+  const dot = segment.lastIndexOf('.');
+  return dot > 0 ? qualifyingToken(segment.slice(dot + 1)) : '';
+}
+
+function badgeToken(metadata: LyraResolvedFileTypeMetadata, mimeType: unknown, name: unknown): string {
+  const abbreviation = typeof metadata.abbreviation === 'string' ? metadata.abbreviation.trim() : '';
+  if (abbreviation) return abbreviation;
+  const fallback = usesFileNameFallback(mimeType);
+  const nameExtension = fallback ? fileNameExtension(name) : '';
+  const extensions = Array.isArray(metadata.extensions) ? metadata.extensions : [];
+  if (nameExtension && extensions.some((extension) => qualifyingToken(extension) === nameExtension)) return nameExtension;
+  const firstExtension = extensions.map(qualifyingToken).find(Boolean) ?? '';
+  if (firstExtension) return firstExtension;
+  return nameExtension;
+}
+
+function estimatedTokenEm(token: string): number {
+  let em = 0;
+  for (const char of token) {
+    em += /[MW]/.test(char) ? 0.97 : /[DGHNOQU]/.test(char) ? 0.82 : /[IJ]/.test(char) ? 0.4 : /[A-Z0-9+]/.test(char) ? 0.7 : 1;
+  }
+  return em;
+}
+
 /**
- * Displays a localized, tokenized file-type badge from a MIME type.
+ * Displays a file-format badge from a MIME type: an unlocalized format token or generic glyph,
+ * with a localized accessible name.
  *
  * @customElement lr-file-icon
  * @csspart base - The outer presentation wrapper.
- * @csspart icon - The format badge.
+ * @csspart icon - The format badge: a short unlocalized format token (`PDF`, `DOCX`) or a generic
+ *   file glyph when no token applies or the badge is too small for legible text.
  * @csspart label - The localized or consumer-authored format label in `mode="label"` mode.
  * @csspart description - Consumer-authored metadata description in `mode="label"` mode.
  * @csspart size - The formatted `bytes` count, shown alongside `label` in `mode="label"` mode when `bytes` is non-zero.
- * @cssprop [--lr-file-icon-size=var(--lr-size-2rem)] - Inline/block size of the format badge.
+ * @cssprop [--lr-file-icon-size=var(--lr-size-2rem)] - Inline/block size of the format badge. The
+ *   token and glyph scale with it; below about `1.25rem` (long tokens: about `1.75rem`) the glyph
+ *   replaces the token.
  * @cssprop [--lr-file-icon-bg=var(--lr-color-brand-quiet)] - Background of the `icon` part. Every
  *   file category renders the same fill; retint it without hijacking `--lr-color-brand-quiet`
  *   library-wide.
@@ -93,7 +132,7 @@ export class LyraFileIcon extends LyraElement {
 
   /** MIME type used to resolve metadata. Also exposed as a `title` tooltip on the badge. */
   @property({ attribute: 'mime-type' }) mimeType = '';
-  /** Optional filename used for fallback detection with an empty or generic MIME type. */
+  /** Optional filename used for fallback detection and badge-token selection with an empty or generic MIME type. */
   @property() name = '';
   /** File size **in bytes**, shown alongside the label in `mode="label"` mode. `0` (the default)
    *  renders no size. Named `bytes`, not `size`: everywhere else in this library `size` names a tier
@@ -161,6 +200,13 @@ export class LyraFileIcon extends LyraElement {
       ? this.localize('fileTypeWithSize', undefined, { label: accessibleNameBase, size: sizeText })
       : accessibleNameBase;
     const accessibleLabel = hostAriaLabel(this) ?? fallbackLabel;
+    let token = '';
+    try {
+      token = badgeToken(metadata, this.mimeType, this.name);
+    } catch {
+      // A hostile directly implemented registry record degrades to the glyph.
+    }
+    const tokenTier = token === '' ? 'none' : estimatedTokenEm(token) <= 2.4 ? 'short' : 'long';
     const descriptionId =
       this.mode === 'label' && metadata.provenance === 'consumer' && metadata.description
         ? 'metadata-description'
@@ -174,7 +220,11 @@ export class LyraFileIcon extends LyraElement {
         aria-describedby=${this.decorative || !descriptionId ? nothing : descriptionId}
         title=${this.mimeType || nothing}
       >
-        <span part="icon" aria-hidden="true"><span class="badge-label">${metadata.provenance === 'consumer' ? metadata.label : this.localize(ICON_LABELS[metadata.icon])}</span></span>
+        <span part="icon" aria-hidden="true"
+          ><span class="face" data-token=${tokenTier}
+            >${token ? html`<span class="token" dir="auto">${token}</span>` : nothing}<span class="glyph">${fileIcon()}</span></span
+          ></span
+        >
         ${this.mode === 'label' ? html`<span part="label">${renderedLabel}</span>` : nothing}
         ${this.mode === 'label' && descriptionId
           ? html`<span id=${descriptionId} part="description">${metadata.description}</span>`

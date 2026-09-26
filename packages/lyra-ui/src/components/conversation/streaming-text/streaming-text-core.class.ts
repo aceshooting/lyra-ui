@@ -44,9 +44,9 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  *   rendered `<ul>`/`<ol>`.
  * @csspart code-block - Forwarded from the composed `<lr-markdown-core>` in Markdown mode -- every
  *   rendered fenced/indented `<pre>`.
- * @csspart code-block-header - Forwarded from `<lr-markdown-core>` when code-block-chrome is enabled.
- * @csspart code-block-language - Forwarded localized language label in the code-block header.
- * @csspart code-block-copy - Forwarded copy-button host in the code-block header.
+ * @csspart code-block-header - Forwarded from `<lr-markdown-core>` when code-block-header is enabled.
+ * @csspart code-block-language - Forwarded source language label in the code-block header.
+ * @csspart code-block-copy - Forwarded native source-copy button in the code-block header.
  * @csspart inline-code - Forwarded from the composed `<lr-markdown-core>` in Markdown mode -- every
  *   rendered inline `<code>` span (backtick spans, not fenced blocks).
  * @csspart link - Forwarded from the composed `<lr-markdown-core>` in Markdown mode -- every
@@ -62,6 +62,17 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * @cssprop [--lr-inline-cursor-width=var(--lr-size-0-125rem)] - Shared width of the inline cursor
  * bar (also its border radius).
  * @cssprop [--lr-inline-cursor-height=var(--lr-size-1em)] - Shared height of the inline cursor bar.
+ * @csspart task-list - Forwarded from the composed Markdown element.
+ * @csspart task-item - Forwarded from the composed Markdown element.
+ * @csspart task-item-checked - Forwarded from the composed Markdown element.
+ * @csspart task-checkbox - Forwarded from the composed Markdown element.
+ * @csspart table-wrapper - Forwarded from the composed Markdown element.
+ * @csspart code-block-frame - Forwarded code-header group.
+ * @csspart code-block-copy-success - Forwarded successful copy state.
+ * @csspart code-block-copy-error - Forwarded failed copy state.
+ * @event lr-copy - Passthrough successful Markdown source-copy outcome.
+ * @event lr-copy-error - Passthrough failed Markdown source-copy outcome.
+ * @csspart streaming-tail - The current uncommitted text during progressive streaming.
  * @status experimental
  * @since 16.0.0
  */
@@ -74,11 +85,12 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
     // above. Every listed name is reused verbatim (no aliasing) since none collides with this
     // element's own base/cursor parts.
     return html`<lr-markdown-core
-      exportparts="content, heading, paragraph, list, code-block, code-block-header, code-block-language, code-block-copy, inline-code, link, table, blockquote, img, math"
+      exportparts="content, heading, paragraph, list, code-block, code-block-header, code-block-language, code-block-copy, inline-code, link, table, blockquote, img, math, task-list, task-item, task-item-checked, task-checkbox, table-wrapper, code-block-frame, code-block-copy-success, code-block-copy-error, streaming-tail"
       .content=${this.displayedContent}
       .streaming=${this.streaming}
       .streamingRender=${this.streamingRender}
       .codeBlockChrome=${this.codeBlockChrome}
+      .codeBlockHeader=${this.codeBlockHeader}
       .languages=${this.languages ?? {}}
       .tabSize=${this.tabSize}
       .htmlMode=${this.htmlMode}

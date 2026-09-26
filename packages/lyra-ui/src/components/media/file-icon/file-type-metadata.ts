@@ -1,3 +1,5 @@
+import { normalizeMimeType, usesFileNameFallback } from './mime-type.js';
+
 export type LyraFileTypeIcon =
   | 'file'
   | 'pdf'
@@ -24,9 +26,18 @@ export type LyraFileTypeCategory =
 
 export interface LyraFileTypeMetadata {
   readonly label: string;
+  /**
+   * Short format token shown inside `lr-file-icon`'s `icon` badge, for example `'PDF'` or
+   * `'DOCX'`. It is rendered verbatim after trimming and is not localized. Keep it to about four
+   * characters to fit the default badge; longer values truncate with an ellipsis. A blank value is
+   * treated as absent. A non-string value, or more than eight code points after trimming, drops the
+   * whole record. When absent, the badge uses a qualifying filename extension or a generic glyph.
+   */
+  readonly abbreviation?: string;
   readonly description?: string;
   readonly icon: LyraFileTypeIcon;
   readonly category: LyraFileTypeCategory;
+  /** File extensions used for fallback lookup; the first qualifying entry also supplies a badge token. */
   readonly extensions?: readonly string[];
 }
 
@@ -52,7 +63,6 @@ const CATEGORIES = new Set<LyraFileTypeCategory>([
 ]);
 const MAX_MIME_TYPES = 512;
 const MAX_EXTENSIONS = 64;
-const MAX_MIME_LENGTH = 256;
 const MAX_EXTENSION_LENGTH = 64;
 const MAX_FILENAME_LOOKUP = 4096;
 
@@ -100,13 +110,6 @@ const GENERIC: LyraResolvedFileTypeMetadata = Object.freeze({
   label: 'File', icon: 'file', category: 'generic', provenance: 'builtin',
 });
 
-function normalizeMimeType(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const normalized = value.trim().toLowerCase().split(';', 1)[0] ?? '';
-  if (!normalized || normalized.length > MAX_MIME_LENGTH || !normalized.includes('/')) return undefined;
-  return normalized;
-}
-
 function normalizeExtension(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim().toLowerCase();
@@ -134,11 +137,14 @@ function snapshotMetadata(
     if (!value || typeof value !== 'object') return undefined;
     const label = value.label;
     const description = value.description;
+    const rawAbbreviation = value.abbreviation;
+    const abbreviation = typeof rawAbbreviation === 'string' ? rawAbbreviation.trim() : rawAbbreviation;
     const icon = value.icon;
     const category = value.category;
     if (
       typeof label !== 'string' || label.length === 0 || label.length > 512 ||
       (description != null && (typeof description !== 'string' || description.length > 2048)) ||
+      (abbreviation != null && (typeof abbreviation !== 'string' || abbreviation.length > 16 || [...abbreviation].length > 8)) ||
       !ICONS.has(icon) || !CATEGORIES.has(category)
     ) return undefined;
     const rawExtensions = Array.isArray(value.extensions) ? value.extensions.slice(0, MAX_EXTENSIONS) : [];
@@ -147,6 +153,7 @@ function snapshotMetadata(
     );
     return Object.freeze({
       label,
+      ...(abbreviation ? { abbreviation } : {}),
       ...(description == null ? {} : { description }),
       icon,
       category,
@@ -222,7 +229,7 @@ export function createFileTypeMetadataRegistry(
   return Object.freeze({
     resolve(mimeType: string, fileName = ''): LyraResolvedFileTypeMetadata {
       const normalized = normalizeMimeType(mimeType);
-      const explicit = normalized && normalized !== 'application/octet-stream' ? byMime.get(normalized) : undefined;
+      const explicit = normalized && !usesFileNameFallback(mimeType) ? byMime.get(normalized) : undefined;
       if (explicit) return explicit;
       if (!normalized || normalized === 'application/octet-stream') {
         const normalizedName = typeof fileName === 'string'

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -80,10 +80,10 @@ uses for its own `[part="body"]`.
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
 - `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
-  GFM task-list checkboxes stay disabled and take the bullet's place; each task item exposes
-  `part="task-item"` and `data-task="true"`, while a list containing only task items has
-  `data-task-list="true"`. The checkbox has a visible token-based border and checked fill rather
-  than relying on the browser's dim disabled appearance. A task's primary inline text supplies its
+  GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
+  text with ordinary sibling items; ordered tasks keep their numerals. The hooks are `task-list`,
+  `task-item`, `task-item-checked` and `task-checkbox`. A task-only unordered list carries
+  `role="list"`. The checkbox has a visible token-based border and checked fill. A task's primary inline text supplies its
   accessible name; nested task text is excluded, and a blank task receives no generated name.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — `target` applied to every
   rendered `<a>`, with `rel="noopener noreferrer"` always added alongside it whenever a `target` is
@@ -103,19 +103,29 @@ uses for its own `[part="body"]`.
   is still arriving and lets consumers target `lr-markdown[streaming]`. `streamingRender` selects
   the streaming presentation. Setting `streaming=false` parses and renders the latest complete
   content; busy state also remains true while parser dependencies are loading
-- `streamingRender: MarkdownStreamingRenderMode = 'plain'` (attribute `streaming-render`,
-  reflected), where `MarkdownStreamingRenderMode = 'plain' | 'progressive'`. The default `plain`
+- `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`,
+  not reflected), where `MarkdownStreamingRender = 'plain' | 'progressive'`. The default `plain`
   preserves the existing behavior of showing accumulated source text while streaming. In
   `progressive` mode, completed top-level blocks render as Markdown as they settle and only the
   trailing in-progress block remains plain text. Settled block nodes keep their identity as new
   chunks arrive, and syntax highlighting is deferred until a block settles. An unterminated fenced
   block is shown as an open, unhighlighted code block. The final full-document parse still runs
-  when streaming ends, including reference links that need content from later blocks.
-- `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — opts fenced blocks into a
-  localized language label and copy button. Copy uses the raw fence source, not highlighted HTML.
-  In progressive streaming, the header appears only after its closing fence arrives; with the
-  default plain streaming mode, chrome appears after the stream settles. Indented code blocks do not
-  receive this chrome.
+  when streaming ends, including reference links that need content from later blocks. Custom block
+  tokenizers, block extensions, parser hooks, pedantic mode, and asynchronous parser configuration
+  use plain streaming; inline extensions and renderer overrides remain supported. A text tail
+  follows the surrounding direction, while its open-fence preview uses code direction. Work is
+  bounded per animation frame; after 2,000 settled groups the remaining source stays plain until
+  completion. Large code blocks defer highlighting until completion.
+- `codeBlockHeader: boolean = false` (attribute `code-block-header`) — adds a language label and
+  an icon-only native copy button to the first 200 non-empty built-in code blocks, fenced or
+  indented. It copies source text without the renderer's terminal newline, preserving leading tabs
+  whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
+  code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
+  compatibility spelling; either property enables the header. Plain streaming defers headers until
+  settle; progressive streaming adds them to committed blocks. The button has a localized accessible
+  name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
+  the header also removes authored style elements and their CSS text to prevent visual copy
+  deception. Trusted mode provides no such guarantee.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
   blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
   peer is available; set `false` to keep plain output even when `shiki` is installed. In progressive
@@ -184,6 +194,8 @@ placed first and preserved inside both ceilings.
   (e.g. `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll, since a
   light-DOM `MutationObserver` on that container can never see a property-driven update rendered
   entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
+- `lr-copy` and `lr-copy-error` — the fulfilled and failed clipboard outcomes from the optional
+  code-block copy chrome; both bubble and are composed.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -192,20 +204,27 @@ placed first and preserved inside both ceilings.
 or a failed render — so a consumer can target `lr-markdown [part='content'][data-fallback]` to
 style it distinctly), `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
 anchor-jump message), `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`),
-`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`; a list made entirely of
-task items carries `data-task-list="true"`), `task-item` (each GFM task `<li>`, also marked
-`data-task="true"`), `code-block` (every rendered fenced/indented `<pre>`, isolated with LTR text
+`paragraph` (every rendered `<p>`), `list` (every rendered `<ul>`/`<ol>`),
+`task-list` (an all-task list), `task-item` (each GFM task), `task-item-checked` (completed task),
+`task-checkbox` (disabled state graphic), `code-block` (every rendered fenced/indented `<pre>`, isolated with LTR text
 direction even inside an RTL document), `inline-code` (every rendered inline `<code>` span —
 backtick spans, not fenced blocks; also isolated LTR), `link` (every rendered `<a>`),
 `table-wrapper` (the logical inline-scroll container for wide tables), `table` (every rendered `<table>`),
 `blockquote` (every rendered `<blockquote>`), `img` (every rendered `<img>`), `math` (a rendered
 inline or block math span, carrying `data-display="inline"|"block"`), and, when
-`code-block-chrome` is enabled, `code-block-header`, `code-block-language`, and `code-block-copy`
-(the header, localized language label, and copy button for each closed fenced block)
+`code-block-header` is enabled, `code-block-frame`, `code-block-header`, `code-block-language`,
+`code-block-copy`, `code-block-copy-success`, and `code-block-copy-error`. The language label uses
+CSS-generated content, so headers add no text to selection or text-quote anchoring. Each header
+adds at most eight elements toward the normal 20,000-node traversal bound.
+The `streaming-tail` part marks the stable text node used by progressive streaming updates.
 
-Wide GFM tables scroll horizontally inside `table-wrapper`, following the current text direction.
-Cell text wraps at word boundaries when possible and breaks a single word only when that word
-cannot fit the column. Inline code and code blocks keep LTR character order in RTL documents while
+Wide GFM tables scroll horizontally inside `table-wrapper`, a keyboard-focusable group named by
+`markdownTableRegion` (English: "Table"). The label follows locale and `.strings` changes without
+reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignment. Raw authored
+HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
+and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore
+letter wrapping with `::part(table) { overflow-wrap: anywhere }`, or Korean/CJK word grouping with
+`::part(table) { word-break: keep-all }`. Inline code and code blocks keep LTR character order in RTL documents while
 their surrounding layout continues to follow the page direction.
 
 **Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
@@ -222,6 +241,9 @@ radius), `--lr-markdown-code-block-padding` (default `var(--lr-space-s) var(--lr
 fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (default `var(--lr-radius)`
 — the fenced `code-block` surface's border radius), `--lr-markdown-table-header-bg` (default
 `var(--lr-color-brand-quiet)` — background of every rendered `[part="table"]` header cell),
+`--lr-markdown-task-checkbox-size` (default `var(--lr-size-0-875em)` — checkbox and aligned gutter),
+`--lr-markdown-code-header-bg` (default `var(--lr-color-surface)`),
+`--lr-markdown-code-header-color` (default `var(--lr-color-text-quiet)`),
 `--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
 `--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`
@@ -253,11 +275,11 @@ after that lazy load resolves; each instance owns its configuration. Call `rende
 ```
 
 Progressive rendering and code-copy chrome are opt-in; the following keeps completed Markdown
-blocks visible while text streams and adds a localized language label plus source-copy button to
-closed fenced blocks:
+blocks visible while text streams and adds a source language label plus localized copy button to
+settled code blocks:
 
 ````html
-<lr-markdown id="reply" streaming streaming-render="progressive" code-block-chrome></lr-markdown>
+<lr-markdown id="reply" streaming streaming-render="progressive" code-block-header></lr-markdown>
 <script type="module">
   import "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
 
@@ -286,9 +308,7 @@ of use, never on `:host`** — a `:host` declaration is re-stamped on every inst
 inherited value, so a page- or container-level declaration could never reach it. This element carries
 its own copy of that fallback rather than inheriting `<lr-code-block>`'s because the two are
 **sibling** custom elements, not ancestor and descendant: no single declaration inside one of them
-can cover the other. The same value can still _look_ different between the two — a markdown code
-block inherits `white-space: pre-wrap` while `<lr-code-block>` is `white-space: pre`, and tab stops
-restart at the beginning of each visual line, so a wrapped line's tabs land differently.
+can cover the other. Both surfaces use `white-space: pre` and scroll horizontally, preserving the same tab stops.
 
 **Known gotchas:**
 

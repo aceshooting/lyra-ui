@@ -193,6 +193,7 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: 'Subagenten erneut ausführen',
   subagentPanelCancelRun: '{name} abbrechen',
   subagentPanelRetryRun: '{name} erneut ausführen',
+  toolTimelineDetailsFor: 'Details zu {name}',
   toolCallBlockHeaderPending: 'Warte auf Verwendung von {name}',
   toolCallBlockHeaderRunning: 'Verwende {name}',
   toolCallBlockHeaderSuccess: '{name} verwendet',

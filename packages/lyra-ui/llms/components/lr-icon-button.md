@@ -16,6 +16,9 @@
 
 ## `lr-icon-button`
 
+Host `aria-keyshortcuts` is forwarded reactively to the internal native button or link, including
+attribute removal and button/link presentation changes.
+
 An accessible icon-only action/link with a native `<button>` inside. It is deliberately not a
 form-associated submitter; use `<lr-button circle type="submit|reset">` with an icon-only default
 slot when a form action is required. Because it is not form-associated, an ancestor

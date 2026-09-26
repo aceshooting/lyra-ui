@@ -649,6 +649,14 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/layout/menu/menu-label.class.js').then((module) => module.LyraMenuLabel),
   },
+  'lr-menubar': {
+    optionalPeers: [],
+    load: () => import('../components/layout/menubar/menubar.class.js').then((module) => module.LyraMenubar),
+  },
+  'lr-menubar-item': {
+    optionalPeers: [],
+    load: () => import('../components/layout/menubar/menubar-item.class.js').then((module) => module.LyraMenubarItem),
+  },
   'lr-message-actions': {
     optionalPeers: [],
     load: () => import('../components/conversation/message-actions/message-actions.class.js').then((module) => module.LyraMessageActions),

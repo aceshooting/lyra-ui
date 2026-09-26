@@ -91,7 +91,9 @@ export const styles = css`
      (0,2,0), so source order alone decides, and a revealed button's toggled-on fill is the same
      brand-quiet the hover uses -- placed first, pressing it would show nothing. Only the fill is
      claimed, so the toggled border colour still reads while pressed. */
-  [part='reveal-button']:active,
+  [part='reveal-button']:where([aria-pressed='true']):active {
+    background: color-mix(in oklab, var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='copy-button']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }

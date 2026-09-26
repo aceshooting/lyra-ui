@@ -116,6 +116,7 @@ function parseTimeList(value: string): number[] {
  *   weight.
  * @cssprop [--lr-navigation-menu-item-hover-bg=var(--lr-color-brand-quiet)] - Hovered background.
  * @cssprop [--lr-navigation-menu-item-hover-color=var(--lr-color-brand)] - Hovered text colour.
+ * @cssprop [--lr-navigation-menu-item-active-color=var(--lr-color-text)] - Pressed text colour.
  * @cssprop [--lr-navigation-menu-item-active-bg=color-mix(in oklab,var(--lr-color-brand-quiet),var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Pressed background.
  * @cssprop [--lr-navigation-menu-item-open-bg=var(--lr-color-brand-quiet)] - Background of a

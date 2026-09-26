@@ -192,6 +192,7 @@ const strings: LyraLocaleStrings = {
   subagentPanelRetry: '重试子智能体',
   subagentPanelCancelRun: '取消{name}',
   subagentPanelRetryRun: '重试{name}',
+  toolTimelineDetailsFor: '{name}的详情',
   toolCallBlockHeaderPending: '等待使用 {name}',
   toolCallBlockHeaderRunning: '正在使用 {name}',
   toolCallBlockHeaderSuccess: '已使用 {name}',

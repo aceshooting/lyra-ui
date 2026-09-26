@@ -221,7 +221,7 @@ export const styles = css`
       --lr-pagination-current-active-bg,
       color-mix(
         in oklab,
-        var(--lr-color-brand),
+        var(--lr-pagination-current-bg, var(--lr-color-brand)),
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );

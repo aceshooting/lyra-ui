@@ -454,6 +454,18 @@ assert.match(
   'actions-only lr-result-card SSR must expose its actions wrapper'
 );
 
+const populatedMenubarHtml = await collectResult(
+  render(
+    html`<lr-menubar label="App"><lr-menubar-item>File<lr-menu slot="menu"><lr-menu-item>New</lr-menu-item></lr-menu></lr-menubar-item><lr-menubar-item>Help</lr-menubar-item></lr-menubar>`,
+    { elementRenderers: animatedImageContext.elementRenderers }
+  )
+);
+assert.match(populatedMenubarHtml, /part="base"[^>]*role="menubar"/, 'menubar semantics render before hydration');
+const menubarMenuWrappers = populatedMenubarHtml.match(/<span[^>]*class="menu"[^>]*>/g) ?? [];
+assert.equal(menubarMenuWrappers.length, 2, 'each menubar item renders one menu wrapper');
+for (const wrapper of menubarMenuWrappers) assert.match(wrapper, /\bhidden\b/, 'menubar menus remain hidden before hydration');
+assert.match(populatedMenubarHtml, /File/, 'menubar labels survive SSR');
+
 const populatedTabGroupHtml = await collectResult(
   render(
     html`<lr-tab-group>

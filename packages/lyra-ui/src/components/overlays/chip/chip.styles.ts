@@ -136,9 +136,10 @@ export const styles = css`
   :host([toggleable]:not([removable])) [part='base'] {
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
+    --_lr-chip-toggle-bg: var(--lr-chip-bg, var(--_lr-chip-bg));
   }
   :host([toggleable]:not([removable]):not([disabled])) [part='base']:hover {
-    background: color-mix(in srgb, var(--lr-chip-accent, var(--_lr-chip-accent)) 8%, var(--lr-chip-bg, var(--_lr-chip-bg)));
+    background: color-mix(in srgb, var(--lr-chip-accent, var(--_lr-chip-accent)) 8%, var(--_lr-chip-toggle-bg));
   }
   /* Pressed deepens the hover's accent wash to --lr-color-mix-active, roughly triple the hover's
      8%. The accent is the mix partner, not --lr-color-mix-partner: a non-neutral chip is a loud
@@ -147,7 +148,7 @@ export const styles = css`
      :active matches even though the button is [part='toggle-button'] stretched over the base, since
      :active applies to the activated element's ancestors too. */
   :host([toggleable]:not([removable]):not([disabled])) [part='base']:active {
-    background: color-mix(in srgb, var(--lr-chip-accent, var(--_lr-chip-accent)) var(--lr-color-mix-active), var(--lr-chip-bg, var(--_lr-chip-bg)));
+    background: color-mix(in srgb, var(--lr-chip-accent, var(--_lr-chip-accent)) var(--lr-color-mix-active), var(--_lr-chip-toggle-bg));
   }
   [part='toggle-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -156,7 +157,8 @@ export const styles = css`
   :host([toggleable][selected]:not([removable])) [part='base'] {
     /* Falls back to --lr-chip-bg, so an unset consumer renders byte-identical. A distinct active
        tint independent of the resting background comes from setting --lr-chip-pressed-bg. */
-    background: var(--lr-chip-pressed-bg, var(--lr-chip-bg, var(--_lr-chip-bg)));
+    --_lr-chip-toggle-bg: var(--lr-chip-pressed-bg, var(--lr-chip-bg, var(--_lr-chip-bg)));
+    background: var(--_lr-chip-toggle-bg);
     /* Falls back to --lr-chip-accent, so an unset consumer -- all four non-neutral variants
        included -- renders byte-identical. A per-item arbitrary color sets --lr-chip-pressed-border,
        leaving --lr-chip-accent, and so the label text color, untouched. */

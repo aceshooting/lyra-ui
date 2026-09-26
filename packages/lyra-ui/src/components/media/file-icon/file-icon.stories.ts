@@ -13,6 +13,31 @@ export const Formats: Story = {
 
 export const FilenameFallback: Story = { render: () => html`<lr-file-icon name="presentation.pptx" mime-type="application/octet-stream" mode="label"></lr-file-icon>` };
 
+export const BadgeTokensAcrossSizes: Story = {
+  name: 'Badge tokens across sizes and locales',
+  render: () => html`
+    <div style="display:grid; gap:var(--lr-space-m);">
+      ${['1rem', '1.5rem', '2rem', '3rem'].map((size) => html`
+        <div style="display:flex; align-items:center; gap:var(--lr-space-m);">
+          <code>${size}</code>
+          <lr-file-icon style="--lr-file-icon-size:${size}" mime-type="application/pdf"></lr-file-icon>
+          <lr-file-icon style="--lr-file-icon-size:${size}" mime-type="application/octet-stream" name="index.ts"></lr-file-icon>
+          <lr-file-icon style="--lr-file-icon-size:${size}" mime-type="application/octet-stream" name="photo.jpeg"></lr-file-icon>
+          <lr-file-icon style="--lr-file-icon-size:${size}" mime-type="application/octet-stream" name="README"></lr-file-icon>
+        </div>
+      `)}
+      <div style="display:flex; align-items:center; gap:var(--lr-space-m)" lang="fr">
+        <lr-file-icon mime-type="application/json"></lr-file-icon>
+        <lr-file-icon dir="rtl" mime-type="application/json"></lr-file-icon>
+        <lr-file-icon mime-type="application/x-long-token" .registry=${createFileTypeMetadataRegistry([{
+          mimeTypes: 'application/x-long-token',
+          metadata: { label: 'Long token', abbreviation: 'WMV', icon: 'file', category: 'generic' },
+        }])}></lr-file-icon>
+      </div>
+    </div>
+  `,
+};
+
 export const ThemedBadge: Story = {
   name: 'Themed badge (cssprops)',
   parameters: {

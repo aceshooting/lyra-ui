@@ -21,10 +21,10 @@ test('builds the complete retained-baseline/evidence plan without changing enrol
       axes.get(axisName)?.artifactPolicy === 'evidence-only',
   );
 
-  assert.equal(new Set(captures.map(({ story }) => story.id)).size, 97);
-  assert.equal(captures.length, 280);
-  assert.equal(evidenceOnly.length, 163);
-  assert.equal(captures.length - evidenceOnly.length, 117);
+  assert.equal(new Set(captures.map(({ story }) => story.id)).size, 99);
+  assert.equal(captures.length, 284);
+  assert.equal(evidenceOnly.length, 170);
+  assert.equal(captures.length - evidenceOnly.length, 114);
 });
 
 test('enrolls the exact required canaries on their intended visual axes', () => {
@@ -68,7 +68,7 @@ test('creates deterministic, disjoint, exhaustive, balanced capture shards', () 
     shardVisualCaptures(captures, shardIndex, 3),
   );
 
-  assert.deepEqual(shards.map((shard) => shard.length), [94, 93, 93]);
+  assert.deepEqual(shards.map((shard) => shard.length), [95, 95, 94]);
   assert.equal(new Set(shards.flat().map(({ key }) => key)).size, captures.length);
   assert.deepEqual(
     shards.flat().map(({ key }) => key).sort(),

@@ -876,10 +876,6 @@ const REGENERATE_HINT = 'Run `pnpm registrations` and commit the regenerated fil
  * registrations. Each entry is a full `a -> b` module path.
  */
 const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
-  // Code-block chrome is opt-in; only markdown instances that render the copy control load/register it.
-  'src/components/conversation/markdown/markdown-base.class.ts -> src/components/utility/copy-button/copy-button.ts',
-  'src/components/conversation/markdown/markdown-core.class.ts -> src/components/conversation/markdown/markdown-base.class.ts -> src/components/utility/copy-button/copy-button.ts',
-  'src/components/conversation/markdown/markdown.class.ts -> src/components/conversation/markdown/markdown-base.class.ts -> src/components/utility/copy-button/copy-button.ts',
   'src/components/forms/phone-input/phone-input.class.ts -> src/components/media/flag/flag.ts',
 ];
 

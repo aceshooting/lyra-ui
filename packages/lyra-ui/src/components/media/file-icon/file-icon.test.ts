@@ -106,7 +106,8 @@ describe('lr-file-icon', () => {
     const el = await fixture<LyraFileIcon>(html`
       <lr-file-icon mime-type="application/x-analysis" mode="label" .registry=${registry}></lr-file-icon>
     `);
-    expect(el.shadowRoot!.querySelector('[part="icon"]')!.textContent).to.equal('My authored label');
+    expect(el.shadowRoot!.querySelector('[part="icon"]')!.textContent).to.not.include('My authored label');
+    expect(el.shadowRoot!.querySelector('[part="icon"] .token') === null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('My authored label');
     expect(el.shadowRoot!.querySelector('[part="description"]')!.textContent).to.equal('My authored description');
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-describedby')).to.equal('metadata-description');
@@ -247,11 +248,11 @@ describe('lr-file-icon', () => {
     const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
     const style = getComputedStyle(icon);
     expect(style.overflow).to.equal('hidden');
-    expect(style.textOverflow).to.equal('ellipsis');
-    expect(style.whiteSpace).to.equal('nowrap');
+    expect(icon.querySelector('.token')?.textContent).to.equal('DOC');
+    expect(getComputedStyle(icon.querySelector('.token')!).whiteSpace).to.equal('nowrap');
   });
 
-  it('truncates localized multi-word badge text from the inline end at default and small sizes', async () => {
+  it('keeps localized labels out of the icon badge and renders a format token', async () => {
     for (const [language, label] of [['en', 'Code file'], ['fr', 'Fichier de code']] as const) {
       for (const direction of ['ltr', 'rtl'] as const) {
         for (const size of ['2rem', '1rem']) {
@@ -259,26 +260,40 @@ describe('lr-file-icon', () => {
             <lr-file-icon
               lang=${language}
               dir=${direction}
-              mime-type="text/markdown"
+              mime-type="application/json"
               style=${`--lr-file-icon-size: ${size}`}
               .strings=${language === 'fr' ? { fileTypeCode: label } : {}}
             ></lr-file-icon>
           `);
           const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
-          const text = icon.querySelector<HTMLElement>('.badge-label');
-          expect(Boolean(text), 'badge text needs its own shrinkable overflow box').to.equal(true);
-          if (!text) continue;
-          const style = getComputedStyle(text);
-
-          expect(text.textContent, `${language}/${direction}/${size}`).to.equal(label);
-          expect(style.textOverflow).to.equal('ellipsis');
-          expect(style.textAlign).to.equal('start');
-          expect(text.scrollWidth).to.be.greaterThan(text.clientWidth);
-          expect(text.getBoundingClientRect().width).to.be.at.most(icon.clientWidth);
-          expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(label);
+          const token = icon.querySelector<HTMLElement>('.token');
+          expect(token?.textContent, `${language}/${direction}/${size}`).to.equal('JSON');
+          if (size === '1rem') expect(getComputedStyle(token!).display).to.equal('none');
+          expect(icon.textContent).to.not.include(label);
+          expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+            language === 'fr' ? 'Fichier de code' : label,
+          );
         }
       }
     }
+  });
+
+  it('uses abbreviation and filename extension tokens without localizing them', async () => {
+    const registry = createFileTypeMetadataRegistry([
+      {
+        mimeTypes: 'application/x-authored',
+        metadata: { label: 'Authored format', abbreviation: '  Md  ', icon: 'code', category: 'code' },
+      },
+    ]);
+    const authored = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/x-authored" .registry=${registry}></lr-file-icon>
+    `);
+    expect(authored.shadowRoot!.querySelector('.token')!.textContent).to.equal('Md');
+
+    const filename = await fixture<LyraFileIcon>(html`
+      <lr-file-icon name="scan.jpeg" mime-type="application/octet-stream"></lr-file-icon>
+    `);
+    expect(filename.shadowRoot!.querySelector('.token')!.textContent).to.equal('JPEG');
   });
 
   it('--lr-file-icon-bg / --lr-file-icon-color retint the format badge independently of the shared brand tokens', async () => {
@@ -376,6 +391,8 @@ describe('file type metadata registry input validation', () => {
     ['a label over the length ceiling', { ...VALID, label: 'x'.repeat(513) }],
     ['a non-string description', { ...VALID, description: 5 }],
     ['a description over the length ceiling', { ...VALID, description: 'x'.repeat(2049) }],
+    ['a non-string abbreviation', { ...VALID, abbreviation: 5 }],
+    ['an abbreviation over the code-point ceiling', { ...VALID, abbreviation: 'ABCDEFGHI' }],
     ['a null metadata record', null],
   ];
 
@@ -393,6 +410,19 @@ describe('file type metadata registry input validation', () => {
       asEntry({ mimeTypes: 'text/x-custom; charset=utf-8', metadata: VALID }),
     ]);
     expect(registry.resolve('text/x-custom').label).to.equal('Custom');
+  });
+
+  it('trims and snapshots abbreviations, while treating blank values as absent', () => {
+    const registry = createFileTypeMetadataRegistry([
+      asEntry({ mimeTypes: 'text/x-trimmed', metadata: { ...VALID, abbreviation: '  PDF  ' } }),
+      asEntry({ mimeTypes: 'text/x-blank', metadata: { ...VALID, abbreviation: '   ', extensions: ['.lyra'] } }),
+    ]);
+    const trimmed = registry.resolve('text/x-trimmed');
+    expect(trimmed.abbreviation).to.equal('PDF');
+    expect(Object.isFrozen(trimmed)).to.be.true;
+    const blank = registry.resolve('text/x-blank');
+    expect('abbreviation' in blank).to.be.false;
+    expect(blank.label).to.equal('Custom');
   });
 
   it('installs an entry whose extensions field is not an array, without extension aliases', () => {

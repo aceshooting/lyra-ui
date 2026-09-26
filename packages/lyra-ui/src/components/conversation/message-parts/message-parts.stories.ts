@@ -288,3 +288,18 @@ export const ToolDisplayBlock: Story = {
     </div>
   `,
 };
+
+export const MarkdownCodeHeaders: Story = {
+  render: () => html`<lr-message-parts code-block-header .parts=${[
+    { id: 'reasoning-code', type: 'reasoning', collapsed: false, text: '```ts\nconst input = 42;\n```' },
+    { id: 'answer-code', type: 'text', text: '```ts\nconsole.log(input);\n```' },
+  ] satisfies MessagePart[]}></lr-message-parts>`,
+};
+
+export const ProgressiveMarkdown: Story = {
+  render: () => html`<lr-message-parts content-mode="markdown" show-reasoning streaming-render="progressive" code-block-header
+    .parts=${[
+      { id: 'reasoning-progressive', type: 'reasoning', state: 'streaming', text: '# Approach\n\nA settled explanation.\n\nConsidering the next step' },
+      { id: 'text-progressive', type: 'text', state: 'streaming', text: '# Answer\n\nA **formatted result**.\n\nThe answer continues' },
+    ]}></lr-message-parts>`,
+};

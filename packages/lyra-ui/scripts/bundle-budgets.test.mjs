@@ -286,14 +286,13 @@ assert.throws(
 const reviewedCeilingKeys = Object.keys(budgets)
   .filter((key) => key.startsWith('dist/') || key === '$componentP95GzipKb' || key === '$componentMaxGzipKb')
   .sort();
-// The tightest standalone ceiling in the file, and the one that notices when the SHARED base class
-// grows: nothing about lr-button itself changed for 16.0.0, so the move from 31 to 31.92 KiB is
-// base-class cost every other bundle pays too. 30 KiB held until the cross-document render-root
-// fallback landed; 31 held until this release. Keep this guard tight -- it is the canary, not a
-// budget, so raise it only with a measurement and a reason, never to make a run pass.
+// The tightest standalone ceiling in the file, and the one that notices when the shared base class
+// grows. The 21.0.0 accessibility surface adds forwarding for `aria-keyshortcuts` on buttons;
+// the measured standalone registration is 32.53 KiB gzip, so the canary remains below this
+// deliberately narrow 33 KiB ceiling.
 assert.ok(
-  budgets['dist/components/forms/button/button.js'] <= 32,
-  'the standalone button registration must remain at or below 32 KiB gzip',
+  budgets['dist/components/forms/button/button.js'] <= 33,
+  'the standalone button registration must remain at or below 33 KiB gzip',
 );
 assert.deepEqual(reviewedCeilingKeys, [
   '$componentMaxGzipKb',

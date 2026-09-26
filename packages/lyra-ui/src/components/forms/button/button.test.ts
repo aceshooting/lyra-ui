@@ -3248,3 +3248,16 @@ it('drops the internal aria-controls relationship once the host idref stops reso
 
   expect((base.ariaControlsElements ?? []).length).to.equal(0);
 });
+
+
+it('forwards host aria-keyshortcuts through button/link changes and removal', async () => {
+  const el = await fixture<LyraButton>(html`<lr-button aria-keyshortcuts="Control+B">Toggle</lr-button>`);
+  const control = () => el.shadowRoot!.querySelector('button, a')!;
+  expect(control().getAttribute('aria-keyshortcuts')).to.equal('Control+B');
+  el.href = '/settings'; await el.updateComplete;
+  expect(control().localName).to.equal('a'); expect(control().getAttribute('aria-keyshortcuts')).to.equal('Control+B');
+  el.href = ''; await el.updateComplete;
+  expect(control().localName).to.equal('button'); expect(control().getAttribute('aria-keyshortcuts')).to.equal('Control+B');
+  el.removeAttribute('aria-keyshortcuts'); await el.updateComplete;
+  expect(control().hasAttribute('aria-keyshortcuts')).to.equal(false);
+});

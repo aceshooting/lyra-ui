@@ -42,8 +42,8 @@ export const styles = css`
      light and dark themes alike. MUST stay after the [aria-pressed='true'] rule and its hover
      companion: all three selectors are (0,2,0), so source order alone decides whether pressing an
      already-selected metric shows any feedback at all. */
-  [part='metric']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part='metric']:where([aria-pressed='true']):active {
+    background: color-mix(in oklab, var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='runs'] { display: flex; min-inline-size: 0; max-inline-size: 100%; flex-direction: column; gap: var(--lr-space-xs); }
   [part='run'] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lr-space-xs); align-items: center; padding-block: var(--lr-space-xs); border: 0; border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); inline-size: 100%; background: transparent; color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }

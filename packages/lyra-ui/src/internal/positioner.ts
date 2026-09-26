@@ -442,7 +442,10 @@ function writeHoverBridge(
  * only `backdrop-filter`/`filter` carry the stale WebKit exclusion, so this replica differs from
  * upstream only by dropping it.
  */
-const FIXED_CONTAINING_BLOCK_WILL_CHANGE_RE = /transform|translate|scale|rotate|perspective|filter/;
+const FIXED_CONTAINING_BLOCK_WILL_CHANGE = new Set([
+  'transform', 'translate', 'scale', 'rotate', 'perspective', 'filter', 'backdrop-filter',
+  'contain', 'offset-path', 'transform-style',
+]);
 const FIXED_CONTAINING_BLOCK_CONTAIN_RE = /paint|layout|strict|content/;
 
 function isNonNoneCssValue(value: string): boolean {
@@ -461,18 +464,28 @@ function establishesFixedContainingBlock(element: Element): boolean {
     isNonNoneCssValue(css.perspective) ||
     isNonNoneCssValue(css.backdropFilter) ||
     isNonNoneCssValue(css.filter) ||
-    FIXED_CONTAINING_BLOCK_WILL_CHANGE_RE.test(css.willChange || '') ||
+    isNonNoneCssValue(css.offsetPath) ||
+    css.contentVisibility === 'auto' || css.contentVisibility === 'hidden' ||
+    css.transformStyle === 'preserve-3d' ||
+    css.willChange.split(',').some((token) => FIXED_CONTAINING_BLOCK_WILL_CHANGE.has(token.trim())) ||
     FIXED_CONTAINING_BLOCK_CONTAIN_RE.test(css.contain || '')
   );
+}
+
+function nativePopoverSupported(): boolean {
+  if (typeof CSS === 'undefined' || typeof HTMLElement === 'undefined') return true;
+  return typeof HTMLElement.prototype.showPopover === 'function' && CSS.supports('selector(:popover-open)');
 }
 
 /** Mirrors `@floating-ui/utils/dom`'s own unexported `isTopLayer()`: a native top-layer element
  *  (an open popover, or a `<dialog>` shown modally) has no containing-block ancestor of its own. */
 function isNativeTopLayerElement(element: Element): boolean {
-  try {
-    if (element.matches(':popover-open')) return true;
-  } catch {
-    // Older engines may not support the :popover-open pseudo-class; fall through to :modal.
+  if (nativePopoverSupported()) {
+    try {
+      if (element.matches(':popover-open')) return true;
+    } catch {
+      // Older engines may not support the :popover-open pseudo-class; fall through to :modal.
+    }
   }
   try {
     return element.matches(':modal');

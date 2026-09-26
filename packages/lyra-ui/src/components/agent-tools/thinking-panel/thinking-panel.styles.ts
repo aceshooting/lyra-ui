@@ -76,6 +76,7 @@ export const styles = css`
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
+    color: var(--lr-color-text);
   }
   [part="header"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

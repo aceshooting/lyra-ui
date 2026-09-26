@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': patch
+"@aceshooting/lyra-ui": patch
 ---
 
 Two border fixes:

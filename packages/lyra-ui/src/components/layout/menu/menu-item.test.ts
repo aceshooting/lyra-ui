@@ -2456,3 +2456,28 @@ describe('collecting already-slotted icon/details/suffix content without relying
     }
   });
 });
+
+
+it('shows a shadow-rendered keyboard shortcut assigned to details', async () => {
+  await import('../../overlays/kbd/kbd.js');
+  const el = await fixtureInMenu(html`<lr-menu-item>New tab<lr-kbd slot="details" keys="mod+t"></lr-kbd></lr-menu-item>`);
+  const details = el.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!;
+  await waitUntil(() => !details.hidden);
+  expect(details.offsetWidth).to.be.greaterThan(0);
+});
+
+it('keeps empty forwarding slots and whitespace-only details hidden', async () => {
+  const wrapperTag = 'test-menu-details-forwarder';
+  if (!customElements.get(wrapperTag)) customElements.define(wrapperTag, class extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' }).innerHTML = '<div role="menu" aria-label="Actions"><lr-menu-item>New<slot name="hint" slot="details"></slot></lr-menu-item></div>';
+    }
+  });
+  const wrapper = await fixture(html`<test-menu-details-forwarder></test-menu-details-forwarder>`);
+  const forwarded = wrapper.shadowRoot!.querySelector<LyraMenuItem>('lr-menu-item')!;
+  await forwarded.updateComplete;
+  expect(forwarded.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!.hidden).to.equal(true);
+  const el = await fixtureInMenu(html`<lr-menu-item>New<slot slot="details">   </slot></lr-menu-item>`);
+  expect(el.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!.hidden).to.equal(true);
+});

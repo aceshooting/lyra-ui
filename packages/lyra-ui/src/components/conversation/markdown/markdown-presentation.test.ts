@@ -50,13 +50,13 @@ describe('markdown presentation', () => {
         el.style.inlineSize = '240px';
         await waitUntil(() => el.shadowRoot?.querySelector('input[type="checkbox"]') != null);
 
-        const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+        const list = el.shadowRoot!.querySelector('[part~="list"]') as HTMLElement;
         const taskItems = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="task-item"]')];
         const listItems = [...list.querySelectorAll<HTMLElement>('li')];
         const checkbox = listItems[1]!.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
-        expect(list.hasAttribute('data-task-list')).to.be.true;
+        expect(list.part.contains('task-list')).to.be.true;
         expect(taskItems).to.have.length(2);
-        expect(taskItems.every((item) => item.hasAttribute('data-task'))).to.be.true;
+        expect(taskItems.every((item) => item.part.contains('task-item'))).to.be.true;
         expect(getComputedStyle(listItems[0]!).listStyleType).to.equal('none');
         expect(checkbox.disabled).to.be.true;
         expect(checkbox.checked).to.be.true;
@@ -96,17 +96,17 @@ describe('markdown presentation', () => {
         await loadMarkdownDeps();
         const { el } = await createMarkdown(tagName, '- [ ] Task\n  - [x] Nested task\n- [ ] ![](javascript:bad)\n- Ordinary item');
         await waitUntil(() => el.shadowRoot?.querySelector('input[type="checkbox"]') != null);
-        const lists = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="list"]')];
+        const lists = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="list"]')];
         const tasks = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="task-item"]')];
         const ordinary = [...el.shadowRoot!.querySelectorAll<HTMLElement>('li')].find((item) => item.textContent?.includes('Ordinary item'))!;
-        expect(lists[0]!.hasAttribute('data-task-list')).to.be.false;
-        expect(lists[1]!.hasAttribute('data-task-list')).to.be.true;
+        expect(lists[0]!.part.contains('task-list')).to.be.false;
+        expect(lists[1]!.part.contains('task-list')).to.be.true;
         expect(tasks).to.have.length(3);
         expect(tasks.some((item) => {
           const label = item.querySelector<HTMLInputElement>('input[type="checkbox"]')?.getAttribute('aria-label');
           return label == null || label.trim() === '';
         })).to.be.true;
-        expect(ordinary.hasAttribute('data-task')).to.be.false;
+        expect(ordinary.part.contains('task-item')).to.be.false;
         expect(getComputedStyle(ordinary).listStyleType).to.not.equal('none');
       });
 

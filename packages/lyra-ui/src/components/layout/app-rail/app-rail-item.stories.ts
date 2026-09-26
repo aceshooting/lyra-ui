@@ -1,3 +1,4 @@
+import './app-rail.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './app-rail-item.js';
@@ -224,4 +225,10 @@ export const NestedChildren: StoryObj = {
       </lr-app-rail-item>
     </div>
   `,
+};
+
+
+export const IconOnlyWithChildren: StoryObj = {
+  parameters: { docs: { description: { story: 'Collapse the rail to hide nested disclosure controls and lists. Returning to full restores the previous expanded state.' } } },
+  render: () => html`<lr-app-rail label="Workspace" collapsible icon-only-breakpoint="0px"><lr-app-rail-item expanded><span slot="icon">○</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item><lr-app-rail-item slot="children">Security</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`,
 };

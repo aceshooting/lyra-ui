@@ -23,12 +23,6 @@ interface MarkdownChromeElement extends HTMLElement {
   updateComplete: Promise<unknown>;
 }
 
-interface CopyButtonElement extends HTMLElement {
-  copyLabel: string;
-  value: string;
-  updateComplete: Promise<unknown>;
-}
-
 async function mount(
   tagName: (typeof tags)[number],
   options: Partial<Pick<MarkdownChromeElement, 'content' | 'codeBlockChrome' | 'highlightCode' | 'htmlMode' | 'languages' | 'streaming' | 'streamingRender' | 'strings'>> = {},
@@ -55,8 +49,8 @@ function headers(el: MarkdownChromeElement): Element[] {
   return [...el.shadowRoot!.querySelectorAll('[part="code-block-header"]')];
 }
 
-function copyControl(el: MarkdownChromeElement): CopyButtonElement {
-  return el.shadowRoot!.querySelector('[part="code-block-copy"]') as CopyButtonElement;
+function copyControl(el: MarkdownChromeElement): HTMLButtonElement {
+  return el.shadowRoot!.querySelector('[part~="code-block-copy"]') as HTMLButtonElement;
 }
 
 async function withClipboard(writes: string[], run: () => Promise<void>): Promise<void> {
@@ -95,21 +89,20 @@ for (const tagName of tags) {
       await waitForMarkdown(el, '[part="code-block-header"]');
       const language = el.shadowRoot!.querySelector('[part="code-block-language"]')!;
       const copy = copyControl(el);
-      expect(language.textContent).to.equal('json source');
-      expect(copy.localName).to.equal('lr-copy-button');
-      expect(copy.copyLabel).to.equal('Copy source');
-      expect(copy.value).to.equal(fencedSource);
+      expect(language.getAttribute('data-language')).to.equal('json');
+      expect(language.closest('[role="group"]')?.getAttribute('aria-label')).to.equal('json source');
+      expect(copy.localName).to.equal('button');
+      expect(copy.getAttribute('aria-label')).to.equal('Copy source');
 
       const writes: string[] = [];
-      await copy.updateComplete;
       await withClipboard(writes, async () => {
-        copy.shadowRoot!.querySelector<HTMLButtonElement>('[part~="base"]')!.click();
+        copy.click();
         await waitUntil(() => writes.length === 1);
       });
-      expect(writes).to.deep.equal([fencedSource]);
+      expect(writes).to.deep.equal([fencedSource.replace(/\n$/, '')]);
     });
 
-    it('adds chrome only to fenced code, excluding indented code and authored marker lookalikes', async () => {
+    it('adds chrome to built-in fenced and indented code without decorating authored lookalikes', async () => {
       const content = [
         '```json',
         '{"kind":"fenced"}',
@@ -121,18 +114,13 @@ for (const tagName of tags) {
       ].join('\n');
       const el = await mount(tagName, { content, codeBlockChrome: true, highlightCode: false, htmlMode: 'trusted' });
       await waitForMarkdown(el, '[part="code-block-header"]');
-      expect(headers(el)).to.have.length(1);
+      expect(headers(el)).to.have.length(2);
       const blocks = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="code-block"]')];
       expect(blocks).to.have.length(2);
-      expect(blocks[0]!.hasAttribute('data-fenced')).to.be.true;
-      expect(blocks[1]!.hasAttribute('data-fenced')).to.be.false;
-      expect(blocks[1]!.previousElementSibling?.getAttribute('part')).to.not.equal('code-block-header');
-      const authoredPre = [...el.shadowRoot!.querySelectorAll<HTMLPreElement>('pre')].find((pre) =>
-        pre.textContent?.includes('authored HTML')
-      );
-      expect(authoredPre).to.exist;
-      expect(authoredPre!.hasAttribute('data-fenced')).to.be.false;
-      expect(el.shadowRoot!.querySelector('pre[data-fenced="true"] code')?.textContent).to.include('fenced');
+      expect(blocks.every((block) => block.parentElement?.part.contains('code-block-frame'))).to.equal(true);
+      const authoredPre = [...el.shadowRoot!.querySelectorAll<HTMLPreElement>('pre')].find((pre) => pre.textContent?.includes('authored HTML'));
+      expect(Boolean(authoredPre)).to.equal(true);
+      expect(authoredPre?.parentElement?.part.contains('code-block-frame')).to.equal(false);
     });
 
     it('waits for a closing fence while streaming and adds chrome once the block settles', async () => {
@@ -143,11 +131,11 @@ for (const tagName of tags) {
         streaming: true,
         streamingRender: 'progressive',
       });
-      await waitForMarkdown(el, '[part="code-block"][data-open-fence]');
+      await waitForMarkdown(el, 'pre[part="code-block"]');
       expect(headers(el)).to.have.length(0);
 
       el.content = '```json\n{"closed":true}\n```\n\nSettled tail';
-      await waitForMarkdown(el, '[part="code-block"][data-fenced="true"]');
+      await waitForMarkdown(el, '[part="code-block-frame"] [part="code-block"]');
       expect(el.getAttribute('aria-busy')).to.equal('true');
       expect(headers(el)).to.have.length(1);
     });

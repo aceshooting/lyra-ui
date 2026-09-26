@@ -660,7 +660,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
           part="icon"
           decorative
           mime-type=${row.entry.mimeType ?? ''}
-          name=${row.entry.name ?? row.entry.label}
+          name=${row.hasChildren ? nothing : row.entry.name ?? row.entry.label}
         ></lr-file-icon>
         <span part="label">${row.entry.label}</span>
       </div>

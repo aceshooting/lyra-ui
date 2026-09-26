@@ -153,7 +153,7 @@ import "@aceshooting/lyra-ui/all.js";
 > upgrade — `<lr-select>` renders as an unknown inert element with its light DOM showing through and
 > no console message. If elements stopped working after upgrading and nothing failed, this is why.
 
-`all.js` registers 278 tags — every component **except** the 16 inventory-designated
+`all.js` registers 280 tags — every component **except** the 16 inventory-designated
 optional-peer-family tags: `<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`,
 `<lr-histogram>`, `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>`, and
 `<lr-geojson-view>` and `<lr-geojson-viewer>` (see Install above). Those always require their own explicit subpath import,
@@ -343,6 +343,10 @@ exact TypeScript/event shape needs an explicit update:
 - `<lr-popover>` emits cancelable `lr-show`/`lr-hide` before state changes and settles the new
   after-events after motion. `<lr-tooltip>` replaces `delay` with independent `show-delay` and
   `hide-delay`.
+- Overlay focus behavior is keyboard-aware: `trigger="focus-visible"` opens only for a
+  keyboard-visible focus, while `trigger="focus"` keeps the any-focus behavior. Both modes still
+  expose their description to the focused control; use `show()`/`open = true` for deterministic
+  scripted opening.
 - Slider input/change details now include the active thumb and full value/range context. Readers of
   `detail.value` continue to work; exact one-key object assertions must accept the wider shape.
 
@@ -479,11 +483,11 @@ registerLyraLocale("en", {
 });
 ```
 
-Twelve translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
+Twenty-one translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
 hand-written catalog at all:
 
 ```js
-import "@aceshooting/lyra-ui/translations/fr.js"; // also ar, de, es, fa, he, it, ja, pt-BR, ro, ru, zh-CN
+import "@aceshooting/lyra-ui/translations/fr.js"; // also ar, de, es, fa, he, hi, id, it, ja, ko, nl, pl, pt-BR, pt-PT, ro, ru, tr, uk, zh-CN, zh-TW
 ```
 
 Each locale also ships as twelve smaller per-family slices, so an app using only a handful of
@@ -495,7 +499,7 @@ import "@aceshooting/lyra-ui/translations/fr/data.js";
 import "@aceshooting/lyra-ui/translations/fr/shared.js"; // cross-cutting strings, import alongside any family
 ```
 
-`fa` and `he` are complete RTL catalogs. Locale lookup applies the normal regional fallback, so
+`ar`, `fa`, and `he` are complete RTL catalogs. Locale lookup applies the normal regional fallback, so
 `fa-IR` resolves through `fa` and `he-IL` through `he`; set `dir="rtl"` on the document or an
 ancestor so layout and directional keyboard behavior follow the chosen language.
 
@@ -1236,9 +1240,10 @@ each one-liner below.
 | `<lr-conversation-item>`                                                               | — (extra)                                                                               | Selectable chat-history row with inline rename; usable standalone or as `<lr-virtual-list>`'s `renderItem()` payload                                                                                                                                                                                              |
 | `<lr-virtual-list>`                                                                    | — (extra)                                                                               | Generic windowed/virtualized list host — renders only the viewport's rows as real DOM, for a multi-thousand-row history sidebar                                                                                                                                                                                   |
 | `<lr-thread-list>`                                                                     | — (extra)                                                                               | Conversation sidebar — grouped, searchable chat-session list with pin/archive/delete/rename affordances; data mode renders `<lr-conversation-item>` rows through an internal `<lr-virtual-list>`, slotted mode renders host-supplied items as-is                                                                  |
-| `<lr-app-rail>` + `<lr-app-rail-item>` + `<lr-app-rail-group>`                                                 | — (extra)                                                                               | Responsive navigation rail: `full` ↔ `icon-only` ↔ `mobile` overlay, tracked off live viewport-width breakpoints; the item provides an accessible icon/label link or button, and the group gathers items under an optional collapsible heading                                                                                                                                       |
+| `<lr-app-rail>` + `<lr-app-rail-item>` + `<lr-app-rail-group>`                                                 | — (extra)                                                                               | Responsive navigation rail: `full` ↔ `icon-only` ↔ `mobile` overlay, tracked off live viewport-width breakpoints; the item provides an accessible icon/label link or button, and the group gathers items under an optional collapsible heading; doubles as the app sidebar with floating/inset `frame`, mode-aware `toggle()`, opt-in `hotkey`, and `<lr-page>` composition |
 | `<lr-page>`                                                                            | `wa-page`                                                                               | Responsive application shell with header, navigation, aside, main, footer, and mobile navigation state under one page-level layout contract                                                                                                                                                                       |
 | `<lr-navigation-menu>` + `<lr-navigation-menu-item>`                                   | — (extra)                                                                               | Disclosure-pattern site navigation bar with flyout panels                                                                                                                                                                                                                                                         |
+| `<lr-menubar>` + `<lr-menubar-item>`                                                   | — (extra)                                                                               | APG application menubar with roving title focus, RTL-aware traversal, nested `<lr-menu>` panels, typeahead, shortcut-detail slots, and controlled selection events                                                                                                                                                 |
 | `<lr-responsive-panel>`                                                                | — (extra)                                                                               | The same slotted content docked inline in normal layout flow (desktop) or as a fullscreen/bottom-sheet overlay (mobile)                                                                                                                                                                                           |
 | `<lr-dock-panel>`                                                                      | — (extra)                                                                               | Single panel docked to one edge of its container, drag/keyboard-resizable and collapsible — the single-edge counterpart to `<lr-multi-split>`'s multi-sibling-panel case                                                                                                                                          |
 | `<lr-model-select>`                                                                    | — (extra)                                                                               | Provider/model picker: closed dropdown over a fixed `catalog`, or a filterable free-text combobox when there isn't one (or `allow-custom` is set)                                                                                                                                                                 |
@@ -1295,7 +1300,7 @@ each one-liner below.
 | `<lr-archive-viewer>`                                                                  | — (extra)                                                                               | Dependency-free bounded ZIP central-directory metadata viewer; lists entry names and declared sizes without inflating or previewing entry content                                                                                                                                                                 |
 | `<lr-ebook-viewer>`                                                                    | — (extra)                                                                               | Renders `.epub` ebooks with the optional `epubjs` peer                                                                                                                                                                                                                                                            |
 | `<lr-pptx-viewer>`                                                                     | — (extra)                                                                               | Best-effort client-side `.pptx` viewer with a persistent fidelity notice                                                                                                                                                                                                                                          |
-| `<lr-file-icon>`                                                                       | — (extra)                                                                               | Tokenized, localized file-format badge with MIME and filename fallback metadata                                                                                                                                                                                                                                   |
+| `<lr-file-icon>`                                                                       | — (extra)                                                                               | File-format badge showing an unlocalized format token or glyph, with a localized accessible name and MIME/filename fallback metadata                                                                                                                                                                            |
 | `<lr-media-card>`                                                                      | — (extra)                                                                               | Lightweight inline preview for one already-sent image/video/file attachment inside a rendered chat message                                                                                                                                                                                                        |
 | `<lr-avatar>`                                                                          | `wa-avatar` / `sl-avatar`                                                               | Small, fixed-size identity marker — image, or an initials fallback with `lr-chip`-style tone recoloring                                                                                                                                                                                                           |
 | `<lr-card>`                                                                            | `wa-card` / `sl-card`                                                                   | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lr-*>` counterpart to `wa-card`                                                                                                                                                                                       |

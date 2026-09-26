@@ -87,6 +87,43 @@ assert.deepEqual(
   'a structurally complete pending review must be valid during authoring',
 );
 
+const additionalCatalog = fixture();
+const koreanEntries = [
+  ['noData', '데이터 없음'],
+  ['fileSizeUnitKb', 'KB'],
+  ['toolCount', { other: '{count}개 도구' }],
+];
+additionalCatalog.releasePlan.additionalCatalogs = ['ko'];
+additionalCatalog.catalogs.push({
+  ...structuredClone(additionalCatalog.catalogs[0]),
+  locale: 'ko',
+  direction: 'ltr',
+  catalog: messageSnapshot(koreanEntries),
+});
+assert.deepEqual(
+  validateTranslationReviews(additionalCatalog, {
+    englishEntries,
+    catalogs: new Map([['fa', persianEntries], ['ko', koreanEntries]]),
+    upstreamPins,
+    requireApproved: false,
+  }),
+  [],
+  'a reviewed catalog outside the pinned upstream union may be declared as an additional catalog',
+);
+
+const overlappingAdditional = structuredClone(additionalCatalog);
+overlappingAdditional.releasePlan.additionalCatalogs = ['fa'];
+assert.match(
+  validateTranslationReviews(overlappingAdditional, {
+    englishEntries,
+    catalogs: new Map([['fa', persianEntries], ['ko', koreanEntries]]),
+    upstreamPins,
+    requireApproved: false,
+  }).join('\n'),
+  /additionalCatalogs must not overlap/,
+  'additional catalogs may not duplicate a locale in the pinned release plan',
+);
+
 assert.match(
   validateTranslationReviews(pending, {
     englishEntries,

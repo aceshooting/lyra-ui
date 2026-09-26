@@ -16,6 +16,9 @@
 
 ## `lr-button`
 
+Host `aria-keyshortcuts` is forwarded reactively to the internal native button or link, including
+attribute removal and button/link presentation changes.
+
 A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
 `type="reset"` are handled by the component itself via its browser-resolved form owner (including
 an external owner named by `form`), since a shadow-internal native button doesn't participate in a

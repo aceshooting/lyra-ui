@@ -13,5 +13,3 @@ export type {
 import { LyraMarkdownCore } from './markdown-core.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 defineElement('markdown-core', LyraMarkdownCore);
-// policy-allow(component-dependency: lr-icon): Markdown's optional copy chrome uses the lean
-// copy-button entry, whose icon-button renders supplied SVG glyphs and never requests lr-icon.

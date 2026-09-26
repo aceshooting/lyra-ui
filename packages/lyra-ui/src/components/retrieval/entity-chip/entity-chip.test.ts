@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './entity-chip.js';
 import type { LyraEntityChip } from './entity-chip.js';
@@ -368,7 +369,7 @@ it('keeps rich tooltip content non-interactive', async () => {
 describe('preview show/hide across pointer and focus', () => {
   const chip = (): Promise<LyraEntityChip> =>
     fixture(
-      html`<lr-entity-chip text="Marie Curie"
+      html`<lr-entity-chip entity-id="e17" text="Marie Curie"
         >Physicist, 1867-1934</lr-entity-chip
       >`
     ) as Promise<LyraEntityChip>;
@@ -378,6 +379,20 @@ describe('preview show/hide across pointer and focus', () => {
     ).hasAttribute('hidden');
   const wrapper = (el: LyraEntityChip): HTMLElement =>
     el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+  const focusByKeyboard = async (el: LyraEntityChip): Promise<void> => {
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const sentinel = el.ownerDocument.createElement('button');
+    sentinel.type = 'button';
+    sentinel.tabIndex = 0;
+    sentinel.setAttribute('aria-hidden', 'true');
+    sentinel.style.cssText = 'position:fixed;inline-size:1px;block-size:1px;opacity:0;';
+    el.before(sentinel);
+    sentinel.focus();
+    await sendKeys({ press: 'Tab' });
+    if (el.shadowRoot?.activeElement !== base) base.focus();
+    await waitUntil(() => el.shadowRoot?.activeElement === base, 'keyboard focus reached the chip');
+    sentinel.remove();
+  };
 
   it('pointerleave schedules the hide rather than closing immediately', async () => {
     const el = await chip();
@@ -396,11 +411,11 @@ describe('preview show/hide across pointer and focus', () => {
 
   it('focusin opens the preview and focusout closes it when not hovered', async () => {
     const el = await chip();
-    wrapper(el).dispatchEvent(new Event('focusin', { bubbles: true }));
+    await focusByKeyboard(el);
     await el.updateComplete;
     expect(hidden(el)).to.be.false;
 
-    wrapper(el).dispatchEvent(new Event('focusout', { bubbles: true }));
+    (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).blur();
     await el.updateComplete;
     expect(hidden(el), 'focusout with no hover closes immediately').to.be.true;
   });
@@ -408,18 +423,18 @@ describe('preview show/hide across pointer and focus', () => {
   it('keeps the preview open on focusout while the pointer is still over the chip', async () => {
     const el = await chip();
     wrapper(el).dispatchEvent(new Event('pointerenter', { bubbles: true }));
-    wrapper(el).dispatchEvent(new Event('focusin', { bubbles: true }));
+    await focusByKeyboard(el);
     await el.updateComplete;
     expect(hidden(el)).to.be.false;
 
-    wrapper(el).dispatchEvent(new Event('focusout', { bubbles: true }));
+    (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).blur();
     await el.updateComplete;
     expect(hidden(el), 'hover still holds it open').to.be.false;
   });
 
   it('keeps the preview open on pointerleave while the chip still has focus', async () => {
     const el = await chip();
-    wrapper(el).dispatchEvent(new Event('focusin', { bubbles: true }));
+    await focusByKeyboard(el);
     wrapper(el).dispatchEvent(new Event('pointerenter', { bubbles: true }));
     await el.updateComplete;
     wrapper(el).dispatchEvent(new Event('pointerleave', { bubbles: true }));
