@@ -74,7 +74,7 @@ integration under `APP-SOLARLEB-BACKEND`. The delivery contract is
 Use this as a workspace coordination route; it does not replace Lyra's public API
 contracts or create a second implementation plan here. All builds, tests and
 benchmarks for this work run on `ssh cygnus`, never on the workstation. Use
-`CI_JOBS=60` where supported and verify each runner's actual concurrency budget.
+`CI_JOBS=58` where supported and verify each runner's actual concurrency budget.
 Application milestones follow the author's regular commit-and-push instruction
 in `solarleb_cygnus/AGENTS.md`.
 
