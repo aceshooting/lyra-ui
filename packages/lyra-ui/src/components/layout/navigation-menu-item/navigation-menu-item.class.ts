@@ -145,7 +145,7 @@ function parseTimeList(value: string): number[] {
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override read when the panel
  *   is positioned. The panel is `fixed` when it is unset.
  * @status experimental
- * @since unreleased
+ * @since 21.0.0
  */
 export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEventMap> {
   static override styles = [LyraElement.styles, styles];

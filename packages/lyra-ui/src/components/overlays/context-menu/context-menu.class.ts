@@ -188,7 +188,7 @@ function isContextMenuKey(event: KeyboardEvent): boolean {
  * @cssprop [--lr-overlay-max-inline-size=var(--lr-size-20rem)] - Maximum inline size fallback of
  *   the popup.
  * @status experimental
- * @since unreleased
+ * @since 21.0.0
  */
 export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-toggle-group.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToggleGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/toggle-group/toggle-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none

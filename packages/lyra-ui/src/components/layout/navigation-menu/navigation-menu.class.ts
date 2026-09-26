@@ -136,7 +136,7 @@ function isAnchorWithHref(value: EventTarget): boolean {
  *   when their panels are positioned.
  * @cssstate collapsed - Present while the collapsed layout is active.
  * @status experimental
- * @since unreleased
+ * @since 21.0.0
  */
 export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

@@ -34,7 +34,7 @@ const TYPE_AHEAD_RESET_MS = 500;
  * @cssprop --lr-menu-min-inline-size - Inherited minimum width of every slotted menu.
  * @cssprop --lr-menu-max-inline-size - Inherited maximum width of every slotted menu.
  * @status experimental
- * @since unreleased
+ * @since 21.0.0
  */
 export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];

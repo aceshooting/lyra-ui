@@ -138,7 +138,7 @@ interface TrackedFocus {
  *   vertical. Any real gap keeps every toggle's corners.
  * @cssprop [--lr-toggle-group-wrap-gap=var(--lr-space-2xs)] - Gap between wrapped lines.
  * @status experimental
- * @since unreleased
+ * @since 21.0.0
  */
 export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   // Both details are detached and frozen at the boundary so a listener cannot mutate the group's

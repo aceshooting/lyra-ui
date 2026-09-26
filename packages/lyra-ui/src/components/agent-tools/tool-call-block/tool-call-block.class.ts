@@ -127,7 +127,7 @@ function argsPresent(args: unknown): boolean {
  * @cssprop [--lr-tool-call-block-accent=var(--lr-color-text-quiet)] - Status glyph colour; defaults per status (brand while running, success, danger on error, warning when denied).
  * @cssprop [--lr-tool-call-block-error-color=var(--lr-color-danger)] - Error section text colour.
  * @status experimental
- * @since unreleased
+ * @since 21.0.0
  */
 export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

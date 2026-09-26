@@ -158,7 +158,7 @@ const STANDALONE: LyraToggleGroupProjection = Object.freeze({
  *   pressed. It is the pressed state's 3:1 non-text indicator; a quiet fill alone would not meet
  *   WCAG 1.4.11.
  * @status experimental
- * @since unreleased
+ * @since 21.0.0
  */
 export class LyraToggle extends LyraElement<LyraToggleEventMap> {
   static override styles = [LyraElement.styles, sizes, variants, styles];

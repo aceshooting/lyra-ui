@@ -1,5 +1,223 @@
 # Changelog
 
+## 21.0.0
+
+### Major Changes
+
+- bccd9f6: `lr-file-input`: the form label and the dropzone instruction are now independent surfaces. A set `label` renders only as the form-control label (and names the dropzone button); it no longer replaces the localized drop-or-browse instruction inside the dropzone. `label=""` and whitespace-only labels now render exactly like an omitted label: no visible form label, the localized instruction is shown, and the instruction names the button (previously an empty label blanked both and left the button without an accessible name). Labelled instances now show the instruction, which is often longer than the label, inside the box, so it can wrap in `compact` toolbars. `lr-eval-dataset`'s `import` part is now a `compact` control that shows the localized `evalDatasetImportLabel` once as its dropzone text and uses it as its accessible name, with no separate form label.
+  
+  **Migration**
+  
+  - Custom dropzone copy via `label` on `lr-file-input`: move it to `<span slot="dropzone">…</span>`. Keep `label` only if you also want a visible form label; otherwise add a matching host `aria-label` (or `accessible-label`) so the accessible name contains the visible text.
+  - Icon-only dropzone via `label=""`: slot your glyph or an empty element into `dropzone` and name the control with a host `aria-label`. A bare `label=""` now shows the instruction and uses it as the name.
+  - `lr-eval-dataset`: override the import copy through `evalDatasetImportLabel` (`.strings` on `lr-eval-dataset` or `registerLyraLocale()`), and restyle the control through `::part(import)`.
+  - Your own components that render `lr-file-input` inside their shadow root: slot the copy yourself, because per-instance `.strings` does not cascade into nested components.
+- 520613c: **Major because documented CSS custom property defaults change.** Every decorative edge hook now defaults to the new `--lr-color-border-subtle` tier instead of `--lr-color-border`: `lr-card` `--border-color`, `lr-divider` `--color`, `lr-accordion` outlined border colours, `lr-tree`/`lr-tree-item` `--indent-guide-color`, `lr-timeline-item` `--lr-timeline-rail-color`, the `--lr-chart-grid-color` of every chart, `lr-badge`/`lr-tag` `--lr-badge-edge`, `lr-attachment-chip` `--lr-attachment-chip-border`, the `--lr-*-border-color` hooks of `lr-activity-feed`, `lr-agent-run`, `lr-commit-card`, `lr-result-card`, `lr-stack-trace` and `lr-terminal`, and the floating-panel `--lr-overlay-border` listed below. The chart canvas hover outline now documents its full fallback, `var(--lr-chart-grid-color, var(--lr-color-border))`. With the new theme input unset these render exactly as before, including when you override `--lr-color-border` on the element, so no code change is required. If you want a decorative edge to follow the control tier again after setting `--lr-theme-color-surface-border-subtle`, set that component's hook explicitly.
+  
+  New opt-in `@aceshooting/lyra-ui/themes/shadcn.css` preset restyles every component after shadcn/ui's default "new-york" style on the Neutral base colour: white and near-black surfaces, a monochrome primary (the default `lr-button` renders shadcn's black primary in light and near-white in dark), `0.5rem` radii, `text-sm` body text, `h-9` controls, a 3px focus ring with no offset, and Tailwind's shadow geometry. Import it next to `theme.css`; either may load first.
+  
+  - The preset answers to shadcn's `.dark` / `.light` classes as well as `.lr-dark` / `.lr-light` and `data-lr-theme`, so an application that toggles `.dark` on `<html>` gets Lyra's dark mode without extra wiring, and a nested `.dark` region is themed on its own. `theme.css` itself still ignores `.dark` / `.light`, so each preset block also repeats `theme.css`'s own value for that mode of every input the preset leaves alone (the success, warning and remaining danger slots, the scrims, and the chart, graph and terminal colours); `.dark` switches those too.
+  - Gemstone and other `setLyraTheme({ accent })` accents recolour the default button, checked controls and the focus ring under the preset, while the secondary and muted greys stay grey. Applications that use accents should switch modes with `setLyraTheme({ mode })` rather than toggling `.dark` alone.
+  - A few values deliberately differ from shadcn so every contrast guarantee still holds: control borders use a 3:1 grey (shadcn's hairline is kept for decorative edges only), the focus ring is an opaque grey, the light danger red is one notch darker and dark danger is a light red with dark text, charts keep Lyra's validated colours, and hover/press mix toward a mid grey so the black primary button still visibly reacts.
+  - New `--lr-color-border-subtle` token for purely decorative edges (dividers and rules, card, panel, table and section edges, separators between items), fed by the new `--lr-theme-color-surface-border-subtle` input. Unset, as in `theme.css`, it resolves to `--lr-color-border`, so nothing renders differently; the shadcn preset sets it to shadcn's hairline. Control boundaries, form controls and meaningful graphics stay on `--lr-color-border` (WCAG 2.2 SC 1.4.11). `tokens-root.css` publishes it at `:root`.
+  - Floating panels now default the shared `--lr-overlay-border` edge to `--lr-color-border-subtle`: `lr-popover`, `lr-dropdown`, `lr-menu`, `lr-dialog` and `lr-drawer`, `lr-selection-toolbar`, and the popups of `lr-entity-chip`, `lr-citation-badge`, `lr-usage-badge`, `lr-tool-call-chip` and `lr-export-button`. Popups that belong to a form control keep `--lr-color-border`: the listboxes of `lr-select`, `lr-combobox`, `lr-locale-picker`, `lr-model-select`, `lr-voice-picker` and `lr-mention-popover`, and the `lr-color-picker` and `lr-time-input` panels. A `--lr-overlay-border` you set still wins on both kinds, and while the subtle input is unset both render exactly as before.
+  - Fills no longer borrow the border token. These render differently even without the preset, because the neutral fill ramp differs from the control grey: `lr-avatar` `--lr-avatar-bg` and `lr-avatar-group` `--lr-avatar-group-badge-bg` now default to `var(--lr-color-neutral-fill-quiet)` (the quiet tint the non-neutral variants already use), `lr-skeleton` `--lr-skeleton-color` (and so upstream `--color`) now defaults to `var(--lr-color-neutral-fill-normal)`, and the default `lr-empty` icon glyph now uses `--lr-color-text-quiet`. Set the hook back to `var(--lr-color-border)` to keep the previous look.
+  - `lr-data-grid` gains `--lr-data-grid-line-color` (default `var(--border-color, var(--lr-color-border-subtle))`) for its decorative grid lines: the outer edge, header, row, cell and footer separators, and the toolbar and pager rules. `--border-color` keeps its default and still recolours both when set; the search field, buttons and page-size select stay on the control tier. A passive `lr-stat` tile's edge moves to `--lr-color-border-subtle`, while a linked tile keeps `--lr-color-border`, matching `lr-card`. With the subtle input unset both render exactly as before. `lr-details` deliberately keeps `--lr-color-border`: its summary is a borderless control whose only visible boundary is that frame.
+  - Cascade layers: `theme.css`, `native.css`, `utilities.css`, `tokens-root.css` and `design-tokens.css` now declare `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`. Nothing renders differently without the preset. If your application declares Lyra's layer order itself, add `lr-theme-preset` to that statement: a layer missing from the first statement the browser sees is ranked last, above `lr-overrides`.
+- bccd9f6: **Major because a previously-working default activation path is removed.** The `focus` trigger of
+  `lr-tooltip` (default `hover focus`), `lr-popover` and `lr-dropdown`, and the hover/focus surfaces
+  of `lr-copy-button`, `lr-app-rail-item`, `lr-usage-badge`, `lr-tool-call-chip`, `lr-citation-badge`
+  and `lr-entity-chip`, now open only on keyboard focus: the focused control must match
+  `:focus-visible` and no pointer press may have preceded it. Pointer, touch and scripted focus that
+  follows them — such as a drawer moving focus to its close button after a tap, or an application
+  calling `.focus()` on a trigger from script — no longer pops a surface. Focus from any source still
+  gives `lr-tooltip`, `lr-copy-button`, `lr-usage-badge` and `lr-tool-call-chip` triggers their
+  accessible description while focus stays on them. A pointer click that opens a closed hover- or
+  focus-mode `lr-popover`/`lr-dropdown` now always opens it pinned like click mode, including
+  `[autofocus]` and menu focus. A direct tap still opens hover surfaces through the browser's
+  compatibility `mouseenter`.
+  
+  **Migration**
+  
+  - `lr-tooltip`, `lr-popover`, `lr-dropdown`: any code that relied on a programmatic `.focus()` call
+    (or synthetic `focus` event) to reveal one of these must call `show()` (or set `.open = true`)
+    instead — that public scripted-reveal API is unaffected by this change.
+  - `lr-copy-button`, `lr-app-rail-item`, `lr-usage-badge`, `lr-tool-call-chip`, `lr-citation-badge`,
+    `lr-entity-chip`: their hover/focus preview has no public scripted-reveal method, so there is no
+    like-for-like replacement for a previously-relied-upon programmatic-focus preview — this is a
+    deliberate accessibility narrowing (WAI-ARIA tooltip pattern), not a renamed API. The accessible
+    description/name these components attach on focus is unaffected; only the *visible preview
+    surface* stops following non-keyboard focus.
+  - Tests that open any of the above surfaces with `.focus()` or a synthetic `focus` event should
+    move focus with a real Tab key (see `test/wtr-focus.ts`'s `focusByKeyboard`) or, for
+    `lr-tooltip`/`lr-popover`/`lr-dropdown`, call `show()` directly.
+
+### Minor Changes
+
+- 754df2f: `lr-accordion-item` gains four independently tunable padding hooks, mirroring `lr-details`: `--lr-accordion-item-summary-padding-block`/`-inline` for the trigger button and `--lr-accordion-item-content-padding-block-end`/`-inline` for the panel content. Each falls through to the existing `--lr-accordion-item-spacing` (and its `--spacing` alias) when unset, so an un-set item renders unchanged; an asymmetric trigger row or a flush, zero-padded panel no longer requires a `::part()` override.
+- aacd1e5: Fixes several component presentation defects: emoji-picker rows now fill the grid and its search
+  field shows a visible placeholder from the new localized `emojiPickerSearchPlaceholder` string
+  (falling back to the search label when blank), overridable per instance with the new
+  `searchPlaceholder` property (`search-placeholder` attribute); file-input keeps its localized drop instruction
+  separate from the optional form label; file-icon truncates long labels with an ellipsis; closed
+  mobile app-rail panels no longer paint a shadow; floating collapsed multi-split panes hide their
+  adjacent divider; and checked switches use their checked fill even when an unchecked fill is set.
+  
+  Markdown task lists now use the checkbox in place of the bullet, tables scroll horizontally with
+  word-aware cell wrapping, code remains left-to-right inside RTL documents, and the streaming plain
+  text fallback no longer displays template indentation. Markdown also gains opt-in progressive
+  streaming with `streaming-render="progressive"` and localized language labels plus source-copy
+  buttons for fenced code via `code-block-header` (`code-block-chrome` is an equivalent alias).
+  Both keep their previous defaults.
+- d7b5939: `lr-app-rail`'s mobile overlay now completes its focus return after the close has been published
+  and the host has re-rendered. A host that hides its own menu button while the overlay is open and
+  re-shows it in response to `lr-toggle` previously lost focus to `<body>` on every close, because the
+  return ran before that re-render. When the return cannot land immediately, it is retried once the
+  close's update has completed and a frame has passed, without taking back focus moved elsewhere in
+  the meantime. If the trigger still cannot take focus, the element focused when the overlay opened,
+  then the built-in toggle, receive it instead.
+  
+  The same deferred focus return now also covers `lr-page`'s mobile navigation drawer (falling back to
+  the default navigation toggle, then the main landmark), `lr-responsive-panel`'s overlay
+  presentation, and `lr-dialog`/`lr-drawer` (retried after the exit animation, so an opener re-shown
+  from `lr-after-hide` is reached too).
+  
+  **New: `lr-app-rail` re-resolves its `trigger`/`for` association at close, not just at open.**
+  Previously the element that would receive focus back was captured once, when the overlay opened.
+  Now, unless the overlay was opened by the built-in toggle button's own click (which still keeps
+  that click as the explicit, higher-priority return target throughout the open/close cycle),
+  `lr-app-rail` re-reads the `trigger`/`for` association again right before the overlay closes and
+  prefers whatever it currently resolves to — falling back to the target captured at open only when
+  the live association no longer resolves to anything. This means reassigning `trigger`/`for` while
+  the overlay is still open changes where focus lands on close, which was not previously possible:
+  the return target used to be fixed for the lifetime of that open/close cycle.
+- af1cb1c: Closed mobile app-rail panels park one pixel beyond the edge, preventing fractional-width background slivers. Slides run only for real opening and closing, so direction changes and entry into mobile mode cannot sweep a closed panel across the page. Open-only elevation is customizable with `--lr-app-rail-panel-shadow`; closed content stays inert.
+- af1cb1c: `lr-app-rail` gains app-sidebar options: `frame` (floating `card` or edgeless `plain`), a mode-aware `toggle()`, `trigger-collapses` for external trigger ARIA in every mode, and an opt-in `hotkey`. It composes with `lr-page` for an allocation-based drawer.
+  
+  `lr-app-rail-item` hides its nested disclosure and list while icon-only, preserving `expanded` and recovering focus to the visible parent. `end` content remains visible and requires sufficient compact rail width.
+  
+  `toggleCollapse()` now alternates the recorded preference while `forceMode` pins presentation. Collapsing a focused resizer returns focus to the rail. `lr-button` and `lr-icon-button` forward host `aria-keyshortcuts` to their native control.
+  
+  `lr-command-palette` safely ignores key-less autofill events and removed hotkeys, supports non-Latin keyboard layouts through physical key fallback, and shares chord ownership with rails.
+- 754df2f: `lr-combobox` now exports a `LyraComboboxInputEvent<Multiple>` type alias from the package root, matching `LyraComboboxChangeEvent` and mirroring `<lr-select>`'s own `LyraSelectChangeEvent`/`LyraSelectInputEvent` pair. Combobox has no dedicated `lr-input` custom event, so the new alias types its native `input` listener (`InputEvent | CustomEvent<...>`) instead.
+- 754df2f: `lr-combobox`'s "+N" selected-tag overflow indicator now carries a second, distinguishing `tag-overflow` part alongside `tag` (`part="tag tag-overflow"`), matching `<lr-select>`'s identical two-part overflow chip so `::part(tag-overflow)` can style just that indicator. `lr-filter-bar` forwards it from a `multiple` `'combobox'` filter as `filter-control-tag-overflow`.
+- c591b4d: Add `<lr-context-menu>`: opens menu items beside the pointer on right-click, on touch press-and-hold, or below the focused element on Shift+F10/ContextMenu, with a cancelable `lr-show` that leaves the platform menu in place.
+- af1cb1c: `lr-file-icon` now shows a short, unlocalized format token (or a generic glyph when no token applies or the badge is too small) inside its icon badge. The full localized label remains in the accessible name and `mode="label"`, and the promised logical-start ellipsis now works. Custom metadata records can provide a trimmed `abbreviation` of up to eight code points; blank values fall back to extension matching. Because a consumer record owns its MIME mapping, its `label` remains verbatim and supplies the accessible name for that record. `fileType*` string overrides (`.strings`, `registerLyraLocale()`) now affect only the accessible name and `mode="label"`; set `abbreviation` on a registry record to control the badge text instead. Source-picker group rows no longer derive a badge token from folder labels.
+  
+  **Baseline change.** The badge no longer exports its text's baseline. In every engine and in both the token and glyph states it now exports a synthesized baseline at the badge's bottom edge, like an image. A consumer row using `align-items: baseline` will see the icon shift down relative to sibling text; the default inline `vertical-align: middle` placement and centered rows are unaffected.
+- 754df2f: `lr-model-select`, `lr-voice-picker`, `lr-code-editor`, `lr-emoji-picker` and `lr-color-picker` now adopt the shared `--lr-form-control-focus-shadow` hook alongside the other field-shaped controls: each paints it as a `box-shadow` on its own primary surface (the trigger/combobox row for the pickers, the editor frame for `lr-code-editor`, and the search field for `lr-emoji-picker`) while focused, additive to the existing focus outline and border. `lr-model-select` and `lr-voice-picker` also gain `--lr-model-select-trigger-hover-border-color` / `--lr-voice-picker-trigger-hover-border-color`, matching the shape of each control's existing resting and open-state border tokens, so the hovered (and, on `lr-voice-picker`, pressed) trigger border is independently overridable. Nothing changes unless one of these tokens is set.
+- 3aa339f: `lr-heatmap` calendar mode now honours explicitly set `cell-gap-x`, `cell-gap-y` and `cell-radius`, so a GitHub-style contribution graph with rounded, visibly spaced cells no longer needs a hand-built matrix. Painting, hit-testing, labels, selection and `lr-cell-click` all follow the spacing; calendars that leave these unset are unchanged. A new read-only `calendarGeometry` getter reports the painted calendar layout (exported type `LyraHeatmapCalendarGeometry`).
+- 754df2f: `lr-heatmap` calendar mode now fires `lr-calendar-geometry-change` whenever the painted `calendarGeometry` snapshot changes (e.g. after `cellGapX`/`cellGapY`/`cellRadius` changes or a `fitToWidth` resize), mirroring matrix mode's `lr-matrix-geometry-change`. This closes the parity gap that made aligning a sibling chart with a calendar harder than with a matrix: a consumer no longer has to poll `calendarGeometry` on its own resize cadence.
+- 9c40f8c: `lr-lite-chart` gains `barSlotWidth` (attribute `bar-slot-width`): a fixed per-category slot width for the default `layout="fit"`, so bars can share an external column pitch (such as a sibling `lr-heatmap`'s cell pitch) without switching to `layout="scroll"`, overflowing the host, or shifting under `dir="rtl"`. `barX` still overrides each category's x-origin; `layout="scroll"` keeps using `barWidth`. Sparse category ticks — for example one month name every few weeks, with the other ticks blanked or empty — now use the room of their empty neighbors before ellipsizing, in both layouts, while ticks with labelled neighbors are ellipsized exactly as before.
+- af1cb1c: Markdown and streaming-text variants and message-parts gain opt-in code-block-header controls with language labels, accessible copy feedback, and exact source copying.
+- af1cb1c: `lr-markdown` and `lr-markdown-core`: GFM table cells no longer split words mid-letter. Cells wrap
+  only between words, even under an inherited `overflow-wrap: anywhere` or `word-break: break-all`,
+  and a table too wide for the component now scrolls horizontally inside a new `table-wrapper` CSS
+  part instead of squeezing its columns. The wrapper is one keyboard tab stop (the arrow keys scroll
+  it) with a localized accessible name from the new `markdownTableRegion` message ("Table"); a table
+  that fits still fills the width. GFM column alignment (`:--`, `:-:`, `--:`) is now applied. Like a
+  long code line, a wide table now counts toward the component's minimum content width.
+  `lr-streaming-text` and `lr-streaming-text-core` forward the new part. Set
+  `::part(table) { overflow-wrap: anywhere }` to restore the previous wrapping, or
+  `::part(table) { word-break: keep-all }` to keep a `keep-all` preference inside tables. Raw HTML
+  tables in the Markdown source and tables from a custom `table` renderer are unchanged; a custom
+  renderer that wants the scroller wraps its table in the `table-wrapper` markup itself. A
+  `::part(table) { overflow-wrap: break-word }` workaround for the old wrapping can be removed; kept,
+  it also reaches unwrapped `part="table"` tables, which have no scroller and would then widen the
+  whole document.
+- af1cb1c: `lr-markdown` and `lr-markdown-core`: GFM task-list items no longer show a bullet beside their
+  checkbox. In unordered lists the read-only checkbox now takes the bullet's place, so task text
+  lines up with neighbouring items; ordered lists keep their numbers. The checkbox is drawn with
+  design tokens (a visible border, and a brand fill with a check mark when checked) instead of the
+  browser's faint disabled styling, in light, dark and forced-colors modes, keeps its fill when
+  printed, and stays disabled. The space previously rendered after the checkbox is now a margin. New
+  CSS parts `task-list`, `task-item`, `task-item-checked` (a checked task, for styling completed
+  items) and `task-checkbox`, also forwarded by `lr-streaming-text` and `lr-streaming-text-core`,
+  allow restyling. The new `--lr-markdown-task-checkbox-size` custom property resizes the checkbox
+  while keeping the text aligned. An unordered list made only of task items carries `role="list"`
+  so it is still announced as a list.
+- af1cb1c: Markdown, streaming-text, message-parts and agent-workspace gain opt-in progressive Markdown streaming with settled blocks, stable text tails, and final full-document parsing.
+- af1cb1c: Add `lr-menubar` and `lr-menubar-item`, an APG menubar whose items drop down slotted `lr-menu`s, with roving focus, RTL-aware arrow traversal that carries the open menu along, hover switching, and typeahead. Items wrap at narrow allocations, preserve native Tab behavior, and support card and plain frames.
+- c591b4d: Add `lr-navigation-menu` + `lr-navigation-menu-item`: disclosure-pattern site navigation with hover/click flyout panels, a shared animated panel region, an optional indicator, arrow-key navigation, and opt-in collapse to an in-flow disclosure list.
+- bccd9f6: Dropdowns, menus, tooltips and other anchored overlays inside transformed or contained containers now open at full size outside them, in the browser top layer where the native Popover API is available. This includes containers that become transformed while an overlay is open. This covers `lr-thread-list` and every `lr-virtual-list` row, `lr-flow-canvas` nodes, `lr-selection-toolbar`, and any consumer `transform`/`filter`/`contain` ancestor, in left-to-right and right-to-left documents.
+  
+  Behaviour change: such promoted `lr-popover`, `lr-dropdown` and `lr-tooltip` instances no longer stack at `--lr-overlay-stack-index`/`--lr-layer-popover` while open. Overlays that are not inside such a container keep their layering.
+  
+  Behaviour change: overlays inside virtual-list rows and flow-canvas nodes now resolve the `fixed` strategy when none is set (their declared default is unchanged). An explicit `positioning-strategy` or an ancestor `--lr-positioning-strategy` still wins, and `::part(row)`/`::part(node) { --lr-positioning-strategy: absolute }` opts a list or canvas out.
+  
+  A promoted overlay whose trigger scrolls out of view is hidden until the trigger returns. Where the Popover API is absent, a row holding an open `lr-dropdown` in `lr-virtual-list` (including `lr-thread-list`) temporarily stops transforming, so its menu is no longer clipped. Overlays inside `lr-pan-zoom` content now align with their trigger at any zoom, with either strategy. Scrolling the wheel over, or pressing on, an open `lr-flow-canvas` node menu no longer zooms the canvas or drags the node. Inside unsanitized `lr-markdown` content, Lyra overlays can now paint over the surrounding app while open. A dropdown or popover whose virtual-list row moves while it is open (for example after a re-sort) now stays open and follows its trigger.
+  
+  `place()` now positions a popup that is already in the native top layer correctly. It now recognises `content-visibility`, `transform-style: preserve-3d`, a non-`none` `offset-path`, and `will-change: contain` or `offset-path` containing blocks, and it no longer mistakes `will-change: transform-origin` for one.
+- 417a629: Associate an external multi-split launcher with `trigger` or `for` to synchronize its disclosure ARIA and return focus when the floating pane closes. App-rail now returns focus to its host when every other close target is unavailable, preserving authored tabindex. Update the layout reference and Storybook examples, and capture the shadcn preset and gemstone accent in the visual matrix.
+  
+  Refresh the README feature guides and current import/theming documentation, and remove obsolete Lyra 7 upgrade walkthroughs from the main documentation.
+- cf2d2ce: Theme runtime: `setLyraTheme()` and theme presets accept a validated, per-mode `tokens` map of `--lr-theme-*` inputs (persisted, applied by the no-flash bootstrap, and contrast-floored against the same token families the static contrast gate checks). `@aceshooting/lyra-ui/theme/presets/shadcn.js` ships the shadcn look as a runtime preset generated from `themes/shadcn.css`; it changes only the look and leaves mode, accent and surface alone. Accent and surface colours, and component CSS length/colour/inset properties, with an unclosed parenthesis or quote (for example `rgb(0 0 0`) are now rejected instead of being written in a form that corrupts the rest of the element's inline `style` when it is re-parsed. The `lyraThemeBootstrap` / `theme-bootstrap.js` bytes change: regenerate any pinned CSP hash for the inline or external bootstrap.
+- c591b4d: Add `lr-toggle`, a two-state pressed button, and `lr-toggle-group`, a one-tab-stop group of toggles with `multiple` or zero-or-one `single` selection.
+- c591b4d: Add `<lr-tool-call-block>`, an inline disclosure showing one tool call's status, duration, arguments, and result or error with field redaction. Add `tool-display="block"` on `<lr-message-parts>` to render each paired tool-call/tool-result through it. `ToolInvocation` gains optional `startedAt`, `endedAt` and `redactedFields`. `<lr-message-parts>` now masks `redactedFields` in both tool displays. The agent-stream runtime rejects an invocation whose values for these keys are malformed. `<lr-message-parts>` now reflects `tool-display="chip"` by default.
+- bccd9f6: Ship twenty new translation catalogs, bringing the total to thirty-two: Czech (`cs`), Danish (`da`), Swiss Standard German (`de-CH`), Finnish (`fi`), Croatian (`hr`), Hindi (`hi`), Hungarian (`hu`), Indonesian (`id`), Kazakh (`kk`), Korean (`ko`), Norwegian Bokmål (`nb`), Dutch (`nl`), Norwegian Nynorsk (`nn`), Polish (`pl`), European Portuguese (`pt-PT`), Slovenian (`sl`), Swedish (`sv`), Turkish (`tr`), Ukrainian (`uk`) and Traditional Chinese (`zh-TW`). Each covers every key in `LYRA_DEFAULT_STRINGS` with the locale's CLDR plural categories, and each is available as a whole-catalog import (`@aceshooting/lyra-ui/translations/<locale>.js`) or as per-family slices.
+- cf2d2ce: Adds opt-in typography styles to `utilities.css`: `lr-heading-1`–`lr-heading-4` and `lr-inline-code` role classes, an `lr-typography` scope that styles headings, paragraphs, links, blockquotes, lists, inline code and tables inside it, and an `lr-not-typography` boundary to opt a subtree out.
+
+### Patch Changes
+
+- bccd9f6: Long text adornments now truncate with a real ellipsis instead of being hard-clipped. Slotted `start`/`end` (and `prefix`/`suffix`) content in `lr-button`, `lr-option` and `lr-date-input` carries its own shrinkable block, as `lr-input` already did, so the ellipsis fires at the logical end; `lr-option` adornments were previously clipped on both sides. The cloned `option-start`/`option-end` adornments in the `lr-select` and `lr-combobox` popups get the same treatment, and `lr-combobox` async `source` rows now wrap a string or number `start`/`end` in a span so it truncates from its start edge instead of centre-clipping. Element and template adornments (such as an `lr-icon`) render unwrapped as before.
+- c591b4d: `adaptAiSdkMessage()` maps the AI SDK `output-denied` state, and `approval-responded` with a rejected approval, to tool status `denied` instead of `running`.
+- 520613c: Two border fixes:
+  
+  - `lr-stat`: a linked tile now shows its hover border when the pointer rests on slotted content (a `sub`, `caption` or `spark` slot, for example), not only when it rests on the tile itself. On that same path, `frame="plain"` no longer shows the lift shadow; it keeps the underline it shows for any other hover.
+  - `lr-agent-eval-dashboard`: run rows no longer show the native button border on three sides. Only the intended top divider remains.
+- 754df2f: `lr-tree-item`'s disclosure toggle, `lr-flow-controls`' toolbar and slotted buttons, and `lr-node-palette`'s draggable items now fall an unset hover/press fill back to `--lr-color-neutral-fill-quiet` instead of `--lr-color-border`. The internal `--lr-color-surface-hover` override point is unchanged and, once set, still wins as before; this only changes the color painted when it is left unset, matching the `lr-avatar`/`lr-skeleton`/`lr-empty` fill fix shipped earlier this release.
+- f017a8e: `lr-chat-viewport` with `live="polite"` or `live="assertive"` now announces a newly appended `lr-chat-message` that was created and appended in one step. The viewport previously read the message before its first render, found no accessible text, and never announced it. It now retries once after the message has rendered, and it still announces each message only once. A child that is appended and removed again before the viewport observes it is no longer announced.
+- af1cb1c: Code now reads left-to-right inside right-to-left documents. This covers:
+  
+  - `lr-markdown`/`lr-markdown-core` fenced, indented and inline code, including the plain-text view
+    shown while streaming;
+  - the scroll area, language badge and file name of `lr-code-block`/`lr-code-block-core`;
+  - `lr-notebook-viewer` raw cells, `lr-geojson-viewer` metadata, `lr-stack-trace` function names and
+    `lr-terminal` without `wrap`.
+  
+  Some text now takes its direction from its own content: authored preformatted text inside
+  Markdown, `lr-tool-result-view` text results and `lr-test-results` failure messages. Surrounding
+  prose, block margins and headers still follow the page direction, and explicit `dir` attributes on
+  authored code are honored. Code scroll areas now open at the start of the code. As a result, under
+  `dir="rtl"` the vertical scrollbar of `lr-code-block`, `lr-code-block-core` and `lr-terminal`
+  without `wrap` sits on the physical right.
+- af1cb1c: Keep disclosure header boundaries at the control-border tier and use readable text colors while pressed: the card edges of `lr-thinking-panel`, `lr-task-list` and `lr-source-list` stay on `--lr-color-border`, because each header is a borderless button whose only visible boundary is that edge, and the quiet `lr-thinking-panel` duration (including the pending label) and `lr-task-list` summary now follow the header's own colour on hover and press instead of losing contrast on the tint. Navigation-menu items now release their parent ownership when detached, so moving them out of a removed menu restores their standalone disclosure behavior.
+- 754df2f: Fix a batch of translation-content defects found during a pre-release audit of the localization catalogs.
+  
+  - `ja`: `temperature` (the LLM sampling-temperature label) was left as the literal English word; now `温度`.
+  - `zh-CN`/`zh-TW`: `artifactPanelLabel` was left as the literal English word `Artifact`; now `产物`/`產物`.
+  - `pt-BR`/`pt-PT`: `policySummaryCategoryGuardrail` was left as the literal English word `Guardrail`; now `Barreira de proteção`.
+  - `de`/`de-CH`: the retrieval span-kind badges `spanKindRetriever` and `spanKindEmbedding`, and the retrieval-compare/stage score labels `Dense`/`Sparse`/`Rerank`/`Final`, were left in English while every other locale (and this catalog's own `retrievalStageEmbed`/`retrievalStageRetrieve`) already translates them; now `Abrufkomponente`/`Einbettung`/`Dicht`/`Dünn`/`Neuordnung`/`Endgültig`.
+  - `sl`: the singular and plural forms of the chat unread-count pill (`newMessageCount`/`newMessagesCount`) were byte-identical, so a single unread message rendered the ungrammatical `Nova sporočila: 1`; the singular form is now `Novo sporočilo: {count}`.
+  - `uk`: `threadListMatchAnnounce` used the same text for all four CLDR plural categories; it now declines by category (`Знайдено {count} розмову`/`розмови`/`розмов`/`розмови`).
+  - `id`: `fileTypeFile` and `archiveViewerFile` used the native word `Berkas` while the rest of the catalog consistently uses the loanword `File` for the same concept; normalized to `File`.
+  - `hi`/`tr`: `generationStatusThroughput` (tokens-per-second) was left as the raw `tok/s` abbreviation while the sibling `generationStatusTokenCount` key already translates "token" in the same catalog; now `{rate} टोकन/सेकंड` and `{rate} belirteç/sn` respectively.
+  - `hi`: `geojsonViewMissingMapLibrary` left the English word "peer" untransliterated mid-sentence; replaced with `पैकेज` (package), matching this catalog's own `mapMissingLibrary` wording for the same package.
+  - `kk`: normalized nine strings that quoted a package name or placeholder with plain ASCII `"..."` quotes to the catalog's own established guillemet (`«...»`) convention.
+  - `hi`, `id`, `ko`, `nl`, `pl`, `uk`: dropped the optional `{ dir: 'ltr', name: '<endonym>' }` `registerLyraLocale()` metadata, which nothing in the library currently reads back and which the other 26 locale catalogs omit, so all-LTR catalogs are consistent again.
+  - `<lr-flag>`/`<lr-locale-picker>`: added the missing `nn` → `no` and `kk` → `kz` entries to the language-to-country flag map, so those two locales resolve a flag like every sibling locale instead of rendering unresolved.
+  
+  Every catalog's key set, key order, interpolation placeholders and plural-category shapes are unchanged.
+- 754df2f: `lr-map` now paints a marker with an omitted `color` in the themed `--lr-color-brand` token, matching the GeoJSON data-layer default, instead of maplibre-gl's own hardcoded `#3FB1CE`. An explicit invalid color (or a `url()` paint server) still falls through to maplibre-gl's own default, unchanged.
+- 1b0388a: lr-markdown and lr-markdown-core with `html-mode="escape"` now escape all text that follows a raw `<pre>`, `<code>`, `<kbd>` or `<script>` tag, in the same paragraph and in every later block, so it displays as literal text like the rest of the raw HTML in that mode. Escape-mode output without such a tag is unchanged, and sanitize and trusted modes are unaffected. The `htmlMode` documentation now states that a consumer `renderer.text` or `renderer.html` override replaces the escape-mode escaping.
+- 22107b6: With `math` enabled, `lr-markdown` and `lr-markdown-core` no longer read a line holding two dollar amounts, such as "$500 and $200", as inline TeX. Inline math now follows pandoc's delimiter rule: the opening `$` must be followed by a non-space, and the closing `$` must follow a non-space and must not be followed by a digit. Ordinary spans such as `$x^2$` and escaped `\$` are unchanged.
+- af1cb1c: `lr-menu-item` now shows its `details` part for any assigned element, so a shadow-rendered `<lr-kbd slot="details" keys="mod+t">` shortcut chip is visible. An empty placeholder element in `details` now reserves one gap. Whitespace-only text and empty forwarding slots remain hidden.
+- c591b4d: `lr-menu-item` now strips `opener` case-insensitively and de-duplicates `rel` tokens, matching `lr-button`/`lr-icon-button`/`lr-breadcrumb-item`/`lr-card`.
+- 333dcc0: `lr-multi-split`: when the collapsing pane is floating (drawer open or closed), the divider beside it no longer takes a gutter or paints a line, so the remaining panes fill the split as documented. The rail state keeps its divider. Focus moved out of a collapsing pane now prefers a divider that stays enabled; with three or more panels and `collapse="start"` it previously landed on the divider being disabled.
+- c591b4d: Closing the topmost non-modal overlay without focus restoration (for example a hover-closed tooltip or popover) no longer moves focus into the overlay beneath it unless focus was inside the overlay that closed. A focus-trapping overlay beneath, such as a modal dialog, still takes focus back.
+- bccd9f6: `lr-popup` (and every overlay built on it) no longer reports an activated popup as `visibility: hidden` for the first moment of its entry fade. Visibility now flips at once when the popup shows and holds until the exit fade ends when it hides; only opacity animates, over `--show-duration` and `--hide-duration` as before. The computed `transition-duration` and `transition-delay` therefore list two values, one for opacity and one for visibility.
+- 65a333c: lr-markdown and lr-markdown-core show exactly `content` in their plain-text fallback (streaming, loading, render failure), with no leading blank line, indent or trailing blank line. This also reaches lr-streaming-text(-core) and lr-message-parts, which additionally no longer render their own template indentation inside a container that preserves whitespace, such as a pre-wrap chat bubble. The same fix applies to lr-context-inspector segment text, to the lr-code-block(-core) activatable line-number gutter without syntax highlighting, and to lr-json-viewer placed under a preformatted ancestor such as lr-notebook-viewer JSON outputs.
+- 754df2f: The `pt-PT` translation catalog now uses genuine European Portuguese grammar and vocabulary throughout instead of reusing Brazilian Portuguese constructions verbatim. Progress and status labels use the European periphrastic construction (`A carregar…`, `A ligar`, `A aguardar entrada`) instead of the Brazilian bare gerund (`Carregando…`, `Conectando`, `Aguardando entrada`); standalone labels and announcements that were left lower-case by the earlier word-substitution pass are capitalized (`Transferir`, `A carregar…`, `Ligação restabelecida.`); and a set of European-specific word choices replace their Brazilian counterparts, including `palavra-passe` for password, `controlo` for a UI control, `telemóvel` for a mobile phone, `eliminar` for delete, `guardar` for save, `registo`/`registado` for record/recorded, and `premido` for a held key or button. A few sentences also pick up European syntax: the `até ao`/`até à` contraction, `já não` instead of `não … mais`, `num` instead of `em um`, and `do que` after `mais`. Every key, placeholder token and plural category shape is unchanged.
+- bccd9f6: State paint now survives the resting tokens and the pointer:
+  
+  - `lr-switch`: a checked track now paints `--lr-switch-checked-track-fill` (default `--lr-color-brand`) even when `--lr-switch-track-fill` is set, and the default hover and press mixes start from the checked fill while checked. Previously, setting `--lr-switch-track-fill` repainted the checked track (and its hover and press) in the unchecked colour. If you set only `--lr-switch-track-fill` and relied on the checked track sharing it, also set `--lr-switch-checked-track-fill`. An explicit `--lr-switch-track-hover-fill` / `-active-fill` still applies in both states; for a per-state value, set it from `lr-switch:state(checked)`.
+  - `lr-chip`: a selected toggleable chip's hover and press wash now starts from `--lr-chip-pressed-bg` instead of the resting `--lr-chip-bg`.
+  - `lr-checkbox`, `lr-radio` and `lr-tree-item`'s checkbox: a checked (or indeterminate) control keeps `--lr-checkbox-checked-border`, `--lr-radio-checked-border-color` or `--lr-tree-checkbox-checked-border-color` / `-indeterminate-border-color` under the pointer instead of switching to brand. An explicit `--lr-checkbox-hover-border`/`-active-border` or `--lr-radio-hover-border-color`/`-active-border-color` still applies in every state.
+  - `lr-tree-item`, `lr-prompt-studio`, `lr-pagination`, `lr-test-results` and `lr-env-list`: the hover and press of the selected row, selected version, current page, pressed filter or revealed button now start from that state's token (`--lr-tree-selected-bg`, `--lr-prompt-studio-version-selected-bg`, `--lr-pagination-current-bg` and `-current-border-color`, `--lr-test-results-filter-active-bg`, `--lr-env-list-reveal-active-bg`) instead of its built-in default. Nothing changes unless you set those tokens.
+  - `lr-trace-tree` and `lr-agent-eval-dashboard`: pressing the already-active row or already-pressed metric now deepens that item's own fill instead of flashing the unselected press colour.
+  - `lr-video-playlist`: the current item keeps its current border and background tint under the pointer and while pressed, instead of taking the plain item hover.
+- 754df2f: `<lr-zoomable-frame>` now routes its `focus()`/`blur()` overrides and its internal frame-focus tracking through the shared `activeElementIn()` guard instead of reading `ShadowRoot.activeElement`/`Document.activeElement` directly. It was missed by the earlier sweep (`fix(a11y): guard every ShadowRoot.activeElement read`) that moved every other focus-rehoming site in the library onto that helper, so it could still throw an unhandled error under a DOM whose `activeElement` getter itself throws (e.g. happy-dom 20.11.1) when nothing is focused. Real browsers never take the guarded path, so behavior there is unchanged.
+
 ## 20.0.1
 
 ### Patch Changes

@@ -31,7 +31,7 @@ import { styles } from './menubar-item.styles.js';
  * @cssprop [--lr-menubar-item-hover-bg=var(--lr-color-brand-quiet)] - Hover, focus-visible and open fill.
  * @cssprop [--lr-menubar-item-active-bg=color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed fill.
  * @status experimental
- * @since unreleased
+ * @since 21.0.0
  */
 export class LyraMenubarItem extends LyraElement {
   static override styles = [LyraElement.styles, styles];

@@ -49,8 +49,8 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-emoji-picker` · lr-emoji-picker.js · `stable` since `4.0.0` — a searchable, keyboard-navigable, form-associated emoji picker.
 - `lr-rubric-form` · lr-rubric-form.js · `stable` since `4.0.0` — a configurable annotation rubric (LangSmith annotation-queue style): score, category, and freeform-comment keys with a submit-and-next fl...
 - `lr-locale-picker` · lr-locale-picker.js · `stable` since `6.0.0` — a closed-list locale switcher over the library's own locale registry.
-- `lr-toggle` · lr-toggle.js · `experimental` since `unreleased` — a two-state button that owns its `pressed` state.
-- `lr-toggle-group` · lr-toggle-group.js · `experimental` since `unreleased` — a set of `<lr-toggle>` children behind one tab stop.
+- `lr-toggle` · lr-toggle.js · `experimental` since `21.0.0` — a two-state button that owns its `pressed` state.
+- `lr-toggle-group` · lr-toggle-group.js · `experimental` since `21.0.0` — a set of `<lr-toggle>` children behind one tab stop.
 
 ## Data display, dashboards & flow canvas — `components/data/` (26)
 
@@ -107,8 +107,8 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-menu` · lr-menu.js · `stable` since `4.0.0` — the inline semantic controller mapped from `<sl-menu>`.
 - `lr-menu-item` · lr-menu-item.js · `stable` since `4.0.0` — a single action row inside `<lr-menu>`'s default slot.
 - `lr-dropdown-item` · lr-dropdown-item.js · `stable` since `4.0.0` — the Web Awesome-compatible name for a menu item.
-- `lr-menubar` · lr-menubar.js · `experimental` since `unreleased` — Horizontal application menubar with roving focus, RTL-aware arrow navigation, typeahead and hover switching.
-- `lr-menubar-item` · lr-menubar-item.js · `experimental` since `unreleased` — A menu title or plain action in an application menubar.
+- `lr-menubar` · lr-menubar.js · `experimental` since `21.0.0` — Horizontal application menubar with roving focus, RTL-aware arrow navigation, typeahead and hover switching.
+- `lr-menubar-item` · lr-menubar-item.js · `experimental` since `21.0.0` — A menu title or plain action in an application menubar.
 - `lr-dock-panel` · lr-dock-panel.js · `stable` since `4.0.0` — a single panel docked to one edge of whatever contains it, resizable by dragging its inner edge.
 - `lr-card` · lr-card.js · `stable` since `4.0.0` — a generic, styled bordered content container: the "small bordered surface with padding" idiom common to hero highlights, clickable grid t...
 - `lr-command-palette` · lr-command-palette.js · `stable` since `4.0.0` — searchable application command menu with keyboard navigation.
@@ -121,8 +121,8 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-drilldown-panel` · lr-drilldown-panel.js · `stable` since `4.1.0` — a controlled navigation and category shell for related evidence, documents, entities, and host-rendered agent runs.
 - `lr-filter-bar` · lr-filter-bar.js · `stable` since `4.1.0` — a row of dashboard filters, each declared by the host (`filters`) rather than invented by this component: every filter composes an existi...
 - `lr-page` · lr-page.js · `stable` since `8.0.0` — a semantic application/page shell that derives its mobile or desktop presentation from its own allocated inline size.
-- `lr-navigation-menu` · lr-navigation-menu.js · `experimental` since `unreleased` — a site-header navigation bar following the WAI-ARIA disclosure navigation pattern: a `nav` landmark holding a list of `<lr-navigation-men...
-- `lr-navigation-menu-item` · lr-navigation-menu-item.js · `experimental` since `unreleased` — one entry of an `<lr-navigation-menu>` bar: a link, a disclosure trigger with a flyout panel, or a plain button.
+- `lr-navigation-menu` · lr-navigation-menu.js · `experimental` since `21.0.0` — a site-header navigation bar following the WAI-ARIA disclosure navigation pattern: a `nav` landmark holding a list of `<lr-navigation-men...
+- `lr-navigation-menu-item` · lr-navigation-menu-item.js · `experimental` since `21.0.0` — one entry of an `<lr-navigation-menu>` bar: a link, a disclosure trigger with a flyout panel, or a plain button.
 
 ## Overlays, status & feedback — `components/overlays/` (22)
 
@@ -139,7 +139,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-popover` · lr-popover.js · `stable` since `4.0.0` — a light-dismiss floating surface, click-triggered by default.
 - `lr-tooltip` · lr-tooltip.js · `stable` since `4.0.0` — a localized tooltip for a consumer-owned trigger.
 - `lr-dropdown` · lr-dropdown.js · `stable` since `4.0.0` — a trigger-owned action menu.
-- `lr-context-menu` · lr-context-menu.js · `experimental` since `unreleased` — turns any slotted region into a context-menu target.
+- `lr-context-menu` · lr-context-menu.js · `experimental` since `21.0.0` — turns any slotted region into a context-menu target.
 - `lr-spinner` · lr-spinner.js · `stable` since `4.0.0` — an indeterminate busy indicator.
 - `lr-progress-bar` · lr-progress-bar.js · `stable` since `4.0.0` — a determinate or indeterminate progress indicator.
 - `lr-progress-ring` · lr-progress-ring.js · `stable` since `4.0.0` — a circular determinate or indeterminate progress indicator.
@@ -312,7 +312,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-prompt-studio` · lr-prompt-studio.js · `stable` since `7.0.0` — a provider-neutral prompt-development workbench for ordered role messages, `{{variable}}` substitution, version selection, preview, save,...
 - `lr-json-schema-viewer` · lr-json-schema-viewer.js · `stable` since `9.0.0` — a recursive, selectable JSON Schema inspector with required-state, constraints, composition branches, `$ref` display, validation issues,...
 - `lr-subagent-panel` · lr-subagent-panel.js · `stable` since `7.0.0` — a controlled hierarchy of nested agent runs with lifecycle status, task/model context, progress, selection, cancellation, and retry intents.
-- `lr-tool-call-block` · lr-tool-call-block.js · `experimental` since `unreleased` — one tool call shown inline as a collapsed-by-default disclosure.
+- `lr-tool-call-block` · lr-tool-call-block.js · `experimental` since `21.0.0` — one tool call shown inline as a collapsed-by-default disclosure.
 
 ## Retrieval, knowledge graph & grounding — `components/retrieval/` (30)
 
