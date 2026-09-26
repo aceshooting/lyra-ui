@@ -66,12 +66,13 @@ test('models the raw core ceiling as the established baseline plus capability al
 
 test('keeps the packed button canary aligned with the authoritative granular hard budget', () => {
   const budgetPath = 'dist/components/forms/button/button.js';
-  // Re-measured for the 21.0.0 release: 32,763 reviewed gzip bytes. The granular authority requires
-  // a whole-KiB integer here, so this canary is 32 rather than the 2% headroom the other entries
-  // take, and it stays the tightest standalone ceiling in the file.
+  // Re-measured for the 21.0.0 release: 32,838 reviewed gzip bytes after the shared focus-modality
+  // frame-focus reset, so the maintainer-approved canary moved from 32 to 33 KiB. The granular
+  // authority requires a whole-KiB integer here, so this canary takes no 2% headroom like the other
+  // entries, and it stays the tightest standalone ceiling in the file.
   assert.equal(
     bundleBudgets[budgetPath],
-    32,
+    33,
     'the granular button entry must retain an explicit KiB ceiling',
   );
   assert.match(

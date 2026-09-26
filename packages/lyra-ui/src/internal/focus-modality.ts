@@ -56,32 +56,21 @@ function onBlur(event: Event): void {
   modalities.delete((event.currentTarget as Window).document);
 }
 
-const FRAME_OWNERS = new Set(['iframe', 'frame', 'object', 'embed']);
+// A frame owner (`iframe`, `frame`, `object`, `embed`) holding focus means keys now go to a child
+// frame and never reach this document. Firefox can move focus into a frame with neither a window
+// `blur` nor a `focusin` for the frame element (only this document's `focusout`), so both focus
+// transitions re-check `activeElement` once the change settles. A getter that throws (a DOM
+// emulator or a test stub) leaves the modality alone.
+const FRAME_OWNER = /^(?:i?frame|object|embed)$/;
 
-const isFrameOwner = (value: unknown): boolean =>
-  (value as Partial<Element> | null)?.nodeType === 1 &&
-  FRAME_OWNERS.has((value as Element).localName);
-
-function onFocusin(event: Event): void {
-  // Focus moving into a child frame: keys pressed there never reach this document, and Firefox
-  // does not reliably blur the parent window when a frame takes focus, so reset here too.
-  if (isFrameOwner(event.target)) modalities.delete((event.currentTarget as Window).document);
-}
-
-function onFocusout(event: Event): void {
-  // Firefox can move focus into a child frame with neither a window `blur` nor a `focusin` for the
-  // frame element here: only this document's `focusout` fires, after which `activeElement` is the
-  // frame owner. Check once the focus change settles.
+function onFocusChange(event: Event): void {
   const doc = (event.currentTarget as Window).document;
   queueMicrotask(() => {
-    let active: Element | null;
     try {
-      active = doc.activeElement;
+      if (FRAME_OWNER.test(doc.activeElement?.localName ?? '')) modalities.delete(doc);
     } catch {
-      // A DOM emulator (or a test stub) whose activeElement getter throws: nothing to judge.
-      return;
+      /* nothing to judge */
     }
-    if (isFrameOwner(active)) modalities.delete(doc);
   });
 }
 
@@ -94,8 +83,8 @@ export function trackInputModality(doc: Document | null | undefined): void {
   view.addEventListener('keydown', onKeydown, { capture: true, passive: true });
   view.addEventListener('pointerdown', onPointerdown, { capture: true, passive: true });
   view.addEventListener('blur', onBlur, { passive: true });
-  view.addEventListener('focusin', onFocusin, { capture: true, passive: true });
-  view.addEventListener('focusout', onFocusout, { capture: true, passive: true });
+  view.addEventListener('focusin', onFocusChange, { capture: true, passive: true });
+  view.addEventListener('focusout', onFocusChange, { capture: true, passive: true });
 }
 
 /** Last recorded modality for `doc`: `'unknown'` until a counted key or pointer press, after the

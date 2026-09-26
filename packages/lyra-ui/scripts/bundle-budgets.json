@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard gzip budgets are KiB limits for bundled+minified ESM with optional peers externalized. The exact reviewed byte map was re-measured for the 16.0.0 release on the final integrated source set with Node 22.23.2, esbuild's production minifier, and gzip level 9, via `node scripts/check-bundle-size.mjs --print-budget-review`. Whole-byte ceilings are expressed in KiB; validation rejects a measurement above its reviewed byte count plus the 4% drift band, and these budgets deliberately take only 2% so ordinary growth still trips the gate. The 2026-09-25 shadcn v21 review remeasured the integrated source after keyboard-focus modality, Markdown, menubar, file-icon, theme, navigation and interaction-state work; the reviewed measurements below are the resulting Node 22.23.2 production bundles with 2% headroom. The prior release rationales remain applicable to the entries they describe. The 2026-09-26 final v21 integration remeasured combobox, select and popover after the keyboard-focus gate for hover/focus disclosures and the trapped-surface top-layer escape (native popover promotion, fixed containing-block detection and lease release shared by every anchored surface) landed; each ceiling is its reviewed measurement plus 2% headroom.",
+  "$comment": "Hard gzip budgets are KiB limits for bundled+minified ESM with optional peers externalized. The exact reviewed byte map was re-measured for the 16.0.0 release on the final integrated source set with Node 22.23.2, esbuild's production minifier, and gzip level 9, via `node scripts/check-bundle-size.mjs --print-budget-review`. Whole-byte ceilings are expressed in KiB; validation rejects a measurement above its reviewed byte count plus the 4% drift band, and these budgets deliberately take only 2% so ordinary growth still trips the gate. The 2026-09-25 shadcn v21 review remeasured the integrated source after keyboard-focus modality, Markdown, menubar, file-icon, theme, navigation and interaction-state work; the reviewed measurements below are the resulting Node 22.23.2 production bundles with 2% headroom. The prior release rationales remain applicable to the entries they describe. The 2026-09-26 final v21 integration remeasured combobox, select and popover after the keyboard-focus gate for hover/focus disclosures and the trapped-surface top-layer escape (native popover promotion, fixed containing-block detection and lease release shared by every anchored surface) landed; each ceiling is its reviewed measurement plus 2% headroom. The maintainer approved raising the whole-KiB button canary from 32 to 33 KiB on 2026-09-26: the shared keyboard-focus modality recorder every component loads through LyraElement gained a frame-focus reset (Firefox moves focus into a child frame without blurring the parent window), taking the standalone button to 32,838 gzip bytes, 70 bytes over the previous 32 KiB ceiling.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "$componentMaxGzipKb": 225781,
@@ -13,7 +13,7 @@
     "dist/components/data/flow-canvas/flow-canvas.js": 50875,
     "dist/components/data/gauge/gauge.js": 25132,
     "dist/components/data/index.js": 325698,
-    "dist/components/forms/button/button.js": 32763,
+    "dist/components/forms/button/button.js": 32838,
     "dist/components/forms/combobox/combobox.js": 72967,
     "dist/components/forms/index.js": 242827,
     "dist/components/forms/select/select.js": 65655,
@@ -57,7 +57,7 @@
   "dist/components/retrieval/index.js": 308.69921875,
   "dist/components/utility/index.js": 130.20703125,
   "dist/components/viewers/index.js": 249.6171875,
-  "dist/components/forms/button/button.js": 32,
+  "dist/components/forms/button/button.js": 33,
   "dist/components/forms/combobox/combobox.js": 72.681640625,
   "dist/components/forms/select/select.js": 65.3984375,
   "dist/components/overlays/overlay/popover.js": 52.685546875,
