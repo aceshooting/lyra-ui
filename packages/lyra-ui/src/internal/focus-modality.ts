@@ -22,7 +22,9 @@
  *
  * A window `blur` (focus leaving for browser UI, another window, or a child frame) resets the
  * modality to `unknown`, because keys pressed elsewhere never reach this document; on re-entry the
- * browser's own `:focus-visible` decides.
+ * browser's own `:focus-visible` decides. Focus landing on a frame-owning element (`iframe`,
+ * `frame`, `object`, `embed`) resets it as well, since not every engine blurs the parent window
+ * when a child frame takes focus.
  *
  * Text-entry controls are deliberately not exempt from (b): they match `:focus-visible` after any
  * focus, so exempting them would let a tap-opened drawer's initial text-field focus pop its
@@ -54,6 +56,28 @@ function onBlur(event: Event): void {
   modalities.delete((event.currentTarget as Window).document);
 }
 
+const FRAME_OWNERS = new Set(['iframe', 'frame', 'object', 'embed']);
+
+const isFrameOwner = (value: unknown): boolean =>
+  (value as Partial<Element> | null)?.nodeType === 1 &&
+  FRAME_OWNERS.has((value as Element).localName);
+
+function onFocusin(event: Event): void {
+  // Focus moving into a child frame: keys pressed there never reach this document, and Firefox
+  // does not reliably blur the parent window when a frame takes focus, so reset here too.
+  if (isFrameOwner(event.target)) modalities.delete((event.currentTarget as Window).document);
+}
+
+function onFocusout(event: Event): void {
+  // Firefox can move focus into a child frame with neither a window `blur` nor a `focusin` for the
+  // frame element here: only this document's `focusout` fires, after which `activeElement` is the
+  // frame owner. Check once the focus change settles.
+  const doc = (event.currentTarget as Window).document;
+  queueMicrotask(() => {
+    if (isFrameOwner(doc.activeElement)) modalities.delete(doc);
+  });
+}
+
 /** Arms the recorder on `doc`'s window once. Idempotent; no-op without `doc.defaultView` (SSR,
  *  inert documents). */
 export function trackInputModality(doc: Document | null | undefined): void {
@@ -63,6 +87,8 @@ export function trackInputModality(doc: Document | null | undefined): void {
   view.addEventListener('keydown', onKeydown, { capture: true, passive: true });
   view.addEventListener('pointerdown', onPointerdown, { capture: true, passive: true });
   view.addEventListener('blur', onBlur, { passive: true });
+  view.addEventListener('focusin', onFocusin, { capture: true, passive: true });
+  view.addEventListener('focusout', onFocusout, { capture: true, passive: true });
 }
 
 /** Last recorded modality for `doc`: `'unknown'` until a counted key or pointer press, after the

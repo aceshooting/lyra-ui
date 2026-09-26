@@ -60,7 +60,7 @@ describe('focus-modality recorder', () => {
       view.addEventListener = originalWindowAdd;
       doc.addEventListener = originalDocumentAdd;
     }
-    expect(windowTypes.slice().sort()).to.deep.equal(['blur', 'keydown', 'pointerdown']);
+    expect(windowTypes.slice().sort()).to.deep.equal(['blur', 'focusin', 'focusout', 'keydown', 'pointerdown']);
     expect(documentTypes).to.deep.equal([]);
 
     const inert = document.implementation.createHTMLDocument('inert');
