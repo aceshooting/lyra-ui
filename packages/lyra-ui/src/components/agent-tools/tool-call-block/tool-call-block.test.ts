@@ -65,6 +65,17 @@ function resolvedToken(el: Element, token: string, property = 'color'): string {
   return value;
 }
 
+
+/** Serializes an element's children without comment nodes (Lit part markers), walking the DOM
+ *  rather than pattern-matching markup. */
+function markupWithoutComments(element: Element): string {
+  const clone = element.cloneNode(true) as Element;
+  const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
+  const comments: Node[] = [];
+  while (walker.nextNode()) comments.push(walker.currentNode);
+  for (const comment of comments) comment.parentNode?.removeChild(comment);
+  return clone.innerHTML;
+}
 describe('<lr-tool-call-block>', () => {
   afterEach(async () => {
     await resetMouse();
@@ -116,7 +127,7 @@ describe('<lr-tool-call-block>', () => {
       await el.updateComplete;
       expect(text(part(el, 'label')), status).to.equal(verb);
       expect(el.getAttribute('status')).to.equal(status);
-      glyphs.add(part(el, 'icon')!.innerHTML.replace(/<!--[^]*?-->/gu, ''));
+      glyphs.add(markupWithoutComments(part(el, 'icon')!));
     }
     expect(glyphs.size).to.equal(5);
 

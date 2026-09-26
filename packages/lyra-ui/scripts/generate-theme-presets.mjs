@@ -240,7 +240,7 @@ export function parsePresetStylesheet(text, file) {
   return { light: light?.declarations ?? new Map(), dark: dark?.declarations ?? new Map(), errors };
 }
 
-const quote = (value) => `'${value.replace(/'/g, '\\\'')}'`;
+const quote = (value) => `'${value.replace(/[\\']/g, (ch) => `\\${ch}`)}'`;
 const constantName = (name) => `LYRA_${name.toUpperCase().replace(/-/g, '_')}_THEME_PRESET`;
 
 /** Renders the generated module for one preset stylesheet. */

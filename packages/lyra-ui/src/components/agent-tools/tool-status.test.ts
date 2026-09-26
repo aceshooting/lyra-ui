@@ -7,11 +7,22 @@ import {
   toolStatusIcon,
 } from './tool-status.js';
 
+/** Serializes an element's children without comment nodes (Lit part markers), walking the DOM
+ *  rather than pattern-matching markup. */
+function markupWithoutComments(element: Element): string {
+  const clone = element.cloneNode(true) as Element;
+  const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
+  const comments: Node[] = [];
+  while (walker.nextNode()) comments.push(walker.currentNode);
+  for (const comment of comments) comment.parentNode?.removeChild(comment);
+  return clone.innerHTML;
+}
+
 function glyphMarkup(status: unknown): string {
   const host = document.createElement('div');
   render(toolStatusIcon(status), host);
   const svgElement = host.querySelector('svg');
-  return svgElement ? svgElement.innerHTML.replace(/<!--[^]*?-->/g, '').replace(/\s+/g, ' ').trim() : '';
+  return svgElement ? markupWithoutComments(svgElement).replace(/\s+/g, ' ').trim() : '';
 }
 
 it('exposes the frozen five-member tool status vocabulary', () => {

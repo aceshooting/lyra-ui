@@ -24,6 +24,17 @@ assert.equal(
   'SSR gate must run without a document shim'
 );
 
+
+/** Removes HTML comments to a fixpoint, so a removal can never splice a new `<!--` together. */
+function withoutHtmlComments(html) {
+  let previous;
+  let current = html;
+  do {
+    previous = current;
+    current = current.replace(/<!--[\s\S]*?-->/g, '');
+  } while (current !== previous);
+  return current;
+}
 function assertIsolatedNodeImport(label, source) {
   const result = spawnSync(
     process.execPath,
@@ -141,7 +152,7 @@ for (const template of [
   const inner = markdownHtml.match(/<div\b[^>]*part="content"[^>]*>([\s\S]*?)<\/div\s*>/)?.[1];
   assert.notEqual(inner, undefined, `${tagName} SSR must render its content part`);
   assert.equal(
-    inner.replace(/<!--[\s\S]*?-->/g, ''),
+    withoutHtmlComments(inner),
     'Hello',
     `${tagName} SSR fallback must be exactly the content`
   );
