@@ -4077,6 +4077,7 @@ describe("row-action overlays escape the virtual viewport", () => {
         <button slot="trigger" type="button" aria-label="Actions for ${thread.id}">⋮</button>
         <lr-menu label="Conversation actions">
           <lr-menu-item value="rename">Rename</lr-menu-item>
+          <lr-menu-item value="pin">Pin</lr-menu-item>
           <lr-menu-item value="delete">Delete</lr-menu-item>
         </lr-menu>
       </lr-dropdown>
@@ -4134,6 +4135,7 @@ describe("row-action overlays escape the virtual viewport", () => {
         <button slot="trigger" type="button">Reference</button>
         <lr-menu label="Conversation actions">
           <lr-menu-item value="rename">Rename</lr-menu-item>
+          <lr-menu-item value="pin">Pin</lr-menu-item>
           <lr-menu-item value="delete">Delete</lr-menu-item>
         </lr-menu>
       </lr-dropdown>

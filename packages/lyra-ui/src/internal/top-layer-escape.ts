@@ -226,17 +226,10 @@ export function ancestorZoom(element: HTMLElement): number {
 }
 
 /** {@link ancestorZoom} including `element`'s own computed `zoom`. */
-export function effectiveZoom(element: Element): number {
+function effectiveZoom(element: Element): number {
   return element instanceof HTMLElement
     ? ancestorZoom(element) * computedZoom(element)
     : computedZoom(element);
-}
-
-/** The compensating `zoom` this module wrote on `element` and still owns, if any. */
-export function writtenZoom(element: HTMLElement): string | undefined {
-  const owner = ownerByMember.get(element) ?? element;
-  const written = leaseByOwner.get(owner)?.zoom.get(element);
-  return written !== undefined && element.style.getPropertyValue('zoom') === written ? written : undefined;
 }
 
 /**

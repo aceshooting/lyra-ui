@@ -18,7 +18,8 @@ describe('disclosure header paint', () => {
       const base = host.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
       const header = host.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
       const body = host.shadowRoot!.querySelector<HTMLElement>(kind === 'sources' ? '[part="list"]' : '[part="body"]')!;
-      const chromeColor = kind === 'sources' ? 'rgb(80, 80, 80)' : 'rgb(210, 210, 210)';
+      // Every header is a borderless button, so the card edge is its only boundary: control tier.
+      const chromeColor = 'rgb(80, 80, 80)';
       expect(getComputedStyle(base).borderTopColor).to.equal(chromeColor);
       expect(getComputedStyle(body).borderTopColor).to.equal(chromeColor);
       try {

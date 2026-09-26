@@ -146,9 +146,12 @@ describe('isKeyboardFocusEvent', () => {
     }
     expect(isKeyboardFocusEvent(new FocusEvent('focus')), 'no element in the path').to.equal(false);
 
-    const { doc } = await freshFrame();
+    const { doc, view } = await freshFrame();
     trackInputModality(doc);
     doc.body.innerHTML = '<button>fresh</button>';
+    // Firefox fires no focus events inside a frame whose window is not focused, so give the fresh
+    // frame focus first; that is a window focus, not an element focus, so the recorder sees nothing.
+    view.focus();
     const fresh = recordFocus(doc);
     try {
       doc.querySelector('button')!.focus();
@@ -178,8 +181,10 @@ describe('isKeyboardFocusEvent', () => {
       inner.blur();
     }
 
-    const { doc } = await freshFrame();
+    const { doc, view } = await freshFrame();
     trackInputModality(doc);
+    // See M3: Firefox needs the frame's window focused before an element inside it can take focus.
+    view.focus();
     const frameHost = doc.createElement('x-closed-host');
     const frameInner = doc.createElement('button');
     frameHost.attachShadow({ mode: 'closed' }).append(frameInner);

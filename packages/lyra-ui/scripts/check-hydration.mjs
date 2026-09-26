@@ -1647,7 +1647,9 @@ try {
     const virtualListEntry = entries.find(({ tag }) => tag === 'lr-virtual-list');
     assert.ok(virtualListEntry, 'lr-virtual-list must be present in the SSR matrix');
     assert.ok(
-      !virtualListEntry.html.includes('data-lr-no-top-layer'),
+      // Match the attribute on a tag, not the stylesheet selector that names it: the server
+      // output carries the component's <style>, whose fallback rule spells the same token.
+      !/<[a-z][^<>]*\sdata-lr-no-top-layer[\s=>]/iu.test(virtualListEntry.html),
       'lr-virtual-list server output must not carry the pre-Popover fallback marker'
     );
     const readMarker = () =>
