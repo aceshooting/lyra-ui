@@ -6,8 +6,3 @@ export interface MenubarItemOwner {
   menuStateChanged(item: HTMLElement, open: boolean): void;
   itemStateChanged(item: HTMLElement): void;
 }
-
-/** @internal */
-interface MenubarItemOwned {
-  [menubarItemOwner](owner: MenubarItemOwner | null, expectedOwner?: MenubarItemOwner): void;
-}
