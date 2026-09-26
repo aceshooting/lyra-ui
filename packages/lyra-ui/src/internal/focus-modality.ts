@@ -74,7 +74,14 @@ function onFocusout(event: Event): void {
   // frame owner. Check once the focus change settles.
   const doc = (event.currentTarget as Window).document;
   queueMicrotask(() => {
-    if (isFrameOwner(doc.activeElement)) modalities.delete(doc);
+    let active: Element | null;
+    try {
+      active = doc.activeElement;
+    } catch {
+      // A DOM emulator (or a test stub) whose activeElement getter throws: nothing to judge.
+      return;
+    }
+    if (isFrameOwner(active)) modalities.delete(doc);
   });
 }
 
