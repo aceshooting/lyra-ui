@@ -568,6 +568,7 @@ const CALENDAR_SPACING_PROPERTIES: ReadonlySet<PropertyKey> = new Set<CalendarSp
 export interface LyraHeatmapEventMap {
   'lr-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
   'lr-matrix-geometry-change': CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>;
+  'lr-calendar-geometry-change': CustomEvent<LyraHeatmapCalendarGeometry>;
   'lr-selection-change': CustomEvent<HeatmapSelectionChangeDetail>;
 }
 
@@ -717,6 +718,11 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * `matrixGeometry` (`padLeft`/`padTop`/`cellSize`) differs from the previous draw -- e.g. after
  * `row-label-width="auto"`/`col-label-height="auto"` resolves against new label content or a
  * resize. `detail` is the same object `matrixGeometry` returns. Never fired in calendar mode.
+ * @event lr-calendar-geometry-change - Fired after a calendar-mode draw pass whose resolved
+ * `calendarGeometry` (`padLeft`/`padTop`/`cellSize`/`cellGapX`/`cellGapY`/`cellRadius`/`weekCount`)
+ * differs from the previous draw -- e.g. after `cellGapX`/`cellGapY`/`cellRadius` changes or a
+ * `fitToWidth` resize. `detail` is the same object `calendarGeometry` returns, mirroring
+ * `lr-matrix-geometry-change`. Never fired in matrix mode.
  * @event lr-selection-change - Non-cancelable controlled multiple-selection proposal with frozen
  * `HeatmapSelectionChangeDetail { selectedCells, source }`. Click/Enter/Space toggles, Shift+arrows
  * extends a rectangle, Shift+Space toggles a row and Ctrl/Meta+Space toggles a column. Pointer drag
@@ -991,8 +997,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * pixels. Lets a sibling chart align with the calendar's week columns without re-deriving the
    * gutter, cell size, or spacing. `undefined` outside calendar mode and before the first calendar
    * draw. Like `matrixGeometry`, this is the stored snapshot of the last paint rather than a fresh
-   * computation, and the same object is returned until the painted geometry changes. No change
-   * event is fired; read it after the draw that follows an update.
+   * computation, and the same object is returned until the painted geometry changes -- at which
+   * point `lr-calendar-geometry-change` fires with that same frozen object as its `detail`,
+   * mirroring `matrixGeometry`/`lr-matrix-geometry-change`.
    */
   get calendarGeometry(): Readonly<LyraHeatmapCalendarGeometry> | undefined {
     if (this.effectiveMode !== 'calendar') return undefined;
@@ -3503,7 +3510,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   /** Stores the frozen snapshot `calendarGeometry` returns, reusing the previous object while the
-   *  painted geometry is unchanged. */
+   *  painted geometry is unchanged, and fires `lr-calendar-geometry-change` (mirroring
+   *  `drawMatrix()`'s `lr-matrix-geometry-change`) when it isn't. */
   private recordCalendarGeometry(
     spacing: ReturnType<LyraHeatmap['calendarSpacing']>,
     weekCount: number
@@ -3528,7 +3536,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       )
     )
       return;
-    this.lastPaintedCalendarGeometry = Object.freeze(next);
+    const frozen = Object.freeze(next);
+    this.lastPaintedCalendarGeometry = frozen;
+    this.emit('lr-calendar-geometry-change', frozen);
   }
 
   private paintCalendarFocusOverlays(

@@ -830,7 +830,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   'src/components/layout/app-rail/app-rail.styles.ts:toggle',
   'src/components/layout/details/accordion-item.styles.ts:button',
   'src/components/layout/details/details.styles.ts:summary',
-  'src/components/layout/menu/menu-item.styles.ts:base',
   'src/components/layout/widget/widget.styles.ts:view-toggle',
   'src/components/media/image-viewer/image-viewer.styles.ts:fit-control',
   'src/components/media/image-viewer/image-viewer.styles.ts:rotate-button',

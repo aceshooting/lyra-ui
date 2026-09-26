@@ -1,15 +1,36 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { hoverUntilMatched, resetMouse } from '../../test/wtr-mouse.js';
 import '../components/forms/button/button.js';
 import '../components/forms/checkbox/checkbox.js';
 import '../components/forms/input/input.js';
 import '../components/layout/card/card.js';
 import '../components/overlays/callout/callout.js';
+// Family coverage beyond forms/overlays/layout: one representative component per remaining
+// family (conversation, agent-tools, retrieval, data, charts, media, utility, viewers), so the
+// preset's token-reach (and, for one of them, its interaction-state) claim is asserted for every
+// family the shadcn look programme touched, not just its five most-exercised components.
+import '../components/conversation/chat-message/chat-message.js';
+import '../components/agent-tools/tool-call-block/tool-call-block.js';
+import '../components/retrieval/source-card/source-card.js';
+import '../components/data/stat/stat.js';
+import '../components/charts/chart/lite-chart.js';
+import '../components/media/media-card/media-card.js';
+import '../components/utility/divider/divider.js';
+import '../components/viewers/highlight-layer/highlight-layer.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
 import type { LyraCheckbox } from '../components/forms/checkbox/checkbox.class.js';
 import type { LyraInput } from '../components/forms/input/input.class.js';
 import type { LyraCard } from '../components/layout/card/card.class.js';
 import type { LyraCallout } from '../components/overlays/callout/callout.class.js';
+import type { LyraChatMessage } from '../components/conversation/chat-message/chat-message.class.js';
+import type { LyraToolCallBlock } from '../components/agent-tools/tool-call-block/tool-call-block.class.js';
+import type { LyraSourceCard } from '../components/retrieval/source-card/source-card.class.js';
+import type { LyraStat } from '../components/data/stat/stat.class.js';
+import type { LyraLiteChart } from '../components/charts/chart/lite-chart.class.js';
+import type { LyraMediaCard } from '../components/media/media-card/media-card.class.js';
+import type { LyraDivider } from '../components/utility/divider/divider.class.js';
+import type { LyraHighlightLayer } from '../components/viewers/highlight-layer/highlight-layer.class.js';
 import { GEMSTONES } from '../theme/gemstones-data.js';
 import { setLyraTheme, type LyraThemeMode } from '../theme/theme.js';
 
@@ -169,6 +190,9 @@ async function restyledInputs(): Promise<Set<string>> {
 
 const PRIMARY = { light: 'rgb(23, 23, 23)', dark: 'rgb(229, 229, 229)' } as const;
 const CONTROL_BORDER = { light: 'rgb(145, 145, 145)', dark: 'rgb(100, 100, 100)' } as const;
+// Same decorative-tier resolution the "draws a decorative lr-card edge" test below reads off
+// lr-card, kept as a named constant here since several family-coverage tests below reuse it.
+const SUBTLE_BORDER = { light: 'rgb(229, 229, 229)', dark: 'rgba(255, 255, 255, 0.1)' } as const;
 const FOCUS = { light: 'rgb(139, 139, 139)', dark: 'rgb(120, 120, 120)' } as const;
 const SURFACE = { light: 'rgb(255, 255, 255)', dark: 'rgb(10, 10, 10)' } as const;
 const NEUTRAL_QUIET = { light: 'rgb(245, 245, 245)', dark: 'rgb(38, 38, 38)' } as const;
@@ -505,5 +529,169 @@ describe('shadcn look preset', () => {
       expected[`${mode} restored`] = PRIMARY[mode];
     }
     expect(rendered).to.deep.equal(expected);
+  });
+
+  // -- family coverage beyond forms/overlays/layout ---------------------------------------------
+  // Each of these reads a token-driven border/outline colour off one representative component from
+  // a family the tests above never touch, proving the preset's reach past button/checkbox/input/
+  // card/callout. All resolve through the same --lr-color-border(-subtle)/--lr-color-brand chain
+  // the existing tests already establish CONTROL_BORDER/SUBTLE_BORDER/PRIMARY against, so a
+  // regression in any of these components' own token wiring (not just the preset) fails here too.
+
+  it('reaches the decorative border tier on lr-chat-message (conversation family)', async () => {
+    await adoptTheme();
+    const rendered: Record<string, string> = {};
+    for (const mode of MODES) {
+      setLyraTheme({ mode, accent: null, tokens: null });
+      const message = await fixture<LyraChatMessage>(
+        html`<lr-chat-message message-role="assistant">Deploys look healthy.</lr-chat-message>`,
+      );
+      await message.updateComplete;
+      const bubble = message.shadowRoot!.querySelector<HTMLElement>('[part~="bubble"]')!;
+      rendered[mode] = getComputedStyle(bubble).borderTopColor;
+    }
+    expect(rendered).to.deep.equal(SUBTLE_BORDER);
+  });
+
+  it('reaches the control border tier on lr-tool-call-block (agent-tools family)', async () => {
+    await adoptTheme();
+    const rendered: Record<string, string> = {};
+    for (const mode of MODES) {
+      setLyraTheme({ mode, accent: null, tokens: null });
+      const block = await fixture<LyraToolCallBlock>(
+        html`<lr-tool-call-block name="search_web" status="success" duration-ms="820"></lr-tool-call-block>`,
+      );
+      await block.updateComplete;
+      const base = block.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      rendered[mode] = getComputedStyle(base).borderTopColor;
+    }
+    expect(rendered).to.deep.equal(CONTROL_BORDER);
+  });
+
+  it('turns the tool-call-block header brand-coloured on hover (agent-tools interaction state)', async () => {
+    await adoptTheme();
+    const shifts: Record<string, boolean> = {};
+    try {
+      for (const mode of MODES) {
+        setLyraTheme({ mode, accent: null, tokens: null });
+        const block = await fixture<LyraToolCallBlock>(
+          html`<lr-tool-call-block name="search_web" status="success" duration-ms="820"></lr-tool-call-block>`,
+        );
+        await block.updateComplete;
+        const header = block.shadowRoot!.querySelector<HTMLElement>('[part~="header"]')!;
+        const resting = getComputedStyle(header).color;
+        await hoverUntilMatched(header, 'pointer did not reach the tool-call-block header');
+        await waitUntil(
+          () => getComputedStyle(header).color === PRIMARY[mode],
+          `hovered header text did not resolve to the preset primary colour in ${mode} mode`,
+        );
+        // Perturbation guard: hovering really did change the colour, not just happened to match.
+        shifts[mode] = getComputedStyle(header).color !== resting;
+      }
+    } finally {
+      await resetMouse();
+    }
+    expect(shifts).to.deep.equal({ light: true, dark: true });
+  });
+
+  it('reaches the decorative border tier on lr-source-card (retrieval family)', async () => {
+    await adoptTheme();
+    const rendered: Record<string, string> = {};
+    for (const mode of MODES) {
+      setLyraTheme({ mode, accent: null, tokens: null });
+      const card = await fixture<LyraSourceCard>(html`
+        <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+          <span slot="excerpt">Revenue grew 12% year over year.</span>
+        </lr-source-card>
+      `);
+      await card.updateComplete;
+      const base = card.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      rendered[mode] = getComputedStyle(base).borderTopColor;
+    }
+    expect(rendered).to.deep.equal(SUBTLE_BORDER);
+  });
+
+  it('reaches the decorative border tier on a passive lr-stat tile (data family)', async () => {
+    await adoptTheme();
+    const rendered: Record<string, string> = {};
+    for (const mode of MODES) {
+      setLyraTheme({ mode, accent: null, tokens: null });
+      // No href: a passive tile's edge is decorative (the control tier is reserved for [href]).
+      const stat = await fixture<LyraStat>(html`<lr-stat label="Active agents" value="17" variant="brand"></lr-stat>`);
+      await stat.updateComplete;
+      const base = stat.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      rendered[mode] = getComputedStyle(base).borderTopColor;
+    }
+    expect(rendered).to.deep.equal(SUBTLE_BORDER);
+  });
+
+  it(`reaches the control border tier on lr-lite-chart's data-table toggle (charts family)`, async () => {
+    await adoptTheme();
+    const rendered: Record<string, string> = {};
+    for (const mode of MODES) {
+      setLyraTheme({ mode, accent: null, tokens: null });
+      const chart = await fixture<LyraLiteChart>(html`
+        <lr-lite-chart
+          type="bar"
+          data-table-toggle
+          .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+          .datasets=${[{ label: 'Revenue', data: [12, 19, 14, 22] }]}
+        ></lr-lite-chart>
+      `);
+      await chart.updateComplete;
+      const toggle = chart.shadowRoot!.querySelector<HTMLElement>('[part~="data-table-toggle"]')!;
+      rendered[mode] = getComputedStyle(toggle).borderTopColor;
+    }
+    expect(rendered).to.deep.equal(CONTROL_BORDER);
+  });
+
+  it('reaches the control border tier on lr-media-card (media family)', async () => {
+    await adoptTheme();
+    const rendered: Record<string, string> = {};
+    for (const mode of MODES) {
+      setLyraTheme({ mode, accent: null, tokens: null });
+      const card = await fixture<LyraMediaCard>(html`
+        <lr-media-card
+          src="https://example.com/reports/quarterly-summary.pdf"
+          kind="file"
+          filename="quarterly-summary.pdf"
+          mime-type="application/pdf"
+        ></lr-media-card>
+      `);
+      await card.updateComplete;
+      const base = card.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      rendered[mode] = getComputedStyle(base).borderTopColor;
+    }
+    expect(rendered).to.deep.equal(CONTROL_BORDER);
+  });
+
+  it('reaches the decorative border tier on lr-divider (utility family)', async () => {
+    await adoptTheme();
+    const rendered: Record<string, string> = {};
+    for (const mode of MODES) {
+      setLyraTheme({ mode, accent: null, tokens: null });
+      const divider = await fixture<LyraDivider>(html`<lr-divider></lr-divider>`);
+      await divider.updateComplete;
+      const base = divider.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      rendered[mode] = getComputedStyle(base).borderTopColor;
+    }
+    expect(rendered).to.deep.equal(SUBTLE_BORDER);
+  });
+
+  it('reaches the preset primary colour on a default-tone lr-highlight-layer rect (viewers family)', async () => {
+    await adoptTheme();
+    const rendered: Record<string, string> = {};
+    for (const mode of MODES) {
+      setLyraTheme({ mode, accent: null, tokens: null });
+      const layer = await fixture<LyraHighlightLayer>(html`
+        <lr-highlight-layer
+          .items=${[{ id: 'zone-a', rects: [{ x: 10, y: 20, width: 40, height: 40 }] }]}
+        ></lr-highlight-layer>
+      `);
+      await layer.updateComplete;
+      const rect = layer.shadowRoot!.querySelector<HTMLElement>('[part~="rect"]')!;
+      rendered[mode] = getComputedStyle(rect).outlineColor;
+    }
+    expect(rendered).to.deep.equal(PRIMARY);
   });
 });

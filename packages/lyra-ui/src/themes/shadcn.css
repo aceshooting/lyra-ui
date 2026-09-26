@@ -45,6 +45,16 @@
      - Hover and press mix toward a mid grey instead of toward the text colour. shadcn's primary
        fill IS the text colour, so the text-following default would move it by nothing at all and
        the default button would show no hover or press state.
+     - Code-fence syntax colouring (keyword/string/comment tokens) is the one visual surface this
+       preset does not repaint at all: it stays GitHub's Shiki palette (SHIKI_LIGHT_THEME /
+       SHIKI_DARK_THEME in code-block/shiki-types.ts) in both modes. Unlike charts and terminal
+       colours (both --lr-theme-* tokens this preset does set its own values for, below), the two
+       Shiki themes carry no --lr-theme-* wiring at all, and there is no public
+       property on lr-code-block/lr-markdown to substitute a different theme pair today -- only
+       which of the two fixed themes paints (light or dark) tracks this preset, through the same
+       --lr-color-text/--lr-color-surface switch every other mode-aware surface here reads
+       (resolveIsDarkTheme() in shiki-dark-theme.ts). Syntax colouring is deliberately left as its
+       own visual domain rather than folded into the token system, not an oversight.
 
    ACCENTS. The neutral role's loud slots are aliases of the brand role's, in both blocks, because
    lr-button's default (variant neutral, appearance accent) is where shadcn's primary lands and a

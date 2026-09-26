@@ -65,4 +65,4 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Voor het weergeven van boxplots moet het optionele boxplotpakket zijn geïnstalleerd.',
 };
 
-registerLyraLocale('nl', strings, { dir: 'ltr', name: 'Nederlands' });
+registerLyraLocale('nl', strings);

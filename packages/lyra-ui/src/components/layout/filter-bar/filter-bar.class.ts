@@ -248,11 +248,9 @@ export interface LyraFilterBarComboboxDefinition extends LyraFilterBarClearableD
   /** A `multiple` combobox filter collapses past the composed `<lr-combobox>`'s own
    *  `max-options-visible` (default `3`, not forwarded by this component) into a localized "+N"
    *  overflow indicator -- the same substance as `<lr-select>`'s own `multiple`-mode overflow chip.
-   *  The one remaining gap: `<lr-select>`'s overflow chip carries a second, distinguishing
-   *  `tag-overflow` part so a consumer can style just that chip; `<lr-combobox>`'s carries only the
-   *  plain `tag` part, so there is no equivalent token for this component to forward as
-   *  `filter-control-tag-overflow`. That is `<lr-combobox>`'s own surface to grow, not something
-   *  `exportparts` can manufacture for a part its composed child never renders. */
+   *  Like that chip, it carries a second, distinguishing `tag-overflow` part alongside the plain
+   *  `tag` part, forwarded here as `filter-control-tag-overflow` so a consumer can style just the
+   *  overflow indicator without also restyling every ordinary selected tag. */
   readonly multiple?: boolean;
   /** `'combobox'` only -- how long (ms) to wait after the last selection change (a pick, a
    *  multi-select toggle, an `allowCustomValue`/`allowCreate` commit, or the clear action) before
@@ -703,6 +701,7 @@ const COMBOBOX_EXPORT_PARTS = [
   'option: filter-control-option',
   'tags: filter-control-tags',
   'tag: filter-control-tag',
+  'tag-overflow: filter-control-tag-overflow',
   'tag-label: filter-control-tag-label',
   'tag__remove-button: filter-control-tag-remove-button',
   'tag__remove-button__base: filter-control-tag-remove-button-base',
@@ -1044,7 +1043,10 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  * @csspart filter-control-option - A select or combobox option row, or a `'checkbox-menu'`'s
  *   `role="menuitemcheckbox"` row.
  * @csspart filter-control-tags - A combobox's multi-select tag container.
- * @csspart filter-control-tag - A combobox's individual selected tag.
+ * @csspart filter-control-tag - A combobox's individual selected tag. The "+N" overflow indicator
+ *   carries both `filter-control-tag` and `filter-control-tag-overflow`.
+ * @csspart filter-control-tag-overflow - A combobox's "+N" indicator standing in for the
+ *   selections past `max-options-visible`.
  * @csspart filter-control-tag-label - A combobox tag's wrapping/ellipsis-safe label; capped by
  *   that control's own `--tag-max-size`.
  * @csspart filter-control-tag-remove-button - A combobox tag's own remove button.

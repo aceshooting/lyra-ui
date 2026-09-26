@@ -64,4 +64,4 @@ const strings: LyraLocaleStrings = {
   reorderMoveCancelled: 'Pengurutan ulang dibatalkan.',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

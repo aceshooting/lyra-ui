@@ -241,4 +241,4 @@ const strings: LyraLocaleStrings = {
   agentRunStatusCancelled: '취소',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

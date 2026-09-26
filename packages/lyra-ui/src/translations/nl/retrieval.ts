@@ -215,4 +215,4 @@ const strings: LyraLocaleStrings = {
   retrievalTraceEvidenceToggle: 'Bewijs voor {label}',
 };
 
-registerLyraLocale('nl', strings, { dir: 'ltr', name: 'Nederlands' });
+registerLyraLocale('nl', strings);

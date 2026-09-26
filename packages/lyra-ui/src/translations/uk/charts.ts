@@ -65,4 +65,4 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Щоб відображати діаграми розмаху, потрібно встановити необов’язковий пакет для побудови діаграм розмаху.',
 };
 
-registerLyraLocale('uk', strings, { dir: 'ltr', name: 'Українська' });
+registerLyraLocale('uk', strings);

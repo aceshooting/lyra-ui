@@ -70,8 +70,11 @@ export const styles = css`
   /* Keep the internal state selector low-specificity so sibling shadow-tree rules remain easy to
      order. Consumer ::part() rules win at the shadow boundary through cascade encapsulation, not
      through a specificity contest with this selector. */
+  /* --lr-color-neutral-fill-quiet, not --lr-color-border: a toolbar button's own hover/press fill
+     is a neutral tint on top of the surface it sits on, not a border color borrowed as a fill --
+     the same class of fix as this release's lr-avatar/lr-skeleton/lr-empty sweep. */
   :where([part='base'] button):hover:where(:not(:disabled)) {
-    background: var(--lr-color-surface-hover, var(--lr-color-border));
+    background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
   }
   /* The active selector keeps the same low-specificity internal shape. The hover fill carried
      further toward --lr-color-mix-partner (the text colour), which moves whichever way the
@@ -79,7 +82,7 @@ export const styles = css`
   :where([part='base'] button):active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
-      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -131,12 +134,12 @@ export const styles = css`
     display: none;
   }
   ::slotted(button:hover:not(:disabled)) {
-    background: var(--lr-color-surface-hover, var(--lr-color-border));
+    background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
   }
   ::slotted(button:active:not(:disabled)) {
     background: color-mix(
       in oklab,
-      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

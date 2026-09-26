@@ -1508,8 +1508,14 @@ Both remain inheritable fallback arms, so set them on an ancestor to retheme a g
 changing unrelated controls. `--lr-model-select-trigger-border-color` (default
 `var(--lr-color-border)`) and `--lr-model-select-trigger-fill` (default `var(--lr-color-surface)`)
 control the trigger/combobox's resting border and background, independent of the open-state border
-below. `--lr-model-select-open-border-color` (default `var(--lr-color-brand)`)
-controls the trigger border while the listbox is open. A synthetic stale-value row has independent
+below. `--lr-model-select-trigger-hover-border-color` (default
+`var(--lr-model-select-trigger-border-color)`) retints the trigger border while the pointer is over it,
+leaving the resting border unchanged when left unset. `--lr-model-select-open-border-color` (default
+`var(--lr-color-brand)`) controls the trigger border while the listbox is open. The shared field
+halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while the trigger or
+combobox is focused — one name for every field-shaped control in the library, so a halo is
+configured once instead of per component. It is additive: the focus outline is the accessibility
+answer to focus and is never replaced by it. A synthetic stale-value row has independent
 `--lr-model-select-option-synthetic-border-style` (default `dashed`) and
 `--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
 `--lr-model-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) — background of a
@@ -3796,7 +3802,14 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   the open-state color below. Default: `var(--lr-color-border)`.
 - `--lr-voice-picker-trigger-fill` — Resting trigger/combobox background. Default:
   `var(--lr-color-surface)`.
+- `--lr-voice-picker-trigger-hover-border-color` — Trigger border color while the pointer is over
+  it, or while it is pressed, independent of the resting border above. Default:
+  `var(--lr-color-brand)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  trigger or combobox is focused. One name for every field-shaped control in the library, so a halo
+  is configured once instead of per component; additive to the existing focus outline. Default:
+  `none`.
 - `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.

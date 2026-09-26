@@ -65,4 +65,4 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Komponen ini memerlukan paket bagan diagram kotak opsional agar diagram kotak dapat ditampilkan.',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

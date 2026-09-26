@@ -578,7 +578,9 @@ attribute when provided), plus two adornment slots:
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
-`tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
+`tag-overflow` (the "+N" indicator, carried alongside `tag` past `max-options-visible`,
+mirroring `lr-select`'s identical two-part overflow chip), `tag-label`, `tag__content`,
+`tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
 `clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
 input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
 `expand-icon`, `listbox`,
@@ -597,9 +599,11 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `retry-button`, `error`, `hint`
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
-`lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
-(`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are
-unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`.
+`lr-change`/native `input` event detail `value` narrow to `string` when `Multiple` is `false` and
+`string[]` (`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored
+surface are unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`. Combobox has no
+dedicated `lr-input` custom event (unlike `lr-select`); the exported `LyraComboboxChangeEvent`/
+`LyraComboboxInputEvent` aliases type `lr-change` and the native `input` listener respectively.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -5308,8 +5312,8 @@ Long group labels, hints, errors, and horizontal option labels wrap within the h
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
 targets keep their own fixed hit-area floor while the surrounding text wraps.
 
-A form-associated collection of `<lr-checkbox>` children. Its readonly `value` is a defensive
-`string[]` snapshot; each
+A form-associated collection of `<lr-checkbox>` children. Its `value` is a settable, frozen,
+defensive `string[]` snapshot; each
 selected value is submitted under `name` and `required` requires at least one selection.
 For zero-or-more choices in button chrome behind one tab stop that submit nothing, use
 `lr-toggle-group`.
@@ -5704,6 +5708,10 @@ hover and invalid states below.
 without changing brand/danger paint in sibling components.
 `--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
 without a `::part(editor)` rule.
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` on
+the editor frame once its textarea is focused — one name for every field-shaped control in the
+library, so a halo is configured once instead of per component. It is additive: the focus outline
+is the accessibility answer to focus and is never replaced by it.
 The `editor` scroll frame also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
 its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
@@ -6005,6 +6013,9 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - `--lr-color-picker-border-color` — Resting trigger border color. Default: `var(--lr-color-border)`.
 - `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text
   field, format/eyedropper buttons and palette swatches. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the trigger
+  while it is focused. One name for every field-shaped control in the library, so a halo is
+  configured once instead of per component; additive to the existing focus outline. Default: `none`.
 - `--lr-color-picker-selected-border` — Selected palette-swatch border. Default:
   `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
@@ -6235,6 +6246,9 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
   color below. Default: `var(--lr-color-border)`.
 - `--lr-emoji-picker-search-fill` — Resting search background. Default: `var(--lr-color-surface)`.
 - `--lr-emoji-picker-search-hover-border-color` — Search hover border. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the search
+  field while it is focused. One name for every field-shaped control in the library, so a halo is
+  configured once instead of per component; additive to the existing focus outline. Default: `none`.
 
 ## `lr-rubric-form`
 
@@ -6538,6 +6552,30 @@ resolver. Menu labels stay visible; a per-entry `country` override also reaches 
   or `lr-combobox` instead.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
   ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.
+
+**Lazy-loading the picked locale's catalog.** `locales` accepts a tag list before any of those
+tags has a registered catalog (see the `locales` property above), and `lr-change` is cancelable, so
+the lightest integration offers every supported tag up front and fetches only the one the visitor
+actually picks:
+
+```js
+import { setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
+
+const picker = document.querySelector("lr-locale-picker");
+picker.locales = ["en", "fr", "ar", "ja"]; // offered before any catalog is registered
+picker.addEventListener("lr-change", async (e) => {
+  e.preventDefault(); // keep `value` updated, defer applying the locale until the catalog lands
+  const tag = e.detail.value;
+  await import(`@aceshooting/lyra-ui/translations/${tag}.js`); // registers the catalog as a side effect
+  setLyraLocale(tag);
+  document.documentElement.lang = tag;
+  document.documentElement.dir = e.detail.direction;
+});
+```
+
+Only the tags actually shipped as ready-made catalogs (see "The shipped catalogs" in the
+localization guide) resolve through that dynamic-import path unmodified; an application-authored
+locale still needs its own `registerLyraLocale()` call before `setLyraLocale()` does anything.
 
 **Additional API surface:**
 

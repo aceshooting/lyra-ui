@@ -106,4 +106,4 @@ const strings: LyraLocaleStrings = {
   localePickerRequired: '언어 선택',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

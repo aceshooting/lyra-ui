@@ -2095,6 +2095,18 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-accordion-item-content-padding-block-end",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-accordion-item-spacing)"
+          },
+          {
+            "name": "--lr-accordion-item-content-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-accordion-item-spacing)"
+          },
+          {
             "name": "--lr-accordion-item-easing",
             "deprecated": null,
             "hasDefault": true,
@@ -2135,6 +2147,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-padding-inline)"
+          },
+          {
+            "name": "--lr-accordion-item-summary-padding-block",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-accordion-item-spacing)"
+          },
+          {
+            "name": "--lr-accordion-item-summary-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-accordion-item-spacing)"
           },
           {
             "name": "--show-duration",
@@ -16943,7 +16967,8 @@
             "name": "lr-close",
             "type": "CustomEvent<null>",
             "cancelable": "always",
-            "constructor": "CustomEvent"
+            "constructor": "CustomEvent",
+            "composed": true
           }
         ],
         "parts": [
@@ -26545,6 +26570,12 @@
             "default": 2
           },
           {
+            "name": "--lr-form-control-focus-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -27829,6 +27860,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-height,var(--lr-size-2-5rem))"
+          },
+          {
+            "name": "--lr-form-control-focus-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -29432,6 +29469,10 @@
           },
           {
             "name": "tag-label",
+            "deprecated": null
+          },
+          {
+            "name": "tag-overflow",
             "deprecated": null
           },
           {
@@ -49517,6 +49558,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-form-control-focus-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -54592,6 +54639,10 @@
           },
           {
             "name": "filter-control-tag-label",
+            "deprecated": null
+          },
+          {
+            "name": "filter-control-tag-overflow",
             "deprecated": null
           },
           {
@@ -61995,6 +62046,12 @@
           }
         ],
         "events": [
+          {
+            "name": "lr-calendar-geometry-change",
+            "type": "CustomEvent<LyraHeatmapCalendarGeometry>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
           {
             "name": "lr-cell-click",
             "type": "CustomEvent<LyraHeatmapCellClickDetail>",
@@ -81719,6 +81776,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-form-control-focus-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -81836,6 +81899,12 @@
             "name": "--lr-model-select-trigger-height",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-model-select-trigger-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-model-select-trigger-border-color)"
           },
           {
             "name": "--lr-model-select-trigger-min-height",
@@ -144029,6 +144098,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-form-control-focus-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -144188,6 +144263,12 @@
             "name": "--lr-voice-picker-trigger-height",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-voice-picker-trigger-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-voice-picker-trigger-min-height",

@@ -184,4 +184,4 @@ const strings: LyraLocaleStrings = {
   graphQueryDeleteWithContext: '{name} verwijderen',
 };
 
-registerLyraLocale('nl', strings, { dir: 'ltr', name: 'Nederlands' });
+registerLyraLocale('nl', strings);

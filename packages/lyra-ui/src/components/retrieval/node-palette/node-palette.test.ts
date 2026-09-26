@@ -9,7 +9,7 @@ import type {
 } from './node-palette.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -1136,6 +1136,27 @@ it("lets a consumer's ::part(item):hover override win under a real pointer", asy
       () => getComputedStyle(target).backgroundColor === 'rgb(7, 8, 9)',
       'the consumer node-palette item hover background never won'
     );
+  } finally {
+    await resetMouse();
+  }
+});
+
+it("falls a palette item's unset hover fill back to the neutral fill token, not the border token", async function () {
+  if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+  const el = (await fixture(
+    html`<lr-node-palette
+      style="--lr-color-border: rgb(1, 2, 3); --lr-color-neutral-fill-quiet: rgb(4, 5, 6)"
+      .items=${items}
+    ></lr-node-palette>`
+  )) as LyraNodePalette;
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="item"]')!;
+  try {
+    await hoverUntilMatched(target, 'the palette item never entered :hover');
+    await waitUntil(
+      () => getComputedStyle(target).backgroundColor === 'rgb(4, 5, 6)',
+      'the palette item never resolved its hover fill from the neutral fill token'
+    );
+    expect(getComputedStyle(target).backgroundColor).to.not.equal('rgb(1, 2, 3)');
   } finally {
     await resetMouse();
   }

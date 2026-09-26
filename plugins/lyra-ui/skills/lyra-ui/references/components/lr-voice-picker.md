@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -203,7 +203,14 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   the open-state color below. Default: `var(--lr-color-border)`.
 - `--lr-voice-picker-trigger-fill` — Resting trigger/combobox background. Default:
   `var(--lr-color-surface)`.
+- `--lr-voice-picker-trigger-hover-border-color` — Trigger border color while the pointer is over
+  it, or while it is pressed, independent of the resting border above. Default:
+  `var(--lr-color-brand)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  trigger or combobox is focused. One name for every field-shaped control in the library, so a halo
+  is configured once instead of per component; additive to the existing focus outline. Default:
+  `none`.
 - `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.

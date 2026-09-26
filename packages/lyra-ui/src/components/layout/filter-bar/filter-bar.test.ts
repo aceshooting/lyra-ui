@@ -274,6 +274,61 @@ describe('combobox tag/tag-label/tags part forwarding', () => {
       'tags alias reaches the tag container'
     ).to.equal('rgb(11, 22, 33)');
   });
+
+  it('forwards tag-overflow through filter-control-tag-overflow, distinguishing the "+N" indicator from an ordinary tag', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'tags',
+        label: 'Tags',
+        type: 'combobox',
+        multiple: true,
+        options: [
+          { value: 'a', label: 'A' },
+          { value: 'b', label: 'B' },
+          { value: 'c', label: 'C' },
+          { value: 'd', label: 'D' },
+        ],
+      },
+    ];
+    const wrapper = (await fixture(html`
+      <div>
+        <style>
+          lr-filter-bar::part(filter-control-tag) {
+            background-color: rgb(1, 2, 3);
+          }
+          lr-filter-bar::part(filter-control-tag-overflow) {
+            background-color: rgb(9, 8, 7);
+          }
+        </style>
+        <lr-filter-bar .filters=${filters} .value=${{ tags: ['a', 'b', 'c', 'd'] }}></lr-filter-bar>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-filter-bar') as LyraFilterBar;
+    await el.updateComplete;
+
+    const combobox = control(el, 'tags') as HTMLElement & { updateComplete: Promise<unknown> };
+    await combobox.updateComplete;
+
+    // The combobox's own `maxOptionsVisible` default (3, not forwarded by the filter-bar) leaves
+    // one value ("d") past the cap, rendering the "+1" overflow indicator alongside the 3 shown tags.
+    const overflow = combobox.shadowRoot!.querySelector<HTMLElement>('[part~="tag-overflow"]');
+    expect(overflow !== null, 'the overflow indicator renders').to.be.true;
+    expect(
+      getComputedStyle(overflow!).backgroundColor,
+      'tag-overflow alias reaches only the overflow indicator'
+    ).to.equal('rgb(9, 8, 7)');
+
+    const ordinaryTags = [...combobox.shadowRoot!.querySelectorAll<HTMLElement>('[part~="tag"]')].filter(
+      (tag) => !tag.getAttribute('part')!.includes('tag-overflow')
+    );
+    expect(ordinaryTags).to.have.length(3);
+    for (const tag of ordinaryTags) {
+      expect(
+        getComputedStyle(tag).backgroundColor,
+        'tag alias reaches every ordinary tag, not the overflow indicator'
+      ).to.equal('rgb(1, 2, 3)');
+    }
+  });
 });
 
 describe('per-filter field part handle', () => {

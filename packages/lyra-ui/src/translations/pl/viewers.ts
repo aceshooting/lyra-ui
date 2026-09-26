@@ -146,4 +146,4 @@ const strings: LyraLocaleStrings = {
   documentCompareNewVersion: 'Nowa wersja',
 };
 
-registerLyraLocale('pl', strings, { dir: 'ltr', name: 'Polski' });
+registerLyraLocale('pl', strings);

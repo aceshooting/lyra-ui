@@ -271,6 +271,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
     super.connectedCallback();
     this.addEventListener('focusin', this.onFocusIn);
     this.addEventListener('focusout', this.onFocusOut);
+    this.addEventListener('keydown', this.onHostKeyDown);
     this.updateBrowserDerivedState(() => {
       this.browserResolved = true;
     });
@@ -284,6 +285,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
   override disconnectedCallback(): void {
     this.removeEventListener('focusin', this.onFocusIn);
     this.removeEventListener('focusout', this.onFocusOut);
+    this.removeEventListener('keydown', this.onHostKeyDown);
     this.cancelMorph();
     this.stopPlacement();
     this.releaseOverlay(false);
@@ -554,8 +556,26 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
       return;
     }
     const within = composedContains(this, deepActiveElement(this.ownerDocument));
-    this.closePanel('user', { repairFocus: false, restoreFocus: within });
+    // No `overlayHandle` exists for this unowned, non-floating path (see `onHostKeyDown`'s doc
+    // comment), so there is no `restoreFocusTo` to fall back on -- default `repairFocus` (not
+    // `false`) is what actually returns focus to the trigger here, mirroring `onBaseClick`'s
+    // click-to-close default.
+    this.closePanel('user', { restoreFocus: within });
   }
+
+  /**
+   * Closes a standalone (unowned) item's open in-flow panel on Escape. An owned item never reaches
+   * this: a `'bar'`-layout owner's floating panel gets its Escape from `activateNonmodalOverlay`
+   * (wired in `syncFloating()`), and any owner at all gets it from `<lr-navigation-menu>`'s own
+   * keydown handling (`itemEscape()`), which this item's `context.escape(this)` branch above
+   * defers to. A plain in-flow disclosure with no owner and no floating layout gets neither, so it
+   * would otherwise have no keyboard-dismiss path at all.
+   */
+  private readonly onHostKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || event.defaultPrevented || !this._open || this.ownerContext) return;
+    event.preventDefault();
+    this.onOverlayEscape();
+  };
 
   private async placementReady(): Promise<boolean> {
     await this.updateComplete;

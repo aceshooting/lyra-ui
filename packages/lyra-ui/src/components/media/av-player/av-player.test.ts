@@ -2681,7 +2681,9 @@ describe('active-state cssprop escape hatches', () => {
   // Every cue-current end value used below is fully opaque (a literal rgb() override, or the
   // opaque --lr-color-brand-quiet fallback), so mid-transition frames are the only ones that ever
   // report a fractional alpha -- polling for full opacity is a generic "the transition settled"
-  // signal that works regardless of which color it settles on.
+  // signal that works regardless of which color it settles on. Opacity alone is not enough, though:
+  // Gecko's final interpolated frame carries an alpha a hair under 1 that serializes as
+  // `rgba(r, g, b, 1)`, so the caller also waits for the element's running transitions to finish.
   function isFullyOpaqueColor(color: string): boolean {
     const match = /^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/.exec(color);
     return match === null || Number(match[1]) === 1;
@@ -2727,7 +2729,7 @@ describe('active-state cssprop escape hatches', () => {
     // value) or merely checking it moved off transparent (still mid-interpolation).
     const current = cueRoot(el).querySelector('[part~="cue-current"]') as HTMLElement;
     await waitUntil(
-      () => isFullyOpaqueColor(getComputedStyle(current).backgroundColor),
+      () => current.getAnimations().length === 0 && isFullyOpaqueColor(getComputedStyle(current).backgroundColor),
       'the current cue background-color transition never settled',
     );
     return el;

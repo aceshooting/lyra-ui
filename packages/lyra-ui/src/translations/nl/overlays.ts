@@ -48,4 +48,4 @@ const strings: LyraLocaleStrings = {
   kbdShiftWord: 'Shift',
 };
 
-registerLyraLocale('nl', strings, { dir: 'ltr', name: 'Nederlands' });
+registerLyraLocale('nl', strings);

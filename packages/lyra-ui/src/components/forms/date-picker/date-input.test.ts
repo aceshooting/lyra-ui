@@ -5076,6 +5076,17 @@ it('keeps date rows on the shared height ladder with calendar and clear targets 
   }
 });
 
+it('exposes --lr-date-input-fill/--lr-date-input-border-color as retheme knobs without a ::part() rule', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input value="2026-09-07"></lr-date-input>`);
+  el.style.setProperty('--lr-date-input-fill', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-date-input-border-color', 'rgb(4, 5, 6)');
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;
+  const cs = getComputedStyle(row);
+  expect(cs.backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(cs.borderTopColor).to.equal('rgb(4, 5, 6)');
+});
+
 it('tracks inherited theme heights at small and large sizes without extra action padding', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`<div style="--lr-theme-form-control-height-s:36px;--lr-theme-form-control-height-l:60px">
     <lr-date-input size="small" value="2026-09-07" with-clear></lr-date-input>

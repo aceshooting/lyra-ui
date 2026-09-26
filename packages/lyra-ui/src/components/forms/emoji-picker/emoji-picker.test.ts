@@ -197,6 +197,26 @@ it('lets a consumer retint the resting search border and fill through component 
   expect(getComputedStyle(search).backgroundColor).to.equal('rgb(4, 5, 6)');
 });
 
+it('paints no box-shadow on the search field by default', async () => {
+  const el = await connectEmojiPicker();
+  const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+  expect(getComputedStyle(search).boxShadow).to.equal('none');
+});
+
+it('paints the shared focus-halo hook on the focused search field', async () => {
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+  el.style.setProperty('--lr-form-control-focus-shadow', '0 0 0 3px rgb(20, 22, 24)');
+  created.push(el);
+  document.body.append(el);
+  await el.updateComplete;
+  const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+  search.focus();
+  await waitUntil(
+    () => getComputedStyle(search).boxShadow.includes('rgb(20, 22, 24)'),
+    'the focused search field never painted the halo',
+  );
+});
+
 it('forwards host focus, blur, and click to the live search control with disabled guards', async () => {
   const el = await connectEmojiPicker();
   const search = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;

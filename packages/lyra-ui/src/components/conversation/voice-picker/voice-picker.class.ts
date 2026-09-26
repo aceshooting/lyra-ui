@@ -280,7 +280,15 @@ export interface LyraVoicePickerEventMap {
  * @cssprop [--lr-voice-picker-preview-active-color=var(--lr-color-brand)] - Active preview icon.
  * @cssprop [--lr-voice-picker-trigger-border-color=var(--lr-color-border)] - Resting trigger/combobox border color, independent of the open-state color below.
  * @cssprop [--lr-voice-picker-trigger-fill=var(--lr-color-surface)] - Resting trigger/combobox background.
+ * @cssprop [--lr-voice-picker-trigger-hover-border-color=var(--lr-color-brand)] - Trigger border
+ * color while the pointer is over it, or while it is pressed. Independent of the resting border
+ * color above.
  * @cssprop [--lr-voice-picker-open-border-color=var(--lr-color-brand)] - Open trigger border color.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control's trigger or combobox is focused. One name for every
+ * field-shaped control in the library, so a halo is configured once rather than per component.
+ * Additive: the focus outline and border cue are the accessibility answer to focus and are never
+ * replaced by it.
  * @cssprop [--lr-voice-picker-option-active-bg=var(--lr-color-brand-quiet)] - Active option fill.
  * @cssprop [--lr-voice-picker-option-selected-border=var(--lr-color-brand)] - Selected option border.
  * @cssprop [--lr-voice-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.

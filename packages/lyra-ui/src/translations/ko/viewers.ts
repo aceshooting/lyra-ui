@@ -137,4 +137,4 @@ const strings: LyraLocaleStrings = {
   documentCompareNewVersion: '새로운 버전',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

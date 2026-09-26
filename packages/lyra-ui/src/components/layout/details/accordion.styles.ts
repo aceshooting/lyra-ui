@@ -5,6 +5,14 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
   }
+  /* Decorative --lr-color-border-subtle, deliberately unlike lr-details' control-tier
+     --lr-color-border: this is a multi-item GROUP frame, not a single disclosure's own boundary.
+     Each lr-accordion-item's own trigger button is borderless (accordion-item.styles.ts's
+     [part~="button"]) and signals its operability with its own colour-quiet chevron
+     (accordion-item.styles.ts's [part~="icon"]), so no item ever relies on this outer frame to
+     communicate a control boundary (WCAG 2.2 SC 1.4.11) -- it is closer to lr-menu's/lr-app-rail's
+     decorative panel edge than to lr-details' borderless-summary frame, which IS its control's only
+     visible boundary. */
   [part='base'] {
     min-inline-size: 0;
     overflow: hidden;

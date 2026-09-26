@@ -133,4 +133,4 @@ const strings: LyraLocaleStrings = {
   reorderItemMoved: 'Переміщено на позицію {index} із {total}',
 };
 
-registerLyraLocale('uk', strings, { dir: 'ltr', name: 'Українська' });
+registerLyraLocale('uk', strings);

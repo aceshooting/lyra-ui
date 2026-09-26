@@ -60,7 +60,9 @@ export interface LyraDocumentViewerEventMap {
  * @event lr-close - Fired when the viewer's shell dialog dismisses the viewer. The detail is the
  *   dialog close reason. A registered renderer's own descendant dialog keeps its independent
  *   `lr-close` path (guarded by `event.target !== event.currentTarget`) and does not close this
- *   viewer.
+ *   viewer. The name itself is not dialog-scoped in this library: if this viewer is also nested
+ *   inside a consumer's own `<lr-dialog>`, that dialog observes this event too. See
+ *   `<lr-dialog>`'s own `lr-close` docs for the full list of emitters and the guard pattern.
  * @event lr-download - Fired when the viewer's safe download action is
  *   activated. The browser download itself is handled by the native link.
  * @event lr-anchor-result - Fired once per applied `anchor`. An incapable resolved renderer

@@ -158,6 +158,13 @@ describe('row chrome cssprops', () => {
     expect(chrome.borderRadius).to.equal('3px');
     expect(getComputedStyle(el).borderRadius).to.equal('3px');
   });
+
+  it('declares a non-zero transition on the base paint so hover/press ease rather than snap', async () => {
+    const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
+    const computed = getComputedStyle(base(el));
+    expect(computed.transitionDuration).to.not.equal('0s');
+    expect(computed.transitionProperty).to.include('background-color');
+  });
 });
 
 describe('danger-state cssprops', () => {
@@ -525,10 +532,15 @@ describe('checked-state cssprops', () => {
   });
 
   it('reacts live when checked toggles at runtime', async () => {
+    // [part='base'] now eases background-color on --lr-transition-fast (row chrome cssprops
+    // above), so a synchronous read right after flipping `checked` would race the transition
+    // instead of observing its resting value -- zero the token on the fixture, matching
+    // button.test.ts's identical `style="--lr-transition-fast: 0ms"` pattern for the same
+    // race, rather than polling three separate assertions with waitUntil.
     const el = (await fixture(html`<lr-menu-item
       type="checkbox"
       value="wrap"
-      style="--lr-menu-item-checked-bg: rgb(9, 9, 9);"
+      style="--lr-transition-fast: 0ms; --lr-menu-item-checked-bg: rgb(9, 9, 9);"
       >Wrap text</lr-menu-item
     >`)) as LyraMenuItem;
     const row = base(el);

@@ -48,4 +48,4 @@ const strings: LyraLocaleStrings = {
   kbdShiftWord: 'Shift',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

@@ -184,10 +184,15 @@ export function validateTranslationReviews(
   const additionalCatalogs = Array.isArray(plan?.additionalCatalogs) ? plan.additionalCatalogs : [];
   const expectedCatalogLocales = [
     ...(Array.isArray(plan?.v8ReleaseExpansion) ? plan.v8ReleaseExpansion : []),
+    ...(Array.isArray(plan?.shippedBeforeV8) ? plan.shippedBeforeV8 : []),
+    ...(Array.isArray(plan?.regionalExtensions) ? plan.regionalExtensions : []),
     ...additionalCatalogs,
   ].sort();
   if (!sameArray(recordLocales, expectedCatalogLocales)) {
-    errors.push('catalogs must contain exactly the v8ReleaseExpansion and additionalCatalogs locales');
+    errors.push(
+      'catalogs must contain exactly the shippedBeforeV8, v8ReleaseExpansion, regionalExtensions and ' +
+        'additionalCatalogs locales -- every shipped, non-deferred catalog carries a review record',
+    );
   }
 
   for (const record of records) {

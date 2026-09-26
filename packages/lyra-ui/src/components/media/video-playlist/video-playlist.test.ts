@@ -1,4 +1,4 @@
-import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './video-playlist.js';
 import type {
   LyraVideoPlaylist,
@@ -6,6 +6,7 @@ import type {
   LyraVideoPlaylistItem,
 } from './video-playlist.js';
 import type { LyraVideo } from '../video/video.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function childVideos(el: LyraVideoPlaylist): LyraVideo[] {
   return [...el.children].filter((child): child is LyraVideo => child.localName === 'lr-video');
@@ -228,6 +229,112 @@ describe('lr-video-playlist public contract', () => {
     const themedCurrent = items(themed)[0]!;
     expect(getComputedStyle(themedCurrent).borderColor).to.equal('rgb(23, 24, 25)');
     expect(getComputedStyle(themedCurrent).backgroundColor).to.equal('rgb(26, 27, 28)');
+  });
+
+  it('keeps the current items themed border-color under hover instead of falling back to the unselected wash, leaving a non-current items hover border unaffected', async () => {
+    const plain = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist style="--lr-transition-fast: 0s">
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    `);
+    const themed = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist
+        style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-border-color: rgb(200, 100, 50)"
+      >
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(plain);
+    await settle(themed);
+    const [, plainOther] = items(plain);
+    const [themedCurrent, themedOther] = items(themed);
+    try {
+      await hoverUntilMatched(themedCurrent!, 'the themed current item never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(themedCurrent!).borderColor === 'rgb(200, 100, 50)',
+        'the current item border never reached its themed color under hover'
+      );
+      expect(getComputedStyle(themedCurrent!).borderColor).to.equal('rgb(200, 100, 50)');
+
+      const plainOtherResting = getComputedStyle(plainOther!).borderColor;
+      await hoverUntilMatched(plainOther!, 'the plain non-current item never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(plainOther!).borderColor !== plainOtherResting,
+        'the plain non-current item border never moved under hover'
+      );
+      const expectedNonCurrentHoverBorder = getComputedStyle(plainOther!).borderColor;
+
+      await hoverUntilMatched(themedOther!, 'the themed non-current item never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(themedOther!).borderColor === expectedNonCurrentHoverBorder,
+        'the themed non-current item border never matched the untouched hover color'
+      );
+      expect(getComputedStyle(themedOther!).borderColor).to.equal(expectedNonCurrentHoverBorder);
+      expect(getComputedStyle(themedOther!).borderColor).to.not.equal('rgb(200, 100, 50)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('resolves the current items hovered and pressed background from its own themed token, differing across two current-item background fixtures', async () => {
+    const fixtureX = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist
+        style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-background: rgb(11, 22, 33)"
+      >
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    `);
+    const fixtureY = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist
+        style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-background: rgb(44, 55, 66)"
+      >
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(fixtureX);
+    await settle(fixtureY);
+    const [currentX] = items(fixtureX);
+    const [currentY] = items(fixtureY);
+    const restingX = getComputedStyle(currentX!).backgroundColor;
+    const restingY = getComputedStyle(currentY!).backgroundColor;
+    try {
+      await hoverUntilMatched(currentX!, 'the first current item never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(currentX!).backgroundColor !== restingX,
+        'the first current item background never moved under hover'
+      );
+      const hoverX = getComputedStyle(currentX!).backgroundColor;
+
+      await hoverUntilMatched(currentY!, 'the second current item never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(currentY!).backgroundColor !== restingY,
+        'the second current item background never moved under hover'
+      );
+      expect(hoverX).to.not.equal(getComputedStyle(currentY!).backgroundColor);
+
+      await hoverUntilMatched(currentX!, 'the first current item never took the pointer hover state for press');
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(currentX!).backgroundColor !== hoverX,
+        'the first current item background never moved to a pressed color'
+      );
+      const pressedX = getComputedStyle(currentX!).backgroundColor;
+      await resetMouse();
+
+      await hoverUntilMatched(currentY!, 'the second current item never took the pointer hover state for press');
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(currentY!).backgroundColor !== restingY,
+        'the second current item background never moved to a pressed color'
+      );
+      expect(pressedX).to.not.equal(getComputedStyle(currentY!).backgroundColor);
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('draws the playlist container edge in the subtle border tier', async () => {

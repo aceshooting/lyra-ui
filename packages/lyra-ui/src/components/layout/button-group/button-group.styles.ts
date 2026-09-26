@@ -33,6 +33,15 @@ export const styles = css`
     min-inline-size: 0;
   }
 
+  /* Deliberately narrow-only, unlike lr-control-group's unconditional [part='base'] fill: a button
+     group is a compact row of uniform-height actions, and unconditionally filling a wide
+     definite-width host would stretch two or three buttons across it with a large trailing gap
+     instead of the shrink-wrapped row a toolbar wants. lr-control-group's own use case -- a mixed
+     row of controls meant to line up with a definite-width toolbar -- has the opposite default.
+     Below this allocation, filling and (via the vertical/wrap flex-wrap above) letting actions
+     stack is what keeps them individually tappable instead of shrinking below their hit-area
+     minimum; see button-group.test.ts's 'goes full-width when its own allocation is narrow' test,
+     which pins this as the intended behavior at both breakpoints. */
   @container (max-inline-size: 20rem) {
     [part='base'] {
       inline-size: 100%;

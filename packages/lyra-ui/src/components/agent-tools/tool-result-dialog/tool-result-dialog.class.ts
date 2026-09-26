@@ -121,7 +121,10 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * @slot footer - Optional action buttons, rendered in a bottom row.
  * @event lr-close - `detail: ToolResultDialogCloseReason`. Fired
  * exactly once per dismissal, via Escape, an opted-in backdrop click, the built-in
- * close button, or a `close()` call.
+ * close button, or a `close()` call. The name is not dialog-scoped in this library: nesting this
+ * dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also
+ * observes this event. See `<lr-dialog>`'s own `lr-close` docs for the full list of emitters and
+ * the `event.target !== event.currentTarget` guard.
  * @event lr-maximize-change - Cancelable. `detail: { maximized: boolean }` (the would-be new
  * `maximized` state), fired when the header's maximize/restore toggle is clicked, *before*
  * `maximized` itself changes. Calling `preventDefault()` vetoes the toggle and leaves `maximized`

@@ -76,4 +76,4 @@ const strings: LyraLocaleStrings = {
   tourStepOf: 'Krok {current} z {total}',
 };
 
-registerLyraLocale('pl', strings, { dir: 'ltr', name: 'Polski' });
+registerLyraLocale('pl', strings);

@@ -973,6 +973,25 @@ it('gives the expand/collapse toggle pressed feedback distinct from hover', asyn
   }
 });
 
+it("falls the toggle's unset hover fill back to the neutral fill token, not the border token", async function () {
+  if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+  const el = (await fixture(html`<lr-tree-item
+    style="--lr-color-border: rgb(1, 2, 3); --lr-color-neutral-fill-quiet: rgb(4, 5, 6)"
+    .item=${{ id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] }}
+  ></lr-tree-item>`)) as LyraTreeItem;
+  const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+  try {
+    await hoverUntilMatched(toggle, 'the disclosure toggle never entered :hover');
+    await waitUntil(
+      () => getComputedStyle(toggle).backgroundColor === 'rgb(4, 5, 6)',
+      'the disclosure toggle never resolved its hover fill from the neutral fill token',
+    );
+    expect(getComputedStyle(toggle).backgroundColor).to.not.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
+});
+
 it('declares a non-zero transition on the item and toggle backgrounds so hover/active paint eases like lr-button', async () => {
   const branch = { ...item, children: [{ id: '1.1', label: 'Child' }] };
   const el = (await fixture(html`<lr-tree-item .item=${branch}></lr-tree-item>`)) as LyraTreeItem;

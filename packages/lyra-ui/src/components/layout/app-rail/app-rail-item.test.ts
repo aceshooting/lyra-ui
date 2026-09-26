@@ -109,6 +109,30 @@ it('keeps disabled rail-item paint unchanged on hover and press', async () => {
   }
 });
 
+it('declares a non-zero transition on the base paint so hover/press ease rather than snap', async () => {
+  const el = (await fixture(html`<lr-app-rail-item>Reports</lr-app-rail-item>`)) as LyraAppRailItem;
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const computed = getComputedStyle(target);
+  expect(computed.transitionDuration).to.not.equal('0s');
+  expect(computed.transitionProperty).to.include('background-color');
+  expect(computed.transitionProperty).to.include('color');
+});
+
+it('declares a non-zero transition on the disclosure toggle paint so hover/press ease rather than snap', async () => {
+  const el = (await fixture(html`
+    <lr-app-rail-item href="/projects">
+      Projects
+      <lr-app-rail-item slot="children" href="/projects/one">One</lr-app-rail-item>
+    </lr-app-rail-item>
+  `)) as LyraAppRailItem;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+  const computed = getComputedStyle(toggle);
+  expect(computed.transitionDuration).to.not.equal('0s');
+  expect(computed.transitionProperty).to.include('background-color');
+  expect(computed.transitionProperty).to.include('color');
+});
+
 it("preserves focus when href changes replace the native link and button owners", async () => {
   const el = (await fixture(
     html`<lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>`

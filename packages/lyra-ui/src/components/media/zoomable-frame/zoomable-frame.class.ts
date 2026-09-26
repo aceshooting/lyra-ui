@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -249,7 +250,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   override focus(options?: FocusOptions): void {
     const frame = this.iframe;
     if (!frame || !this.isConnected || this.withoutInteraction || frame.inert) return;
-    const previous = this.ownerDocument.activeElement;
+    const previous = activeElementIn(this.ownerDocument);
     const wasFocused = this.frameOwnsFocus(frame);
     frame.focus(options);
     if (!wasFocused && this.frameOwnsFocus(frame)) this.emitHostFocus(undefined, previous);
@@ -260,7 +261,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     const frame = this.iframe;
     if (!frame || !this.frameOwnsFocus(frame)) return;
     frame.blur();
-    if (!this.frameOwnsFocus(frame)) this.emitHostBlur(undefined, this.ownerDocument.activeElement);
+    if (!this.frameOwnsFocus(frame)) this.emitHostBlur(undefined, activeElementIn(this.ownerDocument));
   }
 
   /** Activate the internal iframe only while interaction is enabled. */
@@ -283,7 +284,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   private frameIsActive(frame: HTMLIFrameElement | undefined = this.iframe): boolean {
     return Boolean(
       frame && this.isConnected &&
-      this.shadowRoot?.activeElement === frame,
+      activeElementIn(this.shadowRoot) === frame,
     );
   }
 
@@ -356,7 +357,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     view.setTimeout(() => {
       if (generation !== this.focusReconciliationGeneration || !this.isConnected) return;
       if (this.frameOwnsFocus()) this.emitHostFocus();
-      else this.emitHostBlur(undefined, this.ownerDocument.activeElement);
+      else this.emitHostBlur(undefined, activeElementIn(this.ownerDocument));
     }, 0);
   };
 
@@ -461,7 +462,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       const wasFocused = this.frameIsActive(frame);
       frame?.blur();
       if (wasFocused && !this.frameIsActive(frame)) {
-        this.emitHostBlur(undefined, this.ownerDocument.activeElement);
+        this.emitHostBlur(undefined, activeElementIn(this.ownerDocument));
       }
       this.setFrameFocused(false);
       this.resetFocusBoundaryDocument();
@@ -471,7 +472,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       const frame = this.iframe;
       const wasFocused = this.frameIsActive(frame);
       frame?.blur();
-      if (wasFocused) this.emitHostBlur(undefined, this.ownerDocument.activeElement);
+      if (wasFocused) this.emitHostBlur(undefined, activeElementIn(this.ownerDocument));
       this.setFrameFocused(false);
     }
   }

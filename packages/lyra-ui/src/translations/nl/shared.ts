@@ -129,4 +129,4 @@ const strings: LyraLocaleStrings = {
   reorderItemMoved: 'Verplaatst naar positie {index} van {total}',
 };
 
-registerLyraLocale('nl', strings, { dir: 'ltr', name: 'Nederlands' });
+registerLyraLocale('nl', strings);

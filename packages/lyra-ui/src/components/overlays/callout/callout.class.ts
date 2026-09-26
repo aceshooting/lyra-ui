@@ -147,6 +147,10 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * @slot heading - Optional rich heading content; its wrapper owns the configured heading level.
  * @slot icon - Optional icon.
  * @event lr-close - The close action was accepted. Cancelable before the callout hides.
+ *   The name is not dialog-scoped: a callout nested inside `<lr-dialog>` has its `lr-close`
+ *   observed by any listener bound on the dialog too, since library events bubble and are
+ *   composed. See `<lr-dialog>`'s own `lr-close` docs for the full list of emitters and the
+ *   `event.target !== event.currentTarget` guard.
  * @attr inline - Uses the lightweight inline treatment without border, background, or panel padding.
  * @csspart base - The visible grid wrapper inside the host-owned callout surface.
  * @csspart icon - The icon wrapper.

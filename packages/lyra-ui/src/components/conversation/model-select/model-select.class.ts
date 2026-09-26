@@ -163,7 +163,15 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-radius=var(--lr-radius)] - Trigger, combobox, listbox, and option corner radius.
  * @cssprop [--lr-model-select-trigger-border-color=var(--lr-color-border)] - Resting trigger/combobox border color, independent of the open-state color below.
  * @cssprop [--lr-model-select-trigger-fill=var(--lr-color-surface)] - Resting trigger/combobox background.
+ * @cssprop [--lr-model-select-trigger-hover-border-color=var(--lr-model-select-trigger-border-color)] - Trigger
+ * border color while the pointer is over it. Unset, the border stays exactly where the resting
+ * state left it.
  * @cssprop [--lr-model-select-open-border-color=var(--lr-color-brand)] - Open trigger border color.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` while this control's trigger or combobox is focused. One name for every
+ * field-shaped control in the library, so a halo is configured once rather than per component.
+ * Additive: the focus outline and border cue are the accessibility answer to focus and are never
+ * replaced by it.
  * @cssprop [--lr-model-select-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered or keyboard-active option row.
  * @cssprop [--lr-model-select-option-selected-bg=transparent] - Background of the currently-selected option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`.
  * @cssprop [--lr-model-select-option-selected-border=var(--lr-color-brand)] - Border color of the selected option row.

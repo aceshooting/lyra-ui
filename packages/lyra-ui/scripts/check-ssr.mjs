@@ -1154,6 +1154,59 @@ assert.match(
   'lr-file-input SSR-hinted rich error content is not associated with its semantic dropzone'
 );
 
+// The form-control label and the dropzone instruction are two independent surfaces: setting
+// `label` must not repaint the dropzone's own localized instruction with the label text, and the
+// label text itself must render exactly once (inside form-control-label), not also leak into the
+// dropzone. A direct render(), not renderSsrStateProbe(): that helper's own bookkeeping attributes
+// (`data-ssr-state-probe`/`data-ssr-state-light`) echo the case value, including this label text,
+// which would otherwise inflate the occurrence count below.
+const fileInputLabelHtml = await collectResult(
+  render(html`<lr-file-input label="Reference files"></lr-file-input>`, {
+    elementRenderers: animatedImageContext.elementRenderers,
+  })
+);
+const fileInputLabelHtmlWithoutHostAttribute = fileInputLabelHtml.replace(
+  /\blabel="Reference files"/,
+  ''
+);
+const referenceFilesOccurrences = (
+  fileInputLabelHtmlWithoutHostAttribute.match(/Reference files/g) ?? []
+).length;
+assert.equal(
+  referenceFilesOccurrences,
+  1,
+  'lr-file-input SSR output must render the label text exactly once outside the host label attribute'
+);
+assert.match(
+  fileInputLabelHtmlWithoutHostAttribute,
+  /part="form-control-label label"[^>]*>(?:(?!<\/label>)[\s\S])*?Reference files/,
+  'lr-file-input SSR output must render the label text inside its form-control-label element'
+);
+// Anchor on the actual `<span ... part="dropzone-text" ...>` opening tag, not a bare
+// `part="dropzone-text"` substring: the component's own `<style>` block (rendered earlier in the
+// same shadow root) contains the CSS attribute selector `[part="dropzone-text"]` verbatim, and a
+// pattern that starts matching there has no `</span>` between it and the unrelated
+// form-control-label span further down the document, so it can cross the whole stylesheet and
+// falsely "find" the label text inside what is actually CSS.
+const dropzoneTextElementMatch = fileInputLabelHtml.match(
+  /<span[^>]*\bpart="dropzone-text"[^>]*>((?:(?!<\/span>)[\s\S])*)<\/span>/
+);
+assert.ok(
+  dropzoneTextElementMatch,
+  'lr-file-input SSR output must render a dropzone-text element'
+);
+const dropzoneTextContent = dropzoneTextElementMatch[1];
+assert.match(
+  dropzoneTextContent,
+  /Drop files here or click to browse/,
+  'lr-file-input SSR output must keep the localized dropzone instruction in the dropzone-text element even when a label is set'
+);
+assert.doesNotMatch(
+  dropzoneTextContent,
+  /Reference files/,
+  'lr-file-input SSR output must not leak the label text into the dropzone-text element'
+);
+
 // Tool Call Block restores header focus after a collapse, and its first update looks like one
 // (`expanded` defaults to false). The focus bookkeeping must never touch the render root on the
 // server, so render the expanded-with-payload state explicitly.
@@ -1179,6 +1232,37 @@ assert.match(
   toolCallBlockHtml,
   /<div(?=[^>]*\bpart="body")(?![^>]*\bhidden\b)[^>]*>/,
   'lr-tool-call-block SSR output must render a visible body while expanded'
+);
+
+// enumeratePublicSsrStateCases (ssr-fixture.mjs) only ever sets one public attribute at a time, so
+// it never reaches `streaming` and `streaming-render="progressive"` together. Nothing progressive
+// can run on the server (the parser peer loads in connectedCallback), so this combined state must
+// still render the exact same plain-text fallback as every other markdown state -- an explicit
+// probe closes that gap instead of relying on the single-attribute matrix to happen to cover it.
+const markdownStreamingProgressiveHtml = await collectResult(
+  render(
+    html`<lr-markdown
+      streaming
+      streaming-render="progressive"
+      content=${'Use `--verbose` here\n```html\n<script>alert(1)</script>\n```\n'}
+    ></lr-markdown>`,
+    { elementRenderers: animatedImageContext.elementRenderers }
+  )
+);
+assert.match(
+  markdownStreamingProgressiveHtml,
+  /<template shadowroot="open" shadowrootmode="open">/,
+  'lr-markdown SSR output lost its declarative shadow root while streaming and streaming-render="progressive" are combined'
+);
+assert.match(
+  markdownStreamingProgressiveHtml,
+  /<div[^>]*\bpart="content"[^>]*\bdata-fallback\b[^>]*>/,
+  'lr-markdown must still render its plain-text fallback on the server when streaming and streaming-render="progressive" are combined -- nothing progressive can run before peers load'
+);
+assert.match(
+  markdownStreamingProgressiveHtml,
+  /class="fallback-code"/,
+  'lr-markdown SSR fallback lost its fenced-code segment while streaming and streaming-render="progressive" are combined'
 );
 
 assert.equal(

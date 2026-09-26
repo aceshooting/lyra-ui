@@ -56,7 +56,10 @@ reason string so every dismissal path funnels through the same event.
 
 **Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
 'close-button'|'api'|string`) fired exactly once per dismissal (`'backdrop'` requires
-`lightDismiss`); `lr-maximize-change` (`detail:
+`lightDismiss`). This name is not dialog-scoped: nesting this dialog inside a consumer's own
+`<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard. `lr-maximize-change` (`detail:
 { readonly maximized: boolean }`, the new `maximized` state) fired when the header's
 maximize/restore toggle is clicked.
 

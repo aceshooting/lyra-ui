@@ -1169,6 +1169,12 @@ repository's contrast gate re-measures every value in both modes:
   white, and the ramp is also checked for colour-blind separation.
 - **Hover and press** mix toward a mid grey. The default mixes toward the text colour, and shadcn's
   primary _is_ the text colour, so the default button would show no hover or press state at all.
+- **Code-fence syntax colouring** (`lr-code-block` / `lr-markdown`'s keyword/string/comment tokens)
+  is the one surface the preset does not repaint: it stays GitHub's light/dark Shiki theme pair in
+  both modes, with no property yet to substitute a different pair. Only which of the two fixed
+  themes paints (light or dark) tracks the preset, through the same light/dark switch every other
+  surface here reads. Unlike charts, above, this one carries no `--lr-theme-*` input at all — a
+  deliberate scope line, not an oversight.
 
 **Accents.** `lr-button`'s default renders the `neutral` role, and a bare accent only re-derives
 `brand`, so the preset aliases neutral's loud slots to brand's in both modes

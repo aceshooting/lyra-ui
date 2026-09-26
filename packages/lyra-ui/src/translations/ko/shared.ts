@@ -127,4 +127,4 @@ const strings: LyraLocaleStrings = {
   reorderItemMoved: '{total}의 {index} 위치로 이동',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

@@ -303,6 +303,152 @@ it("themes checked track, thumb, hover, and pressed paint through component hook
   }
 });
 
+it("resolves a checked switch that sets only the resting track fill to the default checked brand color, not the resting token", async () => {
+  const onlyResting = (await fixture(html`
+    <lr-switch checked style="--lr-transition-fast: 0s; --lr-switch-track-fill: rgb(10, 20, 30);">Label</lr-switch>
+  `)) as LyraSwitch;
+  const plainChecked = (await fixture(html`<lr-switch checked>Label</lr-switch>`)) as LyraSwitch;
+  const onlyRestingTrack = onlyResting.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  const plainCheckedTrack = plainChecked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  expect(getComputedStyle(onlyRestingTrack).backgroundColor).to.equal(
+    getComputedStyle(plainCheckedTrack).backgroundColor
+  );
+  expect(getComputedStyle(onlyRestingTrack).backgroundColor).to.not.equal("rgb(10, 20, 30)");
+});
+
+it("resolves ::part(track) token overrides on the track itself for both checked and unchecked switches, not on :host", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <style>
+        lr-switch.s4::part(track) {
+          --lr-switch-track-fill: rgb(1, 1, 1);
+          --lr-switch-checked-track-fill: rgb(2, 2, 2);
+        }
+      </style>
+      <lr-switch class="s4" checked style="--lr-transition-fast: 0s;">Checked</lr-switch>
+      <lr-switch class="s4" style="--lr-transition-fast: 0s;">Unchecked</lr-switch>
+    </div>
+  `);
+  const switches = Array.from(wrapper.querySelectorAll<LyraSwitch>("lr-switch"));
+  const checked = switches[0]!;
+  const unchecked = switches[1]!;
+  await checked.updateComplete;
+  await unchecked.updateComplete;
+  const checkedTrack = checked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  const uncheckedTrack = unchecked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  expect(getComputedStyle(checkedTrack).backgroundColor).to.equal("rgb(2, 2, 2)");
+  expect(getComputedStyle(uncheckedTrack).backgroundColor).to.equal("rgb(1, 1, 1)");
+});
+
+it("never leaks the checked track fill token into an unchecked switch's resting track color", async () => {
+  const onlyChecked = (await fixture(html`
+    <lr-switch style="--lr-transition-fast: 0s; --lr-switch-checked-track-fill: rgb(200, 100, 50);">Label</lr-switch>
+  `)) as LyraSwitch;
+  const plainUnchecked = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+  const onlyCheckedTrack = onlyChecked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  const plainUncheckedTrack = plainUnchecked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  expect(getComputedStyle(onlyCheckedTrack).backgroundColor).to.equal(
+    getComputedStyle(plainUncheckedTrack).backgroundColor
+  );
+});
+
+it("supports a per-state hover override through :state(checked) instead of a dedicated checked-hover token", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <style>
+        lr-switch.s6:state(checked) {
+          --lr-switch-track-hover-fill: rgb(3, 3, 3);
+        }
+      </style>
+      <lr-switch class="s6" checked style="--lr-transition-fast: 0s;">Checked</lr-switch>
+      <lr-switch class="s6" style="--lr-transition-fast: 0s;">Unchecked</lr-switch>
+    </div>
+  `);
+  const switches = Array.from(wrapper.querySelectorAll<LyraSwitch>("lr-switch"));
+  const checked = switches[0]!;
+  const unchecked = switches[1]!;
+  await checked.updateComplete;
+  await unchecked.updateComplete;
+  const checkedBase = checked.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const checkedTrack = checked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  const uncheckedBase = unchecked.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const uncheckedTrack = unchecked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  const uncheckedResting = getComputedStyle(uncheckedTrack).backgroundColor;
+  try {
+    await hoverUntilMatched(checkedBase, "the checked switch never took the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(checkedTrack).backgroundColor === "rgb(3, 3, 3)",
+      'checked track background color never reached "rgb(3, 3, 3)"'
+    );
+    expect(getComputedStyle(checkedTrack).backgroundColor).to.equal("rgb(3, 3, 3)");
+
+    await hoverUntilMatched(uncheckedBase, "the unchecked switch never took the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(uncheckedTrack).backgroundColor !== uncheckedResting,
+      "the unchecked track never moved under the pointer"
+    );
+    expect(getComputedStyle(uncheckedTrack).backgroundColor).to.not.equal("rgb(3, 3, 3)");
+  } finally {
+    await resetMouse();
+  }
+});
+
+it("mixes unchecked hover and press from the resting track fill even when the checked token is also set", async () => {
+  const both = (await fixture(html`
+    <lr-switch
+      style="
+        --lr-transition-fast: 0s;
+        --lr-switch-track-fill: rgb(10, 20, 30);
+        --lr-switch-checked-track-fill: rgb(200, 100, 50);
+      "
+      >Label</lr-switch
+    >
+  `)) as LyraSwitch;
+  const restingOnly = (await fixture(html`
+    <lr-switch style="--lr-transition-fast: 0s; --lr-switch-track-fill: rgb(10, 20, 30);">Label</lr-switch>
+  `)) as LyraSwitch;
+  const bothBase = both.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const bothTrack = both.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  const restingOnlyBase = restingOnly.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const restingOnlyTrack = restingOnly.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  const bothResting = getComputedStyle(bothTrack).backgroundColor;
+  const restingOnlyResting = getComputedStyle(restingOnlyTrack).backgroundColor;
+  try {
+    await hoverUntilMatched(bothBase, "the both-tokens switch never took the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(bothTrack).backgroundColor !== bothResting,
+      "the both-tokens track never moved under the pointer"
+    );
+    const bothHover = getComputedStyle(bothTrack).backgroundColor;
+
+    await hoverUntilMatched(restingOnlyBase, "the resting-only switch never took the pointer hover state");
+    await waitUntil(
+      () => getComputedStyle(restingOnlyTrack).backgroundColor !== restingOnlyResting,
+      "the resting-only track never moved under the pointer"
+    );
+    expect(bothHover).to.equal(getComputedStyle(restingOnlyTrack).backgroundColor);
+
+    await hoverUntilMatched(bothBase, "the both-tokens switch never took the pointer hover state for press");
+    await sendMouse({ type: "down" });
+    await waitUntil(
+      () => getComputedStyle(bothTrack).backgroundColor !== bothHover,
+      "the both-tokens track never moved to a pressed color"
+    );
+    const bothActive = getComputedStyle(bothTrack).backgroundColor;
+    await resetMouse();
+
+    await hoverUntilMatched(restingOnlyBase, "the resting-only switch never took the pointer hover state for press");
+    await sendMouse({ type: "down" });
+    await waitUntil(
+      () => getComputedStyle(restingOnlyTrack).backgroundColor === bothActive,
+      "the resting-only track never reached the same pressed color"
+    );
+    expect(bothActive).to.equal(getComputedStyle(restingOnlyTrack).backgroundColor);
+  } finally {
+    await resetMouse();
+  }
+});
+
 it("renders no track border by default, unchecked or checked", async () => {
   const unchecked = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   const checked = (await fixture(html`<lr-switch checked>Label</lr-switch>`)) as LyraSwitch;

@@ -48,4 +48,4 @@ const strings: LyraLocaleStrings = {
   kbdShiftWord: 'Shift',
 };
 
-registerLyraLocale('uk', strings, { dir: 'ltr', name: 'Українська' });
+registerLyraLocale('uk', strings);

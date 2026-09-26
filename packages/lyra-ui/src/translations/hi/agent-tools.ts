@@ -242,4 +242,4 @@ const strings: LyraLocaleStrings = {
   agentRunStatusCancelled: 'रद्द किया गया',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

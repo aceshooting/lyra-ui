@@ -108,4 +108,4 @@ const strings: LyraLocaleStrings = {
   localePickerRequired: 'कोई भाषा चुनें।',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

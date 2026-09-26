@@ -277,6 +277,10 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * color, independent of the hover color below.
  * @cssprop [--lr-emoji-picker-search-fill=var(--lr-color-surface)] - Resting search background.
  * @cssprop [--lr-emoji-picker-search-hover-border-color=var(--lr-color-brand)] - Search hover border.
+ * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
+ * `box-shadow` on the search field while it is focused. One name for every field-shaped control in
+ * the library, so a halo is configured once rather than per component. Additive: the focus outline
+ * is the accessibility answer to focus and is never replaced by it.
  * @cssprop [--lr-emoji-picker-search-min-height=auto] - Minimum row height of the filter field,
  *   for matching it to a themed search field of a chosen density tier. Point it at
  *   `--lr-form-control-height-s` (or any tier of that ladder) to line the picker's own field up

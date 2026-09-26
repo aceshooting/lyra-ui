@@ -244,4 +244,4 @@ const strings: LyraLocaleStrings = {
   agentRunStatusCancelled: 'Скасовано',
 };
 
-registerLyraLocale('uk', strings, { dir: 'ltr', name: 'Українська' });
+registerLyraLocale('uk', strings);

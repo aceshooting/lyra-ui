@@ -129,4 +129,4 @@ const strings: LyraLocaleStrings = {
   reorderItemMoved: '{total} में से स्थान {index} पर ले जाया गया',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

@@ -50,6 +50,10 @@ const hydrationTagArg = process.argv.find((argument) =>
   argument.startsWith('--tag=')
 );
 const hydrationTag = hydrationTagArg?.slice('--tag='.length);
+// T37: the one hydration probe tag that is not inventory-derived -- see its fixture below -- so the
+// `--tag=` guard immediately after this must recognize it too, or isolating just this fixture via
+// `--tag=lr-markdown-streaming-progressive` would fail that guard before ever reaching the fixture.
+const markdownStreamingProgressiveFixtureTag = 'lr-markdown-streaming-progressive';
 const hydrationMatrix = await renderSsrMatrix();
 const { inventory, loader, elementRenderers } = hydrationMatrix;
 const entries = hydrationTag
@@ -57,7 +61,8 @@ const entries = hydrationTag
   : hydrationMatrix.entries;
 if (hydrationTag) {
   assert.ok(
-    entries.some(({ tag }) => tag === hydrationTag),
+    entries.some(({ tag }) => tag === hydrationTag) ||
+      hydrationTag === markdownStreamingProgressiveFixtureTag,
     `unknown hydration probe tag: ${hydrationTag}`
   );
 }
@@ -617,6 +622,36 @@ const statefulProbeMarkup = new Map([
     ),
   ],
 ]);
+// T37: enumeratePublicSsrStateCases (ssr-fixture.mjs) only ever sets one public attribute at a
+// time, so it never reaches `streaming` combined with `streaming-render="progressive"`, and the
+// `lr-markdown` entry above only ever carries `content`. This is a standalone fixture (not another
+// `statefulProbeMarkup` entry) because that map holds exactly one override per real tag; giving it
+// its own `data-fixture-tag` keeps it independent of the plain `lr-markdown` fixture above. The
+// generic per-component loop near the end of this file (`for (const result of
+// outcome.result.components)`) then covers it automatically -- `rootReused`, `shadowNodesReused`
+// and (via this tag's entry in `populatedHydrationTags` below) `populatedFirstNodeReused` all prove
+// the server-rendered plain-text fallback (the only thing that can render before peers load) came
+// through the first hydration update without a mismatch. This harness runs with no optional peers
+// installed, so it cannot reach the later peer-loaded transition into settled blocks and a
+// streaming-tail part; that transition already has non-SSR coverage in
+// markdown-streaming-render.test.ts, where the real parser peer is available.
+const includeMarkdownStreamingProgressiveFixture =
+  !hydrationTag ||
+  hydrationTag === markdownStreamingProgressiveFixtureTag ||
+  hydrationTag === 'lr-markdown';
+const markdownStreamingProgressiveHtml = includeMarkdownStreamingProgressiveFixture
+  ? await collectResult(
+      render(
+        html`<lr-markdown
+          data-ssr-probe=${markdownStreamingProgressiveFixtureTag}
+          streaming
+          streaming-render="progressive"
+          content=${'Use `--verbose` here\n```html\n<script>alert(1)</script>\n```\n'}
+        ></lr-markdown>`,
+        { elementRenderers }
+      )
+    )
+  : '';
 const progressiveSlotParts = {
   'lr-badge': ['start', 'end'],
   'lr-alert': ['icon'],
@@ -654,6 +689,12 @@ const populatedHydrationTags = new Set([
   'lr-navigation-menu',
   'lr-context-menu',
   'lr-markdown',
+  // T37: the standalone streaming + streaming-render="progressive" fixture is a second,
+  // independent `lr-markdown` host (see its own data-fixture-tag section above) -- it needs its
+  // own entry here because `__lyraPopulatedNode`'s `lr-markdown` case dispatches on
+  // `host.localName`, which the generic per-component loop below only enforces (via
+  // `populatedFirstNodeReused`) for tags listed in this Set.
+  'lr-markdown-streaming-progressive',
   'lr-code-block',
   'lr-stack-trace',
 ]);
@@ -722,11 +763,17 @@ const optionalRegistrationUrls = inventory.components
         .replaceAll('\\', '/')}`
   );
 
-const fixtureMarkup = entries
-  .map(
-    ({ tag, html }) => `<section data-fixture-tag="${tag}">${html}</section>`
-  )
-  .join('\n');
+const fixtureMarkup =
+  entries
+    .map(
+      ({ tag, html }) => `<section data-fixture-tag="${tag}">${html}</section>`
+    )
+    .join('\n') +
+  (includeMarkdownStreamingProgressiveFixture
+    ? `\n<section data-fixture-tag="${markdownStreamingProgressiveFixtureTag}">${markdownStreamingProgressiveHtml}</section>`
+    : '');
+const hydrationEntryCount =
+  entries.length + (includeMarkdownStreamingProgressiveFixture ? 1 : 0);
 
 const documentHtml = `<!doctype html>
 <html lang="en">
@@ -1048,7 +1095,9 @@ const documentHtml = `<!doctype html>
         const diagnostics = await Promise.all(fixtures.map(async (fixture) => {
           const host = fixture.firstElementChild;
           const tag = fixture.dataset.fixtureTag;
-          const mode = loader.getLyraSsrMode(tag);
+          // The SSR mode registry is keyed by the real custom element tag, not by this fixture's
+          // own (sometimes synthetic, e.g. lr-markdown-streaming-progressive) data-fixture-tag key.
+          const mode = loader.getLyraSsrMode(host.localName);
           if (!customElements.get(host.localName)) {
             return { tag, mode, status: 'unregistered' };
           }
@@ -1071,7 +1120,9 @@ const documentHtml = `<!doctype html>
             const host = fixture.firstElementChild;
             const before = globalThis.__lyraBeforeHydration.get(tag);
             const firstHydration = firstHydrationResults.get(tag);
-            const mode = loader.getLyraSsrMode(tag);
+            // See the matching comment above: key the SSR mode registry by the real tag, not by
+            // this fixture's own data-fixture-tag key.
+            const mode = loader.getLyraSsrMode(host.localName);
             const diagnostic = byTag.get(tag);
             return {
               tag,
@@ -1276,7 +1327,9 @@ try {
   );
   assert.equal(
     outcome.result.components.length,
-    entries.length,
+    // Plus the standalone lr-markdown-streaming-progressive fixture (T37), which is not part of
+    // the inventory-derived `entries` crawl -- see its own data-fixture-tag section above.
+    hydrationEntryCount,
     'hydration result count drifted from inventory'
   );
 

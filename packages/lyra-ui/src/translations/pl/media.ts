@@ -122,4 +122,4 @@ const strings: LyraLocaleStrings = {
   flagLoadError: 'Flaga niedostępna',
 };
 
-registerLyraLocale('pl', strings, { dir: 'ltr', name: 'Polski' });
+registerLyraLocale('pl', strings);

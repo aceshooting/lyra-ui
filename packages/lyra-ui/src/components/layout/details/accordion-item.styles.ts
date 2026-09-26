@@ -44,9 +44,19 @@ export const styles = css`
     inline-size: 100%;
     min-block-size: var(--lr-icon-button-size);
     box-sizing: border-box;
-    padding: var(
+    padding-block: var(
       --spacing,
-      var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
+      var(
+        --lr-accordion-item-summary-padding-block,
+        var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
+      )
+    );
+    padding-inline: var(
+      --spacing,
+      var(
+        --lr-accordion-item-summary-padding-inline,
+        var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
+      )
     );
     border: none;
     border-radius: 0;
@@ -218,15 +228,20 @@ export const styles = css`
   }
   [part~="content"] {
     display: block;
-    padding: 0
+    padding-block-end: var(
+      --spacing,
       var(
-        --spacing,
+        --lr-accordion-item-content-padding-block-end,
         var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
       )
+    );
+    padding-inline: var(
+      --spacing,
       var(
-        --spacing,
+        --lr-accordion-item-content-padding-inline,
         var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
-      );
+      )
+    );
     overflow-wrap: anywhere;
   }
   @media (prefers-reduced-motion: reduce) {

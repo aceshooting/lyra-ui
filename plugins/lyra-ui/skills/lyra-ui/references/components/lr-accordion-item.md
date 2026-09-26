@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated part** `base` since `8.2.3`; use part `::part(accordion-item)`; removal not before `10.0.0` — The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is.
 - **Optional peers** none
-- **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-details`, `lr-accordion` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -265,7 +265,14 @@ independently focusable and operable when the summary is disabled.
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and
 `--lr-accordion-item-easing` (default `var(--lr-easing-standard)`). The mapped unprefixed names
 `--spacing`, `--show-duration`, `--hide-duration`, and `--easing` remain accepted aliases and win
-when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`.
+when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`. The trigger
+button's and panel content's padding can also be tuned independently of each other and of
+`--lr-accordion-item-spacing`: `--lr-accordion-item-summary-padding-block` and
+`--lr-accordion-item-summary-padding-inline` control the trigger button alone, and
+`--lr-accordion-item-content-padding-block-end` and `--lr-accordion-item-content-padding-inline`
+control the panel content alone. All four default to the same `--lr-accordion-item-spacing`
+resolution, mirroring `lr-details`'s equivalent four hooks below. `--spacing` aliases the item
+rhythm and remains the highest-precedence override, ahead of these four as well.
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default

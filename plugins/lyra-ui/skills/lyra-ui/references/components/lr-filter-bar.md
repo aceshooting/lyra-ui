@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 30 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -144,11 +144,12 @@ space while nothing is slotted.
 **CSS parts:** `base`, `controls`, `field`, `field-<filterId>`, `end`, `filter-control`,
 `filter-control-label`, `filter-control-label-group`, `filter-control-field`,
 `filter-control-input`, `filter-control-start`, `filter-control-end`, `filter-control-listbox`,
-`filter-control-option`, `filter-control-tags`, `filter-control-tag`, `filter-control-tag-label`,
-`filter-control-tag-remove-button`, `filter-control-tag-remove-button-base`,
-`filter-control-clear-button`, `filter-control-expand-button`, `filter-control-expand-icon`,
-`filter-control-popup`, `filter-control-error`, `filter-control-hint`, `active-filters`, `chips`,
-`chip`, `reset-button`, `status`.
+`filter-control-option`, `filter-control-tags`, `filter-control-tag`, `filter-control-tag-overflow`,
+`filter-control-tag-label`, `filter-control-tag-remove-button`,
+`filter-control-tag-remove-button-base`, `filter-control-clear-button`,
+`filter-control-expand-button`, `filter-control-expand-icon`, `filter-control-popup`,
+`filter-control-error`, `filter-control-hint`, `active-filters`, `chips`, `chip`, `reset-button`,
+`status`.
 
 The `filter-control-*` parts are semantic aliases forwarded from each built-in control's shadow
 surface. `filter-control-field` consistently reaches the select trigger, combobox container, or
@@ -166,13 +167,11 @@ definition. Custom renderers retain ownership of their own part forwarding.
 
 A `multiple` `'combobox'` filter collapses past its own `max-options-visible` (3 by default, an
 `<lr-combobox>` property this component does not forward) into a localized "+N" overflow indicator,
-the same substance as `lr-select`'s own `multiple`-mode overflow chip. The one remaining difference:
-`lr-select`'s overflow chip carries a second, distinguishing `tag-overflow` part
-(`part="tag tag-overflow tag__base"`) so a consumer can style just that chip; `lr-combobox`'s
-overflow chip carries only the plain `tag` part, with no equivalent token to forward as
-`filter-control-tag-overflow`. Adding one is `<lr-combobox>`'s own surface to grow, not something
-`lr-filter-bar`'s `exportparts` can manufacture for a part its composed child never renders — noted
-here as a known, deliberate gap rather than silently undocumented.
+the same substance as `lr-select`'s own `multiple`-mode overflow chip. Like that chip
+(`part="tag tag-overflow tag__base"`), `lr-combobox`'s overflow indicator carries a second,
+distinguishing `tag-overflow` part alongside the plain `tag` part, forwarded here as
+`filter-control-tag-overflow` so a consumer can style just the overflow indicator without also
+restyling every ordinary selected tag.
 On a `'checkbox-menu'` filter, `filter-control-field` is the trigger button's own frame — the
 element inside `<lr-button>` that draws the border, background and radius, not the chrome-less
 button host, so a `::part(filter-control-field) { border-color: … }` rule works there exactly as it

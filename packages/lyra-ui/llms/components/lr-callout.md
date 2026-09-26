@@ -49,7 +49,9 @@ unsupported `variant`, `size`, and `heading-level` values become reflected `bran
 while an unsupported `appearance` becomes the omitted state.
 
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
-unless a listener calls `preventDefault()`.
+unless a listener calls `preventDefault()`. This name is not dialog-scoped — see `<lr-dialog>`'s
+own `lr-close` section above for the full list of emitters and the target-filtering guard, which
+matters whenever a callout is nested inside a dialog.
 When accepted close or a direct `open = false` write removes the focused close action, focus moves
 to the nearest available composed action. Vetoed close and newer external focus are preserved.
 

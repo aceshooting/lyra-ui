@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -474,7 +474,9 @@ attribute when provided), plus two adornment slots:
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
-`tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
+`tag-overflow` (the "+N" indicator, carried alongside `tag` past `max-options-visible`,
+mirroring `lr-select`'s identical two-part overflow chip), `tag-label`, `tag__content`,
+`tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
 `clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
 input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
 `expand-icon`, `listbox`,
@@ -493,9 +495,11 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `retry-button`, `error`, `hint`
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
-`lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
-(`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are
-unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`.
+`lr-change`/native `input` event detail `value` narrow to `string` when `Multiple` is `false` and
+`string[]` (`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored
+surface are unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`. Combobox has no
+dedicated `lr-input` custom event (unlike `lr-select`); the exported `LyraComboboxChangeEvent`/
+`LyraComboboxInputEvent` aliases type `lr-change` and the native `input` listener respectively.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so

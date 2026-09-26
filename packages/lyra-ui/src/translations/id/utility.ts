@@ -64,4 +64,4 @@ const strings: LyraLocaleStrings = {
   tourStepOf: 'Langkah {current} dari {total}',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

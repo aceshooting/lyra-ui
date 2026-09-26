@@ -213,4 +213,4 @@ const strings: LyraLocaleStrings = {
   retrievalTraceEvidenceToggle: '{label} 증거',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

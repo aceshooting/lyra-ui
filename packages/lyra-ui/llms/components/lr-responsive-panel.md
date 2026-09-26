@@ -62,8 +62,10 @@ a docked panel's own toggle) should call it directly with its own reason string.
 cancelable pre-close veto, fired by the overlay presentation's built-in dismiss triggers — Escape,
 backdrop click — and by any `close()` call, in either presentation; calling `preventDefault()` keeps
 the panel open and leaves active overlay chrome/focus trapping intact. A plain `open = false`
-property write does **not** fire it, only going through `close()` counts as a dismissal),
-`lr-mode-change`
+property write does **not** fire it, only going through `close()` counts as a dismissal). This name
+is not dialog-scoped: nesting this panel inside a consumer's own `<lr-dialog>` means that dialog's
+`lr-close` listener also observes this event — see `<lr-dialog>`'s `lr-close` section (in
+`overlays.md`) for the full list of emitters and the target-filtering guard. `lr-mode-change`
 (`detail: LyraResponsivePanelModeChangeDetail` = `{ mode: LyraResponsivePanelEffectiveMode }`; fired whenever
 the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
 `'inline'` and `'overlay'`; never fired on the initial render, only for a live change thereafter).

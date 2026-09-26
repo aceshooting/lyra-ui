@@ -143,7 +143,10 @@ export interface LyraToolApprovalDialogEventMap {
  * @event lr-close - `detail: ToolApprovalDialogCloseReason`. Fired exactly
  * once per dismissal — via Escape, an opted-in backdrop click, the Approve/Deny
  * buttons, or a `close()` call — so there is one consistent "this dialog is
- * now closed" signal regardless of which path triggered it.
+ * now closed" signal regardless of which path triggered it. The name is not dialog-scoped in
+ * this library: nesting this dialog inside a consumer's own `<lr-dialog>` means that dialog's
+ * `lr-close` listener also observes this event. See `<lr-dialog>`'s own `lr-close` docs for the
+ * full list of emitters and the `event.target !== event.currentTarget` guard.
  * @event focus - Re-dispatched when the raw-JSON editor receives focus.
  * @event blur - Re-dispatched when the raw-JSON editor loses focus.
  * @csspart backdrop - The full-viewport scrim behind the panel.

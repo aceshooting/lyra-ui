@@ -215,4 +215,4 @@ const strings: LyraLocaleStrings = {
   retrievalTraceEvidenceToggle: '{label} के साक्ष्य',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
@@ -52,6 +55,11 @@ export const styles = css`
     --_lr-color-picker-swatch-color: transparent;
     --_lr-color-picker-grid-hue: transparent;
     --_lr-color-picker-opacity-gradient: none;
+    /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
+       undeclared -- only this private copy of it is declared -- so a value set on :root or any
+       ancestor still reaches the trigger, while the halo itself is painted in one place for every
+       field-shaped control in the library. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   [part~="form-control"] {
     display: inline-flex;
@@ -249,6 +257,13 @@ export const styles = css`
   [part~="trigger"]:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
+     accessibility answer to keyboard focus and stays unchanged, while a halo a consumer
+     deliberately configured should read on a pointer focus too. Unset it resolves to none, so
+     this rule paints nothing by default. */
+  [part~="trigger"]:where(:focus) {
+    ${formControlFocusHalo}
   }
 
   [part~="panel"] {

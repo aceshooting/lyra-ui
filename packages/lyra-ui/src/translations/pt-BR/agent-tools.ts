@@ -155,7 +155,7 @@ const strings: LyraLocaleStrings = {
   policySummaryStateAllow: 'Permitir',
   policySummaryStateDeny: 'Negar',
   policySummaryStateNeedsReview: 'Precisa de revisão',
-  policySummaryCategoryGuardrail: 'Guardrail',
+  policySummaryCategoryGuardrail: 'Barreira de proteção',
   policySummaryCategoryPermission: 'Permissão',
   policySummaryCategoryPrivacy: 'Privacidade',
   policySummaryCategoryTool: 'Ferramenta',

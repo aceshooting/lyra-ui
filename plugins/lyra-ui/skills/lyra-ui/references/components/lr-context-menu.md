@@ -125,6 +125,17 @@ below).
 elsewhere in the region) closes it and reopens it at the new point. That cycle emits `lr-hide` and
 then the next `lr-show`, with **no** `lr-after-hide` between them; do not pair them one-to-one.
 
+**Same-task reparent (drag-and-drop, etc.).** Removing and re-appending the same element within one
+task while the menu is open closes it without emitting `lr-hide`/`lr-after-hide`/`lr-show` for that
+move. This silence is *not* cleared on `connectedCallback`: the composed inner menu's own delayed
+`lr-after-hide` is still pending when the host reconnects, and it must still arrive and settle
+quietly rather than surface as a phantom host `lr-after-hide`. The silence is instead cleared by
+whichever happens first — that delayed inner `lr-after-hide` arriving, or the next `lr-show` (which
+always clears it unconditionally on open). A future audit against a generic "clear transient
+open-state on `connectedCallback`" rule should treat this component's silence flag as
+intentionally exempt, not as a bug — clearing it on connect would let that pending inner event
+through and emit a phantom `lr-after-hide` for a cycle the consumer was never shown.
+
 **Closing and focus.** Escape (topmost overlay only), activating an item, an outside pointer,
 `disabled`, and `hide()` close the menu. Escape, activation and `hide()` return focus to the
 captured target: an element focused inside the region when the gesture arrived (a right-click

@@ -35,7 +35,10 @@ affordance.
 when the close affordance is clicked or Delete is pressed on the focused owning tab. It bubbles, is
 composed and noncancelable. A disabled tab never emits it. The tab never removes itself or its
 panel; the consumer handles the request. The owning group separately emits
-`lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's visual label content; direct default-slot element roots
+`lr-tab-show`/`lr-tab-hide`. This name is not dialog-scoped: a tab strip nested inside a consumer's
+own `<lr-dialog>` has this event observed by that dialog's own `lr-close` listener too — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard. **Slots:** default (the tab's visual label content; direct default-slot element roots
 are inert while projected, and its accessibility-exposed flattened text names the real tab button).
 **CSS parts:** `base`
 and `tab` are aliases on the same projected-content slot; `close-button` and

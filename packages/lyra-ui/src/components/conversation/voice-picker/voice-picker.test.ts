@@ -553,6 +553,77 @@ describe('resting border and fill theme cssprops', () => {
   });
 });
 
+describe('hover border theme cssprop', () => {
+  it('resolves the hovered trigger border to the shared brand token when the hover hook is unset', async () => {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${CATALOG} style="--lr-transition-fast: 0s;"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const restingBorder = getComputedStyle(trigger(el)).borderTopColor;
+    try {
+      await hoverUntilMatched(trigger(el), 'the trigger never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(trigger(el)).borderTopColor !== restingBorder,
+        'the trigger border never moved under the pointer',
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('themes the hovered and pressed trigger border independently of the resting border through --lr-voice-picker-trigger-hover-border-color', async () => {
+    const el = (await fixture(html`
+      <lr-voice-picker
+        .catalog=${CATALOG}
+        style="
+          --lr-transition-fast: 0s;
+          --lr-voice-picker-trigger-border-color: rgb(1, 2, 3);
+          --lr-voice-picker-trigger-hover-border-color: rgb(7, 8, 9);
+        "
+      ></lr-voice-picker>
+    `)) as LyraVoicePicker;
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
+    try {
+      await hoverUntilMatched(trigger(el), 'the trigger never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(trigger(el)).borderTopColor === 'rgb(7, 8, 9)',
+        'the trigger border never reached its themed hover color',
+      );
+      expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgb(7, 8, 9)');
+
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(trigger(el)).borderTopColor === 'rgb(7, 8, 9)',
+        'the pressed trigger border never matched the themed hover color',
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
+describe('focus halo', () => {
+  it('paints no box-shadow on the trigger by default', async () => {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    expect(getComputedStyle(trigger(el)).boxShadow).to.equal('none');
+  });
+
+  it('paints the shared focus-halo hook on the focused trigger', async () => {
+    const el = (await fixture(html`
+      <lr-voice-picker
+        .catalog=${CATALOG}
+        style="--lr-form-control-focus-shadow: 0 0 0 3px rgb(20, 22, 24);"
+      ></lr-voice-picker>
+    `)) as LyraVoicePicker;
+    trigger(el).focus();
+    await waitUntil(
+      () => getComputedStyle(trigger(el)).boxShadow.includes('rgb(20, 22, 24)'),
+      'the focused trigger never painted the halo',
+    );
+  });
+});
+
 describe('open and synthetic stale-row theme cssprops', () => {
   it('inherits independent open and synthetic stale-row longhands from an ancestor', async () => {
     const wrapper = (await fixture(html`

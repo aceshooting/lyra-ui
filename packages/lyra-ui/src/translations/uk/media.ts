@@ -122,4 +122,4 @@ const strings: LyraLocaleStrings = {
   flagLoadError: 'Прапорець недоступний',
 };
 
-registerLyraLocale('uk', strings, { dir: 'ltr', name: 'Українська' });
+registerLyraLocale('uk', strings);

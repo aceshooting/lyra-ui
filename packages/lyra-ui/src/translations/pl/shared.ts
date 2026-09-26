@@ -133,4 +133,4 @@ const strings: LyraLocaleStrings = {
   reorderItemMoved: 'Przeniesiono na pozycję {index} z {total}',
 };
 
-registerLyraLocale('pl', strings, { dir: 'ltr', name: 'Polski' });
+registerLyraLocale('pl', strings);

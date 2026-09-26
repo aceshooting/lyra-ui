@@ -812,6 +812,27 @@ it('hides its built-in toggle when disable-navigation-toggle is set', async () =
   );
 });
 
+it('moves focus into the drawer navigation when showNavigation() is called directly with disable-navigation-toggle set', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px" disable-navigation-toggle>
+      <a slot="navigation" href="#inside">Inside navigation</a>
+      <p id="inside">Content</p>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  expect(getComputedStyle(byPart(page, 'navigation-toggle')).display).to.equal(
+    'none'
+  );
+
+  page.showNavigation();
+  await page.updateComplete;
+
+  expect(page.navOpen).to.be.true;
+  expect(byPart(page, 'drawer').getAttribute('role')).to.equal('dialog');
+  expect(document.activeElement?.textContent).to.contain('Inside navigation');
+});
+
 it('classifies view from allocated inline size and re-resolves rem breakpoints live', async () => {
   const oldRootSize = document.documentElement.style.fontSize;
   try {

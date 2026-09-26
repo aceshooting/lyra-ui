@@ -213,4 +213,4 @@ const strings: LyraLocaleStrings = {
   retrievalTraceEvidenceToggle: 'Bukti {label}',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

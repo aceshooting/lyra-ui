@@ -21,8 +21,8 @@ Long group labels, hints, errors, and horizontal option labels wrap within the h
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
 targets keep their own fixed hit-area floor while the surrounding text wraps.
 
-A form-associated collection of `<lr-checkbox>` children. Its readonly `value` is a defensive
-`string[]` snapshot; each
+A form-associated collection of `<lr-checkbox>` children. Its `value` is a settable, frozen,
+defensive `string[]` snapshot; each
 selected value is submitted under `name` and `required` requires at least one selection.
 For zero-or-more choices in button chrome behind one tab stop that submit nothing, use
 `lr-toggle-group`.

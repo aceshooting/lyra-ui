@@ -65,4 +65,4 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'बॉक्स प्लॉट दिखाने के लिए इस घटक को वैकल्पिक बॉक्स-प्लॉट चार्ट पैकेज इंस्टॉल करना होगा।',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

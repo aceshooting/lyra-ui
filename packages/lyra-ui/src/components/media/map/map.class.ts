@@ -841,7 +841,9 @@ export interface LyraMapMarker {
    * first occurrence is retained. Markers with no `id` remain distinct by coordinate occurrence. */
   readonly id?: string;
   readonly lngLat: readonly [number, number];
-  /** A CSS color. Invalid values and `url()` paint servers use maplibre-gl's default marker color. */
+  /** A CSS color. When omitted, the themed `--lr-color-brand` token is resolved instead of
+   * maplibre-gl's own hardcoded default, so an unstyled pin still tracks the active theme.
+   * Invalid values and `url()` paint servers use maplibre-gl's default marker color. */
   readonly color?: string;
   /** Visible popup text and the marker button's accessible name. A runtime record with a
    * non-string label is malformed and omitted without suppressing valid sibling markers. */
@@ -4369,7 +4371,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       }
       visible.add(key);
       let existing = this._markerInstances.get(key);
-      const markerColor = sanitizeCssColor(m.color);
+      // An explicit, invalid color (or a `url()` paint server) still falls through to
+      // maplibre-gl's own hardcoded default -- documented on `LyraMapMarker.color` -- but an
+      // omitted color resolves the themed brand token, the same way `dataLayerColor()` resolves
+      // an untoned data layer, so a default pin retextures with the rest of the map instead of
+      // staying pinned to maplibre-gl's unthemed `#3FB1CE`.
+      const markerColor =
+        sanitizeCssColor(m.color) ?? (m.color === undefined ? dataLayerColor(this, 'accent') : undefined);
       if (existing && this._markerColors.get(key) !== markerColor) {
         // `color` is baked into the marker's SVG at construction time with
         // no way to mutate it afterwards -- fall through to the "no existing

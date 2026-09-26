@@ -412,6 +412,8 @@ never,
   | '--hide-duration'
   | '--lr-accordion-item-button-active-bg'
   | '--lr-accordion-item-button-hover-bg'
+  | '--lr-accordion-item-content-padding-block-end'
+  | '--lr-accordion-item-content-padding-inline'
   | '--lr-accordion-item-easing'
   | '--lr-accordion-item-filled-bg'
   | '--lr-accordion-item-filled-outlined-bg'
@@ -419,6 +421,8 @@ never,
   | '--lr-accordion-item-outlined-bg'
   | '--lr-accordion-item-show-duration'
   | '--lr-accordion-item-spacing'
+  | '--lr-accordion-item-summary-padding-block'
+  | '--lr-accordion-item-summary-padding-inline'
   | '--show-duration'
   | '--spacing',
   {
@@ -2484,6 +2488,7 @@ export type LyraCodeEditorVueProps = LyraVueCustomElement<
   | '--lr-code-editor-padding'
   | '--lr-code-editor-radius'
   | '--lr-code-editor-tab-size'
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -2569,6 +2574,7 @@ export type LyraColorPickerVueProps = LyraVueCustomElement<
   | '--lr-color-picker-swatch-color'
   | '--lr-color-picker-swatch-disabled-opacity'
   | '--lr-color-picker-swatch-size'
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -4349,6 +4355,7 @@ export type LyraEmojiPickerVueProps = LyraVueCustomElement<
   | '--lr-emoji-picker-selected-bg'
   | '--lr-emoji-picker-selected-color'
   | '--lr-emoji-picker-selected-outline-color'
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset',
@@ -5375,6 +5382,7 @@ export type LyraHeatmapVueProps = LyraVueCustomElement<
   | 'withoutLegend',
   {},
   LyraHeatmapEventMap,
+  | 'lr-calendar-geometry-change'
   | 'lr-cell-click'
   | 'lr-matrix-geometry-change'
   | 'lr-selection-change',
@@ -7050,6 +7058,7 @@ export type LyraModelSelectVueProps = LyraVueCustomElement<
   | 'input'
   | 'lr-change'
   | 'lr-invalid',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -7070,6 +7079,7 @@ export type LyraModelSelectVueProps = LyraVueCustomElement<
   | '--lr-model-select-trigger-border-color'
   | '--lr-model-select-trigger-fill'
   | '--lr-model-select-trigger-height'
+  | '--lr-model-select-trigger-hover-border-color'
   | '--lr-model-select-trigger-min-height'
   | '--lr-model-select-trigger-padding'
   | '--lr-overlay-border'
@@ -12067,6 +12077,7 @@ export type LyraVoicePickerVueProps = LyraVueCustomElement<
   | 'lr-invalid'
   | 'lr-preview-change'
   | 'lr-preview-request',
+  | '--lr-form-control-focus-shadow'
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
   | '--lr-form-control-required-offset'
@@ -12094,6 +12105,7 @@ export type LyraVoicePickerVueProps = LyraVueCustomElement<
   | '--lr-voice-picker-trigger-border-color'
   | '--lr-voice-picker-trigger-fill'
   | '--lr-voice-picker-trigger-height'
+  | '--lr-voice-picker-trigger-hover-border-color'
   | '--lr-voice-picker-trigger-min-height',
   {
     'allow-custom'?: LyraVoicePicker['allowCustom'];

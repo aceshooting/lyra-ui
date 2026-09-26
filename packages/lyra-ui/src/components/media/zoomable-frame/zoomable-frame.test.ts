@@ -863,6 +863,66 @@ it('forwards host focus()/blur()/click() to the frame and re-dispatches its focu
   expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });
 
+/** Stubs `root.activeElement` to throw, matching happy-dom 20.11.1's own throwing getter (see
+ *  `src/internal/active-element.ts`'s doc comment) -- both `Document` and `ShadowRoot` expose the
+ *  same property name, so one helper covers either root. */
+function unavailableActiveElement(root: Document | ShadowRoot): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(root, 'activeElement');
+  Object.defineProperty(root, 'activeElement', {
+    configurable: true,
+    get() {
+      throw new TypeError('Unavailable activeElement');
+    },
+  });
+  return () => {
+    if (descriptor) Object.defineProperty(root, 'activeElement', descriptor);
+    else Reflect.deleteProperty(root, 'activeElement');
+  };
+}
+
+it('guards focus()/blur() against a throwing shadowRoot.activeElement getter (e.g. happy-dom)', async () => {
+  const el = await fixture<LyraZoomableFrame>(html`
+    <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+  `);
+  await el.updateComplete;
+  const restore = unavailableActiveElement(el.shadowRoot!);
+  let updateRejected = false;
+  try {
+    // frameIsActive() gates focus()/blur()/willUpdate() entirely, so a throwing shadowRoot getter
+    // must not escape any of them -- it must simply read as "nothing is focused" instead.
+    expect(() => el.focus()).to.not.throw();
+    expect(() => el.blur()).to.not.throw();
+    el.srcdoc = '<!doctype html><html><body><p>Second</p></body></html>';
+    await el.updateComplete;
+    el.withoutInteraction = true;
+    await el.updateComplete;
+  } catch {
+    updateRejected = true;
+  } finally {
+    restore();
+  }
+  expect(updateRejected, 'a throwing shadowRoot.activeElement getter must not reject the update').to.equal(false);
+});
+
+it('guards a host blur() against a throwing ownerDocument.activeElement getter once the frame is genuinely focused', async () => {
+  const el = await fixture<LyraZoomableFrame>(html`
+    <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+  `);
+  await el.updateComplete;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === frameOf(el)).to.equal(true);
+
+  const restore = unavailableActiveElement(document);
+  try {
+    // blur() reads `activeElementIn(this.ownerDocument)` only for the emitted event's
+    // relatedTarget, once the frame has genuinely lost focus -- it must not throw either.
+    expect(() => el.blur()).to.not.throw();
+  } finally {
+    restore();
+  }
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+});
+
 it('tracks sequential Tab/Shift+Tab and pointer entry at the browsing-context boundary', async function () {
   // Reproduced under WTR_SHARD_INDEX=3 WTR_SHARD_TOTAL=4 WTR_BROWSER=firefox (the full 120-file
   // engine shard, CPU-constrained to match a standard CI runner): a *synthesized* pointer click's

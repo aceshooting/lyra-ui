@@ -224,6 +224,50 @@ describe('<lr-navigation-menu-item>', () => {
     ]);
   });
 
+  it('closes an unowned in-flow panel on Escape and returns focus to the trigger', async () => {
+    const el = await fixture<LyraNavigationMenuItem>(html`
+      <lr-navigation-menu-item>
+        Products
+        <ul slot="panel"><li><a id="analytics" href="/a">Analytics</a></li></ul>
+      </lr-navigation-menu-item>
+    `);
+    await settle(el);
+    const events = recordToggles(el);
+    base(el).click();
+    await settle(el);
+    expect(el.open).to.equal(true);
+
+    const link = el.querySelector<HTMLAnchorElement>('#analytics')!;
+    link.focus();
+    expect(document.activeElement === link).to.equal(true);
+
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+    await settle(el);
+
+    expect(el.open, 'Escape must close a standalone item panel').to.equal(false);
+    expect(panel(el).hidden).to.equal(true);
+    expect(events).to.deep.equal([
+      { open: true, source: 'user' },
+      { open: false, source: 'user' },
+    ]);
+    expect(el.shadowRoot!.activeElement === base(el), 'focus returns to the trigger').to.equal(true);
+  });
+
+  it('leaves an unowned closed item, and a plain Escape elsewhere, untouched', async () => {
+    const el = await fixture<LyraNavigationMenuItem>(html`
+      <lr-navigation-menu-item>
+        Products
+        <ul slot="panel"><li><a href="/a">Analytics</a></li></ul>
+      </lr-navigation-menu-item>
+    `);
+    await settle(el);
+    expect(() =>
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true })),
+    ).to.not.throw();
+    await settle(el);
+    expect(el.open).to.equal(false);
+  });
+
   it('emits no lr-toggle for initial open markup and announces programmatic writes', async () => {
     const container = await fixture<HTMLDivElement>(html`<div></div>`);
     const el = document.createElement('lr-navigation-menu-item') as LyraNavigationMenuItem;

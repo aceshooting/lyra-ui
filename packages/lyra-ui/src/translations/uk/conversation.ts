@@ -83,10 +83,10 @@ const strings: LyraLocaleStrings = {
   deleteConversation: 'Видалити розмову',
   searchThreads: 'Пошук розмов',
   threadListMatchAnnounce: {
-    one: 'Знайдено розмов: {count}',
-    few: 'Знайдено розмов: {count}',
-    many: 'Знайдено розмов: {count}',
-    other: 'Знайдено розмов: {count}',
+    one: 'Знайдено {count} розмову',
+    few: 'Знайдено {count} розмови',
+    many: 'Знайдено {count} розмов',
+    other: 'Знайдено {count} розмови',
   },
   threadListEmpty: 'Розмов ще немає',
   agentWorkspaceLabel: 'Робочий простір агента',
@@ -167,4 +167,4 @@ const strings: LyraLocaleStrings = {
   realtimeSessionConnectionFailed: 'Не вдалося встановити з’єднання реального часу.',
 };
 
-registerLyraLocale('uk', strings, { dir: 'ltr', name: 'Українська' });
+registerLyraLocale('uk', strings);

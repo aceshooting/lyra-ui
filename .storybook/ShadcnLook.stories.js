@@ -1,10 +1,14 @@
 import { html } from 'lit';
+import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
+import { GEMSTONES } from '../packages/lyra-ui/src/theme/gemstones-data.js';
 
 /**
  * The opt-in shadcn/ui look (`@aceshooting/lyra-ui/themes/shadcn.css`) next to Lyra's own, on the
  * same controls. Each story renders a light and a dark panel side by side -- `data-lr-theme` on the
  * panel is honoured by both theme.css and the preset -- and pins the `look` toolbar global, so the
  * two stories are a direct comparison. Every other story can be switched with the `Look` toolbar.
+ * `panel()` demonstrates at least one representative control per component family (not just
+ * forms/overlays/layout) so the preset's reach past its most-tested primitives is directly visible.
  *
  * Autodocs is off on purpose: the preset is a document-level stylesheet, and a docs page renders
  * every story in ONE document, so a page holding both looks could only ever show one of them.
@@ -77,6 +81,81 @@ function panel(mode, label) {
         </p>
       </lr-card>
       <lr-callout variant="danger" heading="Heads up">Destructive actions cannot be undone.</lr-callout>
+
+      <!-- One representative per remaining family (layout, data, charts, conversation,
+           agent-tools, retrieval, media, utility, viewers) -- see shadcn.test.ts for the matching
+           computed-style assertions on several of these. -->
+      <lr-breadcrumb>
+        <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+        <lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>
+        <lr-breadcrumb-item current>Current</lr-breadcrumb-item>
+      </lr-breadcrumb>
+      <div style=${rowStyle}>
+        <lr-stat label="Active agents" value="17" variant="brand"></lr-stat>
+        <lr-stat label="Errors" value="128" delta-percent="-5.1" variant="danger"></lr-stat>
+      </div>
+      <lr-lite-chart
+        type="bar"
+        height="10rem"
+        legend
+        data-table-toggle
+        .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+        .datasets=${[{ label: 'Revenue', data: [12, 19, 14, 22] }]}
+      ></lr-lite-chart>
+      <lr-chat-message message-role="assistant" .timestamp=${new Date()}>
+        Deploys look healthy: three services restarted cleanly.
+      </lr-chat-message>
+      <lr-tool-call-block name="search_web" status="success" duration-ms="820"></lr-tool-call-block>
+      <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+        <span slot="excerpt">Revenue grew 12% year over year.</span>
+      </lr-source-card>
+      <lr-media-card
+        src="https://example.com/reports/quarterly-summary.pdf"
+        kind="file"
+        filename="quarterly-summary.pdf"
+        mime-type="application/pdf"
+      ></lr-media-card>
+      <div>
+        <span>Above</span>
+        <lr-divider></lr-divider>
+        <span>Below</span>
+      </div>
+      <div style="position: relative; block-size: 4rem;">
+        <lr-highlight-layer
+          .items=${[{ id: 'zone-a', rects: [{ x: 10, y: 20, width: 40, height: 40 }], label: 'Zone A' }]}
+        ></lr-highlight-layer>
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * A third scenario alongside the light/dark side-by-side above: the shadcn look with a gemstone
+ * accent layered on top (`setLyraTheme({ accent })`, the same runtime a consumer calls). The accent
+ * ramp is resolved for one mode at a time, so unlike `panel()` this cannot show light and dark
+ * side by side -- toggle the `Theme` toolbar global to see both. Only primary/brand-driven fills
+ * (button, checked checkbox/switch, a `variant="brand"` badge, a streaming chat message's border)
+ * follow the accent; secondary, muted, and status colors deliberately do not -- see
+ * shadcn.test.ts's "lets a gemstone accent recolour primary..." assertions for the same claim
+ * verified against computed styles.
+ */
+function accentPanel(gemstone) {
+  setLyraTheme({ accent: gemstone.fill });
+  return html`
+    <section style=${panelStyle}>
+      <h2 style="margin: 0; font-size: var(--lr-theme-font-size-lg, 1.125rem)">shadcn/ui, ${gemstone.key} accent</h2>
+      <div style=${rowStyle}>
+        <lr-button>Primary</lr-button>
+        <lr-button appearance="filled">Secondary (unaffected)</lr-button>
+        <lr-badge variant="brand">Brand</lr-badge>
+      </div>
+      <div style=${rowStyle}>
+        <lr-checkbox checked>Accept terms</lr-checkbox>
+        <lr-switch checked>Notifications</lr-switch>
+      </div>
+      <lr-chat-message message-role="assistant" status="streaming" .timestamp=${new Date()}>
+        Still generating…
+      </lr-chat-message>
     </section>
   `;
 }
@@ -99,4 +178,10 @@ export const Lyra = {
   name: 'Lyra look (for comparison)',
   globals: { look: 'lyra' },
   render: () => sideBySide('Lyra'),
+};
+
+export const GemstoneAccent = {
+  name: 'shadcn/ui look — gemstone accent',
+  globals: { look: 'shadcn' },
+  render: () => accentPanel(GEMSTONES.emerald),
 };

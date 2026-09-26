@@ -41,7 +41,7 @@ an unrecognized key is simply never looked up.
 
 ## The shipped catalogs
 
-Ten complete catalogs ship with the package as side-effect-only modules — each one calls
+Thirty-two complete catalogs ship with the package as side-effect-only modules — each one calls
 `registerLyraLocale()` for you, so a bare import is the whole setup and there is nothing to read
 back from it:
 
@@ -52,15 +52,37 @@ import '@aceshooting/lyra-ui/translations/fr.js';
 | Locale | Import |
 | --- | --- |
 | Arabic | `@aceshooting/lyra-ui/translations/ar.js` |
+| Czech | `@aceshooting/lyra-ui/translations/cs.js` |
+| Danish | `@aceshooting/lyra-ui/translations/da.js` |
 | German | `@aceshooting/lyra-ui/translations/de.js` |
+| German (Switzerland) | `@aceshooting/lyra-ui/translations/de-CH.js` |
 | Spanish | `@aceshooting/lyra-ui/translations/es.js` |
 | Persian | `@aceshooting/lyra-ui/translations/fa.js` |
+| Finnish | `@aceshooting/lyra-ui/translations/fi.js` |
 | French | `@aceshooting/lyra-ui/translations/fr.js` |
 | Hebrew | `@aceshooting/lyra-ui/translations/he.js` |
+| Hindi | `@aceshooting/lyra-ui/translations/hi.js` |
+| Croatian | `@aceshooting/lyra-ui/translations/hr.js` |
+| Hungarian | `@aceshooting/lyra-ui/translations/hu.js` |
+| Indonesian | `@aceshooting/lyra-ui/translations/id.js` |
+| Italian | `@aceshooting/lyra-ui/translations/it.js` |
 | Japanese | `@aceshooting/lyra-ui/translations/ja.js` |
+| Kazakh | `@aceshooting/lyra-ui/translations/kk.js` |
+| Korean | `@aceshooting/lyra-ui/translations/ko.js` |
+| Norwegian Bokmål | `@aceshooting/lyra-ui/translations/nb.js` |
+| Dutch | `@aceshooting/lyra-ui/translations/nl.js` |
+| Norwegian Nynorsk | `@aceshooting/lyra-ui/translations/nn.js` |
+| Polish | `@aceshooting/lyra-ui/translations/pl.js` |
 | Portuguese (Brazil) | `@aceshooting/lyra-ui/translations/pt-BR.js` |
+| Portuguese (Portugal) | `@aceshooting/lyra-ui/translations/pt-PT.js` |
+| Romanian | `@aceshooting/lyra-ui/translations/ro.js` |
 | Russian | `@aceshooting/lyra-ui/translations/ru.js` |
+| Slovenian | `@aceshooting/lyra-ui/translations/sl.js` |
+| Swedish | `@aceshooting/lyra-ui/translations/sv.js` |
+| Turkish | `@aceshooting/lyra-ui/translations/tr.js` |
+| Ukrainian | `@aceshooting/lyra-ui/translations/uk.js` |
 | Chinese (Simplified) | `@aceshooting/lyra-ui/translations/zh-CN.js` |
+| Chinese (Traditional) | `@aceshooting/lyra-ui/translations/zh-TW.js` |
 
 Import only the ones you ship. Each is a plain module, so a dynamic `import()` is a perfectly good
 way to load a catalog when the user picks that language.

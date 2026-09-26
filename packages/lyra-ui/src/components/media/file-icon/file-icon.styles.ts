@@ -48,10 +48,18 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: var(--lr-line-height-normal);
+    /* overflow: hidden clips at the padding box; at small long-tier sizes Gecko's accent ink
+       (the É in ÉPUB) rises just past a normal line box, so give it a hairline of room. */
+    padding-block: var(--lr-size-1px);
     font-size: min(var(--lr-size-1em), 40cqi);
   }
+  /* 30cqi (the exact 9px the design measured on one host) left WEBM -- the widest built-in
+     long-tier token -- with no real headroom: Firefox and WebKit shape it 1.9px wider than that
+     host's Noto Sans Bold measurement at the default badge size, overflowing the 30px content
+     box. 26cqi (7.8px) restores multiple pixels of cross-engine margin for WEBM while every
+     shorter long-tier token gains proportionally more. */
   .face:where([data-token='long']) > .token {
-    font-size: min(var(--lr-size-1em), 30cqi);
+    font-size: min(var(--lr-size-1em), 26cqi);
   }
   .glyph {
     display: none;

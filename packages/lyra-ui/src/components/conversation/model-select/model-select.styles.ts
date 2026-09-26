@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
@@ -32,6 +35,11 @@ export const styles = css`
     --_lr-model-select-expand-size: var(--lr-size-1-75rem);
     --_lr-model-select-gap-default: var(--lr-space-xs);
     --_lr-model-select-radius-default: var(--lr-radius);
+    /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
+       undeclared -- only this private copy of it is declared -- so a value set on :root or any
+       ancestor still reaches this trigger, while the halo itself is painted in one place for every
+       field-shaped control in the library. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host(:disabled) {
     cursor: not-allowed;
@@ -118,12 +126,26 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* The opt-in focus halo, on :focus rather than :focus-visible for the trigger (matching
+     lr-select): the outline above is the accessibility answer to keyboard focus and stays
+     unchanged, while a halo a consumer deliberately configured should read on a pointer focus
+     too. Unset it resolves to none, so this rule paints nothing by default. */
+  [part="trigger"]:focus,
+  [part="combobox"]:focus-within {
+    ${formControlFocusHalo}
+  }
   /* :where() zeroes the wrapped selectors, holding this at (0,1,0) so the pressed rule below --
      same specificity, later in source order -- wins while the trigger is held. It buys nothing
      against a consumer's own ::part(trigger):hover: encapsulation context sorts before
      specificity, so an outer normal declaration wins whatever this rule weighs. */
   :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
+    /* Falls back to this control's own resting edge, so an unset hook leaves a hovered trigger
+       painted exactly as it always was -- hover has never moved this border. */
+    border-color: var(
+      --lr-model-select-trigger-hover-border-color,
+      var(--lr-model-select-trigger-border-color, var(--lr-color-border))
+    );
   }
   :where([part="trigger"]):active:where(:not(:disabled)) {
     background: color-mix(

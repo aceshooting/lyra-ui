@@ -33,7 +33,10 @@ export const styles = css`
        this part shrink-wrapped around its content. A percentage inline-size against an
        indefinite/shrink-to-fit containing block resolves as if 'auto' per the flex sizing
        algorithm, so this is a byte-identical no-op for the default toolbar-in-a-shrink-to-fit-row
-       case and only takes effect once an ancestor gives the host itself a definite inline size. */
+       case and only takes effect once an ancestor gives the host itself a definite inline size.
+       lr-button-group deliberately keeps the narrow-only (@container) shape instead of this
+       unconditional one -- see button-group.styles.ts's comment on that rule for why a uniform
+       button row and a mixed-control toolbar want opposite wide-host defaults. */
     inline-size: 100%;
     max-inline-size: 100%;
   }

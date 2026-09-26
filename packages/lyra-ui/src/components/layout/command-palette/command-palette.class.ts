@@ -234,7 +234,10 @@ export interface LyraCommandPaletteEventMap {
  * cancelability, and timing) at the same call site; either event's `preventDefault()` vetoes the
  * open. Removed no earlier than 21.0.0.
  * @event lr-close - Emitted before the palette closes. Cancelable: `preventDefault()` keeps it
- * open.
+ * open. The name is not dialog-scoped in this library: nesting this palette inside a consumer's
+ * own `<lr-dialog>` means that dialog's `lr-close` listener also observes this event. See
+ * `<lr-dialog>`'s own `lr-close` docs for the full list of emitters and the
+ * `event.target !== event.currentTarget` guard.
  * @event focus - Re-dispatched when the search input receives focus. Native `focus` neither
  * bubbles nor crosses the shadow boundary, so a host listener on `<lr-command-palette>` itself
  * never sees it otherwise.

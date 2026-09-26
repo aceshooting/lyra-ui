@@ -190,6 +190,7 @@ export type { LyraPickerDetailValue, LyraPickerValue } from './internal/picker-v
 export type {
   ComboboxSourceResult,
   LyraComboboxChangeEvent,
+  LyraComboboxInputEvent,
   LyraComboboxPlacement,
   LyraComboboxSelectionDirection,
   LyraComboboxSourceErrorEvent,

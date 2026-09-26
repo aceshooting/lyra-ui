@@ -84,7 +84,9 @@ export const styles = css`
   :host([appearance="accent"]) [part="combobox-input"]::placeholder {
     color: inherit;
   }
-  :host([appearance="accent"]) [part="tag"] {
+  /* [part~=] because the "+N" overflow indicator carries two names ('tag tag-overflow'); matches
+     lr-select's identical selector for the same reason. */
+  :host([appearance="accent"]) [part~="tag"] {
     background: color-mix(in srgb, currentColor 20%, transparent);
     color: inherit;
   }
@@ -213,7 +215,9 @@ export const styles = css`
   [part="tags"] {
     display: contents;
   }
-  [part="tag"] {
+  /* [part~=] because the "+N" overflow indicator carries two names ('tag tag-overflow'); state
+     lives in the part name because a state selector after ::part() never matches. */
+  [part~="tag"] {
     display: inline-flex;
     min-inline-size: 0;
     max-inline-size: min(100%, var(--tag-max-size, var(--lr-size-5rem)));
@@ -227,6 +231,10 @@ export const styles = css`
     background: var(--lr-combobox-tag-bg, var(--lr-color-brand-quiet));
     color: var(--lr-combobox-tag-color, var(--lr-color-text));
     border-radius: var(--lr-combobox-tag-radius, var(--lr-radius));
+  }
+  [part~="tag-overflow"] {
+    color: var(--lr-color-text-quiet);
+    white-space: nowrap;
   }
   /* text-overflow only fires on inline overflow, so a label left at white-space: normal wraps
      instead of overflowing and the ellipsis is unreachable -- with overflow-wrap: anywhere the wrap

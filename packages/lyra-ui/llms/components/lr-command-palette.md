@@ -76,7 +76,10 @@ cancelability, and timing, fired at the same call site; either event's `preventD
 the open) kept for the 20.x line and removed no earlier than 21.0.0. The `focus`/`blur` bridge is
 new in 10.0.0: native `focus`/`blur` neither
 bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
-never fired at all.
+never fired at all. `lr-close` is not dialog-scoped: nesting this palette inside a consumer's own
+`<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard.
 
 **Slots:** none.
 

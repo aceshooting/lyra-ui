@@ -76,7 +76,7 @@ const strings: LyraLocaleStrings = {
   searchToolsPlaceholder: 'Құралдарды іздеу…',
   useDefaultTools: 'Әдепкі құралдарды пайдалану',
   toolSelectCustomizeHint: 'Жеке құралдарды таңдау үшін өшіріңіз.',
-  noMatchesQuery: '"{query}" сұрауына сәйкес құралдар жоқ.',
+  noMatchesQuery: '«{query}» сұрауына сәйкес құралдар жоқ.',
   toolSelectNoneAvailable: 'Қолжетімді құралдар жоқ.',
   toolSelectSummary: 'Қосулы құралдар: {selected} / {total}',
   toolCount: {

@@ -53,6 +53,12 @@ export const styles = css`
     font-size: var(--lr-form-control-font-size);
     color: inherit;
     line-height: var(--lr-line-height-snug);
+    /* Hover/active/checked below only ever repaint background, so background-color is all this
+       needs; without it this row's fill snaps while lr-button/lr-icon-button/lr-app-rail-item ease.
+       No local reduced-motion override needed -- tokens.styles.ts's shared reduced-motion block
+       already flattens --lr-transition-fast to 0.001ms and applies a blanket transition-duration:
+       0.001ms across the whole shadow tree under prefers-reduced-motion. */
+    transition: background-color var(--lr-transition-fast);
   }
   /* Unlike lr-option/lr-select/lr-combobox/lr-tree-item, a checked row here previously had no
      row-chrome hooks of its own: type="checkbox" only painted the checkmark glyph, leaving the

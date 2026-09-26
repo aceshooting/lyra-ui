@@ -1,6 +1,7 @@
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import './chip.js';
 import type { LyraChip } from './chip.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 class ChipLabelForwardWrapper extends HTMLElement {
   constructor() {
@@ -1170,6 +1171,105 @@ describe('pressed-background override', () => {
     )) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('hovered and pressed colors of a selected chip come from --lr-chip-pressed-bg, independent of --lr-chip-bg', async () => {
+    const a = (await fixture(html`
+      <lr-chip
+        toggleable
+        selected
+        style="--lr-transition-fast: 0s; --lr-chip-bg: rgb(10, 20, 30); --lr-chip-pressed-bg: rgb(200, 100, 50);"
+        >Tag</lr-chip
+      >
+    `)) as LyraChip;
+    const b = (await fixture(html`
+      <lr-chip
+        toggleable
+        selected
+        style="--lr-transition-fast: 0s; --lr-chip-bg: rgb(90, 90, 90); --lr-chip-pressed-bg: rgb(200, 100, 50);"
+        >Tag</lr-chip
+      >
+    `)) as LyraChip;
+    const aToggle = a.shadowRoot!.querySelector<HTMLElement>('[part="toggle-button"]')!;
+    const aBase = a.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const bToggle = b.shadowRoot!.querySelector<HTMLElement>('[part="toggle-button"]')!;
+    const bBase = b.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const aResting = getComputedStyle(aBase).backgroundColor;
+    const bResting = getComputedStyle(bBase).backgroundColor;
+    try {
+      await hoverUntilMatched(aToggle, 'chip A never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(aBase).backgroundColor !== aResting,
+        'chip A background never moved under the pointer',
+      );
+      const aHover = getComputedStyle(aBase).backgroundColor;
+
+      await hoverUntilMatched(bToggle, 'chip B never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(bBase).backgroundColor !== bResting,
+        'chip B background never moved under the pointer',
+      );
+      expect(aHover).to.equal(getComputedStyle(bBase).backgroundColor);
+
+      await hoverUntilMatched(aToggle, 'chip A never took the pointer hover state for press');
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(aBase).backgroundColor !== aHover,
+        'chip A background never moved to a pressed color',
+      );
+      const aActive = getComputedStyle(aBase).backgroundColor;
+      await resetMouse();
+
+      await hoverUntilMatched(bToggle, 'chip B never took the pointer hover state for press');
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(bBase).backgroundColor === aActive,
+        'chip B background never reached the same pressed color',
+      );
+      expect(aActive).to.equal(getComputedStyle(bBase).backgroundColor);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('does not leak --lr-chip-pressed-bg into an unselected chip hover color', async () => {
+    const a = (await fixture(html`
+      <lr-chip
+        toggleable
+        style="--lr-transition-fast: 0s; --lr-chip-bg: rgb(50, 60, 70); --lr-chip-pressed-bg: rgb(200, 100, 50);"
+        >Tag</lr-chip
+      >
+    `)) as LyraChip;
+    const b = (await fixture(html`
+      <lr-chip
+        toggleable
+        style="--lr-transition-fast: 0s; --lr-chip-bg: rgb(50, 60, 70); --lr-chip-pressed-bg: rgb(9, 9, 9);"
+        >Tag</lr-chip
+      >
+    `)) as LyraChip;
+    const aToggle = a.shadowRoot!.querySelector<HTMLElement>('[part="toggle-button"]')!;
+    const aBase = a.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const bToggle = b.shadowRoot!.querySelector<HTMLElement>('[part="toggle-button"]')!;
+    const bBase = b.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const aResting = getComputedStyle(aBase).backgroundColor;
+    const bResting = getComputedStyle(bBase).backgroundColor;
+    try {
+      await hoverUntilMatched(aToggle, 'chip A never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(aBase).backgroundColor !== aResting,
+        'chip A background never moved under the pointer',
+      );
+      const aHover = getComputedStyle(aBase).backgroundColor;
+
+      await hoverUntilMatched(bToggle, 'chip B never took the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(bBase).backgroundColor !== bResting,
+        'chip B background never moved under the pointer',
+      );
+      expect(aHover).to.equal(getComputedStyle(bBase).backgroundColor);
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

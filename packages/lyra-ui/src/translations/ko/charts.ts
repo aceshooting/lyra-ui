@@ -65,4 +65,4 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: '박스 플롯을 렌더링하려면 선택적 박스 플롯 차트 패키지를 설치해야 합니다.',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

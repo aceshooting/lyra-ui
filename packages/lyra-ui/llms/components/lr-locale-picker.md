@@ -203,6 +203,30 @@ resolver. Menu labels stay visible; a per-entry `country` override also reaches 
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
   ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.
 
+**Lazy-loading the picked locale's catalog.** `locales` accepts a tag list before any of those
+tags has a registered catalog (see the `locales` property above), and `lr-change` is cancelable, so
+the lightest integration offers every supported tag up front and fetches only the one the visitor
+actually picks:
+
+```js
+import { setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
+
+const picker = document.querySelector("lr-locale-picker");
+picker.locales = ["en", "fr", "ar", "ja"]; // offered before any catalog is registered
+picker.addEventListener("lr-change", async (e) => {
+  e.preventDefault(); // keep `value` updated, defer applying the locale until the catalog lands
+  const tag = e.detail.value;
+  await import(`@aceshooting/lyra-ui/translations/${tag}.js`); // registers the catalog as a side effect
+  setLyraLocale(tag);
+  document.documentElement.lang = tag;
+  document.documentElement.dir = e.detail.direction;
+});
+```
+
+Only the tags actually shipped as ready-made catalogs (see "The shipped catalogs" in the
+localization guide) resolve through that dynamic-import path unmodified; an application-authored
+locale still needs its own `registerLyraLocale()` call before `setLyraLocale()` does anything.
+
 **Additional API surface:**
 
 - `--lr-locale-picker-gap` — Trigger and option child gap. Default: `var(--lr-space-xs)`.

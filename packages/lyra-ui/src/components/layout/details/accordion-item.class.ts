@@ -65,6 +65,19 @@ export type {
  * @cssprop [--lr-accordion-item-button-active-bg=color-mix(...)] - Trigger pressed background.
  * @cssprop [--lr-accordion-item-spacing=var(--lr-form-control-padding-inline)] - Header/content
  *   spacing.
+ * @cssprop [--lr-accordion-item-summary-padding-block=var(--lr-accordion-item-spacing)] - Trigger
+ *   button block padding (top/bottom), independently tunable from the panel content's own padding.
+ *   Falls through to `--lr-accordion-item-spacing` (and its private default) when unset, so an
+ *   un-set item renders unchanged, mirroring `lr-details`'s equivalent hook.
+ * @cssprop [--lr-accordion-item-summary-padding-inline=var(--lr-accordion-item-spacing)] - Trigger
+ *   button inline padding (start/end), independently tunable from the panel content's own padding.
+ *   Same fallback chain as `--lr-accordion-item-summary-padding-block`.
+ * @cssprop [--lr-accordion-item-content-padding-block-end=var(--lr-accordion-item-spacing)] - Panel
+ *   content's trailing block padding, independently tunable from the trigger button's own padding.
+ *   Same fallback chain as `--lr-accordion-item-summary-padding-block`.
+ * @cssprop [--lr-accordion-item-content-padding-inline=var(--lr-accordion-item-spacing)] - Panel
+ *   content's inline padding, independently tunable from the trigger button's own padding. Same
+ *   fallback chain as `--lr-accordion-item-summary-padding-block`.
  * @cssprop [--lr-accordion-item-show-duration=var(--lr-duration-base)] - Expand transition
  *   duration.
  * @cssprop [--lr-accordion-item-hide-duration=var(--lr-duration-base)] - Collapse transition

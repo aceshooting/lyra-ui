@@ -133,11 +133,11 @@ const strings: LyraLocaleStrings = {
     one: '{count} फ़ीचर',
     other: '{count} फ़ीचर',
   },
-  geojsonViewMissingMapLibrary: 'इस फ़ाइल को मानचित्र पर दिखाने के लिए वैकल्पिक maplibre-gl peer इंस्टॉल करें। इसके बजाय मूल GeoJSON दिखाया जा रहा है।',
+  geojsonViewMissingMapLibrary: 'इस फ़ाइल को मानचित्र पर दिखाने के लिए वैकल्पिक maplibre-gl पैकेज इंस्टॉल करें। इसके बजाय मूल GeoJSON दिखाया जा रहा है।',
   documentCompareNoVersion: 'कोई संस्करण नहीं दिया गया।',
   documentCompareLabel: 'दस्तावेज़ तुलना',
   documentCompareOldVersion: 'पुराना संस्करण',
   documentCompareNewVersion: 'नया संस्करण',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

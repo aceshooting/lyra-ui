@@ -301,7 +301,10 @@ interface ToolProjection {
  * from that control's own `lr-checkbox-toggle-request`/`lr-switch-toggle-request`, before it
  * writes its `checked` state, so a refused change shows no flip-and-snap-back.
  * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
- * via Escape, an opted-in backdrop click, or a `close()` call.
+ * via Escape, an opted-in backdrop click, or a `close()` call. The name is not dialog-scoped in
+ * this library: nesting this dialog inside a consumer's own `<lr-dialog>` means that dialog's
+ * `lr-close` listener also observes this event. See `<lr-dialog>`'s own `lr-close` docs for the
+ * full list of emitters and the `event.target !== event.currentTarget` guard.
  * @event focus - Re-dispatched when the internal search input receives focus.
  * @event blur - Re-dispatched when the internal search input loses focus.
  * @csspart backdrop - The full-viewport scrim behind the panel.

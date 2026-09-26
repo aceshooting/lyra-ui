@@ -406,9 +406,14 @@ export interface LyraComboboxEventMap<Multiple extends boolean = boolean> {
  * Stable per-event aliases, so a host can name one event's type without restating the detail
  * schema (or re-deriving it from `LyraComboboxEventMap`). Each narrows with the same `Multiple`
  * parameter the component does: `LyraComboboxChangeEvent<false>`'s `detail.value` is a `string`.
+ * Combobox has no dedicated `lr-input` custom event (unlike `<lr-select>`); `LyraComboboxInputEvent`
+ * instead aliases the native `input` key, which is `InputEvent | CustomEvent<...>` depending on
+ * whether the input came from typing or a programmatic value/selection change.
  */
 export type LyraComboboxChangeEvent<Multiple extends boolean = boolean> =
   LyraComboboxEventMap<Multiple>['lr-change'];
+export type LyraComboboxInputEvent<Multiple extends boolean = boolean> =
+  LyraComboboxEventMap<Multiple>['input'];
 export type LyraComboboxSourceErrorEvent =
   LyraComboboxEventMap['lr-source-error'];
 
@@ -562,11 +567,15 @@ export type LyraComboboxSourceErrorEvent =
  * @csspart unknown-value - Badge shown next to the closed single-select input, or a `multiple`-mode
  *   tag, when the committed value matches no current option/row (see `isUnknownValue()`).
  * @csspart tags - The multi-select tag container.
- * @csspart tag - An individual selected tag.
+ * @csspart tag - An individual selected tag. The "+N" overflow indicator carries both `tag` and
+ *   `tag-overflow`, so `::part(tag)` styles every chip and `::part(tag-overflow)` only that one --
+ *   mirrors `<lr-select>`'s identical two-part overflow chip.
  * @csspart tag-label - The wrapping/ellipsis-safe selected-tag label.
  * @csspart tag__content - Compatibility wrapper around a selected tag's visible content.
  * @csspart tag__remove-button - A tag's remove button.
  * @csspart tag__remove-button__base - Compatibility name on a tag's remove button.
+ * @csspart tag-overflow - The "+N" indicator standing in for the selections past
+ *   `max-options-visible`.
  * @csspart clear-button - The clear button.
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - Ordinary form-validation text referenced by the internal input; it is not a
@@ -3609,7 +3618,7 @@ export class LyraCombobox<
             <div part="tags">
               ${shownTags.map((value, index) => this.renderTag(value, index))}
               ${extra > 0
-                ? html`<span part="tag"
+                ? html`<span part="tag tag-overflow"
                     >${this.localize('comboboxSelectedOverflow', undefined, {
                       n: getNumberFormat(this.effectiveLocale).format(extra),
                     })}</span

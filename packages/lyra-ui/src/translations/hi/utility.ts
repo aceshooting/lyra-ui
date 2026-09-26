@@ -68,4 +68,4 @@ const strings: LyraLocaleStrings = {
   tourStepOf: '{total} में से चरण {current}',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

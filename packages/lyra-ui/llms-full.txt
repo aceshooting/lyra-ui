@@ -1221,6 +1221,12 @@ repository's contrast gate re-measures every value in both modes:
   white, and the ramp is also checked for colour-blind separation.
 - **Hover and press** mix toward a mid grey. The default mixes toward the text colour, and shadcn's
   primary _is_ the text colour, so the default button would show no hover or press state at all.
+- **Code-fence syntax colouring** (`lr-code-block` / `lr-markdown`'s keyword/string/comment tokens)
+  is the one surface the preset does not repaint: it stays GitHub's light/dark Shiki theme pair in
+  both modes, with no property yet to substitute a different pair. Only which of the two fixed
+  themes paints (light or dark) tracks the preset, through the same light/dark switch every other
+  surface here reads. Unlike charts, above, this one carries no `--lr-theme-*` input at all — a
+  deliberate scope line, not an oversight.
 
 **Accents.** `lr-button`'s default renders the `neutral` role, and a bare accent only re-derives
 `brand`, so the preset aliases neutral's loud slots to brand's in both modes
@@ -5777,7 +5783,9 @@ attribute when provided), plus two adornment slots:
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
-`tag-label`, `tag__content`, `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
+`tag-overflow` (the "+N" indicator, carried alongside `tag` past `max-options-visible`,
+mirroring `lr-select`'s identical two-part overflow chip), `tag-label`, `tag__content`,
+`tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
 `clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
 input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
 `expand-icon`, `listbox`,
@@ -5796,9 +5804,11 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `retry-button`, `error`, `hint`
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
-`lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
-(`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are
-unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`.
+`lr-change`/native `input` event detail `value` narrow to `string` when `Multiple` is `false` and
+`string[]` (`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored
+surface are unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`. Combobox has no
+dedicated `lr-input` custom event (unlike `lr-select`); the exported `LyraComboboxChangeEvent`/
+`LyraComboboxInputEvent` aliases type `lr-change` and the native `input` listener respectively.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -10507,8 +10517,8 @@ Long group labels, hints, errors, and horizontal option labels wrap within the h
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
 targets keep their own fixed hit-area floor while the surrounding text wraps.
 
-A form-associated collection of `<lr-checkbox>` children. Its readonly `value` is a defensive
-`string[]` snapshot; each
+A form-associated collection of `<lr-checkbox>` children. Its `value` is a settable, frozen,
+defensive `string[]` snapshot; each
 selected value is submitted under `name` and `required` requires at least one selection.
 For zero-or-more choices in button chrome behind one tab stop that submit nothing, use
 `lr-toggle-group`.
@@ -10903,6 +10913,10 @@ hover and invalid states below.
 without changing brand/danger paint in sibling components.
 `--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
 without a `::part(editor)` rule.
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` on
+the editor frame once its textarea is focused — one name for every field-shaped control in the
+library, so a halo is configured once instead of per component. It is additive: the focus outline
+is the accessibility answer to focus and is never replaced by it.
 The `editor` scroll frame also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
 its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
@@ -11204,6 +11218,9 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - `--lr-color-picker-border-color` — Resting trigger border color. Default: `var(--lr-color-border)`.
 - `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text
   field, format/eyedropper buttons and palette swatches. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the trigger
+  while it is focused. One name for every field-shaped control in the library, so a halo is
+  configured once instead of per component; additive to the existing focus outline. Default: `none`.
 - `--lr-color-picker-selected-border` — Selected palette-swatch border. Default:
   `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
@@ -11434,6 +11451,9 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
   color below. Default: `var(--lr-color-border)`.
 - `--lr-emoji-picker-search-fill` — Resting search background. Default: `var(--lr-color-surface)`.
 - `--lr-emoji-picker-search-hover-border-color` — Search hover border. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the search
+  field while it is focused. One name for every field-shaped control in the library, so a halo is
+  configured once instead of per component; additive to the existing focus outline. Default: `none`.
 
 ## `lr-rubric-form`
 
@@ -11737,6 +11757,30 @@ resolver. Menu labels stay visible; a per-entry `country` override also reaches 
   or `lr-combobox` instead.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
   ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.
+
+**Lazy-loading the picked locale's catalog.** `locales` accepts a tag list before any of those
+tags has a registered catalog (see the `locales` property above), and `lr-change` is cancelable, so
+the lightest integration offers every supported tag up front and fetches only the one the visitor
+actually picks:
+
+```js
+import { setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
+
+const picker = document.querySelector("lr-locale-picker");
+picker.locales = ["en", "fr", "ar", "ja"]; // offered before any catalog is registered
+picker.addEventListener("lr-change", async (e) => {
+  e.preventDefault(); // keep `value` updated, defer applying the locale until the catalog lands
+  const tag = e.detail.value;
+  await import(`@aceshooting/lyra-ui/translations/${tag}.js`); // registers the catalog as a side effect
+  setLyraLocale(tag);
+  document.documentElement.lang = tag;
+  document.documentElement.dir = e.detail.direction;
+});
+```
+
+Only the tags actually shipped as ready-made catalogs (see "The shipped catalogs" in the
+localization guide) resolve through that dynamic-import path unmodified; an application-authored
+locale still needs its own `registerLyraLocale()` call before `setLyraLocale()` does anything.
 
 **Additional API surface:**
 
@@ -14632,8 +14676,9 @@ ignored) is the calendar-mode counterpart: the frozen snapshot of the last calen
 `padLeft` (weekday gutter), `padTop` (month band), `cellSize`, `cellWidth`, `cellHeight`,
 `cellGapX`, `cellGapY`, `cellRadius`, `weekCount`, and `firstDayOfWeek`. `undefined` outside
 calendar mode and before the first calendar draw; the same object is returned until the painted
-geometry changes, and no event is fired for it. With `data.columnX`/`data.rowY`, those callbacks
-position individual columns/rows instead of `padLeft`/`padTop` plus the gaps.
+geometry changes, at which point `lr-calendar-geometry-change` fires with that same frozen object as
+its `detail`, mirroring `matrixGeometry`/`lr-matrix-geometry-change`. With `data.columnX`/`data.rowY`,
+those callbacks position individual columns/rows instead of `padLeft`/`padTop` plus the gaps.
 
 For a GitHub-style contribution graph with rounded, visibly spaced cells, stay in calendar mode and
 set `cell-gap-x="3" cell-gap-y="3" cell-radius="2"` — week columns, weekday/month labels, date
@@ -14648,7 +14693,10 @@ For a single fluid square cell, use `fit-to-width` with equal horizontal and ver
 `lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
 from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
 against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
-in calendar mode)
+in calendar mode), `lr-calendar-geometry-change` (the calendar-mode counterpart — fired after a
+calendar-mode draw whose resolved `calendarGeometry` differs from the previous draw, e.g. after
+`cellGapX`/`cellGapY`/`cellRadius` changes or a `fitToWidth` resize; `detail` is the same object
+`calendarGeometry` returns; never fired in matrix mode)
 
 **Slots:** `legend` — custom content rendered inside the built-in `[part="legend"]` row, after the
 gradient/`legendStops` swatches, the trailing `valueLabel` caption, and any labeled `annotations`
@@ -18698,7 +18746,10 @@ affordance.
 when the close affordance is clicked or Delete is pressed on the focused owning tab. It bubbles, is
 composed and noncancelable. A disabled tab never emits it. The tab never removes itself or its
 panel; the consumer handles the request. The owning group separately emits
-`lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's visual label content; direct default-slot element roots
+`lr-tab-show`/`lr-tab-hide`. This name is not dialog-scoped: a tab strip nested inside a consumer's
+own `<lr-dialog>` has this event observed by that dialog's own `lr-close` listener too — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard. **Slots:** default (the tab's visual label content; direct default-slot element roots
 are inert while projected, and its accessibility-exposed flattened text names the real tab button).
 **CSS parts:** `base`
 and `tab` are aliases on the same projected-content slot; `close-button` and
@@ -20296,8 +20347,10 @@ a docked panel's own toggle) should call it directly with its own reason string.
 cancelable pre-close veto, fired by the overlay presentation's built-in dismiss triggers — Escape,
 backdrop click — and by any `close()` call, in either presentation; calling `preventDefault()` keeps
 the panel open and leaves active overlay chrome/focus trapping intact. A plain `open = false`
-property write does **not** fire it, only going through `close()` counts as a dismissal),
-`lr-mode-change`
+property write does **not** fire it, only going through `close()` counts as a dismissal). This name
+is not dialog-scoped: nesting this panel inside a consumer's own `<lr-dialog>` means that dialog's
+`lr-close` listener also observes this event — see `<lr-dialog>`'s `lr-close` section (in
+`overlays.md`) for the full list of emitters and the target-filtering guard. `lr-mode-change`
 (`detail: LyraResponsivePanelModeChangeDetail` = `{ mode: LyraResponsivePanelEffectiveMode }`; fired whenever
 the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
 `'inline'` and `'overlay'`; never fired on the initial render, only for a live change thereafter).
@@ -21243,7 +21296,10 @@ cancelability, and timing, fired at the same call site; either event's `preventD
 the open) kept for the 20.x line and removed no earlier than 21.0.0. The `focus`/`blur` bridge is
 new in 10.0.0: native `focus`/`blur` neither
 bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
-never fired at all.
+never fired at all. `lr-close` is not dialog-scoped: nesting this palette inside a consumer's own
+`<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard.
 
 **Slots:** none.
 
@@ -21535,7 +21591,14 @@ independently focusable and operable when the summary is disabled.
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and
 `--lr-accordion-item-easing` (default `var(--lr-easing-standard)`). The mapped unprefixed names
 `--spacing`, `--show-duration`, `--hide-duration`, and `--easing` remain accepted aliases and win
-when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`.
+when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`. The trigger
+button's and panel content's padding can also be tuned independently of each other and of
+`--lr-accordion-item-spacing`: `--lr-accordion-item-summary-padding-block` and
+`--lr-accordion-item-summary-padding-inline` control the trigger button alone, and
+`--lr-accordion-item-content-padding-block-end` and `--lr-accordion-item-content-padding-inline`
+control the panel content alone. All four default to the same `--lr-accordion-item-spacing`
+resolution, mirroring `lr-details`'s equivalent four hooks below. `--spacing` aliases the item
+rhythm and remains the highest-precedence override, ahead of these four as well.
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
@@ -21955,11 +22018,12 @@ space while nothing is slotted.
 **CSS parts:** `base`, `controls`, `field`, `field-<filterId>`, `end`, `filter-control`,
 `filter-control-label`, `filter-control-label-group`, `filter-control-field`,
 `filter-control-input`, `filter-control-start`, `filter-control-end`, `filter-control-listbox`,
-`filter-control-option`, `filter-control-tags`, `filter-control-tag`, `filter-control-tag-label`,
-`filter-control-tag-remove-button`, `filter-control-tag-remove-button-base`,
-`filter-control-clear-button`, `filter-control-expand-button`, `filter-control-expand-icon`,
-`filter-control-popup`, `filter-control-error`, `filter-control-hint`, `active-filters`, `chips`,
-`chip`, `reset-button`, `status`.
+`filter-control-option`, `filter-control-tags`, `filter-control-tag`, `filter-control-tag-overflow`,
+`filter-control-tag-label`, `filter-control-tag-remove-button`,
+`filter-control-tag-remove-button-base`, `filter-control-clear-button`,
+`filter-control-expand-button`, `filter-control-expand-icon`, `filter-control-popup`,
+`filter-control-error`, `filter-control-hint`, `active-filters`, `chips`, `chip`, `reset-button`,
+`status`.
 
 The `filter-control-*` parts are semantic aliases forwarded from each built-in control's shadow
 surface. `filter-control-field` consistently reaches the select trigger, combobox container, or
@@ -21977,13 +22041,11 @@ definition. Custom renderers retain ownership of their own part forwarding.
 
 A `multiple` `'combobox'` filter collapses past its own `max-options-visible` (3 by default, an
 `<lr-combobox>` property this component does not forward) into a localized "+N" overflow indicator,
-the same substance as `lr-select`'s own `multiple`-mode overflow chip. The one remaining difference:
-`lr-select`'s overflow chip carries a second, distinguishing `tag-overflow` part
-(`part="tag tag-overflow tag__base"`) so a consumer can style just that chip; `lr-combobox`'s
-overflow chip carries only the plain `tag` part, with no equivalent token to forward as
-`filter-control-tag-overflow`. Adding one is `<lr-combobox>`'s own surface to grow, not something
-`lr-filter-bar`'s `exportparts` can manufacture for a part its composed child never renders — noted
-here as a known, deliberate gap rather than silently undocumented.
+the same substance as `lr-select`'s own `multiple`-mode overflow chip. Like that chip
+(`part="tag tag-overflow tag__base"`), `lr-combobox`'s overflow indicator carries a second,
+distinguishing `tag-overflow` part alongside the plain `tag` part, forwarded here as
+`filter-control-tag-overflow` so a consumer can style just the overflow indicator without also
+restyling every ordinary selected tag.
 On a `'checkbox-menu'` filter, `filter-control-field` is the trigger button's own frame — the
 element inside `<lr-button>` that draws the border, background and radius, not the chrome-less
 button host, so a `::part(filter-control-field) { border-color: … }` rule works there exactly as it
@@ -25670,6 +25732,17 @@ below).
 elsewhere in the region) closes it and reopens it at the new point. That cycle emits `lr-hide` and
 then the next `lr-show`, with **no** `lr-after-hide` between them; do not pair them one-to-one.
 
+**Same-task reparent (drag-and-drop, etc.).** Removing and re-appending the same element within one
+task while the menu is open closes it without emitting `lr-hide`/`lr-after-hide`/`lr-show` for that
+move. This silence is *not* cleared on `connectedCallback`: the composed inner menu's own delayed
+`lr-after-hide` is still pending when the host reconnects, and it must still arrive and settle
+quietly rather than surface as a phantom host `lr-after-hide`. The silence is instead cleared by
+whichever happens first — that delayed inner `lr-after-hide` arriving, or the next `lr-show` (which
+always clears it unconditionally on open). A future audit against a generic "clear transient
+open-state on `connectedCallback`" rule should treat this component's silence flag as
+intentionally exempt, not as a bug — clearing it on connect would let that pending inner event
+through and emit a phantom `lr-after-hide` for a cycle the consumer was never shown.
+
 **Closing and focus.** Escape (topmost overlay only), activating an item, an outside pointer,
 `disabled`, and `hide()` close the menu. Escape, activation and `hide()` return focus to the
 captured target: an element focused inside the region when the gesture arrived (a right-click
@@ -26308,7 +26381,9 @@ unsupported `variant`, `size`, and `heading-level` values become reflected `bran
 while an unsupported `appearance` becomes the omitted state.
 
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
-unless a listener calls `preventDefault()`.
+unless a listener calls `preventDefault()`. This name is not dialog-scoped — see `<lr-dialog>`'s
+own `lr-close` section above for the full list of emitters and the target-filtering guard, which
+matters whenever a callout is nested inside a dialog.
 When accepted close or a direct `open = false` write removes the focused close action, focus moves
 to the nearest available composed action. Vetoed close and newer external focus are preserved.
 
@@ -34654,7 +34729,10 @@ value, without suppressing the visible `name` heading.
   The event is emitted after the viewer sets `open` to `false`. A registered renderer may compose
   its own descendant dialog; closing that inner dialog keeps its own `lr-close` path — the shell
   guards on `event.target !== event.currentTarget` — and does not close the document viewer.
-  (`<lr-dialog>`'s close event was spelled `lr-dialog-close` before 10.0.0.)
+  (`<lr-dialog>`'s close event was spelled `lr-dialog-close` before 10.0.0.) The name itself is not
+  dialog-scoped in this library: nesting this viewer inside a consumer's own `<lr-dialog>` means
+  that dialog's `lr-close` listener also observes this event — see `<lr-dialog>`'s own `lr-close`
+  section (in `overlays.md`) for the full list of emitters and the guard pattern.
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per
@@ -38654,8 +38732,14 @@ Both remain inheritable fallback arms, so set them on an ancestor to retheme a g
 changing unrelated controls. `--lr-model-select-trigger-border-color` (default
 `var(--lr-color-border)`) and `--lr-model-select-trigger-fill` (default `var(--lr-color-surface)`)
 control the trigger/combobox's resting border and background, independent of the open-state border
-below. `--lr-model-select-open-border-color` (default `var(--lr-color-brand)`)
-controls the trigger border while the listbox is open. A synthetic stale-value row has independent
+below. `--lr-model-select-trigger-hover-border-color` (default
+`var(--lr-model-select-trigger-border-color)`) retints the trigger border while the pointer is over it,
+leaving the resting border unchanged when left unset. `--lr-model-select-open-border-color` (default
+`var(--lr-color-brand)`) controls the trigger border while the listbox is open. The shared field
+halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while the trigger or
+combobox is focused — one name for every field-shaped control in the library, so a halo is
+configured once instead of per component. It is additive: the focus outline is the accessibility
+answer to focus and is never replaced by it. A synthetic stale-value row has independent
 `--lr-model-select-option-synthetic-border-style` (default `dashed`) and
 `--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
 `--lr-model-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) — background of a
@@ -40942,7 +41026,14 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   the open-state color below. Default: `var(--lr-color-border)`.
 - `--lr-voice-picker-trigger-fill` — Resting trigger/combobox background. Default:
   `var(--lr-color-surface)`.
+- `--lr-voice-picker-trigger-hover-border-color` — Trigger border color while the pointer is over
+  it, or while it is pressed, independent of the resting border above. Default:
+  `var(--lr-color-brand)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
+  trigger or combobox is focused. One name for every field-shaped control in the library, so a halo
+  is configured once instead of per component; additive to the existing focus outline. Default:
+  `none`.
 - `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
@@ -42366,7 +42457,10 @@ reason string so every dismissal path funnels through the same event.
 
 **Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
 'close-button'|'api'|string`) fired exactly once per dismissal (`'backdrop'` requires
-`lightDismiss`); `lr-maximize-change` (`detail:
+`lightDismiss`). This name is not dialog-scoped: nesting this dialog inside a consumer's own
+`<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard. `lr-maximize-change` (`detail:
 { readonly maximized: boolean }`, the new `maximized` state) fired when the header's
 maximize/restore toggle is clicked.
 
@@ -42528,7 +42622,10 @@ checkbox or switch never flips at all — the proposal is raised from that contr
 refused change shows no flip-and-snap-back. A host can prevent a proposal while it validates or
 persists it, then assign the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click when `lightDismiss` is enabled, or a `close()` call), and no-detail `focus`/`blur` events
+click when `lightDismiss` is enabled, or a `close()` call; not dialog-scoped — nesting this dialog
+inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes this
+event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters and the
+target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the internal search input gains or loses focus.
 Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
 switch controls stop at the dialog boundary, as do their own
@@ -42960,7 +43057,10 @@ closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-d
 default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
 `pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, an opted-in
-backdrop click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
+backdrop click, the Approve/Deny buttons, or a `close()` call; not dialog-scoped — nesting this
+dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes
+this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
+and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
 
 `waitUntil()` is `<lr-confirm-bar>`-only and this dialog does not carry it. The two components share

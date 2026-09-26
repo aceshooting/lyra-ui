@@ -51,11 +51,12 @@ export const formControlRequiredMarker = css`
  * The one focus halo every field-shaped form control in this library can paint.
  *
  * `lr-input`, `lr-textarea`, `lr-select`, `lr-combobox`, `lr-locale-picker`, `lr-date-input`,
- * `lr-file-input`, `lr-phone-input`, `lr-token-input` and `lr-time-input` each already answer focus
- * with an outline or a brand border, and that stays: the outline is the accessibility contract
- * (WCAG 2.4.7), not decoration, and nothing here replaces or removes it. What none of them had was
- * a way to add the soft ring a design system usually draws *outside* that edge. Writing one meant a
- * `::part()` rule per control, per state, and keeping ten of them in step by hand.
+ * `lr-file-input`, `lr-phone-input`, `lr-token-input`, `lr-time-input`, `lr-model-select`,
+ * `lr-voice-picker`, `lr-code-editor`, `lr-emoji-picker` and `lr-color-picker` each already answer
+ * focus with an outline or a brand border, and that stays: the outline is the accessibility
+ * contract (WCAG 2.4.7), not decoration, and nothing here replaces or removes it. What none of them
+ * had was a way to add the soft ring a design system usually draws *outside* that edge. Writing one
+ * meant a `::part()` rule per control, per state, and keeping fifteen of them in step by hand.
  *
  * `lr-otp-input` is the one field-shaped control deliberately left out, and the reason is mechanical
  * rather than editorial: its focused segment already paints
@@ -78,9 +79,9 @@ export const formControlRequiredMarker = css`
  * Step 1 lives in the adopting component rather than here on purpose. Twenty-two components compose
  * this file for the required marker, and a `var(--lr-form-control-focus-shadow…)` read in *this*
  * file would make every one of them advertise the hook in `custom-elements.json` and in the editor
- * data — including the twelve that never paint a field surface and would honour nothing. A hook is
- * advertised where it works. The private property keeps the paint itself in one place, so the ten
- * controls that do adopt it cannot drift apart.
+ * data — including the seven that never paint a field surface and would honour nothing. A hook is
+ * advertised where it works. The private property keeps the paint itself in one place, so the
+ * fifteen controls that do adopt it cannot drift apart.
  *
  * Declaring the private on `:host` also leaves the public name undeclared everywhere, which is what
  * keeps it a real cascade point: one declaration on `:root`, or on any ancestor to scope it to a

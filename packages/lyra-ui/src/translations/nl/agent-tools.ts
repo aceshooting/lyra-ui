@@ -242,4 +242,4 @@ const strings: LyraLocaleStrings = {
   agentRunStatusCancelled: 'Geannuleerd',
 };
 
-registerLyraLocale('nl', strings, { dir: 'ltr', name: 'Nederlands' });
+registerLyraLocale('nl', strings);

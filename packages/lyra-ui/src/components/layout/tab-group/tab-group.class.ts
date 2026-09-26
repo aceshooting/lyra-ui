@@ -119,7 +119,8 @@ export interface LyraTabGroupEventMap {
  * Home/End jump to the first/last enabled tab,
  * and a roving `tabindex` follows the focused tab. An enabled closable `<lr-tab>` adds
  * `aria-keyshortcuts="Delete"` to that same real tab button; Delete routes the close request through
- * the descriptor so `lr-close` still targets `<lr-tab>`. The visual close affordance stays
+ * the descriptor so `lr-close` still targets `<lr-tab>` (see `<lr-tab>`'s own `lr-close` docs and
+ * `<lr-dialog>`'s, since the name is not dialog-scoped in this library). The visual close affordance stays
  * non-focusable and accessibility-hidden, avoiding a nested interactive control. Rich `<lr-tab>`
  * content is likewise inert while projected; only its accessibility-exposed, default-slot text
  * names the real tab button rather than leaving an interactive descendant inside it. Author

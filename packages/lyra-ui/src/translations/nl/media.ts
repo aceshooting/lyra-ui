@@ -122,4 +122,4 @@ const strings: LyraLocaleStrings = {
   flagLoadError: 'Vlag niet beschikbaar',
 };
 
-registerLyraLocale('nl', strings, { dir: 'ltr', name: 'Nederlands' });
+registerLyraLocale('nl', strings);

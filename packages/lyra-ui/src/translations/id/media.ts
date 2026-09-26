@@ -31,7 +31,7 @@ const strings: LyraLocaleStrings = {
   attachmentMenuFiles: 'Unggah file',
   attachmentMenuImage: 'Unggah foto',
   attachmentMenuCamera: 'Ambil foto',
-  fileTypeFile: 'Berkas',
+  fileTypeFile: 'File',
   fileTypePdf: 'PDF',
   fileTypeWord: 'Dokumen Word',
   fileTypeSpreadsheet: 'Lembar kerja',
@@ -122,4 +122,4 @@ const strings: LyraLocaleStrings = {
   flagLoadError: 'Bendera tidak tersedia',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

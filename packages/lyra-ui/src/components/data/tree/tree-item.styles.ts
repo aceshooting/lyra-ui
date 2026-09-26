@@ -107,13 +107,16 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   :where([part='toggle']):hover:where(:not(:disabled)) {
-    background: var(--lr-color-surface-hover, var(--lr-color-border));
+    /* --lr-color-neutral-fill-quiet, not --lr-color-border: a toggle button's own hover/press fill
+       is a neutral tint on top of the surface it sits on, not a border color borrowed as a fill --
+       the same class of fix as this release's lr-avatar/lr-skeleton/lr-empty sweep. */
+    background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
     border-radius: var(--lr-radius);
   }
   :where([part='toggle']):active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
-      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -122,7 +125,7 @@ export const styles = css`
   :where([part='toggle'])[data-pressed]:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
-      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

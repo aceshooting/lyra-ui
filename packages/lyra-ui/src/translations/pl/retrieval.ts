@@ -219,4 +219,4 @@ const strings: LyraLocaleStrings = {
   retrievalTraceEvidenceToggle: 'Dowody {label}',
 };
 
-registerLyraLocale('pl', strings, { dir: 'ltr', name: 'Polski' });
+registerLyraLocale('pl', strings);

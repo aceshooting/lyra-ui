@@ -1470,7 +1470,10 @@ affordance.
 when the close affordance is clicked or Delete is pressed on the focused owning tab. It bubbles, is
 composed and noncancelable. A disabled tab never emits it. The tab never removes itself or its
 panel; the consumer handles the request. The owning group separately emits
-`lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's visual label content; direct default-slot element roots
+`lr-tab-show`/`lr-tab-hide`. This name is not dialog-scoped: a tab strip nested inside a consumer's
+own `<lr-dialog>` has this event observed by that dialog's own `lr-close` listener too — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard. **Slots:** default (the tab's visual label content; direct default-slot element roots
 are inert while projected, and its accessibility-exposed flattened text names the real tab button).
 **CSS parts:** `base`
 and `tab` are aliases on the same projected-content slot; `close-button` and
@@ -3069,8 +3072,10 @@ a docked panel's own toggle) should call it directly with its own reason string.
 cancelable pre-close veto, fired by the overlay presentation's built-in dismiss triggers — Escape,
 backdrop click — and by any `close()` call, in either presentation; calling `preventDefault()` keeps
 the panel open and leaves active overlay chrome/focus trapping intact. A plain `open = false`
-property write does **not** fire it, only going through `close()` counts as a dismissal),
-`lr-mode-change`
+property write does **not** fire it, only going through `close()` counts as a dismissal). This name
+is not dialog-scoped: nesting this panel inside a consumer's own `<lr-dialog>` means that dialog's
+`lr-close` listener also observes this event — see `<lr-dialog>`'s `lr-close` section (in
+`overlays.md`) for the full list of emitters and the target-filtering guard. `lr-mode-change`
 (`detail: LyraResponsivePanelModeChangeDetail` = `{ mode: LyraResponsivePanelEffectiveMode }`; fired whenever
 the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
 `'inline'` and `'overlay'`; never fired on the initial render, only for a live change thereafter).
@@ -4016,7 +4021,10 @@ cancelability, and timing, fired at the same call site; either event's `preventD
 the open) kept for the 20.x line and removed no earlier than 21.0.0. The `focus`/`blur` bridge is
 new in 10.0.0: native `focus`/`blur` neither
 bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
-never fired at all.
+never fired at all. `lr-close` is not dialog-scoped: nesting this palette inside a consumer's own
+`<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard.
 
 **Slots:** none.
 
@@ -4308,7 +4316,14 @@ independently focusable and operable when the summary is disabled.
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and
 `--lr-accordion-item-easing` (default `var(--lr-easing-standard)`). The mapped unprefixed names
 `--spacing`, `--show-duration`, `--hide-duration`, and `--easing` remain accepted aliases and win
-when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`.
+when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`. The trigger
+button's and panel content's padding can also be tuned independently of each other and of
+`--lr-accordion-item-spacing`: `--lr-accordion-item-summary-padding-block` and
+`--lr-accordion-item-summary-padding-inline` control the trigger button alone, and
+`--lr-accordion-item-content-padding-block-end` and `--lr-accordion-item-content-padding-inline`
+control the panel content alone. All four default to the same `--lr-accordion-item-spacing`
+resolution, mirroring `lr-details`'s equivalent four hooks below. `--spacing` aliases the item
+rhythm and remains the highest-precedence override, ahead of these four as well.
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
@@ -4728,11 +4743,12 @@ space while nothing is slotted.
 **CSS parts:** `base`, `controls`, `field`, `field-<filterId>`, `end`, `filter-control`,
 `filter-control-label`, `filter-control-label-group`, `filter-control-field`,
 `filter-control-input`, `filter-control-start`, `filter-control-end`, `filter-control-listbox`,
-`filter-control-option`, `filter-control-tags`, `filter-control-tag`, `filter-control-tag-label`,
-`filter-control-tag-remove-button`, `filter-control-tag-remove-button-base`,
-`filter-control-clear-button`, `filter-control-expand-button`, `filter-control-expand-icon`,
-`filter-control-popup`, `filter-control-error`, `filter-control-hint`, `active-filters`, `chips`,
-`chip`, `reset-button`, `status`.
+`filter-control-option`, `filter-control-tags`, `filter-control-tag`, `filter-control-tag-overflow`,
+`filter-control-tag-label`, `filter-control-tag-remove-button`,
+`filter-control-tag-remove-button-base`, `filter-control-clear-button`,
+`filter-control-expand-button`, `filter-control-expand-icon`, `filter-control-popup`,
+`filter-control-error`, `filter-control-hint`, `active-filters`, `chips`, `chip`, `reset-button`,
+`status`.
 
 The `filter-control-*` parts are semantic aliases forwarded from each built-in control's shadow
 surface. `filter-control-field` consistently reaches the select trigger, combobox container, or
@@ -4750,13 +4766,11 @@ definition. Custom renderers retain ownership of their own part forwarding.
 
 A `multiple` `'combobox'` filter collapses past its own `max-options-visible` (3 by default, an
 `<lr-combobox>` property this component does not forward) into a localized "+N" overflow indicator,
-the same substance as `lr-select`'s own `multiple`-mode overflow chip. The one remaining difference:
-`lr-select`'s overflow chip carries a second, distinguishing `tag-overflow` part
-(`part="tag tag-overflow tag__base"`) so a consumer can style just that chip; `lr-combobox`'s
-overflow chip carries only the plain `tag` part, with no equivalent token to forward as
-`filter-control-tag-overflow`. Adding one is `<lr-combobox>`'s own surface to grow, not something
-`lr-filter-bar`'s `exportparts` can manufacture for a part its composed child never renders — noted
-here as a known, deliberate gap rather than silently undocumented.
+the same substance as `lr-select`'s own `multiple`-mode overflow chip. Like that chip
+(`part="tag tag-overflow tag__base"`), `lr-combobox`'s overflow indicator carries a second,
+distinguishing `tag-overflow` part alongside the plain `tag` part, forwarded here as
+`filter-control-tag-overflow` so a consumer can style just the overflow indicator without also
+restyling every ordinary selected tag.
 On a `'checkbox-menu'` filter, `filter-control-field` is the trigger button's own frame — the
 element inside `<lr-button>` that draws the border, background and radius, not the chrome-less
 button host, so a `::part(filter-control-field) { border-color: … }` rule works there exactly as it

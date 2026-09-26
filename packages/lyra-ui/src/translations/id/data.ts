@@ -184,4 +184,4 @@ const strings: LyraLocaleStrings = {
   graphQueryDeleteWithContext: 'Hapus {name}',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

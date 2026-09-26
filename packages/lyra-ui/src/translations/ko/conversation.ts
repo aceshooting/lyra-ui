@@ -164,4 +164,4 @@ const strings: LyraLocaleStrings = {
   realtimeSessionConnectionFailed: '실시간 연결에 실패했습니다.',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

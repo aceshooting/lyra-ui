@@ -108,4 +108,4 @@ const strings: LyraLocaleStrings = {
   localePickerRequired: 'Kies een taal.',
 };
 
-registerLyraLocale('nl', strings, { dir: 'ltr', name: 'Nederlands' });
+registerLyraLocale('nl', strings);

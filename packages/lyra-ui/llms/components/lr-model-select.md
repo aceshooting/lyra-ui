@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -228,8 +228,14 @@ Both remain inheritable fallback arms, so set them on an ancestor to retheme a g
 changing unrelated controls. `--lr-model-select-trigger-border-color` (default
 `var(--lr-color-border)`) and `--lr-model-select-trigger-fill` (default `var(--lr-color-surface)`)
 control the trigger/combobox's resting border and background, independent of the open-state border
-below. `--lr-model-select-open-border-color` (default `var(--lr-color-brand)`)
-controls the trigger border while the listbox is open. A synthetic stale-value row has independent
+below. `--lr-model-select-trigger-hover-border-color` (default
+`var(--lr-model-select-trigger-border-color)`) retints the trigger border while the pointer is over it,
+leaving the resting border unchanged when left unset. `--lr-model-select-open-border-color` (default
+`var(--lr-color-brand)`) controls the trigger border while the listbox is open. The shared field
+halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while the trigger or
+combobox is focused — one name for every field-shaped control in the library, so a halo is
+configured once instead of per component. It is additive: the focus outline is the accessibility
+answer to focus and is never replaced by it. A synthetic stale-value row has independent
 `--lr-model-select-option-synthetic-border-style` (default `dashed`) and
 `--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
 `--lr-model-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) — background of a

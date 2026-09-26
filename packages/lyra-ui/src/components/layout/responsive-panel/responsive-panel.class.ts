@@ -130,7 +130,10 @@ export function resolveResponsivePanelEffectiveMode(
  *   does not fire it (matching lr-dialog's own precedent: only going through `close()` counts as
  *   a dismissal), and this is deliberately the same event/semantics in both presentations,
  *   rather than only being meaningful for the overlay case, so a consumer only has to wire up one
- *   listener regardless of which presentation is currently active.
+ *   listener regardless of which presentation is currently active. The name is not dialog-scoped
+ *   in this library: nesting this panel inside a consumer's own `<lr-dialog>` means that dialog's
+ *   `lr-close` listener also observes this event. See `<lr-dialog>`'s own `lr-close` docs for the
+ *   full list of emitters and the `event.target !== event.currentTarget` guard.
  * @event lr-mode-change - `detail: LyraResponsivePanelModeChangeDetail`. Fired whenever the
  *   *effective* mode (not the `mode` prop's literal value, which may be `'auto'`) changes between
  *   `'inline'` and `'overlay'` -- crossing the breakpoint while `mode="auto"`, or the host

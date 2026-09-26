@@ -66,7 +66,7 @@ const strings: LyraLocaleStrings = {
   selectModel: 'モデルを選択…',
   modelSelectNoModels: 'モデルがありません',
   modelSelectRequired: 'モデルを選択してください。',
-  temperature: 'Temperature',
+  temperature: '温度',
   threadListLabel: '会話',
   threadGroupPinned: 'ピン留め',
   threadGroupToday: '今日',

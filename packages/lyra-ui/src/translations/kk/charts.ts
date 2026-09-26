@@ -61,7 +61,7 @@ const strings: LyraLocaleStrings = {
   liteChartBarLabel: '{series}, {label}: {value}',
   chartValuePercentageLabel: '{label}: {value} ({percentage})',
   liteChartCustomMarkSummary: '{content} ({index}, барлығы {total})',
-  chartMissingLibrary: 'Диаграммаларды көрсету үшін бұл компонентке қосымша "chart.js" бумасын орнату қажет.',
+  chartMissingLibrary: 'Диаграммаларды көрсету үшін бұл компонентке қосымша «chart.js» бумасын орнату қажет.',
   boxPlotMissingLibrary: 'Қорапты диаграммаларды көрсету үшін бұл компонентке қосымша box-plot диаграмма бумасын орнату қажет.',
 };
 

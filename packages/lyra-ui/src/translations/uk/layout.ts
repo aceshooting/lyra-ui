@@ -64,4 +64,4 @@ const strings: LyraLocaleStrings = {
   reorderMoveCancelled: 'Зміну порядку скасовано.',
 };
 
-registerLyraLocale('uk', strings, { dir: 'ltr', name: 'Українська' });
+registerLyraLocale('uk', strings);

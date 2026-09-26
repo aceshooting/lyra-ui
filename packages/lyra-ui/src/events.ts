@@ -569,6 +569,13 @@ export type LyraBeforeVisibilityChangeEvent = LyraGraphLegendEventMap['lr-before
 export type LyraBranchChangeEvent = LyraBranchPickerEventMap['lr-branch-change'];
 
 /**
+ * `lr-calendar-geometry-change` — dispatched by `<lr-heatmap>`.
+ *
+ * Detail type: `LyraHeatmapEventMap['lr-calendar-geometry-change']`.
+ */
+export type LyraCalendarGeometryChangeEvent = LyraHeatmapEventMap['lr-calendar-geometry-change'];
+
+/**
  * `lr-camera-request` — dispatched by 2 components: `<lr-attachment-trigger>`,
  * `<lr-prompt-input>`.
  *
@@ -3790,6 +3797,7 @@ export interface LyraGlobalEventMap {
   'lr-before-query-save': LyraBeforeQuerySaveEvent;
   'lr-before-visibility-change': LyraBeforeVisibilityChangeEvent;
   'lr-branch-change': LyraBranchChangeEvent;
+  'lr-calendar-geometry-change': LyraCalendarGeometryChangeEvent;
   'lr-camera-request': LyraCameraRequestEvent;
   'lr-cancel': LyraCancelEvent;
   'lr-card-activate': LyraCardActivateEvent;

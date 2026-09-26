@@ -89,7 +89,10 @@ checkbox or switch never flips at all — the proposal is raised from that contr
 refused change shows no flip-and-snap-back. A host can prevent a proposal while it validates or
 persists it, then assign the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click when `lightDismiss` is enabled, or a `close()` call), and no-detail `focus`/`blur` events
+click when `lightDismiss` is enabled, or a `close()` call; not dialog-scoped — nesting this dialog
+inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes this
+event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters and the
+target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the internal search input gains or loses focus.
 Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
 switch controls stop at the dialog boundary, as do their own

@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 export const styles = css`
   :host {
     display: block;
@@ -9,6 +12,11 @@ export const styles = css`
     --_lr-code-editor-font-size: var(--lr-font-size-m);
     --_lr-code-editor-line-height: 1.5;
     --_lr-code-editor-tab-size: 2;
+    /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
+       undeclared -- only this private copy of it is declared -- so a value set on :root or any
+       ancestor still reaches this frame, while the halo itself is painted in one place for every
+       field-shaped control in the library. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   /* Size ladder for the \`size\` property, mirroring lr-textarea's six-step ladder and its
      untouched-at-the-default-tier test. The default tier is m and the :host block above IS that
@@ -229,6 +237,13 @@ export const styles = css`
   [part='textarea']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
+  /* The opt-in focus halo, on the frame that owns the border rather than the borderless absolute
+     textarea inside it, and on :focus-within since the frame itself is never the focused element.
+     The outline above is the accessibility answer to keyboard focus and stays unchanged; unset,
+     this resolves to none, so the rule paints nothing by default. */
+  [part='editor']:focus-within {
+    ${formControlFocusHalo}
   }
   [part='textarea']::placeholder {
     color: var(--lr-color-text-quiet);

@@ -1,5 +1,5 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import '../flow-canvas/flow-canvas.js';
 import './flow-controls.js';
 import type { LyraFlowControls } from './flow-controls.js';
@@ -558,6 +558,35 @@ describe('toolbar button hover specificity', () => {
     } finally {
       await resetMouse();
       style.remove();
+    }
+  });
+
+  it("falls a toolbar button's unset hover fill back to the neutral fill token, not the border token", async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas>
+        <lr-flow-controls
+          slot="bottom-start"
+          style="--lr-color-border: rgb(1, 2, 3); --lr-color-neutral-fill-quiet: rgb(4, 5, 6)"
+        ></lr-flow-controls>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+    await controls.updateComplete;
+    // fit is enabled once the canvas binds; a disabled button deliberately gets no hover fill.
+    const button = controls.shadowRoot!.querySelector<HTMLButtonElement>('[part="fit"]')!;
+    expect(button.disabled).to.equal(false);
+    try {
+      await hoverUntilMatched(button, 'the toolbar fit button never entered :hover');
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === 'rgb(4, 5, 6)',
+        'the toolbar button never resolved its hover fill from the neutral fill token',
+      );
+      expect(getComputedStyle(button).backgroundColor).to.not.equal('rgb(1, 2, 3)');
+    } finally {
+      await resetMouse();
     }
   });
 });

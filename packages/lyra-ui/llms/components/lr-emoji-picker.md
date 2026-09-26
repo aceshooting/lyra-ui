@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 17 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -197,3 +197,6 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
   color below. Default: `var(--lr-color-border)`.
 - `--lr-emoji-picker-search-fill` — Resting search background. Default: `var(--lr-color-surface)`.
 - `--lr-emoji-picker-search-hover-border-color` — Search hover border. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the search
+  field while it is focused. One name for every field-shaped control in the library, so a halo is
+  configured once instead of per component; additive to the existing focus outline. Default: `none`.

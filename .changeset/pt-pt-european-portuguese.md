@@ -1,0 +1,5 @@
+---
+"@aceshooting/lyra-ui": patch
+---
+
+The `pt-PT` translation catalog now uses genuine European Portuguese grammar and vocabulary throughout instead of reusing Brazilian Portuguese constructions verbatim. Progress and status labels use the European periphrastic construction (`A carregar…`, `A ligar`, `A aguardar entrada`) instead of the Brazilian bare gerund (`Carregando…`, `Conectando`, `Aguardando entrada`); standalone labels and announcements that were left lower-case by the earlier word-substitution pass are capitalized (`Transferir`, `A carregar…`, `Ligação restabelecida.`); and a set of European-specific word choices replace their Brazilian counterparts, including `palavra-passe` for password, `controlo` for a UI control, `telemóvel` for a mobile phone, `eliminar` for delete, `guardar` for save, `registo`/`registado` for record/recorded, and `premido` for a held key or button. A few sentences also pick up European syntax: the `até ao`/`até à` contraction, `já não` instead of `não … mais`, `num` instead of `em um`, and `do que` after `mais`. Every key, placeholder token and plural category shape is unchanged.

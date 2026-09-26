@@ -206,3 +206,57 @@ describe('lr-heatmap calendar cell spacing', () => {
     expect(el.calendarGeometry).to.include({ firstDayOfWeek: 1, weekCount: 4 });
   });
 });
+
+describe('calendarGeometry / lr-calendar-geometry-change', () => {
+  it('fires once when cellGapX/cellGapY/cellRadius change the painted geometry', async () => {
+    const el = await calendar();
+    let count = 0;
+    let detail: LyraHeatmapCalendarGeometry | undefined;
+    el.addEventListener('lr-calendar-geometry-change', (event) => {
+      count++;
+      detail = (event as CustomEvent<LyraHeatmapCalendarGeometry>).detail;
+    });
+    el.cellGapX = 4;
+    el.cellGapY = 3;
+    el.cellRadius = 3;
+    await el.updateComplete;
+    draw(el);
+    expect(count, 'one geometry change produces one event').to.equal(1);
+    expect(detail).to.deep.equal(el.calendarGeometry);
+  });
+
+  it('does not refire on a redraw with unchanged geometry', async () => {
+    const el = await calendar();
+    let count = 0;
+    el.addEventListener('lr-calendar-geometry-change', () => count++);
+    // Same data and spacing -- a redundant redraw must not refire the event.
+    draw(el);
+    expect(count, 'a redraw with unchanged geometry must not refire').to.equal(0);
+  });
+
+  it('is undefined in matrix mode and never fires there', async () => {
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap></lr-heatmap>`);
+    let count = 0;
+    el.addEventListener('lr-calendar-geometry-change', () => count++);
+    el.data = { kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] };
+    await el.updateComplete;
+    (el as unknown as { draw(): void }).draw();
+    expect(el.calendarGeometry).to.equal(undefined);
+    expect(count).to.equal(0);
+  });
+
+  it('returns the very object the geometry event carried, so the two can never disagree', async () => {
+    const el = await calendar();
+    let detail: unknown;
+    el.addEventListener('lr-calendar-geometry-change', (event) => {
+      detail = (event as CustomEvent).detail;
+    });
+    el.cellGapX = 6;
+    await el.updateComplete;
+    draw(el);
+    // A redundant redraw with identical geometry must not replace the shared frozen detail object.
+    draw(el);
+    expect(detail).to.equal(el.calendarGeometry);
+    expect(Object.isFrozen(el.calendarGeometry), 'the shared object must not be mutable').to.be.true;
+  });
+});

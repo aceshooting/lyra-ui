@@ -35,7 +35,10 @@ export interface LyraTabEventMap {
  *   owning group projects them; their accessibility-exposed flattened text names the real tab button.
  * @event lr-close - Emitted when the close affordance is clicked or Delete is pressed on its
  *   focused owning tab. Bubbles, is composed, and is not cancelable; the component does not remove
- *   itself.
+ *   itself. The name is not dialog-scoped in this library: a tab strip nested inside a consumer's
+ *   own `<lr-dialog>` has this event observed by that dialog's own `lr-close` listener too. See
+ *   `<lr-dialog>`'s own `lr-close` docs for the full list of emitters and the
+ *   `event.target !== event.currentTarget` guard.
  * @csspart base - Compatibility name for the tab content wrapper; use `tab`.
  * @csspart tab - The tab content wrapper. It is the same node as `base`.
  * @csspart close-button - The non-focusable visual close affordance shown when `closable` is true.

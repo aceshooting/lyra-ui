@@ -25,6 +25,48 @@ describe('GFM task items', () => {
         await expect(el).to.be.accessible();
       });
     }
+    it(`${name} leaves the checkbox non-interactive: disabled, unfocusable and unclickable`, async () => {
+      const host = await fixture<HTMLElement>(html`<div></div>`);
+      const el = document.createElement(name) as LyraMarkdown;
+      el.content = '- [ ] Open\n- [x] Done\n';
+      host.append(el);
+      await waitUntil(() => Boolean(el.shadowRoot?.querySelector('input')));
+      const root = el.shadowRoot!;
+      const checkbox = root.querySelector<HTMLInputElement>('[part~="task-checkbox"]')!;
+      expect(checkbox.disabled).to.equal(true);
+      checkbox.focus();
+      expect(root.activeElement === checkbox).to.equal(false);
+      const checkedBefore = checkbox.checked;
+      checkbox.click();
+      expect(checkbox.checked).to.equal(checkedBefore);
+    });
+    it(`${name} keeps disc/circle native markers on a plain sibling and a plain list nested inside a task item`, async () => {
+      const host = await fixture<HTMLElement>(html`<div></div>`);
+      const el = document.createElement(name) as LyraMarkdown;
+      el.content = '- [ ] Task\n  - Nested plain\n- Plain sibling';
+      host.append(el);
+      await waitUntil(() => Boolean(el.shadowRoot?.querySelector('input')));
+      const root = el.shadowRoot!;
+      const outerUl = root.querySelector('[part="content"] > ul')!;
+      const taskLi = outerUl.querySelector<HTMLElement>(':scope > li:first-child')!;
+      const plainLi = outerUl.querySelector<HTMLElement>(':scope > li:last-child')!;
+      const nestedUlLi = taskLi.querySelector<HTMLElement>('ul > li')!;
+      expect(getComputedStyle(taskLi).listStyleType).to.equal('none');
+      expect(getComputedStyle(plainLi).listStyleType).to.equal('disc');
+      expect(getComputedStyle(nestedUlLi).listStyleType).to.equal('circle');
+    });
+    it(`${name} keeps the decimal native marker on an ordered list nested inside a task item`, async () => {
+      const host = await fixture<HTMLElement>(html`<div></div>`);
+      const el = document.createElement(name) as LyraMarkdown;
+      el.content = '- [ ] Task\n  1. Nested ordered';
+      host.append(el);
+      await waitUntil(() => Boolean(el.shadowRoot?.querySelector('input')));
+      const root = el.shadowRoot!;
+      const taskLi = root.querySelector<HTMLElement>('[part="content"] > ul > li:first-child')!;
+      const nestedOlLi = taskLi.querySelector<HTMLElement>('ol > li')!;
+      expect(getComputedStyle(taskLi).listStyleType).to.equal('none');
+      expect(getComputedStyle(nestedOlLi).listStyleType).to.equal('decimal');
+    });
     it(`${name} follows the checkbox size property without shifting task text away from sibling prose`, async () => {
       const host = await fixture<HTMLElement>(html`<div dir="rtl"></div>`);
       const el = document.createElement(name) as LyraMarkdown;

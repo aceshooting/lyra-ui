@@ -2507,9 +2507,12 @@ it('caps visible tags at maxOptionsVisible and shows a "+N" overflow tag', async
   el.value = ["a", "b", "c", "d"];
   await el.updateComplete;
 
-  const tags = el.shadowRoot!.querySelectorAll('[part="tag"]');
+  // [part~=] because the overflow tag now carries both 'tag' and 'tag-overflow'.
+  const tags = el.shadowRoot!.querySelectorAll('[part~="tag"]');
   expect(tags.length).to.equal(3);
-  expect(requiredItem(tags, 2, 'overflow tag').textContent?.trim()).to.equal("+2 more");
+  const overflowTag = requiredItem(tags, 2, 'overflow tag');
+  expect(overflowTag.getAttribute('part')).to.equal('tag tag-overflow');
+  expect(overflowTag.textContent?.trim()).to.equal("+2 more");
 });
 
 it("shows the empty-state message with a custom emptyText when no rows match", async () => {
@@ -3309,8 +3312,9 @@ it("localizes and locale-formats the selected-tag overflow count", async () => {
   `)) as LyraCombobox;
   el.value = ["a", "b", "c"];
   await el.updateComplete;
+  // [part~=] because the overflow tag now carries both 'tag' and 'tag-overflow'.
   expect(
-    el.shadowRoot!.querySelectorAll('[part="tag"]')[1]!.textContent?.trim()
+    el.shadowRoot!.querySelectorAll('[part~="tag"]')[1]!.textContent?.trim()
   ).to.equal("٢ إضافية");
 });
 
@@ -4149,8 +4153,10 @@ describe("size", () => {
     `)) as LyraCombobox;
     await mEl.updateComplete;
     await xsEl.updateComplete;
-    const mTag = mEl.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
-    const xsTag = xsEl.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
+    // [part~=] because with max-options-visible="0" the only rendered chip is the overflow tag,
+    // which now carries both 'tag' and 'tag-overflow'.
+    const mTag = mEl.shadowRoot!.querySelector('[part~="tag"]') as HTMLElement;
+    const xsTag = xsEl.shadowRoot!.querySelector('[part~="tag"]') as HTMLElement;
     expect(parseFloat(getComputedStyle(xsTag).fontSize)).to.be.lessThan(
       parseFloat(getComputedStyle(mTag).fontSize)
     );

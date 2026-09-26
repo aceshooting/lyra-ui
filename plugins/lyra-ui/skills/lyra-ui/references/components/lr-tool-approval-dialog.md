@@ -85,7 +85,10 @@ closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-d
 default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
 `pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, an opted-in
-backdrop click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
+backdrop click, the Approve/Deny buttons, or a `close()` call; not dialog-scoped — nesting this
+dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes
+this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
+and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
 
 `waitUntil()` is `<lr-confirm-bar>`-only and this dialog does not carry it. The two components share

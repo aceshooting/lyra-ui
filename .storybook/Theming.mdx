@@ -278,6 +278,12 @@ named, not shipped: `Geist`, then `Inter`, then the system stack.
   white.
 - **Hover and press** mix toward a mid grey rather than toward the text colour. shadcn's primary *is*
   the text colour, so the default mix would not move the default button at all.
+- **Code-fence syntax colouring** (`<lr-code-block>`/`<lr-markdown>`'s keyword/string/comment tokens)
+  is the one surface this preset does not repaint: it stays GitHub's light/dark Shiki palette in
+  both modes. Only which of the two fixed themes paints tracks the preset (through the same
+  light/dark switch every other surface here reads); there is no property yet to substitute a
+  different Shiki theme pair. Unlike charts, this one carries no `--lr-theme-*` input at all — a
+  deliberate scope line, not an oversight.
 
 **Accents still work.** `setLyraTheme({ accent })` writes its ramp inline on `<html>`, which beats
 every layer, and the preset aliases the neutral role's loud slots to the brand role's — so a gemstone

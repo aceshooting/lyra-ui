@@ -265,7 +265,14 @@ independently focusable and operable when the summary is disabled.
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and
 `--lr-accordion-item-easing` (default `var(--lr-easing-standard)`). The mapped unprefixed names
 `--spacing`, `--show-duration`, `--hide-duration`, and `--easing` remain accepted aliases and win
-when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`.
+when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`. The trigger
+button's and panel content's padding can also be tuned independently of each other and of
+`--lr-accordion-item-spacing`: `--lr-accordion-item-summary-padding-block` and
+`--lr-accordion-item-summary-padding-inline` control the trigger button alone, and
+`--lr-accordion-item-content-padding-block-end` and `--lr-accordion-item-content-padding-inline`
+control the panel content alone. All four default to the same `--lr-accordion-item-spacing`
+resolution, mirroring `lr-details`'s equivalent four hooks below. `--spacing` aliases the item
+rhythm and remains the highest-precedence override, ahead of these four as well.
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default

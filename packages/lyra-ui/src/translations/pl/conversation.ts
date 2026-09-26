@@ -167,4 +167,4 @@ const strings: LyraLocaleStrings = {
   realtimeSessionConnectionFailed: 'Nie udało się nawiązać połączenia czasu rzeczywistego.',
 };
 
-registerLyraLocale('pl', strings, { dir: 'ltr', name: 'Polski' });
+registerLyraLocale('pl', strings);

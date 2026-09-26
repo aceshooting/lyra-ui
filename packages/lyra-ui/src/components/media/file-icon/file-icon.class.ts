@@ -66,10 +66,23 @@ function badgeToken(metadata: LyraResolvedFileTypeMetadata, mimeType: unknown, n
   return nameExtension;
 }
 
+// `A` and `V` were bucketed at the generic 0.7 upper bound alongside `C`/`S`/`T`/etc., but the
+// diagonal strokes they share with the `[MW]` bucket measure wider than that bound once real
+// (not single-host) Gecko/WebKit shaping is accounted for -- `WAV` (0.97 + 0.7 + 0.7 = 2.37em)
+// sat just under the 2.4em short-tier cutoff and overflowed its 12px badge in Firefox and WebKit
+// by a few tenths of a pixel, while the equally-estimated `XML`/`BMP`/`MP3`/`MP4` did not. Bucket
+// `A`/`V` above the generic bound so tokens combining a heavy `[MW]` letter with one of these
+// (like `WAV`) move to the roomier long tier; no other built-in short-tier token contains `A` or
+// `V` closely enough to cross the cutoff from this change alone.
 function estimatedTokenEm(token: string): number {
   let em = 0;
   for (const char of token) {
-    em += /[MW]/.test(char) ? 0.97 : /[DGHNOQU]/.test(char) ? 0.82 : /[IJ]/.test(char) ? 0.4 : /[A-Z0-9+]/.test(char) ? 0.7 : 1;
+    em += /[MW]/.test(char) ? 0.97
+      : /[DGHNOQU]/.test(char) ? 0.82
+      : /[AV]/.test(char) ? 0.78
+      : /[IJ]/.test(char) ? 0.4
+      : /[A-Z0-9+]/.test(char) ? 0.7
+      : 1;
   }
   return em;
 }

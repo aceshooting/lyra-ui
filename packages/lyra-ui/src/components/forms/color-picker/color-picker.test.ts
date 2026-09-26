@@ -658,6 +658,27 @@ it("themes the resting trigger border through --lr-color-picker-border-color", a
   ).to.equal("rgb(1, 2, 3)");
 });
 
+it("paints no box-shadow on the trigger by default", async () => {
+  const el = (await fixture(
+    html`<lr-color-picker label="A"></lr-color-picker>`
+  )) as LyraColorPicker;
+  expect(getComputedStyle(part(el, "trigger")).boxShadow).to.equal("none");
+});
+
+it("paints the shared focus-halo hook on the focused trigger", async () => {
+  const el = (await fixture(html`
+    <lr-color-picker
+      label="A"
+      style="--lr-form-control-focus-shadow: 0 0 0 3px rgb(20, 22, 24);"
+    ></lr-color-picker>
+  `)) as LyraColorPicker;
+  (part(el, "trigger") as HTMLButtonElement).focus();
+  await waitUntil(
+    () => getComputedStyle(part(el, "trigger")).boxShadow.includes("rgb(20, 22, 24)"),
+    "the focused trigger never painted the halo",
+  );
+});
+
 // ---------------------------------------------------------------------------
 // format / uppercase / value round-tripping
 // ---------------------------------------------------------------------------

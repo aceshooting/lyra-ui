@@ -111,6 +111,43 @@ assert.deepEqual(
   'a reviewed catalog outside the pinned upstream union may be declared as an additional catalog',
 );
 
+const legacyMissing = fixture();
+legacyMissing.releasePlan.regionalExtensions = ['pt-BR'];
+assert.match(
+  validateTranslationReviews(legacyMissing, {
+    englishEntries,
+    catalogs,
+    upstreamPins,
+    requireApproved: false,
+  }).join('\n'),
+  /shippedBeforeV8, v8ReleaseExpansion, regionalExtensions/,
+  'a regionalExtensions (or shippedBeforeV8) locale must also carry its own catalogs[] review record',
+);
+
+const legacyReviewed = fixture();
+legacyReviewed.releasePlan.regionalExtensions = ['pt-BR'];
+const brazilianPortugueseEntries = [
+  ['noData', 'Nenhum dado'],
+  ['fileSizeUnitKb', 'KB'],
+  ['toolCount', { one: '{count} ferramenta', other: '{count} ferramentas' }],
+];
+legacyReviewed.catalogs.push({
+  ...structuredClone(legacyReviewed.catalogs[0]),
+  locale: 'pt-BR',
+  direction: 'ltr',
+  catalog: messageSnapshot(brazilianPortugueseEntries),
+});
+assert.deepEqual(
+  validateTranslationReviews(legacyReviewed, {
+    englishEntries,
+    catalogs: new Map([['fa', persianEntries], ['pt-BR', brazilianPortugueseEntries]]),
+    upstreamPins,
+    requireApproved: false,
+  }),
+  [],
+  'a shippedBeforeV8/regionalExtensions locale with its own review record passes like any other catalog',
+);
+
 const overlappingAdditional = structuredClone(additionalCatalog);
 overlappingAdditional.releasePlan.additionalCatalogs = ['fa'];
 assert.match(

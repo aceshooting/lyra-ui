@@ -1,5 +1,8 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import {
+  formControlFocusHalo,
+  formControlRequiredMarker,
+} from '../../../internal/form-control.styles.js';
 import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
@@ -19,6 +22,11 @@ export const styles = css`
     --_lr-voice-picker-gap-default: var(--lr-space-xs);
     --_lr-voice-picker-radius-default: var(--lr-form-control-radius);
     --_lr-voice-picker-trigger-min-height-default: var(--lr-form-control-height);
+    /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
+       undeclared -- only this private copy of it is declared -- so a value set on :root or any
+       ancestor still reaches this trigger, while the halo itself is painted in one place for every
+       field-shaped control in the library. */
+    --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host(:disabled) {
     cursor: not-allowed;
@@ -82,19 +90,31 @@ export const styles = css`
   [part='combobox'] {
     cursor: text;
   }
+  /* --lr-voice-picker-trigger-hover-border-color falls back to the same brand literal this rule
+     always painted, so an unset consumer sees no change; the pressed rule below reads the SAME
+     token as its own fallback base, so overriding hover keeps the pressed edge consistent with it
+     rather than leaving press hardcoded to brand while hover moved. */
   [part='trigger']:hover:not(:disabled) {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-voice-picker-trigger-hover-border-color, var(--lr-color-brand));
   }
   /* Hover recolors the border; the press also fills the trigger, mixing its resting surface toward
      the text color, so it escalates hover rather than restating it. */
   [part='trigger']:active:not(:disabled) {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-voice-picker-trigger-hover-border-color, var(--lr-color-brand));
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='trigger']:focus-visible,
   [part='combobox']:focus-within {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The opt-in focus halo, on :focus rather than :focus-visible for the trigger (matching
+     lr-select and lr-model-select): the outline above is the accessibility answer to keyboard
+     focus and stays unchanged, while a halo a consumer deliberately configured should read on a
+     pointer focus too. Unset it resolves to none, so this rule paints nothing by default. */
+  [part='trigger']:focus,
+  [part='combobox']:focus-within {
+    ${formControlFocusHalo}
   }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-voice-picker-open-border-color, var(--lr-color-brand));

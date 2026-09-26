@@ -13,6 +13,10 @@ function buttonFor(item: LyraAccordionItem): HTMLButtonElement {
   return item.shadowRoot!.querySelector<HTMLButtonElement>('[part~="button"]')!;
 }
 
+function contentFor(item: LyraAccordionItem): HTMLElement {
+  return item.shadowRoot!.querySelector<HTMLElement>('[part~="content"]')!;
+}
+
 async function renderAccordion(
   attributes = '',
 ): Promise<{ accordion: LyraAccordion; items: LyraAccordionItem[] }> {
@@ -1340,6 +1344,62 @@ describe('<lr-accordion-item>', () => {
     item.style.removeProperty('--lr-accordion-item-spacing');
     item.style.setProperty('--spacing', '29px');
     expect(getComputedStyle(button).paddingInlineStart).to.equal('29px');
+  });
+
+  it('tunes the trigger and content padding independently via the new per-edge hooks, unset by default', async () => {
+    const baseline = (await fixture(
+      html`<lr-accordion-item label="More">Content</lr-accordion-item>`,
+    )) as LyraAccordionItem;
+    const baselineButton = getComputedStyle(buttonFor(baseline));
+    const baselineContent = getComputedStyle(contentFor(baseline));
+
+    const buttonBlockOnly = (await fixture(html`<lr-accordion-item
+      label="More"
+      style="--lr-accordion-item-summary-padding-block: 30px;"
+    >Content</lr-accordion-item>`)) as LyraAccordionItem;
+    const tunedButton = getComputedStyle(buttonFor(buttonBlockOnly));
+    const untouchedContent = getComputedStyle(contentFor(buttonBlockOnly));
+    expect(tunedButton.paddingBlockStart).to.equal('30px');
+    expect(tunedButton.paddingInlineStart).to.equal(baselineButton.paddingInlineStart);
+    expect(untouchedContent.paddingBlockEnd).to.equal(baselineContent.paddingBlockEnd);
+    expect(untouchedContent.paddingInlineStart).to.equal(baselineContent.paddingInlineStart);
+
+    const contentInlineOnly = (await fixture(html`<lr-accordion-item
+      label="More"
+      style="--lr-accordion-item-content-padding-inline: 40px;"
+    >Content</lr-accordion-item>`)) as LyraAccordionItem;
+    const untouchedButton = getComputedStyle(buttonFor(contentInlineOnly));
+    const tunedContent = getComputedStyle(contentFor(contentInlineOnly));
+    expect(tunedContent.paddingInlineStart).to.equal('40px');
+    expect(tunedContent.paddingBlockEnd).to.equal(baselineContent.paddingBlockEnd);
+    expect(untouchedButton.paddingBlockStart).to.equal(baselineButton.paddingBlockStart);
+    expect(untouchedButton.paddingInlineStart).to.equal(baselineButton.paddingInlineStart);
+  });
+
+  it('still resolves every trigger/content padding edge from --lr-accordion-item-spacing when the new per-edge hooks are unset', async () => {
+    const item = (await fixture(html`<lr-accordion-item
+      label="More"
+      style="--lr-accordion-item-spacing: 18px;"
+    >Content</lr-accordion-item>`)) as LyraAccordionItem;
+    const button = getComputedStyle(buttonFor(item));
+    const content = getComputedStyle(contentFor(item));
+    expect(button.paddingBlockStart).to.equal('18px');
+    expect(button.paddingInlineStart).to.equal('18px');
+    expect(content.paddingBlockEnd).to.equal('18px');
+    expect(content.paddingInlineStart).to.equal('18px');
+  });
+
+  it('keeps the upstream --spacing hook authoritative over the new per-edge hooks', async () => {
+    const item = (await fixture(html`<lr-accordion-item
+      label="More"
+      style="--spacing: 13px; --lr-accordion-item-summary-padding-block: 30px; --lr-accordion-item-content-padding-inline: 40px;"
+    >Content</lr-accordion-item>`)) as LyraAccordionItem;
+    const button = getComputedStyle(buttonFor(item));
+    const content = getComputedStyle(contentFor(item));
+    expect(button.paddingBlockStart).to.equal('13px');
+    expect(button.paddingInlineStart).to.equal('13px');
+    expect(content.paddingBlockEnd).to.equal('13px');
+    expect(content.paddingInlineStart).to.equal('13px');
   });
 
   it('mirrors the icon rotation in RTL and lets consumer part styles disable it', async () => {

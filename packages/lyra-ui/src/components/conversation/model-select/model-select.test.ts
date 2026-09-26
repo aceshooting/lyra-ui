@@ -1,5 +1,5 @@
 import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import "./model-select.js";
 import type { LyraModelSelect } from "./model-select.js";
 
@@ -937,6 +937,66 @@ describe("resting border and fill theme cssprops", () => {
     );
     expect(getComputedStyle(trigger(el)).backgroundColor).to.equal(
       "rgb(4, 5, 6)"
+    );
+  });
+});
+
+describe("hover border theme cssprop", () => {
+  it("leaves the hovered trigger border at its resting color when the hover hook is unset", async () => {
+    const el = (await fixture(html`
+      <lr-model-select .catalog=${CATALOG} style="--lr-transition-fast: 0s;"></lr-model-select>
+    `)) as LyraModelSelect;
+    const restingBorder = getComputedStyle(trigger(el)).borderTopColor;
+    try {
+      await hoverUntilMatched(trigger(el), "the trigger never took the pointer hover state");
+      expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(restingBorder);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("themes the hovered trigger border independently of the resting border through --lr-model-select-trigger-hover-border-color", async () => {
+    const el = (await fixture(html`
+      <lr-model-select
+        .catalog=${CATALOG}
+        style="
+          --lr-transition-fast: 0s;
+          --lr-model-select-trigger-border-color: rgb(1, 2, 3);
+          --lr-model-select-trigger-hover-border-color: rgb(7, 8, 9);
+        "
+      ></lr-model-select>
+    `)) as LyraModelSelect;
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal("rgb(1, 2, 3)");
+    try {
+      await hoverUntilMatched(trigger(el), "the trigger never took the pointer hover state");
+      await waitUntil(
+        () => getComputedStyle(trigger(el)).borderTopColor === "rgb(7, 8, 9)",
+        "the trigger border never reached its themed hover color"
+      );
+      expect(getComputedStyle(trigger(el)).borderTopColor).to.equal("rgb(7, 8, 9)");
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
+describe("focus halo", () => {
+  it("paints no box-shadow on the trigger by default", async () => {
+    const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+    expect(getComputedStyle(trigger(el)).boxShadow).to.equal("none");
+  });
+
+  it("paints the shared focus-halo hook on the focused trigger", async () => {
+    const el = (await fixture(html`
+      <lr-model-select
+        .catalog=${CATALOG}
+        style="--lr-form-control-focus-shadow: 0 0 0 3px rgb(20, 22, 24);"
+      ></lr-model-select>
+    `)) as LyraModelSelect;
+    trigger(el).focus();
+    await waitUntil(
+      () => getComputedStyle(trigger(el)).boxShadow.includes("rgb(20, 22, 24)"),
+      "the focused trigger never painted the halo"
     );
   });
 });

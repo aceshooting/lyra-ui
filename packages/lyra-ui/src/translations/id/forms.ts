@@ -106,4 +106,4 @@ const strings: LyraLocaleStrings = {
   localePickerRequired: 'Pilih bahasa.',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

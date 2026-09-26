@@ -49,7 +49,7 @@ const strings: LyraLocaleStrings = {
   generationStatusElapsedSeconds: '{seconds}s',
   generationStatusTokenCount: '{count} belirteç',
   generationStatusTokensCount: '{count} belirteç',
-  generationStatusThroughput: '{rate} tok/s',
+  generationStatusThroughput: '{rate} belirteç/sn',
   composerLabel: 'İleti',
   composerPlaceholder: 'Bir şey sorun…',
   rename: '{title} öğesini yeniden adlandır',

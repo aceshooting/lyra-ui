@@ -127,4 +127,4 @@ const strings: LyraLocaleStrings = {
   reorderItemMoved: 'Dipindahkan ke posisi {index} dari {total}',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

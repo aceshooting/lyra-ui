@@ -64,7 +64,7 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeCalendar: 'kalender',
   archiveViewerEmpty: 'Arsip ini kosong.',
   archiveViewerFolder: 'Folder',
-  archiveViewerFile: 'Berkas',
+  archiveViewerFile: 'File',
   spreadsheetViewerUnavailable: 'Pratinjau spreadsheet tidak tersedia.',
   csvViewerUnavailable: 'Pratinjau CSV tidak tersedia.',
   csvViewerLabel: 'Dokumen CSV',
@@ -137,4 +137,4 @@ const strings: LyraLocaleStrings = {
   documentCompareNewVersion: 'Versi baru',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

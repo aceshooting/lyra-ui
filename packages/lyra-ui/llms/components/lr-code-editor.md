@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -131,6 +131,10 @@ hover and invalid states below.
 without changing brand/danger paint in sibling components.
 `--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
 without a `::part(editor)` rule.
+The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` on
+the editor frame once its textarea is focused — one name for every field-shaped control in the
+library, so a halo is configured once instead of per component. It is additive: the focus outline
+is the accessibility answer to focus and is never replaced by it.
 The `editor` scroll frame also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
 its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one

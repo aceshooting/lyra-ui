@@ -49,7 +49,7 @@ const strings: LyraLocaleStrings = {
   generationStatusElapsedSeconds: '{seconds} सेकंड',
   generationStatusTokenCount: '{count} टोकन',
   generationStatusTokensCount: '{count} टोकन',
-  generationStatusThroughput: '{rate} tok/s',
+  generationStatusThroughput: '{rate} टोकन/सेकंड',
   composerLabel: 'संदेश',
   composerPlaceholder: 'कुछ भी पूछें…',
   rename: '{title} का नाम बदलें',
@@ -165,4 +165,4 @@ const strings: LyraLocaleStrings = {
   realtimeSessionConnectionFailed: 'रीयल-टाइम कनेक्शन विफल हुआ।',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

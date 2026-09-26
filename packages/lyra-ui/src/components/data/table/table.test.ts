@@ -8716,6 +8716,33 @@ describe('cell link colour', () => {
     expect(getComputedStyle(anchor).color).to.equal('rgb(1, 2, 3)');
   });
 
+  it('honours --lr-table-cell-link-hover-color on hover, overriding --lr-table-cell-link-color', async () => {
+    const anchor = await withLinkCell(
+      '--lr-table-cell-link-color: rgb(1, 2, 3); --lr-table-cell-link-hover-color: rgb(4, 5, 6)'
+    );
+    try {
+      // A single `sendMouse` move resolves before the engine has necessarily processed the pointer
+      // event it synthesized, so the poll below would be waiting on a hover that never arrived.
+      await hoverUntilMatched(anchor, 'the link cell never took the pointer');
+      await waitUntil(
+        () => getComputedStyle(anchor).color === 'rgb(4, 5, 6)',
+        'link cell hover colour never landed'
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('honours --lr-table-cell-color on a plain (non-link) body cell', async () => {
+    const el = await linked();
+    el.setAttribute('style', '--lr-table-cell-color: rgb(7, 8, 9)');
+    el.columns = [{ key: 'name', header: 'Name', cell: (row: Row) => row.name }] as unknown as TableColumn<Row>[];
+    el.rows = rows;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('[part~="cell"]') as HTMLElement;
+    expect(getComputedStyle(cell).color).to.equal('rgb(7, 8, 9)');
+  });
+
   it('lets an inline style on the returned anchor still win', async () => {
     const el = await linked();
     el.columns = [

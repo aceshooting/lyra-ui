@@ -241,4 +241,4 @@ const strings: LyraLocaleStrings = {
   agentRunStatusCancelled: 'Dibatalkan',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

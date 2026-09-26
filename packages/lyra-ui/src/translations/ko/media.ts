@@ -122,4 +122,4 @@ const strings: LyraLocaleStrings = {
   flagLoadError: '플래그를 사용할 수 없음',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

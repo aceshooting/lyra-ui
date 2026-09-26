@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 43 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 43 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -295,6 +295,9 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - `--lr-color-picker-border-color` — Resting trigger border color. Default: `var(--lr-color-border)`.
 - `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text
   field, format/eyedropper buttons and palette swatches. Default: `var(--lr-color-brand)`.
+- `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the trigger
+  while it is focused. One name for every field-shaped control in the library, so a halo is
+  configured once instead of per component; additive to the existing focus outline. Default: `none`.
 - `--lr-color-picker-selected-border` — Selected palette-swatch border. Default:
   `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:

@@ -62,7 +62,7 @@ const strings: LyraLocaleStrings = {
   mentionResultPosition: 'Ұсыныс {current}, барлығы {total}',
   iconLoadError: 'Белгішені жүктеу мүмкін болмады.',
   iconTooLarge: 'Белгіше файлы көрсету үшін тым үлкен.',
-  iconSanitizerMissing: 'Бұл белгішені қауіпсіз көрсету үшін қосымша "dompurify" бумасын орнату қажет.',
+  iconSanitizerMissing: 'Бұл белгішені қауіпсіз көрсету үшін қосымша «dompurify» бумасын орнату қажет.',
   tourSkip: 'Өткізіп жіберу',
   tourDone: 'Дайын',
   tourStepOf: 'Қадам {current}, барлығы {total}',

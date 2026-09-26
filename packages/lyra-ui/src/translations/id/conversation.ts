@@ -164,4 +164,4 @@ const strings: LyraLocaleStrings = {
   realtimeSessionConnectionFailed: 'Koneksi waktu nyata gagal.',
 };
 
-registerLyraLocale('id', strings, { dir: 'ltr', name: 'Bahasa Indonesia' });
+registerLyraLocale('id', strings);

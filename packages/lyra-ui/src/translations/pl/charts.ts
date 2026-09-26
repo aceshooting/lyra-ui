@@ -65,4 +65,4 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Aby wyświetlać wykresy pudełkowe, zainstaluj opcjonalny pakiet wykresów pudełkowych.',
 };
 
-registerLyraLocale('pl', strings, { dir: 'ltr', name: 'Polski' });
+registerLyraLocale('pl', strings);

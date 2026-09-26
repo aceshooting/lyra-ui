@@ -63,6 +63,25 @@ it('lets a consumer retint the resting editor border and fill through component 
   expect(getComputedStyle(editor).backgroundColor).to.equal('rgb(4, 5, 6)');
 });
 
+it('paints no box-shadow on the editor frame by default', async () => {
+  const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  expect(getComputedStyle(editor).boxShadow).to.equal('none');
+});
+
+it('paints the shared focus-halo hook on the editor frame once the inner textarea is focused', async () => {
+  const el = (await fixture(html`
+    <lr-code-editor style="--lr-form-control-focus-shadow: 0 0 0 3px rgb(20, 22, 24)"></lr-code-editor>
+  `)) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  textarea.focus();
+  await waitUntil(
+    () => getComputedStyle(editor).boxShadow.includes('rgb(20, 22, 24)'),
+    'the editor frame never painted the halo once its textarea was focused',
+  );
+});
+
 it('exposes --lr-code-editor-radius, defaulting to the shared radius token', async () => {
   const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
   const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;

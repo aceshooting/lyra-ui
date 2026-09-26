@@ -64,4 +64,4 @@ const strings: LyraLocaleStrings = {
   reorderMoveCancelled: '순서 변경이 취소되었습니다.',
 };
 
-registerLyraLocale('ko', strings, { dir: 'ltr', name: '한국어' });
+registerLyraLocale('ko', strings);

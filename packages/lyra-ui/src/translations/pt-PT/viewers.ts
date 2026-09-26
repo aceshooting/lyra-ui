@@ -14,7 +14,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  loadingDocument: 'a carregar o documento…',
+  loadingDocument: 'A carregar o documento…',
   documentPreviewAlt: 'Pré-visualização do documento',
   documentPreviewUrlNotAllowed: 'A URL do documento não é permitida.',
   documentPreviewFailedToLoad: 'Não foi possível carregar o documento.',
@@ -51,12 +51,12 @@ const strings: LyraLocaleStrings = {
   contactViewerAddressFormat: '{poBox}\n{extendedAddress}\n{streetAddress}\n{locality} {region} {postalCode}\n{country}',
   contactViewerTypeHome: 'Residencial',
   contactViewerTypeWork: 'Comercial',
-  contactViewerTypeCell: 'Celular',
+  contactViewerTypeCell: 'Telemóvel',
   contactViewerTypeVoice: 'Voz',
   contactViewerTypeFax: 'Fax',
   contactViewerTypeInternet: 'Internet',
   contactViewerTypePreferred: 'Preferencial',
-  convertingDocument: 'Convertendo o documento…',
+  convertingDocument: 'A converter o documento…',
   documentPreviewNotAvailable: 'Pré-visualização não disponível para {label}.',
   documentPreviewGenericFile: 'este ficheiro',
   documentPreviewTypeDocument: 'documento',
@@ -136,7 +136,7 @@ const strings: LyraLocaleStrings = {
     many: '{count} feições',
     other: '{count} feições',
   },
-  geojsonViewMissingMapLibrary: 'Instale o peer opcional maplibre-gl para exibir este ficheiro em um mapa. Mostrando o GeoJSON bruto no lugar.',
+  geojsonViewMissingMapLibrary: 'Instale o pacote opcional maplibre-gl para exibir este ficheiro num mapa. A mostrar o GeoJSON bruto em vez disso.',
   documentCompareNoVersion: 'Nenhuma versão fornecida.',
   documentCompareLabel: 'Comparação de documentos',
   documentCompareOldVersion: 'Versão antiga',

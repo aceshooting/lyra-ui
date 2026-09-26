@@ -381,8 +381,9 @@ ignored) is the calendar-mode counterpart: the frozen snapshot of the last calen
 `padLeft` (weekday gutter), `padTop` (month band), `cellSize`, `cellWidth`, `cellHeight`,
 `cellGapX`, `cellGapY`, `cellRadius`, `weekCount`, and `firstDayOfWeek`. `undefined` outside
 calendar mode and before the first calendar draw; the same object is returned until the painted
-geometry changes, and no event is fired for it. With `data.columnX`/`data.rowY`, those callbacks
-position individual columns/rows instead of `padLeft`/`padTop` plus the gaps.
+geometry changes, at which point `lr-calendar-geometry-change` fires with that same frozen object as
+its `detail`, mirroring `matrixGeometry`/`lr-matrix-geometry-change`. With `data.columnX`/`data.rowY`,
+those callbacks position individual columns/rows instead of `padLeft`/`padTop` plus the gaps.
 
 For a GitHub-style contribution graph with rounded, visibly spaced cells, stay in calendar mode and
 set `cell-gap-x="3" cell-gap-y="3" cell-radius="2"` — week columns, weekday/month labels, date
@@ -397,7 +398,10 @@ For a single fluid square cell, use `fit-to-width` with equal horizontal and ver
 `lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
 from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
 against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
-in calendar mode)
+in calendar mode), `lr-calendar-geometry-change` (the calendar-mode counterpart — fired after a
+calendar-mode draw whose resolved `calendarGeometry` differs from the previous draw, e.g. after
+`cellGapX`/`cellGapY`/`cellRadius` changes or a `fitToWidth` resize; `detail` is the same object
+`calendarGeometry` returns; never fired in matrix mode)
 
 **Slots:** `legend` — custom content rendered inside the built-in `[part="legend"]` row, after the
 gradient/`legendStops` swatches, the trailing `valueLabel` caption, and any labeled `annotations`

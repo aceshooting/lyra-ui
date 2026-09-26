@@ -123,6 +123,12 @@ describe('localeNativeName', () => {
     expect(localeNativeName('fa')).to.equal(new Intl.DisplayNames(['fa'], { type: 'language' }).of('fa'));
     expect(localeNativeName('he')).to.equal(new Intl.DisplayNames(['he'], { type: 'language' }).of('he'));
   });
+
+  it('maps the bare region-less Norwegian Nynorsk and Kazakh locale tags to a flag country', () => {
+    expect(languageToCountry('nn')).to.equal('no');
+    expect(languageToCountry('kk')).to.equal('kz');
+    expect(languageToCountry('kk-KZ')).to.equal('kz');
+  });
 });
 
 describe('alpha3ToAlpha2', () => {

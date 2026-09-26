@@ -122,4 +122,4 @@ const strings: LyraLocaleStrings = {
   flagLoadError: 'झंडा उपलब्ध नहीं है',
 };
 
-registerLyraLocale('hi', strings, { dir: 'ltr', name: 'हिन्दी' });
+registerLyraLocale('hi', strings);

@@ -423,7 +423,10 @@ reason string so every dismissal path funnels through the same event.
 
 **Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
 'close-button'|'api'|string`) fired exactly once per dismissal (`'backdrop'` requires
-`lightDismiss`); `lr-maximize-change` (`detail:
+`lightDismiss`). This name is not dialog-scoped: nesting this dialog inside a consumer's own
+`<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see
+`<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
+target-filtering guard. `lr-maximize-change` (`detail:
 { readonly maximized: boolean }`, the new `maximized` state) fired when the header's
 maximize/restore toggle is clicked.
 
@@ -585,7 +588,10 @@ checkbox or switch never flips at all — the proposal is raised from that contr
 refused change shows no flip-and-snap-back. A host can prevent a proposal while it validates or
 persists it, then assign the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click when `lightDismiss` is enabled, or a `close()` call), and no-detail `focus`/`blur` events
+click when `lightDismiss` is enabled, or a `close()` call; not dialog-scoped — nesting this dialog
+inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes this
+event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters and the
+target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the internal search input gains or loses focus.
 Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
 switch controls stop at the dialog boundary, as do their own
@@ -1017,7 +1023,10 @@ closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-d
 default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
 `pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, an opted-in
-backdrop click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
+backdrop click, the Approve/Deny buttons, or a `close()` call; not dialog-scoped — nesting this
+dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes
+this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
+and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
 
 `waitUntil()` is `<lr-confirm-bar>`-only and this dialog does not carry it. The two components share

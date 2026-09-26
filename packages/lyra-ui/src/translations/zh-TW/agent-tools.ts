@@ -136,7 +136,7 @@ const strings: LyraLocaleStrings = {
   browserFrameStatusStalled: '已停滯',
   browserFrameControllerAgent: '智慧體',
   browserFrameControllerUser: '使用者',
-  artifactPanelLabel: 'Artifact',
+  artifactPanelLabel: '產物',
   artifactPanelPreview: '預覽',
   artifactPanelCode: '程式碼',
   artifactPanelPreviousVersion: '上一個版本',

@@ -5,8 +5,44 @@ import {
   createFileTypeMetadataRegistry,
   getFileTypeMetadata,
   type LyraFileTypeMetadataEntry,
+  type LyraFileTypeMetadataRegistry,
+  type LyraResolvedFileTypeMetadata,
 } from './file-type-metadata.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
+
+// Every rendering assertion below that is sensitive to font metrics or baseline synthesis
+// includes the engine name, so a failure is attributable without re-running every engine.
+function engineLabel(): string {
+  const ua = navigator.userAgent;
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) return 'WebKit';
+  return 'Chromium';
+}
+
+/** A zero-size inline-block appended at the end of an inline run sits exactly on that run's
+ *  baseline (its own baseline, with no in-flow content, is its bottom margin edge; the default
+ *  `vertical-align: baseline` then aligns that edge with the line's baseline). Returns the
+ *  viewport Y coordinate of the baseline. */
+function probeBaselineY(afterNode: Element): number {
+  const probe = document.createElement('span');
+  probe.style.display = 'inline-block';
+  probe.style.inlineSize = '0';
+  probe.style.blockSize = '0';
+  afterNode.append(probe);
+  const y = probe.getBoundingClientRect().top;
+  probe.remove();
+  return y;
+}
+
+/** Sub-pixel fit: a `Range` over the token's text node reports the full run even while an
+ *  ellipsis is painted, unlike integer `scrollWidth`/`clientWidth`. */
+function measureTokenFit(el: LyraFileIcon): { token: HTMLElement; textRect: DOMRect; boxRect: DOMRect } {
+  const token = el.shadowRoot!.querySelector<HTMLElement>('.token')!;
+  const range = document.createRange();
+  range.selectNodeContents(token);
+  return { token, textRect: range.getBoundingClientRect(), boxRect: token.getBoundingClientRect() };
+}
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-file-icon', 'size');
@@ -359,6 +395,351 @@ describe('lr-file-icon', () => {
     const el = wrapper.querySelector('lr-file-icon') as LyraFileIcon;
     expect(el.matches(':dir(rtl)')).to.be.true;
     expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  });
+});
+
+describe('lr-file-icon badge token fit across the built-in registry (T3)', () => {
+  // One MIME type per built-in record (37 total): the badge token it resolves to, and the size
+  // tier `estimatedTokenEm` buckets it into. Every one must fit inside the default-size badge
+  // without hitting its own ellipsis -- only a custom `abbreviation` (T4) or a narrower
+  // `--lr-file-icon-size` (T2) is meant to overflow it.
+  const BUILT_IN_TOKEN_FIT_CASES: readonly (readonly [mimeType: string, token: string, tier: 'short' | 'long'])[] = [
+    ['application/pdf', 'PDF', 'short'],
+    ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'DOCX', 'long'],
+    ['application/msword', 'DOC', 'short'],
+    ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'XLSX', 'long'],
+    ['application/vnd.ms-excel', 'XLS', 'short'],
+    ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'PPTX', 'long'],
+    ['application/vnd.ms-powerpoint', 'PPT', 'short'],
+    ['application/vnd.oasis.opendocument.text', 'ODT', 'short'],
+    ['application/vnd.oasis.opendocument.spreadsheet', 'ODS', 'short'],
+    ['application/vnd.oasis.opendocument.presentation', 'ODP', 'short'],
+    ['application/rtf', 'RTF', 'short'],
+    ['application/epub+zip', 'EPUB', 'long'],
+    ['application/x-mobipocket-ebook', 'MOBI', 'long'],
+    ['text/plain', 'TXT', 'short'],
+    ['text/csv', 'CSV', 'short'],
+    ['text/markdown', 'MD', 'short'],
+    ['text/html', 'HTML', 'long'],
+    ['text/xml', 'XML', 'short'],
+    ['application/json', 'JSON', 'long'],
+    ['application/yaml', 'YAML', 'long'],
+    ['application/zip', 'ZIP', 'short'],
+    ['application/gzip', 'GZ', 'short'],
+    ['application/x-tar', 'TAR', 'short'],
+    ['application/x-7z-compressed', '7Z', 'short'],
+    ['application/vnd.rar', 'RAR', 'short'],
+    ['image/jpeg', 'JPG', 'short'],
+    ['image/png', 'PNG', 'short'],
+    ['image/gif', 'GIF', 'short'],
+    ['image/webp', 'WEBP', 'long'],
+    ['image/svg+xml', 'SVG', 'short'],
+    ['image/tiff', 'TIF', 'short'],
+    ['image/bmp', 'BMP', 'short'],
+    ['image/heic', 'HEIC', 'long'],
+    ['audio/mpeg', 'MP3', 'short'],
+    // `WAV`'s W+A+V combination measures wider in Firefox/WebKit than the per-character estimate
+    // predicted (it overflowed the short tier's 12px badge by a few tenths of a pixel on those
+    // engines); `estimatedTokenEm` now buckets `A`/`V` above the generic weight so it lands here.
+    ['audio/wav', 'WAV', 'long'],
+    ['video/mp4', 'MP4', 'short'],
+    ['video/webm', 'WEBM', 'long'],
+  ];
+
+  it('T3: covers all 37 built-in records, 25 short-tier and 12 long-tier', () => {
+    expect(BUILT_IN_TOKEN_FIT_CASES).to.have.length(37);
+    expect(BUILT_IN_TOKEN_FIT_CASES.filter(([, , tier]) => tier === 'short')).to.have.length(25);
+    expect(BUILT_IN_TOKEN_FIT_CASES.filter(([, , tier]) => tier === 'long')).to.have.length(12);
+  });
+
+  for (const [mimeType, expectedToken, tier] of BUILT_IN_TOKEN_FIT_CASES) {
+    it(`fits the ${expectedToken} token for ${mimeType} inside its ${tier}-tier badge`, async () => {
+      const el = await fixture<LyraFileIcon>(html`<lr-file-icon mime-type=${mimeType}></lr-file-icon>`);
+      const face = el.shadowRoot!.querySelector<HTMLElement>('.face')!;
+      expect(face.dataset['token'], `${engineLabel()}: ${mimeType} tier`).to.equal(tier);
+      const { token, textRect, boxRect } = measureTokenFit(el);
+      expect(token.textContent).to.equal(expectedToken);
+      expect(
+        textRect.width,
+        `${engineLabel()}: ${expectedToken} overflowed its ${tier}-tier badge`,
+      ).to.be.at.most(boxRect.width + 0.01);
+      if (tier === 'short') {
+        const probe = document.createElement('span');
+        probe.style.fontSize = 'var(--lr-font-size-xs)';
+        el.shadowRoot!.append(probe);
+        const expectedFontSize = getComputedStyle(probe).fontSize;
+        probe.remove();
+        expect(
+          getComputedStyle(token).fontSize,
+          `${engineLabel()}: ${expectedToken} short-tier font-size`,
+        ).to.equal(expectedFontSize);
+      }
+    });
+  }
+
+  it('T3: fits a name-derived long-tier token resolved from an empty MIME type', async () => {
+    for (const [name, expectedToken] of [['home-movie.wmv', 'WMV'], ['podcast.wma', 'WMA']] as const) {
+      const el = await fixture<LyraFileIcon>(html`<lr-file-icon name=${name}></lr-file-icon>`);
+      const face = el.shadowRoot!.querySelector<HTMLElement>('.face')!;
+      expect(face.dataset['token'], `${engineLabel()}: ${name} tier`).to.equal('long');
+      const { token, textRect, boxRect } = measureTokenFit(el);
+      expect(token.textContent, name).to.equal(expectedToken);
+      expect(textRect.width, `${engineLabel()}: ${expectedToken} overflowed`).to.be.at.most(boxRect.width + 0.01);
+    }
+  });
+
+  it('T3: fits a consumer abbreviation at the long-tier size', async () => {
+    const registry = createFileTypeMetadataRegistry([{
+      mimeTypes: 'application/x-mmm',
+      metadata: { label: 'Triple M', abbreviation: 'MMM', icon: 'code', category: 'code' },
+    }]);
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/x-mmm" .registry=${registry}></lr-file-icon>
+    `);
+    const face = el.shadowRoot!.querySelector<HTMLElement>('.face')!;
+    expect(face.dataset['token'], engineLabel()).to.equal('long');
+    const { token, textRect, boxRect } = measureTokenFit(el);
+    expect(token.textContent).to.equal('MMM');
+    expect(textRect.width, `${engineLabel()}: MMM overflowed`).to.be.at.most(boxRect.width + 0.01);
+  });
+});
+
+describe('lr-file-icon badge token start-alignment, RTL and vertical containment (T4)', () => {
+  it('T4: truncates an 8-code-point abbreviation with a start-aligned ellipsis, not a centered clip', async () => {
+    const registry = createFileTypeMetadataRegistry([{
+      mimeTypes: 'application/x-authored-max',
+      metadata: { label: 'Authored max', abbreviation: 'AUTHORED', icon: 'code', category: 'code' },
+    }]);
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/x-authored-max" .registry=${registry}></lr-file-icon>
+    `);
+    const { token, textRect, boxRect } = measureTokenFit(el);
+    expect(token.textContent).to.equal('AUTHORED');
+    expect(getComputedStyle(token).textOverflow, engineLabel()).to.equal('ellipsis');
+    expect(
+      textRect.width,
+      `${engineLabel()}: the full run must overflow to exercise the ellipsis`,
+    ).to.be.greaterThan(boxRect.width);
+    expect(
+      Math.abs(textRect.left - boxRect.left),
+      `${engineLabel()}: clipped from the end, not centered`,
+    ).to.be.lessThan(0.5);
+  });
+
+  it('T4: right-aligns a Hebrew abbreviation resolved by dir="auto"', async () => {
+    const registry = createFileTypeMetadataRegistry([{
+      mimeTypes: 'application/x-hebrew',
+      metadata: { label: 'Hebrew file', abbreviation: 'קובץ', icon: 'code', category: 'code' },
+    }]);
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/x-hebrew" .registry=${registry}></lr-file-icon>
+    `);
+    const { token, textRect, boxRect } = measureTokenFit(el);
+    expect(token.textContent).to.equal('קובץ');
+    expect(
+      getComputedStyle(token).direction,
+      `${engineLabel()}: dir="auto" must resolve rtl from Hebrew content`,
+    ).to.equal('rtl');
+    expect(
+      Math.abs(textRect.right - boxRect.right),
+      `${engineLabel()}: right-aligned, not left-clipped`,
+    ).to.be.lessThan(0.5);
+  });
+
+  it('T4: keeps a Latin token left-to-right and fitting under a dir="rtl" ancestor', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir="rtl">
+        <lr-file-icon
+          mime-type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ></lr-file-icon>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraFileIcon>('lr-file-icon')!;
+    const { token, textRect, boxRect } = measureTokenFit(el);
+    expect(token.textContent).to.equal('DOCX');
+    expect(getComputedStyle(token).direction, engineLabel()).to.equal('ltr');
+    expect(
+      textRect.width,
+      `${engineLabel()}: DOCX overflowed under a dir="rtl" ancestor`,
+    ).to.be.at.most(boxRect.width + 0.01);
+  });
+
+  for (const abbreviation of ['jpg', 'ÅÄÖ', 'ÉPUB', 'קובץ']) {
+    it(`T4: keeps the vertical ink of a ${abbreviation} abbreviation inside the token box`, async () => {
+      const registry = createFileTypeMetadataRegistry([{
+        mimeTypes: 'application/x-ink-probe',
+        metadata: { label: 'Ink probe', abbreviation, icon: 'code', category: 'code' },
+      }]);
+      const el = await fixture<LyraFileIcon>(html`
+        <lr-file-icon mime-type="application/x-ink-probe" .registry=${registry}></lr-file-icon>
+      `);
+      const token = el.shadowRoot!.querySelector<HTMLElement>('.token')!;
+      expect(token.textContent).to.equal(abbreviation);
+      const baseline = probeBaselineY(token);
+      const box = token.getBoundingClientRect();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      ctx.font = getComputedStyle(token).font;
+      const metrics = ctx.measureText(abbreviation);
+      const inkTop = baseline - metrics.actualBoundingBoxAscent;
+      const inkBottom = baseline + metrics.actualBoundingBoxDescent;
+      expect(
+        inkTop,
+        `${engineLabel()}: ${abbreviation} ink clipped above the token box`,
+      ).to.be.at.least(box.top - 0.5);
+      expect(
+        inkBottom,
+        `${engineLabel()}: ${abbreviation} ink clipped below the token box`,
+      ).to.be.at.most(box.bottom + 0.5);
+    });
+  }
+});
+
+describe('lr-file-icon badge token resolution edge cases (T5)', () => {
+  it('T5: keeps a .ini extension token as INI under lang="tr", with no CSS text-transform doing the casing', async () => {
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon lang="tr" name="config.ini" mime-type="application/octet-stream"></lr-file-icon>
+    `);
+    const token = el.shadowRoot!.querySelector<HTMLElement>('.token')!;
+    expect(token.textContent, 'the Turkish dotless/dotted-I mapping must not touch this token').to.equal('INI');
+    expect(getComputedStyle(token).textTransform, engineLabel()).to.equal('none');
+  });
+
+  it('T5: degrades to the glyph without throwing when a directly implemented registry record throws from its abbreviation getter', async () => {
+    const hostileMetadata = {
+      label: 'Hostile record',
+      icon: 'code',
+      category: 'code',
+      provenance: 'consumer',
+      extensions: [5, {}],
+      get abbreviation(): string {
+        throw new Error('hostile abbreviation getter');
+      },
+    } as unknown as LyraResolvedFileTypeMetadata;
+    const hostileRegistry: LyraFileTypeMetadataRegistry = {
+      resolve: () => hostileMetadata,
+    };
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/x-hostile" .registry=${hostileRegistry}></lr-file-icon>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(
+      base.getAttribute('aria-label'),
+      'label and accessible name still come from the record',
+    ).to.equal('Hostile record');
+    const face = el.shadowRoot!.querySelector<HTMLElement>('.face')!;
+    expect(
+      face.dataset['token'],
+      'a throwing abbreviation getter must degrade to the glyph, not throw',
+    ).to.equal('none');
+    expect(face.querySelector('.token') === null, 'a throwing getter must render no token').to.be.true;
+    expect(getComputedStyle(face.querySelector('.glyph')!).display).to.equal('block');
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-file-icon forced-colors contract (T6)', () => {
+  it('T6: forces the glyph stroke and token color to CanvasText only where the engine actually forces colors', async function () {
+    await setForcedColors('active');
+    try {
+      expect(matchMedia('(forced-colors: active)').matches, engineLabel()).to.be.true;
+
+      // Independent control that never reads the component under test: a glyph that fails to
+      // follow forced colors must not be able to skip its own assertions. WebKit matches the
+      // forced-colors media query under emulation without forcing any rendered color, which
+      // this control -- keeping its authored color -- is what actually detects.
+      const control = document.createElement('span');
+      control.style.color = 'rgb(40, 50, 60)';
+      document.body.append(control);
+      const controlColor = getComputedStyle(control).color;
+      control.remove();
+      const engineForcesColors = controlColor !== 'rgb(40, 50, 60)';
+      if (!engineForcesColors) this.skip();
+
+      const canvasTextProbe = document.createElement('span');
+      canvasTextProbe.style.color = 'CanvasText';
+      document.body.append(canvasTextProbe);
+      const canvasText = getComputedStyle(canvasTextProbe).color;
+      canvasTextProbe.remove();
+
+      const generic = await fixture<LyraFileIcon>(html`
+        <lr-file-icon
+          mime-type="application/x-unrecognized"
+          style="--lr-file-icon-color: rgb(40, 50, 60)"
+        ></lr-file-icon>
+      `);
+      const glyphPath = generic.shadowRoot!.querySelector<SVGPathElement>('.glyph path')!;
+      expect(getComputedStyle(glyphPath).stroke, engineLabel()).to.equal(canvasText);
+      expect(getComputedStyle(glyphPath).stroke).to.not.equal('rgb(40, 50, 60)');
+      const glyphBox = generic.shadowRoot!.querySelector<HTMLElement>('.glyph')!.getBoundingClientRect();
+      expect(glyphBox.width, `${engineLabel()}: glyph box collapsed`).to.be.greaterThan(0);
+      expect(glyphBox.height, `${engineLabel()}: glyph box collapsed`).to.be.greaterThan(0);
+
+      const pdf = await fixture<LyraFileIcon>(html`
+        <lr-file-icon mime-type="application/pdf" style="--lr-file-icon-color: rgb(40, 50, 60)"></lr-file-icon>
+      `);
+      const { token, textRect, boxRect } = measureTokenFit(pdf);
+      expect(getComputedStyle(token).color, engineLabel()).to.equal(canvasText);
+      expect(getComputedStyle(token).color).to.not.equal('rgb(40, 50, 60)');
+      expect(getComputedStyle(token).display, `${engineLabel()}: token must stay visible`).to.not.equal('none');
+      expect(
+        textRect.width,
+        `${engineLabel()}: PDF token overflowed under forced colors`,
+      ).to.be.at.most(boxRect.width + 0.01);
+    } finally {
+      await setForcedColors('none');
+    }
+  });
+});
+
+describe('lr-file-icon baseline contract (T9)', () => {
+  async function bottomEdgeBaselineOffset(mimeType: string, hostStyle = ''): Promise<number> {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="display: flex; align-items: baseline">
+        <lr-file-icon mime-type=${mimeType} style=${hostStyle}></lr-file-icon>
+        <span>Sibling label</span>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraFileIcon>('lr-file-icon')!;
+    const sibling = wrapper.querySelector('span')!;
+    const baseline = probeBaselineY(sibling);
+    return baseline - el.getBoundingClientRect().bottom;
+  }
+
+  it('T9: exports a baseline at the badge bottom edge for the token state, the glyph state, and a small size', async () => {
+    const borderProbe = document.createElement('div');
+    borderProbe.style.borderTopStyle = 'solid';
+    borderProbe.style.borderTopWidth = 'var(--lr-border-width-thin)';
+    document.body.append(borderProbe);
+    const borderWidth = Number.parseFloat(getComputedStyle(borderProbe).borderTopWidth);
+    borderProbe.remove();
+
+    const cases: readonly (readonly [label: string, mimeType: string, hostStyle: string])[] = [
+      ['token state', 'application/pdf', ''],
+      ['glyph state', 'application/x-unrecognized', ''],
+      ['small size', 'application/pdf', '--lr-file-icon-size: 1rem'],
+    ];
+    for (const [label, mimeType, hostStyle] of cases) {
+      const offset = await bottomEdgeBaselineOffset(mimeType, hostStyle);
+      expect(Math.abs(offset), `${engineLabel()}: ${label}`).to.be.at.most(borderWidth + 0.5);
+    }
+  });
+
+  it('T9: places the host at the same inline offset from following text in both the token and glyph states', async () => {
+    async function offsetFromFollowingText(mimeType: string): Promise<number> {
+      const wrapper = await fixture<HTMLElement>(html`
+        <p style="margin: 0"><lr-file-icon mime-type=${mimeType}></lr-file-icon>Following text</p>
+      `);
+      const el = wrapper.querySelector<LyraFileIcon>('lr-file-icon')!;
+      const textNode = wrapper.lastChild as Text;
+      const range = document.createRange();
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 1);
+      return range.getBoundingClientRect().top - el.getBoundingClientRect().top;
+    }
+    const tokenOffset = await offsetFromFollowingText('application/pdf');
+    const glyphOffset = await offsetFromFollowingText('application/x-unrecognized');
+    expect(Math.abs(tokenOffset - glyphOffset), engineLabel()).to.be.lessThan(0.5);
   });
 });
 

@@ -4064,6 +4064,67 @@ it('rejects url paint servers from marker colors', async function () {
   expect(marker.innerHTML.toLowerCase()).to.not.contain('url(');
 });
 
+function stubMarkerConstruction(el: LyraMap): Array<{ color?: string } | undefined> {
+  const constructedOptions: Array<{ color?: string } | undefined> = [];
+  class FakeMarker {
+    constructor(options?: { color?: string }) {
+      constructedOptions.push(options);
+    }
+
+    setLngLat(): this {
+      return this;
+    }
+
+    setPopup(): this {
+      return this;
+    }
+
+    getPopup(): undefined {
+      return undefined;
+    }
+
+    getElement(): HTMLElement {
+      return document.createElement('button');
+    }
+
+    addTo(): this {
+      return this;
+    }
+
+    remove(): void {}
+  }
+  const privateMap = el as unknown as { _map: unknown; _maplibreModule: unknown };
+  privateMap._map = {};
+  privateMap._maplibreModule = { Marker: FakeMarker, Popup: class {} };
+  return constructedOptions;
+}
+
+it('defaults an omitted marker color to the themed brand token instead of the unthemed maplibre-gl default', async () => {
+  const el = (await fixture(
+    html`<lr-map style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+  )) as LyraMap;
+  const constructedOptions = stubMarkerConstruction(el);
+
+  el.markers = [{ id: 'unstyled', lngLat: [0, 0] }];
+  await el.updateComplete;
+
+  expect(constructedOptions).to.have.lengthOf(1);
+  expect(constructedOptions[0]?.color).to.equal('rgb(9, 8, 7)');
+});
+
+it("leaves an explicit invalid marker color to maplibre-gl's own default, unlike an omitted color", async () => {
+  const el = (await fixture(
+    html`<lr-map style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+  )) as LyraMap;
+  const constructedOptions = stubMarkerConstruction(el);
+
+  el.markers = [{ id: 'invalid', lngLat: [0, 0], color: 'not-a-color' }];
+  await el.updateComplete;
+
+  expect(constructedOptions).to.have.lengthOf(1);
+  expect(constructedOptions[0]).to.equal(undefined);
+});
+
 it('does not collide two id-less markers placed at the same coordinates', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;

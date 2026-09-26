@@ -92,7 +92,7 @@ const strings: LyraLocaleStrings = {
   deny: 'Қабылдамау',
   approve: 'Мақұлдау',
   fieldRequired: 'Бұл өрісті толтыру міндетті.',
-  unsupportedFieldType: 'Қолдау көрсетілмейтін өріс түрі: "{type}".',
+  unsupportedFieldType: 'Қолдау көрсетілмейтін өріс түрі: «{type}».',
   valueInvalid: 'Мән жарамсыз.',
   copyFailed: 'Көшіру сәтсіз аяқталды',
   durationMilliseconds: '{value} мс',

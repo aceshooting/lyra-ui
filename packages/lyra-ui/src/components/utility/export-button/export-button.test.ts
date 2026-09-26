@@ -1265,6 +1265,36 @@ it('supports opt-in compact density and outlined or quiet trigger treatments', a
   expect(getComputedStyle(trigger).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
 });
 
+it('keeps compact size and outlined/quiet appearance intact inside a narrow RTL toolbar allocation', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 320px">
+      <lr-export-button
+        size="s"
+        appearance="outlined"
+        .formats=${['csv', 'json']}
+      ></lr-export-button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-export-button') as LyraExportButton;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+
+  expect(el.size).to.equal('s');
+  expect(el.appearance).to.equal('outlined');
+  expect(getComputedStyle(trigger).minBlockSize).to.equal('40px');
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+
+  el.appearance = 'quiet';
+  await el.updateComplete;
+  expect(getComputedStyle(trigger).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+
+  el.open = true;
+  const menu = await waitForOpenMenu(el);
+  expect(el.size).to.equal('s');
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  expect(el.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width);
+  expect(menu.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width + 0.5);
+});
+
 it('bounds and wraps a long rendered format menu within the popover viewport clamp', async () => {
   const el = await fixture<LyraExportButton>(html`
     <lr-export-button

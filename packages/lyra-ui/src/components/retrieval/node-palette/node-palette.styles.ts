@@ -131,15 +131,19 @@ export const styles = css`
   /* :where() zeroes the wrapped attribute-selector and pseudo-class, leaving :hover/:focus-visible
      alone at (0,1,0). Unwrapped, [part='item']:not([aria-disabled='true']):hover is (0,3,0) and
      out-ranks the source-later :active rule below, leaving a dragged item with no pressed fill. */
+  /* --lr-color-neutral-fill-quiet, not --lr-color-border: a draggable palette item's own
+     hover/press fill is a neutral tint on top of the surface it sits on, not a border color
+     borrowed as a fill -- the same class of fix as this release's lr-avatar/lr-skeleton/lr-empty
+     sweep. */
   :where([part='item']):hover:where(:not([aria-disabled='true'])),
   :where([part='item']):focus-visible:where(:not([aria-disabled='true'])) {
-    background: var(--lr-color-surface-hover, var(--lr-color-border));
+    background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
   }
   /* These items are drag sources (cursor: grab above), so the press is the moment the drag starts:
      deeper fill plus the grabbing cursor. Same :where() shape as the hover rule, so the two tie at
      (0,1,0) and source order hands this one the press. */
   :where([part='item']):active:where(:not([aria-disabled='true'])) {
-    background: color-mix(in oklab, var(--lr-color-surface-hover, var(--lr-color-border)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     cursor: grabbing;
   }
   [part='item']:focus-visible {
