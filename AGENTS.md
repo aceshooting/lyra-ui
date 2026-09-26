@@ -29,9 +29,12 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
 
 ## Workspace hygiene
 
-- Create temporary Git worktrees only under `/tmp/` (for example, with `mktemp -d`); never
-  create them as sibling directories of this repository. Keep the primary checkout cleanly
-  identifiable and remove temporary worktrees when their work has been integrated.
+- Create temporary Git worktrees only under `../lyra-ui_worktrees/<name>` (for example,
+  `git worktree add --detach ../lyra-ui_worktrees/<name>`) — never inside this checkout, as any
+  other sibling of it, or under `/tmp/`. `/tmp` is RAM-backed on the author's workstation, and a
+  worktree's `node_modules`, `dist` and browser runs have exhausted memory there and lost
+  uncommitted work on the forced reboot. Keep the primary checkout cleanly identifiable and remove
+  each worktree as soon as its work has been integrated.
 
 ## Author's Cygnus / Solarleb workspace goal
 
