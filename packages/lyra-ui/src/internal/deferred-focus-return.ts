@@ -22,6 +22,8 @@ export interface DeferredFocusReturnRequest {
   settled?: Promise<unknown>;
   /** Extra validity check evaluated before the pass acts (for example "still closed"). */
   isCurrent?: () => boolean;
+  /** Final component-owned target, used only when every ordinary return candidate is unavailable. */
+  fallback?: () => void;
 }
 
 /**
@@ -41,8 +43,8 @@ export interface DeferredFocusReturnRequest {
  * registered during that event -- has already landed. It acts only while focus is still stranded:
  * lost to `<body>`, still on whatever the synchronous return landed on, or inside the region
  * `stranded` names. Focus the user or host deliberately moved elsewhere in the meantime is never
- * taken back. It then focuses the first candidate that can hold focus; when none can, focus is left
- * where it is. One bounded pass, not a poll.
+ * taken back. It then focuses the first candidate that can hold focus, or invokes the optional
+ * component-owned fallback when none can. One bounded pass, not a poll.
  *
  * `cancel()` -- and a later `schedule()` -- abandons a pending pass. Call it when the overlay
  * reopens, closes again, or the component disconnects.
@@ -81,7 +83,7 @@ export class DeferredFocusReturn {
         // A resolver must not throw out of a deferred frame callback.
         return;
       }
-      focusFirstAvailable([...candidates]);
+      if (!focusFirstAvailable([...candidates])) request.fallback?.();
     };
     void (async () => {
       await host.updateComplete;

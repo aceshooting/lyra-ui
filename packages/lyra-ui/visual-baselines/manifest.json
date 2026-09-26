@@ -709,6 +709,18 @@
     {
       "id": "utility-visually-hidden--skip-link",
       "profile": "standard"
+    },
+    {
+      "id": "theming-shadcn--shadcn",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Capture the opt-in shadcn preset in light, dark, and RTL before promoting reviewed baselines."
+    },
+    {
+      "id": "theming-shadcn--gemstone-accent",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Capture the opt-in shadcn preset in light, dark, and RTL before promoting reviewed baselines."
     }
   ],
   "tagCoverage": {
@@ -998,6 +1010,10 @@
     ],
     "lr-streaming-text": [
       "streamingtext--right-to-left-code-stream"
+    ],
+    "lr-button": [
+      "theming-shadcn--shadcn",
+      "theming-shadcn--gemstone-accent"
     ]
   },
   "untaggedStories": {

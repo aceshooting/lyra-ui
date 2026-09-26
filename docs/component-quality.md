@@ -13,7 +13,7 @@ component’s compatibility status. The machine-readable source is
 - Exact same-test/same-instance populated or open axe evidence: **295**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
-- Visual-regression enrollment: **90** tags
+- Visual-regression enrollment: **91** tags
 - Forced-colors visual enrollment: **8** tags
 - Manually verified assistive-technology pairings: **0**
 
@@ -81,7 +81,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-breadcrumb-item`](component-integration.md#lr-breadcrumb-item) | stable | automated | not recorded | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-browser-frame`](component-integration.md#lr-browser-frame) | stable | automated | not recorded | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-bubble-chart`](component-integration.md#lr-bubble-chart) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | complete | source signal | source signal | not enrolled | not verified |
-| [`lr-button`](component-integration.md#lr-button) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
+| [`lr-button`](component-integration.md#lr-button) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified |
 | [`lr-button-group`](component-integration.md#lr-button-group) | stable | automated | N/A | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-calendar`](component-integration.md#lr-calendar) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-calendar-viewer`](component-integration.md#lr-calendar-viewer) | stable | automated | N/A | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | not recorded | source signal | not enrolled | not verified |

@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
 import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 export type { LyraFrame } from '../../../internal/variants.js';
 import { detectPlatform } from '../../../internal/platform.js';
@@ -502,7 +503,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  while focus is still inside the rail or has fallen to `<body>` -- focus moved elsewhere in the
    *  meantime is never taken back -- and focuses the first candidate that can hold focus: this
    *  trigger, then the element that held focus when the overlay opened, then the built-in
-   *  `[part="toggle"]` (unavailable under `hideToggle`); when none can, focus is left where it is.
+   *  `[part="toggle"]` (unavailable under `hideToggle`), then this rail's host. The host receives
+   *  a temporary `tabindex="-1"` only when needed, removed on blur without changing an authored tabindex.
    *  An external trigger needs this explicit association instead of relying
    *  on whatever last held focus: a consumer's own JS-driven `open = true` (rather than a real
    *  click) never focuses anything, and even a real click does not reliably focus its target in
@@ -657,6 +659,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** Cancelled by every open and close, so a deferred focus return that a later transition (or a
    *  disconnect) overtook never runs. */
   private readonly deferredFocusReturn = new DeferredFocusReturn();
+  private restoreFallbackTabIndex?: () => void;
   private triggerAria?: AriaOwnershipLease;
   // Repairs focus after a responsive mobile close or removal of a focused inline resizer.
   private recoverInlineFocusAfterResponsiveClose = false;
@@ -1047,6 +1050,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.baseEl?.removeAttribute('data-sliding');
     this.deferredFocusReturn.cancel();
     super.disconnectedCallback();
+    this.restoreFallbackTabIndex?.();
     this.teardownMediaQueries();
     this.overlayHandle?.suspend();
     this.endResizerGesture();
@@ -1148,7 +1152,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  back. It then focuses the first candidate that can actually hold focus -- the return target
    *  (built-in toggle click, external `trigger`/`for`, or the element focused when the overlay
    *  opened), then the element focused when the overlay opened, then the built-in `[part="toggle"]`
-   *  (unavailable under `hideToggle`). When none can, focus is left where it is. A reopen, another
+   *  (unavailable under `hideToggle`), then the rail host. A reopen, another
    *  close, or a disconnect before the frame arrives abandons the pass. */
   private scheduleDeferredFocusReturn(): void {
     const candidates = [this.overlayReturnTarget, this.overlayOpener];
@@ -1156,7 +1160,22 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       host: this,
       candidates: () => [...candidates, this.toggleEl],
       isCurrent: () => !this.overlayActive,
+      fallback: () => this.focusHostFallback(),
     });
+  }
+
+  private focusHostFallback(): void {
+    if (!this.hasAttribute('tabindex')) {
+      this.setAttribute('tabindex', '-1');
+      const restore = (): void => {
+        this.removeEventListener('blur', restore);
+        if (this.getAttribute('tabindex') === '-1') this.removeAttribute('tabindex');
+        this.restoreFallbackTabIndex = undefined;
+      };
+      this.restoreFallbackTabIndex = restore;
+      this.addEventListener('blur', restore);
+    }
+    if (!focusFirstAvailable(this)) this.restoreFallbackTabIndex?.();
   }
 
   /** Reparents the (never destroyed/recreated) toggle button between its two valid DOM positions:

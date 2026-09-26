@@ -37,6 +37,31 @@ and no runtime dependency on either project.
 > users get a separate `sl-*` migration map because the APIs are not identical. No competitor runtime,
 > theme, token namespace, or source code is required by Lyra.
 
+## v21 highlights
+
+| Area | Features and reference |
+| --- | --- |
+| Looks and branding | Opt-in shadcn look as [CSS](llms/shared.md#the-shadcn-look--themesshadcncss) or a persistent [runtime token preset](llms/shared.md), with independent mode, accent, and surface settings. Decorative borders have their own token; control boundaries keep their contrast floor. |
+| Navigation | [Menubar and navigation menu](llms/layout.md), context menu, and app-rail sidebar controls with external launchers, shortcuts, resizing, and persistence. Multi-split exposes pane actions and optional launcher ARIA/focus association. |
+| Toggle controls | [Toggle and toggle group](llms/forms.md#lr-toggle-group) provide pressed-button state, single or multiple selection, keyboard navigation, and joined styling. |
+| Markdown and streaming | [Markdown](llms/conversation.md) supports optional code-block headers with exact-source copying, progressive streaming, GFM table scrollers and column alignment, and themed read-only task checkboxes. |
+| Tool results | [Tool-call blocks](llms/agent-tools.md) provide expandable summaries and result presentation with controlled disclosure state. |
+| Languages | 32 optional translation catalogs plus built-in English, including the new regional and European/Asian catalogs listed below. Load whole catalogs or family slices. |
+| Typography | [Typography utilities](llms/shared.md#typography) apply a shared scale and reading styles to native content alongside custom elements. |
+
+Choose the original Lyra look by loading `theme.css`. To select shadcn through the runtime:
+
+```js
+import '@aceshooting/lyra-ui/theme.css';
+import { applyLyraThemePreset } from '@aceshooting/lyra-ui/theme/presets.js';
+import { LYRA_SHADCN_THEME_PRESET } from '@aceshooting/lyra-ui/theme/presets/shadcn.js';
+
+applyLyraThemePreset(LYRA_SHADCN_THEME_PRESET);
+applyLyraThemePreset('sapphire'); // accent and system-following mode; keeps the shadcn look
+```
+
+See the [changelog](CHANGELOG.md) for version-by-version changes and historical upgrade notes.
+
 ## Install
 
 ```bash
@@ -88,7 +113,7 @@ The tag-shaped path is stable even if Lyra later reorganizes its internal family
 family-shaped paths remain supported, but new application code should prefer
 `components/<tag>.js`.
 
-The new v8 application-shell and media surfaces have the same granular shape:
+Application-shell and media components have the same granular shape:
 
 ```js
 import "@aceshooting/lyra-ui/components/lr-page.js";
@@ -96,7 +121,7 @@ import "@aceshooting/lyra-ui/components/lr-video.js";
 import "@aceshooting/lyra-ui/components/lr-video-playlist.js";
 ```
 
-Imports for behavior preserved under a new compatibility tag are explicit too:
+Native time input, pan/zoom, split panels, and alerts also have granular registrations:
 
 ```js
 import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
@@ -138,20 +163,10 @@ don't, because a barrel cannot be tree-shaken down to the two elements you actua
 import "@aceshooting/lyra-ui/all.js";
 ```
 
-> **Breaking in 8.0.0 — the package root no longer registers anything.** In 7.x, a bare
-> `import '@aceshooting/lyra-ui'` had the side effect of defining every root-included tag. It does
-> not any more: the root is now a **pure export surface**. `@aceshooting/lyra-ui/all.js` is the
-> explicit compatibility path that carries that side effect, and rewriting the one specifier is the
-> whole migration.
->
-> Every named and type export stays on the root, at the same specifier, with the same name —
-> `import { LyraSelect, type LyraSelectEventMap } from '@aceshooting/lyra-ui'` is unchanged, and it
-> now costs you nothing at runtime. Only the side effect moved.
->
-> Watch for this, because it is the genuinely nasty part: a missed migration does **not** throw a
-> module error. The import still resolves, the build still succeeds, and the tags simply never
-> upgrade — `<lr-select>` renders as an unknown inert element with its light DOM showing through and
-> no console message. If elements stopped working after upgrading and nothing failed, this is why.
+> **Registration is explicit.** The package root is a side-effect-free export surface for
+> classes, helpers, and types; importing it does not define custom elements. Import each component's
+> registration entry, a family entry, or `@aceshooting/lyra-ui/all.js` for bulk registration.
+> An unregistered tag remains inert even when the import and build succeed.
 
 `all.js` registers 280 tags — every component **except** the 16 inventory-designated
 optional-peer-family tags: `<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`,
@@ -165,9 +180,8 @@ import "@aceshooting/lyra-ui/components/lr-map.js";
 import "@aceshooting/lyra-ui/components/lr-graph.js";
 ```
 
-Granular per-component imports remain the recommendation. `all.js` exists so a 7.x application can
-upgrade in one line, not because pulling 278 elements into a bundle to render four of them is a good
-idea.
+Prefer granular per-component imports to keep the bundle proportional to the components you use.
+Use `all.js` when bulk registration is appropriate for the application.
 
 `all.js` registers `<lr-flag>` without pulling in the optional flag asset graph. If a
 flag uses `country` or `language`, also import the peer registration entry once:
@@ -293,223 +307,6 @@ Claude the same reference as a skill, plus the `/lyra-ui:review`, `/lyra-ui:migr
 **Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
 contributor guide for agents working _on_ lyra-ui, not the same document as the above.
 
-## Upgrading from 7.x
-
-8.0.0 removes naming and default accidents, completes mapped public contracts, and adds new platform
-surface for SSR, framework typing, guarded loading, and opt-in styles. Existing Lyra-original
-behavior displaced by a mapped contract moves to a truthful compatibility tag instead of
-disappearing. Almost every intentional break below is a find-and-replace, and where a default flips
-it flips to the mapped public contract — an attribute renamed into its own negation is the most
-expensive mistake available here, because the renamed markup parses cleanly and every instance that
-doesn't carry it silently adopts the opposite behavior.
-
-### Tag renames
-
-| 7.x              | 8.0.0            | Also                                                                                                                                                                                                                                                                                                     |
-| ---------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<lr-tabs>`      | `<lr-tab-group>` | The `lr-tabs-change` event splits into `lr-tab-hide` (outgoing tab) then `lr-tab-show` (incoming), and `--lr-tabs-*` custom properties become `--lr-tab-group-*`. The group is composed from `<lr-tab>` / `<lr-tab-panel>` children. The library's own `slot`/`label` panel-attribute shape was **removed in 9.0.0** — rewrite each former `<div slot="x" label="…">` child as one `<lr-tab panel="x">` plus one `<lr-tab-panel name="x">`, and fold each former `slot="x-icon"` sibling's content into that `<lr-tab>`'s own default slot (mark a decorative glyph `aria-hidden`, since the tab derives its accessible name from that content). A leftover `slot`/`label` child is skipped silently: the strip renders empty. |
-| `<lr-tree-node>` | `<lr-tree-item>` |                                                                                                                                                                                                                                                                                                          |
-
-Neither old name is registered as an alias. A tag that silently keeps working under its old name is
-how a rename looks finished while half of it is inert.
-
-### Component contract moves and default changes
-
-Two existing tags now carry the mapped contract their names promise. Rename the old behavior when
-that is what the application needs:
-
-| 7.x behavior                                     | 8.0.0 destination        | What the old tag means now                                                       |
-| ------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------- |
-| Browser-native `<lr-time-input>`                 | `<lr-native-time-input>` | `<lr-time-input>` is the locale-aware segmented field and popup.                 |
-| Slotted/image `<lr-zoomable-frame>` pan and zoom | `<lr-pan-zoom>`          | `<lr-zoomable-frame>` is a sandboxed iframe preview with discrete zoom controls. |
-
-The following changes do not require a tag rename, but code that relied on the former default or
-exact TypeScript/event shape needs an explicit update:
-
-- `<lr-select>.value` is typed `string | string[]`; `multiple` opts into the array-valued runtime
-  mode. Narrow the value after checking `multiple` rather than assuming a string.
-- A bare `<lr-button>` now uses `appearance="accent"`. Write `appearance="filled"` to preserve the
-  former visual tier.
-- `<lr-input type="password">` no longer adds a reveal button unless `password-toggle` is present,
-  and `<lr-input type="number">` leaves native spin buttons visible unless `without-spin-buttons`
-  (or `no-spin-buttons`) is present.
-- `<lr-pagination>` now defaults `page-size` to `10`, not `20`; its page-change detail also includes
-  `pageSize`, and the cancelable `lr-before-page-change` precedes it.
-- `<lr-skeleton>` defaults to `effect="none"`, not `pulse`; `<lr-mutation-observer>` defaults
-  `child-list` to false, not true.
-- `<lr-format-date>` and `<lr-relative-time>` default an unset date to the construction-time current
-  instant. `<lr-format-bytes>` uses decimal `unit-step="1000"`; write `1024` to retain the former
-  scaling.
-- `<lr-popover>` emits cancelable `lr-show`/`lr-hide` before state changes and settles the new
-  after-events after motion. `<lr-tooltip>` replaces `delay` with independent `show-delay` and
-  `hide-delay`.
-- Slider input/change details now include the active thumb and full value/range context. Readers of
-  `detail.value` continue to work; exact one-key object assertions must accept the wider shape.
-
-The component-family reference documents every aligned default beside the affected property. The
-contract-aware migration report identifies upstream-origin rewrites; the separate `lyra-v7`
-profile described below makes the former popup/popover/tooltip defaults explicit.
-
-The exact registration imports for the new and moved surfaces are:
-
-```js
-import "@aceshooting/lyra-ui/components/lr-page.js";
-import "@aceshooting/lyra-ui/components/lr-video.js";
-import "@aceshooting/lyra-ui/components/lr-video-playlist.js";
-import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
-import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
-```
-
-### Attribute and property renames
-
-Each row is a mechanical rewrite in your own markup or CSS. Three of them also change what happens
-when the attribute is _absent_, so grep for the tag as well as for the old attribute.
-
-| 7.x                                                | 8.0.0                                  | What to check                                                                                                                             |
-| -------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `<lr-dialog no-light-dismiss>`                     | `<lr-dialog light-dismiss>`            | Polarity un-inverted, so the default flips: a backdrop click no longer dismisses a dialog unless you opt in. `<lr-drawer>` inherits this. |
-| `<lr-pagination hide-summary>`                     | `<lr-pagination with-summary>`         | Same flip: the localized "showing X–Y of Z" row is now opt-in.                                                                            |
-| `<lr-pagination total-items>`                      | `<lr-pagination total>`                | Leaving `total` unset renders the empty state, so a missed rename is visible rather than silent.                                          |
-| `<lr-avatar src>`                                  | `<lr-avatar image>`                    |                                                                                                                                           |
-| `<lr-drawer placement>`                            | default `start` → `end`                | A drawer with no `placement` now enters from the logical end edge; write `placement="start"` to keep the old side.                        |
-| `<lr-slider>` `::part(fill)`                       | `::part(indicator)`                    | Rename the selector in your own CSS; the old part name matches nothing and fails silently.                                                |
-| `<lr-flag detailed>`                               | `<lr-flag variant="detailed">`         | The deprecated boolean is gone.                                                                                                           |
-| `<lr-attachment-chip size>`, `<lr-file-icon size>` | `bytes`                                | These were byte counts wearing the name of the size ladder.                                                                               |
-| `<lr-dock-panel size>` / `min-size` / `max-size`   | `extent` / `min-extent` / `max-extent` | Same reason: a CSS length along the docked axis, not a size step.                                                                         |
-
-`<lr-combobox>`'s `with-clear` is no longer marked deprecated. Both upstream spellings of the clear
-button — `with-clear` and `clearable` — are now first-class on `<lr-input>`, `<lr-select>` and
-`<lr-combobox>` alike, so there is nothing to rewrite in either direction.
-
-### Security-preserving differences
-
-Some upstream behavior is intentionally not made automatic:
-
-- `<lr-include>` sanitizes every fetched or same-page fragment, has no script-executing mode, and
-  defaults `mode` to `same-origin` instead of `cors`. A migration that depends on cross-origin or
-  script execution remains unchanged with a location-aware warning. Its post-sanitization
-  transclusion is network-silent and non-interactive: anchors remain only for resolvable
-  same-document `#fragment` links (rebased per include instance); every other navigation or
-  resource attribute, including `href`, `src`, `srcset`, `action`, `ping`, and `poster`, is stripped,
-  so images do not load. Form-control and custom-element wrappers are unwrapped to safe ordinary
-  text or children, while controls with no passive content are removed.
-- Link-like Lyra controls always contribute `noopener noreferrer` to `rel` whenever `target` is set,
-  and always strip `opener`. Author `rel` tokens are merged rather than ignored, so `nofollow`, `me`
-  and `license` survive the rename — `<lr-button>` and `<lr-breadcrumb-item>` therefore migrate
-  automatically as of 9.0.0. `<lr-app-rail-item>` still derives `rel` from `target` alone.
-- `<lr-zoomable-frame>` rejects active/non-embeddable URL schemes, always renders a sandbox, and
-  will not combine `allow-scripts` with `allow-same-origin`. `<lr-video>` validates media and
-  thumbnail URLs and byte-caps remote thumbnail VTT input.
-
-These are deliberate fail-closed contracts. The migration report records them instead of emitting
-markup that appears converted while weakening the application's security boundary.
-
-### One styling vocabulary
-
-`variant`, `tone` and `kind` used to mean the same thing on different components, and `appearance`
-meant two unrelated things. There is now one name per concept, library-wide.
-
-- **`tone` → `variant`** on `<lr-avatar>`, `<lr-avatar-group>`, `<lr-chip>` and `<lr-confirm-bar>`,
-  and on `<lr-activity-feed>`'s entry objects — along with its `tone-dot*` CSS parts, now
-  `variant-dot*`. No alias for any of them.
-- **`appearance="card|plain"` → `frame="card|plain"`** on the thirteen container components that had
-  it (`<lr-stat>`, `<lr-agent-run>`, `<lr-task-list>`, `<lr-result-card>`, `<lr-commit-card>`,
-  `<lr-stack-trace>`, `<lr-entity-card>`, `<lr-source-card>`, `<lr-community-card>`,
-  `<lr-media-card>`, `<lr-chat-composer>`, `<lr-flow-controls>`, `<lr-flow-run-status>`).
-  `appearance` now means how a control fills itself and nothing else:
-  `accent | filled | outlined | filled-outlined | plain`.
-- **`<lr-button>`'s default `appearance` is now `accent`**, and `filled` is a genuinely quieter tier.
-  The two used to render identically for every variant except neutral.
-- **`size` accepts both ladders everywhere** — this library's `2xs|xs|s|m|l|xl` and the upstream
-  `small|medium|large` — so a migrated `size="small"` needs no rewrite.
-- **`<lr-badge>`, `<lr-tag>` and `<lr-chip>` are no longer unconditionally pill-shaped.** They
-  default to a rounded rectangle; add `pill` for the old fully-rounded ends.
-
-### Tokens and theming
-
-- **`theme.css` now declares cascade layers**:
-  `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`, with the tokens in
-  `lr-theme` (`lr-theme-preset`, which holds the optional `themes/shadcn.css` preset, joined the list
-  later; name all five if you declare the order yourself). Any _unlayered_ declaration of yours now
-  beats every Lyra one regardless of specificity or load order, so a plain `:root { --lr-theme-… }`
-  override always wins with no `!important`. If you already wrap your overrides in your own
-  `@layer`, they now sort relative to `lr-theme` rather than losing to an unlayered `:root` — name
-  your layer in an `@layer` statement after importing `theme.css`, or move those rules out of a
-  layer entirely.
-- **`--lr-font-size-md` is removed**; use `--lr-font-size-m`. The two were the same value under two
-  names, which is why `<lr-button>` rendered `size="m"` and `size="l"` at identical text sizes.
-- **Compound motion tokens are split into duration and easing** (`--lr-duration-*` +
-  `--lr-easing-*`). The compound `--lr-transition-*` tokens still resolve, composed from the two.
-- **Shadows are five tiered steps** (`--lr-shadow-xs` … `--lr-shadow-xl`), declared per mode with
-  much heavier dark-mode alphas, because a single near-black step against a near-black surface is not
-  a luminance difference at all. `--lr-shadow` still resolves (to the `m` step) and a theme that set
-  `--lr-theme-shadow-color` keeps working; a theme that overrode `--lr-shadow` directly should move to
-  the step it meant.
-- **Hover and press are a color mix, not `filter: brightness()`** — tune them library-wide with
-  `--lr-color-mix-hover` / `--lr-color-mix-active` against `--lr-color-mix-partner`.
-  `--lr-hover-brightness` still resolves but no component reads it.
-- **New `--lr-color-surface-overlay`** for modal panels (the page surface in light mode, lighter than
-  the page in dark), a **new `--lr-terminal-bg-*` set** for ANSI background colors, and a new
-  `--lr-form-control-*` tier (`height`, `font-size`, `padding-inline`, `padding-block`, `gap`,
-  `radius`) — one ladder shared by every control, retuned per `size` step.
-- Colors moved where the generated ramp put them, including the brand seed. Restoring the old hex
-  values by hand would reintroduce the contrast failures the ramp exists to prevent.
-- The value-named `--lr-size-<value>` tokens are unchanged and still resolve, but the family is
-  frozen: existing entries may disappear as call sites find a semantic home, and none will be added.
-  Don't build new theming on them — reach for `--lr-space-*`, `--lr-radius*`, `--lr-font-size-*` or
-  `--lr-form-control-*` instead.
-
-### Localization
-
-**Pluralized messages are now CLDR category objects** selected through `Intl.PluralRules`, replacing
-the paired `<key>` + `<key>Plural` convention. A catalog passed to `registerLyraLocale()`, or a
-per-instance `.strings`, that used the old pair must be rewritten — with that locale's real
-categories, which for Russian is four and for Arabic six:
-
-```ts
-// 7.x
-registerLyraLocale("en", {
-  toolCount: "{count} tool",
-  toolCountPlural: "{count} tools",
-});
-
-// 8.0.0
-registerLyraLocale("en", {
-  toolCount: { one: "{count} tool", other: "{count} tools" },
-});
-```
-
-Thirty-two translation catalogs now ship as side-effect-only modules, so a common locale no longer needs a
-hand-written catalog at all:
-
-```js
-import "@aceshooting/lyra-ui/translations/fr.js"; // also ar, cs, da, de, de-CH, es, fa, fi, he, hi, hr, hu, id, it, ja, kk, ko, nb, nl, nn, pl, pt-BR, pt-PT, ro, ru, sl, sv, tr, uk, zh-CN, zh-TW
-```
-
-Each locale also ships as twelve smaller per-family slices, so an app using only a handful of
-components can import just those families instead of the whole catalog:
-
-```js
-import "@aceshooting/lyra-ui/translations/fr/forms.js";
-import "@aceshooting/lyra-ui/translations/fr/data.js";
-import "@aceshooting/lyra-ui/translations/fr/shared.js"; // cross-cutting strings, import alongside any family
-```
-
-`ar`, `fa`, and `he` are complete RTL catalogs. Locale lookup applies the normal regional fallback, so
-`fa-IR` resolves through `fa` and `he-IL` through `he`; set `dir="rtl"` on the document or an
-ancestor so layout and directional keyboard behavior follow the chosen language.
-
-### Packaging
-
-- **`@aceshooting/lyra-ui/internal/*` is no longer a published subpath.** The supported helpers moved
-  to `@aceshooting/lyra-ui/utilities/*` (one module per helper, or the whole set from
-  `@aceshooting/lyra-ui/utilities`), which now also carries `FormAssociated` and `groupByRecency` —
-  previously reachable only through the side-effectful root barrel. Rewrite
-  `@aceshooting/lyra-ui/internal/positioner.js` as `@aceshooting/lyra-ui/utilities/positioner.js`,
-  and likewise for `a11y`, `announcer`, `icons`, `layered-layout`, `lyra-element`,
-  `overlay-manager`, `prefix` and `scroll-lock`. Anything else that lived under `internal/` was never
-  a public API and has no replacement subpath.
-
 ## Migrating from Web Awesome or Shoelace
 
 The "Mirrors" column records a design/API relationship, not blanket permission to rename a tag.
@@ -585,29 +382,6 @@ run is byte-idempotent. Comments, prose, unrelated identifiers/packages, and par
 treated as component uses. `--check` never writes files and exits nonzero while a rewrite or warning
 remains.
 
-**Preserving Lyra 7 overlay defaults.** This is a separate, opt-in profile; the default command
-above continues to scan only Web Awesome and Shoelace uses. Run it first in dry-run mode:
-
-```bash
-npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --origin=lyra-v7 --dry-run \
-  --report=lyra-v7-migration.json path/to/your/src
-```
-
-The profile never renames an `lr-*` tag or import. It inserts attributes only when absent:
-
-| Component      | Lyra 7 behavior made explicit                                                   |
-| -------------- | ------------------------------------------------------------------------------- |
-| `<lr-popup>`   | `strategy="fixed"`, `placement="bottom-start"`, `distance="4"`, `flip`, `shift` |
-| `<lr-popover>` | `placement="bottom-start"`, `distance="4"`, `without-arrow`                     |
-| `<lr-tooltip>` | `distance="6"`, `without-arrow`                                                 |
-
-Boolean `true` is emitted as canonical attribute presence; the positive inverse
-`without-arrow` is used instead of serializing `arrow="false"`. Existing explicit values are
-untouched. An opaque framework attribute spread or DOM alias blocks that component profile across
-the scanned target set with a location-aware warning, so the tool cannot silently insert a default
-beside a value it cannot see. Review or expand the dynamic value, rerun, then apply without
-`--dry-run`; a final run should report no changes.
-
 The inventory does not treat `dir` or `lang` as component-member drift: both are platform-global
 HTML passthrough attributes. It likewise excludes Web Awesome's `did-ssr` hydration marker, which is
 upstream runtime bookkeeping rather than an authored member to copy onto a Lyra component.
@@ -648,6 +422,29 @@ what you need (see Usage above). That's most of this library, including every da
 components, `<lr-map>`, and the entire **Conversation & Agent UI** family (chat messages,
 streaming text, tool-call chips/dialogs, citations, model/settings pickers, and more) — Web
 Awesome has no chat/agent UI component family at all.
+
+### Security boundaries
+
+Some upstream behavior is intentionally not made automatic:
+
+- `<lr-include>` sanitizes every fetched or same-page fragment, has no script-executing mode, and
+  defaults `mode` to `same-origin` instead of `cors`. A migration that depends on cross-origin or
+  script execution remains unchanged with a location-aware warning. Its post-sanitization
+  transclusion is network-silent and non-interactive: anchors remain only for resolvable
+  same-document `#fragment` links (rebased per include instance); every other navigation or
+  resource attribute, including `href`, `src`, `srcset`, `action`, `ping`, and `poster`, is stripped,
+  so images do not load. Form-control and custom-element wrappers are unwrapped to safe ordinary
+  text or children, while controls with no passive content are removed.
+- Link-like Lyra controls always contribute `noopener noreferrer` to `rel` whenever `target` is set,
+  and always strip `opener`. Author `rel` tokens are merged rather than ignored, so `nofollow`, `me`
+  and `license` survive the rename — `<lr-button>` and `<lr-breadcrumb-item>` therefore support
+  automatic migration. `<lr-app-rail-item>` still derives `rel` from `target` alone.
+- `<lr-zoomable-frame>` rejects active/non-embeddable URL schemes, always renders a sandbox, and
+  will not combine `allow-scripts` with `allow-same-origin`. `<lr-video>` validates media and
+  thumbnail URLs and byte-caps remote thumbnail VTT input.
+
+These are deliberate fail-closed contracts. The migration report records them instead of emitting
+markup that appears converted while weakening the application's security boundary.
 
 ## Theming, internationalization & RTL
 
@@ -773,7 +570,7 @@ setLyraLocale("fr"); // or just set <html lang="fr">/an ancestor `lang` — comp
 
 The dedicated `localization.js` entry is side-effect-free: it does not register the component
 graph. The package root continues to re-export the same runtime for compatibility, but importing
-the root remains registration-free in v8.
+the root remains registration-free.
 
 ```html
 <!-- Per-instance: override specific keys on one element without a global registry. -->
@@ -816,7 +613,7 @@ remains available for the complete M+1 line and cannot be removed before M+2. Se
 Every Lyra entry point is server-safe under Node 20+ — the package root, `all.js`, the family
 barrels, and every granular registration module alike. The `@aceshooting/lyra-ui/ssr-loader.js`
 entry installs Lit's hydration hook before registering Lyra (it still pulls the whole `all.js`
-closure, so it is unaffected by the 8.0.0 root split) and exports the machine-readable
+closure independently of the package root) and exports the machine-readable
 `LYRA_SSR_SUPPORT_MATRIX`. New integrations that want granular registration can import
 `@aceshooting/lyra-ui/hydration.js` first instead, then their own component modules. The matrix has
 two explicit tiers:

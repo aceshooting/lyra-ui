@@ -60,7 +60,7 @@
     "automatedAccessibility": 295,
     "accessibilityExemptions": 1,
     "accessibilityMissing": 0,
-    "visualEnrolled": 90,
+    "visualEnrolled": 91,
     "forcedColorsEnrolled": 8,
     "assistiveTechnologyVerified": 0
   },
@@ -5784,7 +5784,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "reducedMotion",
-          "visual",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -5958,13 +5957,25 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "not-enrolled",
-          "stories": [],
-          "axes": [],
-          "evidence": [],
+          "status": "complete",
+          "stories": [
+            "theming-shadcn--gemstone-accent",
+            "theming-shadcn--shadcn"
+          ],
+          "axes": [
+            "dark",
+            "light",
+            "rtl"
+          ],
+          "evidence": [
+            {
+              "file": "visual-baselines/manifest.json",
+              "kind": "automated screenshot enrollment"
+            }
+          ],
           "reviewer": "aceshooting",
           "reviewedAt": "2026-09-11",
-          "limitation": "No visual-regression story is enrolled for this tag."
+          "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
           "applicability": "not-applicable",
@@ -5998,7 +6009,7 @@
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
-        "No visual-regression story is enrolled for this tag.",
+        "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
         "No optional-peer or remote-content trust boundary was detected in the component directory.",
         "No forced-colors visual capture is enrolled for this tag.",
@@ -31221,8 +31232,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 394,
+              "file": "src/components/layout/multi-split/multi-split-trigger.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -31355,6 +31366,7 @@
         "tests": [
           "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
           "src/components/layout/multi-split/multi-split-remediation.test.ts",
+          "src/components/layout/multi-split/multi-split-trigger.test.ts",
           "src/components/layout/multi-split/multi-split.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

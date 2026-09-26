@@ -173,6 +173,16 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
+- `trigger: HTMLElement | null = null` (attribute: false) — external launcher associated with the
+  collapsing pane. Takes precedence over `for`; wire its click to `togglePane()` yourself. The
+  launcher receives `aria-controls` pointing to the pane and `aria-expanded`: `true` for wide or
+  open floating panes, `false` for rail or closed floating panes. Closing the floating drawer returns
+  focus to the launcher, including a deferred retry after the close update. Existing author ARIA
+  is restored when the association is released, collapse is disabled, or the split disconnects.
+  A pane without an id receives a temporary one, removed when the association ends unless the
+  author changed it. Leaving both association properties unset preserves existing behavior.
+- `for: string = ''` — id of an external launcher in the split's document or shadow root; resolved
+  on updates and when the drawer opens or closes. A direct `trigger` reference takes precedence.
 - `releasePinOnBreakpoint: boolean = false` (attribute `release-pin-on-breakpoint`, reflected) — opts a
   pinned `collapseState` in to releasing itself when the layout it was made for is gone: either the
   measured collapse band changes to a different one than the pin was made in, or

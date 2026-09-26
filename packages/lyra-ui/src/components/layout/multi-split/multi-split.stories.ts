@@ -477,15 +477,16 @@ export const ConsumerOwnedTrigger: Story = {
     docs: {
       description: {
         story:
-          'The split renders no collapsed UI of its own, so the trigger is the consumer’s. `togglePane()` picks the mechanism the pane’s current band provides: pinning `wide`/`rail` above the float breakpoint, and opening or closing the floating drawer below it. `release-pin-on-breakpoint` drops a pin created for one band once the measured band or the effective orientation moves on, instead of leaving it to leak into the next layout. `--lr-multi-split-floating-panel-inset` insets the drawer from the split’s own edges.',
+          'The split renders no collapsed UI of its own, so the trigger is the consumer’s. Associate its id through `for` (or assign the `trigger` property) to synchronize `aria-expanded`/`aria-controls` and return focus when the drawer closes. `togglePane()` picks the mechanism the pane’s current band provides: pinning `wide`/`rail` above the float breakpoint, and opening or closing the floating drawer below it. `release-pin-on-breakpoint` drops a pin created for one band once the measured band or the effective orientation moves on, instead of leaving it to leak into the next layout. `--lr-multi-split-floating-panel-inset` insets the drawer from the split’s own edges.',
       },
     },
   },
   render: () => html`
     <div data-multi-split-demo>
-      <lr-button @click=${togglePaneFromTrigger}>Toggle inspector</lr-button>
+      <button id="split-inspector-trigger" type="button" @click=${togglePaneFromTrigger}>Toggle inspector</button>
       <lr-multi-split
         collapse="end"
+        for="split-inspector-trigger"
         release-pin-on-breakpoint
         style="height: 10rem; margin-block-start: 0.5rem; border: 1px solid var(--lr-color-border); --lr-multi-split-floating-panel-inset: 0.5rem"
       >

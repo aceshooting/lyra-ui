@@ -26,6 +26,9 @@ This file is a short index. The primary documentation lives on the sites linked 
 - **[Component integration cards](component-integration.md)** — per-tag imports, optional peers,
   direct/transitive component dependencies, and bundle measurements when available.
 
+- **[Roadmap](roadmap.md)** — planned switchable styling, glass surfaces, density presets, and
+  visual theme tooling after v21.
+
 ## Contributing & policies
 
 - **[CONTRIBUTING.md](../CONTRIBUTING.md)** — local setup, running tests/lint/build.

@@ -134,7 +134,7 @@ export const ExternalMobileControl: Story = {
     docs: {
       description: {
         story:
-          'Set `hide-toggle` when application-owned mobile navigation already has its own trigger, and assign that trigger to the rail\'s `trigger` property (or reference its id via `for`) so closing the overlay -- by any path, not just this button -- returns focus to it. The built-in `[part="toggle"]` stays hidden while closed, but survives `hide-toggle` once the overlay opens: reparented inside the trapped panel, it becomes the only in-panel dismiss control.',
+          'Set `hide-toggle` when application-owned mobile navigation already has its own trigger, and assign that trigger to the rail\'s `trigger` property (or reference its id via `for`) so closing the overlay -- by any path, not just this button -- returns focus to it. If the trigger, opener, and built-in toggle are unavailable, focus returns to the rail host with a temporary tabindex that is removed on blur. The built-in `[part="toggle"]` stays hidden while closed, but survives `hide-toggle` once the overlay opens: reparented inside the trapped panel, it becomes the only in-panel dismiss control.',
       },
     },
   },

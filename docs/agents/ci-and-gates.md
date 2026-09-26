@@ -3,6 +3,15 @@
 > Detail behind the "Dev commands and gates" section of [AGENTS.md](../../AGENTS.md). The digest
 > there is the contract; this file carries the full gate lists, ordering rationale, and incidents.
 
+## Remote test workspace hygiene
+
+Use `ssh cygnus` for contributor builds, tests, and benchmarks. Treat task directories under
+`~/work` as disposable: after verification and a successful commit/push, remove the task's
+checkouts, build outputs, logs, downloaded toolchains, and caches. Check for active processes and
+uncommitted changes first. Preserve any unreleased source changes and useful test evidence in a
+small local recovery archive before deleting them from Cygnus; do not leave large test trees on
+its limited disk or remove another active task's files.
+
 ## `contract-policy` (most of `pnpm lint`'s time)
 
 `pnpm lint` recurses through the workspace. For `@aceshooting/lyra-ui`, its exact expansion is
@@ -260,9 +269,9 @@ the PR checks list tells you which of these to reproduce locally:
    `docs-and-storybook` aggregate requires both. The split retains the complete Chromium checks
    while removing their former 214-second + 248-second serial chain from one runner.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
-   `packages/lyra-ui/visual-baselines/README.md`). The 107 stories expand to 307 axis-level
-   captures: 111 compare against tracked baselines and 196 are evidence-only. They are lexically
-   sorted and round-robin partitioned across a three-leg matrix (103/102/102 captures), so the
+   `packages/lyra-ui/visual-baselines/README.md`). The 109 stories expand to 313 axis-level
+   captures: 111 compare against tracked baselines and 202 are evidence-only. They are lexically
+   sorted and round-robin partitioned across a three-leg matrix (105/104/104 captures), so the
    historical ~3.5min sweep no longer sits on one runner's critical path. Each leg downloads the
    `storybook-static/` artifact `docs_build` (point 5) already built, runs
    `test:visual` with its one-based shard coordinates, and unconditionally uploads a uniquely
@@ -278,7 +287,7 @@ VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 \
 
 Sharding happens after an optional `--filter` and at capture-axis granularity, not story
 granularity. The unit test proves every capture is selected exactly once and shard sizes differ by
-at most one; an ordinary unsharded local run still exercises all 307 captures.
+at most one; an ordinary unsharded local run still exercises all 313 captures.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`) for
 Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Nine legs use the

@@ -125,7 +125,9 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   rail or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
   focuses the first candidate that can actually hold focus: the trigger, then the element that held
   focus when the overlay opened, then the built-in `[part='toggle']` (unavailable under
-  `hideToggle`). When none can, focus is left where it is. Needed because a consumer's own
+  `hideToggle`), and finally the rail host. The host temporarily receives `tabindex="-1"` only
+  when it has no authored tabindex; the temporary attribute is removed on blur or disconnect.
+  Needed because a consumer's own
   JS-driven `open = true` never focuses anything, and even a real click does not reliably focus its
   target in every browser. Resolved when the overlay opens and again when it closes, so reassigning
   it (or `for`) while the overlay is open changes where focus returns; when the association no

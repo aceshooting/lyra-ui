@@ -77,31 +77,24 @@ Review or expand the dynamic use, choose the exact granular target from
 , and rerun. A warning is intentionally not converted into markup that parses
 cleanly but has inert members.
 
-## Important targets and v8 compatibility moves
+## Upstream mappings to review
 
-Most compatible relationships keep the suffix (`wa-button` → `lr-button`). These targets or local
-v8 moves deserve an explicit check:
+Most compatible relationships keep the suffix (`wa-button` → `lr-button`). These upstream mappings
+deserve an explicit check:
 
-| Source/old surface                         | Target                   | Note                                                                                                                                              |
-| ------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<wa-comparison>` / `<sl-image-comparer>`  | `<lr-image-comparer>`    | Different upstream names for the same before/after role; follow the generated classification before renaming.                                     |
-| `<sl-range>`                               | `<lr-slider>`            | Different tag name; review the value/event detail contract.                                                                                       |
-| `<wa-split-panel>` / `<sl-split-panel>`    | `<lr-split-panel>`       | Exact two-pane separator; the richer multi-pane `<lr-multi-split>` is a separate Lyra component.                                                  |
-| `<sl-alert>`                               | `<lr-alert>`             | Closed by default, with alert lifecycle/countdown and identity-preserving `toast()`. `<lr-callout>` remains the Web Awesome callout relationship. |
-| Lyra 7 `<lr-tabs>`                         | `<lr-tab-group>`         | The old tag is not registered; update events and `--lr-tabs-*` custom properties too.                                                             |
-| Lyra 7 `<lr-tree-node>`                    | `<lr-tree-item>`         | The old tag is not registered.                                                                                                                    |
-| Lyra 7 native `<lr-time-input>`            | `<lr-native-time-input>` | `<lr-time-input>` is now the locale-aware segmented field and popup.                                                                              |
-| Lyra 7 slotted/image `<lr-zoomable-frame>` | `<lr-pan-zoom>`          | `<lr-zoomable-frame>` is now the sandboxed iframe preview.                                                                                        |
+| Source | Target | Note |
+| --- | --- | --- |
+| `<wa-comparison>` / `<sl-image-comparer>` | `<lr-image-comparer>` | Different upstream names for the same before/after role; follow the generated classification before renaming. |
+| `<sl-range>` | `<lr-slider>` | Different tag name; review the value/event detail contract. |
+| `<wa-split-panel>` / `<sl-split-panel>` | `<lr-split-panel>` | Exact two-pane separator; the richer multi-pane `<lr-multi-split>` is a separate Lyra component. |
+| `<sl-alert>` | `<lr-alert>` | Closed by default, with alert lifecycle/countdown and identity-preserving `toast()`. `<lr-callout>` remains the Web Awesome callout relationship. |
 
 The corresponding granular registrations are:
 
 ```js
 import "@aceshooting/lyra-ui/components/lr-split-panel.js";
 import "@aceshooting/lyra-ui/components/lr-alert.js";
-import "@aceshooting/lyra-ui/components/lr-tab-group.js";
-import "@aceshooting/lyra-ui/components/lr-tree-item.js";
-import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
-import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
+import "@aceshooting/lyra-ui/components/lr-image-comparer.js";
 ```
 
 Page and media mappings use the same stable tag-shaped registrations:
@@ -112,26 +105,9 @@ import "@aceshooting/lyra-ui/components/lr-video.js";
 import "@aceshooting/lyra-ui/components/lr-video-playlist.js";
 ```
 
-## Preserving Lyra 7 overlay defaults
-
-This is a separate opt-in profile. The normal command never scans existing `lr-*` markup:
-
-```bash
-npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --origin=lyra-v7 --check \
-  --report=lyra-v7-migration.json path/to/your/src
-```
-
-It inserts these values only when absent and never renames an `lr-*` tag or import:
-
-| Component      | Lyra 7 behavior made explicit                                                   |
-| -------------- | ------------------------------------------------------------------------------- |
-| `<lr-popup>`   | `strategy="fixed"`, `placement="bottom-start"`, `distance="4"`, `flip`, `shift` |
-| `<lr-popover>` | `placement="bottom-start"`, `distance="4"`, `without-arrow`                     |
-| `<lr-tooltip>` | `distance="6"`, `without-arrow`                                                 |
-
-True booleans use canonical attribute presence. Existing explicit values are untouched. An opaque
-spread or DOM alias blocks that component across the scanned target set rather than letting the
-tool guess beside a value it cannot see.
+For the separately supported legacy Lyra profile, see the generated CLI/API reference in
+[`llms/migration.md`](./llms/migration.md). This guide focuses on migrations from Web Awesome and
+Shoelace.
 
 ## Security-preserving differences
 

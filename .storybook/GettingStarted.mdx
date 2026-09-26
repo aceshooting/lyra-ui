@@ -66,8 +66,7 @@ import "@aceshooting/lyra-ui/components/lr-tab-panel.js";
 </lr-tab-group>
 ```
 
-The v8 Page and media surfaces use the same granular convention, as do the compatibility tags that
-preserve displaced Lyra behavior:
+Page, media, and native-control components use the same granular convention:
 
 ```js
 import "@aceshooting/lyra-ui/components/lr-page.js";
@@ -101,7 +100,7 @@ import "@aceshooting/lyra-ui/all.js"; // registers every root-included component
 ```
 
 Convenient in a scratch file, a REPL, or while you are still deciding which components you need.
-The package root itself is a pure named-export surface in v8 and registers no tags.
+The package root itself is a pure named-export surface and registers no tags.
 
 Two things to know before you ship it:
 
@@ -129,9 +128,7 @@ import "@aceshooting/lyra-ui/components/forms"; // every form control
 
 The eleven keys are `agent-tools`, `charts`, `conversation`, `data`, `forms`, `layout`, `media`,
 `overlays`, `retrieval`, `utility` and `viewers` — the same segments the granular paths use. Each
-entry registers _and_ re-exports the complete family. (Only three of these were documented before
-8.0.0, which made the other eight effectively unreachable even though they were in the `exports`
-map.)
+entry registers _and_ re-exports the complete family.
 
 A family barrel is **side-effectful by design**: importing it registers every tag in that family,
 just as `all.js` registers its root-included set. Reach for one when you genuinely use most of a

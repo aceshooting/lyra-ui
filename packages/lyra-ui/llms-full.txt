@@ -131,47 +131,27 @@ The older family-shaped registration paths remain supported for compatibility. C
 `.class.js` entries still use their owning family path because they intentionally expose source
 organization and do not register a tag.
 
-Principal v8 and compatibility registrations use the same exact shape:
+New application code can import any component through its stable tag-shaped path:
 
 ```js
-import "@aceshooting/lyra-ui/components/lr-page.js";
-import "@aceshooting/lyra-ui/components/lr-video.js";
-import "@aceshooting/lyra-ui/components/lr-video-playlist.js";
-import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
-import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
-import "@aceshooting/lyra-ui/components/lr-split-panel.js";
-import "@aceshooting/lyra-ui/components/lr-alert.js";
+import "@aceshooting/lyra-ui/components/lr-context-menu.js";
+import "@aceshooting/lyra-ui/components/lr-menubar.js";
+import "@aceshooting/lyra-ui/components/lr-tool-call-block.js";
 ```
 
 `llms/index.md` lists every tag and its owning implementation module. The stable tag-shaped alias
 and the family-shaped compatibility path both resolve through the package's `./components/*`
 export.
 
-**Breaking in 8.0.0 — the package root no longer registers anything.** Through 7.x, importing the
-bare `@aceshooting/lyra-ui` root had the side effect of defining every non-optional-peer tag, so a
-project that only wanted a type or a helper from it silently pulled the then-current 268 component
-definitions into its eager bundle. The root is now a pure, side-effect-free export surface, and the
-registrations moved to an explicit entry:
+The package root is a pure, side-effect-free export surface. Import a component entry to register
+only that tag, or use the explicit `all.js` entry when whole-library registration is needed:
 
 ```js
-import "@aceshooting/lyra-ui/all.js"; // exactly the pre-8 root behaviour, opted into by name
+import "@aceshooting/lyra-ui/all.js"; // explicitly registers the root-included tags
 ```
 
-_Nothing was removed from the root's named surface._ Every class, helper, and type it exported in
-7.x is still exported, from the same specifier; `all.js` re-exports that identical surface, so
-`import { LyraTable } from '@aceshooting/lyra-ui';` and the `@aceshooting/lyra-ui/all.js` form of it
-both keep working. Only the registration side effect changed.
-
-_Migrating._ If a bare `import '@aceshooting/lyra-ui';` (or a bundler entry that relied on it) was
-how your tags got defined, add the `/all.js` specifier — a one-line change with identical behaviour.
-If instead the root was only ever imported for values or types, delete nothing: those imports now
-cost what they should. The symptom of a missed migration is an unupgraded element — the tag renders
-as an empty inert box with its light DOM visible — not a module error, because the specifier still
-resolves and still hands back everything it used to.
-
-_Granular imports remain the recommendation._ `all.js` is a compatibility and prototyping
-convenience, not the intended production shape: it is side-effectful by definition and cannot be
-tree-shaken down to the handful of elements a page actually renders.
+Use the root for its named exports and types. `all.js` is side-effectful and registers the
+root-included inventory; prefer tag-shaped imports in application code for smaller bundles.
 
 The entry points, then:
 
@@ -184,8 +164,8 @@ The entry points, then:
   one warning for that exact conflict with the existing/incoming package versions, constructor
   names, and both constructor references. An existing non-Lyra definition is reported with an
   `unknown` existing version rather than guessed provenance.
-- **Root barrel.** `import '@aceshooting/lyra-ui';` registers **nothing** (see the 8.0.0 note
-  above). It re-exports a broad compatibility surface of commonly used classes, helpers, and types,
+- **Root barrel.** `import '@aceshooting/lyra-ui';` registers **nothing**. It re-exports a broad
+  compatibility surface of commonly used classes, helpers, and types,
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
@@ -1124,14 +1104,10 @@ To place your overrides deliberately rather than relying on being unlayered:
 }
 ```
 
-**Breaking in 8.0.0 — if you wrapped your Lyra overrides in a layer of your own, re-check them.**
-That rule used to be compared against an _unlayered_ `theme.css`, which meant it lost
-unconditionally, whatever its specificity. Now both sides are layered, so the winner is decided by
-**layer order** — and layer order is fixed by whichever name the browser saw first. Import
-`theme.css` before your own `@layer` statement and your layer sorts after Lyra's and wins; declare
-your layers first and `lr-theme` is appended after them and wins instead. The outcome can therefore
-flip in either direction on a change that only moves an `@import`, with nothing in the stylesheet
-looking wrong. Two fixes, either is fine:
+Lyra's styles use five named cascade layers. Layer order is fixed by the first order statement the
+browser sees, so an application layer declared before Lyra's names can lose even when it appears
+later in the stylesheet. Either leave overrides unlayered, which outranks the named layers, or
+declare the complete Lyra order before your application layer:
 
 ```css
 /* 1. Unlayer them — an unlayered rule outranks all five Lyra layers unconditionally,
@@ -1159,7 +1135,7 @@ reason.
 
 ### The shadcn look — `themes/shadcn.css`
 
-One more import restyles every component after [shadcn/ui](https://ui.shadcn.com)'s default
+One more import restyles every component after [shadcn/ui](https://ui.shadcn.com)'s
 "new-york" style on its Neutral base colour:
 
 ```ts
@@ -2171,12 +2147,9 @@ setLyraLocale("fr"); // page-level selection; see the precedence order below
 4. **`<html lang>`**, the document default.
 5. **`'en'`.**
 
-**Breaking in 9.0.0:** steps 3 and 4 were the other way round, which made `setLyraLocale()` inert on
-any page that declares `<html lang>` — i.e. essentially every well-formed page. `setLyraLocale('fr')`
-under `<html lang="en">` silently kept rendering English. It now wins. Two consequences: an
-application that switched locale by _rewriting_ `<html lang>` still works only if it never also
-called `setLyraLocale()` (the explicit call now pins the locale until changed or cleared with
-`setLyraLocale('')`), and a per-subtree `lang`/`locale` override is unaffected — it still beats both.
+An explicit `setLyraLocale()` selection takes precedence over `<html lang>`. Clear it with
+`setLyraLocale('')` to let the document language apply again. A per-subtree `lang`/`locale`
+override takes precedence over either page-level choice.
 
 To keep `<html lang>`/`dir` in step with `setLyraLocale()` — which everything _outside_ this library
 reads, from `:lang()` rules to spellcheck to a screen reader's pronunciation — use
@@ -2189,7 +2162,7 @@ The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
 `LyraLocaleStrings`, `LyraLocaleMeta`, `LyraLocaleDirection`, `LyraMessageKey`, `LyraMessage`,
 `LyraPluralMessage` and `LyraPluralCategory`. The package root continues to re-export the same
-surface for compatibility and remains registration-free in v8; use the dedicated entry when the
+surface for compatibility and remains registration-free; use the dedicated entry when the
 application only needs locale setup and the narrower import graph.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
 read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
@@ -2394,10 +2367,9 @@ registerLyraLocale("ru", {
   category), pass the display string as `count` and the raw number as `pluralCount`. A non-finite
   or absent value selects `other`.
 
-**Breaking in 8.0.0:** a catalog that paired a singular key with a separate `<key>Plural` key must be
-rewritten as one object-valued entry. The old spelling is not read, and nothing warns — the plural
-key becomes an unused entry and the singular renders for every count. Fold the pair into
-`{ one: …, other: … }` under the singular key's name.
+Pluralized messages use one object-valued entry keyed by CLDR categories. A catalog with separate
+singular and `<key>Plural` entries should fold them into `{ one: …, other: … }` under the singular
+key's name; the plural key is not read.
 
 ## RTL and direction
 
@@ -2900,11 +2872,8 @@ Each of the eleven component families has an entry point that registers every el
 `@aceshooting/lyra-ui/components/forms`, `.../components/overlays`, and so on for `agent-tools`,
 `charts`, `conversation`, `data`, `layout`, `media`, `retrieval`, `utility` and `viewers`.
 
-They existed for three families before 8.0.0, were in the exports map, and were documented nowhere —
-so they were effectively unreachable. All eleven now exist and are listed here.
-
 A family barrel is **side-effectful by design**: importing it registers every tag in that family, the
-same way `all.js` registers all of them (the package root itself registers nothing as of 8.0.0 — see
+same way `all.js` registers its root-included tags (the package root itself registers nothing — see
 "Importing and registering components"). Reach for one when you genuinely use most of a family
 and want a single import; reach for the granular
 `@aceshooting/lyra-ui/components/<tag>.js` path when you do not, because a barrel cannot be
@@ -2926,18 +2895,13 @@ surface. Importable one module per helper, e.g.
 `@aceshooting/lyra-ui/utilities/positioner.js` — the `.js` is required — or as a whole from the extensionless
 `@aceshooting/lyra-ui/utilities`.
 
-**This replaced `@aceshooting/lyra-ui/internal/*` in 8.0.0. `@aceshooting/lyra-ui/internal/*` is no
-longer a published subpath** — the import fails to resolve rather than degrading. The whole
-`internal/` tree used to be exported with no stability statement, which made every internal
-refactor potentially breaking for someone. The helpers below are the supported surface and are
-covered by semver. Each subpath and the extensionless barrel use explicit named exports, so an
-implementation helper added to `internal/` does not silently become public. Rewriting an existing
-supported import is a path swap and nothing more:
+`@aceshooting/lyra-ui/internal/*` is not a published subpath. The helpers below are the supported
+public utility surface and are covered by semver. Each subpath and the extensionless barrel use
+explicit named exports, so an implementation helper added to `internal/` does not silently become
+public:
 
 ```ts
-// before 8.0.0
-import { place } from "@aceshooting/lyra-ui/internal/positioner.js";
-// 8.0.0
+// Public utility import
 import { place } from "@aceshooting/lyra-ui/utilities/positioner.js";
 ```
 
@@ -3816,7 +3780,8 @@ These named interfaces and helper signatures are available to typed integrations
   `start(root?: LyraDefinitionRoot, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
   `stop(): unknown`
 
-- **`custom-elements-jsx-contracts`** — Framework integration type contracts.
+- **`custom-elements-jsx-contracts`** — Framework integration type contracts, including the multi-split
+  `for` launcher id and `trigger` element reference.
   `LyraReactIntrinsicElements {
   "lr-accordion": unknown;
   "lr-accordion-item": unknown;
@@ -4235,7 +4200,8 @@ These named interfaces and helper signatures are available to typed integrations
   means the check must fail closed.
   `lyraSsrElementRenderers(/* public names: litElementRenderer */): unknown`
 
-- **`svelte-contracts`** — Framework integration type contracts.
+- **`svelte-contracts`** — Framework integration type contracts, including the multi-split
+  `for` launcher id and `trigger` element reference.
   `LyraElementTagNameMap {
   "lr-accordion": unknown;
   "lr-accordion-item": unknown;
@@ -4901,7 +4867,8 @@ These named interfaces and helper signatures are available to typed integrations
 }`
   `setLyraTheme(/* public names: theme */): unknown`
 
-- **`vue-contracts`** — Framework integration type contracts.
+- **`vue-contracts`** — Framework integration type contracts, including the multi-split
+  `for` launcher id and `trigger` element reference.
   `LyraVueGlobalComponents {
   "lr-accordion": unknown;
   "lr-accordion-item": unknown;
@@ -17490,6 +17457,16 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
+- `trigger: HTMLElement | null = null` (attribute: false) — external launcher associated with the
+  collapsing pane. Takes precedence over `for`; wire its click to `togglePane()` yourself. The
+  launcher receives `aria-controls` pointing to the pane and `aria-expanded`: `true` for wide or
+  open floating panes, `false` for rail or closed floating panes. Closing the floating drawer returns
+  focus to the launcher, including a deferred retry after the close update. Existing author ARIA
+  is restored when the association is released, collapse is disabled, or the split disconnects.
+  A pane without an id receives a temporary one, removed when the association ends unless the
+  author changed it. Leaving both association properties unset preserves existing behavior.
+- `for: string = ''` — id of an external launcher in the split's document or shadow root; resolved
+  on updates and when the drawer opens or closes. A direct `trigger` reference takes precedence.
 - `releasePinOnBreakpoint: boolean = false` (attribute `release-pin-on-breakpoint`, reflected) — opts a
   pinned `collapseState` in to releasing itself when the layout it was made for is gone: either the
   measured collapse band changes to a different one than the pin was made in, or
@@ -19700,7 +19677,9 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   rail or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
   focuses the first candidate that can actually hold focus: the trigger, then the element that held
   focus when the overlay opened, then the built-in `[part='toggle']` (unavailable under
-  `hideToggle`). When none can, focus is left where it is. Needed because a consumer's own
+  `hideToggle`), and finally the rail host. The host temporarily receives `tabindex="-1"` only
+  when it has no authored tabindex; the temporary attribute is removed on blur or disconnect.
+  Needed because a consumer's own
   JS-driven `open = true` never focuses anything, and even a real click does not reliably focus its
   target in every browser. Resolved when the overlay opens and again when it closes, so reassigning
   it (or `for`) while the overlay is open changes where focus returns; when the association no

@@ -7131,6 +7131,7 @@ export type LyraMultiSplitVueProps = LyraVueCustomElement<
   | 'defaultSizes'
   | 'dividerLabel'
   | 'floatBreakpoint'
+  | 'for'
   | 'locale'
   | 'min'
   | 'narrowOrientation'
@@ -7144,7 +7145,8 @@ export type LyraMultiSplitVueProps = LyraVueCustomElement<
   | 'releasePinOnBreakpoint'
   | 'sizes'
   | 'storageKey'
-  | 'strings',
+  | 'strings'
+  | 'trigger',
   {},
   LyraMultiSplitEventMap,
   | 'lr-multi-split-collapse-change'

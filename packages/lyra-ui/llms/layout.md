@@ -214,6 +214,16 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
   behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
+- `trigger: HTMLElement | null = null` (attribute: false) — external launcher associated with the
+  collapsing pane. Takes precedence over `for`; wire its click to `togglePane()` yourself. The
+  launcher receives `aria-controls` pointing to the pane and `aria-expanded`: `true` for wide or
+  open floating panes, `false` for rail or closed floating panes. Closing the floating drawer returns
+  focus to the launcher, including a deferred retry after the close update. Existing author ARIA
+  is restored when the association is released, collapse is disabled, or the split disconnects.
+  A pane without an id receives a temporary one, removed when the association ends unless the
+  author changed it. Leaving both association properties unset preserves existing behavior.
+- `for: string = ''` — id of an external launcher in the split's document or shadow root; resolved
+  on updates and when the drawer opens or closes. A direct `trigger` reference takes precedence.
 - `releasePinOnBreakpoint: boolean = false` (attribute `release-pin-on-breakpoint`, reflected) — opts a
   pinned `collapseState` in to releasing itself when the layout it was made for is gone: either the
   measured collapse band changes to a different one than the pin was made in, or
@@ -2425,7 +2435,9 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   rail or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
   focuses the first candidate that can actually hold focus: the trigger, then the element that held
   focus when the overlay opened, then the built-in `[part='toggle']` (unavailable under
-  `hideToggle`). When none can, focus is left where it is. Needed because a consumer's own
+  `hideToggle`), and finally the rail host. The host temporarily receives `tabindex="-1"` only
+  when it has no authored tabindex; the temporary attribute is removed on blur or disconnect.
+  Needed because a consumer's own
   JS-driven `open = true` never focuses anything, and even a real click does not reliably focus its
   target in every browser. Resolved when the overlay opens and again when it closes, so reassigning
   it (or `for`) while the overlay is open changes where focus returns; when the association no

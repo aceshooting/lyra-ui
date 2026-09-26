@@ -7138,6 +7138,7 @@ export type LyraMultiSplitSvelteProps = LyraSvelteElementProps<
   | 'defaultSizes'
   | 'dividerLabel'
   | 'floatBreakpoint'
+  | 'for'
   | 'locale'
   | 'min'
   | 'narrowOrientation'
@@ -7151,7 +7152,8 @@ export type LyraMultiSplitSvelteProps = LyraSvelteElementProps<
   | 'releasePinOnBreakpoint'
   | 'sizes'
   | 'storageKey'
-  | 'strings',
+  | 'strings'
+  | 'trigger',
   {},
   LyraMultiSplitEventMap,
   | 'lr-multi-split-collapse-change'

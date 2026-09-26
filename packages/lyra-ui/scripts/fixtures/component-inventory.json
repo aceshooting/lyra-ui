@@ -82632,6 +82632,16 @@
             "default": 400
           },
           {
+            "name": "for",
+            "property": "for",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -82809,6 +82819,16 @@
             "default": 400
           },
           {
+            "name": "for",
+            "attribute": "for",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
@@ -82935,6 +82955,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "trigger",
+            "attribute": null,
+            "type": "HTMLElement | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           }
         ],
         "slots": [

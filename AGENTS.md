@@ -36,6 +36,11 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
   uncommitted work on the forced reboot. Keep the primary checkout cleanly identifiable and remove
   each worktree as soon as its work has been integrated.
 
+After remote verification and a successful commit/push, clean up task-owned Lyra checkouts,
+build outputs, logs, toolchains, and caches under `~/work` on `ssh cygnus`. Preserve uncommitted
+source locally first and leave active tasks alone; see
+[remote test workspace hygiene](docs/agents/ci-and-gates.md#remote-test-workspace-hygiene).
+
 ## Author's Cygnus / Solarleb workspace goal
 
 | Repository | Role | Local checkout |

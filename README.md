@@ -48,7 +48,7 @@ a live example, source code, and API reference.
 ## Table of Contents
 
 - [Quick Start](#quick-start)
-- [Upgrading from 7.x](#upgrading-from-7x)
+- [v21 highlights](#v21-highlights)
 - [Principles & Guidelines](#principles--guidelines)
 - [Components](#components)
 - [Theming, internationalization & RTL](#theming-internationalization--rtl)
@@ -126,13 +126,21 @@ pnpm run test:migrate-wa     # run migration fixture/tests
 
 Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).
 
-## Upgrading from 7.x
+## v21 highlights
 
-8.0.0 aligns the mapped component contracts, preserves displaced Lyra behavior under truthful new
-tags, and adds the Page, Video, Playlist, SSR, typing, and optional loading/style surfaces needed for
-a complete migration. It also includes intentional tag, attribute, default, and styling-vocabulary
-changes. The full list, with what each one changes and what to search for, is in the package README:
-[`packages/lyra-ui/README.md#upgrading-from-7x`](./packages/lyra-ui/README.md#upgrading-from-7x).
+- **Two visual looks:** Lyra and the opt-in shadcn preset, with independent light/dark mode,
+  gemstone or custom accents, and persistent runtime token presets.
+- **Navigation and actions:** context menus, menubars, navigation menus, pressed toggles and toggle
+  groups; app-rail sidebar controls, shortcuts and persistence; multi-split external launchers.
+- **Conversation UI:** progressive Markdown, code headers with copy controls, scrollable GFM tables,
+  styled task lists, and expandable tool-call blocks.
+- **Localization and styling:** 32 optional translation catalogs plus built-in English, typography
+  utilities, and separate decorative and control-border tokens.
+
+See the [feature guide](./packages/lyra-ui/README.md#v21-highlights) for APIs and examples.
+The [roadmap](./docs/roadmap.md) covers switchable styling, glass surfaces, and density presets.
+For version-by-version changes and older upgrades, use the
+[package changelog](./packages/lyra-ui/CHANGELOG.md).
 
 ## Principles & Guidelines
 
@@ -164,8 +172,8 @@ the alias stays valid if the component's internal family changes. Import
 
 | Family | Highlights |
 |---|---|
-| `forms` | button, input, textarea, select, combobox, date picker, calendar, phone/token/file input, color and swatch pickers, emoji picker, locale picker, code editor, checkbox/radio/switch/slider, time range, rubric form |
-| `layout` | page, tabs, menu, command palette, breadcrumb, details, card, widget, split, stepper, carousel, scroller, app rail, dock panel, dashboard grid, drilldown panel, filter bar, segmented, virtual list, responsive panel |
+| `forms` | button, input, textarea, select, combobox, date picker, calendar, phone/token/file input, color and swatch pickers, emoji picker, locale picker, code editor, checkbox/radio/switch/slider, toggle and toggle group, time range, rubric form |
+| `layout` | page, tabs, menu, menubar, context menu, navigation menu, command palette, breadcrumb, details, card, widget, split, stepper, carousel, scroller, app rail, dock panel, dashboard grid, drilldown panel, filter bar, segmented, virtual list, responsive panel |
 | `overlays` | dialog, drawer, overlay, toast, callout, badge, chip, kbd, rating, progress, spinner, skeleton, empty |
 | `data` | table, data grid, tree, timeline, calendar, gauge, heatmap, sparkline, word cloud, stat, pagination, query builder, flow canvas and nodes, sequence strip, file tree, env list, context meter |
 | `charts` | Chart.js-backed `lr-chart` (optional peer) |
@@ -182,7 +190,9 @@ Every one of the 296 tags is built on the same three guarantees — not opt-in p
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn. A ready-made light/dark base ships as `theme.css`, and an
-  opt-in `themes/shadcn.css` preset gives every component the shadcn/ui look.
+  opt-in `themes/shadcn.css` preset gives every component the shadcn/ui look. The generated
+  runtime preset supports switching and persistence without swapping stylesheets; mode and accent
+  remain independent of the look.
 - **Internationalization** via a small runtime (`registerLyraLocale`/`setLyraLocale`, or a
   per-instance `.strings` override) — every built-in string (labels, announcements, aria-labels)
   is translatable without a rebuild or a per-locale bundle.

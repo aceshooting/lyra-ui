@@ -4,10 +4,15 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   activateOverlay,
+  deepActiveElement,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
+import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal/aria-ownership.js';
+import { nextId } from '../../../internal/a11y.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
@@ -503,6 +508,15 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  consumer opts in by setting this (or it's forced open programmatically)
    *  — see the class doc. */
   @property({ type: Boolean, reflect: true }) open = false;
+  /** External launcher whose aria-expanded and aria-controls describe the collapsing pane.
+   *  Takes precedence over `for`. Wire its click to `togglePane()`; this association does not
+   *  add click handlers. Expanded means wide, or an open floating drawer; rail is collapsed.
+   *  Closing the drawer returns focus to the associated launcher. Author ARIA and panel IDs are
+   *  restored when the association is released, collapse is disabled, or this split disconnects. */
+  @property({ attribute: false }) trigger: HTMLElement | null = null;
+  /** Id of an external launcher in this split's document or shadow root; ignored when `trigger`
+   *  is set. Resolved on updates and when the drawer opens or closes. */
+  @property() for = '';
   /** Overrides the auto-inserted divider's `aria-label` — receives the divider's 0-based index
    *  and the total panel count (`lr-multi-split` supports N panels, so a single fixed string can't
    *  express every divider's label; a function can). Unset (the default) keeps today's exact
@@ -533,6 +547,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private overlayActive = false;
   private justOpened = false;
   private overlayHandle?: OverlayHandle;
+  private triggerAria?: AriaOwnershipLease;
+  private triggerPanel?: HTMLElement;
+  private generatedTriggerPanelId?: string;
+  private overlayReturnTarget: HTMLElement | null = null;
+  private overlayOpener: HTMLElement | null = null;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   /** The panel `role`/`aria-modal` were last overwritten on and their prior values, so closing the
    *  drawer restores exactly what the consumer had authored rather than assuming it was unset. */
   private floatingDialogPanel: HTMLElement | null = null;
@@ -622,6 +642,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       }
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
+    if (this.hasUpdated) this.syncExternalTriggerA11y();
   }
 
   override disconnectedCallback(): void {
@@ -631,11 +652,15 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.resetCollapseObserver();
     this.resetGutterObserver();
     this.overlayHandle?.suspend();
+    this.deferredFocusReturn.cancel();
+    this.releaseExternalTriggerA11y();
     this.releaseOwnedPanels();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.deferredFocusReturn.cancel();
+    this.releaseExternalTriggerA11y();
     this.endDragGestures();
     this.resetCollapseObserver();
     this.resetGutterObserver();
@@ -2140,6 +2165,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private activateFloatingOverlay(): void {
+    this.deferredFocusReturn.cancel();
+    const opener = deepActiveElement(this.ownerDocument);
+    this.overlayOpener = isHtmlElement(opener) ? opener : null;
+    const trigger = this.resolveExternalTrigger();
+    this.overlayReturnTarget = trigger ?? this.overlayOpener;
     // The 'floating' drawer is a genuine modal surface -- focus-trapped, backdropped, and making
     // sibling panes inert (see the class doc) -- but its target is the consumer's own slotted
     // light-DOM panel (see `floatingPanelEl`'s doc comment), so nothing here renders a `role` for
@@ -2158,6 +2188,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       host: this,
       panel: () => this.floatingPanelEl,
       modalRoot: () => this.floatingPanelEl,
+      restoreFocusTo: trigger ?? undefined,
       onEscape: () => this.setOpen(false),
       onBackdrop: () => this.setOpen(false),
       lockScroll: true,
@@ -2166,8 +2197,17 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private deactivateFloatingOverlay(): void {
+    const trigger = this.resolveExternalTrigger();
+    if (trigger) this.overlayHandle?.updateRestoreFocusTo(trigger);
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
+    if (trigger || this.trigger || this.for) {
+      this.deferredFocusReturn.schedule({
+        host: this,
+        candidates: () => [this.resolveExternalTrigger(), this.overlayReturnTarget, this.overlayOpener],
+        isCurrent: () => !this.overlayActive,
+      });
+    }
     const panel = this.floatingDialogPanel;
     this.floatingDialogPanel = null;
     if (!panel) return;
@@ -2401,6 +2441,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       (constraint) => finiteRange(constraint?.minPx ?? 0, 0, 0) > 0
     ));
     this.decorateOwnedPanels(constraintResolution);
+    this.syncExternalTriggerA11y();
     // Runs after this render (not willUpdate) so the floating panel's
     // repositioned geometry above has already landed before the focus call
     // below can rely on it -- mirrors lr-app-rail's/lr-dialog's identical
@@ -2409,6 +2450,46 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.justOpened = false;
       this.overlayHandle?.focusInitial();
     }
+  }
+
+  private resolveExternalTrigger(): HTMLElement | null {
+    if (this.trigger) return this.trigger;
+    if (!this.for) return null;
+    const root = this.getRootNode() as Document | ShadowRoot;
+    const found = root.getElementById?.(this.for);
+    return isHtmlElement(found) ? found : null;
+  }
+
+  private syncExternalTriggerA11y(): void {
+    const panel = this.ownedPanels[this.collapsingIndex];
+    const trigger = panel && this.panelCount > 1 ? this.resolveExternalTrigger() : null;
+    if (!this.isConnected || !panel || !trigger) {
+      this.releaseExternalTriggerA11y();
+      return;
+    }
+    if (this.triggerPanel !== panel) {
+      this.releaseExternalTriggerA11y();
+      this.triggerPanel = panel;
+    }
+    if (!panel.id) {
+      this.generatedTriggerPanelId = nextId('multi-split-panel');
+      panel.id = this.generatedTriggerPanelId;
+    }
+    const contribution = {
+      attributes: { 'aria-expanded': this.paneExpanded ? 'true' : 'false' },
+      controls: [panel],
+    };
+    if (this.triggerAria) this.triggerAria.update(trigger, contribution);
+    else this.triggerAria = acquireAriaOwnership(trigger, contribution);
+  }
+
+  private releaseExternalTriggerA11y(): void {
+    this.triggerAria?.release();
+    this.triggerAria = undefined;
+    if (this.triggerPanel && this.generatedTriggerPanelId &&
+        this.triggerPanel.id === this.generatedTriggerPanelId) this.triggerPanel.removeAttribute('id');
+    this.triggerPanel = undefined;
+    this.generatedTriggerPanelId = undefined;
   }
 
   /**

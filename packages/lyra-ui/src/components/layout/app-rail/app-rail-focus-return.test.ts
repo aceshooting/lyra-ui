@@ -168,6 +168,38 @@ describe('app rail mobile overlay focus return', () => {
     }
   });
 
+  it('returns to the rail host when the hidden toggle and opener cannot receive focus', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    try {
+      await openFromTrigger(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+      expect(rail.getAttribute('tabindex')).to.equal('-1');
+      trigger.style.visibility = '';
+      trigger.focus();
+      expect(rail.hasAttribute('tabindex')).to.equal(false);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('preserves an authored tabindex when the rail host receives fallback focus', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    rail.tabIndex = 0;
+    try {
+      await openFromTrigger(rail, trigger);
+      rail.toggle();
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+      trigger.style.visibility = '';
+      trigger.focus();
+      expect(rail.getAttribute('tabindex')).to.equal('0');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('returns focus to a trigger reassigned while the overlay is open', async () => {
     const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: true });
     const replacement = document.createElement('button');

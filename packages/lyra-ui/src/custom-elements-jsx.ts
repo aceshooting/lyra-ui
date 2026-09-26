@@ -7136,6 +7136,7 @@ export type LyraMultiSplitReactProps = LyraReactElementProps<
   | 'defaultSizes'
   | 'dividerLabel'
   | 'floatBreakpoint'
+  | 'for'
   | 'locale'
   | 'min'
   | 'narrowOrientation'
@@ -7149,7 +7150,8 @@ export type LyraMultiSplitReactProps = LyraReactElementProps<
   | 'releasePinOnBreakpoint'
   | 'sizes'
   | 'storageKey'
-  | 'strings',
+  | 'strings'
+  | 'trigger',
   {},
   LyraMultiSplitEventMap,
   | 'lr-multi-split-collapse-change'
