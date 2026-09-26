@@ -156,10 +156,10 @@ export const styles = css`
     pointer-events: auto;
   }
   /* Density escape -- same convention as lr-empty's compact. A --lr-space-l dropzone is unusable in
-     a toolbar or table cell, so compact shrinks the padding, gap and label font. The tuned values
-     sit in inline var() fallbacks, not a :host declaration (re-declared per instance, shadowing
-     ancestor values), so a consumer can retune from outside; the fallbacks preserve today's
-     rendering for an unset dropzone. */
+     a toolbar or table cell, so compact shrinks the padding, gap and dropzone instruction font. The
+     tuned values sit in inline var() fallbacks, not a :host declaration (re-declared per instance,
+     shadowing ancestor values), so a consumer can retune from outside; the fallbacks preserve
+     today's rendering for an unset dropzone. */
   :host([compact]) [part~="base"] {
     padding: var(--lr-file-input-compact-padding, var(--lr-space-s));
     font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));

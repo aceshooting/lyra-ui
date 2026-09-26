@@ -1,0 +1,5 @@
+---
+'@aceshooting/lyra-ui': minor
+---
+
+Behaviour change: the `focus` trigger of `lr-tooltip` (default `hover focus`), `lr-popover` and `lr-dropdown`, and the hover/focus surfaces of `lr-copy-button`, `lr-app-rail-item`, `lr-usage-badge`, `lr-tool-call-chip`, `lr-citation-badge` and `lr-entity-chip`, now open only on keyboard focus: the focused control must match `:focus-visible` and no pointer press may have preceded it. Pointer, touch and scripted focus that follows them, such as a drawer moving focus to its close button after a tap, no longer pops a surface; call `show()` to reveal one from script. Focus from any source still gives `lr-tooltip`, `lr-copy-button`, `lr-usage-badge` and `lr-tool-call-chip` triggers their accessible description while focus stays on them. A pointer click that opens a closed hover- or focus-mode `lr-popover`/`lr-dropdown` now always opens it pinned like click mode, including `[autofocus]` and menu focus. A direct tap still opens hover surfaces through the browser's compatibility `mouseenter`. Tests that open these surfaces with `.focus()` or synthetic focus events should move focus with a real Tab key or call `show()`.

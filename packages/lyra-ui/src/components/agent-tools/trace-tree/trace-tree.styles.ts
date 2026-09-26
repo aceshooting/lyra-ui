@@ -94,6 +94,15 @@ export const styles = css`
   [part='row']:active {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
+  /* Pressing the active row mixes from the active fill, not the plain-row surface, so it never reads
+     as deselected mid-click. :where() keeps it (0,2,0); MUST stay after the plain :active rule. */
+  [part='row']:where([data-active]):active {
+    background: color-mix(
+      in oklab,
+      var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
 
   /* text-quiet against brand-quiet lands at ~4.17:1 against the currently shipped default tokens,
      just under the WCAG AA 4.5:1 floor for normal-size text (recompute from

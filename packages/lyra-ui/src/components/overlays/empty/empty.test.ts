@@ -889,3 +889,10 @@ it('does not replay the initial announcement when an announce empty state reconn
   ]);
   el.remove();
 });
+
+// The default icon is a glyph, so it takes the muted foreground role, never the border token.
+it('colours the icon with the muted text role, not the border token', async () => {
+  const el = (await fixture(html`<lr-empty heading="Nothing here" style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-neutral-fill-quiet: rgb(1, 2, 3); --lr-theme-color-neutral-fill-normal: rgb(4, 5, 6); --lr-theme-color-text-quiet: rgb(7, 8, 9)"><span>*</span></lr-empty>`)) as LyraEmpty;
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+  expect(getComputedStyle(icon).color).to.equal('rgb(7, 8, 9)');
+});

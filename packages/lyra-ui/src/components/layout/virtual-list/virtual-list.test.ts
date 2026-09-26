@@ -5344,3 +5344,79 @@ describe('light-DOM projection -- SSR and hydration', () => {
     ).to.be.true;
   });
 });
+
+describe("row overlays and the top layer", () => {
+  const rowItems = Array.from({ length: 20 }, (_, i) => `Row ${i}`);
+
+  async function mount(style = "", renderItem = (value: unknown) => html`${value}`) {
+    const wrapper = await fixture<HTMLElement>(html`<div style=${style}>
+      <lr-virtual-list style="--lr-virtual-list-height: 120px" row-height="40" .items=${rowItems} .renderItem=${renderItem}></lr-virtual-list>
+    </div>`);
+    const el = wrapper.querySelector("lr-virtual-list") as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    return { wrapper, el };
+  }
+
+  async function resolvedRowStrategy(style: string, partOverride = false): Promise<string> {
+    await import("../../overlays/overlay/dropdown.js");
+    const { el } = await mount(style, (value: unknown) => html`<lr-dropdown style="--lr-transition-fast:0ms"
+      ><button slot="trigger" type="button">${value}</button><span>Menu</span></lr-dropdown
+    >`);
+    const sheet = document.createElement("style");
+    sheet.textContent = ".vl-part-override::part(row) { --lr-positioning-strategy: absolute; }";
+    if (partOverride) {
+      document.head.append(sheet);
+      el.classList.add("vl-part-override");
+    }
+    try {
+      const dropdown = el.shadowRoot!.querySelector("lr-dropdown") as HTMLElement & {
+        show(): Promise<void>;
+        hide(o?: { focusTrigger?: boolean }): Promise<void>;
+      };
+      const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+      await dropdown.show();
+      await waitUntil(() => popup.style.position !== "");
+      const strategy = popup.style.position;
+      await dropdown.hide({ focusTrigger: false });
+      return strategy;
+    } finally {
+      sheet.remove();
+    }
+  }
+
+  it("resolves fixed for a row overlay by default, below an ancestor value and a ::part(row) override", async () => {
+    expect(await resolvedRowStrategy(""), "rows default their overlays to fixed").to.equal("fixed");
+    expect(await resolvedRowStrategy("--lr-positioning-strategy: absolute"), "an ancestor value wins").to.equal("absolute");
+    expect(await resolvedRowStrategy("", true), "a ::part(row) value wins").to.equal("absolute");
+  });
+
+  it("keeps the inline row transform and adds the private row offset", async () => {
+    const { el } = await mount();
+    const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+    expect(rows[1]!.style.transform).to.equal("translateY(40px)");
+    expect(rows[1]!.style.getPropertyValue("--_lr-virtual-list-row-offset")).to.equal("40px");
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute("data-lr-no-top-layer"), "native Popover engines render no fallback marker").to.equal(false);
+  });
+
+  it("lets a default-absolute tooltip in the last visible row escape the list", async () => {
+    await import("../../overlays/overlay/tooltip.js");
+    const { el } = await mount("", (value: unknown) => html`<button type="button" id=${`b-${String(value).replace(" ", "")}`}>${value}</button
+      ><lr-tooltip for=${`b-${String(value).replace(" ", "")}`} placement="bottom" style="--lr-transition-fast:0ms">Tip for ${value}</lr-tooltip>`);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const baseRect = base.getBoundingClientRect();
+    const tooltip = el.shadowRoot!.querySelector<HTMLElement & { show(): Promise<void>; hide(): Promise<void> }>(
+      'lr-tooltip[for="b-Row2"]'
+    )!;
+    await tooltip.show();
+    const body = tooltip.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    await waitUntil(() => body.style.left !== "" && body.matches(":popover-open"), "the trapped tooltip is promoted");
+    const rect = body.getBoundingClientRect();
+    expect(rect.bottom, "the tooltip extends below the list viewport").to.be.greaterThan(baseRect.bottom);
+    // A top-layer box is never clipped by the list's scroller; the tooltip itself is
+    // pointer-transparent, so it is checked through its geometry and top-layer state.
+    expect(rect.height).to.be.greaterThan(0);
+    await tooltip.hide();
+  });
+});

@@ -86,6 +86,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'मौजूदा रंग: {color}',
   selectSelectedOverflow: '+{n} और',
   emojiPickerSearchLabel: 'इमोजी खोजें',
+  emojiPickerSearchPlaceholder: 'इमोजी खोजें…',
   emojiPickerGridLabel: 'इमोजी',
   emojiPickerEmpty: 'कोई इमोजी नहीं मिला',
   emojiPickerLoadError: 'इमोजी लोड नहीं हो सके।',

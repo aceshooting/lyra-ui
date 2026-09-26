@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './agent-eval-dashboard.js';
 import type { LyraAgentEvalDashboard } from './agent-eval-dashboard.class.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
@@ -357,6 +357,41 @@ it('keeps a hover tint on the selected metric, not only on the unselected ones',
         'the row that goes dead on hover',
     );
   } finally {
+    await resetMouse();
+  }
+});
+
+// Pressing the already-selected metric used to fall to the plain press rule mixed from the
+// unselected surface, so the metric looked deselected mid-click. It now mixes from its own fill.
+it('mixes the pressed selected metric from --lr-agent-eval-dashboard-active-background', async () => {
+  const el = (await fixture(html`
+    <lr-agent-eval-dashboard
+      metric-id="first"
+      style="--lr-transition-fast: 0s; --lr-agent-eval-dashboard-active-background: rgb(200, 0, 0)"
+      .metrics=${[
+        { id: 'first', label: 'First', value: 1 },
+        { id: 'second', label: 'Second', value: 2 },
+      ]}
+    ></lr-agent-eval-dashboard>
+  `)) as LyraAgentEvalDashboard;
+  await el.updateComplete;
+  const metric = el.shadowRoot!.querySelector<HTMLElement>('[part="metric"][data-metric-id="first"]')!;
+  expect(metric.getAttribute('aria-pressed')).to.equal('true');
+  const probe = document.createElement('span');
+  probe.style.backgroundColor =
+    'color-mix(in oklab, rgb(200, 0, 0), var(--lr-color-mix-partner) var(--lr-color-mix-active))';
+  el.shadowRoot!.append(probe);
+  const expected = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  try {
+    await hoverUntilMatched(metric, 'the selected metric never reported :hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => metric.matches(':active') && getComputedStyle(metric).backgroundColor === expected,
+      'pressing the selected metric did not mix from its active background',
+    );
+  } finally {
+    await sendMouse({ type: 'up' });
     await resetMouse();
   }
 });

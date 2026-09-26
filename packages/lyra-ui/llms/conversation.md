@@ -114,6 +114,15 @@ uses for its own `[part="body"]`.
   follows the surrounding direction, while its open-fence preview uses code direction. Work is
   bounded per animation frame; after 2,000 settled groups the remaining source stays plain until
   completion. Large code blocks defer highlighting until completion.
+  Known limits of progressive mode: an in-progress list or table stays plain text until another
+  block follows it (and a code fence inside it reads in page direction until then); raw HTML or a
+  consumer renderer override that leaves an element open, and a reference definition whose title is
+  still open, hold rendering until they close; the `<mark>` highlight fallback (browsers without the
+  CSS Custom Highlight API) repaints at settle; producers should stream raw Markdown rather than
+  pre-closing open constructs, because a later edit that is not an append rebuilds from the first
+  changed block. With `<lr-streaming-text>`, use `content-mode="markdown"` so auto-detection does
+  not replace the displayed reply mid-stream. During a progressive stream `getHeadingTree()` returns
+  the headings of settled blocks.
 - `codeBlockHeader: boolean = false` (attribute `code-block-header`) — adds a language label and
   an icon-only native copy button to the first 200 non-empty built-in code blocks, fenced or
   indented. It copies source text without the renderer's terminal newline, preserving leading tabs
@@ -222,8 +231,27 @@ reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignmen
 HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
 and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore
 letter wrapping with `::part(table) { overflow-wrap: anywhere }`, or Korean/CJK word grouping with
-`::part(table) { word-break: keep-all }`. Inline code and code blocks keep LTR character order in RTL documents while
-their surrounding layout continues to follow the page direction.
+`::part(table) { word-break: keep-all }`.
+
+**Direction.** Inside a right-to-left document, fenced, indented and inline code
+(`::part(code-block)`, `::part(inline-code)`, and any other `code` outside a `pre` that has no
+`dir`) computes `direction: ltr; unicode-bidi: isolate; text-align: start`, plain or highlighted; a
+block's inner `<code>` inherits from its `pre`. Prose, list markers, block margins, table layout and
+the code-block header still follow the page direction, and the rendered HTML carries no `dir`
+attribute. An authored `pre` with neither `part="code-block"` nor `dir` gets
+`unicode-bidi: plaintext`, so each line takes the direction of its first strong character (WebKit
+resolves it once from the block's first strong character instead of per line), and an explicit
+`dir` on authored `pre`/`code` always wins. Consumers restore right-to-left code with an
+outer rule such as `lr-markdown::part(code-block), lr-markdown::part(inline-code) { direction: rtl }`
+(the block's `<code>` follows its `pre`). The plain-text view shown while streaming, loading or
+after a failure renders exactly `content`, isolating recognizable fenced runs as left-to-right
+blocks and same-line code spans as left-to-right isolates. Those internal runs carry no part, so a
+`::part()` override does not reach them. The recognition is a heuristic: indented (four-space)
+code blocks, fences inside blockquotes or on a list-marker line, and code spans that cross a line
+break are not isolated until the final parse; at most 128 fenced runs and 128 code spans are
+isolated. In progressive streaming a text tail follows the page direction while an open-fence
+preview uses code direction. Bidi formatting characters inside code (for example U+202E) are
+rendered as authored, not neutralized.
 
 **Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
@@ -293,7 +321,10 @@ HTML parsing at all — the raw `content` string itself) and fires `lr-render-er
 `html-mode="sanitize"`, an unavailable or failed `dompurify` peer takes that same fail-closed path:
 the component never renders `marked`'s raw HTML output when sanitization was requested. Use
 `html-mode="escape"` when authored raw HTML should remain visible as text, or
-`html-mode="trusted"` only for content whose complete HTML output is already trusted. While the
+`html-mode="trusted"` only for content whose complete HTML output is already trusted. Trusted
+content is painted inside a clipped (`contain: paint`) surface, so plain positioned HTML in it stays
+clipped to the component; Lyra anchored overlays authored inside it (like `lr-dialog`) open in the
+browser top layer and can paint over the surrounding app while they are open. While the
 optional peers are still resolving, the host carries `aria-busy="true"` (set/
 cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
 rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
@@ -358,6 +389,8 @@ this component's own module never imports or calls that function at all; it only
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
+Direction behaves exactly as described for `<lr-markdown>` (**Direction** above).
+
 Removing `content` clears the document and its empty-document tab stop, including while streaming.
 The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
 empty string. Later source text renders normally.
@@ -384,6 +417,7 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) with its compatibility alias
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
@@ -473,7 +507,8 @@ const view = html`<lr-markdown-core
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -1547,6 +1582,13 @@ blinking cursor and auto-detected Markdown rendering. First-party invention (no 
 equivalent). The host is expected to assign the _entire_ current text on every update to `content`,
 not a delta — this component does no accumulation or ordering of its own.
 
+**Direction.** Markdown mode inherits `<lr-markdown>`'s code direction (see its **Direction**
+paragraph), including the isolated fenced runs and code spans of the streaming plain-text view,
+and the forwarded `code-block`/`inline-code` parts accept an outer `direction` override once the
+content has settled. Plain `content-mode`, including a fenced block shown as plain text, follows
+the page direction; use `content-mode="markdown"` when code must read left-to-right while
+streaming.
+
 **Properties:**
 
 - `content: string = ''` — the full current text so far.
@@ -1580,9 +1622,13 @@ properties existed:
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
 - `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
-  and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the composed
-  Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
+  and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its compatibility
+  alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the
+  composed Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
+  Use `streaming-render="progressive"` with `content-mode="markdown"`: in `auto` mode the element
+  switches from plain text to Markdown when detection first succeeds, which replaces the displayed
+  reply once, mid-stream.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
   `<lr-markdown>`'s own `highlightCode`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
@@ -1648,7 +1694,7 @@ sets `math` here.
   coalesce-ms="80"
   streaming
   streaming-render="progressive"
-  code-block-chrome
+  code-block-header
 ></lr-streaming-text>
 <script type="module">
   import "@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.js";
@@ -1674,7 +1720,7 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-  `streamingRender`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
+  `streamingRender`, `codeBlockHeader`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
   configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
@@ -1704,7 +1750,8 @@ happens to end with.
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -1723,6 +1770,8 @@ dynamic-import table at all. A fenced code block whose language isn't a key in `
 renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
 mirroring `<lr-markdown-core>`'s own contract.
 
+Direction behaves exactly as described for `<lr-streaming-text>` (**Direction** above).
+
 **Properties:** `content: string = ''` — the full current text so far, identical contract to
 `<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
 (attribute `coalesce-ms`) — same trailing-edge coalesce window described in
@@ -1740,11 +1789,13 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its compatibility alias
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
 (attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
-progressive output, and `codeBlockChrome` enables the localized code label and source-copy action.
+progressive output, and `codeBlockHeader` (or its `codeBlockChrome` alias) enables the localized
+code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
 `<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
@@ -1793,7 +1844,8 @@ shared behavior.
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -1920,6 +1972,14 @@ Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer
 `language` is unset/unrecognized. That
 fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
 and it's what every instance renders at zero extra bytes until shiki resolves.
+
+**Direction.** Inside a right-to-left document `::part(body)` computes `direction: ltr`, so code
+reads left-to-right and its scroll area opens at the start of the code; as a result, under
+`dir="rtl"` the vertical scrollbar, when present, sits on the physical right. `::part(language)` is
+a left-to-right isolate, and `::part(filename)` wraps the file name in a first-strong `<bdi>` (its
+`textContent` is unchanged). The header row and copy button follow the page direction; the
+line-number gutter belongs to the body, so it sits at the physical left. An outer `lr-code-block::part(body) { direction: rtl }` rule restores
+right-to-left code. Bidi formatting characters inside code are rendered as authored.
 
 Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
 an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
@@ -2151,6 +2211,8 @@ this component's own module never imports or calls that function at all. It only
 plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages`), so a consumer
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
+
+Direction behaves exactly as described for `<lr-code-block>` (**Direction** above).
 
 Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
 an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
@@ -3046,10 +3108,14 @@ icon — the item has no default slot to receive one); unset renders the built-i
 `renderActions?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. an `lr-dropdown` containing `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
-the host normally and never trigger `lr-select`. When its resolved positioning strategy is `fixed`
-and the browser supports `showPopover()`, the popup escapes the transformed virtual row into the
-browser top layer, so the row cannot clip or cover its menu. Otherwise it retains fixed-position
-fallback behavior. Unset renders only the built-in
+the host normally and never trigger `lr-select`. Overlays returned here resolve the `fixed`
+strategy inside the virtual row by default (an explicit `positioning-strategy`/`hoist` or an
+ancestor `--lr-positioning-strategy` still wins), and a trapped `fixed` menu opens at full size
+outside the list, in the browser top layer where the native Popover API exists, in left-to-right
+and right-to-left documents, with no consumer CSS. A promoted menu whose trigger scrolls out of the
+list is hidden until the trigger returns. Where the Popover API is absent, the row holding an open
+`lr-dropdown` stops transforming while it is open, so its menu is still not clipped. Unset renders
+only the built-in
 `rowActions`.
 `renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`
@@ -3279,9 +3345,10 @@ assigned to `animation-duration` alone. The spinner stops outright under
 ## `lr-usage-badge`
 
 Compact, static resource strip for one message or run — tokens in/out, cost, latency — with a
-hover/focus tooltip breakdown. Purely formatting: computes no counts, rates, or prices; every segment
+hover or keyboard-focus tooltip breakdown. Purely formatting: computes no counts, rates, or prices; every segment
 is independently optional, and with nothing set, nothing renders at all (not even a focusable shell).
-The tooltip reuses `lr-tool-call-chip`'s hover/focus/Escape/`aria-describedby` contract wholesale.
+The tooltip reuses `lr-tool-call-chip`'s hover/keyboard-focus/Escape/`aria-describedby` contract
+wholesale; focus of any kind describes the badge.
 Not `lr-context-meter` (occupancy of a fixed capacity); not `lr-generation-metrics` (live, with a
 Stop button) — this is static after the fact.
 
@@ -3889,6 +3956,10 @@ parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
+Direction: built-in text and reasoning parts inherit `<lr-markdown>`'s code direction, so code reads
+left-to-right inside a right-to-left document. `lr-message-parts` forwards no Markdown part, so that
+nested code direction cannot be overridden from outside with `::part()`.
+
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
@@ -3956,10 +4027,10 @@ standalone result, and a later call part for the same id cannot unmask what the 
 original reference.
 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
-'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
-`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is also exported from
-`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js` and the package
-root. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
+'chip' | 'block'`; `MessagePart` and its discriminated part shapes come from the
+`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is exported from the component module
+(`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js`, or the side-effect-free
+`message-parts.class.js`); it is not a package-root export. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
 `lr-markdown-core` component modules. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
 retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
@@ -3967,9 +4038,9 @@ and data parts carry exactly one of `data` or `widget`. Empty ids and later dupl
 are ignored so each rendered identity and announcement remains unambiguous.
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
-events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
+events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
+`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
@@ -4006,9 +4077,9 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 
 ```html
 <lr-message-parts
-  tool-display="disclosure"
+  tool-display="block"
   streaming-render="progressive"
-  code-block-chrome
+  code-block-header
 ></lr-message-parts>
 ```
 
@@ -4016,7 +4087,8 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 
 - `lr-anchor-result` event — Passthrough from rendered Markdown.
 - `lr-citation-open` event — Passthrough from a rendered citation's full-preview action.
-- `lr-copy` event — Passthrough from rendered JSON content.
+- `lr-copy` event — Passthrough from rendered JSON content or a Markdown code-block header.
+- `lr-copy-error` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
 - `lr-link-click` event — Passthrough from rendered Markdown.
 - `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
@@ -4173,7 +4245,10 @@ import "@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.j
 ## `lr-selection-toolbar`
 
 Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
-`DocumentLocator` into ask, quote, cite, and copy actions.
+`DocumentLocator` into ask, quote, cite, and copy actions. The toolbar is positioned in viewport
+coordinates; inside a transformed, filtered or contained ancestor (a per-message toolbar in a
+virtualized transcript row) it is shown in the browser top layer where the native Popover API
+exists, so it stays aligned with the selection and unclipped.
 
 **Properties:** `open: boolean = false` (reflected); `text: string = ''`;
 clone-owned `anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and

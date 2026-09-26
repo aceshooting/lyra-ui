@@ -67,15 +67,16 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * The default slot is *not* the chip's visible content — the chip's own
  * label is always built from `name`/`summary`/`status`/`duration-ms`. It's
  * reserved for optional read-only preview content (e.g. the tool's raw
- * arguments or a short formatted summary) shown in a floating tooltip on hover/focus, positioned
+ * arguments or a short formatted summary) shown in a floating tooltip on hover or keyboard focus
+ * (the focused control matches `:focus-visible` and no pointer press preceded it), positioned
  * with `internal/positioner.js`'s `place()` the same way `<lr-combobox>`
  * positions its listbox. No tooltip is shown at all when the slot carries no
  * content — hovering an empty chip does nothing. Hover and keyboard focus are
  * tracked as independent reasons to keep the tooltip open (mirrors
  * `<lr-citation-badge>`'s popover), so releasing one modality while the
  * other is still active doesn't close it, and the trigger button's
- * `aria-describedby` points at the tooltip's id whenever it's open and has
- * content, so the association reaches assistive tech too; a host-authored `aria-describedby` is
+ * `aria-describedby` points at the tooltip's id whenever it's open or focused (focus of any
+ * kind describes the chip) and has content, so the association reaches assistive tech too; a host-authored `aria-describedby` is
  * projected onto the same button and merged with that id, since idrefs never cross the shadow
  * boundary on their own. The tooltip is an
  * explicitly noninteractive preview: its flattened subtree is inert, so a
@@ -91,7 +92,7 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * for the current `status` is used.
  *
  * @customElement lr-tool-call-chip
- * @slot - Noninteractive tooltip preview text or formatting, shown on hover/focus. Interactive
+ * @slot - Noninteractive tooltip preview text or formatting, shown on hover or keyboard focus. Interactive
  * descendants are inert; put actions in the detail surface opened from
  * `lr-tool-call-chip-select`. Nothing renders when this slot is empty. An open tooltip
  * participates in shared Escape ordering even while only hovered, deferring to a genuinely
@@ -214,6 +215,8 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   // tooltip the other modality is still holding open.
   private hovering = false;
   private focused = false;
+  /** Any focus on the trigger describes it, whether or not keyboard focus opened the tooltip. */
+  @state() private focusDescribed = false;
 
   private hasPreviewNodes(nodes: readonly Node[]): boolean {
     return nodes.some((node) => {
@@ -305,6 +308,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     this.tooltipOpen = false;
     this.hovering = false;
     this.focused = false;
+    this.focusDescribed = false;
   }
 
   private onDetailSlotChange = (e: Event): void => {
@@ -348,6 +352,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   };
 
   private onFocus = (event: FocusEvent): void => {
+    this.focusDescribed = true;
     if (!isKeyboardFocusEvent(event)) return;
     this.focused = true;
     this.showTooltip();
@@ -355,6 +360,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   private onBlur = (): void => {
     this.focused = false;
+    this.focusDescribed = false;
     if (this.hovering) return;
     this.hideTooltip();
   };
@@ -447,7 +453,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         part="base"
         type="button"
         aria-label=${this.accessibleLabel}
-        aria-describedby=${this.hasDetailSlot && this.tooltipOpen
+        aria-describedby=${this.hasDetailSlot && (this.tooltipOpen || this.focusDescribed)
           ? this.tooltipId
           : nothing}
         @click=${this.onClick}

@@ -78,7 +78,9 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   @property({ type: Boolean, reflect: true }) streaming = false;
 
   /** Forwarded to the composed Markdown element. `plain` preserves the existing streaming
-   * fallback; `progressive` renders completed Markdown blocks while the final block is arriving. */
+   * fallback; `progressive` renders completed Markdown blocks while the final block is arriving.
+   * Use with `content-mode="markdown"`: in `auto` mode the element switches from plain text to
+   * Markdown when detection first succeeds, which replaces the displayed reply once, mid-stream. */
   @property({ attribute: 'streaming-render' })
   streamingRender: MarkdownStreamingRender = 'plain';
 

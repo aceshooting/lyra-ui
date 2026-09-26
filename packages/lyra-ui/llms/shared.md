@@ -176,7 +176,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-ui/translations/<locale>.js` (the twenty-one shipped message catalogs),
+  `@aceshooting/lyra-ui/translations/<locale>.js` (the thirty-two shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
@@ -2235,13 +2235,15 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
 
-Twenty-one full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `hi`, `id`,
-`it`, `ja`, `ko`, `nl`, `pl`, `pt-BR`, `pt-PT`, `ro`, `ru`, `tr`, `uk`, `zh-CN`, `zh-TW`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
+Thirty-two full catalogs ship with the package — **`ar`, `cs`, `da`, `de`, `de-CH`, `es`, `fa`, `fi`,
+`fr`, `he`, `hi`, `hr`, `hu`, `id`, `it`, `ja`, `kk`, `ko`, `nb`, `nl`, `nn`, `pl`, `pt-BR`, `pt-PT`, `ro`,
+`ru`, `sl`, `sv`, `tr`, `uk`, `zh-CN`, `zh-TW`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
 **side-effect-only modules**: import one bare, read nothing from it, and it calls
 `registerLyraLocale()` for you.
 
 ```ts
 import "@aceshooting/lyra-ui/translations/de.js";
+import "@aceshooting/lyra-ui/translations/de-CH.js"; // Swiss Standard German
 import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
 import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
@@ -2256,14 +2258,15 @@ import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional Chinese
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
 `one`/`two`/`other`); Italian uses a non-default set too (`it`: `one`/`many`/`other`), and so does
 Romanian (`ro`: `one`/`few`/`other`, where `few` covers `0` and `2`-`19` and `other` is the
-`de`-requiring form from `20` upward). `ar`, `fa`
+`de`-requiring form from `20` upward). The Slavic catalogs carry their own sets as well (`cs`:
+`one`/`few`/`many`/`other`; `hr`: `one`/`few`/`other`; `sl`: `one`/`two`/`few`/`other`). `ar`, `fa`
 and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
-`pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs. Step 2 of the lookup order above
-still makes each reachable from a less-specific language tag, while an exact `lang="pt-PT"` or
-`lang="zh-TW"` selects its dedicated regional catalog. They are listed under their real tags in
+`de-CH`, `pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs. Step 2 of the lookup order above
+still makes each reachable from a less-specific language tag, while an exact `lang="de-CH"`,
+`lang="pt-PT"` or `lang="zh-TW"` selects its dedicated regional catalog. They are listed under their real tags in
 `getRegisteredLyraLocales()`.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
@@ -2725,6 +2728,23 @@ control) is a single tab stop using a roving `tabindex`; arrow keys move within 
 `aria-hidden` and `inert` items; `Home`/`End` jump to the ends; `Enter` and `Space` both activate;
 `Escape` dismisses the topmost dismissible overlay and returns focus to whatever opened it.
 `ArrowLeft`/`ArrowRight` mean previous/next and swap under `dir="rtl"`.
+
+**Hover/focus surfaces open on keyboard focus.** The `focus` trigger of `lr-tooltip` (default
+`hover focus`), `lr-popover` and `lr-dropdown`, and the hover/focus surfaces of `lr-copy-button`,
+`lr-app-rail-item`, `lr-usage-badge`, `lr-tool-call-chip`, `lr-citation-badge` and
+`lr-entity-chip`, open on focus only when the element that actually holds focus matches
+`:focus-visible` and no pointer press has been seen since the last key press. So pointer, touch and
+scripted focus that follows them — a drawer or dialog moving initial focus to its first control
+after a tap, focus restored after a click-closed overlay, a click handler focusing a button — no
+longer pops a surface, and a non-keyboard focus never cancels a pending hide. Focus that re-enters
+the document from outside it (browser UI, another window, a child frame) is judged by the
+browser's own focus ring. A keyboard-opened drawer shows its initial-focus control's tooltip, and
+Escape closing another overlay restores focus with the tooltip open wherever the browser shows the
+ring. Focus of any kind still gives `lr-tooltip`, `lr-copy-button`, `lr-usage-badge` and
+`lr-tool-call-chip` triggers their accessible description while focus stays on them. A direct tap
+still opens hover surfaces through the browser's compatibility `mouseenter`. Call `show()` for a
+scripted reveal; tests should move focus with a real Tab key or call `show()` rather than `.focus()`
+or synthetic focus events.
 
 **`accessibleLabel` binds to one of two different attributes depending on the component, and the
 two are not interchangeable.** Most components (e.g. `lr-card`, `lr-stat`) expose it as a direct

@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './trace-tree.js';
 import type { LyraTraceTree } from './trace-tree.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from './span.js';
@@ -1153,5 +1153,38 @@ describe('lr-trace-tree trace extent past the render cap', () => {
       bars[0]!.getAttribute('style'),
       'a 1s span in a 10s trace occupies a tenth of the track, not all of it',
     ).to.contain('inline-size:10%');
+  });
+});
+
+// Pressing the active row fell to the plain press rule, mixed from the unselected surface, so the
+// selected row looked deselected mid-click. The press now mixes from the active fill.
+describe('lr-trace-tree active-row press', () => {
+  it('mixes the pressed active row from --lr-trace-tree-row-active-bg', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree
+        style="--lr-trace-tree-row-active-bg: rgb(200, 0, 0)"
+        active-span-id="search"
+        .spans=${SPANS}
+      ></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector<HTMLElement>('[part="row"][data-active]')!;
+    const probe = document.createElement('span');
+    probe.style.backgroundColor =
+      'color-mix(in oklab, rgb(200, 0, 0), var(--lr-color-mix-partner) var(--lr-color-mix-active))';
+    el.shadowRoot!.append(probe);
+    const expected = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    try {
+      await hoverUntilMatched(active, 'the active row never reported :hover');
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => active.matches(':active') && getComputedStyle(active).backgroundColor === expected,
+        'pressing the active row did not mix from its active fill',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
   });
 });

@@ -3775,3 +3775,35 @@ describe("lr-radio-group branch-coverage edge cases", () => {
     expect((group.querySelector("lr-radio") as LyraRadio).checked).to.be.false;
   });
 });
+
+// The pointer rules outrank the checked rule, so a themed checked border used to snap back to the
+// brand default under the pointer. Unset hover/active hooks now fall back to the checked border.
+it("keeps --lr-radio-checked-border-color while checked and hovered or pressed", async () => {
+  const el = (await fixture(html`
+    <lr-radio
+      checked
+      style="--lr-transition-fast: 0s; --lr-radio-checked-border-color: rgb(10, 20, 30);"
+      >Choice</lr-radio
+    >
+  `)) as LyraRadio;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const circle = el.shadowRoot!.querySelector<HTMLElement>('[part~="circle"]')!;
+  expect(getComputedStyle(circle).borderTopColor, "resting").to.equal("rgb(10, 20, 30)");
+  try {
+    await hoverUntilMatched(base, "the radio base never reported :hover");
+    await waitUntil(
+      () => getComputedStyle(circle).borderTopColor === "rgb(10, 20, 30)",
+      "hovering replaced the themed checked border"
+    );
+    await sendMouse({ type: "down" });
+    await waitUntil(() => base.matches(":active"), "the radio never reported :active");
+    await waitUntil(
+      () => getComputedStyle(circle).borderTopColor === "rgb(10, 20, 30)",
+      "pressing replaced the themed checked border"
+    );
+  } finally {
+    await sendMouse({ type: "up" });
+    await resetMouse();
+  }
+});

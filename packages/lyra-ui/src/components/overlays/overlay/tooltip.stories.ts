@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './tooltip.js';
 import '../../forms/icon-button/icon-button.js';
+import '../../forms/button/button.js';
+import '../drawer/drawer.js';
 import type { LyraTooltip } from './tooltip.js';
 
 const meta: Meta = {
@@ -27,21 +29,32 @@ export const LyraIconButtonTrigger: Story = {
   `,
 };
 
-export const FocusVisibleTrigger: Story = {
-  name: 'Keyboard-visible focus trigger',
+export const KeyboardFocusOnly: Story = {
+  name: 'Keyboard focus only',
   parameters: {
     docs: {
       description: {
         story:
-          '`focus-visible` opens on keyboard-visible focus while ignoring pointer- or script-focused controls. It also checks the real focused control inside a shadow trigger such as `<lr-icon-button>`. The default `focus` token keeps its existing any-focus behavior.',
+          'The default `hover focus` trigger opens on keyboard focus only: the focused control must match `:focus-visible` and no pointer press may have preceded it. Click **Open drawer** and its initial focus lands on the help button without showing the tooltip; open it with Enter instead and the tooltip appears with the focus ring. Either way the focused button is described by the tooltip text.',
       },
     },
   },
   render: () => html`
-    <lr-tooltip trigger="hover focus-visible" show-delay="0">
-      Opens on hover or keyboard-visible focus.
-      <lr-icon-button slot="trigger" icon="help" aria-label="Keyboard help"></lr-icon-button>
-    </lr-tooltip>
+    <lr-button
+      @click=${(event: Event) => {
+        const drawer = (event.currentTarget as HTMLElement).nextElementSibling as HTMLElement & {
+          open: boolean;
+        };
+        drawer.open = true;
+      }}
+      >Open drawer</lr-button
+    >
+    <lr-drawer label="Filters">
+      <lr-tooltip show-delay="0">
+        Explain these filters
+        <lr-icon-button slot="trigger" icon="help" aria-label="Filter help"></lr-icon-button>
+      </lr-tooltip>
+    </lr-drawer>
   `,
 };
 
@@ -157,7 +170,7 @@ export const ClickTrigger: Story = {
     docs: {
       description: {
         story:
-          '`trigger` takes a space-separated list of `hover`, `focus`, `focus-visible`, `click` and `manual`, defaulting to `"hover focus"`. `focus-visible` is the opt-in keyboard-visible focus mode; `focus` preserves its any-focus behavior. `show-delay` and `hide-delay` are independent, so a tooltip can appear instantly and linger on the way out.',
+          '`trigger` takes a space-separated list of `hover`, `focus`, `click` and `manual`, defaulting to `"hover focus"`. `focus` means keyboard focus; pointer and scripted focus that follows a pointer press do not open it. `show-delay` and `hide-delay` are independent, so a tooltip can appear instantly and linger on the way out.',
       },
     },
   },

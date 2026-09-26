@@ -301,6 +301,16 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* The part is a flex container, so its own text-overflow never fires on slotted content: each
+     slotted adornment is a flex item that needs its own shrinkable block for the ellipsis. */
+  [part~="start"] ::slotted(*),
+  [part~="end"] ::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   /* The label does NOT grow by default. It used to (flex: 1 1 auto), which made a stretched
      button's icon+label hug the leading edge with every pixel of slack parked invisibly inside
      the label box -- the wrapper reached the trailing content edge while the glyphs stayed at the

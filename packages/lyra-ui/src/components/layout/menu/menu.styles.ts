@@ -88,7 +88,8 @@ export const styles = css`
   .submenu-surface.open {
     visibility: visible;
     opacity: 1;
-    transform: translateY(0);
+    /* The transition end state; none interpolates identically and is not a containing block. */
+    transform: none;
     transition: opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast);
   }

@@ -179,13 +179,35 @@ export const Disabled: Story = {
   render: () => html`<lr-file-input disabled accept=".csv,.xlsx"></lr-file-input>`,
 };
 
+export const LabelAndInstruction: Story = {
+  name: 'Form label and dropzone instruction',
+  render: () => html`
+    <div style="display:grid; gap:1rem; max-width:32rem;">
+      <lr-file-input label="Reference files" multiple></lr-file-input>
+      <lr-file-input label="Reference files" multiple
+        ><span slot="dropzone">Drop PDFs here or browse</span></lr-file-input
+      >
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The form label and the dropzone instruction are independent surfaces. `label` names the control and renders above the dropzone; the dropzone keeps the localized instruction (first) until the `dropzone` slot replaces it (second).',
+      },
+    },
+  },
+};
+
 export const Compact: Story = {
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:32rem;">
       <lr-file-input multiple accept=".csv,.xlsx"></lr-file-input>
       <div style="display:flex; align-items:center; gap:0.5rem;">
         <span style="font-size:0.8125rem; color:var(--lr-color-text-quiet);">Attachments</span>
-        <lr-file-input compact multiple accept=".csv,.xlsx" label="Add files" style="flex:1;"></lr-file-input>
+        <lr-file-input compact multiple accept=".csv,.xlsx" aria-label="Add files" style="flex:1;"
+          ><span slot="dropzone">Add files</span></lr-file-input
+        >
       </div>
     </div>
   `,
@@ -193,7 +215,7 @@ export const Compact: Story = {
     docs: {
       description: {
         story:
-          'Default dropzone above, then `compact` inline in a toolbar row where the full `--lr-space-l` dropzone would not fit.',
+          'Default dropzone above, then `compact` inline in a toolbar row where the full `--lr-space-l` dropzone would not fit. The toolbar control has no form label: its slotted dropzone text is the only visible copy, and a matching host `aria-label` makes the accessible name contain it.',
       },
     },
   },

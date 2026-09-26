@@ -112,7 +112,7 @@ export const NarrowAllocation: Story = {
     docs: {
       description: {
         story:
-          'A 320px allocation with a wide table, a long link, and an unbroken code line demonstrates logical containment and internal overflow.',
+          'A 320px allocation with a wide table, a long link, and an unbroken code line demonstrates logical containment and internal overflow: the wide table scrolls inside its own `table-wrapper`.',
       },
     },
   },
@@ -242,16 +242,25 @@ export const MaxHeightScrolling: Story = {
 };
 
 export const TaskLists: Story = {
-  render: () => html`<lr-markdown .content=${'- Ordinary item\n- [ ] Open task with enough text to wrap\n- [x] Completed task\n\n1. [x] Ordered task'}></lr-markdown>`,
+  parameters: { docs: { description: { story: 'Mixed, all-task, loose, nested and ordered task lists. The read-only checkbox replaces the bullet in unordered lists and follows the numeral in ordered ones.' } } },
+  render: () => html`<div style="display:grid; gap:1rem; max-inline-size:32rem;">
+    <lr-markdown .content=${'- Ordinary item\n- [ ] Open task with enough text to wrap onto a second line so the hang stays visible\n- [x] Completed task\n\n- [x] All-task list\n- [ ] Second task\n\n- [ ] Loose task\n\n- [x] Loose completed task\n\n- [ ] Parent task\n  - Nested plain item\n  - [x] Nested completed task\n\n3. [x] Ordered task keeps its numeral\n4. [ ] Next ordered task'}></lr-markdown>
+    <div dir="rtl"><lr-markdown .content=${'- Ordinary item\n- [ ] Open task with enough text to wrap onto a second line so the hang stays visible\n- [x] Completed task\n\n- [x] All-task list\n- [ ] Second task\n\n- [ ] Loose task\n\n- [x] Loose completed task\n\n- [ ] Parent task\n  - Nested plain item\n  - [x] Nested completed task\n\n3. [x] Ordered task keeps its numeral\n4. [ ] Next ordered task'}></lr-markdown></div>
+  </div>`,
 };
 export const WideGfmTables: Story = {
-  render: () => html`<div style="inline-size: 320px"><lr-markdown .content=${'| Name | Amount |\n| :--- | ---: |\n| LongUnbreakableColumnHeadingLongUnbreakableColumnHeading | 42 |'}></lr-markdown></div>`,
+  parameters: { docs: { description: { story: 'At 390px: a long prose cell wraps between words, an aligned table applies GFM alignment, and a six-column identifier table scrolls inside its keyboard-focusable `table-wrapper`. The second copy is right-to-left.' } } },
+  render: () => html`<div style="display:grid; gap:1rem;">
+    <div style="inline-size: 390px; max-inline-size: 100%"><lr-markdown .content=${'| Name | Notes |\n| --- | --- |\n| Report | A long prose cell that wraps only between words, never in the middle of a word, however narrow the column gets. |\n\n| Left | Center | Right | Default |\n| :--- | :---: | ---: | --- |\n| a | b | 42 | d |\n\n| Identifier | Region | Owner | Created | Status | Checksum |\n| --- | --- | --- | --- | --- | --- |\n| svc-authentication-gateway-primary | eu-central-1 | platform-infrastructure-team | 2026-09-25T10:00:00Z | operational | 9f86d081884c7d659a2feaa0c55ad015 |'}></lr-markdown></div>
+    <div dir="rtl" style="inline-size: 390px; max-inline-size: 100%"><lr-markdown .content=${'| Name | Notes |\n| --- | --- |\n| Report | A long prose cell that wraps only between words, never in the middle of a word, however narrow the column gets. |\n\n| Left | Center | Right | Default |\n| :--- | :---: | ---: | --- |\n| a | b | 42 | d |\n\n| Identifier | Region | Owner | Created | Status | Checksum |\n| --- | --- | --- | --- | --- | --- |\n| svc-authentication-gateway-primary | eu-central-1 | platform-infrastructure-team | 2026-09-25T10:00:00Z | operational | 9f86d081884c7d659a2feaa0c55ad015 |'}></lr-markdown></div>
+  </div>`,
 };
 export const CodeBlockHeaders: Story = {
   render: () => html`<lr-markdown code-block-header .content=${'```ts\nconst greeting = "Hello";\n```\n\n    indented code'}></lr-markdown>`,
 };
 export const RightToLeftCode: Story = {
-  render: () => html`<div dir="rtl"><lr-markdown code-block-header .content=${'نص عربي مع `--flag`\n\n```js\nconst answer = 42;\n```'}></lr-markdown></div>`,
+  parameters: { docs: { description: { story: 'Arabic prose with inline code, a fenced block with one long line, an indented block and an authored `<pre>` of Arabic verse in sanitize mode. Code reads left-to-right; prose and the authored verse follow their own direction.' } } },
+  render: () => html`<div dir="rtl" lang="ar" style="inline-size: 400px; max-inline-size: 100%"><lr-markdown code-block-header .highlightCode=${false} .content=${'استخدم الخيار `--verbose` لعرض التفاصيل.\n\n```js\nconst report = buildReport({ verbose: true, locale: \'ar\', includeTimings: true, destination: \'./out/report.json\' });\n```\n\n    indented_code --flag\n\n<pre>قصيدة عربية\nسطر ثانٍ من الشعر</pre>'}></lr-markdown></div>`,
 };
 
 export const ProgressiveStreaming: Story = {

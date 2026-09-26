@@ -1,0 +1,64 @@
+// The `charts` slice of the cs translation catalog for @aceshooting/lyra-ui: strings owned exclusively by `src/components/charts/**`.
+// A side-effect-only module: a consumer writes a bare
+// `import '@aceshooting/lyra-ui/translations/cs/charts';` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- `scripts/check-translations.mjs` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
+// Regenerate the SHAPE (never the translations) with:
+//   node scripts/scaffold-translation.mjs cs --force
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
+
+const strings: LyraLocaleStrings = {
+  chartCategory: 'Kategorie',
+  chartTotal: 'Celkem',
+  chartAxisTotal: '{axis} celkem',
+  chartPrimaryAxis: 'Hlavní osa',
+  chartSecondaryAxis: 'Vedlejší osa',
+  chartPointLabel: 'Bod {n}',
+  chartPointCoordinates: 'x {x}, y {y}',
+  chartBubblePointCoordinates: 'x {x}, y {y}, poloměr {radius}',
+  chartLabeledPoint: '{label}: {coordinates}',
+  chartTrendIncreasing: 'rostoucí',
+  chartTrendDecreasing: 'klesající',
+  chartTrendFlat: 'ustálený',
+  chartSummary: '{label}: počet hodnot {count}, rozsah {min} až {max}, trend {trend}',
+  chartSeriesNoData: '{label}: žádná data',
+  chartSummaryWithData: '{type} graf. {summaries}.',
+  chartSummaryEmpty: '{type} graf bez dat.',
+  chartSummarySeparator: '. ',
+  chartData: 'Data grafu',
+  chartDataSampled: 'Vygenerovaná tabulka dat zobrazuje vzorek nejvýše 1 000 záznamů. Pro přístup ke všem datům grafu zadejte vlastní tabulku dat.',
+  chartZoomUnavailable: 'Přiblížení není k dispozici, základní graf však zůstává dostupný.',
+  chartDataLabelsUnavailable: 'Popisky dat nejsou k dispozici, základní graf však zůstává dostupný.',
+  chartStackTotalsUnavailable: 'Součty skupin nejsou k dispozici, základní graf však zůstává dostupný.',
+  chartAnnotationsUnavailable: 'Poznámky grafu nejsou k dispozici, základní graf však zůstává dostupný.',
+  chartTypeLine: 'Spojnicový',
+  chartTypeBar: 'Sloupcový',
+  chartTypeScatter: 'Bodový',
+  chartTypePie: 'Výsečový',
+  chartTypeDoughnut: 'Prstencový',
+  chartTypeRadar: 'Paprskový',
+  chartTypePolarArea: 'Polární plošný',
+  chartTypeBubble: 'Bublinový',
+  boxPlotSeriesSummary: '{label}: {count} rozdělení, rozsah mediánů {min} až {max}, trend mediánu {trend}',
+  boxPlotSummaryWithData: 'Krabicový graf. {summaries}.',
+  boxPlotSummaryEmpty: 'Krabicový graf bez dat.',
+  boxPlotData: 'Data krabicového grafu',
+  chartSeriesLabel: 'Řada',
+  boxPlotMin: 'Min.',
+  boxPlotQ1: 'Q1',
+  boxPlotMedian: 'Medián',
+  boxPlotQ3: 'Q3',
+  boxPlotMax: 'Max.',
+  boxPlot: 'Krabicový graf',
+  histogramFrequency: 'Četnost',
+  liteChartMarkSummary: '{series}, {label}: {value} ({index} z {total})',
+  liteChartBarLabel: '{series}, {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
+  liteChartCustomMarkSummary: '{content} ({index} z {total})',
+  chartMissingLibrary: 'Tato komponenta vyžaduje k vykreslení grafů nainstalovaný volitelný balíček „chart.js“.',
+  boxPlotMissingLibrary: 'Tato komponenta vyžaduje k vykreslení krabicových grafů nainstalovaný volitelný balíček pro krabicové grafy.',
+};
+
+registerLyraLocale('cs', strings);

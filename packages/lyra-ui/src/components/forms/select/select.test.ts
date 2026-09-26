@@ -6755,3 +6755,31 @@ describe("lr-select activation event", () => {
     ).to.equal(0);
   });
 });
+
+// Cloned option adornments sit in a centred inline-flex part, so a long text clone was clipped on
+// both sides. Each direct child now carries its own shrinkable block with an ellipsis.
+describe("lr-select popup adornment truncation", () => {
+  const LONG = "Adornment text that is far too long.";
+
+  for (const slot of ["start", "end"] as const) {
+    it(`truncates a long cloned ${slot} text adornment with an ellipsis`, async () => {
+      const el = (await fixture(html`
+        <lr-select style="inline-size: 240px">
+          <lr-option value="fr">France<span slot=${slot}>${LONG}</span></lr-option>
+        </lr-select>
+      `)) as LyraSelect;
+      el.open = true;
+      await el.updateComplete;
+      await aTimeout(0);
+      const row = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-value="fr"]')!;
+      const part = row.querySelector<HTMLElement>(`[part~="option-${slot}"]`)!;
+      const adornment = part.firstElementChild as HTMLElement;
+      const box = adornment.getBoundingClientRect();
+      const partBox = part.getBoundingClientRect();
+      expect(box.left, "start edge stays inside the part").to.be.at.least(partBox.left - 0.5);
+      expect(box.right, "end edge stays inside the part").to.be.at.most(partBox.right + 0.5);
+      expect(getComputedStyle(adornment).textOverflow).to.equal("ellipsis");
+      expect(adornment.scrollWidth > adornment.clientWidth, "text overflows its box").to.equal(true);
+    });
+  }
+});

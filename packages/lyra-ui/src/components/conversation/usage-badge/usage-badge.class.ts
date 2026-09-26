@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { reserveOverlayOrder, type OverlayOrderReservation } from '../../../internal/overlay-order.js';
 import type { UsageBadgeOverlayHandle } from './usage-badge-overlay-runtime.js';
@@ -16,13 +17,15 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilli
 
 /**
  * `<lr-usage-badge>` — a compact, static resource strip for one message or run: tokens in/out,
- * cost, latency, with a hover/focus tooltip breakdown. Purely formatting — this component computes
+ * cost, latency, with a hover or keyboard-focus tooltip breakdown. Purely formatting — this component computes
  * no counts, rates, or prices; every segment is independently optional, and with nothing set,
  * nothing renders at all (not even a focusable/interactive shell).
  *
- * The tooltip reuses `<lr-tool-call-chip>`'s hover/focus/Escape/`aria-describedby` contract
- * wholesale: hover and focus are tracked as independent "keep it open" reasons, so releasing one
- * modality while the other still holds doesn't close it.
+ * The tooltip reuses `<lr-tool-call-chip>`'s hover/keyboard-focus/Escape/`aria-describedby`
+ * contract wholesale: hover and keyboard focus are tracked as independent "keep it open" reasons,
+ * so releasing one modality while the other still holds doesn't close it; focus of any kind
+ * describes the badge. Keyboard focus means the focused control matches `:focus-visible` and no
+ * pointer press preceded it.
  *
  * The built-in latency formatting has no minutes/hours tier (`'{ms}ms'`, or one-decimal seconds
  * above 1000ms) — a host whose latencies commonly exceed a minute sets `formatLatency` to render
@@ -129,6 +132,8 @@ export class LyraUsageBadge extends LyraElement {
   @property({ type: Boolean, reflect: true }) abbreviate = false;
 
   @state() private tooltipOpen = false;
+  /** Any focus on the badge describes it, whether or not keyboard focus opened the tooltip. */
+  @state() private focusDescribed = false;
   @state() private hasDetailsSlot = false;
   @state() private hasSummarySlot = false;
   @state() private detailsText = '';
@@ -334,6 +339,7 @@ export class LyraUsageBadge extends LyraElement {
     this.hideTooltip();
     this.hovering = false;
     this.focused = false;
+    this.focusDescribed = false;
   }
 
   private onMouseEnter = (): void => {
@@ -345,12 +351,15 @@ export class LyraUsageBadge extends LyraElement {
     if (this.focused) return;
     this.hideTooltip();
   };
-  private onFocus = (): void => {
+  private onFocus = (event: FocusEvent): void => {
+    this.focusDescribed = true;
+    if (!isKeyboardFocusEvent(event)) return;
     this.focused = true;
     this.showTooltip();
   };
   private onBlur = (): void => {
     this.focused = false;
+    this.focusDescribed = false;
     if (this.hovering) return;
     this.hideTooltip();
   };
@@ -380,7 +389,7 @@ export class LyraUsageBadge extends LyraElement {
         aria-label=${!interactive
           ? nothing
           : this.getAttribute('aria-label') ?? this.localize('usageBadgeLabel')}
-        aria-describedby=${interactive && this.tooltipOpen ? this.tooltipId : nothing}
+        aria-describedby=${interactive && (this.tooltipOpen || this.focusDescribed) ? this.tooltipId : nothing}
         @mouseenter=${this.onMouseEnter}
         @mouseleave=${this.onMouseLeave}
         @focus=${this.onFocus}

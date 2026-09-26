@@ -1786,3 +1786,40 @@ it("rebinds live slotted-action observation to the current realm after adoption"
     iframe.remove();
   }
 });
+
+describe("top-layer escape", () => {
+  async function toolbarIn(trapStyle: string) {
+    const wrapper = await fixture<HTMLElement>(html`<div style=${trapStyle}>
+      <lr-selection-toolbar open text="selected passage" .rect=${new DOMRect(40, 140, 120, 20)}></lr-selection-toolbar>
+    </div>`);
+    const el = wrapper.querySelector("lr-selection-toolbar") as LyraSelectionToolbar;
+    await el.updateComplete;
+    const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+    return { wrapper, el, toolbar };
+  }
+
+  it("promotes a toolbar trapped by a transformed, clipping ancestor and keeps its geometry", async () => {
+    const reference = await toolbarIn("");
+    const referenceRect = reference.toolbar.getBoundingClientRect();
+    expect(reference.toolbar.matches(":popover-open"), "outside any trap it is never promoted").to.equal(false);
+    expect(reference.toolbar.hasAttribute("popover")).to.equal(false);
+    reference.wrapper.remove();
+
+    const { wrapper, el, toolbar } = await toolbarIn("transform: translateY(0); overflow: hidden; block-size: 20px; margin-block-start: 300px");
+    await waitUntil(() => toolbar.matches(":popover-open"), "the trapped toolbar is promoted");
+    const rect = toolbar.getBoundingClientRect();
+    expect(rect.left + rect.width / 2).to.be.closeTo(referenceRect.left + referenceRect.width / 2, 1.5);
+    expect(rect.top).to.be.closeTo(referenceRect.top, 1.5);
+    const wrapperRect = wrapper.getBoundingClientRect();
+    expect(rect.bottom <= wrapperRect.top || rect.top >= wrapperRect.bottom, "the toolbar lies outside the clipping wrapper").to.equal(true);
+    const action = el.shadowRoot!.querySelector<HTMLElement>("lr-button[data-action]")!;
+    const actionRect = action.getBoundingClientRect();
+    const hit = el.shadowRoot!.elementFromPoint(actionRect.left + actionRect.width / 2, actionRect.top + actionRect.height / 2);
+    expect(hit?.closest("lr-button")?.getAttribute("data-action")).to.equal(action.getAttribute("data-action"));
+
+    el.open = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="toolbar"]') === null, "closing removes the toolbar").to.equal(true);
+    expect(toolbar.matches(":popover-open"), "removal releases the top layer").to.equal(false);
+  });
+});

@@ -12,6 +12,10 @@ import {
   hitTestHighlightRanges,
   internalLinkHrefFrom,
   markdownHighlightKey,
+  markdownHighlightConfigChanged,
+  markdownNeedsReparse,
+  markdownSanitizerPolicy,
+  normalizeMarkdownLeadingTabs,
   MarkdownParserController,
   parseMarkdownDocument,
   processPendingHighlights,
@@ -21,6 +25,7 @@ import {
   setCachedHighlight,
   type PendingHighlight,
 } from './markdown-shared.js';
+import type { MarkdownCodeBlockRecord } from './markdown-code-header.js';
 
 it('applies the resolved palette immediately when starting the shared theme watch', () => {
   const host = document.body.appendChild(document.createElement('div'));
@@ -653,6 +658,116 @@ describe('escape-mode raw-block text', () => {
           context.html(escapeOpener(opener), escapedPayload),
         );
       }
+    }
+  });
+});
+
+describe('code-block header parse contract', () => {
+  type Extra = { header?: boolean; records?: MarkdownCodeBlockRecord[]; tabSize?: number; math?: boolean; cached?: string; marked?: MarkedModule };
+  async function parse(raw: string, extra: Extra = {}): Promise<{ html: string; records: MarkdownCodeBlockRecord[] }> {
+    const marked = extra.marked ?? (await loadMarkdownDeps()).marked!;
+    const records = extra.records ?? [];
+    const tabSize = extra.tabSize ?? 4;
+    const { html } = parseMarkdownDocument({
+      marked,
+      content: normalizeMarkdownLeadingTabs(raw, tabSize),
+      rawContent: raw,
+      tabSize,
+      gfm: true,
+      linkTarget: '_blank',
+      headingOffset: 0,
+      escapeHtmlOption: false,
+      trustedHtmlOption: false,
+      highlightCodeOption: extra.cached !== undefined,
+      getCachedHighlight: () => extra.cached,
+      failedHighlightKeys: new Set(),
+      headingAnchorsOption: false,
+      mathOption: extra.math === true,
+      cachedKatex: null,
+      pendingKeys: [],
+      headingTreeOut: [],
+      ...(extra.header === undefined ? {} : { codeBlockHeaderOption: extra.header, codeFrameNonce: 'n', codeBlocksOut: records }),
+    });
+    return { html, records };
+  }
+  const corpus = '```ts\nconst a = 1;\n```\n\n    indented\n\ntext';
+
+  it('is byte-identical with the header omitted or off', async () => {
+    const omitted = (await parse(corpus)).html;
+    expect((await parse(corpus, { header: false })).html).to.equal(omitted);
+    expect(omitted).not.to.include('code-block-frame');
+    const cached = '<pre part="code-block"><code class="language-ts">cached</code></pre>\n';
+    expect((await parse(corpus, { cached, header: false })).html).to.equal((await parse(corpus, { cached })).html);
+  });
+
+  it('wraps each non-empty block in a numbered frame and records it in document order', async () => {
+    const { html, records } = await parse(corpus, { header: true });
+    expect(html).to.include("<div part='code-block-frame' data-lr-code-frame='n:0'>");
+    expect(html).to.include("<div part='code-block-frame' data-lr-code-frame='n:1'>");
+    expect(html).not.to.match(/\n<\/div>/);
+    expect(records).to.deep.equal([
+      { language: 'ts', source: 'const a = 1;', ordinal: 0 },
+      { language: '', source: 'indented', ordinal: 1 },
+    ]);
+    const cached = await parse(corpus, { header: true, cached: '<pre part="code-block"><code>cached</code></pre>\n' });
+    expect(cached.html).to.include("data-lr-code-frame='n:0'>");
+  });
+
+  it('skips empty and over-limit blocks while still advancing the ordinal', async () => {
+    const { records } = await parse('```\n```\n\n```js\nx\n```', { header: true });
+    expect(records).to.deep.equal([{ language: 'js', source: 'x', ordinal: 1 }]);
+    const many = await parse(Array.from({ length: 201 }, (_, index) => `\`\`\`\nb${index}\n\`\`\``).join('\n\n'), { header: true });
+    expect(many.records.length).to.equal(200);
+    expect(many.html).not.to.include("data-lr-code-frame='n:200'");
+  });
+
+  it('records sanitized language labels as text', async () => {
+    const { html, records } = await parse('```ts‮​\u0007x\ncode\n```\n\n```ts"><img src=x onerror=alert(1)>\ncode\n```', { header: true });
+    expect(records[0]!.language).to.equal('tsx');
+    expect(records[1]!.language).to.equal('ts"><img');
+    expect(html).not.to.include('<img');
+    const astral = `${'a'.repeat(31)}\u{1F600}tail`;
+    const clipped = (await parse(`\`\`\`${astral}\ncode\n\`\`\``, { header: true })).records[0]!.language;
+    expect(clipped).to.equal(`${'a'.repeat(31)}\u{1F600}`);
+  });
+
+  it('pairs copied source with its original tabs by ordinal', async () => {
+    expect((await parse('```make\n\tbuild\n```', { header: true })).records[0]!.source).to.equal('\tbuild');
+    expect((await parse('```\n```\n\n```make\n\tbuild\n```', { header: true })).records[0]!.source).to.equal('\tbuild');
+    const mixed = await parse('```\n```\n\n```\n\tone\n```\n\n```\n    one\n```', { header: true });
+    expect(mixed.records.map((record) => record.source)).to.deep.equal(['\tone', '    one']);
+    const math = await parse('$$\nx\n$$\n\n```make\n\tbuild\n```', { header: true, math: true });
+    expect(math.records[0]!.source).to.equal('\tbuild');
+  });
+
+  it('falls back to the displayed source when the parser declines pairing', async () => {
+    const pedantic = (await loadMarkdownDeps()).marked!;
+    const configured = { ...pedantic, Marked: class extends pedantic.Marked { constructor() { super(); (this as unknown as { setOptions(options: object): void }).setOptions({ pedantic: true }); } } } as MarkedModule;
+    const result = await parse('```make\n\tbuild\n```', { header: true, marked: configured });
+    expect(['\tbuild', '    build']).to.include(result.records[0]?.source ?? '    build');
+    const nested = await parse('- item\n\n  ```make\n  \tbuild\n  ```', { header: true });
+    expect(nested.records.length).to.equal(1);
+  });
+
+  it('reparses and resets highlight bookkeeping for either header spelling', () => {
+    for (const key of ['codeBlockHeader', 'codeBlockChrome']) {
+      expect(markdownNeedsReparse(new Map([[key, undefined]])), key).to.equal(true);
+      expect(markdownHighlightConfigChanged(new Map([[key, undefined]])), key).to.equal(true);
+    }
+  });
+
+  it('builds a fresh sanitizer policy only for sanitize mode', () => {
+    expect(markdownSanitizerPolicy({ htmlMode: 'escape', math: false, codeBlockHeader: true })).to.equal(null);
+    expect(markdownSanitizerPolicy({ htmlMode: 'trusted', math: true, codeBlockHeader: true })).to.equal(null);
+    for (const math of [false, true]) for (const codeBlockHeader of [false, true]) {
+      const policy = markdownSanitizerPolicy({ htmlMode: 'sanitize', math, codeBlockHeader });
+      expect(policy).to.deep.equal({
+        ADD_ATTR: ['target'],
+        FORBID_ATTR: ['style', 'data-lr-code-chrome'],
+        ...(codeBlockHeader ? { FORBID_TAGS: ['style'] } : {}),
+        ...(math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
+      });
+      expect(policy === markdownSanitizerPolicy({ htmlMode: 'sanitize', math, codeBlockHeader })).to.equal(false);
     }
   });
 });

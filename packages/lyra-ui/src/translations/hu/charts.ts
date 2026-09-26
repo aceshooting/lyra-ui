@@ -1,0 +1,64 @@
+// The `charts` slice of the hu translation catalog for @aceshooting/lyra-ui: strings owned exclusively by `src/components/charts/**`.
+// A side-effect-only module: a consumer writes a bare
+// `import '@aceshooting/lyra-ui/translations/hu/charts';` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- `scripts/check-translations.mjs` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
+// Regenerate the SHAPE (never the translations) with:
+//   node scripts/scaffold-translation.mjs hu --force
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
+
+const strings: LyraLocaleStrings = {
+  chartCategory: 'Kategória',
+  chartTotal: 'Összesen',
+  chartAxisTotal: 'Összesen ({axis})',
+  chartPrimaryAxis: 'Elsődleges tengely',
+  chartSecondaryAxis: 'Másodlagos tengely',
+  chartPointLabel: '{n}. pont',
+  chartPointCoordinates: 'x {x}, y {y}',
+  chartBubblePointCoordinates: 'x {x}, y {y}, sugár {radius}',
+  chartLabeledPoint: '{label}: {coordinates}',
+  chartTrendIncreasing: 'növekvő',
+  chartTrendDecreasing: 'csökkenő',
+  chartTrendFlat: 'stagnáló',
+  chartSummary: '{label}: {count} érték, tartomány: {min} – {max}, trend: {trend}',
+  chartSeriesNoData: '{label}: nincs adat',
+  chartSummaryWithData: 'Diagram ({type}). {summaries}.',
+  chartSummaryEmpty: 'Diagram ({type}) adatok nélkül.',
+  chartSummarySeparator: '. ',
+  chartData: 'Diagramadatok',
+  chartDataSampled: 'A generált adattábla legfeljebb 1000 rekordból álló mintát mutat. Az összes diagramadat eléréséhez adjon meg egyéni adattáblát.',
+  chartZoomUnavailable: 'A nagyítás nem érhető el, de az alapdiagram továbbra is elérhető.',
+  chartDataLabelsUnavailable: 'Az adatcímkék nem érhetők el, de az alapdiagram továbbra is elérhető.',
+  chartStackTotalsUnavailable: 'A halmozott összegek nem érhetők el, de az alapdiagram továbbra is elérhető.',
+  chartAnnotationsUnavailable: 'A diagramjegyzetek nem érhetők el, de az alapdiagram továbbra is elérhető.',
+  chartTypeLine: 'Vonal',
+  chartTypeBar: 'Oszlop',
+  chartTypeScatter: 'Pont',
+  chartTypePie: 'Kör',
+  chartTypeDoughnut: 'Perec',
+  chartTypeRadar: 'Radar',
+  chartTypePolarArea: 'Polárterület',
+  chartTypeBubble: 'Buborék',
+  boxPlotSeriesSummary: '{label}: {count} eloszlás, medián tartomány: {min} – {max}, medián trend: {trend}',
+  boxPlotSummaryWithData: 'Dobozdiagram. {summaries}.',
+  boxPlotSummaryEmpty: 'Dobozdiagram adatok nélkül.',
+  boxPlotData: 'Dobozdiagram adatai',
+  chartSeriesLabel: 'Adatsor',
+  boxPlotMin: 'Min.',
+  boxPlotQ1: 'Q1',
+  boxPlotMedian: 'Medián',
+  boxPlotQ3: 'Q3',
+  boxPlotMax: 'Max.',
+  boxPlot: 'Dobozdiagram',
+  histogramFrequency: 'Gyakoriság',
+  liteChartMarkSummary: '{series}, {label}: {value} ({index}/{total})',
+  liteChartBarLabel: '{series}, {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
+  liteChartCustomMarkSummary: '{content} ({index}/{total})',
+  chartMissingLibrary: 'A diagramok megjelenítéséhez ennek az összetevőnek szüksége van az opcionális „chart.js” csomagra.',
+  boxPlotMissingLibrary: 'A dobozdiagramok megjelenítéséhez ennek az összetevőnek szüksége van az opcionális dobozdiagram-csomagra.',
+};
+
+registerLyraLocale('hu', strings);

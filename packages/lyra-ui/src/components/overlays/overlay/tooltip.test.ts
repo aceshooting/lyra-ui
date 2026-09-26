@@ -1,8 +1,11 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import '../../forms/button/button.js';
+import '../../forms/icon-button/icon-button.js';
+import '../drawer/drawer.js';
 import './tooltip.js';
 
 const FORWARDER_TAG = 'test-tooltip-content-forwarder';
@@ -33,26 +36,6 @@ function descriptionProxy(el: LyraTooltip): HTMLSpanElement {
 
 function popup(el: LyraTooltip): HTMLElement {
   return el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
-}
-
-function composedFocusIsInside(target: HTMLElement): boolean {
-  const active = target.ownerDocument.activeElement;
-  return active === target || target.contains(active) || target.shadowRoot?.activeElement !== null;
-}
-
-async function focusByKeyboard(target: HTMLElement, owner?: HTMLElement): Promise<void> {
-  const anchor = owner ?? target;
-  const sentinel = target.ownerDocument.createElement('button');
-  sentinel.type = 'button';
-  sentinel.tabIndex = 0;
-  sentinel.setAttribute('aria-hidden', 'true');
-  sentinel.style.cssText = 'position:fixed;inline-size:1px;block-size:1px;opacity:0;';
-  anchor.before(sentinel);
-  sentinel.focus();
-  await sendKeys({ press: 'Tab' });
-  if (!composedFocusIsInside(target)) target.focus();
-  await waitUntil(() => composedFocusIsInside(target), 'keyboard focus reached the target');
-  sentinel.remove();
 }
 
 it('tracks flattened forwarded text and actionability through mutation, reassignment, and fallback', async () => {
@@ -241,7 +224,7 @@ it('opens from keyboard focus and lets Escape dismiss it without moving focus', 
   `)) as LyraTooltip;
   const trigger = el.querySelector('button')!;
 
-  await focusByKeyboard(trigger, el);
+  await focusByKeyboard(trigger);
   await el.updateComplete;
   expect(el.open).to.be.true;
   expect(trigger.ownerDocument.activeElement === trigger).to.be.true;
@@ -254,50 +237,382 @@ it('opens from keyboard focus and lets Escape dismiss it without moving focus', 
   expect(trigger.ownerDocument.activeElement === trigger).to.be.true;
 });
 
-it('supports opt-in focus-visible activation for pointer, script, keyboard, and shadow triggers', async () => {
-  const wrapper = (await fixture(html`
-    <div>
-      <button id="prior">Prior</button>
-      <lr-tooltip trigger="hover focus-visible" show-delay="0" hide-delay="0">
-        Keyboard help
-        <button id="direct" slot="trigger">Help</button>
-      </lr-tooltip>
-      <lr-tooltip trigger="focus-visible" show-delay="0" hide-delay="0">
+/** Lets a `show-delay="0"` tooltip act on a focus event before a "stays closed" assertion. */
+async function settle(el: LyraTooltip): Promise<void> {
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
+function describesWithProxy(el: LyraTooltip, node: HTMLElement): boolean {
+  const proxy = descriptionProxy(el);
+  const reflected = (node as HTMLElement & { ariaDescribedByElements?: Element[] | null })
+    .ariaDescribedByElements;
+  if (reflected?.includes(proxy)) return true;
+  return (node.getAttribute('aria-describedby') ?? '').split(/\s+/).includes(proxy.id);
+}
+
+async function clickCenter(target: Element): Promise<void> {
+  const rect = target.getBoundingClientRect();
+  await sendMouse({
+    type: 'click',
+    position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+  });
+  await resetMouse();
+}
+
+function blurActive(): void {
+  (document.activeElement as HTMLElement | null)?.blur?.();
+}
+
+describe('keyboard-only focus activation', () => {
+  afterEach(async () => {
+    blurActive();
+    await resetMouse();
+  });
+
+  it('T1 opens on Tab onto the slotted trigger with the default trigger, described and accessible', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip show-delay="0">Keyboard help<button type="button" slot="trigger">Help</button></lr-tooltip>
+    `);
+    const trigger = el.querySelector('button')!;
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el.open, 'keyboard focus opens the tooltip');
+    expect(describesWithProxy(el, trigger)).to.equal(true);
+    await expect(el).to.be.accessible();
+  });
+
+  it('T2 does not open on a real pointer click with trigger="focus"', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip trigger="focus" show-delay="0">Help<button type="button" slot="trigger">Help</button></lr-tooltip>
+    `);
+    let shows = 0;
+    el.addEventListener('lr-show', () => shows++);
+    await clickCenter(el.querySelector('button')!);
+    await settle(el);
+    expect(el.open).to.equal(false);
+    expect(shows).to.equal(0);
+  });
+
+  it('T3/T3b keeps closed when a click handler moves focus onto the trigger', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <button type="button" id="still" @mousedown=${(event: Event) => event.preventDefault()}>Open</button>
+        <button type="button" id="plain">Open</button>
+        <lr-tooltip show-delay="0">Help<button type="button" slot="trigger">Help</button></lr-tooltip>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    const trigger = el.querySelector('button')!;
+    const still = wrapper.querySelector<HTMLButtonElement>('#still')!;
+    const plain = wrapper.querySelector<HTMLButtonElement>('#plain')!;
+    still.addEventListener('click', () => trigger.focus());
+    plain.addEventListener('click', () => trigger.focus());
+
+    // The opener that takes no focus (the Safari/macOS-Firefox shape): the engine can still
+    // report the ring on the script focus that follows, so only the recorded press refuses it.
+    await focusByKeyboard(still);
+    await clickCenter(still);
+    await settle(el);
+    expect(document.activeElement === trigger, 'the handler focused the trigger').to.equal(true);
+    expect(el.open, 'a pointer-initiated script focus does not open').to.equal(false);
+
+    blurActive();
+    await clickCenter(plain);
+    await settle(el);
+    expect(document.activeElement === trigger, 'the handler focused the trigger').to.equal(true);
+    expect(el.open, 'a focusing opener behaves the same').to.equal(false);
+  });
+
+  it('T4 opens when Enter on an opener moves focus onto the trigger', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <button type="button" id="opener">Open</button>
+        <lr-tooltip show-delay="0">Help<button type="button" slot="trigger">Help</button></lr-tooltip>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    const trigger = el.querySelector('button')!;
+    const opener = wrapper.querySelector<HTMLButtonElement>('#opener')!;
+    opener.addEventListener('click', () => trigger.focus());
+    await focusByKeyboard(opener);
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(() => el.open, 'Enter-driven focus opens the tooltip');
+  });
+
+  it('T4b follows a drawer opened by pointer (closed) or by Enter (open) onto its initial focus', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-button id="opener">Open drawer</lr-button>
+        <lr-drawer label="Panel">
+          <lr-tooltip show-delay="0">
+            Close panel
+            <lr-icon-button slot="trigger" icon="more" aria-label="More"></lr-icon-button>
+          </lr-tooltip>
+        </lr-drawer>
+      </div>
+    `);
+    const opener = wrapper.querySelector<HTMLElement>('#opener')!;
+    const drawer = wrapper.querySelector('lr-drawer') as HTMLElement & { open: boolean; updateComplete: Promise<unknown> };
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    const iconButton = el.querySelector<HTMLElement>('lr-icon-button')!;
+    opener.addEventListener('click', () => {
+      drawer.open = true;
+    });
+    const focusedInside = () => {
+      const active = document.activeElement;
+      return active === iconButton || iconButton.contains(active);
+    };
+
+    await clickCenter(opener);
+    await waitUntil(focusedInside, 'the drawer moved initial focus onto the trigger');
+    await settle(el);
+    expect(el.open, 'tap-opened drawer initial focus does not open the tooltip').to.equal(false);
+    expect(describesWithProxy(el, iconButton.shadowRoot!.querySelector('button')!), 'still described').to.equal(true);
+
+    drawer.open = false;
+    await waitUntil(() => !focusedInside(), 'the drawer closed');
+    await focusByKeyboard(opener);
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(focusedInside, 'the drawer moved initial focus onto the trigger');
+    await waitUntil(() => el.open, 'Enter-opened drawer initial focus opens the tooltip');
+    drawer.open = false;
+    await drawer.updateComplete;
+  });
+
+  it('T4c opens after another overlay\'s Escape restores focus onto the trigger', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-tooltip show-delay="0" hide-delay="0">
+          Opens the panel
+          <lr-button slot="trigger">Open drawer</lr-button>
+        </lr-tooltip>
+        <lr-drawer label="Panel"><button type="button">Inside</button></lr-drawer>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    const opener = el.querySelector<HTMLElement>('lr-button')!;
+    const drawer = wrapper.querySelector('lr-drawer') as HTMLElement & { open: boolean };
+    opener.addEventListener('click', () => {
+      drawer.open = true;
+    });
+    const openerFocused = () => document.activeElement === opener;
+
+    await focusByKeyboard(opener);
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(() => drawer.open && !openerFocused() && !el.open, 'the drawer took focus');
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => !drawer.open && openerFocused(), 'Escape restored focus to the opener');
+    await waitUntil(() => el.open, 'keyboard-only restore opens the tooltip');
+
+    if (navigator.userAgent.includes('Firefox')) return; // Firefox reports no ring for this restore.
+    await el.hide();
+    blurActive();
+    await clickCenter(opener);
+    await waitUntil(() => drawer.open && !openerFocused(), 'the drawer took focus');
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => !drawer.open && openerFocused(), 'Escape restored focus to the opener');
+    await waitUntil(() => el.open, 'the restore follows the engine ring');
+  });
+
+  it('T5 evaluates the deepest focused control inside a shadow trigger', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip show-delay="0" hide-delay="0">
         Shadow help
-        <lr-button id="shadow" slot="trigger">Shadow</lr-button>
+        <lr-icon-button slot="trigger" icon="more" aria-label="More"></lr-icon-button>
       </lr-tooltip>
-    </div>
-  `)) as HTMLElement;
-  const prior = wrapper.querySelector<HTMLButtonElement>('#prior')!;
-  const direct = wrapper.querySelector<HTMLButtonElement>('#direct')!;
-  const shadow = wrapper.querySelector<HTMLElement>('#shadow')!;
-  const directTooltip = direct.closest('lr-tooltip') as LyraTooltip;
-  const shadowTooltip = shadow.closest('lr-tooltip') as LyraTooltip;
+    `);
+    const iconButton = el.querySelector<HTMLElement>('lr-icon-button')!;
+    await focusByKeyboard(iconButton);
+    await waitUntil(() => el.open, 'Tab into the inner control opens');
+    blurActive();
+    await waitUntil(() => !el.open, 'blur closes');
+    await focusAfterPointer(iconButton);
+    await settle(el);
+    expect(el.open).to.equal(false);
+  });
 
-  await resetMouse();
-  const priorRect = prior.getBoundingClientRect();
-  await sendMouse({ type: 'click', position: [Math.round(priorRect.x + 4), Math.round(priorRect.y + 4)] });
-  direct.focus();
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  expect(direct.matches(':focus-visible'), 'pointer focus is not keyboard-visible').to.be.false;
-  expect(directTooltip.open, 'programmatic focus does not open a focus-visible tooltip').to.be.false;
+  it('T6 applies the same gate to a for= trigger', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <button type="button" id="for-trigger">Help</button>
+        <lr-tooltip for="for-trigger" show-delay="0" hide-delay="0">Help</lr-tooltip>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    const trigger = wrapper.querySelector<HTMLButtonElement>('#for-trigger')!;
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el.open, 'keyboard focus opens');
+    blurActive();
+    await waitUntil(() => !el.open, 'blur closes');
+    await focusAfterPointer(trigger);
+    await settle(el);
+    expect(el.open).to.equal(false);
+  });
 
-  direct.blur();
-  prior.focus();
-  await sendKeys({ press: 'Tab' });
-  await waitUntil(() => direct.matches(':focus-visible'), 'keyboard Tab makes the trigger focus-visible');
-  await waitUntil(() => directTooltip.open, 'keyboard-visible focus opens the tooltip');
-  await directTooltip.hide();
+  it('T7 leaves hover independent of pointer focus', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip show-delay="0" hide-delay="0">Help<button type="button" slot="trigger">Help</button></lr-tooltip>
+    `);
+    const trigger = el.querySelector('button')!;
+    await focusAfterPointer(trigger);
+    await settle(el);
+    expect(el.open).to.equal(false);
+    await hoverUntilMatched(trigger, 'the pointer reached the trigger');
+    await waitUntil(() => el.open, 'hover opens');
+    await resetMouse();
+    await waitUntil(() => !el.open, 'mouseleave closes despite pointer focus');
+    expect(document.activeElement === trigger, 'focus stayed on the trigger').to.equal(true);
+  });
 
-  const innerShadowButton = shadow.shadowRoot?.querySelector('button');
-  expect(innerShadowButton).to.exist;
-  await resetMouse();
-  const nextPriorRect = prior.getBoundingClientRect();
-  await sendMouse({ type: 'click', position: [Math.round(nextPriorRect.x + 4), Math.round(nextPriorRect.y + 4)] });
-  shadow.focus();
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  expect(innerShadowButton!.matches(':focus-visible'), 'programmatic focus inside a shadow trigger is not keyboard-visible').to.be.false;
-  expect(shadowTooltip.open, 'the focus-visible check reaches the actual shadow focus target').to.be.false;
+  it('T8 does not reopen after Escape from actionable content restores focus', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip show-delay="0" hide-delay="0">
+        <button type="button" slot="trigger">Help</button>
+        <button type="button" id="action">Action</button>
+      </lr-tooltip>
+    `);
+    const trigger = el.querySelector<HTMLButtonElement>('[slot="trigger"]')!;
+    const action = el.querySelector<HTMLButtonElement>('#action')!;
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el.open, 'keyboard focus opens');
+    action.focus();
+    await el.updateComplete;
+    expect(el.open, 'focus inside interactive content retains it').to.equal(true);
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => !el.open && document.activeElement === trigger, 'Escape closes and restores');
+    await settle(el);
+    expect(el.open, 'the restore does not reopen').to.equal(false);
+  });
+
+  it('T9 keeps the hover focus default', async () => {
+    const el = await fixture<LyraTooltip>(html`<lr-tooltip></lr-tooltip>`);
+    expect(el.trigger).to.equal('hover focus');
+  });
+
+  it('T10 keeps the gate across a reconnect', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div><lr-tooltip show-delay="0" hide-delay="0">Help<button type="button" slot="trigger">Help</button></lr-tooltip></div>
+    `);
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    const trigger = el.querySelector('button')!;
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el.open);
+    blurActive();
+    await waitUntil(() => !el.open);
+    el.remove();
+    wrapper.append(el);
+    await el.updateComplete;
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el.open, 'keyboard focus opens after reconnect');
+    blurActive();
+    await waitUntil(() => !el.open);
+    await focusAfterPointer(trigger);
+    await settle(el);
+    expect(el.open).to.equal(false);
+  });
+
+  it('T11 opens when Tab re-enters the document from a child frame after a pointer press', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <button type="button" id="before">Before</button>
+        <iframe srcdoc="<button>in</button>" style="block-size: 60px"></iframe>
+        <lr-tooltip show-delay="0">Help<button type="button" slot="trigger">Help</button></lr-tooltip>
+      </div>
+    `);
+    const frame = wrapper.querySelector('iframe')!;
+    await waitUntil(() => frame.contentDocument?.querySelector('button'), 'the frame loaded');
+    const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+    const trigger = el.querySelector('button')!;
+    await clickCenter(wrapper.querySelector('#before')!);
+    const inner = frame.contentDocument!.querySelector('button')!;
+    const frameRect = frame.getBoundingClientRect();
+    const innerRect = inner.getBoundingClientRect();
+    await sendMouse({
+      type: 'click',
+      position: [
+        Math.round(frameRect.left + innerRect.left + innerRect.width / 2),
+        Math.round(frameRect.top + innerRect.top + innerRect.height / 2),
+      ],
+    });
+    await resetMouse();
+    for (let press = 0; press < 3 && document.activeElement !== trigger; press++) {
+      await sendKeys({ press: 'Tab' });
+    }
+    expect(document.activeElement === trigger, 'Tab left the frame onto the trigger').to.equal(true);
+    await waitUntil(() => el.open, 're-entry is judged by the engine ring');
+  });
+
+  it('T12 pointer focus cancels no pending hide; keyboard focus does', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip show-delay="0" hide-delay="200">Help<button type="button" slot="trigger">Help</button></lr-tooltip>
+    `);
+    const trigger = el.querySelector('button')!;
+    await hoverUntilMatched(trigger, 'the pointer reached the trigger');
+    await waitUntil(() => el.open, 'hover opens');
+    await resetMouse();
+    await focusAfterPointer(trigger);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(el.open, 'pointer focus did not cancel the pending hide').to.equal(false);
+
+    blurActive();
+    await hoverUntilMatched(trigger, 'the pointer reached the trigger');
+    await waitUntil(() => el.open, 'hover opens');
+    await resetMouse();
+    await focusByKeyboard(trigger);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(el.open, 'keyboard focus holds it open').to.equal(true);
+  });
+
+  it('T13 describes the trigger on any focus without opening it', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <button type="button" id="outside">Outside</button>
+        <lr-tooltip show-delay="0" hide-delay="0">Help<button type="button" slot="trigger">Help</button></lr-tooltip>
+        <lr-tooltip trigger="hover" show-delay="0" hide-delay="0">Hover<button type="button" slot="trigger">Hover</button></lr-tooltip>
+      </div>
+    `);
+    const [el, hoverOnly] = Array.from(wrapper.querySelectorAll<LyraTooltip>('lr-tooltip'));
+    const trigger = el!.querySelector('button')!;
+    const outside = wrapper.querySelector<HTMLButtonElement>('#outside')!;
+
+    await focusAfterPointer(trigger);
+    await settle(el!);
+    expect(el!.open).to.equal(false);
+    expect(describesWithProxy(el!, trigger), 'pointer focus describes').to.equal(true);
+    await expect(wrapper).to.be.accessible();
+    outside.focus();
+    await el!.updateComplete;
+    expect(describesWithProxy(el!, trigger), 'leaving the trigger releases').to.equal(false);
+
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el!.open, 'keyboard focus opens');
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => !el!.open, 'Escape closes');
+    expect(document.activeElement === trigger).to.equal(true);
+    expect(describesWithProxy(el!, trigger), 'the description stays while focused').to.equal(true);
+
+    const hoverTrigger = hoverOnly!.querySelector('button')!;
+    await focusAfterPointer(hoverTrigger);
+    await settle(hoverOnly!);
+    expect(describesWithProxy(hoverOnly!, hoverTrigger), 'hover-only pointer focus').to.equal(false);
+    await focusByKeyboard(hoverTrigger);
+    await settle(hoverOnly!);
+    expect(describesWithProxy(hoverOnly!, hoverTrigger), 'hover-only keyboard focus').to.equal(false);
+  });
+
+  it('clears a focus description when the tooltip becomes disabled', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip show-delay="0">Help<button type="button" slot="trigger">Help</button></lr-tooltip>
+    `);
+    const trigger = el.querySelector('button')!;
+    await focusAfterPointer(trigger);
+    await settle(el);
+    expect(describesWithProxy(el, trigger)).to.equal(true);
+    el.disabled = true;
+    await el.updateComplete;
+    expect(describesWithProxy(el, trigger)).to.equal(false);
+  });
 });
 
 it('keeps composed trigger and actionable-popup focus transitions inside the interaction', async () => {
@@ -319,7 +634,7 @@ it('keeps composed trigger and actionable-popup focus transitions inside the int
   const second = el.querySelector<HTMLButtonElement>('#second-trigger-action')!;
   const action = el.querySelector<HTMLButtonElement>('#tooltip-action')!;
 
-  await focusByKeyboard(first, el);
+  await focusByKeyboard(first);
   await waitUntil(() => el.open);
   second.focus();
   await new Promise<void>((resolve) => queueMicrotask(resolve));
@@ -457,11 +772,7 @@ it('cancels a delayed transition in its scheduling window and uses the adopted o
   let topCancellations = 0;
   let frameSchedules = 0;
 
-  // Establish the browser's real keyboard-focus-visible state before replacing the timer APIs
-  // below; the assertions in this test count only tooltip transition timers.
-  await focusByKeyboard(trigger, el);
-  trigger.blur();
-
+  // The subject is timers and realms, not focus modality, so the ungated hover path drives it.
   window.setTimeout = ((handler: TimerHandler): number => {
     topSchedules++;
     const handle = ++nextHandle;
@@ -482,15 +793,13 @@ it('cancels a delayed transition in its scheduling window and uses the adopted o
   }) as typeof frameWindow.clearTimeout;
 
   try {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
-    trigger.focus();
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
     expect(topSchedules).to.equal(1);
     frameDocument.body.append(el);
     await el.updateComplete;
     expect(topCancellations).to.equal(1);
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
-    trigger.focus();
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
     expect(frameSchedules + topSchedules).to.equal(2);
     for (const [handle, callback] of [...frameTimers, ...topTimers]) {
       frameTimers.delete(handle);
@@ -586,7 +895,7 @@ it('resolves show-delay from the --show-delay custom property when no attribute 
   expect(el.showDelay).to.equal(150);
 
   const trigger = el.querySelector('button')!;
-  await focusByKeyboard(trigger, el);
+  await focusByKeyboard(trigger);
   await waitUntil(() => el.open, 'should open well before the 150ms default show-delay', {
     interval: 5,
     timeout: 120,

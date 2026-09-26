@@ -1,4 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { nothing } from "lit";
+import { sendKeys } from "@web/test-runner-commands";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./thread-list.js";
 import "../../overlays/chip/chip.js";
@@ -4055,5 +4057,406 @@ describe("error state", () => {
     )) as LyraThreadList;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe("row-action overlays escape the virtual viewport", () => {
+  const rowThreads = Array.from({ length: 5 }, (_, i) => ({
+    id: `r${i}`,
+    title: `Row thread ${i}`,
+    timestamp: new Date(now.getTime() - i * 60_000),
+  }));
+
+  function renderRowActions(options: { strategy?: string; hideDuration?: string } = {}) {
+    return (thread: { id: string }) => html`
+      <lr-dropdown
+        placement="bottom-end"
+        positioning-strategy=${options.strategy ?? nothing}
+        style="--lr-transition-fast:0ms; --hide-duration:${options.hideDuration ?? "0ms"}"
+      >
+        <button slot="trigger" type="button" aria-label="Actions for ${thread.id}">⋮</button>
+        <lr-menu label="Conversation actions">
+          <lr-menu-item value="rename">Rename</lr-menu-item>
+          <lr-menu-item value="delete">Delete</lr-menu-item>
+        </lr-menu>
+      </lr-dropdown>
+    `;
+  }
+
+  async function mountList(
+    options: { hostStyle?: string; dir?: string; strategy?: string; hideDuration?: string; data?: typeof rowThreads } = {}
+  ) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${options.dir ?? "ltr"} style="block-size:100px; inline-size:320px; display:flex; flex-direction:column">
+        <lr-thread-list
+          grouping="none"
+          style="flex:1; min-block-size:0; ${options.hostStyle ?? ""}"
+          .threads=${options.data ?? rowThreads}
+          .renderActions=${renderRowActions(options)}
+        ></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-thread-list") as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    return { wrapper, el };
+  }
+
+  function rowMenu(el: LyraThreadList, id: string) {
+    const row = dataRow(el, id);
+    const dropdown = row.querySelector("lr-dropdown") as LyraDropdown;
+    const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    const trigger = dropdown.querySelector<HTMLElement>('[slot="trigger"]')!;
+    const items = [...dropdown.querySelectorAll<HTMLElement>("lr-menu-item")];
+    const menu = dropdown.querySelector("lr-menu")!;
+    return { row, dropdown, popup, trigger, items, menu };
+  }
+
+  async function openRowMenu(el: LyraThreadList, id: string) {
+    const parts = rowMenu(el, id);
+    await parts.dropdown.show();
+    await waitUntil(
+      () => parts.popup.style.left !== "" && parts.popup.getBoundingClientRect().height > 0,
+      "the row menu is placed"
+    );
+    await nextFrame();
+    return parts;
+  }
+
+  function hits(item: HTMLElement): boolean {
+    const rect = item.getBoundingClientRect();
+    return deepElementFromPoint(document, rect.left + rect.width / 2, rect.top + rect.height / 2).includes(item);
+  }
+
+  async function referenceMenuWidth(): Promise<number> {
+    const reference = await fixture<LyraDropdown>(html`
+      <lr-dropdown style="--lr-transition-fast:0ms">
+        <button slot="trigger" type="button">Reference</button>
+        <lr-menu label="Conversation actions">
+          <lr-menu-item value="rename">Rename</lr-menu-item>
+          <lr-menu-item value="delete">Delete</lr-menu-item>
+        </lr-menu>
+      </lr-dropdown>
+    `);
+    const popup = reference.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    await reference.show();
+    await waitUntil(() => popup.style.left !== "");
+    const width = popup.getBoundingClientRect().width;
+    await reference.hide({ focusTrigger: false });
+    reference.remove();
+    return width;
+  }
+
+  async function expectEscaped(
+    el: LyraThreadList,
+    id: string,
+    rtl: boolean,
+    expectBelow: boolean,
+    unpromotedWidth: number
+  ) {
+    const { popup, trigger, items, menu } = await openRowMenu(el, id);
+    const viewportRect = viewportEl(el).getBoundingClientRect();
+    expect(popup.matches(":popover-open"), "the trapped row menu is promoted").to.equal(true);
+    const available = parseFloat(popup.style.getPropertyValue("--lr-positioner-available-block-size"));
+    expect(available, "the available block size is the viewport's, not the list's").to.be.greaterThan(100);
+    const menuList = menu.shadowRoot!.querySelector<HTMLElement>('[role="menu"]') ?? menu;
+    expect(menuList.scrollHeight, "the menu does not scroll").to.be.at.most(menuList.clientHeight + 1);
+    expect(popup.scrollHeight).to.be.at.most(popup.clientHeight + 1);
+    for (const item of items) expect(hits(item), `${item.textContent} is hit-testable`).to.equal(true);
+    const lastRect = items[items.length - 1]!.getBoundingClientRect();
+    if (expectBelow) {
+      expect(lastRect.top + lastRect.height / 2, "an item lies below the list viewport").to.be.greaterThan(viewportRect.bottom);
+    }
+    const popupRect = popup.getBoundingClientRect();
+    const triggerRect = trigger.getBoundingClientRect();
+    if (rtl) expect(popupRect.left, "inline-end edges align (RTL)").to.be.closeTo(triggerRect.left, 1.5);
+    else expect(popupRect.right, "inline-end edges align").to.be.closeTo(triggerRect.right, 1.5);
+    expect(popupRect.left, "the written left is honoured").to.be.closeTo(parseFloat(popup.style.left), 0.5);
+    expect(popupRect.width, "no stretch from the UA popover rules").to.be.closeTo(unpromotedWidth, 0.5);
+    return { popup, trigger, items, popupRect, triggerRect };
+  }
+
+  afterEach(() => {
+    document.documentElement.removeAttribute("dir");
+  });
+
+  it("opens row 1's menu at full size below its trigger with no cascade (the report)", async () => {
+    const width = await referenceMenuWidth();
+    const { el } = await mountList();
+    const { popupRect, triggerRect, popup } = await expectEscaped(el, "r0", false, true, width);
+    expect(popupRect.top, "row 1 opens below its trigger").to.be.at.least(triggerRect.bottom - 1);
+    await rowMenu(el, "r0").dropdown.hide({ focusTrigger: false });
+    await waitUntil(() => !popup.hasAttribute("popover"));
+  });
+
+  it("opens with --lr-positioning-strategy: fixed on the host", async () => {
+    const width = await referenceMenuWidth();
+    const { el } = await mountList({ hostStyle: "--lr-positioning-strategy: fixed" });
+    await expectEscaped(el, "r0", false, true, width);
+    await rowMenu(el, "r0").dropdown.hide({ focusTrigger: false });
+  });
+
+  it("opens under a right-to-left fixture", async () => {
+    const width = await referenceMenuWidth();
+    const { el } = await mountList({ hostStyle: "--lr-positioning-strategy: fixed", dir: "rtl" });
+    await expectEscaped(el, "r0", true, true, width);
+    await rowMenu(el, "r0").dropdown.hide({ focusTrigger: false });
+  });
+
+  it("opens under a right-to-left root without the UA inset discarding left", async () => {
+    const width = await referenceMenuWidth();
+    document.documentElement.dir = "rtl";
+    try {
+      const { el } = await mountList({ hostStyle: "--lr-positioning-strategy: fixed", dir: "rtl" });
+      await expectEscaped(el, "r0", true, true, width);
+      await rowMenu(el, "r0").dropdown.hide({ focusTrigger: false });
+    } finally {
+      document.documentElement.removeAttribute("dir");
+    }
+  });
+
+  it("opens row 2's menu at full size", async () => {
+    const width = await referenceMenuWidth();
+    const { el } = await mountList({ hostStyle: "--lr-positioning-strategy: fixed" });
+    await expectEscaped(el, "r1", false, false, width);
+    await rowMenu(el, "r1").dropdown.hide({ focusTrigger: false });
+  });
+
+  it("keeps an explicit positioning-strategy=absolute inside the row", async () => {
+    const { el } = await mountList({ strategy: "absolute" });
+    const { popup, dropdown } = await openRowMenu(el, "r0");
+    expect(popup.style.position).to.equal("absolute");
+    expect(popup.matches(":popover-open"), "an explicit value wins").to.equal(false);
+    await dropdown.hide({ focusTrigger: false });
+  });
+
+  it("stays promoted through the exit transition and releases once settled, returning focus", async () => {
+    const { el } = await mountList({ hideDuration: "150ms" });
+    const { popup, dropdown, trigger } = await openRowMenu(el, "r0");
+    expect(popup.matches(":popover-open")).to.equal(true);
+    const hideStarted = oneEvent(dropdown, "lr-hide");
+    const afterHide = oneEvent(dropdown, "lr-after-hide");
+    const hiding = dropdown.hide();
+    await hideStarted;
+    expect(popup.matches(":popover-open"), "still in the top layer mid-exit").to.equal(true);
+    await afterHide;
+    await hiding;
+    await waitUntil(() => !popup.hasAttribute("popover"), "settling releases the promotion");
+    expect(popup.hasAttribute("data-lr-top-layer")).to.equal(false);
+    expect(popup.matches(":popover-open")).to.equal(false);
+    await waitUntil(() => trigger.matches(":focus"), "focus returns to the trigger");
+  });
+
+  it("passes axe with a promoted row menu open", async () => {
+    const { el } = await mountList();
+    const { dropdown } = await openRowMenu(el, "r0");
+    await expect(el).to.be.accessible();
+    await dropdown.hide({ focusTrigger: false });
+  });
+
+  it("re-promotes and re-aligns a menu whose row moves in a re-sort", async () => {
+    const { el } = await mountList();
+    const { popup, dropdown } = await openRowMenu(el, "r0");
+    expect(popup.matches(":popover-open")).to.equal(true);
+    // Moved to second place in both input order and recency, whichever the list sorts by.
+    el.threads = [
+      { ...rowThreads[1]!, timestamp: new Date(now.getTime() + 60_000) },
+      { ...rowThreads[0]!, timestamp: now },
+      ...rowThreads.slice(2),
+    ];
+    await el.updateComplete;
+    await waitUntil(() => renderedThreadIds(el)[1] === "r0", "r0 moves to the second row");
+    const moved = rowMenu(el, "r0");
+    expect(moved.dropdown === dropdown, "the keyed row keeps its dropdown").to.equal(true);
+    await waitUntil(() => popup.matches(":popover-open"), "the moved menu is promoted again");
+    await waitUntil(
+      () => Math.abs(popup.getBoundingClientRect().right - moved.trigger.getBoundingClientRect().right) < 1.5,
+      "the menu follows the moved trigger"
+    );
+    await dropdown.hide({ focusTrigger: false });
+  });
+
+  it("opens a row menu's submenu outside the list, above its parent, and closes it first on Escape", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="block-size:40px; inline-size:220px; display:flex; flex-direction:column">
+        <lr-thread-list
+          grouping="none"
+          style="flex:1; min-block-size:0"
+          .threads=${rowThreads}
+          .renderActions=${(thread: { id: string }) => html`
+            <lr-dropdown placement="bottom-end" style="--lr-transition-fast:0ms">
+              <button slot="trigger" type="button" aria-label="Actions for ${thread.id}">⋮</button>
+              <lr-menu label="Conversation actions">
+                <lr-menu-item value="rename">Rename</lr-menu-item>
+                <lr-menu-item value="move" class="move">
+                  Move to
+                  <lr-menu slot="submenu">
+                    <lr-menu-item value="work">Work</lr-menu-item>
+                    <lr-menu-item value="home">Home</lr-menu-item>
+                  </lr-menu>
+                </lr-menu-item>
+              </lr-menu>
+            </lr-dropdown>
+          `}
+        ></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-thread-list") as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const { dropdown, popup } = await openRowMenu(el, "r0");
+    expect(popup.matches(":popover-open")).to.equal(true);
+    const move = dropdown.querySelector(".move") as HTMLElement & {
+      openSubmenu(focus?: string): void;
+      submenuOpen: boolean;
+    };
+    move.openSubmenu("first");
+    await waitUntil(() => move.submenuOpen, "the submenu opens");
+    const subItems = [...move.querySelectorAll<HTMLElement>('lr-menu[slot="submenu"] lr-menu-item')];
+    const viewportRect = viewportEl(el).getBoundingClientRect();
+    const outside = subItems.some((item) => {
+      const rect = item.getBoundingClientRect();
+      return rect.top + rect.height / 2 > viewportRect.bottom || rect.left + rect.width / 2 > viewportRect.right;
+    });
+    expect(outside, "the submenu lies outside the list viewport").to.equal(true);
+    const surface = (move.querySelector('lr-menu[slot="submenu"]') as HTMLElement).shadowRoot!.querySelector<HTMLElement>(".submenu-surface")!;
+    expect(surface.scrollHeight, "the submenu is not squeezed to the list's box").to.be.at.most(surface.clientHeight + 1);
+    await waitUntil(() => subItems[0]!.matches(":focus") || subItems[0]!.matches(":focus-within"), "focus enters the submenu");
+    await sendKeys({ press: "Escape" });
+    await waitUntil(() => !move.submenuOpen, "Escape closes the submenu");
+    expect(dropdown.open, "the parent menu stays open").to.equal(true);
+    await sendKeys({ press: "Escape" });
+    await waitUntil(() => !dropdown.open, "a second Escape closes the menu");
+  });
+
+  it("falls back to an untransformed row where the native Popover API is absent", async () => {
+    const original = CSS.supports;
+    CSS.supports = function (this: typeof CSS, ...args: unknown[]) {
+      if (args.length === 1 && args[0] === "selector(:popover-open)") return false;
+      return (original as (...a: unknown[]) => boolean).apply(this, args);
+    } as typeof CSS.supports;
+    try {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div>
+          <div style="block-size:100px; inline-size:320px; display:flex; flex-direction:column">
+            <lr-thread-list
+              grouping="none"
+              style="flex:1; min-block-size:0"
+              .threads=${rowThreads}
+              .renderActions=${renderRowActions()}
+            ></lr-thread-list>
+          </div>
+          <div id="later" style="position:relative; z-index:2; block-size:160px; background:white">Later content</div>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-thread-list") as LyraThreadList;
+      await el.updateComplete;
+      el.threads = [...rowThreads];
+      const base = viewportEl(el);
+      await waitUntil(() => base.hasAttribute("data-lr-no-top-layer"), "the fallback marker is rendered");
+      const { row, popup, items, dropdown } = rowMenu(el, "r0");
+      const rowElement = row.closest('[part="row"]') as HTMLElement;
+      const topBefore = rowElement.getBoundingClientRect().top;
+      await openRowMenu(el, "r0");
+      expect(popup.matches(":popover-open"), "no promotion without the native API").to.equal(false);
+      expect(popup.hasAttribute("popover")).to.equal(false);
+      expect(getComputedStyle(rowElement).transform).to.equal("none");
+      expect(rowElement.getBoundingClientRect().top).to.be.closeTo(topBefore, 0.5);
+      const later = wrapper.querySelector("#later")!.getBoundingClientRect();
+      const last = items[items.length - 1]!.getBoundingClientRect();
+      expect(last.top + last.height / 2).to.be.greaterThan(base.getBoundingClientRect().bottom);
+      expect(last.top, "the menu overlaps the later sibling").to.be.lessThan(later.bottom);
+      for (const item of items) expect(hits(item), `${item.textContent} paints above later content`).to.equal(true);
+      await dropdown.hide({ focusTrigger: false });
+      await waitUntil(() => getComputedStyle(rowElement).transform !== "none", "the row transform returns after close");
+    } finally {
+      CSS.supports = original;
+    }
+  });
+
+  it("hides a promoted menu while its trigger is scrolled out of view", async () => {
+    const width = await referenceMenuWidth();
+    const { el } = await mountList();
+    const { popup, trigger, items } = await expectEscaped(el, "r0", false, true, width);
+    const base = viewportEl(el);
+    const itemRect = items[0]!.getBoundingClientRect();
+    const scrollBy = trigger.getBoundingClientRect().bottom - base.getBoundingClientRect().top + 2;
+    base.scrollTop = scrollBy;
+    await waitUntil(() => getComputedStyle(popup).visibility === "hidden", "the detached menu hides");
+    expect(dataRow(el, "r0"), "the row is still rendered").to.exist;
+    const hit = deepElementFromPoint(document, itemRect.left + itemRect.width / 2, itemRect.top + itemRect.height / 2);
+    expect(hit.includes(items[0]!)).to.equal(false);
+    base.scrollTop = 0;
+    await waitUntil(() => getComputedStyle(popup).visibility === "visible", "the menu returns with its trigger");
+    await waitUntil(
+      () => Math.abs(popup.getBoundingClientRect().right - trigger.getBoundingClientRect().right) < 1.5
+    );
+    items[0]!.focus();
+    base.scrollTop = scrollBy;
+    await waitUntil(() => getComputedStyle(popup).visibility === "hidden");
+    await waitUntil(() => !items.some((item) => item.matches(":focus")), "focus never stays on a hidden item");
+    base.scrollTop = 0;
+    await rowMenu(el, "r0").dropdown.hide({ focusTrigger: false });
+  });
+
+  it("does not hide a public place() popup when its anchor scrolls away", async () => {
+    const { place } = await import("../../../internal/positioner.js");
+    const wrap = await fixture<HTMLElement>(html`
+      <div style="block-size:60px; overflow:auto; transform:translateY(0)">
+        <button id="anchor" style="block-size:24px">a</button>
+        <div style="block-size:200px"></div>
+        <div id="popup">p</div>
+      </div>
+    `);
+    const popup = wrap.querySelector<HTMLElement>("#popup")!;
+    const stop = place(wrap.querySelector<HTMLElement>("#anchor")!, popup);
+    await waitUntil(() => popup.style.left !== "");
+    wrap.scrollTop = 100;
+    await nextFrame();
+    await nextFrame();
+    expect(popup.style.getPropertyValue("visibility")).to.equal("");
+    stop();
+  });
+
+  it("opens a context menu inside a virtual row at full size in LTR and RTL", async () => {
+    await import("../../overlays/context-menu/context-menu.js");
+    for (const dir of ["ltr", "rtl"]) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${dir} style="block-size:100px; inline-size:320px; display:flex; flex-direction:column">
+          <lr-thread-list
+            grouping="none"
+            style="flex:1; min-block-size:0"
+            .threads=${rowThreads}
+            .renderActions=${(thread: { id: string }) => html`
+              <lr-context-menu label="Row menu">
+                <button slot="trigger" type="button" aria-label="Context for ${thread.id}">⋯</button>
+                <lr-menu-item value="rename">Rename</lr-menu-item>
+                <lr-menu-item value="delete">Delete</lr-menu-item>
+              </lr-context-menu>
+            `}
+          ></lr-thread-list>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-thread-list") as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+      const contextMenu = dataRow(el, "r0").querySelector("lr-context-menu") as HTMLElement & {
+        showAt(point: { x: number; y: number; contextElement?: Element }): void;
+        open: boolean;
+      };
+      const trigger = contextMenu.querySelector<HTMLElement>('[slot="trigger"]')!;
+      const shell = contextMenu.shadowRoot!.querySelector("lr-dropdown") as LyraDropdown;
+      const popup = shell.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+      const triggerRect = trigger.getBoundingClientRect();
+      contextMenu.showAt({ x: triggerRect.left + 2, y: triggerRect.bottom - 2, contextElement: trigger });
+      await waitUntil(() => popup.style.left !== "" && popup.matches(":popover-open"), `promoted (${dir})`);
+      const items = [...contextMenu.querySelectorAll<HTMLElement>("lr-menu-item")];
+      await waitUntil(() => items.every((item) => item.getBoundingClientRect().height > 0));
+      for (const item of items) expect(hits(item), `${item.textContent} is hit-testable (${dir})`).to.equal(true);
+      const popupRect = popup.getBoundingClientRect();
+      expect(popupRect.left).to.be.closeTo(parseFloat(popup.style.left), 0.5);
+      await shell.hide({ focusTrigger: false });
+      wrapper.remove();
+    }
   });
 });

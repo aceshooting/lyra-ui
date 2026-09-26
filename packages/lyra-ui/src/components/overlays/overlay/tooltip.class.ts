@@ -85,8 +85,9 @@ function safelyComposedContains(container: Element, candidate: unknown): boolean
   }
 }
 
-/** One keyword of the space-separated `trigger` list. */
-export type LyraTooltipTrigger = 'hover' | 'focus' | 'focus-visible' | 'click' | 'manual';
+/** One keyword of the space-separated `trigger` list. `focus` means keyboard focus: the focused
+ *  control must match `:focus-visible` and the last input must not have been a pointer press. */
+export type LyraTooltipTrigger = 'hover' | 'focus' | 'click' | 'manual';
 
 export type { LyraArrowPlacement, OverlayVirtualRect, PlaceStrategy };
 
@@ -143,9 +144,13 @@ export interface LyraTooltipEventMap {
  * live positioning anchor force-closes the tooltip, while a remaining slotted/`for` fallback is
  * rebound and keeps the tooltip open.
  *
- * `trigger` is a space-separated list of `hover`, `focus`, `focus-visible`, `click` and `manual`,
- * defaulting to `"hover focus"`. `focus` preserves the any-focus behavior; `focus-visible` opts
- * into keyboard-visible focus only, including for a focus target inside a shadow trigger.
+ * `trigger` is a space-separated list of `hover`, `focus`, `click` and `manual`, defaulting to
+ * `"hover focus"`. `focus` means keyboard focus: the focused element must match `:focus-visible`
+ * and the last input must not have been a pointer press. Pointer, touch and scripted focus that
+ * follows them do not open it, but any focus inside the trigger still wires its description; use
+ * `show()` for scripted reveals. This narrows `wa-tooltip`/`sl-tooltip` focus activation
+ * deliberately, following the WAI-ARIA tooltip pattern. The check reads the control that actually
+ * holds focus, including one inside a shadow-root trigger.
  * `manual` (in the list, or the standalone `manual` boolean) means only
  * `show()`/`hide()`/`open` move it. `show-delay` and `hide-delay` are independent, so a tooltip
  * can linger after the pointer leaves without also being slow to appear.
@@ -153,14 +158,17 @@ export interface LyraTooltipEventMap {
  * Content/trigger observers and delayed transitions bind to the current owner window; disconnect
  * and cross-document adoption cancel the old realm before reconnect creates replacements.
  *
- * While open, the trigger's `aria-describedby` targets a hidden text proxy in this component's
+ * While open, and whenever focus is inside the trigger (when `focus` is among the active
+ * keywords), the trigger's `aria-describedby` targets a hidden text proxy in this component's
  * light DOM rather than the shadow-private popup. Native triggers can resolve that ID directly.
  * A description is only announced on the node that actually holds focus, so a custom-element
  * trigger also has the proxy applied to its first focusable descendant (through slots and nested
  * open shadow roots) — reaching `<lr-select>`, `<lr-switch>`, `<lr-chip>` and consumer-authored
  * wrappers, not only the components that forward their own host `aria-describedby`. Descendants
  * inside a shadow root are linked through `ariaDescribedByElements`, where the serialized internal
- * attribute is intentionally empty; descriptions the control already had are kept and restored.
+ * attribute is intentionally empty; descriptions the control already had are kept, merged while
+ * described and restored once the tooltip is neither open nor focused, when the trigger is
+ * replaced, or when the tooltip disconnects.
  * Bubbling `focusin`/`focusout` observes those real composed targets, and moving focus within the
  * trigger or between interactive popup controls does not spuriously close the tooltip.
  *
@@ -249,7 +257,12 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
   /**
    * Space-separated interaction list: any of `hover`, `focus`, `click`, `manual`. `manual` (or an
-   * empty list) leaves the tooltip entirely under programmatic control.
+   * empty list) leaves the tooltip entirely under programmatic control. `focus` means keyboard
+   * focus: the focused element must match `:focus-visible` and the last input must not have been
+   * a pointer press. Pointer, touch and scripted focus that follows them do not open it, but any
+   * focus inside the trigger still wires its description; use `show()` for scripted reveals. This
+   * narrows `wa-tooltip`/`sl-tooltip` focus activation deliberately, following the WAI-ARIA
+   * tooltip pattern.
    */
   @property() trigger = 'hover focus';
   /** Equivalent to including `manual` in `trigger`; kept because it reads better as a boolean
@@ -291,7 +304,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    * CSS positioning scheme the popup is laid out with -- the same property, spelled the same way,
    * as on `<lr-popover>`, `<lr-dropdown>` and `<lr-select>`. `absolute` (this component's mirrored
    * default) positions against the nearest containing block and scrolls with it; `fixed` positions
-   * against the viewport and escapes most clipping ancestors. An unsupported value resolves back
+   * against the viewport and escapes most clipping ancestors, and escapes transformed, filtered or
+   * contained ancestors by promoting the popup into the browser top layer where the native Popover
+   * API exists (otherwise, as before, such an ancestor contains and clips it). An unsupported
+   * value resolves back
    * to the default. Changes apply live while open.
    * This property reports only the instance's own authored value (or the mirrored default); the
    * popup is actually placed with the `--lr-positioning-strategy` cascading custom property
@@ -458,8 +474,16 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.positioningDirection = direction;
     this.syncNamedTriggerMode(false);
     if ((changed.has('manual') || changed.has('trigger')) && this.isManual) this.cancelPendingTransition();
+    if ((changed.has('manual') || changed.has('trigger')) && this.focusDescribesTrigger && !this.opensOn('focus')) {
+      this.focusDescribesTrigger = false;
+      this.syncTriggerA11y();
+    }
     if (changed.has('disabled') && this.disabled) {
       this.cancelPendingTransition();
+      if (this.focusDescribesTrigger) {
+        this.focusDescribesTrigger = false;
+        this.syncTriggerA11y();
+      }
       if (this._open) {
         if (this.hasUpdated) void this.hide();
         else this.applyOpenState(false);
@@ -1104,29 +1128,23 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   };
   private onEnter = (event: Event): void => {
     if (this.disabled) return;
-    this.syncTriggerA11y();
     if (event.type === 'focusin') {
-      if (this.opensOn('focus')) {
-        this.focusDescribesTrigger = true;
-      }
-      if (this.suppressTriggerFocusOpen) {
-        return;
-      }
-      if (this.opensOn('focus')) {
-        this.requestTransition(true);
-        return;
-      }
-      if (!this.opensOn('focus-visible') || !this.isTriggerFocusVisible()) return;
+      // Any focus inside the trigger describes it; only keyboard focus opens it, and a
+      // non-keyboard focus neither starts a show nor cancels a pending hide.
+      if (this.opensOn('focus')) this.focusDescribesTrigger = true;
+      this.syncTriggerA11y();
+      if (this.suppressTriggerFocusOpen || !this.opensOn('focus')) return;
       if (!isKeyboardFocusEvent(event)) return;
-    } else if (!this.opensOn('hover')) return;
-    if (event.type !== 'focusin') this.openedByPointer = true;
+    } else {
+      this.syncTriggerA11y();
+      if (!this.opensOn('hover')) return;
+      this.openedByPointer = true;
+    }
     this.requestTransition(true);
   };
   private onLeave = (event: Event): void => {
     if (
-      event.type === 'focusout'
-        ? !this.opensOn('focus') && !this.opensOn('focus-visible')
-        : !this.opensOn('hover')
+      event.type === 'focusout' ? !this.opensOn('focus') : !this.opensOn('hover')
     ) return;
     const next = (event as FocusEvent | MouseEvent).relatedTarget;
     if (
@@ -1144,17 +1162,6 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.interactiveContent && this.isPopupTarget(next)) return;
     this.requestTransition(false);
   };
-  /** `focus-visible` belongs to the node that actually receives focus, which can be inside a
-   *  consumer-supplied custom-element trigger's shadow root. */
-  private isTriggerFocusVisible(): boolean {
-    const target = this.accessibleTrigger ?? this.triggerElement;
-    if (!target) return false;
-    try {
-      return target.matches(':focus-visible');
-    } catch {
-      return false;
-    }
-  }
   private onTriggerClick = (): void => {
     if (this.disabled) return;
     if (!this.opensOn('click')) return;

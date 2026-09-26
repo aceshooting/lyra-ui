@@ -25,6 +25,9 @@ export const styles = css`
        once the block-size: 100% below is a definite value -- same reasoning as
        file-input.styles.ts's own bordered [part~="base"]. */
     box-sizing: border-box;
+    /* Control tier, not the decorative --lr-color-border-subtle: the summary is a borderless
+       disclosure button, so collapsed this frame is that control's only visible boundary
+       (WCAG 2.2 SC 1.4.11) -- the same classification as lr-thinking-panel's card edge. */
     border: var(--lr-border-width-thin) solid
       var(--lr-details-outlined-border-color, var(--lr-color-border));
     border-radius: var(--lr-details-radius, var(--lr-radius));

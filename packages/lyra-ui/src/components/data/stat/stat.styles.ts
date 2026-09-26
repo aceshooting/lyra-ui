@@ -11,7 +11,12 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-stat-gap, var(--lr-space-xs));
     padding: var(--lr-stat-padding, var(--lr-space-m));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* A passive tile's edge is decorative, so it rests on the subtle tier. A linked tile is one
+       whole-tile control whose edge is its only visible boundary at rest (WCAG 2.2 SC 1.4.11), so
+       [href] re-points the private edge to the control tier -- through a custom property rather
+       than a border-color declaration, so the (0,1,0) hover and pressed rules below still win on
+       source order. Same split as lr-card's passive and actionable edges. */
+    border: var(--lr-border-width-thin) solid var(--_lr-stat-edge, var(--lr-color-border-subtle));
     border-radius: var(--lr-radius);
     /* The RESTING tile's own hook, alongside the padding/gap levers above and the pressed state's
        existing --lr-stat-link-active-bg -- the tier a dashboard actually sits at all day was the
@@ -55,6 +60,7 @@ export const styles = css`
     pointer-events: auto;
   }
   [part='base'][href] {
+    --_lr-stat-edge: var(--lr-color-border);
     cursor: pointer;
     transition: border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
   }

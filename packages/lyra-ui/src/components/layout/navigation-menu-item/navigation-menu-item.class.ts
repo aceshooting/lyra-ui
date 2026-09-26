@@ -4,6 +4,7 @@ import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
   deferredPlaceReady,
+  loadAnchoredOverlayRuntime,
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
@@ -467,7 +468,18 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
     if (!shouldFloat) {
       this.stopPlacement();
       if (this.overlayHandle) this.releaseOverlay(false);
-      if (panel && !this.closing) this.clearPlacementStyles(panel);
+      if (panel && !this.closing) {
+        this.clearPlacementStyles(panel);
+        // Crossing from the floating bar into the collapsed flow layout keeps this same panel
+        // open and visible, so it never settles through [hidden]: release a top-layer promotion
+        // explicitly or the panel would stay out of flow instead of rendering below its trigger.
+        if (visible && panel.hasAttribute('data-lr-top-layer')) {
+          void loadAnchoredOverlayRuntime().then(
+            (runtime) => runtime.releaseTopLayer?.(panel),
+            () => undefined,
+          );
+        }
+      }
       if (visible) {
         this.pendingShow = false;
         this.pendingMorph = undefined;

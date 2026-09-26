@@ -9,7 +9,8 @@ export const styles = css`
     --_lr-avatar-group-overlap: var(--lr-size-neg-6px);
     --_lr-avatar-group-ring-color: var(--lr-color-surface);
     --_lr-avatar-group-ring-width: var(--lr-border-width-medium);
-    --_lr-avatar-group-badge-bg: var(--lr-color-border);
+    /* A fill role, not the border token, matching lr-avatar's neutral disc. */
+    --_lr-avatar-group-badge-bg: var(--lr-color-neutral-fill-quiet);
     --_lr-avatar-group-badge-color: var(--lr-color-text);
     --_lr-avatar-group-badge-font-size: var(--lr-font-size-m);
   }

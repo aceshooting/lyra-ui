@@ -1864,3 +1864,20 @@ describe("fill chain (block-size)", () => {
     expect(gate.getAttribute("hidden")).to.equal("until-found");
   });
 });
+
+// The summary is a borderless disclosure button, so the outlined frame is its only visible
+// boundary (WCAG 2.2 SC 1.4.11): it stays on the control tier even with the decorative input set.
+for (const appearance of ['outlined', 'filled-outlined'] as const) {
+  it(`keeps the ${appearance} frame on the --lr-color-border control tier, not the subtle tier`, async () => {
+    const el = await fixture<LyraDetails>(html`
+      <lr-details
+        summary="Shipping"
+        appearance=${appearance}
+        style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
+        >Body</lr-details
+      >
+    `);
+    const frame = el.shadowRoot!.querySelector<HTMLElement>("[part~='base']")!;
+    expect(getComputedStyle(frame).borderTopColor).to.equal('rgb(10, 20, 30)');
+  });
+}

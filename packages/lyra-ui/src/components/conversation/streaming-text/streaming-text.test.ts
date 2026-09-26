@@ -1054,3 +1054,83 @@ describe('template whitespace', () => {
     }
   });
 });
+
+describe('lr-streaming-text forwarded Markdown parts and code direction', () => {
+  const innerOf = (el: LyraStreamingText): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('lr-markdown')!;
+  const innerRoot = (el: LyraStreamingText): ShadowRoot => innerOf(el).shadowRoot!;
+
+  async function mount(content: string, dir: 'ltr' | 'rtl' = 'ltr', mode = 'markdown'): Promise<LyraStreamingText> {
+    const host = await fixture<HTMLElement>(html`<div dir=${dir} style="inline-size: 400px"></div>`);
+    const el = document.createElement('lr-streaming-text') as LyraStreamingText;
+    el.setAttribute('content-mode', mode);
+    el.content = content;
+    host.append(el);
+    await el.updateComplete;
+    return el;
+  }
+
+  it('lets outer ::part() rules reach forwarded task-list and table-wrapper parts', async () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      lr-streaming-text::part(task-list) { outline-style: dashed }
+      lr-streaming-text::part(task-item) { outline-style: dotted }
+      lr-streaming-text::part(task-item-checked) { text-decoration-line: line-through }
+      lr-streaming-text::part(task-checkbox) { outline-style: solid }
+      lr-streaming-text::part(table-wrapper) { outline-style: double }
+    `;
+    document.head.append(style);
+    try {
+      const el = await mount('- [ ] Open\n- [x] Done\n\n| A | B |\n| - | - |\n| 1 | 2 |');
+      await waitUntil(() => Boolean(innerOf(el)?.shadowRoot?.querySelector('[part="table-wrapper"]')));
+      const root = innerRoot(el);
+      expect(getComputedStyle(root.querySelector('[part~="task-list"]')!).outlineStyle).to.equal('dashed');
+      const items = [...root.querySelectorAll('[part~="task-item"]')];
+      expect(items.map((item) => getComputedStyle(item).outlineStyle)).to.deep.equal(['dotted', 'dotted']);
+      expect(items.map((item) => getComputedStyle(item).textDecorationLine)).to.deep.equal(['none', 'line-through']);
+      expect(getComputedStyle(root.querySelector('[part~="task-checkbox"]')!).outlineStyle).to.equal('solid');
+      expect(getComputedStyle(root.querySelector('[part="table-wrapper"]')!).outlineStyle).to.equal('double');
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('segments the streamed fallback and keeps settled code left-to-right under RTL', async () => {
+    const el = await mount('', 'rtl', 'auto');
+    el.coalesceMs = 30;
+    el.streaming = true;
+    const chunks = ['# عنوان\n', 'استخدم `--verbose` هنا\n', '```js\n', 'const a = 1;\n'];
+    let content = '';
+    for (const chunk of chunks) {
+      content += chunk;
+      el.content = content;
+      await aTimeoutMs(10);
+    }
+    await waitUntil(() => Boolean(innerOf(el)?.shadowRoot?.querySelector('.fallback-code')), 'inner fallback never segmented', { timeout: 3000 });
+    const fallback = innerRoot(el);
+    expect(fallback.querySelectorAll('.fallback-inline-code').length).to.equal(1);
+    expect(getComputedStyle(fallback.querySelector('.fallback-code')!).direction).to.equal('ltr');
+    el.content = `${content}${'```'}\n`;
+    el.streaming = false;
+    await waitUntil(() => Boolean(innerOf(el)?.shadowRoot?.querySelector('pre[part~="code-block"]')), 'never settled', { timeout: 3000 });
+    const style = document.createElement('style');
+    style.textContent = 'lr-streaming-text::part(code-block), lr-streaming-text::part(inline-code) { outline-style: dotted }';
+    document.head.append(style);
+    try {
+      const pre = innerRoot(el).querySelector<HTMLElement>('pre[part~="code-block"]')!;
+      const inline = innerRoot(el).querySelector<HTMLElement>('[part="inline-code"]')!;
+      expect([getComputedStyle(pre).outlineStyle, getComputedStyle(inline).outlineStyle]).to.deep.equal(['dotted', 'dotted']);
+      expect([getComputedStyle(pre).direction, getComputedStyle(inline).direction]).to.deep.equal(['ltr', 'ltr']);
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('keeps plain content mode in page direction, fences included', async () => {
+    const el = await mount('```js\nconst a = 1;\n```\n', 'rtl', 'plain');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('.plain')!).direction).to.equal('rtl');
+  });
+});
+
+function aTimeoutMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

@@ -331,13 +331,40 @@ it('keeps windowed rows at the grid width so group headings remain on one line',
   expect(headingText.getClientRects().length).to.equal(1);
 });
 
-it('uses the localized search label as a visible search placeholder', async () => {
+it('shows a dedicated localized search placeholder, separate from the accessible name', async () => {
   const el = await picker();
   const searchInput = search(el);
-  expect(searchInput.placeholder).to.equal(searchInput.getAttribute('aria-label'));
-  el.strings = { emojiPickerSearchLabel: 'Rechercher des emojis' };
+  expect(searchInput.placeholder, 'English fallback').to.equal('Search emoji…');
+  expect(searchInput.getAttribute('aria-label')).to.equal('Search emoji');
+  el.strings = { emojiPickerSearchPlaceholder: 'Rechercher des emojis…' };
   await el.updateComplete;
-  expect(searchInput.placeholder).to.equal('Rechercher des emojis');
+  expect(searchInput.placeholder, '.strings reaches the placeholder').to.equal('Rechercher des emojis…');
+  expect(searchInput.getAttribute('aria-label'), 'the name is untouched').to.equal('Search emoji');
+});
+
+it('lets searchPlaceholder override the localized placeholder', async () => {
+  const el = await picker();
+  const searchInput = search(el);
+  el.searchPlaceholder = 'Find a reaction';
+  await el.updateComplete;
+  expect(searchInput.placeholder).to.equal('Find a reaction');
+  el.setAttribute('search-placeholder', 'Type to filter');
+  await el.updateComplete;
+  expect(searchInput.placeholder, 'reflected from the attribute').to.equal('Type to filter');
+  el.removeAttribute('search-placeholder');
+  await el.updateComplete;
+  expect(searchInput.placeholder, 'removal restores the localized default').to.equal('Search emoji…');
+});
+
+it('falls back to the search label when the placeholder is blank', async () => {
+  const el = await picker();
+  const searchInput = search(el);
+  el.strings = { emojiPickerSearchLabel: 'Rechercher des emojis', emojiPickerSearchPlaceholder: '' };
+  await el.updateComplete;
+  expect(searchInput.placeholder, 'blank localized placeholder').to.equal('Rechercher des emojis');
+  el.searchPlaceholder = '   ';
+  await el.updateComplete;
+  expect(searchInput.placeholder, 'blank property').to.equal('Rechercher des emojis');
 });
 
 it('does not reacquire external-description observers from a queued update after disconnect', async () => {

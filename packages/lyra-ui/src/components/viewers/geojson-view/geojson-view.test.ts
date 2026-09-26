@@ -1,5 +1,11 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './geojson-view.js';
+// Registers the shipped `ar` catalog slices the `lang="ar"` feature-count test resolves against,
+// so it renders real catalog text instead of tripping the dev-mode locale-fallback warning that
+// strict-console browser lanes treat as fatal.
+import '../../../translations/ar/viewers.js';
+import '../../../translations/ar/media.js';
+import '../../../translations/ar/shared.js';
 import { LyraGeoJsonViewer, LyraGeojsonView } from './geojson-view.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
@@ -317,7 +323,19 @@ describe('fetching and parsing', () => {
   });
 
   it('formats the feature count with the effective locale', async () => {
-    stubFetch(FEATURE_COLLECTION);
+    // Three features: the shipped Arabic catalog's dual (`two`) form spells the count out as a
+    // word, while its `few` form interpolates the locale-formatted number this test pins.
+    stubFetch({
+      ...FEATURE_COLLECTION,
+      features: [
+        ...FEATURE_COLLECTION.features,
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [-122.6, 37.9] },
+          properties: {},
+        },
+      ],
+    });
     const el = (await fixture(
       html`<lr-geojson-view lang="ar" src=${GEOJSON_URL}></lr-geojson-view>`
     )) as LyraGeojsonView;
@@ -328,7 +346,7 @@ describe('fetching and parsing', () => {
     );
     expect(
       el.shadowRoot!.querySelector('[part="status"]')!.textContent
-    ).to.include(new Intl.NumberFormat('ar').format(2));
+    ).to.include(`${new Intl.NumberFormat('ar').format(3)} معالم`);
   });
 
   it('fires lr-render-error and shows an error state for a non-GeoJSON shape', async () => {
@@ -1948,4 +1966,16 @@ it('registers a application/geo+json renderer whose matches() and render() behav
     host.querySelector('lr-geojson-viewer'),
     'render() produces the canonical viewer element'
   ).to.exist;
+});
+
+it('keeps GeoJSON metadata left-to-right under RTL', async () => {
+  stubFetch({ type: 'Feature', geometry: { type: 'Point', coordinates: [10, 20] }, properties: { name: 'منطقة' } });
+  const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 480px"><lr-geojson-view></lr-geojson-view></div>`);
+  const el = host.querySelector('lr-geojson-view') as LyraGeojsonView;
+  (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+  el.src = GEOJSON_URL;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="metadata"]') !== null);
+  const metadata = el.shadowRoot!.querySelector<HTMLElement>('[part="metadata"]')!;
+  expect(getComputedStyle(metadata).direction).to.equal('ltr');
+  expect(getComputedStyle(metadata).unicodeBidi).to.equal('isolate');
 });

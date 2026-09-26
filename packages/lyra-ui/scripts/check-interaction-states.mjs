@@ -75,6 +75,21 @@ import { isMainModule } from './is-main-module.mjs';
 //      A bare `no-transition-needed:` with nothing after it is itself a finding. The other two
 //      markers predate that rule and keep their looser form; new markers do not get to be silent.
 //
+//   4. State-masked fallback (per stylesheet). A state rule (`:state(checked)`, a
+//      `[part~='checked']`-style part token, `[aria-pressed]`, `:host([open])`, `:checked`,
+//      `[data-selected]`, ...) that re-points a private `--_lr-X` only works if the paint site reads
+//      that private BARE. Layered as the fallback arm of a resting public token --
+//      `var(--lr-switch-track-fill, var(--_lr-switch-track-fill))` -- the private is dead the moment a
+//      consumer sets the resting token, and the state silently paints the resting colour. That is
+//      how lr-switch's checked track took the unchecked fill. A finding is any `var(--_lr-X` whose X
+//      a state rule declares, sitting in the fallback arm of a `var(--lr-P, ...)` where P is not
+//      itself a pointer or state token (`-hover`, `-active`, `-checked`, ...): a pointer/state token
+//      wrapping the private is the deliberate override for that paint. Fix: resolve the private per
+//      state with the public token folded inside it, and consume it bare. A public token the
+//      component documents as authoritative across states records that with
+//          /* state-fallback-ok: <reason, citing the documented contract> */
+//      anywhere between the previous rule and the rule holding the consumption site.
+//
 // Rules 1 and 2 record a deliberate omission the same way :active does, with a marker comment:
 //     /* no-hover-state: a transparent hit target with nothing of its own to paint */
 // on or immediately above the rule for rule 1, anywhere in the file for rule 2.
@@ -100,6 +115,7 @@ function styleFiles(directory) {
 const OPT_OUT = /no-pressed-state:/;
 const HOVER_OPT_OUT = /no-hover-state:/;
 const TRANSITION_OPT_OUT = /no-transition-needed:/;
+const STATE_FALLBACK_OPT_OUT = /state-fallback-ok:/;
 
 /**
  * Every `transition`/`transition-property` declaration in a rule body, as `[property, value]` --
@@ -293,9 +309,11 @@ const blankComments = (source) =>
 export function readStyleRules(source) {
   const optOutLines = new Set();
   const transitionOptOutLines = new Set();
+  const stateFallbackOptOutLines = new Set();
   source.split('\n').forEach((line, index) => {
     if (HOVER_OPT_OUT.test(line)) optOutLines.add(index + 1);
     if (TRANSITION_OPT_OUT.test(line)) transitionOptOutLines.add(index + 1);
+    if (STATE_FALLBACK_OPT_OUT.test(line)) stateFallbackOptOutLines.add(index + 1);
   });
   const stripped = blankComments(source);
   const rules = [];
@@ -307,12 +325,16 @@ export function readStyleRules(source) {
   // rather than a squeezed single line.
   let pendingOptOut = false;
   let pendingTransitionOptOut = false;
+  let pendingStateFallbackOptOut = stateFallbackOptOutLines.has(1);
+  if (optOutLines.has(1)) pendingOptOut = true;
+  if (transitionOptOutLines.has(1)) pendingTransitionOptOut = true;
   for (let index = 0; index < stripped.length; index += 1) {
     const char = stripped[index];
     if (char === '\n') {
       line += 1;
       if (optOutLines.has(line)) pendingOptOut = true;
       if (transitionOptOutLines.has(line)) pendingTransitionOptOut = true;
+      if (stateFallbackOptOutLines.has(line)) pendingStateFallbackOptOut = true;
     }
     if (char === '{') {
       stack.push({ selector: stripped.slice(cursor, index), bodyStart: index + 1, line });
@@ -334,10 +356,13 @@ export function readStyleRules(source) {
             line: selectorLine,
             optedOut: pendingOptOut,
             transitionOptedOut: pendingTransitionOptOut,
+            stateFallbackOptedOut: pendingStateFallbackOptOut,
+            bodyLine: frame.line,
             enclosing: stack.map((outer) => outer.selector.replace(/\s+/g, ' ').trim()),
           });
           pendingOptOut = false;
           pendingTransitionOptOut = false;
+          pendingStateFallbackOptOut = false;
         }
       }
       cursor = index + 1;
@@ -852,12 +877,113 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
  */
 const PRE_TOKEN_TRANSITION_GAP_CEILING = 96;
 
+// ---------------------------------------------------------------------------
+// State-masked fallback (rule 4 in the header)
+// ---------------------------------------------------------------------------
+
+const STATE_WORDS = ['checked', 'selected', 'pressed', 'current', 'indeterminate', 'expanded', 'open'];
+const HOST_STATE_ATTRIBUTE =
+  /\[(?:checked|selected|pressed|current|active|open|expanded|indeterminate)(?=[\]=~|^$*\s])/;
+
+/** The balanced argument of every `:host(...)` in a selector, nested `:where()`/`:is()` included. */
+function hostArguments(selector) {
+  const out = [];
+  for (const match of selector.matchAll(/:host\(/g)) {
+    let depth = 1;
+    let index = match.index + match[0].length;
+    const start = index;
+    for (; index < selector.length && depth > 0; index += 1) {
+      if (selector[index] === '(') depth += 1;
+      else if (selector[index] === ')') depth -= 1;
+    }
+    out.push(selector.slice(start, index - 1));
+  }
+  return out;
+}
+
+/**
+ * Whether a selector carries a state qualifier. Size, variant and appearance selectors are
+ * deliberately absent, as are outcome part suffixes (`-success`, `-error`, `-loading`): a paint
+ * that varies by outcome is not a state that a resting token may mask.
+ */
+export function hasStateQualifier(selector) {
+  if (/:state\(/.test(selector)) return true;
+  if (/:checked\b|:indeterminate\b/.test(selector)) return true;
+  if (/\[aria-(?:checked|selected|pressed|current|expanded)\b/.test(selector)) return true;
+  if (/\[data-(?:state|checked|selected|active|current|pressed)\b/.test(selector)) return true;
+  if (hostArguments(selector).some((argument) => HOST_STATE_ATTRIBUTE.test(argument))) return true;
+  for (const [, value] of selector.matchAll(/\[part[~*^$|]?=\s*["']?([^"'\]]+)["']?\s*\]/g)) {
+    for (const token of value.trim().split(/\s+/)) {
+      if (STATE_WORDS.some((word) => token === word || token.endsWith(`-${word}`))) return true;
+    }
+  }
+  return false;
+}
+
+/** A public token whose name already names a pointer or state paint deliberately overrides it. */
+const POINTER_OR_STATE_TOKEN = /-(?:hover|active|focus|pressed|checked|selected|current|open|expanded)(?:-|$)/;
+
+const PRIVATE_DECLARATION = /(?:^|[;{\s])(--_lr-[\w-]+)\s*:/g;
+
+/**
+ * Rule 4. Returns `{ line, message }` per consumption site where a state-declared private var sits
+ * in the fallback arm of a resting public token.
+ */
+export function stateMaskedFallbacks(source) {
+  const rules = readStyleRules(source);
+  const stateDeclared = new Map();
+  for (const rule of rules) {
+    if (!hasStateQualifier(rule.selector)) continue;
+    for (const [, name] of rule.body.matchAll(PRIVATE_DECLARATION)) {
+      if (!stateDeclared.has(name)) stateDeclared.set(name, rule.line);
+    }
+  }
+  if (stateDeclared.size === 0) return [];
+  const findings = [];
+  for (const rule of rules) {
+    if (rule.stateFallbackOptedOut) continue;
+    const { body } = rule;
+    const stack = [];
+    let line = rule.bodyLine;
+    for (let index = 0; index < body.length; index += 1) {
+      const char = body[index];
+      if (char === '\n') line += 1;
+      if (char === '(') {
+        const head = body.slice(Math.max(0, index - 3), index);
+        const name = head === 'var' ? /^\(\s*(--[\w-]+)/.exec(body.slice(index))?.[1] : undefined;
+        if (name && name.startsWith('--_lr-') && stateDeclared.has(name)) {
+          const masking = stack
+            .filter((frame) => frame.name?.startsWith('--lr-') && frame.fallback)
+            .map((frame) => frame.name)
+            .filter((token) => !POINTER_OR_STATE_TOKEN.test(token));
+          for (const token of masking) {
+            findings.push({
+              line,
+              message:
+                `\`var(${name})\` is declared by the state rule at line ${stateDeclared.get(name)} but ` +
+                `consumed in the fallback arm of \`${token}\`, which masks that state whenever it is ` +
+                'set -- resolve the private per state, public token folded inside it, and consume it bare',
+            });
+          }
+        }
+        stack.push({ name, fallback: false });
+      } else if (char === ')') {
+        stack.pop();
+      } else if (char === ',' && stack.length > 0) {
+        stack[stack.length - 1].fallback = true;
+      }
+    }
+  }
+  return findings;
+}
+
 if (isMainModule(import.meta.url)) {
   const findings = [];
   let checked = 0;
   let pointerParts = 0;
   let repaintedPointerParts = 0;
   let focusVisibleSheets = 0;
+  let stateFallbackFindings = 0;
   const grandfatheredHits = new Set();
   const files = [...styleFiles(componentsRoot), ...styleFiles(internalRoot)].sort();
 
@@ -889,6 +1015,12 @@ if (isMainModule(import.meta.url)) {
       if (!hasTwin) {
         findings.push(`${where}:${rule.line}: \`${rule.selector}\` has no :active counterpart`);
       }
+    }
+
+    // ----- state-masked fallbacks (rule 4) ---------------------------------
+    for (const finding of stateMaskedFallbacks(raw)) {
+      stateFallbackFindings += 1;
+      findings.push(`${where}:${finding.line}: ${finding.message}`);
     }
 
     // ----- hover and transition contracts ---------------------------------
@@ -933,7 +1065,11 @@ if (isMainModule(import.meta.url)) {
       '\nAdd the matching :active rule, or record the omission with a `no-pressed-state: <reason>` comment.' +
         '\nAdd the matching :hover rule, or record the omission with a `no-hover-state: <reason>` comment.' +
         '\nAdd `transition: var(--lr-transition-interactive);` to the resting rule, or record the ' +
-        'omission with a `no-transition-needed: <reason>` comment.',
+        'omission with a `no-transition-needed: <reason>` comment.' +
+        (stateFallbackFindings
+          ? '\nConsume a state-declared private var bare, or record a documented cross-state public ' +
+            'token with a `state-fallback-ok: <reason>` comment.'
+          : ''),
     );
     process.exitCode = 1;
   } else {

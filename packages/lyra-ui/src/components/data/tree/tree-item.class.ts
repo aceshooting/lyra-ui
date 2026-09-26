@@ -180,13 +180,15 @@ export interface LyraTreeItemEventMap {
  * @cssprop [--lr-tree-depth=0] - Internal indent plumbing, not a retheming knob: this node's
  *   `depth`, written inline onto `[part="row"]` by the component and multiplied by
  *   `--indent-size` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
- * @cssprop [--lr-tree-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected row.
+ * @cssprop [--lr-tree-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected row,
+ *   and the base its hover/press mixes from.
  * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row.
- * @cssprop [--lr-tree-checkbox-checked-border-color=var(--lr-color-brand)] - Checked control border.
+ * @cssprop [--lr-tree-checkbox-checked-border-color=var(--lr-color-brand)] - Checked control border, and
+ *   the border under the pointer.
  * @cssprop [--lr-tree-checkbox-checked-bg=var(--lr-color-brand)] - Checked control background.
  * @cssprop [--lr-tree-checkbox-checked-color=var(--lr-color-on-brand)] - Checked glyph color.
  * @cssprop [--lr-tree-checkbox-indeterminate-border-color=var(--lr-color-brand)] - Indeterminate
- *   control border.
+ *   control border, and the border under the pointer.
  * @cssprop [--lr-tree-checkbox-indeterminate-bg=var(--lr-color-brand)] - Indeterminate control
  *   background.
  * @cssprop [--lr-tree-checkbox-indeterminate-color=var(--lr-color-on-brand)] - Indeterminate glyph

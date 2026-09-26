@@ -161,6 +161,16 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* The part is a flex container, so its own text-overflow never fires on slotted content: each
+     slotted adornment carries its own shrinkable block, the lr-input pattern. */
+  [part="start"] ::slotted(*),
+  [part="end"] ::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   [part="start"][hidden],
   [part="end"][hidden] {
     display: none;

@@ -88,6 +88,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'Culoarea curentă: {color}',
   selectSelectedOverflow: '+{n} altele',
   emojiPickerSearchLabel: 'Caută emoji',
+  emojiPickerSearchPlaceholder: 'Caută emoji…',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Niciun emoji găsit',
   emojiPickerLoadError: 'Emoji-urile nu au putut fi încărcate.',

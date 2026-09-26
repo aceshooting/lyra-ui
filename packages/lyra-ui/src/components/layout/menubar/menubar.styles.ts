@@ -2,6 +2,13 @@ import { css } from 'lit';
 
 export const styles = css`
   :host { display: block; min-inline-size: 0; }
+  /* The shared ladder writes a unitless 0 block padding at these tiers. The item row subtracts the
+     padding from the control height inside calc(), where a unitless number cannot mix with a
+     length, so the whole min-block-size would drop. Restate the same zero as a length. */
+  :host([size='2xs']),
+  :host([size='xs']) {
+    --lr-form-control-padding-block: calc(var(--lr-space-2xs) * 0);
+  }
   [part='base'] {
     display: flex;
     flex-wrap: wrap;

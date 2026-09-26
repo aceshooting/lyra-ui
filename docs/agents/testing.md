@@ -33,6 +33,13 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
 - Calling `oneEvent()` *after* a synchronous `dispatchEvent()` races and hangs — always set up
   the `oneEvent()` listener *before* triggering the dispatch (a pitfall that recurred across
   multiple plan docs' own sample code, always fixed the same way).
+- **Focus-modality tests use `test/wtr-focus.ts`** (`focusByKeyboard()` / `focusAfterPointer()`).
+  Programmatic `.focus()` inherits the previous focus's `:focus-visible` state and the window's
+  last recorded input, so it is order-dependent in a shared wtr page. Synthetic focus events never
+  open a keyboard-gated surface (the focused-element check rejects them); a test whose subject is
+  not focus drives the ungated hover path (`mouseenter`/`pointerenter`) instead. A test that spies
+  on `window.addEventListener` must pre-arm with `trackInputModality(document)` or connect a
+  fixture first, because the first connected Lyra element arms three permanent window listeners.
 - Every component gets at least one axe check in addition to behavior tests, **run against the
   exact instance of its own tag mounted by that test** — not a sibling or a separate fixture.
   `check:qualification` enforces same-test, same-instance evidence, or a narrowly scoped recorded

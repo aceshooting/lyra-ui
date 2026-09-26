@@ -32,6 +32,12 @@ import {
 } from '../../../internal/nonmodal-overlay-manager.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './selection-toolbar.styles.js';
+import {
+  isLibraryPromotedAndShowing,
+  needsTopLayerEscape,
+  promoteToTopLayer,
+  stripStaleTopLayer,
+} from '../../../internal/top-layer-escape.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_selectionAsk, LYRA_DEFAULT_selectionCite, LYRA_DEFAULT_selectionQuote, LYRA_DEFAULT_selectionToolbarLabel } from '../../../internal/default-strings.generated.js';
@@ -279,6 +285,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.open && this.text) this.escapeTrappingAncestor();
     if (changed.has('open') || changed.has('text')) this.syncOpenLifecycle();
     if (
       this.open &&
@@ -1006,6 +1013,20 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const stop = this.stopPositioning;
     this.stopPositioning = undefined;
     stop?.();
+  }
+
+  /**
+   * The toolbar is `position: fixed` with viewport-pixel insets, so a transformed, filtered or
+   * contained ancestor (a per-message toolbar inside a virtualized transcript row) would re-base
+   * and clip it. Where the native Popover API exists it is shown in the browser top layer instead.
+   * Re-tested on every render while open; the closed toolbar is removed from the template, which
+   * releases the promotion.
+   */
+  private escapeTrappingAncestor(): void {
+    const toolbar = this.toolbar;
+    if (!toolbar || isLibraryPromotedAndShowing(toolbar)) return;
+    if (needsTopLayerEscape(toolbar)) promoteToTopLayer(toolbar);
+    else stripStaleTopLayer(toolbar);
   }
 
   override render(): TemplateResult {

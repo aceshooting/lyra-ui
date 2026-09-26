@@ -88,6 +88,10 @@ export const styles = css`
     /* Row positions update via this transform on every scroll-driven re-render -- the compositor
        hint avoids a full repaint per frame. */
     will-change: transform;
+    /* A row is a transformed box inside a clipping scroller, so an absolute overlay in it is always
+       clipped: fixed (which escapes into the top layer) is the only default that works here. A
+       private default tier behind --lr-positioning-strategy, so every authored value still wins. */
+    --_lr-positioning-strategy-default: fixed;
   }
   /* will-change: transform makes each row its own stacking context and rows carry no z-index, so
      they paint in DOM order: anything overflowing a row (an lr-menu popup, a tooltip, an outward
@@ -100,6 +104,18 @@ export const styles = css`
      groups render first, so an active row wins. */
   [part="row"]:where(:focus-within, :has(lr-dropdown[open])) {
     z-index: var(--lr-layer-content);
+  }
+  /* Engines without the native Popover API: a row holding an open dropdown stops being a
+     containing block, so its fixed menu lays out against the viewport and the scroller no longer
+     clips it. !important because the row offset is an inline transform, which outranks every
+     normal stylesheet declaration. The row stays a stacking context (position + z-index), so it is
+     raised to the popover layer: the menu now extends past the list, where later page content at a
+     positive z-index would otherwise paint over it and take its clicks. */
+  [part="base"][data-lr-no-top-layer] [part="row"]:has(lr-dropdown[open]) {
+    transform: none !important;
+    will-change: auto;
+    inset-block-start: var(--_lr-virtual-list-row-offset);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
   }
   /* lr-thread-list's renderItem output lands in this shadow root, so an excerpt's <mark> is
      unreachable from the thread-list stylesheet or a rule following ::part(row-excerpt). Pinned to

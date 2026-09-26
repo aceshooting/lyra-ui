@@ -179,10 +179,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Accessible name and visible heading for the workspace. */
-  /** Forwarded to each message's parts to render settled blocks during a progressive stream. */
+  /** Forwarded to each message's `<lr-message-parts>`; see `lr-markdown`'s `streamingRender`. */
   @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
 
+  /** Accessible name and visible heading for the workspace. */
   @property() label?: string;
 
   /** Host-level accessible-name override for the internal `role="region"` root. */

@@ -198,3 +198,21 @@ it('fails closed when the loaded positioning runtime rejects setup', async () =>
   expect(popup.style.getPropertyValue('visibility')).to.equal('hidden');
   cleanup();
 });
+
+it('loads the escape-aware placement and the explicit top-layer release by default', async () => {
+  __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+  const loaded = await loadAnchoredOverlayRuntime();
+  const positioner = await import('./positioner.js');
+  expect(loaded.place).to.equal(positioner.placeAnchoredSurface);
+  expect(loaded.place).to.not.equal(positioner.place);
+  expect(loaded.trackRect).to.equal(positioner.trackRect);
+  expect(loaded.releaseTopLayer).to.equal(positioner.releaseTopLayer);
+});
+
+it('honours an injected runtime without releaseTopLayer, where the optional release is a no-op', async () => {
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => Promise.resolve(runtime));
+  const loaded = await loadAnchoredOverlayRuntime();
+  expect(loaded.releaseTopLayer).to.equal(undefined);
+  const element = document.createElement('div');
+  expect(() => loaded.releaseTopLayer?.(element)).to.not.throw();
+});

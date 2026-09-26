@@ -8684,3 +8684,87 @@ describe("readonly", () => {
     expect(el.value).to.deep.equal(["b"]);
   });
 });
+
+// Option adornments sit in a centred inline-flex part: a bare text node or a long text element was
+// clipped on both sides. Element children now carry their own ellipsis block, and async string or
+// number adornments are wrapped in one span so the same rule reaches them.
+describe("lr-combobox popup adornment truncation", () => {
+  const LONG = "Adornment text that is far too long.";
+
+  function expectTruncatedInside(adornment: HTMLElement, part: HTMLElement): void {
+    const box = adornment.getBoundingClientRect();
+    const partBox = part.getBoundingClientRect();
+    expect(box.left, "start edge stays inside the part").to.be.at.least(partBox.left - 0.5);
+    expect(box.right, "end edge stays inside the part").to.be.at.most(partBox.right + 0.5);
+    expect(getComputedStyle(adornment).textOverflow).to.equal("ellipsis");
+    const range = document.createRange();
+    range.selectNodeContents(adornment);
+    expect(
+      range.getBoundingClientRect().width,
+      "the text run is wider than its box"
+    ).to.be.greaterThan(box.width + 0.01);
+  }
+
+  async function openRows(rows: unknown[]): Promise<HTMLElement> {
+    const el = (await fixture(
+      html`<lr-combobox style="inline-size: 240px"></lr-combobox>`
+    )) as LyraCombobox;
+    el.source = async () => rows as never;
+    el.open = true;
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="option"]') !== null,
+      "the async row rendered",
+      { timeout: 2000 }
+    );
+    return el.shadowRoot!.querySelector<HTMLElement>('[part="option"]')!;
+  }
+
+  for (const slot of ["start", "end"] as const) {
+    it(`truncates a long cloned ${slot} text adornment with an ellipsis`, async () => {
+      const el = (await fixture(html`
+        <lr-combobox style="inline-size: 240px">
+          <lr-option value="fr">France<span slot=${slot}>${LONG}</span></lr-option>
+        </lr-combobox>
+      `)) as LyraCombobox;
+      el.open = true;
+      await el.updateComplete;
+      await aTimeout(0);
+      const row = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-value="fr"]')!;
+      const part = row.querySelector<HTMLElement>(`[part~="option-${slot}"]`)!;
+      expectTruncatedInside(part.firstElementChild as HTMLElement, part);
+      expect(part.scrollWidth <= part.clientWidth + 1, "the part itself no longer overflows").to.equal(
+        true
+      );
+    });
+  }
+
+  it("wraps an async string start adornment so it truncates from its start edge", async () => {
+    const row = await openRows([{ value: "a", label: "Alpha", start: "x".repeat(36) }]);
+    const part = row.querySelector<HTMLElement>('[part="option-start"]')!;
+    const wrapper = part.firstElementChild as HTMLElement;
+    expect(wrapper?.localName, "a wrapper span holds the text").to.equal("span");
+    expect(
+      Math.abs(wrapper.getBoundingClientRect().left - part.getBoundingClientRect().left),
+      "the wrapper starts at the part's start edge"
+    ).to.be.at.most(0.5);
+    expectTruncatedInside(wrapper, part);
+  });
+
+  it("wraps an async number end adornment", async () => {
+    const row = await openRows([{ value: "a", label: "Alpha", end: 42 }]);
+    const part = row.querySelector<HTMLElement>('[part="option-end"]')!;
+    expect(part.firstElementChild?.localName).to.equal("span");
+    expect(part.textContent!.trim()).to.equal("42");
+  });
+
+  it("passes an async element adornment through without a wrapper", async () => {
+    const row = await openRows([
+      { value: "a", label: "Alpha", start: html`<lr-icon id="async-icon" name="star"></lr-icon>` },
+    ]);
+    const part = row.querySelector<HTMLElement>('[part="option-start"]')!;
+    expect(part.firstElementChild?.id, "the icon stays the part's direct child").to.equal(
+      "async-icon"
+    );
+  });
+});

@@ -194,9 +194,9 @@ function trackSnapshot(
  * @csspart playlist-thumbnail - Thumbnail within a playlist item.
  * @csspart playlist-title - Title text within a playlist item.
  * @cssprop [--lr-video-playlist-item-current-background=var(--lr-color-brand-fill-quiet)] - Current
- *   playlist-item background.
+ *   playlist-item background, kept under the pointer.
  * @cssprop [--lr-video-playlist-item-current-border-color=var(--lr-color-brand)] - Current
- *   playlist-item border color.
+ *   playlist-item border color, kept under the pointer.
  * @status experimental
  * @since 8.0.0
  */

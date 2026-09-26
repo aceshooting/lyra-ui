@@ -75,6 +75,10 @@ export const styles = css`
     inset-block-start: 0;
     inset-inline-start: 0;
     will-change: transform;
+    /* A node is translated inside a scaled, clipped world, so an absolute overlay in its slotted
+       content is always clipped: fixed (which escapes into the top layer) is the default. A private
+       default tier behind --lr-positioning-strategy, so every authored value still wins. */
+    --_lr-positioning-strategy-default: fixed;
     /* WCAG 2.5.8 floor: this element carries the pointer handlers, but its size comes from the
        consumer-authored slotted card, which the component cannot constrain. node-control, the one
        part that already had a floor, is sr-only -- a keyboard proxy no pointer can reach. 24px

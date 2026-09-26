@@ -101,6 +101,23 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * directly into the produced HTML — a single pass, not a second DOM walk
  * after insertion.
  *
+ * GFM tables wrap cell text only between words. A table that cannot fit scrolls inline inside its
+ * `table-wrapper`, a single keyboard tab stop that the arrow keys scroll. GFM column alignment is
+ * applied. Raw HTML tables and tables from a custom `table` renderer are not wrapped.
+ *
+ * Direction: inside a right-to-left document, fenced, indented and inline code (`::part(code-block)`,
+ * `::part(inline-code)` and any other `code` outside a `pre` that carries no `dir`) is laid out
+ * left-to-right as an isolate starting at the inline start, and the plain-text view shown while
+ * streaming, loading or after a failure isolates recognizable fenced runs and same-line code spans
+ * the same way. Surrounding prose, block margins and headers still follow the page direction. An
+ * authored `pre` without `part="code-block"` or `dir` takes each line's direction from its first
+ * strong character, and an explicit `dir` on authored code always wins. An outer
+ * `::part(code-block)`/`::part(inline-code)` rule can restore right-to-left code; it cannot reach
+ * the streaming plain-text view, whose code runs carry no part. The streaming recognition is a
+ * heuristic: indented (four-space) code blocks, fences inside blockquotes or on a list-marker line,
+ * and code spans crossing a line break are not isolated until the final parse. Bidi formatting
+ * characters inside code are rendered as authored, not neutralized.
+ *
  * Fenced code blocks are syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
  * uses (`highlightCode`, default `true` — a pure upgrade gated by whether `shiki` is installed at
  * all, not a separate opt-in). `languages` supplies explicit grammars while the full loader
@@ -181,7 +198,7 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * @csspart code-block-copy - The native source-copy button in the optional code-block header.
  * @csspart inline-code - Every rendered inline `<code>` span (backtick spans, not fenced blocks).
  * @csspart link - Every rendered `<a>`.
- * @csspart table - Every rendered `<table>`.
+ * @csspart table - Every rendered `<table>`, inside `table-wrapper`.
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
@@ -218,7 +235,9 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * @csspart task-item - A read-only task list item.
  * @csspart task-item-checked - Additional state token on a completed task item.
  * @csspart task-checkbox - The disabled checkbox of a task list item.
- * @csspart table-wrapper - The named, keyboard-focusable horizontal table scroller.
+ * @csspart table-wrapper - The keyboard-focusable inline scroller around every rendered `<table>`
+ *   (`role="group"`, named by the localized `markdownTableRegion` string, default "Table"). A
+ *   table wider than the component scrolls here instead of splitting words.
  * @cssprop [--lr-markdown-task-checkbox-size=var(--lr-size-0-875em)] - Checkbox size, including its aligned list gutter.
  * @csspart code-block-frame - The named group around a code header and its code block.
  * @csspart code-block-copy-success - Additional copy-button token during successful confirmation.
@@ -432,7 +451,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
     }
     if (!isCurrent()) return undefined;
     return highlighter
-      ? tokenizeMarkdownHighlight(highlighter, pending, (this.codeBlockHeader || this.codeBlockChrome))
+      ? tokenizeMarkdownHighlight(highlighter, pending)
       : null;
   }
 }

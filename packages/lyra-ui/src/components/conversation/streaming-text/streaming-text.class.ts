@@ -92,6 +92,11 @@ export {
  * settle point, and that event is composed, so it bubbles out through this element unmodified;
  * emitting a second one here would double-fire every listener.
  *
+ * Direction: Markdown mode inherits the composed Markdown element's code direction (code reads
+ * left-to-right inside a right-to-left document; see that element's docs), and the forwarded
+ * `code-block`/`inline-code` parts accept an outer `direction` override. Plain mode, including
+ * a fenced block shown as plain text, follows the page direction.
+ *
  * @customElement lr-streaming-text
  * @event lr-content-settled - Fired after newly-coalesced content actually reaches the rendered
  *   DOM (plain-text mode only -- see the class doc). `detail: null`.

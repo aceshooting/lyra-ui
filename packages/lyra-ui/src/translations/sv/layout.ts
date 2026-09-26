@@ -1,0 +1,63 @@
+// The `layout` slice of the sv translation catalog for @aceshooting/lyra-ui: strings owned exclusively by `src/components/layout/**`.
+// A side-effect-only module: a consumer writes a bare
+// `import '@aceshooting/lyra-ui/translations/sv/layout';` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- `scripts/check-translations.mjs` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
+// Regenerate the SHAPE (never the translations) with:
+//   node scripts/scaffold-translation.mjs sv --force
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
+
+const strings: LyraLocaleStrings = {
+  carousel: 'karusell',
+  carouselLabel: 'Karusell',
+  carouselSlide: 'bild',
+  carouselSlidePosition: 'Bild {index} av {total}',
+  carouselSlideAnnouncement: '{position}: {content}',
+  carouselSlideAnnouncementSeparator: '. ',
+  carouselIndicators: 'Karusellbilder',
+  carouselGoTo: 'Gå till bild {index}',
+  scrollerLabel: 'Rullningsbart innehåll',
+  scrollPrevious: 'Rulla bakåt',
+  scrollNext: 'Rulla framåt',
+  closeNavigation: 'Stäng navigering',
+  openNavigation: 'Öppna navigering',
+  resizeNavigation: 'Ändra storlek på navigering',
+  appRailCollapse: 'Komprimera navigering',
+  appRailExpand: 'Expandera navigering',
+  appRailItemCollapse: 'Komprimera {label}',
+  appRailItemExpand: 'Expandera {label}',
+  resizeValuePercent: '{value} procent',
+  commandPaletteLabel: 'Kommandopalett',
+  commandPalettePlaceholder: 'Sök kommandon…',
+  commandPaletteEmpty: 'Inga matchande kommandon.',
+  commandPaletteResults: 'Kommandon',
+  dockPanelCollapse: 'Komprimera panel',
+  dockPanelExpand: 'Expandera panel',
+  dockPanelResize: 'Ändra storlek på panel',
+  responsivePanel: 'Panel',
+  breadcrumb: 'Sökväg',
+  resizeDivider: 'Ändra storlek på avdelaren mellan panel {a} och panel {b}',
+  widgetFullscreenPanel: 'Helskärmspanel',
+  widgetViewGroup: 'Panelvy',
+  widgetExitFullscreen: 'Avsluta helskärm',
+  widgetExpandToFullscreen: 'Expandera till helskärm',
+  widgetCollapse: 'Komprimera panel',
+  widgetExpand: 'Expandera panel',
+  skipToContent: 'Hoppa till innehåll',
+  dashboardGridLabel: 'Instrumentpanelens rutnät',
+  dashboardCellCollisionRejected: '{label} kan inte placeras där eftersom den överlappar en annan cell.',
+  dashboardCellMoved: '{label} flyttades till kolumn {x}, rad {y}.',
+  dashboardCellResized: '{label} ändrades till bredd {w}, höjd {h}.',
+  filterBarReset: 'Återställ filter',
+  filterBarActiveFilters: 'Aktiva filter',
+  drilldownDocuments: 'Dokument',
+  drilldownRuns: 'Agentkörningar',
+  drilldownEmpty: 'Inget objekt valt',
+  drilldownUntitledNode: 'Namnlöst steg',
+  reorderMovePending: 'Omordning väntar.',
+  reorderMoveCancelled: 'Omordning avbröts.',
+};
+
+registerLyraLocale('sv', strings);

@@ -340,6 +340,7 @@ describe('lr-menubar', () => {
 
   it('tracks size ladder height, font and padding with a 24px target floor', async () => {
     const bar = await sample(); const file = item(bar, 'file'); const fonts: string[] = []; const paddings: string[] = [];
+    const defaults = { xs: 26, s: 30, m: 40, l: 48 } as const;
     for (const size of ['xs', 's', 'm', 'l'] as const) {
       bar.size = size; await bar.updateComplete;
       const base = bar.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
@@ -347,9 +348,11 @@ describe('lr-menubar', () => {
       const probe = document.createElement('div');
       probe.style.cssText = 'height:var(--lr-form-control-height);padding-block:var(--lr-form-control-padding-block);border:var(--lr-border-width-thin) solid;box-sizing:content-box;font-size:var(--lr-form-control-font-size);padding-inline:var(--lr-form-control-padding-inline)';
       bar.shadowRoot!.append(probe); const resolved = getComputedStyle(probe); const computed = getComputedStyle(row);
-      const expected = Math.max(parseFloat(resolved.height), 24) +
-        2 * parseFloat(resolved.paddingTop) + 2 * parseFloat(resolved.borderTopWidth);
-      expect(Math.abs(base.getBoundingClientRect().height - expected)).to.be.lessThan(0.6);
+      const expected = Math.max(parseFloat(resolved.height),
+        24 + 2 * parseFloat(resolved.paddingTop) + 2 * parseFloat(resolved.borderTopWidth));
+      expect(parseFloat(computed.minBlockSize), `${size} item min-block-size must resolve`).to.be.at.least(24);
+      expect(Math.abs(base.getBoundingClientRect().height - expected)).to.be.lessThan(0.5);
+      expect(Math.abs(expected - defaults[size])).to.be.lessThan(0.5);
       expect(computed.fontSize).to.equal(resolved.fontSize); expect(computed.paddingInlineStart).to.equal(resolved.paddingInlineStart);
       expect(file.getBoundingClientRect().height).to.be.at.least(24); expect(file.getBoundingClientRect().width).to.be.at.least(24);
       fonts.push(computed.fontSize); paddings.push(computed.paddingInlineStart); probe.remove();

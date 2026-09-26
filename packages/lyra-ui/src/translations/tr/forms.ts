@@ -86,6 +86,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'Geçerli renk: {color}',
   selectSelectedOverflow: '+{n} tane daha',
   emojiPickerSearchLabel: 'Emoji ara',
+  emojiPickerSearchPlaceholder: 'Emoji ara…',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Emoji bulunamadı',
   emojiPickerLoadError: 'Emoji yüklenemedi.',

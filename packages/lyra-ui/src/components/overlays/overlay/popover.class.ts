@@ -24,6 +24,7 @@ import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-r
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import {
   literalSetConverter,
   omittedEmptyStringConverter,
@@ -87,9 +88,15 @@ const POPUP_ROLE = literalSetConverter<LyraPopupRole>(
  *
  * `'click'` is the shipped behaviour and stays the default. `'hover'` and `'focus'` are the two
  * transient modes: they open after `showDelay`, close after `hideDelay` once the interaction ends,
- * never move focus into the surface on their own, and can be *pinned* open by a click on the
- * trigger (a second click releases the pin and closes). `'manual'` refuses every interaction and
- * leaves the surface entirely to `show()`/`hide()`/`open`, and wins over any keyword beside it.
+ * never move focus into a surface they opened themselves, and can be *pinned* open by a click on
+ * the trigger (a second click releases the pin and closes). `'focus'` means keyboard focus: the
+ * focused element must match `:focus-visible` and the last input must not have been a pointer
+ * press, so pointer, touch and scripted focus that follows them do not open it; use `show()` for
+ * scripted reveals. A click that opens a closed transient surface pins it and moves focus like
+ * click mode (`[autofocus]`, menu focus); a click on an already-open one only pins it. This
+ * narrows `wa-popover`/`wa-dropdown`/`sl-dropdown` focus activation deliberately, following the
+ * WAI-ARIA tooltip pattern. `'manual'` refuses every interaction and leaves the surface entirely
+ * to `show()`/`hide()`/`open`, and wins over any keyword beside it.
  */
 export type LyraPopoverTrigger = 'click' | 'hover' | 'focus' | 'manual';
 
@@ -146,9 +153,14 @@ export interface LyraPopoverEventMap {
  *
  * `trigger` selects which interaction opens it: `click` (the shipped default), `hover`, `focus`,
  * or `manual`. The two transient modes open after `showDelay`, close after `hideDelay` once the
- * interaction ends, deliberately never move focus into the surface, and keep it open while focus
- * rests anywhere inside it. A click on the trigger while a transient surface is open *pins* it --
- * the pointer may then leave without closing it -- and the next click releases the pin. Set
+ * interaction ends, deliberately never move focus into a surface they opened themselves, and keep
+ * it open while focus rests anywhere inside it. `focus` means keyboard focus: the focused element
+ * must match `:focus-visible` and the last input must not have been a pointer press; pointer,
+ * touch and scripted focus that follows them do not open it (use `show()` for scripted reveals),
+ * a deliberate narrowing of `wa-popover`/`wa-dropdown`/`sl-dropdown`. A click on the trigger while
+ * a transient surface is open *pins* it -- the pointer may then leave without closing it -- and
+ * the next click releases the pin. A click that opens a closed transient surface pins it and moves
+ * focus like click mode; a click on an already-open one only pins it. Set
  * `hover-bridge` to have the positioner clip an invisible quad across the `distance` gap so a
  * pointer travelling from the trigger to the popup never leaves both at once.
  *
@@ -230,7 +242,8 @@ export interface LyraPopoverEventMap {
  *   {@link positioningStrategy}, read from computed style when the popup is (re)positioned. Set it
  *   once on `:root`, a theme, or one clipping ancestor to change every unset overlay beneath it
  *   without authoring `positioning-strategy`/`hoist` on each instance; an explicit value on the
- *   instance always wins over it.
+ *   instance always wins over it. Inside `lr-virtual-list` rows and `lr-flow-canvas` nodes an
+ *   unset value resolves `fixed`.
  * @cssstate open - Present while the popover is open.
  * @status stable
  * @since 4.0.0
@@ -276,8 +289,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /**
    * CSS positioning scheme the popup is laid out with -- the one property `<lr-popover>`,
    * `<lr-dropdown>` and `<lr-select>` all spell the same way. `fixed` normally positions against
-   * the viewport, so it escapes most clipping ancestors; `absolute` positions against the popup's
-   * containing block and scrolls with it. Each component keeps its own mirrored default, so
+   * the viewport, so it escapes most clipping ancestors; it also escapes transformed, filtered or
+   * contained ancestors by promoting the popup into the browser top layer where the native Popover
+   * API exists (otherwise, as before, such an ancestor contains and clips it). `absolute`
+   * positions against the popup's containing block and scrolls with it. Each component keeps its own mirrored default, so
    * setting nothing on the instance and on every ancestor never changes what it already rendered;
    * an unsupported authored value resolves to that same default. Changes apply live while open.
    * This property reports only the instance's own authored value (or the mirrored default); the
@@ -348,7 +363,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    * Space-separated list of the interactions that open the popover -- see
    * {@link LyraPopoverTrigger} for the keywords, which are exactly `<lr-tooltip>`'s. Unrecognized
    * tokens are dropped and a list left with none resolves back to `'click'`, so the property always
-   * reads back as a canonical list.
+   * reads back as a canonical list. `focus` means keyboard focus: the focused element must match
+   * `:focus-visible` and the last input must not have been a pointer press; use `show()` for
+   * scripted reveals. A click that opens a closed transient surface pins it and moves focus like
+   * click mode; a click on an already-open one only pins it.
    * @type {string}
    * @default 'click'
    */
@@ -470,6 +488,12 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  (`lr-after-hide`), preserving the existing visibility/opacity fade in the meantime. Mirrors
    *  `LyraSelect`'s `listboxHidden`. */
   @state() private popupHidden = true;
+  /** Set for the duration of `disconnectedCallback()`. A keyed move (a `repeat()` reorder)
+   *  queues disconnect then connect on this element; a nested DOM operation inside the disconnect
+   *  teardown (releasing a slotted menu, trigger attributes) can make the engine run the queued
+   *  connect *before* that teardown finishes, which would then undo the reconnect. */
+  private disconnecting = false;
+  private reconnectedWhileDisconnecting = false;
   private positionedAnchor?: Element | VirtualAnchor;
   private positioningDirection?: 'ltr' | 'rtl';
   private directionChanged = false;
@@ -612,8 +636,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  longer visibility-hidden. Focus cannot reliably enter a visibility-hidden subtree in Firefox
    *  or WebKit, so autofocus and mapped menu focus wait for this readiness boundary. */
   protected onPopupPositioned(): void {
-    // A hover/focus-opened surface never pulls focus: the user did not ask to go there, and moving
-    // the caret out from under them is the exact defect `trigger="hover"` would otherwise ship.
+    // A hover- or keyboard-focus-opened surface never pulls focus: the user did not ask to go
+    // there, and moving the caret out from under them is the exact defect `trigger="hover"` would
+    // otherwise ship.
     if (this.openedByInteraction) return;
     this.overlayHandle?.focusAutofocus();
   }
@@ -748,6 +773,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   override connectedCallback(): void {
+    if (this.disconnecting) {
+      // Re-entrant reconnect: replayed once the teardown in progress has finished.
+      this.reconnectedWhileDisconnecting = true;
+      return;
+    }
     super.connectedCallback();
     this.connectionSequence = ++popoverConnectionSequence;
     // On the host, not the trigger: focus moving OUT of slotted popup content fires `focusout` on
@@ -779,6 +809,20 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     }
   }
   override disconnectedCallback(): void {
+    this.disconnecting = true;
+    try {
+      this.teardownOnDisconnect();
+      super.disconnectedCallback();
+    } finally {
+      this.disconnecting = false;
+    }
+    if (this.reconnectedWhileDisconnecting) {
+      this.reconnectedWhileDisconnecting = false;
+      if (this.isConnected) this.connectedCallback();
+    }
+  }
+
+  private teardownOnDisconnect(): void {
     this.stopAnchorIdentityObservation?.();
     this.stopAnchorIdentityObservation = undefined;
     this.invalidatePositioning();
@@ -802,7 +846,6 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.cancelTransitionAnimation();
     this.removeAttribute('data-closing');
     this.popupHidden = true;
-    super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
@@ -1179,8 +1222,14 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.requestInteractionClose(event.relatedTarget);
   };
 
-  private onSurfaceFocusIn = (): void => {
+  private onSurfaceFocusIn = (event: FocusEvent): void => {
     if (!this.opensOn('focus') || this.suppressTriggerFocusOpen) return;
+    // Focus that arrives on the trigger opens (or holds) the surface only when it is keyboard
+    // focus. While closed, host `focusin` can only come from the trigger (popup content is
+    // hidden); while open, focus inside the surface's own content keeps its retention effect.
+    const onTrigger =
+      !this.open || (this.triggerElement != null && event.composedPath().includes(this.triggerElement));
+    if (onTrigger && !isKeyboardFocusEvent(event)) return;
     this.requestDelayedTransition(true);
   };
 

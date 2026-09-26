@@ -1,4 +1,6 @@
-import { fixture, fixtureSync, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, fixtureSync, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
 import './source-list.js';
 import '../source-card/source-card.js';
 import '../../utility/copy-button/copy-button.js';
@@ -515,4 +517,50 @@ describe('compact and frame', () => {
       getComputedStyle(part(explicit, 'base')).cssText,
     );
   });
+});
+
+describe('header text contrast at rest, hover and press', () => {
+  afterEach(async () => {
+    await resetMouse();
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`keeps the header text readable and following the header colour (${theme})`, async () => {
+      const wrapper = await fixture<HTMLElement>(
+        html`<div data-lr-theme=${theme}><lr-source-list style="--lr-transition-fast: 0s"></lr-source-list></div>`,
+      );
+      const el = wrapper.querySelector('lr-source-list') as LyraSourceList;
+      await el.updateComplete;
+      const root = el.shadowRoot!;
+      const header = root.querySelector<HTMLElement>('[part="header"]')!;
+      const base = root.querySelector<HTMLElement>('[part="base"]')!;
+      const text = header.querySelector<HTMLElement>('span:not([part])')!;
+      expect(text.textContent!.trim()).to.equal('Sources');
+      const assertContrast = (state: string): void => {
+        expect(
+          contrastRatio(getComputedStyle(text).color, effectiveBackground(header, base)),
+          state,
+        ).to.be.at.least(4.5);
+      };
+      assertContrast('rest');
+
+      const restBackground = getComputedStyle(header).backgroundColor;
+      await hoverUntilMatched(header, 'source-list header under the pointer');
+      await waitUntil(() => getComputedStyle(header).backgroundColor !== restBackground, 'hover background');
+      const brand = resolvedColorToken(root, '--lr-color-brand');
+      await waitUntil(() => getComputedStyle(text).color === brand, 'hovered header text turns brand');
+      assertContrast('hover');
+      const hoverBackground = getComputedStyle(header).backgroundColor;
+
+      await sendMouse({ type: 'down' });
+      try {
+        await waitUntil(() => getComputedStyle(header).backgroundColor !== hoverBackground, 'pressed background');
+        const body = resolvedColorToken(root, '--lr-color-text');
+        await waitUntil(() => getComputedStyle(text).color === body, 'pressed header text returns to the body colour');
+        assertContrast('pressed');
+      } finally {
+        await sendMouse({ type: 'up' });
+      }
+    });
+  }
 });

@@ -413,3 +413,13 @@ export const IconCopyAndHeaderActions: Story = {
     </div>
   `,
 };
+
+export const RightToLeft: Story = {
+  parameters: { docs: { description: { story: 'Under `dir=\'rtl\'` the code body stays left-to-right and opens at the start of the code, the `c++` badge and `./src/main.cpp` file name keep their character order, and the header follows the page direction.' } } },
+  render: () => html`
+    <div dir="rtl" style="inline-size: 400px; max-inline-size: 100%;">
+      <lr-code-block language="c++" filename="./src/main.cpp" max-height="8rem" line-numbers
+        .code=${'#include <iostream>\n\nint main() {\n  std::cout << \"A deliberately long line that has to scroll horizontally inside the code body\" << std::endl;\n  short();\n  return 0;\n}\n'}></lr-code-block>
+    </div>
+  `,
+};

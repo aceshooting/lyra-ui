@@ -14,6 +14,7 @@ import { layeredLayout } from '../../../internal/layered-layout.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
+import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { tag } from '../../../internal/prefix.js';
@@ -168,6 +169,14 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * `nodes-draggable`, and it is excluded from starting or receiving a new connection while
  * `connectable` -- an edge that already touches a since-disabled node is left alone. Omitted or
  * `false` renders the node exactly as before this field existed.
+ *
+ * Anchored Lyra overlays in a node's slotted content (a node menu, a tooltip) default to the
+ * `fixed` strategy, because a node is translated inside a scaled, clipped world where an `absolute`
+ * overlay could never extend past the canvas; a trapped `fixed` overlay opens in the browser top
+ * layer where the native Popover API exists. An authored `positioning-strategy`, an ancestor's
+ * `--lr-positioning-strategy`, or `::part(node) { --lr-positioning-strategy: absolute }` still
+ * wins. Wheel and pointer gestures that start inside such an open overlay stay its own: they
+ * neither zoom the canvas nor drag the node.
  *
  * @customElement lr-flow-canvas
  * @slot - Consumer-authored node cards matched by `node-id`. Each matching card is assigned to the
@@ -1438,8 +1447,29 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return this.orientation === 'horizontal' && rtl ? rect.width - local : local;
   }
 
+  /**
+   * True when the event started inside a surface shown in the browser top layer -- a node menu the
+   * anchored-overlay escape promoted, or a consumer's own open popover -- between the target and
+   * `boundary`. Such a surface paints outside the node and the canvas, but it is still a DOM
+   * descendant, so its wheel and pointer gestures must stay its own: scrolling a long menu must
+   * not zoom the canvas, and pressing on its chrome must not drag the node.
+   */
+  private isFromTopLayerSurface(e: Event, boundary: EventTarget | null | undefined): boolean {
+    for (const entry of e.composedPath()) {
+      if (entry === boundary) return false;
+      if (
+        entry instanceof Element &&
+        (entry.hasAttribute('data-lr-top-layer') || isNativeTopLayerElement(entry))
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private onWheel = (e: WheelEvent): void => {
     if (this.locked || !this.viewportEl) return;
+    if (this.isFromTopLayerSurface(e, this.viewportEl)) return;
     e.preventDefault();
     // Wheel events arrive in dense bursts; neither the viewport's rect nor the resolved text
     // direction can change within a single frame, so both are measured at most once per frame
@@ -1460,6 +1490,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onBackgroundPointerDown = (e: PointerEvent): void => {
     if (this.locked) return;
+    if (this.isFromTopLayerSurface(e, this.viewportEl)) return;
     this.panDrag = {
       pointerId: e.pointerId,
       startClientX: e.clientX,
@@ -2021,6 +2052,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onNodePointerDown(e: PointerEvent, node: FlowNode): void {
     if (!this.nodesDraggable || this.locked || node.disabled) return;
     const wrapper = e.currentTarget as HTMLElement;
+    if (this.isFromTopLayerSurface(e, wrapper)) return;
     // An unscoped `closest()` match cannot be trusted on its own here: `[part='viewport']` is an
     // ANCESTOR of every node wrapper that itself carries `tabindex="0"` and a `part` other than
     // `"node"`, so `[tabindex]:not([part="node"])` matches it too. `closest()` doesn't stop at
@@ -2177,6 +2209,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onWorldPointerDown = (e: PointerEvent): void => {
     if (!this.connectable || this.locked || this.connectState) return;
+    if (this.isFromTopLayerSurface(e, this.viewportEl)) return;
     const path = e.composedPath();
     const handleEl = path.find((el) => isHtmlElement(el) && el.dataset['handleKind'] === 'output') as
       | HTMLElement

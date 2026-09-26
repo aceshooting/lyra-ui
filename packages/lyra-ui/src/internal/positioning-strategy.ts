@@ -27,6 +27,16 @@ import type { PlaceStrategy } from './positioner.js';
 const POSITIONING_STRATEGY_CUSTOM_PROPERTY = '--lr-positioning-strategy';
 
 /**
+ * Private contextual default a container whose own layout traps overlays publishes for its
+ * content: `lr-virtual-list` rows and `lr-flow-canvas` nodes set it to `fixed`, because an
+ * `absolute` overlay inside a transformed box under a clipping scroller never works there, while
+ * `fixed` escapes into the browser top layer. It sits behind the public property, so every
+ * authored value -- an instance property, an ancestor's `--lr-positioning-strategy` (even
+ * `:root`), a `::part(row)` rule -- still wins.
+ */
+const POSITIONING_STRATEGY_CONTEXT_DEFAULT = '--_lr-positioning-strategy-default';
+
+/**
  * Resolves which `PlaceStrategy` an anchored overlay should place with, honoring a cascading
  * theme-level override so a consumer never has to author `positioning-strategy`/`hoist` on every
  * instance living inside the same clipping ancestor (an `overflow: hidden` card, a scroller, or
@@ -40,7 +50,9 @@ const POSITIONING_STRATEGY_CUSTOM_PROPERTY = '--lr-positioning-strategy';
  *    ancestor's `:root`/theme/card rule cascades in, but only the recognized `absolute`/`fixed`
  *    keywords are honored -- anything else (unset, whitespace, a typo) is not a value this
  *    resolves, and falls through.
- * 3. `fallback` -- the component's own mirrored default, unchanged for anyone who sets neither.
+ * 3. A containing component's private contextual default (`--_lr-positioning-strategy-default`,
+ *    `fixed` inside `lr-virtual-list` rows and `lr-flow-canvas` nodes), below every authored value.
+ * 4. `fallback` -- the component's own mirrored default, unchanged for anyone who sets neither.
  *
  * Reads computed style once per call, so call this at open/reposition time (never per animation
  * frame). SSR-safe: `ownerDocument.defaultView` is absent before a client attaches (there is no
@@ -55,9 +67,9 @@ export function resolveEffectivePositioningStrategy(
   if (explicit !== undefined) return explicit;
   const view = host.ownerDocument.defaultView;
   if (!view) return fallback;
-  const inherited = view
-    .getComputedStyle(host)
-    .getPropertyValue(POSITIONING_STRATEGY_CUSTOM_PROPERTY)
-    .trim();
-  return inherited === 'absolute' || inherited === 'fixed' ? inherited : fallback;
+  const computed = view.getComputedStyle(host);
+  const inherited = computed.getPropertyValue(POSITIONING_STRATEGY_CUSTOM_PROPERTY).trim();
+  if (inherited === 'absolute' || inherited === 'fixed') return inherited;
+  const contextual = computed.getPropertyValue(POSITIONING_STRATEGY_CONTEXT_DEFAULT).trim();
+  return contextual === 'absolute' || contextual === 'fixed' ? contextual : fallback;
 }

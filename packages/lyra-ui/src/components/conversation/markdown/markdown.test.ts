@@ -3861,3 +3861,44 @@ describe('escape-mode raw-block text', () => {
     });
   }
 });
+
+describe('top-layer escape in trusted content', () => {
+  it('lets a Lyra overlay escape the unsanitized containment while plain positioned HTML stays clipped', async () => {
+    await import('../../overlays/overlay/popover.js');
+    const el = (await fixture(
+      html`<lr-markdown html-mode="trusted" style="display:block; inline-size:300px"></lr-markdown>`
+    )) as LyraMarkdown;
+    el.content =
+      '<div style="position:relative; block-size:40px">' +
+      '<lr-popover positioning-strategy="fixed" style="--lr-transition-fast:0ms">' +
+      '<button slot="trigger">Open</button><p style="margin:0; block-size:160px">Popover body</p>' +
+      '</lr-popover>' +
+      '<div class="plain" style="position:absolute; inset-block-start:0; inset-inline-start:200px; ' +
+      'inline-size:40px; block-size:400px; background:red"></div></div>';
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-popover') !== null);
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+    expect(content.hasAttribute('data-unsanitized')).to.equal(true);
+    const popover = el.shadowRoot!.querySelector('lr-popover') as HTMLElement & {
+      show(): Promise<void>;
+      hide(o?: { focusTrigger?: boolean }): Promise<void>;
+    };
+    const popup = popover.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    await popover.show();
+    await waitUntil(() => popup.style.left !== '' && popup.matches(':popover-open'), 'the trapped popover is promoted');
+    const contentRect = content.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    expect(popupRect.bottom, 'the popover extends past the markdown box').to.be.greaterThan(contentRect.bottom);
+    const y = contentRect.bottom + Math.min(8, (popupRect.bottom - contentRect.bottom) / 2);
+    const x = popupRect.left + Math.min(10, popupRect.width / 2);
+    const hit = el.shadowRoot!.elementFromPoint(x, y);
+    expect(hit?.localName === 'p' || hit?.localName === 'lr-popover', 'the popover hit-tests outside the markdown box').to.equal(true);
+
+    const plain = el.shadowRoot!.querySelector<HTMLElement>('.plain')!;
+    const plainRect = plain.getBoundingClientRect();
+    expect(plainRect.bottom).to.be.greaterThan(contentRect.bottom);
+    const below = document.elementFromPoint(plainRect.left + plainRect.width / 2, contentRect.bottom + 20);
+    expect(below === el, 'plain positioned HTML stays clipped to the markdown surface').to.equal(false);
+    await popover.hide({ focusTrigger: false });
+  });
+});

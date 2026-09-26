@@ -4,6 +4,7 @@ import "./app-rail.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
+import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 if (!customElements.get('app-rail-icon-forwarder')) {
   customElements.define(
@@ -440,6 +441,41 @@ describe("tooltip", () => {
     base.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="tooltip"]')) == null).to.be.true;
+  });
+
+  it('shows the flyout on keyboard focus only, still recording the focus-return target', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <button id="app-rail-flyout-outside">Outside</button>
+        <lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const outside = wrapper.querySelector<HTMLButtonElement>('#app-rail-flyout-outside')!;
+    const flyout = () => el.shadowRoot!.querySelector('[part="tooltip"]');
+
+    await focusByKeyboard(base);
+    await el.updateComplete;
+    expect(flyout() != null, 'keyboard focus shows the flyout').to.equal(true);
+    await expect(el).to.be.accessible();
+    base.blur();
+    await el.updateComplete;
+    expect(flyout() == null).to.equal(true);
+
+    await focusAfterPointer(base);
+    await el.updateComplete;
+    expect(flyout() == null, 'pointer-then-script focus shows no flyout').to.equal(true);
+    base.blur();
+
+    outside.focus();
+    window.dispatchEvent(new PointerEvent('pointerdown'));
+    base.focus();
+    await el.updateComplete;
+    expect(flyout() == null, 'pointer focus shows no flyout').to.equal(true);
+    const recorded = (el as unknown as { focusReturnTarget?: HTMLElement }).focusReturnTarget;
+    expect(recorded?.id, 'the focus-return target is still recorded').to.equal('app-rail-flyout-outside');
+    base.blur();
   });
 
   it("does not show a flyout when tooltip is unset (the default)", async () => {

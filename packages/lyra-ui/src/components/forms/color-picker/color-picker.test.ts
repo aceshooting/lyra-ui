@@ -3052,3 +3052,27 @@ it("makes lr-show/lr-hide cancelable and the after-events not", async () => {
     false,
   ]);
 });
+
+it("releases a top-layer promoted panel when switching to inline while open", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="transform: translateY(0); overflow: hidden; block-size: 60px">
+      <lr-color-picker label="Accent" positioning-strategy="fixed"></lr-color-picker>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-color-picker") as LyraColorPicker;
+  el.open = true;
+  await el.updateComplete;
+  const panel = part(el, "panel");
+  await waitUntil(() => panel.matches(":popover-open"), "the trapped panel is promoted");
+  el.inline = true;
+  await el.updateComplete;
+  await waitUntil(() => !panel.matches(":popover-open"), "the inline switch releases the top layer");
+  expect(panel.hasAttribute("popover")).to.equal(false);
+  expect(panel.hasAttribute("data-lr-top-layer")).to.equal(false);
+  expect(getComputedStyle(panel).position).to.not.equal("fixed");
+  const host = el.getBoundingClientRect();
+  const rect = panel.getBoundingClientRect();
+  expect(rect.top).to.be.at.least(host.top - 0.5);
+  expect(rect.left).to.be.at.least(host.left - 0.5);
+  expect(rect.bottom).to.be.at.most(host.bottom + 0.5);
+});

@@ -13,7 +13,7 @@ export const styles = [
        transcript can retune the nested card without a ::part(base) override. */
     [part="base"] {
       border: var(--lr-border-width-thin) solid
-        var(--lr-task-list-border-color, var(--lr-color-border-subtle));
+        var(--lr-task-list-border-color, var(--lr-color-border));
       border-radius: var(--lr-task-list-radius, var(--lr-radius));
       background: var(--lr-task-list-background, var(--lr-color-surface));
       overflow: hidden;
@@ -83,7 +83,14 @@ export const styles = [
         var(--lr-color-brand-quiet),
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       );
-    color: var(--lr-color-text);
+      color: var(--lr-color-text);
+    }
+    /* The quiet summary count fails contrast on the hover tint and on the deeper pressed mix, so it
+       follows the header's own colour in both states: brand on hover, the body colour while
+       pressed. Same treatment as lr-tool-call-block's header. */
+    :where(button[part="header"]):hover [part="summary"],
+    :where(button[part="header"]):active [part="summary"] {
+      color: inherit;
     }
     button[part="header"]:focus-visible {
       outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -122,7 +129,7 @@ export const styles = [
          it, so it follows the same hook rather than stranding a mismatched rule in a retuned
          card. */
       border-block-start: var(--lr-border-width-thin) solid
-        var(--lr-task-list-border-color, var(--lr-color-border-subtle));
+        var(--lr-task-list-border-color, var(--lr-color-border));
     }
     [part="body"][hidden] {
       display: none;

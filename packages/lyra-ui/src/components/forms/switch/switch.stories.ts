@@ -29,10 +29,12 @@ export const Checked: Story = {
 export const IndependentStateTheme: Story = {
   name: 'Independent checked and pointer theme',
   render: () => html`
-    <lr-switch
-      checked
-      style="--lr-switch-gap: var(--lr-space-l); --lr-switch-checked-track-fill: var(--lr-color-success); --lr-switch-thumb-fill: var(--lr-color-on-success); --lr-switch-track-hover-fill: var(--lr-color-warning); --lr-switch-track-active-fill: var(--lr-color-danger);"
-    >Hover and press me</lr-switch>
+    <div
+      style="display:grid; gap:var(--lr-space-m); --lr-switch-gap: var(--lr-space-l); --lr-switch-track-fill: var(--lr-color-border-strong); --lr-switch-checked-track-fill: var(--lr-color-success); --lr-switch-thumb-fill: var(--lr-color-on-success); --lr-switch-track-hover-fill: var(--lr-color-warning); --lr-switch-track-active-fill: var(--lr-color-danger);"
+    >
+      <lr-switch checked>Hover and press me (checked)</lr-switch>
+      <lr-switch>Hover and press me (unchecked)</lr-switch>
+    </div>
   `,
 };
 

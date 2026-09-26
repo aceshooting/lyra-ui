@@ -86,48 +86,12 @@ export const Default: Story = {
   render: () => html`<lr-message-parts .parts=${parts}></lr-message-parts>`,
 };
 
-export const ToolDisclosures: Story = {
-  name: 'Tool disclosures',
-  parameters: {
-    docs: {
-      description: {
-        story: 'Opting into `tool-display="disclosure"` pairs each tool result with its call by invocation id. Calls stay collapsed until opened, show a localized status while pending, and reveal arguments plus the eventual result or error in place.',
-      },
-    },
-  },
-  render: () => html`
-    <lr-message-parts
-      tool-display="disclosure"
-      .parts=${[
-        {
-          id: 'web-call',
-          type: 'tool-call',
-          metadata: { durationMs: 1_420, redactedFields: ['args.apiKey'] },
-          invocation: {
-            id: 'web-search-1',
-            name: 'web_search',
-            args: { query: 'Lyra UI accessibility', apiKey: 'hidden' },
-            status: 'running',
-          },
-        },
-        {
-          id: 'web-result',
-          type: 'tool-result',
-          invocationId: 'web-search-1',
-          name: 'web_search',
-          result: { hits: 3 },
-        },
-      ] satisfies MessagePart[]}
-    ></lr-message-parts>
-  `,
-};
-
 export const StreamingTextAndReasoning: Story = {
   parameters: {
     docs: {
       description: {
         story:
-          'Both built-in Markdown paths show accumulated plain text while streaming. Markdown parsing and syntax highlighting are deferred until the host replaces the same-id part with `state: "complete"`.',
+          'With the default `streaming-render="plain"`, both built-in Markdown paths show accumulated plain text while streaming, and Markdown parsing and syntax highlighting are deferred until the host replaces the same-id part with `state: "complete"`. Set `streaming-render="progressive"` (see the Progressive Markdown story) to render settled blocks while a part is still streaming.',
       },
     },
   },
@@ -302,4 +266,12 @@ export const ProgressiveMarkdown: Story = {
       { id: 'reasoning-progressive', type: 'reasoning', state: 'streaming', text: '# Approach\n\nA settled explanation.\n\nConsidering the next step' },
       { id: 'text-progressive', type: 'text', state: 'streaming', text: '# Answer\n\nA **formatted result**.\n\nThe answer continues' },
     ]}></lr-message-parts>`,
+};
+
+export const RightToLeftCode: Story = {
+  parameters: { docs: { description: { story: 'Right-to-left text and reasoning parts with inline and fenced code. Code reads left-to-right; `lr-message-parts` forwards no Markdown part, so this cannot be overridden with `::part()`.' } } },
+  render: () => html`<div dir="rtl" style="inline-size: 400px; max-inline-size: 100%;"><lr-message-parts .parts=${[
+    { id: 'rtl-reasoning', type: 'reasoning', collapsed: false, text: 'أتحقق من الخيار `--verbose`.' },
+    { id: 'rtl-answer', type: 'text', text: 'استخدم هذا الأمر:\n\n```sh\nnpm run build -- --verbose\n```' },
+  ] satisfies MessagePart[]}></lr-message-parts></div>`,
 };

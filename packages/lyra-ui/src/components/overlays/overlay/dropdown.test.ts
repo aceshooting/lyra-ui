@@ -180,18 +180,26 @@ it('honors a same-as-default hoist property over an inherited fixed strategy', a
   await dropdown.hide({ focusTrigger: false });
 });
 
-it('keeps a fixed dropdown in the top layer inside an open dialog', async () => {
+it('promotes a trapped fixed dropdown above an open dialog and leaves an untrapped one on z-index', async () => {
   const dialog = await fixture<HTMLElement>(html`
     <lr-dialog label="Actions">
-      <lr-dropdown hoist style="--lr-transition-fast: 0ms">
-        <button slot="trigger">Actions</button>
-        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
-        <lr-dropdown-item value="delete">Delete</lr-dropdown-item>
+      <div id="trap" style="transform: translateY(0); overflow: hidden; block-size: 40px">
+        <lr-dropdown id="trapped" hoist style="--lr-transition-fast: 0ms">
+          <button slot="trigger">Actions</button>
+          <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+          <lr-dropdown-item value="delete">Delete</lr-dropdown-item>
+        </lr-dropdown>
+      </div>
+      <lr-dropdown id="plain" hoist style="--lr-transition-fast: 0ms">
+        <button slot="trigger">More</button>
+        <lr-dropdown-item value="copy">Copy</lr-dropdown-item>
       </lr-dropdown>
     </lr-dialog>
   `);
-  const dropdown = dialog.querySelector('lr-dropdown') as LyraDropdown;
+  const dropdown = dialog.querySelector('#trapped') as LyraDropdown;
+  const plain = dialog.querySelector('#plain') as LyraDropdown;
   const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  const plainPopup = plain.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
   const close = (dialog as HTMLElement & { close(reason?: string): Promise<void> }).close.bind(dialog);
   const show = (dialog as HTMLElement & { show(): Promise<void> }).show.bind(dialog);
 
@@ -199,12 +207,25 @@ it('keeps a fixed dropdown in the top layer inside an open dialog', async () => 
     await show();
     expect(dialog.matches(':popover-open')).to.be.true;
     await dropdown.show();
-    await waitUntil(() => popup.matches(':popover-open'));
+    await waitUntil(() => popup.matches(':popover-open') && popup.style.left !== '');
     expect(dialog.matches(':popover-open'), 'the dropdown does not light-dismiss the containing dialog').to.be.true;
     expect(popup.getBoundingClientRect().height).to.be.greaterThan(48);
+    const items = [...dropdown.querySelectorAll('lr-dropdown-item')];
+    const deleteRect = items[1]!.getBoundingClientRect();
+    const trapRect = dialog.querySelector('#trap')!.getBoundingClientRect();
+    expect(deleteRect.top, 'the second item lies outside the clipping trap').to.be.greaterThan(trapRect.bottom);
+    const hit = document.elementFromPoint(deleteRect.left + deleteRect.width / 2, deleteRect.top + deleteRect.height / 2);
+    expect(hit?.closest('lr-dropdown-item')?.getAttribute('value'), 'the promoted menu paints above the dialog panel').to.equal('delete');
     await dropdown.hide({ focusTrigger: false });
     expect(dialog.matches(':popover-open')).to.be.true;
     expect(popup.matches(':popover-open')).to.be.false;
+    expect(popup.hasAttribute('popover')).to.be.false;
+
+    await plain.show();
+    await waitUntil(() => plainPopup.style.left !== '');
+    expect(plainPopup.matches(':popover-open'), 'an untrapped fixed dropdown inside the dialog is not promoted').to.be.false;
+    expect(plainPopup.hasAttribute('data-lr-top-layer')).to.be.false;
+    await plain.hide({ focusTrigger: false });
   } finally {
     await close('api');
   }
@@ -212,7 +233,7 @@ it('keeps a fixed dropdown in the top layer inside an open dialog', async () => 
 
 it('keeps a parent dropdown top layer open for nested and canceled hide events', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div>
+    <div style="transform: translateY(0); overflow: hidden; block-size: 40px">
       <lr-dropdown hoist style="--lr-transition-fast: 0ms; --hide-duration: 120ms">
         <button slot="trigger">Outer</button>
         <lr-dropdown hoist style="--lr-transition-fast: 0ms">
@@ -230,8 +251,10 @@ it('keeps a parent dropdown top layer open for nested and canceled hide events',
 
   await outer.show();
   await inner.show();
-  expect(outerPopup.matches(':popover-open')).to.be.true;
-  expect(innerPopup.matches(':popover-open')).to.be.true;
+  expect(outerPopup.matches(':popover-open'), 'the trapped outer menu is promoted').to.be.true;
+  // Floating UI would still measure the nested menu against the scroller its parent escaped, so a
+  // surface nested in a promoted popup is promoted too, above its parent.
+  expect(innerPopup.matches(':popover-open'), 'the nested menu inside a promoted popup is promoted').to.be.true;
   await inner.hide({ focusTrigger: false });
   expect(outerPopup.matches(':popover-open'), 'a nested lr-after-hide must not close its ancestor').to.be.true;
 
@@ -242,6 +265,7 @@ it('keeps a parent dropdown top layer open for nested and canceled hide events',
   expect(outer.open).to.be.true;
   expect(outerPopup.matches(':popover-open'), 'a stale hide cannot remove a reopened popup').to.be.true;
   await outer.hide({ focusTrigger: false });
+  await waitUntil(() => !outerPopup.hasAttribute('popover'), 'settling closed releases the promotion');
 });
 
 it('normalizes the additive inherited popup-role instead of corrupting dropdown semantics', async () => {

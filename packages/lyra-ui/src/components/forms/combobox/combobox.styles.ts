@@ -555,6 +555,16 @@ export const styles = css`
     max-inline-size: 40%;
     overflow: hidden;
   }
+  /* The part is a centred flex container, so a text child is clipped on both sides unless it
+     carries its own shrinkable block with the ellipsis. */
+  [part="option-start"] > *,
+  [part="option-end"] > * {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   [part="option-label"] {
     display: flex;
     flex-direction: column;

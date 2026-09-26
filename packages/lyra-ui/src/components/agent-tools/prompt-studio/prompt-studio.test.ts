@@ -734,3 +734,46 @@ it('tolerates a message with `content: null` without blanking the rest of the pa
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="message"]')).to.have.lengthOf(2);
 });
+
+// The selected version's hover and press defaults used to mix from the literal brand-quiet, so a
+// themed selected fill vanished under the pointer. Both now start from the selected fill.
+it('mixes the selected version hover and press from --lr-prompt-studio-version-selected-bg', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-studio
+      style="--lr-transition-fast: 0s; --lr-prompt-studio-version-selected-bg: rgb(200, 0, 0)"
+      selected-version-id="v1"
+      .versions=${versions}
+    ></lr-prompt-studio>
+  `)) as LyraPromptStudio;
+  await el.updateComplete;
+  const version = el.shadowRoot!.querySelector<HTMLElement>('[part="version"]')!;
+  const resolve = (color: string): string => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = color;
+    el.shadowRoot!.append(probe);
+    const value = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return value;
+  };
+  const hover =
+    'color-mix(in oklab, rgb(200, 0, 0), var(--lr-color-mix-partner) var(--lr-color-mix-hover))';
+  const expectedHover = resolve(hover);
+  const expectedPress = resolve(
+    `color-mix(in oklab, ${hover}, var(--lr-color-mix-partner) var(--lr-color-mix-active))`,
+  );
+  try {
+    await hoverUntilMatched(version, 'selected version never received the pointer hover state');
+    await waitUntil(
+      () => getComputedStyle(version).backgroundColor === expectedHover,
+      'selected version hover did not mix from the selected fill',
+    );
+    await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => version.matches(':active') && getComputedStyle(version).backgroundColor === expectedPress,
+      'selected version press did not mix from the selected fill',
+    );
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});

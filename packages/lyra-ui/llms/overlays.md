@@ -128,8 +128,31 @@ wrapper or a `z-index: 2147483647` sticky header can no longer paint over it or 
 that override no longer decides anything for their modal instances and can be dropped — the token
 still resolves the `z-index` in their stylesheet, but only as the fallback for a user agent without
 popover support. A `contained` drawer is deliberately nonmodal and is not promoted. The token keeps
-doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are _not_
-promoted, and go on stacking at `--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
+doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are not
+promoted unless trapped (below), and otherwise go on stacking at `--lr-overlay-stack-index`,
+falling back to `--lr-layer-popover`.
+
+**Anchored overlays and the top layer.** An anchored overlay that resolves the `fixed` strategy
+(dropdowns, popovers, tooltips, selects, comboboxes, date/time inputs, colour pickers, submenus,
+context menus, navigation-menu panels, chips' and badges' popovers, `lr-popup strategy="fixed"`,
+and `lr-selection-toolbar`) is promoted into the browser top layer only while it is **trapped**: when
+a `transform`ed, `filter`ed, `contain`ed (or `will-change: transform`, `content-visibility`,
+`offset-path`, `transform-style: preserve-3d`) ancestor would otherwise become its containing block
+and clip it. It then opens at full size, positioned against the viewport, in left-to-right and
+right-to-left documents, without moving any DOM node, so slots, styling, ARIA relationships and
+events are unchanged. The check is repeated on every placement update, so an ancestor that becomes
+transformed while the overlay is open (a hover lift, an animation wrapper) is handled too. A
+promoted instance no longer stacks at `--lr-overlay-stack-index`/`--lr-layer-popover` while open:
+it paints above everything outside the top layer, including toasts. A promoted overlay whose
+trigger scrolls out of its scroller is hidden until the trigger returns. An overlay that is not
+trapped keeps the z-index layering above. Promotion needs the native Popover API; a popover
+polyfill does not count, and without it (older Firefox and Safari releases in the support window)
+such an ancestor still contains and clips the overlay, except inside `lr-virtual-list` rows (see
+`lr-virtual-list`). Overlays opened inside `lr-pan-zoom` content align with their trigger and render
+at UI scale with either strategy. The full-viewport modal surfaces that are not anchored overlays
+(`lr-command-palette`, `lr-lightbox`, the tool approval/result/select dialogs, a fullscreen
+`lr-widget`, the `lr-responsive-panel` overlay and `lr-tour`'s spotlight) still stack with
+`z-index`: do not place them under a transformed, filtered or contained ancestor.
 
 **Initial focus.** An `[autofocus]` element anywhere in the slotted content takes focus when the
 overlay opens — including one inside a slotted custom element's own open shadow root, so
@@ -511,7 +534,7 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 
 **Themeable custom properties:** `--lr-skeleton-w`, `--lr-skeleton-h` (set/cleared by the
 `width`/`height` properties; defaults `100%` / `var(--lr-size-1em)`),
-`--lr-skeleton-color` (default `var(--lr-color-border)`), `--lr-skeleton-sheen-color` (default
+`--lr-skeleton-color` (default `var(--lr-color-neutral-fill-normal)`), `--lr-skeleton-sheen-color` (default
 `var(--lr-color-surface)`), `--lr-skeleton-border-radius` (default `var(--lr-radius)` for text and
 rectangle shapes); upstream `--color`, `--sheen-color`, and `--border-radius` feed those same
 values. The shared `--lr-transition-ambient` (default `1.8s ease-in-out`) controls the pulse/sheen
@@ -1193,7 +1216,8 @@ rule covers all four non-neutral variants, because the shared variants sheet has
 the chip reads those generic slots and never names a variant, and sets its border `transparent`),
 `--lr-chip-pressed-border` (border color while pressed/selected — falls back to
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
-back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
+back to `--lr-chip-bg`; a selected chip's hover/press wash mixes from it, an unselected toggleable
+chip's from `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
 `--lr-chip-padding-inline`, `--lr-chip-gap`, `--lr-chip-icon-size` (all five have private defaults
 that follow each `size`, so setting one on the element or a theme ancestor remains authoritative; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
@@ -1449,9 +1473,10 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   under RTL. The shared positioner's physical coordinates remain authoritative in either
   direction, so RTL never stretches a fixed-width popup against an opposite logical inset.
 - `strategy: 'absolute' | 'fixed' = 'absolute'` (reflected) — the CSS positioning scheme. `fixed`
-  normally positions relative to the viewport, but ancestors using transforms, filters or
-  containment can establish a different containing block, and ancestor clipping may still apply.
-  `absolute` positions relative to its containing block and scrolls with its containing content.
+  positions relative to the viewport; under a transformed, filtered or contained ancestor the popup
+  is promoted into the browser top layer where the native Popover API exists, and otherwise that
+  ancestor establishes its containing block and may clip it. `absolute` positions relative to its
+  containing block and scrolls with its containing content.
 - `distance: number = 0` — offset from the anchor along the placement axis, in px
 - `skidding: number = 0` — offset along the anchor's edge, in px
 - `flip: boolean = false` (not reflected), with `flipFallbackPlacements: string = ''` (attribute
@@ -1585,14 +1610,23 @@ If the import fails, leave the native disclosure visible and usable.
   the same way; each keeps its own default, so setting nothing changes nothing. An unsupported value
   resolves back to that default. This property always reports the instance's own authored value (or
   its mirrored default) — see the cascading `--lr-positioning-strategy` custom property below for a
-  theme-level way to change the *rendered* strategy of every instance that sets neither.
+  theme-level way to change the *rendered* strategy of every instance that sets neither. `fixed`
+  escapes transformed, filtered or contained ancestors by promoting the popup into the browser top
+  layer where the native Popover API exists; otherwise, as before, such an ancestor contains and
+  clips it (see **Anchored overlays and the top layer**).
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
   keyword. The two transient modes open after `showDelay`, close after `hideDelay` once the
-  interaction ends, never move focus into the surface, and stay open while focus rests anywhere
-  inside it. A click on the trigger pins a transient surface open; the next click releases the pin
-  and closes it. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
+  interaction ends, never move focus into the surface they opened themselves, and stay open while
+  focus rests anywhere inside it. `focus` means keyboard focus: the focused element must match
+  `:focus-visible` and the last input must not have been a pointer press, so pointer, touch and
+  scripted focus that follows them do not open it; call `show()` for scripted reveals. A click on
+  the trigger pins a transient surface open; the next click releases the pin and closes it. A click
+  that opens a *closed* transient surface opens it pinned like click mode, including pulling
+  `[autofocus]` (and, for `lr-dropdown`, focusing the active menu item); a click on a surface hover
+  already opened only pins it. Migrating from `wa-popover`/`wa-dropdown`/`sl-dropdown`: the same
+  keyboard-focus narrowing as `lr-tooltip` applies. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
   and wins over any keyword beside it. Unrecognized tokens are dropped and the property reads back
   as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
   `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
@@ -1774,8 +1808,8 @@ the same colour.
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
 placement/anchor change while open — never per animation frame). Setting nothing anywhere leaves
 every default exactly as before. Precedence: an explicit `positioning-strategy`/`hoist` on the
-instance always wins; otherwise this inherited custom property; otherwise the component's own
-mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
+instance always wins; otherwise this inherited custom property; otherwise `fixed` inside
+`lr-virtual-list` rows and `lr-flow-canvas` nodes; otherwise the component's own mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
 theme, or a single clipping ancestor (an `overflow: hidden` card or a scroller) changes every unset
 overlay beneath it — no need to author `positioning-strategy`/`hoist` on each instance individually,
 or to remember it on every new one:
@@ -1818,7 +1852,8 @@ or to remember it on every new one:
 ## `lr-tooltip`
 
 A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
-interactions open it is configurable as of 8.0.0; by default it is still hover and focus.
+interactions open it is configurable as of 8.0.0; by default it is still hover and focus. Focus
+means keyboard focus; see `trigger`.
 
 An open lr-tooltip repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.
@@ -1832,10 +1867,15 @@ later text renders normally.
   Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
   already closed, so a pending timer can't reopen it behind the caller's back.
 - `trigger: string = 'hover focus'` — **new in 8.0.0.** A _space-separated_ list of `hover`,
-  `focus`, `focus-visible`, `click` and `manual`. `focus` opens on any focus, preserving the default
-  and existing behavior; `focus-visible` opens only when the trigger's actual focus target matches
-  `:focus-visible`, including a focused control inside a shadow-root trigger. Use it when opening a
-  tooltip on programmatic or pointer focus would obscure nearby content. `manual` (or an empty list)
+  `focus`, `click` and `manual`. `focus` means keyboard focus: the focused element must match
+  `:focus-visible` and the last input must not have been a pointer press. Pointer, touch and
+  scripted focus that follows them do not open it, but any focus inside the trigger still wires its
+  description; use `show()` for scripted reveals. This narrows `wa-tooltip`/`sl-tooltip` focus
+  activation deliberately, following the WAI-ARIA tooltip pattern, and the check reads the control
+  that actually holds focus, including one inside a shadow-root trigger. Migrating from
+  `wa-tooltip`/`sl-tooltip`: focus activation is narrowed to keyboard focus. If you removed `focus`
+  from `trigger` to stop pointer or programmatic pops, restore the default; call `show()` for
+  scripted reveals. `manual` (or an empty list)
   leaves the tooltip entirely under programmatic control. Note the name collision: this string
   property and the `trigger` _slot_ are different things — the slot holds the element, this property
   says which of its interactions count.
@@ -1955,7 +1995,8 @@ default, when neither `positioning-strategy` nor `hoist` is authored on the inst
 </lr-tooltip>
 ```
 
-While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
+While open, and whenever focus is inside the trigger (when `focus` is among the active keywords),
+trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
 not the shadow-private popup. Native triggers resolve that ID directly. A description is only
 announced on the node that actually holds focus, so when the trigger is a custom element the same
 proxy is applied to the first focusable descendant as well — across slots and nested open shadow
@@ -1964,8 +2005,9 @@ just the components that forward their own host `aria-describedby`. A descendant
 receives the serialized ID; one inside a shadow root is linked through `ariaDescribedByElements`,
 whose explicit element-reference assignment intentionally leaves that control's serialized
 `aria-describedby` value empty in supporting browsers. Existing author-provided descriptions —
-including a control's own internal hint/error text — are merged while open and restored when the
-tooltip closes, the trigger is replaced, or the tooltip disconnects. Late author writes remain the
+including a control's own internal hint/error text — are merged while described and restored once
+the tooltip is neither open nor focused, when the trigger is replaced, or when the tooltip
+disconnects. Late author writes remain the
 release baseline while Lyra's active description stays composed into the owned value.
 
 With no slotted trigger, a live HTML `for` target receives those same interactions and description;
@@ -2038,13 +2080,15 @@ The inner menu list owns scrolling within the popup's height limit, keeping a co
 header and footer visible. The outer `popup` and `content` parts allow overflow so nested submenus
 remain clickable outside the parent menu in every supported browser. This works with either
 submenu authoring shape, with or without `hoist` or an arrow; no overflow override is required.
-When the resolved strategy is `fixed` (from `positioning-strategy="fixed"`, `hoist`, or an
-inherited `--lr-positioning-strategy: fixed`) and `showPopover()` is supported, an open popup is
-promoted to the browser's top layer. This lets a fixed dropdown inside a transformed virtual-list
-row escape that row's clipping and stacking context. The popup stays promoted through its hide
-transition and returns to its ordinary shadow-tree stacking context after `lr-after-hide`;
-disconnecting also removes it from the top layer. If the browser lacks the Popover API, fixed
-positioning remains in use without promotion.
+When the resolved strategy is `fixed` (from `positioning-strategy="fixed"`, `hoist`, an inherited
+`--lr-positioning-strategy: fixed`, or the `fixed` default inside `lr-virtual-list` rows, so
+`lr-thread-list` row actions, and `lr-flow-canvas` nodes) and a transformed, filtered or contained
+ancestor would trap it, an open popup is promoted to the browser's top layer where the native
+Popover API exists (see **Anchored overlays and the top layer**). A dropdown in a short virtual
+list therefore opens at full size below its row. The popup stays promoted through its hide
+transition and returns to its ordinary shadow-tree stacking context once it settles closed; a
+submenu nested in a promoted menu is promoted above it. An untrapped fixed dropdown keeps the
+z-index layering.
 
 An open lr-dropdown repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.
@@ -2330,8 +2374,9 @@ parent; set `lr-context-menu { display: block }` to get a box.
 `--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), and `--show-duration` / `--hide-duration`
 (`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
 The popup always uses fixed positioning (the anchor is a viewport point), so the cascading
-`--lr-positioning-strategy` is not consulted. It is not promoted to the top layer: it stacks exactly
-like `lr-dropdown` (`--lr-overlay-stack-index`). Motion uses the `dropdown.show` /
+`--lr-positioning-strategy` is not consulted. Like `lr-dropdown`, it is promoted to the top layer
+only when a transformed, filtered or contained ancestor (such as an `lr-virtual-list` row) would
+trap it; otherwise it stacks like `lr-dropdown` (`--lr-overlay-stack-index`). Motion uses the `dropdown.show` /
 `dropdown.hide` registry entries, flattened under `prefers-reduced-motion`; overriding those
 entries also affects context menus.
 

@@ -86,6 +86,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'رنگ فعلی: {color}',
   selectSelectedOverflow: '+{n} بیشتر',
   emojiPickerSearchLabel: 'جست‌وجوی ایموجی',
+  emojiPickerSearchPlaceholder: 'جست‌وجوی ایموجی…',
   emojiPickerGridLabel: 'ایموجی',
   emojiPickerEmpty: 'ایموجی پیدا نشد',
   emojiPickerLoadError: 'بارگیری ایموجی‌ها ممکن نبود.',

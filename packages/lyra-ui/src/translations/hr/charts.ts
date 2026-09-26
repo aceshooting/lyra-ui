@@ -1,0 +1,64 @@
+// The `charts` slice of the hr translation catalog for @aceshooting/lyra-ui: strings owned exclusively by `src/components/charts/**`.
+// A side-effect-only module: a consumer writes a bare
+// `import '@aceshooting/lyra-ui/translations/hr/charts';` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- `scripts/check-translations.mjs` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
+// Regenerate the SHAPE (never the translations) with:
+//   node scripts/scaffold-translation.mjs hr --force
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
+
+const strings: LyraLocaleStrings = {
+  chartCategory: 'Kategorija',
+  chartTotal: 'Ukupno',
+  chartAxisTotal: 'Ukupno ({axis})',
+  chartPrimaryAxis: 'Primarna os',
+  chartSecondaryAxis: 'Sekundarna os',
+  chartPointLabel: 'Točka {n}',
+  chartPointCoordinates: 'x {x}, y {y}',
+  chartBubblePointCoordinates: 'x {x}, y {y}, polumjer {radius}',
+  chartLabeledPoint: '{label}: {coordinates}',
+  chartTrendIncreasing: 'rastući',
+  chartTrendDecreasing: 'padajući',
+  chartTrendFlat: 'stabilan',
+  chartSummary: '{label}: broj vrijednosti {count}, raspon od {min} do {max}, trend: {trend}',
+  chartSeriesNoData: '{label}: nema podataka',
+  chartSummaryWithData: 'Grafikon ({type}). {summaries}.',
+  chartSummaryEmpty: 'Grafikon ({type}) bez podataka.',
+  chartSummarySeparator: '. ',
+  chartData: 'Podaci grafikona',
+  chartDataSampled: 'Generirana tablica podataka prikazuje uzorak od najviše 1.000 zapisa. Za pristup svim podacima grafikona navedite prilagođenu tablicu podataka.',
+  chartZoomUnavailable: 'Zumiranje nije dostupno, ali osnovni grafikon ostaje dostupan.',
+  chartDataLabelsUnavailable: 'Oznake podataka nisu dostupne, ali osnovni grafikon ostaje dostupan.',
+  chartStackTotalsUnavailable: 'Zbrojevi naslaganih vrijednosti nisu dostupni, ali osnovni grafikon ostaje dostupan.',
+  chartAnnotationsUnavailable: 'Bilješke grafikona nisu dostupne, ali osnovni grafikon ostaje dostupan.',
+  chartTypeLine: 'Linijski',
+  chartTypeBar: 'Stupčasti',
+  chartTypeScatter: 'Raspršeni',
+  chartTypePie: 'Tortni',
+  chartTypeDoughnut: 'Prstenasti',
+  chartTypeRadar: 'Radarski',
+  chartTypePolarArea: 'Polarni',
+  chartTypeBubble: 'Mjehuričasti',
+  boxPlotSeriesSummary: '{label}: broj distribucija {count}, raspon medijana od {min} do {max}, trend medijana: {trend}',
+  boxPlotSummaryWithData: 'Kutijasti dijagram. {summaries}.',
+  boxPlotSummaryEmpty: 'Kutijasti dijagram bez podataka.',
+  boxPlotData: 'Podaci kutijastog dijagrama',
+  chartSeriesLabel: 'Serija',
+  boxPlotMin: 'Min.',
+  boxPlotQ1: 'Q1',
+  boxPlotMedian: 'Medijan',
+  boxPlotQ3: 'Q3',
+  boxPlotMax: 'Maks.',
+  boxPlot: 'Kutijasti dijagram',
+  histogramFrequency: 'Učestalost',
+  liteChartMarkSummary: '{series}, {label}: {value} ({index} od {total})',
+  liteChartBarLabel: '{series}, {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
+  liteChartCustomMarkSummary: '{content} ({index} od {total})',
+  chartMissingLibrary: 'Za prikaz grafikona ova komponenta zahtijeva instaliran izborni paket „chart.js”.',
+  boxPlotMissingLibrary: 'Za prikaz kutijastih dijagrama ova komponenta zahtijeva instaliran izborni paket za kutijaste dijagrame.',
+};
+
+registerLyraLocale('hr', strings);

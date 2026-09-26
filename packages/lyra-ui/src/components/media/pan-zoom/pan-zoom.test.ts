@@ -1,7 +1,12 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './pan-zoom.js';
 import type { LyraPanZoom } from './pan-zoom.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
+
+ignoreResizeObserverLoopErrors(
+  'changing the zoom under an open overlay rewrites its compensating zoom inside the positioner resize callback',
+);
 
 it('preserves the former zoomable-frame slotted pan/zoom contract under lr-pan-zoom', async () => {
   const el = await fixture<LyraPanZoom>(html`
@@ -351,4 +356,85 @@ it('keeps the pan/zoom surface accessible in populated state', async () => {
     <lr-pan-zoom aria-label="Diagram preview"><div>Diagram</div></lr-pan-zoom>
   `);
   await expect(el).to.be.accessible();
+});
+
+describe('anchored overlays in zoomed content', () => {
+  async function zoomedDropdown(strategy: 'fixed' | 'absolute', positionedWrapper = false) {
+    await import('../../overlays/overlay/dropdown.js');
+    await import('../../layout/menu/dropdown-item.js');
+    const dropdown = html`<lr-dropdown positioning-strategy=${strategy} style="--lr-transition-fast:0ms">
+      <button slot="trigger" style="margin: 10px">Actions</button>
+      <lr-dropdown-item value="a">Alpha</lr-dropdown-item>
+    </lr-dropdown>`;
+    const el = await fixture<LyraPanZoom>(html`
+      <lr-pan-zoom zoom="2" style="inline-size: 400px; block-size: 200px">
+        <div style="inline-size: 180px; block-size: 90px; ${positionedWrapper ? 'position: relative' : ''}">${dropdown}</div>
+      </lr-pan-zoom>
+    `);
+    const dd = el.querySelector('lr-dropdown') as HTMLElement & {
+      show(): Promise<void>;
+      hide(o?: { focusTrigger?: boolean }): Promise<void>;
+    };
+    const popup = dd.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    const trigger = dd.querySelector('button')!;
+    return { el, dd, popup, trigger };
+  }
+
+  async function expectAligned(popup: HTMLElement, trigger: HTMLElement): Promise<void> {
+    await waitUntil(() => popup.style.left !== '' && popup.getBoundingClientRect().width > 0);
+    await waitUntil(() => {
+      const t = trigger.getBoundingClientRect();
+      const p = popup.getBoundingClientRect();
+      return Math.abs(p.left - t.left) < 1.5 && Math.abs(p.top - t.bottom) < 1.5;
+    }, 'the popup opens at its trigger in zoomed content');
+  }
+
+  it('aligns a fixed dropdown to its trigger inside zoom="2" content without promoting it', async () => {
+    const { dd, popup, trigger } = await zoomedDropdown('fixed');
+    await dd.show();
+    await expectAligned(popup, trigger);
+    expect(popup.matches(':popover-open'), 'zoom alone is not a trap').to.equal(false);
+    expect(Number.parseFloat(getComputedStyle(popup).zoom)).to.be.closeTo(0.5, 0.001);
+    await dd.hide({ focusTrigger: false });
+    await waitUntil(() => popup.hidden);
+    await waitUntil(() => popup.style.getPropertyValue('zoom') === '', 'the settle releases the compensation');
+  });
+
+  it('aligns a default-absolute dropdown whose offset parent lies outside the zoomed content', async () => {
+    const { dd, popup, trigger } = await zoomedDropdown('absolute');
+    await dd.show();
+    await expectAligned(popup, trigger);
+    expect(Number.parseFloat(getComputedStyle(popup).zoom)).to.be.closeTo(0.5, 0.001);
+    await dd.hide({ focusTrigger: false });
+  });
+
+  it('writes no zoom for an absolute dropdown whose offset parent is inside the zoomed content', async () => {
+    const { dd, popup, trigger } = await zoomedDropdown('absolute', true);
+    await dd.show();
+    await expectAligned(popup, trigger);
+    expect(popup.style.getPropertyValue('zoom')).to.equal('');
+    await dd.hide({ focusTrigger: false });
+  });
+
+  it('keeps an open tooltip aligned when the zoom changes', async () => {
+    await import('../../overlays/overlay/tooltip.js');
+    const el = await fixture<LyraPanZoom>(html`
+      <lr-pan-zoom zoom="2" style="inline-size: 400px; block-size: 200px">
+        <div style="inline-size: 180px; block-size: 90px">
+          <lr-tooltip placement="bottom-start" distance="0" style="--lr-transition-fast:0ms"
+            ><button slot="trigger" style="margin: 10px">Hint</button><span>Tip</span></lr-tooltip
+          >
+        </div>
+      </lr-pan-zoom>
+    `);
+    const tooltip = el.querySelector('lr-tooltip') as HTMLElement & { show(): Promise<void>; hide(): Promise<void> };
+    const popup = tooltip.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    const trigger = tooltip.querySelector('button')!;
+    await tooltip.show();
+    await expectAligned(popup, trigger);
+    el.zoom = 3;
+    await el.updateComplete;
+    await expectAligned(popup, trigger);
+    await tooltip.hide();
+  });
 });

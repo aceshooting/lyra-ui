@@ -70,7 +70,7 @@ button, so programmatic focus/activation reaches the same semantic owner as poin
 interaction.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
-shown in a floating tooltip on hover/focus; nothing renders at all, no hover affordance, when this
+shown in a floating tooltip on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it); nothing renders at all, no hover affordance, when this
 slot is empty), `icon` (overrides the built-in per-status glyph entirely via native slot-fallback
 content — assigned content wins; otherwise the `icon` prop is rendered as a literal hint; otherwise
 the built-in glyph for the current `status` is used)
@@ -133,7 +133,7 @@ ancestor to change every unset chip beneath it.
 
 The default slot's tooltip uses the same `'top-start'` placement as `<lr-combobox>`'s listbox, and
 appears/disappears instantly
-on hover/focus/blur/mouseleave with no fade transition and no "pointer moved into the tooltip"
+on hover or keyboard focus, and on blur/mouseleave, with no fade transition and no "pointer moved into the tooltip"
 tracking — it's documented as read-only preview content, not an interactive surface meant to retain
 focus of its own. `denied` gets its own warning-toned glyph and color (a policy rejection, not a
 runtime failure) distinct from `error`'s danger tone, matching `<lr-tool-result-dialog>`'s
@@ -165,6 +165,8 @@ falling back to `<lr-json-viewer>` whenever no renderer matches, a candidate ren
 owns none of the actual visual weight of a populated tool result — that's entirely whatever the
 registered renderer returns; `<lr-tool-result-view>` is just the dispatch + fallback + loading-state
 shell around it.
+
+Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — JSON reads left-to-right and an Arabic line right-to-left inside either document direction. WebKit resolves this once per block from its first strong character rather than per line.
 
 **Properties:**
 
@@ -838,6 +840,8 @@ cause"/"During handling" separators) into separate groups. Frames matching `inte
 behind a count-labeled toggle. A malformed or non-safe-integer location remains visible as raw,
 non-activatable text. Falls back to verbatim raw text when nothing parses. First-party invention
 (no Web Awesome equivalent).
+
+Direction: function names (`::part(frame-function)`) and locations (`::part(frame-location)`) carry `dir="ltr"`, so `Object.<anonymous>` and file paths read left-to-right inside a right-to-left document; the frame button itself follows the page direction.
 
 Removing the `trace` attribute clears parsed content and copies empty text; the property retains
 `null` until assigned again.
@@ -1688,6 +1692,8 @@ cursor-addressed full-screen apps. An ANSI sequence split across chunks retains 
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
 clean parser boundary.
 
+Direction: every line is left-to-right. Without `wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. With `wrap`, the scrollport follows the page direction.
+
 A search with no matches clears earlier rendered match markers. Removing the `content` attribute
 clears output and preserves the normal `null` property readback.
 
@@ -1877,7 +1883,8 @@ least their start, unknown kinds become `other`, and unknown statuses become `pe
 `live-region`.
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
-`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row — and
+`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row, and the base
+its hover/press mixes from — and
 `--lr-trace-tree-row-active-color` (default `var(--lr-color-text)`) — the color of that row's
 secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the `pending`
 `status-text` label). Same state-scoped-property convention described under `lr-span-waterfall`
@@ -2080,6 +2087,8 @@ A pass/fail suite summary with per-status counts, status filter toggles, and per
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
 
+Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
+
 **Properties:** `suites: readonly TestSuiteResult[] = []` (attribute: false) — `TestSuiteResult { id: string;
 name: string; tests: readonly TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
@@ -2132,7 +2141,7 @@ adjacent localized status word carries the meaning. Running rows use the decorat
 `var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
 `var(--lr-color-brand)`) and `--lr-test-results-filter-active-color` (default
 `var(--lr-color-brand)`) — the background, border color and text color of a pressed (active) status
-filter toggle. All three follow the state-scoped-property convention described under
+filter toggle. The background is also the base its hover/press mixes from. All three follow the state-scoped-property convention described under
 `lr-span-waterfall`: inline `var()` fallbacks rather than `:host` declarations, so each can be set on
 the element or on any ancestor. They exist because
 `::part(filter-toggle)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
@@ -2760,7 +2769,8 @@ the host to apply to its controlled `examples` array.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
 search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
-`grid`, `add-button`, `remove-button`, `import`, `export`.
+`grid`, `add-button`, `remove-button`, `import` (the internal `compact` `lr-file-input`; its
+dropzone text and accessible name are the localized `evalDatasetImportLabel`), `export`.
 
 **Themeable custom properties:** `--lr-eval-dataset-search-min-height` (default `auto`),
 `--lr-eval-dataset-search-font-size` (default `inherit`),
@@ -3059,7 +3069,7 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Additional API surface:**
 
 - `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
-- `--lr-agent-eval-dashboard-active-background` — Active metric background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-agent-eval-dashboard-active-background` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.
 
 ## `lr-approval-queue`
 
@@ -3259,7 +3269,7 @@ import "@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.
 - `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
 - `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
-- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.
+- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Unset, mixes from `--lr-prompt-studio-version-selected-bg` (its own default shown). Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.
 
 ## `lr-json-schema-viewer`
 

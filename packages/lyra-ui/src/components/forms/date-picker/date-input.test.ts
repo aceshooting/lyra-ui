@@ -5090,3 +5090,27 @@ it('tracks inherited theme heights at small and large sizes without extra action
   expect(row().getBoundingClientRect().height).to.equal(52);
   await expect(el).to.be.accessible();
 });
+
+// The start/end parts are inline-flex, so the part's own ellipsis never fired on slotted text.
+describe("lr-date-input slotted adornment truncation", () => {
+  const LONG = "Adornment text that is far too long.";
+
+  for (const slot of ["start", "end"] as const) {
+    it(`truncates a long slotted ${slot} text adornment with an ellipsis`, async () => {
+      const el = (await fixture(html`
+        <lr-date-input style="inline-size: 240px"
+          ><span slot=${slot} id="adornment">${LONG}</span></lr-date-input
+        >
+      `)) as LyraDateInput;
+      await el.updateComplete;
+      const part = el.shadowRoot!.querySelector(`[part~="${slot}"]`) as HTMLElement;
+      const adornment = el.querySelector("#adornment") as HTMLElement;
+      const box = adornment.getBoundingClientRect();
+      const partBox = part.getBoundingClientRect();
+      expect(box.left, "start edge stays inside the part").to.be.at.least(partBox.left - 0.5);
+      expect(box.right, "end edge stays inside the part").to.be.at.most(partBox.right + 0.5);
+      expect(getComputedStyle(adornment).textOverflow).to.equal("ellipsis");
+      expect(adornment.scrollWidth > adornment.clientWidth, "text overflows its box").to.equal(true);
+    });
+  }
+});

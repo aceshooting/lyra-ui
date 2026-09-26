@@ -709,3 +709,33 @@ describe('card chrome theming hooks', () => {
     expect(getComputedStyle(copy).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
 });
+
+function glyphRect(root: Node, needle: string): DOMRect {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const index = (node as Text).data.indexOf(needle);
+    if (index === -1) continue;
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + needle.length);
+    return range.getClientRects()[0] ?? range.getBoundingClientRect();
+  }
+  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
+}
+
+it('reads function names and locations left-to-right under RTL while the frame button follows the page', async () => {
+  const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 480px">
+    <lr-stack-trace .collapseInternal=${false} .trace=${'Error: boom\n    at Object.<anonymous> (/app/src/index.js:3:7)'}></lr-stack-trace>
+  </div>`);
+  const el = host.querySelector('lr-stack-trace') as LyraStackTrace;
+  await el.updateComplete;
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part="frame-function"]')));
+  const fn = el.shadowRoot!.querySelector<HTMLElement>('[part="frame-function"]')!;
+  expect(fn.getAttribute('dir')).to.equal('ltr');
+  expect(glyphRect(fn, 'O').left).to.be.lessThan(glyphRect(fn, '>').left);
+  expect(glyphRect(fn, '<').left).to.be.lessThan(glyphRect(fn, '>').left);
+  expect(el.shadowRoot!.querySelector('[part="frame-location"]')?.getAttribute('dir')).to.equal('ltr');
+  const frame = fn.closest('[part~="frame"]') as HTMLElement | null;
+  expect(frame ? getComputedStyle(frame).direction : 'rtl').to.equal('rtl');
+  await expect(el).to.be.accessible();
+});

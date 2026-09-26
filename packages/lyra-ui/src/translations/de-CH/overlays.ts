@@ -1,0 +1,47 @@
+// The `overlays` slice of the de-CH translation catalog for @aceshooting/lyra-ui: strings owned exclusively by `src/components/overlays/**`.
+// A side-effect-only module: a consumer writes a bare
+// `import '@aceshooting/lyra-ui/translations/de-CH/overlays';` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- `scripts/check-translations.mjs` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
+// Regenerate the SHAPE (never the translations) with:
+//   node scripts/scaffold-translation.mjs de-CH --force
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
+
+const strings: LyraLocaleStrings = {
+  rating: 'Bewertung',
+  calloutAnnouncementWithContext: '{context}: {content}',
+  closeWithContext: 'Schliessen: {snippet}',
+  closeWithTruncatedContext: 'Schliessen: {snippet}…',
+  toastContentIncomplete: 'Benachrichtigung mit unvollständigem Inhalt',
+  toastOverflow: 'Nicht angezeigte Benachrichtigungen: {count}.',
+  kbdEscapeVisual: 'Esc',
+  kbdEscapeWord: 'Escape',
+  kbdTabWord: 'Tabulator',
+  kbdSpaceWord: 'Leertaste',
+  kbdDeleteVisual: 'Entf',
+  kbdDeleteWord: 'Entfernen',
+  kbdHomeWord: 'Pos 1',
+  kbdEndWord: 'Ende',
+  kbdPageUpVisual: 'Bild ↑',
+  kbdPageUpWord: 'Bild auf',
+  kbdPageDownVisual: 'Bild ↓',
+  kbdPageDownWord: 'Bild ab',
+  kbdEnterWord: 'Eingabe',
+  kbdBackspaceWord: 'Rücktaste',
+  kbdArrowUpWord: 'Pfeil nach oben',
+  kbdArrowDownWord: 'Pfeil nach unten',
+  kbdArrowLeftWord: 'Pfeil nach links',
+  kbdArrowRightWord: 'Pfeil nach rechts',
+  kbdPlusWord: 'Plus',
+  kbdMinusWord: 'Minus',
+  kbdCommandWord: 'Command',
+  kbdControlVisual: 'Strg',
+  kbdControlWord: 'Steuerung',
+  kbdOptionWord: 'Option',
+  kbdAltWord: 'Alt',
+  kbdShiftWord: 'Umschalt',
+};
+
+registerLyraLocale('de-CH', strings);

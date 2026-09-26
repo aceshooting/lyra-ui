@@ -390,3 +390,37 @@ it('forwards progressive mode through both streaming-text variants and message t
   expect(nestedMarkdown.map((el) => el.shadowRoot!.querySelector('[part="content"] h1')?.textContent))
     .to.deep.equal(['Text part', 'Reasoning part']);
 });
+
+it('restores focus from an open-fence preview to the committed code block, but never steals outside focus', async () => {
+  await preloadMarkdown();
+  for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
+    const el = mountMarkdown(tag, '# Code\n\n```text\nline one\n');
+    el.highlightCode = false;
+    const root = await contentRoot(el);
+    await waitUntil(() => Boolean(root.querySelector('pre[part="code-block"]')), 'open fence preview never rendered');
+    root.querySelector<HTMLElement>('pre[part="code-block"]')!.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('code-block');
+    el.content += '```\n\nAfter the block\n';
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="streaming-tail"]')?.textContent?.includes('After') === true
+      || Boolean(el.shadowRoot!.querySelector('[part="content"] p')), 'closing fence never committed');
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="content"] > pre[part="code-block"]')?.textContent === 'line one\n', 'fence never committed as a settled block');
+    await waitUntil(() => document.activeElement === el && el.shadowRoot!.activeElement?.getAttribute('part') === 'code-block',
+      `focus not restored: document=${document.activeElement?.localName}, shadow=${el.shadowRoot!.activeElement?.localName}`, { timeout: 2000 });
+    expect(el.shadowRoot!.activeElement?.textContent).to.equal('line one\n');
+
+    const outside = document.createElement('input');
+    mounted.push(outside);
+    document.body.append(outside);
+    const second = mountMarkdown(tag, '# Code\n\n```text\nline two\n');
+    second.highlightCode = false;
+    const secondRoot = await contentRoot(second);
+    await waitUntil(() => Boolean(secondRoot.querySelector('pre[part="code-block"]')));
+    secondRoot.querySelector<HTMLElement>('pre[part="code-block"]')!.focus();
+    outside.focus();
+    second.content += '```\n\nAfter\n';
+    await waitUntil(() => Boolean(second.shadowRoot!.querySelector('[part="content"] p, [part="streaming-tail"]')));
+    await second.updateComplete;
+    expect(document.activeElement === outside).to.equal(true);
+  }
+});

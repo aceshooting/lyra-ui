@@ -107,3 +107,41 @@ export const ProgressiveMarkdown: Story = {
   render: () => html`<lr-streaming-text-core content-mode="markdown" streaming streaming-render="progressive" code-block-header
     .content=${'# Settled response\n\nA **formatted paragraph**.\n\n```js\nconst ready = true;\n```\n\nThe response continues'}></lr-streaming-text-core>`,
 };
+
+export const RightToLeftCodeStream: Story = {
+  parameters: { docs: { description: { story: 'A timer-driven right-to-left stream through inline code and a fenced block. The plain-text view isolates the code runs left-to-right while streaming, and the settled Markdown keeps them left-to-right.' } } },
+  render: () => {
+    const source = 'مقدمة قصيرة.\n\nاستخدم `--verbose` لعرض التفاصيل.\n\n```js\nconst answer = compute(42);\n```\n\nخاتمة.';
+    const tokens = source.split(/(?<=\s)/);
+    return html`<div dir="rtl" style="display:grid; gap:0.75rem; inline-size:400px; max-inline-size:100%;">
+      <lr-streaming-text-core content-mode="markdown" coalesce-ms="50"></lr-streaming-text-core>
+      <div><button type="button" @click=${(event: Event) => {
+        const el = (event.currentTarget as HTMLElement).closest('div[dir]')!.querySelector('lr-streaming-text-core') as HTMLElement & { content: string; streaming: boolean };
+        el.content = '';
+        el.streaming = true;
+        let index = 0;
+        const timer = setInterval(() => {
+          index++;
+          el.content = tokens.slice(0, index).join('');
+          if (index >= tokens.length) {
+            clearInterval(timer);
+            el.streaming = false;
+          }
+        }, 40);
+      }}>ابدأ البث</button></div>
+    </div>`;
+  },
+};
+
+export const ForwardedTaskListParts: Story = {
+  parameters: { docs: { description: { story: 'The composed Markdown element\'s task-list and table-wrapper parts are forwarded, so an outer `::part()` rule styles completed tasks and the table scroller.' } } },
+  render: () => html`
+    <style>
+      .forwarded-task-parts::part(task-item-checked) { text-decoration-line: line-through; color: var(--lr-color-text-quiet); }
+      .forwarded-task-parts::part(task-checkbox) { --lr-markdown-task-checkbox-size: 1.125em; }
+      .forwarded-task-parts::part(table-wrapper) { outline: 1px dashed var(--lr-color-border); }
+    </style>
+    <lr-streaming-text-core class="forwarded-task-parts" content-mode="markdown"
+      .content=${'- [x] Draft the answer\n- [ ] Cite the sources\n\n| Step | Owner |\n| --- | --- |\n| Review | Platform team |'}></lr-streaming-text-core>
+  `,
+};

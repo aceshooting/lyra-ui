@@ -2,6 +2,8 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-call-chip.js';
 import type { LyraToolCallChip } from './tool-call-chip.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 it('defaults to status="pending" with empty name/category/summary/icon/call-id and no duration', async () => {
   const el = (await fixture(html`<lr-tool-call-chip></lr-tool-call-chip>`)) as LyraToolCallChip;
@@ -348,7 +350,7 @@ describe('detail tooltip', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
 
     expect(tooltip.hidden).to.be.false;
@@ -389,7 +391,7 @@ describe('detail tooltip', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
 
     expect(tooltip.hidden).to.be.false;
@@ -409,7 +411,7 @@ describe('detail tooltip', () => {
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
     const unsupportedAction = el.querySelector<HTMLButtonElement>('#unsupported-action')!;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     unsupportedAction.focus();
 
@@ -453,7 +455,7 @@ describe('detail tooltip', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(tooltip.hidden).to.be.false;
 
@@ -469,7 +471,7 @@ describe('detail tooltip', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(tooltip.hidden).to.be.false;
 
@@ -485,7 +487,7 @@ describe('detail tooltip', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(tooltip.hidden).to.be.false;
 
@@ -512,7 +514,7 @@ describe('detail tooltip', () => {
 
     base.dispatchEvent(new MouseEvent('mouseenter'));
     await el.updateComplete;
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     base.blur();
     await el.updateComplete;
@@ -567,7 +569,7 @@ describe('detail tooltip', () => {
     expect(tooltipAfterReconnect.hidden).to.be.true;
   });
 
-  it('associates the trigger with the open tooltip via aria-describedby, using a stable id', async () => {
+  it('associates the trigger with the tooltip via aria-describedby while focused or open, using a stable id', async () => {
     const el = (await fixture(
       html`<lr-tool-call-chip name="web_search"><p>Query: solar panel efficiency</p></lr-tool-call-chip>`,
     )) as LyraToolCallChip;
@@ -576,7 +578,7 @@ describe('detail tooltip', () => {
 
     expect(base.hasAttribute('aria-describedby')).to.be.false;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(tooltip.id).to.not.equal('');
     expect(base.getAttribute('aria-describedby')).to.equal(tooltip.id);
@@ -625,7 +627,7 @@ describe('detail tooltip', () => {
     };
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     if (Reflect.has(base, 'ariaDescribedByElements')) {
       const described = base.ariaDescribedByElements ?? [];
@@ -679,7 +681,7 @@ it('is accessible in a populated state with category, duration, and an open deta
     </lr-tool-call-chip>
   `)) as LyraToolCallChip;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
-  base.focus();
+  await focusByKeyboard(base);
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -704,4 +706,51 @@ it('keeps long labels and localized metadata visible inside a 256px allocation',
   expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
   expect(label.getBoundingClientRect().width).to.be.greaterThan(0);
   expect(meta.getBoundingClientRect().width).to.be.at.most(base.getBoundingClientRect().width);
+});
+
+describe('keyboard-only detail tooltip focus', () => {
+  const tooltipOf = (el: LyraToolCallChip) =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!;
+
+  it('opens on keyboard focus, describes on pointer focus without opening, and clears on blur', async () => {
+    const el = await fixture<LyraToolCallChip>(
+      html`<lr-tool-call-chip name="web_search">Query: solar</lr-tool-call-chip>`,
+    );
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    await focusByKeyboard(base);
+    await el.updateComplete;
+    expect(tooltipOf(el).hidden, 'keyboard focus opens').to.equal(false);
+    base.blur();
+    await el.updateComplete;
+    expect(tooltipOf(el).hidden).to.equal(true);
+
+    await focusAfterPointer(base);
+    await el.updateComplete;
+    expect(tooltipOf(el).hidden, 'pointer focus does not open').to.equal(true);
+    expect(base.getAttribute('aria-describedby'), 'pointer focus still describes').to.equal(tooltipOf(el).id);
+    base.blur();
+    await el.updateComplete;
+    expect(base.hasAttribute('aria-describedby'), 'blur clears the description').to.equal(false);
+  });
+
+  it('closes a hover-opened tooltip on pointer leave even while pointer-focused', async () => {
+    const el = await fixture<LyraToolCallChip>(
+      html`<lr-tool-call-chip name="web_search">Query: solar</lr-tool-call-chip>`,
+    );
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    try {
+      await hoverUntilMatched(base, 'the pointer reached the chip');
+      await el.updateComplete;
+      expect(tooltipOf(el).hidden, 'hover opens').to.equal(false);
+      window.dispatchEvent(new PointerEvent('pointerdown'));
+      base.focus();
+      await el.updateComplete;
+      await resetMouse();
+      await el.updateComplete;
+      expect(tooltipOf(el).hidden, 'pointer leave closes despite pointer focus').to.equal(true);
+    } finally {
+      base.blur();
+      await resetMouse();
+    }
+  });
 });

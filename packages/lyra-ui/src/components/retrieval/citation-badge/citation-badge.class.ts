@@ -55,7 +55,7 @@ const STATUS_MESSAGE_KEY: Record<CitationBadgeStatus, string | null> = {
 // A short grace period before the popover actually hides on pointer-leave/
 // focus-out, so moving the mouse from the badge into the popover itself (to
 // select/copy its text) doesn't make it vanish mid-move. Cancelled outright
-// if hover or focus returns before it fires. No delay on Escape or explicit
+// if hover or keyboard focus returns before it fires. No delay on Escape or explicit
 // keyboard blur — those are intentional dismissals, not transient pointer
 // travel, so they close immediately.
 const HIDE_DELAY_MS = 200;
@@ -71,7 +71,8 @@ const HIDE_DELAY_MS = 200;
  *
  * The default slot is *not* the badge's visible content — the badge always
  * renders `[index]` — it's reserved for optional rich preview content (e.g.
- * a filename + short excerpt) shown in a floating popover on hover/focus,
+ * a filename + short excerpt) shown in a floating popover on hover or keyboard focus (the
+ * focused control matches `:focus-visible` and no pointer press preceded it),
  * positioned with `internal/positioner.js`'s `place()` the same way
  * `<lr-tool-call-chip>` positions its own detail tooltip. No popover shows
  * at all when the slot carries no content, and the popover never traps
@@ -111,7 +112,7 @@ const HIDE_DELAY_MS = 200;
  *
  * @customElement lr-citation-badge
  * @slot - Rich preview/tooltip content (e.g. a filename + excerpt), shown in
- * a floating popover on hover/focus. Nothing renders (no hover affordance at
+ * a floating popover on hover or keyboard focus. Nothing renders (no hover affordance at
  * all) when this slot is empty.
  * @event lr-citation-activate - The badge was activated (click, or Enter
  * while focused). `detail: { sourceId, index }`.
@@ -267,7 +268,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     this.overlayHandle = undefined;
     this.clearHideTimer();
     // Reset transient state so reconnecting a reparented or virtualized element re-arms its
-    // positioner and does not preserve stale hover/focus ownership.
+    // positioner and does not preserve stale hover/keyboard-focus ownership.
     this.popoverOpen = false;
     this.hovering = false;
     this.focused = false;
@@ -302,10 +303,10 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   private showPreview(): void {
     if (!this.hasPreviewSlot) return;
     // Cancel any pending hide unconditionally -- including when the popover
-    // is already open -- so hover/focus returning within the grace period
+    // is already open -- so hover/keyboard focus returning within the grace period
     // (pointerenter -> pointerleave -> pointerenter before HIDE_DELAY_MS)
     // actually cancels the scheduled hide instead of leaving it armed to
-    // fire later regardless of the now-restored hover/focus state.
+    // fire later regardless of the now-restored hover/keyboard-focus state.
     this.clearHideTimer();
     if (this.popoverOpen) return;
     this.popoverOpen = true;

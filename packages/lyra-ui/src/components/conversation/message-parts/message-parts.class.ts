@@ -143,8 +143,10 @@ export interface LyraMessagePartsEventMap
  * citation ranks, retry payloads, and error announcements all consume that same projection.
  * Streaming text and reasoning parts forward that state into their nested Markdown renderer, so
  * parsing/highlighting coalesces until the same-id part becomes complete.
- * Streaming text and reasoning show accumulated plain text; Markdown parsing and syntax
- * highlighting wait until that part completes.
+ * With the default `streaming-render="plain"`, streaming text and reasoning show accumulated
+ * plain text and Markdown parsing and syntax highlighting wait until that part completes;
+ * `streaming-render="progressive"` renders each settled top-level block as Markdown while the
+ * part is still streaming.
  *
  * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
  *
@@ -158,6 +160,10 @@ export interface LyraMessagePartsEventMap
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
+ * Direction: built-in text and reasoning parts inherit `<lr-markdown>`'s code direction, so code
+ * reads left-to-right inside a right-to-left document. This element forwards no Markdown part,
+ * so that nested code direction cannot be overridden with `::part()` from outside.
  *
  * @customElement lr-message-parts
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
@@ -175,7 +181,8 @@ export interface LyraMessagePartsEventMap
  * @event lr-retry - Passthrough from a rendered attachment.
  * @event lr-remove - Passthrough from a rendered attachment.
  * @event lr-citation-open - Passthrough from a rendered citation's full-preview action.
- * @event lr-copy - Passthrough from rendered JSON content.
+ * @event lr-copy - Passthrough from rendered JSON content or a Markdown code-block header.
+ * @event lr-copy-error - Passthrough from rendered JSON content or a Markdown code-block header.
  * @event lr-search-change - Passthrough from rendered JSON content.
  * @event lr-widget-action - Passthrough from a rendered declarative widget.
  * @event lr-widget-state-change - Passthrough from a rendered controlled widget.

@@ -467,6 +467,39 @@ async function captureStory(page, baseUrl, story, axis) {
       return host?.navOpen === true && drawer?.getAttribute('role') === 'dialog';
     });
   }
+  if (id === 'streamingtext--right-to-left-code-stream') {
+    // The story's resting state is an empty stream behind a start button. Run its real
+    // timer-driven stream to completion so the capture shows the settled right-to-left document
+    // with its left-to-right inline and fenced code, not an empty host.
+    await page.evaluate(() => {
+      const button = document.querySelector('div[dir="rtl"] button');
+      if (!(button instanceof HTMLButtonElement)) {
+        throw new Error('Right-to-left code stream visual fixture did not render its start button.');
+      }
+      button.click();
+    });
+    await page.waitForFunction(
+      () => {
+        const host = document.querySelector('lr-streaming-text');
+        const markdown = host?.shadowRoot?.querySelector('lr-markdown');
+        return (
+          host?.streaming === false &&
+          typeof host.content === 'string' &&
+          host.content.endsWith('خاتمة.') &&
+          markdown?.shadowRoot?.querySelector('pre[part~="code-block"]') instanceof Element &&
+          markdown.shadowRoot.querySelector('[part="inline-code"]') instanceof Element
+        );
+      },
+      undefined,
+      { timeout: 15_000 },
+    );
+    await page.evaluate(async () => {
+      const host = document.querySelector('lr-streaming-text');
+      await host?.updateComplete;
+      await host?.shadowRoot?.querySelector('lr-markdown')?.updateComplete;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+  }
   if (id === 'utility-visually-hidden--skip-link') {
     // A resting visually-hidden screenshot is indistinguishable from the component being absent.
     // Focus its real light-DOM link so this baseline covers the component's visible contract.
@@ -499,6 +532,34 @@ async function captureStory(page, baseUrl, story, axis) {
         throw new Error('Menu Label visual fixture did not render its containing menu.');
       }
       await menu.updateComplete;
+    });
+  }
+  if (id === 'layout-menubar--default') {
+    // A resting menubar shows only its titles. Open the first title through a real click so the
+    // capture covers the expanded title paint, the drop-down placement below it, and (on the
+    // forced-colors axis) the open-title outline.
+    await page.evaluate(async () => {
+      const bar = document.querySelector('lr-menubar');
+      const item = bar?.querySelector('lr-menubar-item');
+      if (!(bar instanceof HTMLElement) || !(item instanceof HTMLElement)) {
+        throw new Error('Menubar visual fixture did not render its first title.');
+      }
+      await bar.updateComplete;
+      await item.updateComplete;
+      item.click();
+    });
+    await page.waitForFunction(() => {
+      const item = document.querySelector('lr-menubar lr-menubar-item');
+      const surface = item?.querySelector('lr-menu')?.shadowRoot?.querySelector('.submenu-surface');
+      return item?.getAttribute('aria-expanded') === 'true' && surface instanceof Element &&
+        getComputedStyle(surface).visibility === 'visible';
+    });
+    await page.evaluate(async () => {
+      const bar = document.querySelector('lr-menubar');
+      const item = bar?.querySelector('lr-menubar-item');
+      await bar?.updateComplete;
+      await item?.updateComplete;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
   }
   if (id === 'threadlist--default') {

@@ -223,10 +223,13 @@ function paginationItems(
  *   current quiet-brand active mix.
  * @cssprop [--lr-pagination-active-border-color=var(--lr-color-brand)] - Ordinary control pressed border color.
  * @cssprop [--lr-pagination-current-hover-bg=var(--lr-color-brand)] - Current-page hover background.
+ *   Unset, falls back to `--lr-pagination-current-bg`, then brand.
  * @cssprop [--lr-pagination-current-hover-border-color=transparent] - Current-page hover border color.
+ *   Unset, falls back to `--lr-pagination-current-border-color`, then transparent.
  * @cssprop --lr-pagination-current-active-bg - Current-page pressed background; defaults to the
- *   current brand active mix.
+ *   current brand active mix, mixed from `--lr-pagination-current-bg`.
  * @cssprop [--lr-pagination-current-active-border-color=transparent] - Current-page pressed border color.
+ *   Unset, falls back to `--lr-pagination-current-border-color`, then transparent.
  * @cssprop [--lr-pagination-control-radius=var(--lr-radius)] - Border radius of navigation
  * buttons and the page input.
  * @cssprop [--lr-pagination-control-padding=var(--lr-space-xs)] - Inner padding of the nav buttons

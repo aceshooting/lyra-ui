@@ -88,6 +88,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'Couleur actuelle : {color}',
   selectSelectedOverflow: '+{n} autres',
   emojiPickerSearchLabel: 'Rechercher un emoji',
+  emojiPickerSearchPlaceholder: 'Rechercher un emoji…',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Aucun emoji trouvé',
   emojiPickerLoadError: 'Impossible de charger les emojis.',

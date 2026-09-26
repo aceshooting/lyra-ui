@@ -32,7 +32,8 @@ export const styles = css`
   [part='icon'] {
     font-size: var(--lr-font-size-3xl);
     line-height: var(--lr-line-height-none);
-    color: var(--lr-color-border);
+    /* The muted foreground role, not the border token: this is a glyph, not an edge. */
+    color: var(--lr-color-text-quiet);
   }
   [part='icon'][hidden] {
     display: none;

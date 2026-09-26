@@ -14,6 +14,7 @@
 import assert from 'node:assert/strict';
 import {
   adoptsSharedTransition,
+  hasStateQualifier,
   hoverContract,
   hoverCoverage,
   paintedFamilies,
@@ -23,6 +24,7 @@ import {
   readHoverRules,
   readStyleRules,
   repaintedParts,
+  stateMaskedFallbacks,
   styledParts,
   targetsPart,
   transitionCoverage,
@@ -529,6 +531,99 @@ test('a no-transition-needed reason may be the multi-line paragraph these styles
     transitionMarkerReason('/* no-transition-needed:\n   the press starts\n   a drag. */'),
     /^the press starts a drag\.$/,
   );
+});
+
+// ----- rule 4: state-masked fallback -----------------------------------------------------------
+// The reduced shape lr-switch shipped: the checked rule re-points a private, but every paint site
+// layers it under the RESTING public token, so setting `--lr-switch-track-fill` masks the checked
+// state entirely.
+const MASKED_SWITCH = [
+  '  [part~="track"] {',
+  '    --_lr-switch-track-fill: var(--lr-color-border);',
+  '    background: var(--lr-switch-track-fill, var(--_lr-switch-track-fill));',
+  '  }',
+  '  [part~="track"][part~="checked"] {',
+  '    --_lr-switch-track-fill: var(--lr-switch-checked-track-fill, var(--lr-color-brand));',
+  '  }',
+  '  .layout:hover [part~="track"] {',
+  '    background: var(',
+  '      --lr-switch-track-hover-fill,',
+  '      color-mix(in oklab, var(--lr-switch-track-fill, var(--_lr-switch-track-fill)), black 10%)',
+  '    );',
+  '  }',
+].join('\n');
+
+// The fixed shape: the private folds the public token in per state and is read bare; the pointer
+// token wrapping it is a deliberate override, not a mask.
+const FIXED_SWITCH = [
+  '  [part~="track"] {',
+  '    --_lr-switch-track-fill: var(--lr-switch-track-fill, var(--lr-color-border));',
+  '    background: var(--_lr-switch-track-fill);',
+  '  }',
+  '  [part~="track"][part~="checked"] {',
+  '    --_lr-switch-track-fill: var(--lr-switch-checked-track-fill, var(--lr-color-brand));',
+  '  }',
+  '  .layout:hover [part~="track"] {',
+  '    background: var(',
+  '      --lr-switch-track-hover-fill,',
+  '      color-mix(in oklab, var(--_lr-switch-track-fill), black 10%)',
+  '    );',
+  '  }',
+].join('\n');
+
+test('rule 4 flags a state-declared private layered under a resting public token', () => {
+  const findings = stateMaskedFallbacks(MASKED_SWITCH);
+  assert.deepEqual(
+    findings.map((finding) => finding.line),
+    [3, 11],
+    'one finding per consumption site, nested color-mix() fallback included',
+  );
+  assert.match(findings[0].message, /state rule at line 5/);
+  assert.match(findings[0].message, /--lr-switch-track-fill/);
+  assert.match(findings[0].message, /consume it bare/);
+});
+
+test('rule 4 passes the bare-consumption fix and a pointer token wrapping the private', () => {
+  assert.deepEqual(stateMaskedFallbacks(FIXED_SWITCH), []);
+});
+
+test('rule 4 ignores a private no state rule declares', () => {
+  const sizeOnly = MASKED_SWITCH.replace('[part~="track"][part~="checked"]', ':host([size="small"]) [part~="track"]');
+  assert.deepEqual(stateMaskedFallbacks(sizeOnly), []);
+});
+
+test('rule 4 honours a state-fallback-ok marker above the consuming rule only', () => {
+  const marked = MASKED_SWITCH.replace(
+    '  [part~="track"] {',
+    '  /* state-fallback-ok: the resting token is documented as authoritative in every state */\n  [part~="track"] {',
+  );
+  assert.deepEqual(
+    stateMaskedFallbacks(marked).map((finding) => finding.line),
+    [12],
+    'the marker opts out the next rule, not the whole stylesheet',
+  );
+});
+
+test('rule 4 state qualifiers cover the documented forms and skip outcome suffixes', () => {
+  for (const selector of [
+    ':host(:state(checked)) [part="track"]',
+    '[part~="page-current"]',
+    '[part~="checkbox__control--checked"]',
+    '[part="item"][aria-selected="true"]',
+    ':host(:where([open])) [part="panel"]',
+    'input:checked + span',
+    '[part="row"][data-active]',
+  ]) {
+    assert.equal(hasStateQualifier(selector), true, selector);
+  }
+  for (const selector of [
+    ':host([size="small"]) [part="track"]',
+    '[part~="status-success"]',
+    ':host([variant="brand"]) [part="base"]',
+    '[part="dot"][data-stalled]',
+  ]) {
+    assert.equal(hasStateQualifier(selector), false, selector);
+  }
 });
 
 if (failures > 0) {

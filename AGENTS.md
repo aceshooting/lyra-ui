@@ -274,6 +274,10 @@ Full rules, incidents, and patterns:
   aliases are the reference. Do NOT retrofit forwarding speculatively — consumers reliably file when
   genuinely blocked (that is how `lr-filter-bar`'s and `lr-tree`'s forwarding got added), and a part
   name added on a guess is permanent public API nobody asked for.
+- A state never paints through the resting public token: resolve a per-state private var (public
+  token folded in) and read it bare, and mix hover/press from the state's own fill; an unqualified
+  pointer token applies in every state, a state-named one owns its state
+  (`check-interaction-states` rule 4, opt-out `state-fallback-ok:`).
 - Silently-inert CSS is invisible to all tooling — assert rendered results
   (`getComputedStyle`/hit test), never stylesheet text; only pseudo-classes may follow
   `::part(x)`; encode state in the part name; and forward every documented part with
@@ -407,6 +411,9 @@ Release blockers for new components, bugs in existing ones. Full rules:
 - Roving tabindex steps past disabled targets and never leaves zero focusable stops; the
   navigable predicate excludes `inert` and `closest('[inert]')` too — an inert element refuses
   `focus()` silently, stranding roving focus and killing every later key press.
+- A supplementary hover/focus disclosure (tooltip-class) opens only on keyboard focus through
+  `isKeyboardFocusEvent()` (`src/internal/focus-modality.ts`) and stays described on any focus;
+  a control's primary editing popup, self-reveals and value feedback are the stated exemptions.
 - Live regions live in the host's light DOM, never a shadow root: announce through
   `acquireAnnouncementSink()` (`src/internal/announcer.ts`), which mounts the region ahead of the
   text and appends each message as a new child.
@@ -462,6 +469,9 @@ Full rules and incident write-ups: **[docs/agents/testing.md](docs/agents/testin
   size *and* per-component test quality, and a byte-identical `pnpm manifest` is not evidence it is
   clean.
 - Set up `oneEvent()` BEFORE the dispatch that triggers it, or the test hangs.
+- Move focus for a keyboard-gated surface with `test/wtr-focus.ts` (`focusByKeyboard`/
+  `focusAfterPointer`), never a bare `.focus()` or synthetic focus event; a `window` listener spy
+  pre-arms with `trackInputModality(document)`.
 - Axe-check every component against its own tag AND in populated/open states — the coverage
   gate's substring check proves neither.
 - Adversarial fixtures: focused-element keyboard activation, `dir="rtl"`, unsorted input,

@@ -233,7 +233,8 @@ for (const file of policyStyleFiles()) {
     // the component's own shadow stylesheet. Any local declaration -- on :host, a state selector,
     // or an internal part -- wins over the value inherited from a theme/container ancestor. It can
     // also make a direct host value lose once the declaration sits on a descendant. Defaults belong
-    // in the consuming var() fallback, or in a private --_lr-* value selected by size/state rules.
+    // in the consuming var() fallback, or in a private --_lr-* value selected by size/variant rules;
+    // a state rule re-points a private var that the paint site reads bare.
     // Scanning every declaration rather than only :host blocks keeps the invariant true across
     // refactors and catches multiple declarations written on one line.
     for (const declaration of line.matchAll(

@@ -199,7 +199,8 @@ function isSourceLabelAvailable(node: Node): boolean {
  * @cssprop [--lr-chip-accent=var(--lr-color-text)] - Text/icon color of the pill. Each non-neutral
  * `variant` changes its private default to that variant's loud fill.
  * @cssprop [--lr-chip-bg=var(--lr-color-surface)] - Background of the pill. Each non-neutral
- * `variant` changes its private default to that variant's quiet fill.
+ * `variant` changes its private default to that variant's quiet fill. Also the base an unselected
+ * toggleable chip's hover/press wash mixes from.
  * @cssprop [--lr-chip-border=var(--lr-color-border)] - Border color of the pill. Every non-neutral
  * `variant` changes its private default to `transparent`.
  * @cssprop [--lr-chip-font-size=var(--lr-font-size-sm)] - Label font size. Each `size` changes its
@@ -225,7 +226,8 @@ function isSourceLabelAvailable(node: Node): boolean {
  * grows to fit its content (floored by `--lr-chip-min-height` when interactive). Set it to pin a
  * fixed height. A value below the shared interactive target is for non-interactive chips only.
  * @cssprop [--lr-chip-pressed-bg=var(--lr-chip-bg)] - Background while a toggleable chip is
- * selected, independently themeable from its resting background.
+ * selected, independently themeable from its resting background, and the base a selected chip's
+ * hover/press wash mixes from.
  * @cssprop [--lr-chip-pressed-border=var(--lr-chip-accent)] - Border color while a toggleable chip
  * is selected, independently themeable from the label/icon color.
  * @status stable

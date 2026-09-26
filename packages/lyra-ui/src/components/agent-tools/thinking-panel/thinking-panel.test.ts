@@ -3,7 +3,8 @@ import './thinking-panel.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
 import '../../conversation/streaming-text/streaming-text.js';
 import '../../conversation/markdown/markdown.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
@@ -682,30 +683,40 @@ describe('live-mode auto-scroll via composed lr-content-settled (property-driven
     expect(body.scrollTop, 'post-hoc mode must never auto-scroll, per the class doc').to.equal(0);
   });
 
-  it('does not double-scroll when the light-DOM MutationObserver and a composed lr-content-settled both fire within the same frame', async () => {
-    const el = await fixture<LyraThinkingPanel>(html`
-      <lr-thinking-panel mode="live">
-        <lr-streaming-text content-mode="plain" coalesce-ms="0"></lr-streaming-text>
-      </lr-thinking-panel>
-    `);
-    await forceSmallBody(el);
-    const streamingText = el.querySelector('lr-streaming-text') as unknown as { content: string };
+  // Both signals are raised inside one task, so no animation frame can separate them in any
+  // engine. A real streaming child settles on its own schedule (a Lit update, possibly a later
+  // task), which is exactly why the fixture must not rely on it to share the mutation's frame.
+  for (const order of ['settle before the mutation record', 'mutation record before the settle'] as const) {
+    it(`does not double-scroll when the light-DOM MutationObserver and a composed lr-content-settled both fire within the same frame (${order})`, async () => {
+      const el = await fixture<LyraThinkingPanel>(html`
+        <lr-thinking-panel mode="live">
+          <lr-streaming-text content-mode="plain" coalesce-ms="0"></lr-streaming-text>
+        </lr-thinking-panel>
+      `);
+      await forceSmallBody(el);
+      const streamingText = el.querySelector('lr-streaming-text')!;
 
-    let scrollCalls = 0;
-    el.scrollToBottom = () => {
-      scrollCalls += 1;
-    };
+      let scrollCalls = 0;
+      el.scrollToBottom = () => {
+        scrollCalls += 1;
+      };
 
-    const settled = oneEvent(el, 'lr-content-settled');
-    // Both signals land in the same turn: a direct light-DOM text append (observed by the
-    // MutationObserver) and the composed child's own property-driven settle.
-    el.appendChild(document.createTextNode('Plain light-DOM chunk. '));
-    streamingText.content = 'Composed shadow-DOM chunk. ';
-    await settled;
-    await twoFrames();
+      const settled = oneEvent(el, 'lr-content-settled');
+      const settle = (): void => {
+        streamingText.dispatchEvent(new CustomEvent('lr-content-settled', { bubbles: true, composed: true }));
+      };
+      // The append queues the MutationObserver's microtask. Dispatching synchronously runs the
+      // settle listener before it; queueing the dispatch as a microtask runs it after. Either way
+      // both land before the next frame.
+      el.appendChild(document.createTextNode('Plain light-DOM chunk. '));
+      if (order === 'settle before the mutation record') settle();
+      else queueMicrotask(settle);
+      await settled;
+      await twoFrames();
 
-    expect(scrollCalls, 'both signals landing in one frame must still coalesce to a single scroll').to.equal(1);
-  });
+      expect(scrollCalls, 'both signals landing in one frame must still coalesce to a single scroll').to.equal(1);
+    });
+  }
 });
 
 describe('body keyboard accessibility', () => {
@@ -1021,7 +1032,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-thinking-panel
         expanded
-        style="--lr-thinking-panel-background: var(--lr-color-surface); --lr-thinking-panel-border-color: var(--lr-color-border-subtle); --lr-thinking-panel-radius: var(--lr-radius)"
+        style="--lr-thinking-panel-background: var(--lr-color-surface); --lr-thinking-panel-border-color: var(--lr-color-border); --lr-thinking-panel-radius: var(--lr-radius)"
         >Reasoning</lr-thinking-panel
       >
     `)) as LyraThinkingPanel;
@@ -1036,7 +1047,9 @@ describe('card chrome theming hooks', () => {
     );
   });
 
-  it('draws the card edge and divider on the decorative --lr-color-border-subtle tier', async () => {
+  // The header is a borderless button, so the card edge is that control's only visible boundary
+  // (WCAG 2.2 SC 1.4.11): it stays on the control tier even when the decorative input is set.
+  it('keeps the card edge and divider on the --lr-color-border control tier, not the subtle tier', async () => {
     const el = (await fixture(html`
       <lr-thinking-panel
         expanded
@@ -1044,7 +1057,67 @@ describe('card chrome theming hooks', () => {
         >Reasoning</lr-thinking-panel
       >
     `)) as LyraThinkingPanel;
-    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(7, 8, 9)');
-    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
+});
+
+describe('header text contrast at rest, hover and press', () => {
+  afterEach(async () => {
+    await resetMouse();
+  });
+
+  // The quiet duration and the brand pending label both sit on the header's hover tint and on the
+  // deeper pressed mix; each must follow the header colour there instead of keeping its own.
+  const cases = [
+    { name: 'finished duration', template: html`<lr-thinking-panel mode="post-hoc" .durationMs=${4200}></lr-thinking-panel>` },
+    { name: 'pending live label', template: html`<lr-thinking-panel mode="live"></lr-thinking-panel>` },
+  ];
+  for (const theme of ['light', 'dark'] as const) {
+    for (const { name, template } of cases) {
+      it(`keeps the ${name} readable and following the header colour (${theme})`, async () => {
+        const wrapper = await fixture<HTMLElement>(
+          html`<div data-lr-theme=${theme}>${template}</div>`,
+        );
+        const el = wrapper.querySelector('lr-thinking-panel') as LyraThinkingPanel;
+        await el.updateComplete;
+        const root = el.shadowRoot!;
+        const header = root.querySelector<HTMLElement>('[part="header"]')!;
+        const base = root.querySelector<HTMLElement>('[part="base"]')!;
+        const texts = ['label', 'duration'].map((partName) => root.querySelector<HTMLElement>(`[part="${partName}"]`)!);
+        expect(texts.every(Boolean), 'label and duration both render').to.equal(true);
+        const assertContrast = (state: string): void => {
+          const background = effectiveBackground(header, base);
+          for (const node of texts) {
+            expect(
+              contrastRatio(getComputedStyle(node).color, background),
+              `${state} ${node.getAttribute('part')}`,
+            ).to.be.at.least(4.5);
+          }
+        };
+        assertContrast('rest');
+
+        const restBackground = getComputedStyle(header).backgroundColor;
+        await hoverUntilMatched(header, 'thinking-panel header under the pointer');
+        await waitUntil(() => getComputedStyle(header).backgroundColor !== restBackground, 'hover background');
+        const brand = resolvedColorToken(root, '--lr-color-brand');
+        expect(texts.map((node) => getComputedStyle(node).color)).to.deep.equal([brand, brand]);
+        assertContrast('hover');
+        const hoverBackground = getComputedStyle(header).backgroundColor;
+
+        await sendMouse({ type: 'down' });
+        try {
+          await waitUntil(() => getComputedStyle(header).backgroundColor !== hoverBackground, 'pressed background');
+          const body = resolvedColorToken(root, '--lr-color-text');
+          await waitUntil(
+            () => texts.every((node) => getComputedStyle(node).color === body),
+            'pressed header text returns to the body colour',
+          );
+          assertContrast('pressed');
+        } finally {
+          await sendMouse({ type: 'up' });
+        }
+      });
+    }
+  }
 });

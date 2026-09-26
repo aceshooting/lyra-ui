@@ -549,7 +549,13 @@ localized loading text to that shared polite sink, including repeated loading cy
 `--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,
 `--row-hover-background`, `--selected-background`, `--stripe-background`, `--text-color`, and
 `--transition-duration`. Defaults resolve through Lyra design tokens. Set `--max-height: none` to
-render every row instead of a virtual window. Three grid-specific hooks reach formatter and row
+render every row instead of a virtual window. `--border-color` (default `var(--lr-color-border)`)
+paints the control boundaries (search, buttons, page size) and, unless the separate grid-line hook
+is set, the grid lines too. `--lr-data-grid-line-color` (default
+`var(--border-color, var(--lr-color-border-subtle))`) paints only the decorative grid lines: the
+outer edge, header, row, cell and footer separators, and the toolbar and pager rules. It defaults to
+the subtle tier, so a theme such as the shadcn preset softens the grid while the controls keep a
+3:1 boundary. Three grid-specific hooks reach formatter and row
 detail content inside the shadow root: `--lr-data-grid-cell-color` (default `inherit`) controls
 body-cell text, `--lr-data-grid-cell-link-color` (default `var(--lr-color-brand)`) controls nested
 anchors, and `--lr-data-grid-cell-link-hover-color` (default
@@ -1524,7 +1530,9 @@ page has `--lr-pagination-current-bg`, `--lr-pagination-current-border-color`, a
 `--lr-pagination-active-border-color`; the applied page has independent
 `--lr-pagination-current-hover-bg`, `--lr-pagination-current-hover-border-color`,
 `--lr-pagination-current-active-bg`, and `--lr-pagination-current-active-border-color` hooks. Each
-defaults to the exact shared brand/quiet-brand/active-mix treatment used previously. These state
+defaults to the exact shared brand/quiet-brand/active-mix treatment used previously. Unset, the
+applied page's hover and press start from its own `--lr-pagination-current-bg` and
+`--lr-pagination-current-border-color`, so a themed current chip keeps its paint under the pointer. These state
 hooks and the resting background/border hooks are consumed through inline fallbacks, so they work
 when inherited from an ancestor as well as when set directly on one pager. Shared spacing,
 disabled-opacity, and focus-ring tokens remain available as usual.
@@ -3003,7 +3011,8 @@ from `<lr-tree>`. `--lr-tree-depth` is internal and set inline per row for inden
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
-fallbacks); and paired
+fallbacks). The selected-row background is also the base its hover/press mixes from, and each
+checkbox border token also paints that state's border under the pointer; and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
 badge property falls back to its corresponding shared semantic token. The expanded names are
@@ -3085,6 +3094,15 @@ caller aliases, and reports edit intent for the host to apply.
 
 Input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
 optional labels cannot suppress a later valid handle with the same ID.
+
+Anchored Lyra overlays in a node's slotted content (a node menu, a tooltip) resolve the `fixed`
+strategy by default, because a node is translated inside a scaled, clipped world where an
+`absolute` overlay could never extend past the canvas; a trapped `fixed` overlay opens in the
+browser top layer where the native Popover API exists. An authored `positioning-strategy`, an
+ancestor `--lr-positioning-strategy`, or `lr-flow-canvas::part(node) { --lr-positioning-strategy:
+absolute }` still wins. Wheel and pointer gestures that start inside an open node overlay stay its
+own: scrolling a long menu scrolls it instead of zooming the canvas, and pressing its chrome does
+not drag the node.
 
 Horizontal RTL reflects the coordinate plane while authored cards, generated `lr-flow-node` cards,
 native portable fallback cards and SVG edge labels retain readable content. Explicit physical model
@@ -4031,7 +4049,8 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 
 **Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
-`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle.
+`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle. The background is also the
+base its hover/press mixes from.
 Both are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either
 can be set on the element _or any ancestor_. They exist because
 `::part(reveal-button)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute

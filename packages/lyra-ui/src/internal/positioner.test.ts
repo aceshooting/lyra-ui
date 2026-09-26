@@ -1190,6 +1190,96 @@ describe('fixed-position containing blocks', () => {
     stop();
   });
 
+  async function trapFixture(
+    trapStyle: string,
+  ): Promise<{ trap: HTMLElement; anchor: HTMLElement; popup: HTMLElement }> {
+    const trap = await fixture<HTMLElement>(html`
+      <div
+        style="position: relative; margin-block-start: 40px; margin-inline-start: 60px;
+          inline-size: 260px; block-size: 200px; ${trapStyle}"
+      >
+        <button
+          id="trap-anchor"
+          style="position: absolute; inset-block-start: 40px; inset-inline-start: 20px;
+            inline-size: 120px; block-size: 32px;"
+        >
+          Trigger
+        </button>
+        <div id="trap-popup" style="inline-size: 160px; block-size: 80px;">Listbox</div>
+      </div>
+    `);
+    return {
+      trap,
+      anchor: trap.querySelector('#trap-anchor') as HTMLElement,
+      popup: trap.querySelector('#trap-popup') as HTMLElement,
+    };
+  }
+
+  async function expectUnderAnchor(anchor: HTMLElement, popup: HTMLElement, label: string) {
+    const stop = place(anchor, popup, { placement: 'bottom-start', strategy: 'fixed', offset: 4 });
+    try {
+      await waitFor(
+        () => popup.style.left,
+        (left) => left !== '',
+      );
+      await waitFor(
+        () => Math.abs(popup.getBoundingClientRect().left - anchor.getBoundingClientRect().left),
+        (delta) => delta < 1.5,
+      ).catch(() => undefined);
+      const anchorRect = anchor.getBoundingClientRect();
+      const popupRect = popup.getBoundingClientRect();
+      expect(popupRect.left, `${label}: inline start`).to.be.closeTo(anchorRect.left, 1.5);
+      expect(popupRect.top, `${label}: below the anchor`).to.be.closeTo(anchorRect.bottom + 4, 1.5);
+    } finally {
+      stop();
+    }
+  }
+
+  it('positions a caller-promoted top-layer popup against the viewport, not its transformed ancestor', async () => {
+    const { anchor, popup } = await trapFixture('transform: translateY(40px)');
+    popup.setAttribute('popover', 'manual');
+    popup.style.setProperty('inset', 'auto');
+    popup.showPopover();
+    try {
+      await expectUnderAnchor(anchor, popup, 'caller-promoted popover');
+    } finally {
+      popup.hidePopover();
+    }
+  });
+
+  for (const [label, style] of [
+    ['content-visibility: auto', 'content-visibility: auto; contain-intrinsic-size: 260px 200px'],
+    ['transform-style: preserve-3d', 'transform-style: preserve-3d'],
+    ['offset-path', "offset-path: path('M200,150 L210,160'); offset-rotate: 0deg"],
+    ['will-change: contain', 'will-change: contain'],
+    ['will-change: offset-path', 'will-change: offset-path'],
+  ] as const) {
+    it(`positions a fixed-strategy popup under its anchor under a ${label} ancestor`, async () => {
+      const { anchor, popup } = await trapFixture(style);
+      await expectUnderAnchor(anchor, popup, label);
+    });
+  }
+
+  it('keeps positioning a polyfill-shaped open popover against its containing block', async () => {
+    const { anchor, popup } = await trapFixture('transform: translateY(40px)');
+    const originalSupports = CSS.supports;
+    const originalMatches = Element.prototype.matches;
+    CSS.supports = function (this: typeof CSS, ...args: unknown[]) {
+      if (args.length === 1 && args[0] === 'selector(:popover-open)') return false;
+      return (originalSupports as (...a: unknown[]) => boolean).apply(this, args);
+    } as typeof CSS.supports;
+    Element.prototype.matches = function (this: Element, selector: string) {
+      if (selector === ':popover-open' && this === popup) return true;
+      return originalMatches.call(this, selector);
+    } as typeof Element.prototype.matches;
+    try {
+      await expectUnderAnchor(anchor, popup, 'polyfill-shaped popover');
+    } finally {
+      CSS.supports = originalSupports;
+      Element.prototype.matches = originalMatches;
+    }
+  });
+
   it('positions a fixed-strategy popup directly under its anchor under a filter ancestor', async () => {
     const { anchor, popup } = await filteredAncestorFixture('filter');
     const stop = place(anchor, popup, { placement: 'bottom-start', strategy: 'fixed' });

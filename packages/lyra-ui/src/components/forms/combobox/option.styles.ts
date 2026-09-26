@@ -101,6 +101,17 @@ export const styles = css`
     white-space: nowrap;
   }
 
+  /* The part is a centred flex container, so its own text-overflow never fires on slotted content
+     (a long item is clipped on both sides): each slotted adornment carries its own block. */
+  [part~='start'] ::slotted(*),
+  [part~='end'] ::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   [part~='checked-icon'] {
     color: var(--lr-option-checked-icon-color, var(--lr-color-brand));
   }

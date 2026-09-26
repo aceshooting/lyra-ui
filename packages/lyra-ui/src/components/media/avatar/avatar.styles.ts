@@ -5,7 +5,9 @@ export const styles = css`
     display: inline-flex;
     vertical-align: middle;
     --_lr-avatar-size: var(--lr-size-3rem);
-    --_lr-avatar-bg: var(--lr-color-border);
+    /* A fill role, not the border token: the neutral disc is a surface behind the initials, the
+       quiet tint every non-neutral variant below also uses. */
+    --_lr-avatar-bg: var(--lr-color-neutral-fill-quiet);
     --_lr-avatar-color: var(--lr-color-text);
     /* Keep initials proportional across the complete mirrored size ladder. */
     --_lr-avatar-font-size: var(--lr-font-size-m);
@@ -40,8 +42,7 @@ export const styles = css`
   /* Deliberately NOT the shared internal/variants.styles.ts sheet, which points the generic slots
      at the 45-slot semantic grid's contrast-checked pairing, where text on a quiet fill is
      on-quiet. An avatar's initials ARE the accent -- the variant's loud colour on its quiet tint
-     -- so that pairing would repaint every non-neutral avatar, and the neutral default (a
-     --lr-color-border circle, not neutral-fill-quiet) with it. */
+     -- so that pairing would repaint every non-neutral avatar's initials. */
   :host([variant='brand']) {
     --_lr-avatar-bg: var(--lr-color-brand-quiet);
     --_lr-avatar-color: var(--lr-color-brand);

@@ -43,7 +43,7 @@ export interface LyraAvatarEventMap {
  * @cssprop [--lr-avatar-size=var(--lr-size-3rem)] - Inline and block size of the container. `size`
  *   steps its private default across the shared six-step ladder, from `var(--lr-size-1-5rem)`
  *   (`2xs`) to `var(--lr-size-5rem)` (`xl`); an inherited or direct public value still wins.
- * @cssprop [--lr-avatar-bg=var(--lr-color-border)] - Container background. Each non-neutral
+ * @cssprop [--lr-avatar-bg=var(--lr-color-neutral-fill-quiet)] - Container background. Each non-neutral
  *   `variant` changes its private default to that variant's `-quiet` tint.
  * @cssprop [--lr-avatar-color=var(--lr-color-text)] - Initials/glyph color. Each non-neutral
  *   `variant` changes its private default to that variant's loud color.

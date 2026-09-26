@@ -1,5 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './usage-badge.js';
 import '../../overlays/dialog/dialog.js';
 import type { LyraUsageBadge } from './usage-badge.js';
@@ -109,7 +110,7 @@ for (const legacy of [false, true]) {
     const badge = await fixture<LyraUsageBadge>(
       html`<lr-usage-badge tokens-in="12"></lr-usage-badge>`
     );
-    base(badge).focus();
+    await focusByKeyboard(base(badge));
     await badge.updateComplete;
     const composing = new KeyboardEvent('keydown', {
       key: 'Escape',
@@ -134,8 +135,8 @@ it('retains hover after focus releases', async () => {
     html`<lr-usage-badge tokens-in="12"></lr-usage-badge>`
   );
   await enter(badge);
-  base(badge).dispatchEvent(new Event('focus'));
-  base(badge).dispatchEvent(new Event('blur'));
+  await focusByKeyboard(base(badge));
+  base(badge).blur();
   await badge.updateComplete;
   expect(tooltip(badge).hidden).to.be.false;
   base(badge).dispatchEvent(new Event('mouseleave'));

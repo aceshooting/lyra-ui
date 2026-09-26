@@ -2134,3 +2134,30 @@ describe('template whitespace', () => {
     expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
   });
 });
+
+function glyphRect(root: Node, needle: string): DOMRect {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const index = (node as Text).data.indexOf(needle);
+    if (index === -1) continue;
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + needle.length);
+    return range.getClientRects()[0] ?? range.getBoundingClientRect();
+  }
+  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
+}
+
+it('keeps a raw cell source LTR-isolated and start-aligned under RTL', async () => {
+  const wrapper = await fixture<HTMLElement>(
+    html`<div dir="rtl" style="inline-size: 600px"><lr-notebook-viewer .notebook=${{ nbformat: 4, nbformat_minor: 5, metadata: {}, cells: [{ cell_type: 'raw', id: 'raw', source: 'const a = foo(1);', metadata: {} }] }}></lr-notebook-viewer></div>`,
+  );
+  const el = wrapper.querySelector('lr-notebook-viewer') as LyraNotebookViewer;
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="raw-source"]')));
+  const raw = rowRoot(el).querySelector<HTMLElement>('[part~="raw-source"]')!;
+  const style = getComputedStyle(raw);
+  expect([style.direction, style.unicodeBidi]).to.deep.equal(['ltr', 'isolate']);
+  const start = raw.getBoundingClientRect().left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+  expect(glyphRect(raw, 'const').left - start).to.be.at.most(2);
+  expect(glyphRect(raw, ';').left).to.be.greaterThan(glyphRect(raw, 'const').right);
+});

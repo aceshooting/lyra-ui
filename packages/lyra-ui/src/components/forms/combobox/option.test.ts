@@ -792,3 +792,28 @@ describe('lr-option text label inside a hidden container', () => {
     ).to.equal('Kept');
   });
 });
+
+// The start/end parts are centred inline-flex boxes, so a long slotted text adornment used to be
+// clipped on both sides with an inert ellipsis. The slotted item now carries its own block.
+describe('lr-option slotted adornment truncation', () => {
+  const LONG = 'Adornment text that is far too long.';
+
+  for (const slot of ['start', 'end'] as const) {
+    it(`truncates a long slotted ${slot} text adornment with an ellipsis`, async () => {
+      const el = (await fixture(html`
+        <lr-option value="a" style="inline-size: 240px"
+          >Label<span slot=${slot} id="adornment">${LONG}</span></lr-option
+        >
+      `)) as LyraOption;
+      await el.updateComplete;
+      const part = el.shadowRoot!.querySelector(`[part~="${slot}"]`) as HTMLElement;
+      const adornment = el.querySelector('#adornment') as HTMLElement;
+      const box = adornment.getBoundingClientRect();
+      const partBox = part.getBoundingClientRect();
+      expect(box.left, 'start edge stays inside the part').to.be.at.least(partBox.left - 0.5);
+      expect(box.right, 'end edge stays inside the part').to.be.at.most(partBox.right + 0.5);
+      expect(getComputedStyle(adornment).textOverflow).to.equal('ellipsis');
+      expect(adornment.scrollWidth > adornment.clientWidth, 'text overflows its box').to.equal(true);
+    });
+  }
+});

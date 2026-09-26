@@ -275,3 +275,11 @@ it('renders a visible, nonzero box -- [part=base] uses display:block, not inline
   expect(rect.width).to.be.greaterThan(0);
   expect(rect.height).to.be.greaterThan(0);
 });
+
+// A placeholder is a fill, so it follows the neutral normal FILL role (a preset's muted grey),
+// never the control-border token.
+it('paints the placeholder from the neutral normal fill role, not the border token', async () => {
+  const el = (await fixture(html`<lr-skeleton style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-neutral-fill-quiet: rgb(1, 2, 3); --lr-theme-color-neutral-fill-normal: rgb(4, 5, 6); --lr-theme-color-text-quiet: rgb(7, 8, 9)"></lr-skeleton>`)) as LyraSkeleton;
+  const indicator = el.shadowRoot!.querySelector<HTMLElement>('[part~="indicator"]')!;
+  expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(4, 5, 6)');
+});

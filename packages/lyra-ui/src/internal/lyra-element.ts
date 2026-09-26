@@ -9,6 +9,7 @@ import {
 import { property } from 'lit/decorators.js';
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
+import { topLayerReset } from './top-layer.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 import {
@@ -1226,8 +1227,9 @@ function hasOwnAutofocusAccessor(host: HTMLElement): boolean {
 export class LyraElement<Events = LyraEventMap> extends LitElement {
   // `palette` before `tokens`: the ramp and the semantic grid are raw inputs, and `tokens` is
   // free to reference them. Both are shared `CSSResult` instances, so adopting them in every
-  // component costs one stylesheet in the bundle, not one per component.
-  static override styles: CSSResultGroup = [palette, tokens];
+  // component costs one stylesheet in the bundle, not one per component. `topLayerReset` neutralises
+  // the UA `[popover]` rules on an anchored surface the top-layer escape promoted.
+  static override styles: CSSResultGroup = [palette, tokens, topLayerReset];
 
   /**
    * Reactive public properties whose array/tuple assignments cross the shared immutable ownership

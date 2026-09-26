@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import {
   applyComposedFocusRepair,
@@ -120,8 +121,8 @@ export interface LyraAppRailItemEventMap {
  * @csspart children - The nested list, hidden in icon-only while preserving expanded. Rendered only while something is
  *   slotted into `children`; hidden (but present, so `aria-controls` keeps resolving) while
  *   `expanded` is `false`.
- * @csspart tooltip - The hover/focus label flyout, only rendered while `tooltip` is set, the item
- *   is `icon-only`, and it is hovered or focused.
+ * @csspart tooltip - The hover or keyboard-focus label flyout, only rendered while `tooltip` is
+ *   set, the item is `icon-only`, and it is hovered or keyboard-focused.
  * @cssprop [--lr-app-rail-item-current-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `current`/`aria-current="page"` item. Scoped to `[aria-current='page']` only and declared as an
  *   inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors
@@ -216,7 +217,8 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
    *  this per item (e.g. by comparing `href` against the current location). */
   @property({ type: Boolean, reflect: true }) current = false;
 
-  /** Opt-in hover/focus flyout showing this item's label text while `icon-only` (set externally by
+  /** Opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no
+   *  pointer press preceded it) showing this item's label text while `icon-only` (set externally by
    *  the parent `<lr-app-rail>` as the viewport narrows) hides it from view -- an explicit,
    *  documented property instead of an unverified cross-browser `::part()` + `::after` + `attr()`
    *  composition. No effect outside icon-only mode, since the label is already visible there.
@@ -370,7 +372,13 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   }
 
   private onFocusShow = (event: Event): void => {
-    if (this.tooltip && this.hasAttribute('icon-only')) this.showTooltip = true;
+    if (
+      this.tooltip
+      && this.hasAttribute('icon-only')
+      && (event.type !== 'focus' || isKeyboardFocusEvent(event))
+    ) {
+      this.showTooltip = true;
+    }
     if (event.type !== 'focus') return;
     const related = (event as FocusEvent).relatedTarget;
     if (related && (related as Node).nodeType === 1 && isComposedFocusAvailable(related as Element)) {

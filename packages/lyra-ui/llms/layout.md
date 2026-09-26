@@ -2253,6 +2253,20 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
   decides: groups render before the rows, so an active row wins while (and only while) it needs to,
   which is right — a group header is a non-interactive `pointer-events: none` label.
+- **Overlays in rows escape the list.** The per-row transform also makes each row the containing
+  block of any `position: fixed` descendant, inside the list's own clipping scroller, so an
+  `absolute` overlay in a row can never extend past the list. Rows therefore default anchored Lyra
+  overlays (dropdowns, tooltips, popovers, selects, context menus) to the `fixed` strategy, and a
+  trapped `fixed` overlay opens at full size in the browser top layer where the native Popover API
+  exists — a row-action menu in a short list is no longer squeezed or clipped, in either direction.
+  An authored value still wins: an instance's `positioning-strategy`/`hoist`, an ancestor's
+  `--lr-positioning-strategy` (even on `:root`), or
+  `lr-virtual-list::part(row) { --lr-positioning-strategy: absolute }` to opt rows out. A promoted
+  overlay whose trigger scrolls out of the list is hidden until the trigger returns. Where the
+  Popover API is absent, a row holding an open `lr-dropdown` in `renderItem` mode stops
+  transforming while the dropdown is open (it keeps its position and is raised to the popover
+  layer), so the menu is not clipped; other overlays there keep the clipped geometry. `:has()`
+  cannot see slotted rows, so that fallback does not apply under `rowProjection="light"`.
 
 ### Light-DOM row projection
 
@@ -2558,7 +2572,8 @@ existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's v
 previously reachable only through `::part(nav)`. Plus shared
 tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
-`--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
+`--lr-space-*`, `--lr-radius`, `--lr-shadow-l` (the mobile overlay panel's default elevation, while
+open only), `--lr-shadow-s` (the `frame="card"` default elevation), `--lr-icon-button-size`,
 `--lr-focus-ring-*`, `--lr-transition-base`). The rail's inline-end edge and its header/footer rules
 use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
 `'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
@@ -2757,17 +2772,16 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 ### `lr-app-rail-item`
 
+An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
+set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
+removing the label from the accessibility tree.
+
 In icon-only presentation the nested disclosure and children list are hidden while `expanded`
 is preserved. Returning full restores the list. If a disclosure or descendant had focus, it moves
 to the outermost visible parent item's base control. The parent link remains operable. The `end`
 slot stays visible; reserve an icon-only rail width of at least twice the nav padding plus the icon
 square, item gap and end content. A 1.5rem badge requires 5.5rem with default tokens. Keep end actions
 out of default-width compact rails, or use a rail that never collapses.
-
-
-An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
-set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
-removing the label from the accessibility tree.
 
 **Properties:**
 
@@ -2779,7 +2793,8 @@ removing the label from the accessibility tree.
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location). `active`, a deprecated alias in both property and attribute form, was removed
   in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
-- `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
+- `tooltip: boolean = false` (reflected) — opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it)
+  (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
   since the label is already visible there. `false` (the default) reproduces the exact existing
@@ -2852,8 +2867,8 @@ nav-slot behaviour, not new to these slots.
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
 shipped `active-indicator` part — suppressed by default while `icon-only`, see the current-ring
-tokens below), `tooltip` (the hover/focus label flyout, only rendered while `tooltip` is set, the
-item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around the `meta` slot,
+tokens below), `tooltip` (the hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it), only rendered while
+`tooltip` is set, the item is `icon-only`, and it is hovered or keyboard-focused), `meta` (the wrapper around the `meta` slot,
 hidden while empty), `end` (the wrapper around the `end` slot, hidden while empty), `toggle` (the
 `children` disclosure, rendered only while something is slotted into `children`; a sibling of
 `base`, never nested inside it), `toggle-icon` (the wrapper around the disclosure chevron,
@@ -3926,15 +3941,15 @@ card given only a resting shadow keeps that exact shadow on hover.
 
 ## `lr-command-palette`
 
+Searchable application command menu. Renders nothing at all while closed. Uses the same shared
+overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
+dismissal, ref-counted document scroll lock).
+
 Hotkeys share last-connected eligible ownership with `lr-app-rail` in the same window. Removing the
 `hotkey` attribute disables the chord, and key-less browser autofill events are ignored. Non-ASCII
 layout keys may match a single ASCII letter/digit chord through `event.code`; printed ASCII keys
 remain authoritative. Existing palette behavior in editable content and for already-prevented events
 is unchanged.
-
-Searchable application command menu. Renders nothing at all while closed. Uses the same shared
-overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
-dismissal, ref-counted document scroll lock).
 
 Valid string keywords still participate in search alongside the command's label, description, and
 group. Unsafe keyword entries are skipped without invoking accessors, and selection returns the

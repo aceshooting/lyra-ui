@@ -7,19 +7,19 @@ import type { MarkdownCodeBlockRecord } from './markdown-code-header.js';
 let marked: MarkedModule;
 before(async () => { marked = (await loadMarkdownDeps()).marked!; });
 
-function options(content = ''): ParseMarkdownOptions {
+function options(content = '', escapeHtmlOption = false): ParseMarkdownOptions {
   return { marked, content, gfm: true, linkTarget: null, headingOffset: 0,
-    escapeHtmlOption: false, trustedHtmlOption: false, highlightCodeOption: false,
+    escapeHtmlOption, trustedHtmlOption: false, highlightCodeOption: false,
     getCachedHighlight: () => undefined, failedHighlightKeys: new Set(),
     headingAnchorsOption: true, mathOption: false, cachedKatex: null,
     pendingKeys: [], headingTreeOut: [] };
 }
-function session(): MarkdownProgressiveSession {
+function session(escapeHtmlOption = false): MarkdownProgressiveSession {
   return new MarkdownProgressiveSession({
-    parser: createMarkdownRenderContext(options()).instance, gfm: true, tabSize: 4,
+    parser: createMarkdownRenderContext(options('', escapeHtmlOption)).instance, gfm: true, tabSize: 4,
     render: (source, rawContent, links, state, slugger) => {
       const headings: MarkdownHeadingItem[] = [], codeBlocks: MarkdownCodeBlockRecord[] = [];
-      const result = createMarkdownRenderContext({ ...options(source), rawContent, slugger,
+      const result = createMarkdownRenderContext({ ...options(source, escapeHtmlOption), rawContent, slugger,
         headingTreeOut: headings, codeBlocksOut: codeBlocks }).render(source, { links, state });
       return { ...result, rawHtml: result.html, headings, codeBlocks, pendingKeys: [] };
     },
@@ -49,7 +49,43 @@ const corpus = [
   '<div>\n\ninside\n\n</div>\n\nDone.\n',
   '<pre>\n\n<x>\n</pre>\n\nDone.\n',
   '# CRLF\r\n\r\nA paragraph.\r\n\r\nDone.\r\n',
+  // The GFM-table and task-item fixtures (wide table; mixed and all-task lists).
+  '| Identifier | Region | Owner | Created | Status | Checksum |\n| --- | --- | --- | --- | --- | --- |\n| svc-authentication-gateway-primary | eu-central-1 | platform-infrastructure-team | 2026-09-25T10:00:00Z | operational | 9f86d081884c7d659a2feaa0c55ad015 |\n\nAfter.\n',
+  '- [x] shipped\n- ordinary\n- [ ] pending\n\nDone.\n',
+  '- [x] one\n- [x] two\n- [ ] three\n\n1. [ ] first\n2. [x] second\n',
 ];
+
+/** Deterministic PRNG (mulberry32) so a failing random schedule reproduces exactly. */
+function seeded(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Every schedule the differential corpus runs: per line, fixed chunks 1-17, three seeded random. */
+function schedules(source: string): Array<[string, number[]]> {
+  const result: Array<[string, number[]]> = [];
+  const lineEnds: number[] = [];
+  for (let end = source.indexOf('\n'); end !== -1; end = source.indexOf('\n', end + 1)) lineEnds.push(end + 1);
+  result.push(['lines', lineEnds]);
+  for (let chunk = 1; chunk <= 17; chunk++) {
+    const ends: number[] = [];
+    for (let end = chunk; end < source.length; end += chunk) ends.push(end);
+    result.push([`chunk ${chunk}`, ends]);
+  }
+  for (const seed of [1, 2, 3]) {
+    const random = seeded(seed);
+    const ends: number[] = [];
+    for (let end = 1 + Math.floor(random() * 24); end < source.length; end += 1 + Math.floor(random() * 24)) ends.push(end);
+    result.push([`random seed ${seed}`, ends]);
+  }
+  return result;
+}
 
 describe('progressive Markdown boundaries and final parity', () => {
   for (const [index, source] of corpus.entries()) for (const chunk of [1, 7, 64]) {
@@ -173,4 +209,50 @@ it('admits default and inline renderer configuration but rejects async and block
   parser.defaults['async'] = false;
   parser.defaults['extensions'] = { block: [() => undefined] };
   expect(markdownProgressiveEligible(parser, true)).to.equal(false);
+});
+
+describe('progressive Markdown prefix stability', () => {
+  // Reference definitions are the recorded invalidation cause that may legitimately rewrite an
+  // earlier committed group, so documents that define references are excluded here.
+  const stable = corpus.filter((source) => !/^\[[^\]]+\]:/m.test(source));
+  for (const [index, source] of stable.entries()) {
+    it(`never rewrites a committed group while appending line by line (document ${index})`, () => {
+      const value = session();
+      const lines = source.split(/(?<=\n)/);
+      let committed: string[] = [];
+      let end = 0;
+      for (const line of lines) {
+        end += line.length;
+        value.update(source.slice(0, end));
+        drain(value);
+        const html = value.blocks.map((block) => block.html);
+        expect(html.slice(0, committed.length), `rewritten after ${JSON.stringify(source.slice(0, end))}`).to.deep.equal(committed);
+        committed = html;
+      }
+      value.step(true, true);
+      expect(value.blocks.slice(0, committed.length).map((block) => block.html)).to.deep.equal(committed);
+    });
+  }
+});
+
+describe('progressive Markdown differential corpus', () => {
+  for (const escape of [false, true]) {
+    for (const [index, source] of corpus.entries()) {
+      it(`adopts the complete parse for corpus ${index} under every schedule${escape ? ' (escape mode)' : ''}`, () => {
+        const expected = parseMarkdownDocument(options(normalizeMarkdownLeadingTabs(source, 4), escape)).html;
+        for (const [label, ends] of schedules(source)) {
+          const value = session(escape);
+          for (const end of ends) {
+            value.update(source.slice(0, end));
+            drain(value);
+            expect(value.failed, `${label}: failed at source offset ${end}`).to.equal(false);
+          }
+          value.update(source);
+          value.step(true, true);
+          expect(value.blocks.map((block) => block.html).join(''), label).to.equal(expected);
+          expect(value.tail, label).to.equal(null);
+        }
+      });
+    }
+  }
 });

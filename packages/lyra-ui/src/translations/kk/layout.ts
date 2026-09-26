@@ -1,0 +1,63 @@
+// The `layout` slice of the kk translation catalog for @aceshooting/lyra-ui: strings owned exclusively by `src/components/layout/**`.
+// A side-effect-only module: a consumer writes a bare
+// `import '@aceshooting/lyra-ui/translations/kk/layout';` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- `scripts/check-translations.mjs` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
+// Regenerate the SHAPE (never the translations) with:
+//   node scripts/scaffold-translation.mjs kk --force
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
+
+const strings: LyraLocaleStrings = {
+  carousel: 'карусель',
+  carouselLabel: 'Карусель',
+  carouselSlide: 'слайд',
+  carouselSlidePosition: 'Слайд {index}, барлығы {total}',
+  carouselSlideAnnouncement: '{position}: {content}',
+  carouselSlideAnnouncementSeparator: '. ',
+  carouselIndicators: 'Карусель слайдтары',
+  carouselGoTo: 'Слайдқа өту: {index}',
+  scrollerLabel: 'Айналдырылатын мазмұн',
+  scrollPrevious: 'Артқа айналдыру',
+  scrollNext: 'Алға айналдыру',
+  closeNavigation: 'Навигацияны жабу',
+  openNavigation: 'Навигацияны ашу',
+  resizeNavigation: 'Навигация өлшемін өзгерту',
+  appRailCollapse: 'Навигацияны жию',
+  appRailExpand: 'Навигацияны жаю',
+  appRailItemCollapse: 'Жию: {label}',
+  appRailItemExpand: 'Жаю: {label}',
+  resizeValuePercent: '{value} пайыз',
+  commandPaletteLabel: 'Командалар палитрасы',
+  commandPalettePlaceholder: 'Командаларды іздеу…',
+  commandPaletteEmpty: 'Сәйкес командалар жоқ.',
+  commandPaletteResults: 'Командалар',
+  dockPanelCollapse: 'Панельді жию',
+  dockPanelExpand: 'Панельді жаю',
+  dockPanelResize: 'Панель өлшемін өзгерту',
+  responsivePanel: 'Панель',
+  breadcrumb: 'Навигация тізбегі',
+  resizeDivider: 'Панельдер арасындағы бөлгіштің өлшемін өзгерту: {a} және {b}',
+  widgetFullscreenPanel: 'Толық экранды панель',
+  widgetViewGroup: 'Панель көрінісі',
+  widgetExitFullscreen: 'Толық экраннан шығу',
+  widgetExpandToFullscreen: 'Толық экранға жаю',
+  widgetCollapse: 'Панельді жию',
+  widgetExpand: 'Панельді жаю',
+  skipToContent: 'Мазмұнға өту',
+  dashboardGridLabel: 'Бақылау тақтасының торы',
+  dashboardCellCollisionRejected: '{label} элементін ол жерге орналастыру мүмкін емес, себебі ол басқа ұяшықпен қабаттасады.',
+  dashboardCellMoved: '{label} жылжытылды: баған {x}, жол {y}.',
+  dashboardCellResized: '{label} өлшемі өзгертілді: ені {w}, биіктігі {h}.',
+  filterBarReset: 'Сүзгілерді қалпына келтіру',
+  filterBarActiveFilters: 'Белсенді сүзгілер',
+  drilldownDocuments: 'Құжаттар',
+  drilldownRuns: 'Агент іске қосылымдары',
+  drilldownEmpty: 'Ешбір элемент таңдалмаған',
+  drilldownUntitledNode: 'Атаусыз қадам',
+  reorderMovePending: 'Ретін өзгерту күтілуде.',
+  reorderMoveCancelled: 'Ретін өзгерту тоқтатылды.',
+};
+
+registerLyraLocale('kk', strings);

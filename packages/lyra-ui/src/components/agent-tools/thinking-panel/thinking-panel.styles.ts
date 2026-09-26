@@ -16,7 +16,7 @@ export const styles = css`
      transcript can retune the nested card without a ::part(base) override. */
   [part="base"] {
     border: var(--lr-border-width-thin) solid
-      var(--lr-thinking-panel-border-color, var(--lr-color-border-subtle));
+      var(--lr-thinking-panel-border-color, var(--lr-color-border));
     border-radius: var(--lr-thinking-panel-radius, var(--lr-radius));
     background: var(--lr-thinking-panel-background, var(--lr-color-surface));
     overflow: hidden;
@@ -123,6 +123,14 @@ export const styles = css`
   [part="duration"][data-pending] {
     color: var(--lr-thinking-panel-pending-color, var(--lr-color-brand));
   }
+  /* The quiet duration text (and the brand pending label) fails contrast on the hover tint and on
+     the deeper pressed mix, so it follows the header's own colour in both states: brand on hover,
+     the body colour while pressed. Declared after, and more specific than, the pending rule so the
+     pending label is covered too. Same treatment as lr-tool-call-block's header. */
+  [part="header"]:hover [part="duration"],
+  [part="header"]:active [part="duration"] {
+    color: inherit;
+  }
   .pending-dot {
     inline-size: var(--lr-size-0-375rem);
     block-size: var(--lr-size-0-375rem);
@@ -159,7 +167,7 @@ export const styles = css`
     /* The header/body divider is the same chrome the outer border is, and frame="plain" keeps it,
        so it follows the same hook rather than stranding a mismatched rule in a retuned card. */
     border-block-start: var(--lr-border-width-thin) solid
-      var(--lr-thinking-panel-border-color, var(--lr-color-border-subtle));
+      var(--lr-thinking-panel-border-color, var(--lr-color-border));
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
     line-height: var(--lr-line-height-normal);

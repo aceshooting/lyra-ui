@@ -84,6 +84,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: '現在の色：{color}',
   selectSelectedOverflow: '他 {n} 件',
   emojiPickerSearchLabel: '絵文字を検索',
+  emojiPickerSearchPlaceholder: '絵文字を検索…',
   emojiPickerGridLabel: '絵文字',
   emojiPickerEmpty: '絵文字が見つかりません',
   emojiPickerLoadError: '絵文字を読み込めませんでした。',

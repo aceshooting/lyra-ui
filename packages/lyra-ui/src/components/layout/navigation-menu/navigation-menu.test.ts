@@ -1700,3 +1700,57 @@ describe('<lr-navigation-menu> styling', () => {
     expect(getComputedStyle(panel(dark)).backgroundColor).to.equal(expected);
   });
 });
+
+describe('<lr-navigation-menu> top-layer escape', () => {
+  it('promotes a trapped bar panel and releases it when the bar collapses', async () => {
+    const menu = await menuFixture(html`
+      <div id="trap" style="transform: translateY(0); overflow: hidden; block-size: 48px; inline-size: 900px">
+        <lr-navigation-menu mobile-breakpoint="40rem" expanded>${items('tl-')}</lr-navigation-menu>
+      </div>
+    `);
+    const trap = menu.parentElement as HTMLElement;
+    const products = item(menu, 'tl-products');
+    base(products).click();
+    await waitPlaced(products);
+    await waitUntil(() => panel(products).matches(':popover-open'), 'the trapped bar panel is promoted');
+
+    trap.style.inlineSize = '320px';
+    trap.style.blockSize = 'auto';
+    await waitUntil(() => menu.collapsed, 'menu never collapsed');
+    await settle(menu);
+    await waitUntil(() => !panel(products).matches(':popover-open'), 'crossing into flow releases the top layer');
+    expect(panel(products).hasAttribute('data-lr-top-layer')).to.equal(false);
+    expect(panel(products).hasAttribute('popover')).to.equal(false);
+
+    products.open = true;
+    await settle(menu);
+    expect(panel(products).hidden).to.equal(false);
+    expect(panel(products).matches(':popover-open'), 'a collapsed-layout panel is never promoted').to.equal(false);
+    const panelRect = panel(products).getBoundingClientRect();
+    const triggerRect = base(products).getBoundingClientRect();
+    expect(panelRect.top, 'the panel renders in flow below its trigger').to.be.at.least(triggerRect.bottom - 1);
+  });
+
+  it('releases a promoted panel that stays open when its item leaves the menu', async () => {
+    const menu = await menuFixture(html`
+      <div style="transform: translateY(0); overflow: hidden; block-size: 48px; inline-size: 900px">
+        <lr-navigation-menu>${items('lo-')}</lr-navigation-menu>
+      </div>
+    `);
+    const products = item(menu, 'lo-products');
+    base(products).click();
+    await waitPlaced(products);
+    await waitUntil(() => panel(products).matches(':popover-open'), 'the trapped bar panel is promoted');
+    const outside = document.createElement('div');
+    menu.parentElement!.after(outside);
+    outside.append(products);
+    await products.updateComplete;
+    await nextFrame();
+    await waitUntil(() => !panel(products).hasAttribute('data-lr-top-layer'), 'the unowned panel is released');
+    expect(panel(products).matches(':popover-open')).to.equal(false);
+    expect(products.open, 'the moved item keeps its panel open').to.equal(true);
+    expect(panel(products).hidden).to.equal(false);
+    expect(getComputedStyle(panel(products)).position, 'an unowned open panel is in flow').to.equal('static');
+    outside.remove();
+  });
+});

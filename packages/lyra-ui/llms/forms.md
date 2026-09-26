@@ -194,7 +194,8 @@ the full form-label, option, overlay, and first-open positioning contracts arriv
 chunks instead of being weakened in a separate partial combobox implementation.
 
 An `lr-option` row remains bounded by its owning listbox: the default label ellipsizes and each
-`start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
+`start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row, where a long slotted text adornment truncates with an
+ellipsis. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
 
 **Adornments in the popup (fixed in 11.0.0).** Before 11.0.0 this paragraph described behavior the
@@ -278,7 +279,9 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
   `lr-popover`, `lr-dropdown`, `lr-tooltip` and `lr-color-picker`. `fixed` is this control's
   default and what it has always rendered: it positions against the viewport and escapes most
-  clipping ancestors, which suits a typeahead list that usually sits inside a scrollable region.
+  clipping ancestors, which suits a typeahead list that usually sits inside a scrollable region;
+  under a transformed, filtered or contained ancestor the listbox is promoted into the browser top
+  layer where the native Popover API exists (otherwise, as before, that ancestor clips it).
   `absolute` positions against the nearest containing block and scrolls with it. An unsupported
   value resolves to the default. Like `placement`, a change takes effect the next time the listbox
   opens. When the instance sets nothing, the cascading `--lr-positioning-strategy` custom property
@@ -440,7 +443,7 @@ readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
 the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
-`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
+`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. A string or number `start`/`end` truncates with an ellipsis when it outgrows the part; template content should render an element at its top level to do the same. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
 put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
 provide richer spoken text than the visible label, and `data` is retained without being rendered
@@ -4244,7 +4247,9 @@ below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
 State paint is independently themeable through `--lr-checkbox-hover-border`,
 `--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
 `--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
-corresponding brand/brand-quiet/danger token.
+corresponding brand/brand-quiet/danger token. While checked or indeterminate, an unset
+`--lr-checkbox-hover-border` / `--lr-checkbox-active-border` falls back to
+`--lr-checkbox-checked-border`, so a themed checked border survives the pointer.
 `--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
 `[part='box']`'s corner radius without a `::part(box)` rule.
 
@@ -4442,6 +4447,9 @@ fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independentl
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
 retint the pointer states (their defaults remain mixes from the current state's resting fill, so a
 checked switch mixes from `--lr-switch-checked-track-fill` even when the unchecked fill is set).
+The checked fill never falls back to `--lr-switch-track-fill`: unset, it is `--lr-color-brand`.
+An explicit hover or active fill applies in both states; for a per-state value, set it from
+`lr-switch:state(checked) { --lr-switch-track-hover-fill: …; }`.
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
 renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
 look) without affecting any other switch. `--lr-switch-checked-track-border` (default
@@ -4895,7 +4903,9 @@ while `checked` — a component-scoped indirection (the same pattern `lr-checkbo
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
 The pointer states are independently themeable with `--lr-radio-hover-border-color` (default
 `var(--lr-color-brand)`), `--lr-radio-active-border-color` (defaulting through the hover border),
-and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`).
+and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`). While checked, an unset
+hover or active border falls back to `--lr-radio-checked-border-color`, so a themed checked border
+survives the pointer.
 WA's `--checked-icon-color` and `--checked-icon-scale` aliases feed the selected indicator's color
 and scale.
 
@@ -5823,8 +5833,11 @@ and:
   see `<lr-popover>` (`llms/components/lr-popover.md`): the one property `<lr-popover>`,
   `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell the same way,
   `'absolute' | 'fixed'`. `absolute` is this control's mirrored default and keeps the panel in the
-  component's local scrolling context; `fixed` escapes most clipping ancestors. An unsupported value
-  resolves back to the default, and a change applies live while the panel is open.
+  component's local scrolling context; `fixed` escapes most clipping ancestors, and escapes
+  transformed, filtered or contained ancestors by promoting the panel into the browser top layer
+  where the native Popover API exists (otherwise, as before, such an ancestor contains and clips
+  it). An unsupported value resolves back to the default, and a change applies live while the panel
+  is open.
   `hoist: boolean = false` is its retained exact alias (`hoist` ⇔ `positioning-strategy="fixed"`);
   writing either spelling updates the other, so the two attributes can never disagree. Prefer
   `positioning-strategy` in new code. This property always reports the instance's own authored
@@ -6078,8 +6091,12 @@ label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji,
 shortcodes? }`; assignment captures a bounded frozen owned snapshot, including the current contents
 of reused source item objects. Earlier snapshots remain frozen and unchanged; in-place source edits
 become visible only after an explicit `groups` assignment. The search field matches
-`name` and every `shortcodes` entry, case-insensitively. Its accessible name and visible placeholder
-use the same localized `emojiPickerSearchLabel` string. Consumer group labels render verbatim.
+`name` and every `shortcodes` entry, case-insensitively. Its accessible name is the localized
+`emojiPickerSearchLabel` string; its visible placeholder is the separate localized
+`emojiPickerSearchPlaceholder` string (English `'Search emoji…'`), overridable per instance with
+`searchPlaceholder?: string` (attribute `search-placeholder`). A blank placeholder, from the property
+or the string, falls back to the search label, so the field never renders empty; the placeholder
+never changes the accessible name. Consumer group labels render verbatim.
 Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
 headings follow `registerLyraLocale()`/`.strings` through filtering and windowed rendering, including
 same-locale `.strings` changes, without exposing localization keys as consumer data. Caller-authored

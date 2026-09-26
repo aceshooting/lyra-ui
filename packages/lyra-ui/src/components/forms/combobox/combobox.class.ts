@@ -182,6 +182,16 @@ const comboboxSpellcheckConverter = {
       : spellcheckConverter.fromAttribute?.(value, type),
 };
 
+/**
+ * Wraps a string or number row adornment in its own span. The `option-start`/`option-end` parts are
+ * centred flex containers, so a bare text node there is an anonymous flex item that is clipped on
+ * both sides; an element child gets the part's `> *` ellipsis rule. Nodes and templates pass
+ * through unchanged, so icon adornments gain no extra box.
+ */
+function adornmentContent(value: unknown): unknown {
+  return typeof value === 'string' || typeof value === 'number' ? html`<span>${value}</span>` : value;
+}
+
 function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
   return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value);
 }
@@ -3464,7 +3474,7 @@ export class LyraCombobox<
           ?data-active=${id === activeId}
         >
           ${o.start
-            ? renderInertPresentation(o.start, { part: 'option-start' })
+            ? renderInertPresentation(adornmentContent(o.start), { part: 'option-start' })
             : ''}
           ${o.icon
             ? renderInertPresentation(o.icon, { part: 'option-icon' })
@@ -3485,7 +3495,7 @@ export class LyraCombobox<
             ? html`<span part="option-badge">${o.badge}</span>`
             : ''}
           ${o.end
-            ? renderInertPresentation(o.end, { part: 'option-end' })
+            ? renderInertPresentation(adornmentContent(o.end), { part: 'option-end' })
             : ''}
         </div>`
       );

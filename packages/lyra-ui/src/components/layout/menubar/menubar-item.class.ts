@@ -6,7 +6,6 @@ import { isAccessibilitySubtreeExcluded } from '../../../internal/a11y.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { composedContains, deepActiveElement } from '../../../internal/nonmodal-overlay-manager.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
-import { isKeyboardFocusEvent, lastInputModality } from '../../../internal/focus-modality.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   submenuPanelController,
@@ -52,10 +51,6 @@ export class LyraMenubarItem extends LyraElement {
   private panelName: OwnedAriaLabel = { owns: false, value: null };
   private pendingFocusout?: () => void;
   private ignoredElements = new Map<HTMLElement, boolean>();
-  private pressedPointerId: number | null = null;
-  private readonly releaseCapturedPointer = (event: PointerEvent): void => {
-    if (this.pressedPointerId === null || event.pointerId === this.pressedPointerId) this.clearPressedState();
-  };
 
   constructor() {
     super();
@@ -63,63 +58,6 @@ export class LyraMenubarItem extends LyraElement {
       if (this.disabled) { event.preventDefault(); event.stopImmediatePropagation(); }
     }, { capture: true });
     this.addEventListener('mousedown', event => { if (this.disabled) event.preventDefault(); });
-    this.addEventListener('focusin', (event) => {
-      const focused = this.ownerDocument.activeElement === this;
-      if (!focused || (lastInputModality(this.ownerDocument) === 'pointer' && !isKeyboardFocusEvent(event))) return;
-      this.setAttribute('data-focus-visible', '');
-      const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-      base?.setAttribute('data-focus-visible', '');
-      const hoverBackground = getComputedStyle(this).getPropertyValue('--lr-menubar-item-hover-bg').trim();
-      if (hoverBackground) base?.style.setProperty('background-color', hoverBackground, 'important');
-    });
-    this.addEventListener('focusout', (event) => {
-      const relatedTarget = (event as FocusEvent).relatedTarget;
-      const next = relatedTarget instanceof Element ? relatedTarget : null;
-      if (!next || !composedContains(this, next)) {
-        this.removeAttribute('data-focus-visible');
-        const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-        base?.removeAttribute('data-focus-visible');
-        if (!this.hasAttribute('data-pressed')) {
-          base?.style.removeProperty('background');
-          base?.style.removeProperty('background-color');
-        }
-      }
-    });
-    this.addEventListener('pointerdown', (event: PointerEvent) => {
-      if (!this.disabled) {
-        this.pressedPointerId = event.pointerId;
-        if (typeof this.setPointerCapture === 'function') {
-          try { this.setPointerCapture(event.pointerId); } catch { /* pointer may already be gone */ }
-        }
-        this.setAttribute('data-pressed', '');
-        const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-        base?.setAttribute('data-pressed', '');
-        const activeBackground = getComputedStyle(this).getPropertyValue('--lr-menubar-item-active-bg').trim();
-        base?.style.removeProperty('background-color');
-        base?.style.setProperty(
-          'background',
-          activeBackground || 'color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-          'important',
-        );
-      }
-    });
-    this.addEventListener('pointerup', () => {
-      this.clearPressedState();
-    });
-    this.addEventListener('pointercancel', () => {
-      this.clearPressedState();
-    });
-    this.addEventListener('lostpointercapture', () => {
-      this.clearPressedState();
-    });
-  }
-
-  private clearPressedState(): void {
-    this.removeAttribute('data-pressed');
-    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-    base?.removeAttribute('data-pressed');
-    base?.style.removeProperty('background');
-    if (!this.hasAttribute('data-focus-visible')) base?.style.removeProperty('background-color');
   }
 
   /** @internal */
@@ -141,8 +79,6 @@ export class LyraMenubarItem extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.ownerDocument.addEventListener('pointerup', this.releaseCapturedPointer);
-    this.ownerDocument.addEventListener('pointercancel', this.releaseCapturedPointer);
     if (this.tabIndex !== 0) this.tabIndex = -1;
     this.syncLabel(false);
     const Observer = this.ownerDocument.defaultView?.MutationObserver;
@@ -169,22 +105,11 @@ export class LyraMenubarItem extends LyraElement {
     ++this.inertGeneration;
     this.cancelPendingFocusout();
     this.labelObserver?.disconnect(); this.labelObserver = undefined;
-    this.ownerDocument.removeEventListener('pointerup', this.releaseCapturedPointer);
-    this.ownerDocument.removeEventListener('pointercancel', this.releaseCapturedPointer);
-    this.pressedPointerId = null;
     if (this.panel && this.attached) this.panel[submenuPanelController].detach(this);
-    this.cancelPendingFocusout();
     this.expanded = false;
     this.attached = false;
     this.setInert(true);
     this.restoreIgnoredElements();
-    this.removeAttribute('data-focus-visible');
-    this.removeAttribute('data-pressed');
-    this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.removeAttribute('data-focus-visible');
-    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-    base?.removeAttribute('data-pressed');
-    base?.style.removeProperty('background');
-    base?.style.removeProperty('background-color');
     super.disconnectedCallback();
   }
 

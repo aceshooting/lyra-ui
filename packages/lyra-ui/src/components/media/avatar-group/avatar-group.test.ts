@@ -1025,3 +1025,11 @@ describe('collecting already-slotted avatars without relying on the initial slot
     }
   });
 });
+
+it('paints the neutral overflow badge from the neutral quiet fill role, not the border token', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group max="0" style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-neutral-fill-quiet: rgb(1, 2, 3); --lr-theme-color-neutral-fill-normal: rgb(4, 5, 6); --lr-theme-color-text-quiet: rgb(7, 8, 9)"><lr-avatar></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const visual = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
+  expect(getComputedStyle(visual).backgroundColor).to.equal('rgb(1, 2, 3)');
+});

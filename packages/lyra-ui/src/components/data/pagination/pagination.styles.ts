@@ -208,10 +208,17 @@ export const styles = css`
     );
   }
   /* Without its own :hover arm the current page's brand chip falls back to the rule above and
-     lightens under the pointer, reading as not selected. */
+     lightens under the pointer, reading as not selected. Unset hooks start from the current-page
+     tokens, so a themed current chip keeps its paint under the pointer. */
   [part~="page-current"]:where(:hover) {
-    background: var(--lr-pagination-current-hover-bg, var(--lr-color-brand));
-    border-color: var(--lr-pagination-current-hover-border-color, transparent);
+    background: var(
+      --lr-pagination-current-hover-bg,
+      var(--lr-pagination-current-bg, var(--lr-color-brand))
+    );
+    border-color: var(
+      --lr-pagination-current-hover-border-color,
+      var(--lr-pagination-current-border-color, transparent)
+    );
   }
   /* Pressing the page you are on is a no-op but must still acknowledge the click: the chip deepens
      rather than lightening, so it never reads as deselected. MUST stay after the generic :active
@@ -225,7 +232,10 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    border-color: var(--lr-pagination-current-active-border-color, transparent);
+    border-color: var(
+      --lr-pagination-current-active-border-color,
+      var(--lr-pagination-current-border-color, transparent)
+    );
   }
   [part~="first-button"]:where(:focus-visible),
   [part~="previous-button"]:where(:focus-visible),

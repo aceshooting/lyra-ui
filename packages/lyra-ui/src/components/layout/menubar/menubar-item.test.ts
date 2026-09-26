@@ -1,4 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraMenubarItem } from './menubar-item.class.js';
 import './menubar.js';
 
@@ -41,21 +42,21 @@ describe('lr-menubar-item', () => {
     expect(wrapper.querySelector<HTMLElement>('span')!.hidden).to.equal(true);
   });
 
-  it('clears pressed styling when the pointer is released outside the item', async () => {
-    const item = await fixture<LyraMenubarItem>(html`<lr-menubar-item>File</lr-menubar-item>`);
-    item.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 17, pointerType: 'mouse' }));
-    expect(item.hasAttribute('data-pressed')).to.equal(true);
-    document.body.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 17, pointerType: 'mouse' }));
-    expect(item.hasAttribute('data-pressed')).to.equal(false);
-    expect(item.shadowRoot!.querySelector('[part="base"]')?.hasAttribute('data-pressed')).to.equal(false);
-  });
-
-  it('does not apply keyboard focus styling when focus follows a pointer', async () => {
-    const item = await fixture<LyraMenubarItem>(html`<lr-menubar-item>File</lr-menubar-item>`);
-    item.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 18, pointerType: 'mouse' }));
-    item.focus();
-    await item.updateComplete;
-    expect(item.hasAttribute('data-focus-visible')).to.equal(false);
-    document.body.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 18, pointerType: 'mouse' }));
+  it('paints press and pointer focus from native state only, with no inline or data-attribute paint', async () => {
+    const wrapper = await fixture(html`<lr-menubar label="App" style="--lr-transition-fast:0ms;--lr-menubar-item-active-bg:rgb(65, 43, 21)"><lr-menubar-item id="help">Help</lr-menubar-item></lr-menubar>`);
+    const help = wrapper.querySelector<LyraMenubarItem>('#help')!;
+    const base = help.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    await hoverUntilMatched(help, 'Help should be hovered');
+    try {
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(base).backgroundColor === 'rgb(65, 43, 21)', 'pressed paint did not apply');
+      const rect = wrapper.getBoundingClientRect();
+      await sendMouse({ type: 'move', position: [Math.round(rect.left + 2), Math.round(rect.bottom + 40)] });
+    } finally { await sendMouse({ type: 'up' }); }
+    await waitUntil(() => getComputedStyle(base).backgroundColor !== 'rgb(65, 43, 21)', 'pressed paint did not clear');
+    expect(help.matches(':focus-visible')).to.equal(false);
+    expect(base.getAttribute('style')).to.equal(null);
+    expect(help.hasAttribute('data-pressed') || help.hasAttribute('data-focus-visible')).to.equal(false);
+    await resetMouse();
   });
 });

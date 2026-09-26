@@ -206,8 +206,10 @@ export interface LyraCheckboxEventMap {
  * @cssprop [--lr-checkbox-checked-border=var(--lr-color-brand)] - Border color of `[part='box']`
  * while `checked` or `indeterminate`.
  * @cssprop [--lr-checkbox-hover-border=var(--lr-color-brand)] - Box border while the enabled
- * interactive control is hovered.
- * @cssprop [--lr-checkbox-active-border=var(--lr-color-brand)] - Box border while pressed.
+ * interactive control is hovered. While checked or indeterminate, unset falls back to
+ * `--lr-checkbox-checked-border`.
+ * @cssprop [--lr-checkbox-active-border=var(--lr-color-brand)] - Box border while pressed. While
+ * checked or indeterminate, unset falls back to `--lr-checkbox-checked-border`.
  * @cssprop [--lr-checkbox-active-ring=var(--lr-color-brand-quiet)] - Outer box ring while pressed.
  * @cssprop [--lr-checkbox-invalid-border=var(--lr-color-danger)] - Box border while invalid chrome
  * is visible.

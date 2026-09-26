@@ -418,6 +418,7 @@ export const LYRA_DEFAULT_emojiPickerGroupTravelPlaces: LyraMessage = 'Travel & 
 export const LYRA_DEFAULT_emojiPickerGroupUnknown: LyraMessage = 'Group {group}';
 export const LYRA_DEFAULT_emojiPickerLoadError: LyraMessage = 'Could not load emoji.';
 export const LYRA_DEFAULT_emojiPickerSearchLabel: LyraMessage = 'Search emoji';
+export const LYRA_DEFAULT_emojiPickerSearchPlaceholder: LyraMessage = 'Search emoji…';
 export const LYRA_DEFAULT_entityChipWithType: LyraMessage = '{label}, {type}';
 export const LYRA_DEFAULT_entityCommunity: LyraMessage = 'Community';
 export const LYRA_DEFAULT_entityDegree: LyraMessage = 'Connections';

@@ -241,7 +241,7 @@ buttons.
 - `errorLabel?: string` (attribute `error-label`) — failure name/tooltip text; omission uses
   localized `copyFailed`, while an explicit empty string suppresses it.
 - `tooltip: 'full' | 'copy' | 'none' = 'full'` (reflected) — `full` shows the resting tooltip on
-  hover/focus and feedback after activation, `copy` shows feedback only, and `none` disables it.
+  hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it) and feedback after activation, `copy` shows feedback only, and `none` disables it.
 - `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` (attribute
   `tooltip-placement`, reflected).
 - `hoist: boolean = false` (reflected) — uses fixed tooltip positioning to escape clipped

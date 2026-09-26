@@ -88,6 +88,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'צבע נוכחי: {color}',
   selectSelectedOverflow: 'עוד {n}',
   emojiPickerSearchLabel: "חפש אימוג'י",
+  emojiPickerSearchPlaceholder: "חפש אימוג'י…",
   emojiPickerGridLabel: "אימוג'י",
   emojiPickerEmpty: 'לא נמצא אימוג׳י',
   emojiPickerLoadError: 'לא ניתן לטעון אימוג׳י.',

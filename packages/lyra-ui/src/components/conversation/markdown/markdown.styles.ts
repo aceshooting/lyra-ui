@@ -31,7 +31,9 @@ export const styles = css`
   }
   [part='content'][data-unsanitized] {
     /* Unsanitized content may carry positioned descendants; clip that trusted-content escape hatch
-       to this surface rather than let it cover the surrounding app. */
+       to this surface rather than let it cover the surrounding app. Plain positioned HTML stays
+       clipped here, but a Lyra anchored overlay authored inside the content (like lr-dialog) opens
+       in the browser top layer and can paint over the app while it is open. */
     contain: paint;
   }
   [part='streaming-tail'] {

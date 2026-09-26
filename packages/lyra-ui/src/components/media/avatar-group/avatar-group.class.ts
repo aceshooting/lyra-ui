@@ -80,7 +80,7 @@ export interface LyraAvatarGroupEventMap {
  * @cssprop [--lr-avatar-group-ring-color=var(--lr-color-surface)] - The cutout-style ring
  * drawn around every avatar and the overflow badge.
  * @cssprop [--lr-avatar-group-ring-width=var(--lr-border-width-medium)] - Ring thickness.
- * @cssprop [--lr-avatar-group-badge-bg=var(--lr-color-border)] - Overflow badge background.
+ * @cssprop [--lr-avatar-group-badge-bg=var(--lr-color-neutral-fill-quiet)] - Overflow badge background.
  * Its private default follows `variant`; the public value remains authoritative.
  * @cssprop [--lr-avatar-group-badge-color=var(--lr-color-text)] - Overflow badge text color.
  * Its private default follows `variant`; the public value remains authoritative.

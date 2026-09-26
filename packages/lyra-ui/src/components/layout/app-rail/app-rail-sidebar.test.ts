@@ -14,6 +14,8 @@ import '../command-palette/command-palette.js';
 import '../../forms/icon-button/icon-button.js';
 import '../../forms/input/input.js';
 import '../../utility/divider/divider.js';
+import '../../overlays/dialog/dialog.js';
+import type { LyraDialog } from '../../overlays/dialog/dialog.class.js';
 
 function press(key = 'b', init: KeyboardEventInit = {}, target: EventTarget = window): KeyboardEvent {
   const event = new KeyboardEvent('keydown', { key, ctrlKey: true, bubbles: true, composed: true, cancelable: true, ...init });
@@ -23,6 +25,21 @@ function mobile(rail: LyraAppRail): void {
   (rail as unknown as { onMobileChange(event: { matches: boolean }): void }).onMobileChange({ matches: true });
 }
 function base(rail: LyraAppRail): HTMLElement { return rail.shadowRoot!.querySelector<HTMLElement>('[part="base"], [part="panel"]')!; }
+/** What `declaration` computes to inside the rail's shadow root, where its fallback tokens live. */
+function resolvedInShadow(rail: LyraAppRail, declaration: string, property: string): string {
+  const probe = document.createElement('span'); probe.setAttribute('style', declaration); rail.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property); probe.remove(); return value;
+}
+/** The controls relationship reaches the trigger either as an element reference (retargeted to
+ *  the rail host across the shadow boundary) or, without that API, as an idref. */
+function controlsRail(trigger: HTMLElement, rail: LyraAppRail): boolean {
+  const reflected = trigger as HTMLElement & { ariaControlsElements?: Element[] | null };
+  if (Reflect.has(reflected, 'ariaControlsElements')) {
+    const controlled = reflected.ariaControlsElements ?? [];
+    return controlled.length === 1 && (controlled[0] === rail || controlled[0] === base(rail));
+  }
+  return trigger.getAttribute('aria-controls') === base(rail).id && base(rail).id !== '';
+}
 let originalMatchMedia: typeof window.matchMedia;
 
 beforeEach(() => {
@@ -38,10 +55,28 @@ describe('app rail sidebar frame', () => {
     const el = await fixture<LyraAppRail>(html`<lr-app-rail></lr-app-rail>`);
     const style = getComputedStyle(base(el));
     expect(style.marginTop).to.equal('0px'); expect(style.boxShadow).to.equal('none');
-    expect(parseFloat(style.borderInlineEndWidth)).to.be.greaterThan(0); expect(getComputedStyle(el).display).to.equal('block');
+    expect(style.borderInlineEndWidth).to.equal(resolvedInShadow(el, 'border: var(--lr-border-width-thin) solid', 'border-top-width'));
+    expect(parseFloat(style.borderInlineEndWidth)).to.be.greaterThan(0);
+    expect(style.backgroundColor).to.equal(resolvedInShadow(el, 'background-color: var(--lr-color-surface)', 'background-color'));
+    expect(getComputedStyle(el).display).to.equal('block');
     el.setAttribute('frame', 'floating'); await el.updateComplete;
     expect(el.frame).to.equal(undefined); expect(el.hasAttribute('frame')).to.equal(false);
     (el as unknown as { frame: string }).frame = 'bogus'; await el.updateComplete; expect(el.hasAttribute('frame')).to.equal(false);
+  });
+
+  it('frames a default card with the resolved gap, thin subtle edges, radius and elevation', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div style="block-size:300px"><lr-app-rail frame="card" style="block-size:100%"></lr-app-rail></div>`);
+    const el = wrapper.querySelector<LyraAppRail>('lr-app-rail')!; const style = getComputedStyle(base(el));
+    const gap = resolvedInShadow(el, 'margin-top: var(--lr-space-s)', 'margin-top'); const thin = resolvedInShadow(el, 'border: var(--lr-border-width-thin) solid', 'border-top-width');
+    expect(parseFloat(gap)).to.be.greaterThan(0);
+    expect([style.marginTop, style.marginRight, style.marginBottom, style.marginLeft]).to.deep.equal([gap, gap, gap, gap]);
+    expect([style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth]).to.deep.equal([thin, thin, thin, thin]);
+    const subtle = resolvedInShadow(el, 'color: var(--lr-color-border-subtle)', 'color');
+    expect([style.borderTopColor, style.borderRightColor, style.borderBottomColor, style.borderLeftColor]).to.deep.equal([subtle, subtle, subtle, subtle]);
+    expect(style.borderTopLeftRadius).to.equal(resolvedInShadow(el, 'border-top-left-radius: var(--lr-radius)', 'border-top-left-radius'));
+    expect(style.boxShadow).not.to.equal('none'); expect(getComputedStyle(el).display).to.equal('flow-root');
+    const host = el.getBoundingClientRect(); const inner = base(el).getBoundingClientRect();
+    expect(Math.abs(inner.height - (host.height - 2 * parseFloat(gap)))).to.be.lessThan(0.6);
   });
 
   it('contains card margins and accepts gap, radius and shadow overrides', async () => {
@@ -254,5 +289,104 @@ describe('sidebar composition', () => {
       expect(getComputedStyle(rail.shadowRoot!.querySelector('[part="collapse-toggle"]')!).display).to.equal('none'); expect(press().defaultPrevented).to.equal(false);
       await expect(page).to.be.accessible(); wrapper.style.inlineSize = '1200px'; await waitUntil(() => page.view === 'desktop' && rail.mode === 'icon-only');
     } finally { observer.disconnect(); }
+  });
+});
+
+describe('sidebar focus return, triggers and hotkey eligibility', () => {
+  // T2 / H3: closing the mobile overlay returns focus to whatever held it before it opened, through
+  // both the public toggle() and the hotkey.
+  for (const via of ['toggle()', 'hotkey'] as const) it(`returns focus to the prior holder when ${via} closes the mobile overlay`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><button id="outside">Outside</button><lr-app-rail hotkey="ctrl+b"><button id="first">First</button></lr-app-rail></div>`);
+    const el = wrapper.querySelector<LyraAppRail>('lr-app-rail')!; mobile(el); await el.updateComplete; await el.updateComplete;
+    const act = (): void => { if (via === 'toggle()') el.toggle(); else expect(press().defaultPrevented).to.equal(true); };
+    wrapper.querySelector<HTMLButtonElement>('#outside')!.focus(); expect(document.activeElement?.id).to.equal('outside');
+    act(); await el.updateComplete; expect(el.open).to.equal(true);
+    await waitUntil(() => document.activeElement?.id === 'first', 'focus did not move into the open panel');
+    act(); await el.updateComplete; expect(el.open).to.equal(false);
+    await waitUntil(() => document.activeElement?.id === 'outside', 'focus did not return to the prior holder');
+  });
+
+  // A1 (direct `trigger` reference) and A2 (`for` idref): on desktop, trigger-collapses projects
+  // the inline disclosure state and the controls relationship onto the external trigger.
+  for (const path of ['trigger', 'for'] as const) it(`associates a desktop ${path} trigger with the rail it collapses`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><button id="sidebar-trigger">Toggle</button><lr-app-rail trigger-collapses for=${path === 'for' ? 'sidebar-trigger' : ''}></lr-app-rail></div>`);
+    const el = wrapper.querySelector<LyraAppRail>('lr-app-rail')!; const trigger = wrapper.querySelector<HTMLButtonElement>('#sidebar-trigger')!;
+    if (path === 'trigger') el.trigger = trigger;
+    await el.updateComplete; await el.updateComplete;
+    expect(el.mode).to.equal('full'); expect(trigger.getAttribute('aria-expanded')).to.equal('true');
+    expect(controlsRail(trigger, el), 'the trigger controls the rail').to.equal(true);
+    el.toggle(); await el.updateComplete; expect(el.mode).to.equal('icon-only');
+    expect(trigger.getAttribute('aria-expanded')).to.equal('false'); expect(controlsRail(trigger, el)).to.equal(true);
+  });
+
+  // H5: an open modal dialog inerts the background, so the rail behind it is not eligible.
+  it('ignores the hotkey while a modal lr-dialog is open, then acts again once it closes', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-app-rail hotkey="ctrl+b"></lr-app-rail><lr-dialog label="Settings"><button>Inside</button></lr-dialog></div>`);
+    const el = wrapper.querySelector<LyraAppRail>('lr-app-rail')!; const dialog = wrapper.querySelector<LyraDialog>('lr-dialog')!;
+    try {
+      dialog.open = true; await dialog.updateComplete; await waitUntil(() => el.inert || el.closest('[inert]') !== null, 'the modal did not inert the background');
+      expect(press().defaultPrevented).to.equal(false); await el.updateComplete; expect(el.mode).to.equal('full');
+    } finally { dialog.open = false; await dialog.updateComplete; }
+    await waitUntil(() => !el.inert && el.closest('[inert]') === null, 'the background stayed inert');
+    expect(press().defaultPrevented).to.equal(true); await el.updateComplete; expect(el.mode).to.equal('icon-only');
+  });
+
+  // H7: `mod` resolves to the platform's own modifier; the other one never acts.
+  it('acts on mod+b only with the modifier the platform implies', async () => {
+    const el = await fixture<LyraAppRail>(html`<lr-app-rail hotkey="mod+b"></lr-app-rail>`);
+    const mac = detectPlatform(navigator) === 'mac';
+    expect(press('b', mac ? { ctrlKey: true } : { ctrlKey: false, metaKey: true }).defaultPrevented).to.equal(false);
+    await el.updateComplete; expect(el.mode).to.equal('full');
+    expect(press('b', mac ? { ctrlKey: false, metaKey: true } : { ctrlKey: true }).defaultPrevented).to.equal(true);
+    await el.updateComplete; expect(el.mode).to.equal('icon-only');
+  });
+});
+
+describe('sidebar recipes and item presentation', () => {
+  const recipeB = (inlineSize: string) => html`<div style=${`inline-size:${inlineSize};block-size:500px`}><style>lr-page[view='mobile'] lr-app-rail::part(collapse-toggle) { display:none; }</style><lr-page><lr-app-rail slot="navigation" label="Workspace" frame="plain" mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="ctrl+b" style="--lr-transition-base:0ms"><lr-app-rail-item><span slot="icon">A</span>Account</lr-app-rail-item></lr-app-rail><p>Main content</p></lr-page></div>`;
+  const glue = (page: LyraPage, rail: LyraAppRail): MutationObserver => {
+    const sync = () => { rail.forceMode = page.view === 'mobile' ? 'full' : 'auto'; };
+    const observer = new MutationObserver(sync); observer.observe(page, { attributes: true, attributeFilter: ['view'] }); sync(); return observer;
+  };
+
+  // R1: a narrow allocation pins the rail full and leaves the page drawer as the only modal surface.
+  it('pins the rail full inside the only drawer at a narrow allocation', async () => {
+    const wrapper = await fixture<HTMLDivElement>(recipeB('600px'));
+    const page = wrapper.querySelector<LyraPage>('lr-page')!; const rail = wrapper.querySelector<LyraAppRail>('lr-app-rail')!; const observer = glue(page, rail);
+    try {
+      await waitUntil(() => page.view === 'mobile', 'the page never reached its mobile view'); await rail.updateComplete;
+      expect(rail.forceMode).to.equal('full'); expect(rail.mode).to.equal('full'); expect(rail.shadowRoot!.querySelectorAll('[part="panel"]').length).to.equal(0);
+      page.showNavigation(); await page.updateComplete; await rail.updateComplete;
+      expect(page.shadowRoot!.querySelectorAll('[aria-modal="true"]').length + rail.shadowRoot!.querySelectorAll('[aria-modal="true"]').length).to.equal(1);
+      expect(getComputedStyle(rail.shadowRoot!.querySelector('[part="collapse-toggle"]')!).display).to.equal('none');
+    } finally { observer.disconnect(); }
+  });
+
+  // R2: at a wide allocation the rail is released and collapsing it hands its width to main.
+  it('collapses to the icon width at a wide allocation and grows the page main region', async () => {
+    const wrapper = await fixture<HTMLDivElement>(recipeB('1200px'));
+    const page = wrapper.querySelector<LyraPage>('lr-page')!; const rail = wrapper.querySelector<LyraAppRail>('lr-app-rail')!; const observer = glue(page, rail);
+    try {
+      await waitUntil(() => page.view === 'desktop', 'the page never reached its desktop view'); await rail.updateComplete;
+      expect(rail.forceMode).to.equal('auto');
+      const main = page.shadowRoot!.querySelector<HTMLElement>('[part="main"]')!; const before = main.getBoundingClientRect().width;
+      rail.toggle(); await rail.updateComplete; expect(rail.mode).to.equal('icon-only');
+      const iconWidth = parseFloat(resolvedInShadow(rail, 'inline-size: var(--lr-app-rail-icon-width, var(--_lr-app-rail-icon-width))', 'inline-size'));
+      await waitUntil(() => Math.abs(base(rail).getBoundingClientRect().width - iconWidth) < 0.5, 'the rail did not settle at the icon width');
+      await waitUntil(() => main.getBoundingClientRect().width > before, 'the page main region did not grow');
+    } finally { observer.disconnect(); }
+  });
+
+  // G2: the full presentation shows the disclosure and children, and icon-only never resets expanded.
+  it('shows the nested disclosure in full and restores it after an icon-only round trip', async () => {
+    const rail = await fixture<LyraAppRail>(html`<lr-app-rail force-mode="full"><lr-app-rail-item id="parent" expanded><span slot="icon">A</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`);
+    const parent = rail.querySelector<LyraAppRailItem>('#parent')!; await parent.updateComplete;
+    const shown = (name: string): boolean => getComputedStyle(parent.shadowRoot!.querySelector(`[part="${name}"]`)!).display !== 'none';
+    expect(shown('toggle')).to.equal(true); expect(shown('children')).to.equal(true);
+    rail.forceMode = 'icon-only'; await rail.updateComplete; await parent.updateComplete;
+    expect(shown('toggle')).to.equal(false); expect(parent.expanded).to.equal(true);
+    rail.forceMode = 'full'; await rail.updateComplete; await parent.updateComplete;
+    expect(parent.expanded).to.equal(true); expect(shown('toggle')).to.equal(true); expect(shown('children')).to.equal(true);
+    expect(parent.hasAttribute('icon-only')).to.equal(false);
   });
 });

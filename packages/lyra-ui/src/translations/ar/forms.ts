@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'اللون الحالي: {color}',
   selectSelectedOverflow: '+{n} أخرى',
   emojiPickerSearchLabel: 'البحث في الرموز التعبيرية',
+  emojiPickerSearchPlaceholder: 'البحث في الرموز التعبيرية…',
   emojiPickerGridLabel: 'الرموز التعبيرية',
   emojiPickerEmpty: 'لم يتم العثور على رموز تعبيرية',
   emojiPickerLoadError: 'تعذّر تحميل الرموز التعبيرية.',

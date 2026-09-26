@@ -10,7 +10,7 @@ export const styles = css`
     display: block;
     inline-size: 100%;
     block-size: 100%;
-    background: var(--lr-skeleton-color, var(--color, var(--lr-color-border)));
+    background: var(--lr-skeleton-color, var(--color, var(--lr-color-neutral-fill-normal)));
     border-radius: var(--lr-skeleton-border-radius, var(--border-radius, var(--lr-radius)));
   }
   :host([shape='circle']) [part~='indicator'] {
@@ -22,9 +22,9 @@ export const styles = css`
   [part~='indicator'][data-effect='sheen'] {
     background-image: linear-gradient(
       90deg,
-      var(--lr-skeleton-color, var(--color, var(--lr-color-border))) 0%,
+      var(--lr-skeleton-color, var(--color, var(--lr-color-neutral-fill-normal))) 0%,
       var(--lr-skeleton-sheen-color, var(--sheen-color, var(--lr-color-surface))) 50%,
-      var(--lr-skeleton-color, var(--color, var(--lr-color-border))) 100%
+      var(--lr-skeleton-color, var(--color, var(--lr-color-neutral-fill-normal))) 100%
     );
     background-size: 200% 100%;
     animation: lr-skeleton-sheen var(--lr-transition-ambient) infinite;

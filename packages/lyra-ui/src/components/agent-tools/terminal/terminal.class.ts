@@ -173,6 +173,11 @@ export interface LyraTerminalEventMap {
  * `20rem`) already is that cap, retunable the same way. A second, differently-shaped "grows until
  * capped" property would fight that always-scrolling model rather than complement it.
  *
+ * Direction: every line is left-to-right. Without `wrap`, the scrollport is laid out
+ * left-to-right too, so a long line scrolls from its start and, under `dir="rtl"`, the vertical
+ * scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the
+ * page direction. With `wrap`, the scrollport follows the page direction.
+ *
  * @customElement lr-terminal
  * @event lr-copy - `detail: { ok: true, text }` — the plain-text clipboard write completed.
  * @event lr-error - The clipboard write failed; generic no-detail notification.

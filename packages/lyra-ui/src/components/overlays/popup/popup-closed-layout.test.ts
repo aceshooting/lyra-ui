@@ -48,9 +48,13 @@ it('preserves the popup opacity transition while removing the settled inactive l
     expect(getComputedStyle(popup).visibility).to.equal('visible');
     expect(popup.hasAttribute('hidden')).to.be.false;
     control.active = false;
+    await control.updateComplete;
     // The exit fade is a plain CSS transition (no host lifecycle event), so it must still be
-    // mid-flight immediately after `active` flips -- proving `hidden` was not applied instantly.
+    // mid-flight immediately after `active` flips -- proving `hidden` was not applied instantly,
+    // and that visibility holds through the fade instead of cutting the popup off at once.
+    expect(popup.hasAttribute('data-active')).to.be.false;
     expect(popup.hasAttribute('hidden')).to.be.false;
+    expect(getComputedStyle(popup).visibility).to.equal('visible');
     expect(popup.getBoundingClientRect().width).to.be.greaterThan(0);
     await waitUntil(() => popup.hasAttribute('hidden'), 'the settled-inactive popup leaves layout');
   }

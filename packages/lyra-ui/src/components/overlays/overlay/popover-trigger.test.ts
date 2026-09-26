@@ -1,5 +1,6 @@
 import { aTimeout, expect, fixture, waitUntil } from '@open-wc/testing';
-import { hoverUntilMatched, resetMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import './popover.js';
 import './dropdown.js';
@@ -64,7 +65,7 @@ describe('lr-popover trigger modes', () => {
   it('ignores hover and focus while the trigger mode is click', async () => {
     const el = await build('');
     enter(triggerOf(el));
-    triggerOf(el).focus();
+    await focusByKeyboard(triggerOf(el));
     await settlePointer();
     expect(el.open).to.equal(false);
   });
@@ -136,7 +137,7 @@ describe('lr-popover trigger modes', () => {
     const outside = document.createElement('button');
     el.parentElement!.append(outside);
     const inside = () => el.querySelector<HTMLButtonElement>('button:not([slot])')!;
-    triggerOf(el).focus();
+    await focusByKeyboard(triggerOf(el));
     await waitUntil(() => el.open, 'focusing the trigger opens it');
     inside().focus();
     await settlePointer();
@@ -150,7 +151,7 @@ describe('lr-popover trigger modes', () => {
     const el = await build('trigger="manual"');
     triggerOf(el).click();
     enter(triggerOf(el));
-    triggerOf(el).focus();
+    await focusByKeyboard(triggerOf(el));
     await settlePointer();
     expect(el.open).to.equal(false);
     await el.show();
@@ -257,7 +258,7 @@ describe('lr-popover trigger modes', () => {
     expect(el.open).to.equal(false);
     el.trigger = 'focus';
     await el.updateComplete;
-    triggerOf(el).focus();
+    await focusByKeyboard(triggerOf(el));
     await settlePointer();
     expect(el.open).to.equal(false);
   });
@@ -298,7 +299,7 @@ describe('lr-popover trigger modes', () => {
 
   it('opens a for-anchored popover on focus, exactly like a slotted one', async () => {
     const { el, trigger, outside } = await buildFor('trigger="focus"');
-    trigger.focus();
+    await focusByKeyboard(trigger);
     await waitUntil(() => el.open, 'focusing an external for-trigger opens the popover');
     outside.focus();
     await waitUntil(() => !el.open, 'focus leaving the whole surface closes it');
@@ -306,7 +307,7 @@ describe('lr-popover trigger modes', () => {
 
   it('retains a for-anchored focus popover while focus moves into the popup', async () => {
     const { el, trigger, outside } = await buildFor('trigger="focus"');
-    trigger.focus();
+    await focusByKeyboard(trigger);
     await waitUntil(() => el.open, 'focusing the external trigger opens it');
     el.querySelector<HTMLButtonElement>('button')!.focus();
     await settlePointer();
@@ -329,7 +330,7 @@ describe('lr-popover trigger modes', () => {
     el.addEventListener('lr-show', () => {
       shows += 1;
     });
-    triggerOf(el).focus();
+    await focusByKeyboard(triggerOf(el));
     await waitUntil(() => el.open, 'focusing the slotted trigger opens it');
     await settlePointer();
     expect(shows).to.equal(1, 'the host listener is the only one that ran');
@@ -343,7 +344,7 @@ describe('lr-popover trigger modes', () => {
     // Focus first, while the trigger provably does not already hold it: a close hands focus BACK
     // to the trigger, so the focus keyword has to be exercised before the hover keyword.
     outside.focus();
-    triggerOf(el).focus();
+    await focusByKeyboard(triggerOf(el));
     await waitUntil(() => el.open, 'the focus keyword opens it');
     outside.focus();
     await waitUntil(() => !el.open, 'focus leaving the surface closes it');
@@ -517,5 +518,120 @@ describe('collecting an already-slotted trigger without relying on the initial s
     } finally {
       el.remove();
     }
+  });
+});
+
+/** Records pointer modality without an outside press that would light-dismiss an open surface:
+ *  the recorder listens on the window, which a document-level dismissal listener never sees. */
+const recordPointerPress = (): void => {
+  window.dispatchEvent(new PointerEvent('pointerdown'));
+};
+
+const clickCenter = async (target: Element): Promise<void> => {
+  const rect = target.getBoundingClientRect();
+  await sendMouse({
+    type: 'click',
+    position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+  });
+  await resetMouse();
+};
+
+describe('lr-popover focus keyword follows keyboard focus', () => {
+  afterEach(async () => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    await resetMouse();
+  });
+
+  it('P1 opens on Tab without pulling focus, refuses pointer focus, and click-pins with autofocus', async () => {
+    const el = await build('trigger="focus"', '<input autofocus aria-label="Inside field" />');
+    const input = el.querySelector<HTMLInputElement>('input')!;
+    await focusByKeyboard(triggerOf(el));
+    await waitUntil(() => el.open, 'Tab opens it');
+    await settlePointer();
+    expect(document.activeElement === triggerOf(el)).to.equal(true, 'a focus open pulls no focus');
+    (document.activeElement as HTMLElement).blur();
+    await waitUntil(() => !el.open, 'blur closes it');
+
+    await focusAfterPointer(triggerOf(el));
+    await settlePointer();
+    expect(el.open).to.equal(false, 'pointer-then-script focus does not open');
+    triggerOf(el).blur();
+
+    await clickCenter(triggerOf(el));
+    await waitUntil(() => el.open, 'a real click opens it');
+    await waitUntil(() => document.activeElement === input, 'the click-pinned open pulls [autofocus]');
+    await el.hide();
+  });
+
+  it('P2 applies the same gate to a for-anchored trigger', async () => {
+    const { el, trigger } = await buildFor('trigger="focus"');
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el.open, 'Tab opens it');
+    trigger.blur();
+    await waitUntil(() => !el.open, 'blur closes it');
+    await focusAfterPointer(trigger);
+    await settlePointer();
+    expect(el.open).to.equal(false, 'pointer-then-script focus does not open');
+  });
+
+  it('P3 keeps pointer focus inside open popup content retaining the surface', async () => {
+    const el = await build('trigger="focus"', '<button>Inside</button>');
+    await focusByKeyboard(triggerOf(el));
+    await waitUntil(() => el.open, 'Tab opens it');
+    recordPointerPress();
+    el.querySelector<HTMLButtonElement>('button:not([slot])')!.focus();
+    await settlePointer();
+    expect(el.open).to.equal(true, 'content focus of any modality retains it');
+  });
+
+  it('P4 restores focus on a keyboard Escape without reopening', async () => {
+    const el = await build('trigger="focus"');
+    await focusByKeyboard(triggerOf(el));
+    await waitUntil(() => el.open, 'Tab opens it');
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => !el.open, 'Escape closes it');
+    await settlePointer();
+    await aTimeout(30);
+    expect(document.activeElement === triggerOf(el)).to.equal(true, 'focus stays on the trigger');
+    expect(el.open).to.equal(false, 'the restore does not reopen it');
+  });
+
+  it('P5 gates lr-dropdown the same way and click-opens with menu focus', async () => {
+    const el = await fixture<LyraDropdown>(`<lr-dropdown trigger="focus" style="--lr-duration-base: 0ms">
+      <button slot="trigger">Menu</button>
+      <lr-dropdown-item>One</lr-dropdown-item>
+    </lr-dropdown>`);
+    const trigger = triggerOf(el as unknown as LyraPopover);
+    const item = el.querySelector('lr-dropdown-item')!;
+    await focusAfterPointer(trigger);
+    await settlePointer();
+    expect(el.open).to.equal(false, 'pointer-then-script focus does not open');
+    trigger.blur();
+
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el.open, 'Tab opens it');
+    await settlePointer();
+    expect(document.activeElement === trigger).to.equal(true, 'a focus open pulls no focus');
+    trigger.blur();
+    await waitUntil(() => !el.open, 'blur closes it');
+
+    await clickCenter(trigger);
+    await waitUntil(() => el.open, 'a real click opens it');
+    await waitUntil(
+      () => document.activeElement === item || item.contains(document.activeElement),
+      'the click-pinned open focuses the active menu item'
+    );
+    await el.hide();
+  });
+
+  it('P6 does not let pointer focus cancel a pending hover close', async () => {
+    const el = await build('trigger="hover focus" hide-delay="150"');
+    enter(triggerOf(el));
+    await waitUntil(() => el.open, 'hovering opens it');
+    leave(triggerOf(el));
+    recordPointerPress();
+    triggerOf(el).focus();
+    await aTimeout(250);
+    expect(el.open).to.equal(false, 'the pending close still ran');
   });
 });

@@ -2,7 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./pagination.js";
 import type { LyraPagination } from "./pagination.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "../../../translations/pl/shared.js";
 
 function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
@@ -2614,5 +2614,49 @@ describe("lr-pagination activation event", () => {
       activateCount,
       "a host writing `page` is not a user activation"
     ).to.equal(0);
+  });
+});
+
+// The current page's hover and press used to paint from brand and a transparent border, ignoring a
+// themed current chip, so it read as a different state under the pointer. Unset pointer hooks now
+// start from the current-page tokens.
+describe("lr-pagination current page under the pointer", () => {
+  it("keeps the themed current background and border when hovered and pressed", async () => {
+    const el = (await fixture(html`
+      <lr-pagination
+        total="95"
+        page-size="10"
+        page="2"
+        style="--lr-transition-fast: 0s; --lr-pagination-current-bg: rgb(200, 0, 0); --lr-pagination-current-border-color: rgb(0, 150, 0);"
+      ></lr-pagination>
+    `)) as LyraPagination;
+    await el.updateComplete;
+    const current = el.shadowRoot!.querySelector<HTMLElement>('[part~="page-current"]')!;
+    current.scrollIntoView();
+    const probe = document.createElement("span");
+    probe.style.backgroundColor =
+      "color-mix(in oklab, rgb(200, 0, 0), var(--lr-color-mix-partner) var(--lr-color-mix-active))";
+    el.shadowRoot!.append(probe);
+    const pressedBg = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    try {
+      await hoverUntilMatched(current, "the current page never reported :hover");
+      await waitUntil(() => {
+        const style = getComputedStyle(current);
+        return style.backgroundColor === "rgb(200, 0, 0)" && style.borderTopColor === "rgb(0, 150, 0)";
+      }, "hovering the current page replaced its themed paint");
+      await sendMouse({ type: "down" });
+      await waitUntil(() => {
+        const style = getComputedStyle(current);
+        return (
+          current.matches(":active") &&
+          style.backgroundColor === pressedBg &&
+          style.borderTopColor === "rgb(0, 150, 0)"
+        );
+      }, "pressing the current page did not start from its themed paint");
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
   });
 });

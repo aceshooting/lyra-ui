@@ -4438,3 +4438,121 @@ describe('drop-active must not erase the viewport focus indicator', () => {
     expect(getComputedStyle(viewport).boxShadow).to.equal('none');
   });
 });
+
+describe('node overlays escape the canvas', () => {
+  async function canvasWithNodeMenu(options: { style?: string; items?: number } = {}) {
+    await import('../../overlays/overlay/dropdown.js');
+    await import('../../layout/menu/dropdown-item.js');
+    const count = options.items ?? 2;
+    const el = (await fixture(html`
+      <lr-flow-canvas nodes-draggable style="width:320px;height:120px;${options.style ?? ''}">
+        <div node-id="a" style="padding:12px">
+          <lr-dropdown style="--lr-transition-fast:0ms">
+            <button slot="trigger" type="button">Menu</button>
+            ${Array.from({ length: count }, (_, i) => html`<lr-dropdown-item value=${`i${i}`}>Item ${i}</lr-dropdown-item>`)}
+          </lr-dropdown>
+        </div>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 10, y: 40 } }];
+    await el.updateComplete;
+    const dropdown = el.querySelector('lr-dropdown') as HTMLElement & {
+      show(): Promise<void>;
+      hide(o?: { focusTrigger?: boolean }): Promise<void>;
+      shadowRoot: ShadowRoot;
+    };
+    const popup = dropdown.shadowRoot.querySelector<HTMLElement>('[part~="popup"]')!;
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    return { el, dropdown, popup, wrapper };
+  }
+
+  it('resolves fixed for a node overlay by default, below an ancestor value and a ::part(node) override', async () => {
+    const strategyWith = async (style: string, partOverride = false): Promise<string> => {
+      const { el, dropdown, popup } = await canvasWithNodeMenu({ style });
+      const sheet = document.createElement('style');
+      sheet.textContent = '.part-override::part(node) { --lr-positioning-strategy: absolute; }';
+      if (partOverride) {
+        document.head.append(sheet);
+        el.classList.add('part-override');
+      }
+      try {
+        await dropdown.show();
+        await waitUntil(() => popup.style.position !== '');
+        const strategy = popup.style.position;
+        await dropdown.hide({ focusTrigger: false });
+        return strategy;
+      } finally {
+        sheet.remove();
+      }
+    };
+    expect(await strategyWith(''), 'nodes default their overlays to fixed').to.equal('fixed');
+    expect(await strategyWith('--lr-positioning-strategy: absolute'), 'an ancestor value wins').to.equal('absolute');
+    expect(await strategyWith('', true), 'a ::part(node) value wins').to.equal('absolute');
+  });
+
+  it('opens a slotted node dropdown outside the clipped canvas at zoom 1.5', async () => {
+    const { el, dropdown, popup } = await canvasWithNodeMenu({ items: 6 });
+    el.setViewport({ x: 0, y: 0, zoom: 1.5 });
+    await el.updateComplete;
+    await dropdown.show();
+    await waitUntil(() => popup.style.left !== '' && popup.matches(':popover-open'));
+    const items = [...el.querySelectorAll<HTMLElement>('lr-dropdown-item')];
+    const canvasRect = el.getBoundingClientRect();
+    const outside = items.filter((item) => {
+      const rect = item.getBoundingClientRect();
+      const y = rect.top + rect.height / 2;
+      return y > canvasRect.bottom || y < canvasRect.top;
+    });
+    expect(outside.length, 'part of the menu lies outside the clipped canvas').to.be.greaterThan(0);
+    for (const item of outside) {
+      const rect = item.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      expect(hit?.closest('lr-dropdown-item')?.getAttribute('value')).to.equal(item.getAttribute('value'));
+    }
+    await dropdown.hide({ focusTrigger: false });
+  });
+
+  it('lets a wheel over a promoted node menu scroll the menu instead of zooming the canvas', async () => {
+    const { el, dropdown, popup } = await canvasWithNodeMenu({ items: 40 });
+    await dropdown.show();
+    await waitUntil(() => popup.style.left !== '' && popup.matches(':popover-open'));
+    const before = el.viewport.zoom;
+    const item = el.querySelector('lr-dropdown-item') as HTMLElement;
+    const wheel = new WheelEvent('wheel', { deltaY: 100, bubbles: true, composed: true, cancelable: true });
+    item.dispatchEvent(wheel);
+    expect(el.viewport.zoom).to.equal(before);
+    expect(wheel.defaultPrevented, 'the canvas leaves the menu wheel alone').to.equal(false);
+    const scroller = [popup, ...popup.querySelectorAll<HTMLElement>('*')].find(
+      (node) => node.scrollHeight > node.clientHeight + 1,
+    ) ?? (dropdown.shadowRoot.querySelector('[part~="menu"]') as HTMLElement | null)?.shadowRoot?.querySelector<HTMLElement>('[role="menu"]');
+    expect(scroller, 'the long menu has its own scroller').to.exist;
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const background = new WheelEvent('wheel', { deltaY: -100, clientX: 5, clientY: 5, bubbles: true, cancelable: true });
+    viewportEl.dispatchEvent(background);
+    expect(el.viewport.zoom, 'a wheel on the canvas background still zooms').to.be.greaterThan(before);
+    await dropdown.hide({ focusTrigger: false });
+  });
+
+  it('does not drag the node from a press on the promoted menu chrome', async () => {
+    const { el, dropdown, popup, wrapper } = await canvasWithNodeMenu();
+    await dropdown.show();
+    await waitUntil(() => popup.style.left !== '' && popup.matches(':popover-open'));
+    let captured = false;
+    wrapper.setPointerCapture = () => {
+      captured = true;
+    };
+    const before = wrapper.style.transform;
+    popup.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, clientX: 0, clientY: 0, bubbles: true, composed: true, button: 0 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 40, clientY: 30 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, clientX: 40, clientY: 30 }));
+    expect(wrapper.style.transform).to.equal(before);
+    expect(captured).to.equal(false);
+    await dropdown.hide({ focusTrigger: false });
+
+    const card = el.querySelector('[node-id="a"]') as HTMLElement;
+    card.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 8, clientX: 0, clientY: 0, bubbles: true, composed: true, button: 0 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 8, clientX: 40, clientY: 30 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 8, clientX: 40, clientY: 30 }));
+    expect(captured, 'the node body still starts a drag').to.equal(true);
+  });
+});

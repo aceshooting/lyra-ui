@@ -5,6 +5,11 @@ export const styles = css`
     --_lr-data-grid-accent-color: var(--lr-color-brand);
     --_lr-data-grid-background-color: var(--lr-color-surface);
     --_lr-data-grid-border-color: var(--lr-color-border);
+    /* Grid lines (the outer table edge, header/row/cell/footer separators and the toolbar/pager
+       rules) are decorative, so they default to the subtle tier. Control boundaries (search,
+       buttons, page-size) keep --border-color on the control tier. A --border-color override
+       still recolours both unless --lr-data-grid-line-color is set. */
+    --_lr-data-grid-line-color: var(--lr-color-border-subtle);
     --_lr-data-grid-border-radius: var(--lr-radius);
     --_lr-data-grid-border-width: var(--lr-border-width-thin);
     --_lr-data-grid-cell-padding: var(--lr-space-m);
@@ -69,7 +74,7 @@ export const styles = css`
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     overflow: hidden;
     border: var(--border-width, var(--_lr-data-grid-border-width)) solid
-      var(--border-color, var(--_lr-data-grid-border-color));
+      var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     border-radius: var(--border-radius, var(--_lr-data-grid-border-radius));
     background: var(--background-color, var(--_lr-data-grid-background-color));
   }
@@ -86,13 +91,13 @@ export const styles = css`
     gap: var(--lr-space-s);
     padding: var(--lr-space-s);
     border-block-end: var(--border-width, var(--_lr-data-grid-border-width))
-      solid var(--border-color, var(--_lr-data-grid-border-color));
+      solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
   }
 
   [part="tree-limit"] {
     padding: var(--lr-space-s) var(--lr-space-m);
     border-block-start: var(--border-width, var(--_lr-data-grid-border-width))
-      solid var(--border-color, var(--_lr-data-grid-border-color));
+      solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
@@ -308,7 +313,7 @@ export const styles = css`
       var(--_lr-data-grid-header-row-height)
     );
     border-block-end: var(--border-width, var(--_lr-data-grid-border-width))
-      solid var(--border-color, var(--_lr-data-grid-border-color));
+      solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     background: var(
       --header-background,
       var(--_lr-data-grid-header-background)
@@ -325,7 +330,7 @@ export const styles = css`
     min-inline-size: 0;
     padding: var(--cell-padding, var(--_lr-data-grid-cell-padding));
     border-inline-end: var(--border-width, var(--_lr-data-grid-border-width))
-      solid var(--border-color, var(--_lr-data-grid-border-color));
+      solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     overflow: hidden;
     text-align: start;
   }
@@ -387,7 +392,7 @@ export const styles = css`
     min-inline-size: max-content;
     min-block-size: var(--row-height, var(--_lr-data-grid-row-height));
     border-block-end: var(--border-width, var(--_lr-data-grid-border-width))
-      solid var(--border-color, var(--_lr-data-grid-border-color));
+      solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     background: var(--background-color, var(--_lr-data-grid-background-color));
     transition: background-color
       var(--transition-duration, var(--_lr-data-grid-transition-duration))
@@ -608,7 +613,7 @@ export const styles = css`
   [part="row-detail"] {
     padding: var(--cell-padding, var(--_lr-data-grid-cell-padding));
     border-block-end: var(--border-width, var(--_lr-data-grid-border-width))
-      solid var(--border-color, var(--_lr-data-grid-border-color));
+      solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     background: var(--lr-color-surface-raised);
   }
 
@@ -636,7 +641,7 @@ export const styles = css`
 
   [part="footer-row"] {
     border-block-start: var(--border-width, var(--_lr-data-grid-border-width))
-      solid var(--border-color, var(--_lr-data-grid-border-color));
+      solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     border-block-end: 0;
     font-weight: var(--lr-font-weight-semibold);
   }
@@ -668,7 +673,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     padding: var(--lr-space-s);
     border-block-start: var(--border-width, var(--_lr-data-grid-border-width))
-      solid var(--border-color, var(--_lr-data-grid-border-color));
+      solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
   }
 
   .page-size-wrapper {

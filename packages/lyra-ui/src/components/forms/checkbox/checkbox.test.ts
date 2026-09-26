@@ -3,7 +3,7 @@ import type { PropertyValues } from "lit";
 import "./checkbox.js";
 import type { LyraCheckbox } from "./checkbox.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 it("emits one cancelable lr-invalid alias when a validity check fails", async () => {
   const el = (await fixture(
@@ -2386,5 +2386,64 @@ describe('lr-checkbox-toggle-request', () => {
       el.matches(':state(user-valid)'),
       'an allowed toggle still reveals validity, exactly as before'
     ).to.be.true;
+  });
+});
+
+// The pointer rules outrank the checked rule, so a themed checked border used to snap back to the
+// brand default under the pointer. Unset hover/active hooks now fall back to the checked border.
+describe("lr-checkbox checked border under the pointer", () => {
+  for (const state of ["checked", "indeterminate"] as const) {
+    it(`keeps --lr-checkbox-checked-border while ${state} and hovered or pressed`, async () => {
+      const el = (await fixture(html`
+        <lr-checkbox
+          ?checked=${state === "checked"}
+          ?indeterminate=${state === "indeterminate"}
+          style="--lr-transition-fast: 0s; --lr-checkbox-checked-border: rgb(10, 20, 30);"
+          >Terms</lr-checkbox
+        >
+      `)) as LyraCheckbox;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+      const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
+      expect(getComputedStyle(box).borderTopColor, "resting").to.equal("rgb(10, 20, 30)");
+      try {
+        await hoverUntilMatched(base, "the checkbox base never reported :hover");
+        await waitUntil(
+          () => getComputedStyle(box).borderTopColor === "rgb(10, 20, 30)",
+          "hovering replaced the themed checked border"
+        );
+        await sendMouse({ type: "down" });
+        await waitUntil(() => base.matches(":active"), "the checkbox never reported :active");
+        await waitUntil(
+          () => getComputedStyle(box).borderTopColor === "rgb(10, 20, 30)",
+          "pressing replaced the themed checked border"
+        );
+      } finally {
+        await sendMouse({ type: "up" });
+        await resetMouse();
+      }
+    });
+  }
+
+  it("still lets an explicit hover hook win while checked", async () => {
+    const el = (await fixture(html`
+      <lr-checkbox
+        checked
+        style="--lr-transition-fast: 0s; --lr-checkbox-checked-border: rgb(10, 20, 30); --lr-checkbox-hover-border: rgb(1, 2, 3);"
+        >Terms</lr-checkbox
+      >
+    `)) as LyraCheckbox;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
+    try {
+      await hoverUntilMatched(base, "the checkbox base never reported :hover");
+      await waitUntil(
+        () => getComputedStyle(box).borderTopColor === "rgb(1, 2, 3)",
+        "the explicit hover hook did not apply while checked"
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 });

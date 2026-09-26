@@ -8,6 +8,11 @@ import {
 } from "@open-wc/testing";
 import jsonGrammar from "shiki/langs/json.mjs";
 import "./code-block-core.js";
+// Registers the shipped `ar` catalog slices the `lang="ar-EG"` gutter tests resolve against, so
+// they render real catalog text instead of tripping the dev-mode locale-fallback warning that
+// strict-console browser lanes treat as fatal.
+import "../../../translations/ar/conversation.js";
+import "../../../translations/ar/shared.js";
 import type { LyraCodeBlockCore } from "./code-block-core.js";
 import {
   loadShikiHighlighterCore,
@@ -274,7 +279,7 @@ describe("lr-code-block-core", () => {
       '[part~="line-button"][data-line="2"]',
     )!;
     expect(second.textContent?.trim()).to.equal('٢');
-    expect(second.getAttribute('aria-label')).to.equal('Line ٢');
+    expect(second.getAttribute('aria-label')).to.equal('السطر ٢');
   });
 
   it("extends a shiki-themed background across a long line's full horizontal scroll width", async () => {
@@ -985,7 +990,7 @@ describe("activatable-lines", () => {
     const rect = gutter.getBoundingClientRect();
     expect(source.textContent).to.equal("");
     expect(gutter.textContent?.trim()).to.equal("٢");
-    expect(gutter.getAttribute("aria-label")).to.equal("Line ٢");
+    expect(gutter.getAttribute("aria-label")).to.equal("السطر ٢");
     expect(rect.width).to.be.at.least(24);
     expect(rect.height).to.be.at.least(24);
   });
@@ -2160,5 +2165,78 @@ describe('template whitespace', () => {
     expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
     expect(lineButtons(el)[0]!.getBoundingClientRect().width).to.be.closeTo(iconButtonSizePx(el), 1);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe("lr-code-block-core under a right-to-left document", () => {
+  function glyphs(root: Node, needle: string): DOMRect {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const index = (node as Text).data.indexOf(needle);
+      if (index === -1) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + needle.length);
+      return range.getClientRects()[0] ?? range.getBoundingClientRect();
+    }
+    throw new Error(`text ${JSON.stringify(needle)} not rendered`);
+  }
+  const code = "int main() {\n  std::cout << \"A deliberately long line that must scroll horizontally inside the body of the block\";\n  short();\n}\n";
+
+  async function mount(dir: "rtl" | "ltr", filename = "./src/main.cpp", lineNumbers = false): Promise<HTMLElement> {
+    const host = await fixture<HTMLElement>(html`<div dir=${dir} style="inline-size: 360px">
+      <lr-code-block-core .languages=${{}} language="c++" filename=${filename} ?line-numbers=${lineNumbers} .code=${code}></lr-code-block-core>
+    </div>`);
+    const el = host.querySelector("lr-code-block-core") as HTMLElement & { updateComplete: Promise<boolean> };
+    await el.updateComplete;
+    await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part="body"]')?.textContent?.includes("short")));
+    return el;
+  }
+
+  it("lays the body out left-to-right from the start of the code while the header follows the page", async () => {
+    const el = await mount("rtl");
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    expect(getComputedStyle(body).direction).to.equal("ltr");
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="header"]')!).direction).to.equal("rtl");
+    const rect = body.getBoundingClientRect();
+    const first = glyphs(body, "short");
+    expect(first.left).to.be.within(rect.left, rect.right);
+    expect(first.right).to.be.within(rect.left, rect.right);
+  });
+
+  it("keeps the language badge and file name in their own character order", async () => {
+    const el = await mount("rtl");
+    const language = el.shadowRoot!.querySelector<HTMLElement>('[part="language"]')!;
+    expect(glyphs(language, "c").left).to.be.lessThan(glyphs(language, "+").left);
+    const filename = el.shadowRoot!.querySelector<HTMLElement>('[part="filename"]')!;
+    expect(filename.textContent).to.equal("./src/main.cpp");
+    expect(glyphs(filename, ".").left).to.be.lessThan(glyphs(filename, "src").left);
+    const arabic = await mount("rtl", "تقرير.md");
+    const arabicName = arabic.shadowRoot!.querySelector<HTMLElement>('[part="filename"]')!;
+    expect(arabicName.textContent).to.equal("تقرير.md");
+    expect(glyphs(arabicName, "تقرير").left).to.be.greaterThan(glyphs(arabicName, "md").left);
+  });
+
+  it("places the file name at the header start and the copy control after it", async () => {
+    const el = await mount("rtl");
+    const filename = el.shadowRoot!.querySelector<HTMLElement>('[part="filename"]')!.getBoundingClientRect();
+    const copy = el.shadowRoot!.querySelector<HTMLElement>('[part~="copy-button"]')!.getBoundingClientRect();
+    expect(copy.right).to.be.at.most(filename.left + 0.5);
+  });
+
+  it("keeps the line-number gutter at the physical left under RTL", async () => {
+    const el = await mount("rtl", "./src/main.cpp", true);
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const number = glyphs(body, "1");
+    expect(number.left).to.be.lessThan(glyphs(body, "short").left);
+    expect(number.left - body.getBoundingClientRect().left).to.be.lessThan(body.getBoundingClientRect().width / 2);
+  });
+
+  it("is unchanged in a left-to-right document and passes axe under RTL", async () => {
+    const ltr = await mount("ltr");
+    expect(getComputedStyle(ltr.shadowRoot!.querySelector('[part="body"]')!).direction).to.equal("ltr");
+    expect(getComputedStyle(ltr.shadowRoot!.querySelector('[part="header"]')!).direction).to.equal("ltr");
+    const rtl = await mount("rtl");
+    await expect(rtl).to.be.accessible();
   });
 });

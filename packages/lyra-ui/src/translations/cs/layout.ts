@@ -1,0 +1,63 @@
+// The `layout` slice of the cs translation catalog for @aceshooting/lyra-ui: strings owned exclusively by `src/components/layout/**`.
+// A side-effect-only module: a consumer writes a bare
+// `import '@aceshooting/lyra-ui/translations/cs/layout';` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- `scripts/check-translations.mjs` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
+// Regenerate the SHAPE (never the translations) with:
+//   node scripts/scaffold-translation.mjs cs --force
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
+
+const strings: LyraLocaleStrings = {
+  carousel: 'karusel',
+  carouselLabel: 'Karusel',
+  carouselSlide: 'snímek',
+  carouselSlidePosition: 'Snímek {index} z {total}',
+  carouselSlideAnnouncement: '{position}: {content}',
+  carouselSlideAnnouncementSeparator: '. ',
+  carouselIndicators: 'Snímky karuselu',
+  carouselGoTo: 'Přejít na snímek {index}',
+  scrollerLabel: 'Posouvatelný obsah',
+  scrollPrevious: 'Posunout zpět',
+  scrollNext: 'Posunout vpřed',
+  closeNavigation: 'Zavřít navigaci',
+  openNavigation: 'Otevřít navigaci',
+  resizeNavigation: 'Změnit velikost navigace',
+  appRailCollapse: 'Sbalit navigaci',
+  appRailExpand: 'Rozbalit navigaci',
+  appRailItemCollapse: 'Sbalit {label}',
+  appRailItemExpand: 'Rozbalit {label}',
+  resizeValuePercent: '{value} procent',
+  commandPaletteLabel: 'Paleta příkazů',
+  commandPalettePlaceholder: 'Hledat příkazy…',
+  commandPaletteEmpty: 'Žádné odpovídající příkazy.',
+  commandPaletteResults: 'Příkazy',
+  dockPanelCollapse: 'Sbalit panel',
+  dockPanelExpand: 'Rozbalit panel',
+  dockPanelResize: 'Změnit velikost panelu',
+  responsivePanel: 'Panel',
+  breadcrumb: 'Drobečková navigace',
+  resizeDivider: 'Změnit velikost oddělovače mezi panelem {a} a panelem {b}',
+  widgetFullscreenPanel: 'Panel na celou obrazovku',
+  widgetViewGroup: 'Zobrazení panelu',
+  widgetExitFullscreen: 'Ukončit režim celé obrazovky',
+  widgetExpandToFullscreen: 'Rozbalit na celou obrazovku',
+  widgetCollapse: 'Sbalit panel',
+  widgetExpand: 'Rozbalit panel',
+  skipToContent: 'Přeskočit na obsah',
+  dashboardGridLabel: 'Mřížka řídicího panelu',
+  dashboardCellCollisionRejected: 'Položku {label} tam nelze umístit, protože se překrývá s jinou buňkou.',
+  dashboardCellMoved: 'Položka {label} přesunuta do sloupce {x}, řádku {y}.',
+  dashboardCellResized: 'Velikost položky {label} změněna na šířku {w}, výšku {h}.',
+  filterBarReset: 'Obnovit filtry',
+  filterBarActiveFilters: 'Aktivní filtry',
+  drilldownDocuments: 'Dokumenty',
+  drilldownRuns: 'Běhy agentů',
+  drilldownEmpty: 'Není vybrána žádná položka',
+  drilldownUntitledNode: 'Krok bez názvu',
+  reorderMovePending: 'Probíhá změna pořadí.',
+  reorderMoveCancelled: 'Změna pořadí zrušena.',
+};
+
+registerLyraLocale('cs', strings);

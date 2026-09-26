@@ -46,6 +46,13 @@ export const WithSuppliedGroups: Story = {
   render: () => html`<lr-emoji-picker .groups=${groups}></lr-emoji-picker>`,
 };
 
+export const CustomSearchPlaceholder: Story = {
+  parameters: {
+    docs: { description: { story: '`search-placeholder` replaces the localized `emojiPickerSearchPlaceholder` copy for one instance. The search field keeps its localized accessible name.' } },
+  },
+  render: () => html`<lr-emoji-picker search-placeholder="Find a reaction" .groups=${groups}></lr-emoji-picker>`,
+};
+
 /** The opt-in theme-level scrollbar hooks retheme the emoji grid, plus every other internal
  *  scroll container in the library, from one declaration on an ancestor. */
 export const ThemedScrollbar: Story = {

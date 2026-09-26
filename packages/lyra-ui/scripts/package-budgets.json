@@ -31,7 +31,7 @@
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
-    "stableTagAliasCount": 294,
+    "stableTagAliasCount": 296,
     "emittedFilesPerAlias": 2,
     "measuredEntrypointRemainder": 473,
     "nextComponentArtifactHeadroom": 7,
@@ -40,6 +40,6 @@
   "maximum": {
     "packedBytes": 8507147,
     "unpackedBytes": 34536551,
-    "fileCount": 3568
+    "fileCount": 3572
   }
 }

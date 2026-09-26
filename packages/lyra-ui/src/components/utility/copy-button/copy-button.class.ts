@@ -237,7 +237,9 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
    *  explicit empty string intentionally suppresses that fallback. */
   @property({ attribute: 'error-label' }) errorLabel?: string;
 
-  /** Tooltip behavior: normal hover/focus plus feedback, feedback only, or disabled. */
+  /** Tooltip behavior: normal hover or keyboard-focus tooltip plus feedback, feedback only, or
+   *  disabled. Keyboard focus means the focused control matches `:focus-visible` and no pointer
+   *  press preceded it; focus of any kind still describes the button. */
   @property({ reflect: true }) tooltip: LyraCopyButtonTooltip = 'full';
 
   /** Side on which the tooltip appears. */

@@ -84,6 +84,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: '현재 색상: {color}',
   selectSelectedOverflow: '+ {n} 더 보기',
   emojiPickerSearchLabel: '이모티콘 검색',
+  emojiPickerSearchPlaceholder: '이모티콘 검색…',
   emojiPickerGridLabel: '이모지',
   emojiPickerEmpty: '이모티콘이 없습니다',
   emojiPickerLoadError: '이모티콘을 로드할 수 없습니다.',

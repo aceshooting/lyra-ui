@@ -26,7 +26,7 @@ export type LyraSkeletonEffect = 'pulse' | 'sheen' | 'none';
  *   shared by the pulse and sheen effects.
  * @cssprop [--lr-skeleton-w=100%] - Inline size of the placeholder.
  * @cssprop [--lr-skeleton-h=var(--lr-size-1em)] - Block size of the placeholder.
- * @cssprop [--lr-skeleton-color=var(--lr-color-border)] - Placeholder color.
+ * @cssprop [--lr-skeleton-color=var(--lr-color-neutral-fill-normal)] - Placeholder color.
  * @cssprop [--lr-skeleton-sheen-color=var(--lr-color-surface)] - Sheen highlight color.
  * @cssprop [--lr-skeleton-border-radius=var(--lr-radius)] - Text/rectangle corner radius.
  * @cssprop [--color=var(--lr-skeleton-color)] - Upstream-compatible placeholder color.

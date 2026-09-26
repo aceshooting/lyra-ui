@@ -554,7 +554,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  the same structural reason the built-in `rowActions` buttons don't also trigger `lr-select` --
    *  so ordinary Lyra controls returned here (`lr-dropdown`, `lr-icon-button`, etc.) fire their own
    *  events normally without also selecting the row. A nested open `lr-dropdown` also keeps its
-   *  virtual row above later rows even if focus temporarily leaves the menu. Unset (the default)
+   *  virtual row above later rows even if focus temporarily leaves the menu. Overlays returned here
+   *  default to the `fixed` strategy inside the virtual row and open at full size outside the list
+   *  (in the browser top layer where the native Popover API exists), in both directions; a
+   *  promoted menu whose trigger scrolls out of the list is hidden until the trigger returns. An
+   *  explicit `positioning-strategy="absolute"` keeps a menu inside the row. Unset (the default)
    *  leaves `rowActions`' output byte-for-byte unchanged. */
   @property({ attribute: false }) renderActions?: (
     thread: LyraChatThread

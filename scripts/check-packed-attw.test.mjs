@@ -19,10 +19,11 @@ test('derives every non-CSS package export and partitions it exhaustively once',
   // Deliberately a reviewed literal, not a derived count: this gate's purpose is that growing the
   // PUBLISHED export surface requires a human to look. 16.1.0 adds exactly one --
   // ./components/layout/filter-bar/filter-bar-register.js, the lean registration entry that lets a
-  // text+select filter bar avoid pulling in combobox and date-picker. 21.0.0 adds 18: the
+  // text+select filter bar avoid pulling in combobox and date-picker. 21.0.0 adds 24: the
   // class, registration, and lr-* alias exports of lr-toggle, lr-toggle-group,
-  // lr-navigation-menu, lr-navigation-menu-item, lr-context-menu, and lr-tool-call-block.
-  assert.equal(entrypoints.length, 978, 'the reviewed package has 978 typed exports');
+  // lr-navigation-menu, lr-navigation-menu-item, lr-context-menu, and lr-tool-call-block, plus the
+  // same three for lr-menubar and lr-menubar-item.
+  assert.equal(entrypoints.length, 984, 'the reviewed package has 984 typed exports');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
@@ -32,7 +33,7 @@ test('derives every non-CSS package export and partitions it exhaustively once',
   const shards = Array.from({ length: ATTW_CI_SHARD_TOTAL }, (_, index) =>
     partitionAttwEntrypoints(entrypoints, index + 1, ATTW_CI_SHARD_TOTAL),
   );
-  assert.deepEqual(shards.map((shard) => shard.length), [245, 245, 244, 244]);
+  assert.deepEqual(shards.map((shard) => shard.length), [246, 246, 246, 246]);
   assert.equal(new Set(shards.flat()).size, entrypoints.length, 'shards are disjoint');
   assert.deepEqual(shards.flat().sort(), entrypoints, 'shards cover every typed export');
 });

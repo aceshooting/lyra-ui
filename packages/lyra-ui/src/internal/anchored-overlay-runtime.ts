@@ -1,15 +1,24 @@
-import type { place, trackRect } from './positioner.js';
+import type { place, releaseTopLayer, trackRect } from './positioner.js';
 
 /** The positioning capability loaded on the first anchored surface open. */
 export interface AnchoredOverlayRuntime {
+  /** `placeAnchoredSurface()` in the default runtime: `place()` plus the top-layer escape. */
   place: typeof place;
   trackRect: typeof trackRect;
+  /** Releases a top-layer promotion explicitly, for a surface that stops being an overlay without
+   *  settling through `[hidden]`. Optional so injected test runtimes stay valid. */
+  releaseTopLayer?: typeof releaseTopLayer;
 }
 
 type AnchoredOverlayRuntimeLoader = () => Promise<AnchoredOverlayRuntime>;
 export type DeferredOperationHandle = (() => void) & { ready: Promise<boolean> };
 
-const defaultRuntimeLoader: AnchoredOverlayRuntimeLoader = () => import('./positioner.js');
+const defaultRuntimeLoader: AnchoredOverlayRuntimeLoader = () =>
+  import('./positioner.js').then((runtime) => ({
+    place: runtime.placeAnchoredSurface,
+    trackRect: runtime.trackRect,
+    releaseTopLayer: runtime.releaseTopLayer,
+  }));
 let runtimeLoader = defaultRuntimeLoader;
 let runtimePromise: Promise<AnchoredOverlayRuntime> | undefined;
 

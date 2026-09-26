@@ -376,8 +376,7 @@ export interface ParseMarkdownOptions {
   headingOffset: number;
   /** Optional document-level slugger reused when independently parsing progressive blocks. */
   slugger?: Slugger;
-  /** Marks parser-owned fenced blocks for opt-in code chrome. */
-  codeBlockChromeOption?: boolean;
+  /** Frames parser-owned fenced and indented blocks with the opt-in code-block header. */
   codeBlockHeaderOption?: boolean;
   codeFrameNonce?: string;
   codeBlocksOut?: MarkdownCodeBlockRecord[];
@@ -863,13 +862,12 @@ export function createMarkdownKatexState(): MarkdownKatexState {
  * from `code-block-shared.ts`'s own `codeBlockLineTransformer` -- that one targets
  * `<lr-code-block>`'s `part="pre'`/`part='code"`/line-numbers contract, which doesn't apply here.
  */
-export function markdownCodeTransformer(lang: string, includeFencedMarker = false): ShikiTransformer {
+export function markdownCodeTransformer(lang: string): ShikiTransformer {
   return {
     name: 'lr-markdown-code-block',
     pre(node) {
       node.properties.part = ['code-block'];
       node.properties['tabindex'] = '0';
-      if (includeFencedMarker) node.properties['data-fenced'] = 'true';
     },
     code(node) {
       const classValue = node.properties['class'];
@@ -996,13 +994,12 @@ function enforceMarkdownAnchorRelGuard(markup: string): string {
 export function tokenizeMarkdownHighlight(
   hl: ShikiHighlighter,
   pending: PendingHighlight,
-  includeFencedMarker = false,
 ): string | null {
   try {
     const highlighted = hl.codeToHtml(pending.code, {
       lang: normalizeShikiLanguage(pending.lang),
       themes: SHIKI_THEMES,
-      transformers: [markdownCodeTransformer(pending.lang, includeFencedMarker)],
+      transformers: [markdownCodeTransformer(pending.lang)],
     }) as string;
     return `${encodeMarkdownHighlightStyles(highlighted)}\n`;
   } catch {
@@ -1066,7 +1063,7 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
 /** Whether the *highlighting* configuration changed, invalidating in-flight work and the
  *  permanently-failed key set. */
 export function markdownHighlightConfigChanged(changed: Map<PropertyKey, unknown>): boolean {
-  return changed.has('highlightCode') || changed.has('languages') || changed.has('codeBlockChrome');
+  return changed.has('highlightCode') || changed.has('languages') || changed.has('codeBlockChrome') || changed.has('codeBlockHeader');
 }
 
 /** Whether the *grammar set* changed, additionally invalidating already-highlighted output. */
@@ -1475,10 +1472,17 @@ export function markdownTableRegionLabel(localize: (key: string) => string): str
   return localize('markdownTableRegion');
 }
 
+const MARKDOWN_TABLE_WRAPPER_SELECTOR = '[part="table-wrapper"][role="group"]';
+
+/** Whether `root` holds at least one wrapper {@link labelMarkdownTableWrappers} would name. */
+export function markdownHasTableWrappers(root: ParentNode | null): boolean {
+  return root?.querySelector(MARKDOWN_TABLE_WRAPPER_SELECTOR) != null;
+}
+
 /** Names only the exact styled wrapper whose group role allows an accessible name. */
 export function labelMarkdownTableWrappers(root: ParentNode | null, label: string): void {
   if (!root) return;
-  for (const wrapper of root.querySelectorAll<HTMLElement>('[part="table-wrapper"][role="group"]')) {
+  for (const wrapper of root.querySelectorAll<HTMLElement>(MARKDOWN_TABLE_WRAPPER_SELECTOR)) {
     if (wrapper.getAttribute('aria-label') !== label) wrapper.setAttribute('aria-label', label);
   }
 }

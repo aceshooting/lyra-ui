@@ -4,6 +4,7 @@ import type { LyraUsageBadge } from "./usage-badge.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { hoverUntilMatched, resetMouse } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
+import { focusAfterPointer, focusByKeyboard } from "../../../../test/wtr-focus.js";
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-usage-badge', 'compact');
@@ -266,7 +267,7 @@ describe("tooltip breakdown", () => {
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new Event("mouseenter"));
-    base.dispatchEvent(new Event("focus"));
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden
@@ -279,7 +280,7 @@ describe("tooltip breakdown", () => {
       "focus still holds it open"
     ).to.be.false;
 
-    base.dispatchEvent(new Event("blur"));
+    base.blur();
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden
@@ -291,7 +292,7 @@ describe("tooltip breakdown", () => {
       html`<lr-usage-badge tokens-in="10"></lr-usage-badge>`
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new Event("focus"));
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden
@@ -311,7 +312,7 @@ describe("tooltip breakdown", () => {
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.hasAttribute("aria-describedby")).to.be.false;
-    base.dispatchEvent(new Event("focus"));
+    await focusByKeyboard(base);
     await el.updateComplete;
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
@@ -353,7 +354,7 @@ describe("tooltip breakdown", () => {
       >`
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new Event("focus"));
+    await focusByKeyboard(base);
     await el.updateComplete;
     // Assigned content stays in the light DOM under Shadow DOM slotting, so it never becomes
     // descendant text of a shadow-tree node -- querying the tooltip's own `.textContent` (as
@@ -391,7 +392,7 @@ describe("tooltip breakdown", () => {
       html`<lr-usage-badge latency-ms="100"></lr-usage-badge>`
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new Event("focus"));
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden
@@ -421,7 +422,7 @@ describe("tooltip breakdown", () => {
       >`
     )) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new Event("focus"));
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden
@@ -487,7 +488,7 @@ describe("tooltip breakdown", () => {
       </lr-usage-badge>
     `)) as LyraUsageBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new Event("focus"));
+    await focusByKeyboard(base);
     await el.updateComplete;
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
@@ -509,7 +510,7 @@ it("localizes built-in tooltip row labels via .strings", async () => {
     ></lr-usage-badge>`
   )) as LyraUsageBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  base.dispatchEvent(new Event("focus"));
+  await focusByKeyboard(base);
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent
@@ -533,7 +534,7 @@ it("is accessible with every segment set and the tooltip open", async () => {
     ></lr-usage-badge>`
   )) as LyraUsageBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  base.dispatchEvent(new Event("focus"));
+  await focusByKeyboard(base);
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -573,7 +574,7 @@ it("contains all badge states with long localized content in an exact 320px RTL 
 
   for (const el of badges) {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new Event("focus"));
+    await focusByKeyboard(base);
     await el.updateComplete;
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
@@ -618,9 +619,51 @@ it("clamps the actual floating tooltip through the shared popover-viewport-clamp
     html`<lr-usage-badge tokens-in="1" style="--lr-popover-viewport-clamp: 10px"></lr-usage-badge>`
   )) as LyraUsageBadge;
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
-  base.focus();
+  await focusByKeyboard(base);
   await waitUntil(() => {
     const tooltip = el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]');
     return tooltip?.hidden === false && getComputedStyle(tooltip).maxInlineSize === "10px";
   }, "the rendered tooltip did not resolve the viewport clamp token");
+});
+
+describe("keyboard-only tooltip focus", () => {
+  const tooltipOf = (el: LyraUsageBadge) =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!;
+
+  it("opens on keyboard focus, describes on pointer focus without opening, and clears on blur", async () => {
+    const el = (await fixture(html`<lr-usage-badge tokens-in="10"></lr-usage-badge>`)) as LyraUsageBadge;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    await focusByKeyboard(base);
+    await el.updateComplete;
+    expect(tooltipOf(el).hidden, "keyboard focus opens").to.equal(false);
+    base.blur();
+    await el.updateComplete;
+    expect(tooltipOf(el).hidden).to.equal(true);
+    expect(base.hasAttribute("aria-describedby")).to.equal(false);
+
+    await focusAfterPointer(base);
+    await el.updateComplete;
+    expect(tooltipOf(el).hidden, "pointer focus does not open").to.equal(true);
+    expect(base.getAttribute("aria-describedby"), "pointer focus still describes").to.equal(tooltipOf(el).id);
+    base.blur();
+    await el.updateComplete;
+    expect(base.hasAttribute("aria-describedby"), "blur clears the description").to.equal(false);
+  });
+
+  it("closes a hover-opened tooltip on pointer leave even while pointer-focused", async () => {
+    const el = (await fixture(html`<lr-usage-badge tokens-in="10"></lr-usage-badge>`)) as LyraUsageBadge;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    try {
+      await hoverUntilMatched(base, "the pointer reached the badge");
+      await waitUntil(() => !tooltipOf(el).hidden, "hover opens");
+      window.dispatchEvent(new PointerEvent("pointerdown"));
+      base.focus();
+      await el.updateComplete;
+      await resetMouse();
+      await waitUntil(() => tooltipOf(el).hidden, "pointer leave closes despite pointer focus");
+    } finally {
+      base.blur();
+      await resetMouse();
+    }
+  });
 });

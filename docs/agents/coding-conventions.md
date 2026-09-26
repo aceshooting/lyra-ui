@@ -212,6 +212,23 @@
   are not text, so they stay safe. Assert the rendered result with `renderedTemplateWhitespace()`
   from `test/rendered-whitespace.ts`, never by reading template text; the lifecycle suite runs it
   on every tag's default state (`template-whitespace-contract`).
+- **Never layer a state under the resting public token.** A state whose paint has its own public
+  token, or whose default carries meaning the resting token must not erase, is never layered under
+  the resting public token. Resolve a per-state private var (public token folded inside it) on the
+  painted element and read it bare. A hover or press paint that tracks the current fill mixes from
+  that var, or from the state's own token with its default. It never mixes from the resting token,
+  or from a literal that merely equals the state's default. The exception is a public token the
+  component documents as authoritative across states (`lr-stream-status`'s dot). Rule 4 of
+  `scripts/check-interaction-states.mjs` gates the private-var form: a state-declared `--_lr-*`
+  inside the fallback arm of a resting `var(--lr-*, …)` fails, and a documented cross-state token
+  records `/* state-fallback-ok: <reason> */` above the consuming rule. `lr-switch` shipped the
+  defect: `--lr-switch-track-fill` masked the checked track entirely.
+- **An unqualified pointer token applies in every state.** An explicit pointer token whose name
+  carries no state (`--lr-switch-track-hover-fill`, `--lr-checkbox-hover-border`) applies in every
+  state. A control that needs a different pointer paint in one state ships a state-named pointer
+  token for it, and that token owns that state (`--lr-radio-button-checked-hover-*`,
+  `--lr-pagination-current-hover-bg`, `--lr-time-input-column-selected-hover-bg`). Unset, either
+  token's default starts from the fill of the state being painted.
 - **Watch for silently-inert CSS.** A declaration that never applies looks identical to one that
   works, and nothing in the toolchain flags it — not `tsc`, not the style policy, not a test that
   greps stylesheet text. Four live instances were found in one pass: `:host(:has(> lr-x))`

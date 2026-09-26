@@ -761,7 +761,12 @@ function normalizedGroupBy(
  *   64-descendant-level projection budget.
  * @cssprop [--accent-color=var(--lr-color-brand)] - Accent used by focus and active states.
  * @cssprop [--background-color=var(--lr-color-surface)] - Grid background.
- * @cssprop [--border-color=var(--lr-color-border)] - Grid and cell border color.
+ * @cssprop [--border-color=var(--lr-color-border)] - Border color of the grid's controls (search,
+ *   buttons, page size), and of its grid lines unless `--lr-data-grid-line-color` is set.
+ * @cssprop [--lr-data-grid-line-color=var(--border-color,var(--lr-color-border-subtle))] - Color of
+ *   the decorative grid lines: the outer edge, header, row, cell and footer separators, and the
+ *   toolbar and pager rules. Defaults to the subtle tier so a theme can soften the grid without
+ *   weakening its control boundaries.
  * @cssprop [--border-radius=var(--lr-radius)] - Outer and control corner radius.
  * @cssprop [--border-width=var(--lr-border-width-thin)] - Grid and cell border width.
  * @cssprop [--cell-padding=var(--lr-space-m)] - Header, cell, and footer padding.

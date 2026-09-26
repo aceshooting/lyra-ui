@@ -1207,3 +1207,53 @@ it('shows a hover fill on a selected row, distinct from the resting selected fil
     await resetMouse();
   }
 });
+
+// The checkbox pointer rules used to repaint every control from the literal brand, so a themed
+// checked or indeterminate border vanished under the pointer. They now start from the state token.
+it('keeps the themed checked and indeterminate checkbox border under the pointer', async () => {
+  const wrapper = await fixture(html`
+    <div
+      role="tree"
+      style="--lr-color-brand: rgb(40, 41, 42); --lr-tree-checkbox-checked-border-color: rgb(200, 0, 0); --lr-tree-checkbox-indeterminate-border-color: rgb(0, 0, 200)"
+    >
+      <lr-tree-item label="Checked"></lr-tree-item>
+      <lr-tree-item label="Mixed"></lr-tree-item>
+    </div>
+  `);
+  const [checked, mixed] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  for (const treeItem of [checked!, mixed!]) configureOwnedItem(treeItem, { selection: 'multiple' });
+  setTreeItemSelection(checked!, true, false);
+  setTreeItemSelection(mixed!, false, true);
+  await checked!.updateComplete;
+  await mixed!.updateComplete;
+
+  const cases = [
+    [checked!, 'rgb(200, 0, 0)'],
+    [mixed!, 'rgb(0, 0, 200)'],
+  ] as const;
+  for (const [treeItem, hoverColor] of cases) {
+    const target = treeItem.shadowRoot!.querySelector('[part="checkbox"]') as HTMLElement;
+    const control = treeItem.shadowRoot!.querySelector('[part~="checkbox__control"]') as HTMLElement;
+    // The expected press paint, resolved against the same mix tokens inside the item's shadow root.
+    const probe = document.createElement('span');
+    probe.style.border = `1px solid color-mix(in oklab, ${hoverColor}, var(--lr-color-mix-partner) var(--lr-color-mix-active))`;
+    treeItem.shadowRoot!.append(probe);
+    const pressedColor = getComputedStyle(probe).borderTopColor;
+    probe.remove();
+    try {
+      await hoverUntilMatched(target, `${treeItem.label} checkbox never reported :hover`);
+      await waitUntil(
+        () => getComputedStyle(control).borderTopColor === hoverColor,
+        `${treeItem.label}: hovering replaced the themed border`,
+      );
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(control).borderTopColor === pressedColor,
+        `${treeItem.label}: pressing did not mix from the themed border`,
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  }
+});

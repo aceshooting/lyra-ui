@@ -107,7 +107,8 @@ export interface LyraEvalDatasetEventMap {
  * @csspart toolbar - The row of add/remove/import/export controls.
  * @csspart add-button - The "Add example" button.
  * @csspart remove-button - The "Remove" button, disabled while nothing is selected.
- * @csspart import - The internal `<lr-file-input>`.
+ * @csspart import - The internal `compact` `<lr-file-input>`; its dropzone text and accessible name
+ *   are the localized `evalDatasetImportLabel`.
  * @csspart export - The internal `<lr-export-button>`.
  * @csspart search - The search field's wrapper. Only rendered while `searchable`.
  * @csspart search-input - The `<input type="search">`. Only rendered while `searchable`.

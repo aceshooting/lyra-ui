@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import type {
   AgentRun,
   CancelEventDetail,
@@ -993,4 +993,32 @@ describe("a slotted [hidden] message", () => {
       getComputedStyle(el.querySelector<HTMLElement>("#findable")!).display
     ).to.equal("block");
   });
+});
+
+it('forwards streaming-render to every message-parts renderer, defaulting to plain', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      .messages=${[
+        {
+          id: 'progressive-message',
+          role: 'assistant',
+          text: '',
+          parts: [{ id: 'answer', type: 'text', text: '# Settled heading\n\nstreaming tail', state: 'streaming' }],
+        },
+      ]}
+    ></lr-agent-workspace>
+  `);
+  const parts = el.shadowRoot!.querySelector('lr-message-parts') as HTMLElement & { streamingRender: string; updateComplete: Promise<boolean> };
+  expect(el.streamingRender).to.equal('plain');
+  expect(parts.streamingRender).to.equal('plain');
+  el.setAttribute('streaming-render', 'progressive');
+  await el.updateComplete;
+  await parts.updateComplete;
+  expect(parts.streamingRender).to.equal('progressive');
+  const markdown = parts.shadowRoot!.querySelector('lr-markdown') as HTMLElement & { streamingRender: string; streaming: boolean };
+  expect([markdown.streamingRender, markdown.streaming]).to.deep.equal(['progressive', true]);
+  await waitUntil(
+    () => markdown.shadowRoot?.querySelector('[part="content"] h1')?.textContent === 'Settled heading',
+    'the workspace message never rendered its settled heading progressively',
+  );
 });

@@ -7,9 +7,29 @@ import {
   offset,
   platform,
   size,
+  hide,
   type Boundary,
+  type Middleware,
+  type MiddlewareData,
   type Placement,
 } from '@floating-ui/dom';
+import {
+  establishesFixedContainingBlock,
+  findFixedContainingBlockAncestor,
+  fixedContainingBlockParentNode,
+  isLastTraversableFixedContainingBlockNode,
+  isNativeTopLayerElement,
+} from './fixed-containing-block.js';
+import {
+  applyReferenceHidden,
+  ancestorZoom,
+  compensateAncestorZoom,
+  hasTopLayerAncestor,
+  isLibraryPromotedAndShowing,
+  needsTopLayerEscape,
+  promoteToTopLayer,
+  stripStaleTopLayer,
+} from './top-layer-escape.js';
 import {
   finiteGeometry,
   PositionerGeometryError,
@@ -18,6 +38,7 @@ import {
 } from './positioner-geometry.js';
 
 export { virtualAnchorFromRect, type VirtualAnchor } from './positioner-geometry.js';
+export { releaseTopLayer } from './top-layer-escape.js';
 
 /** What `place()` reports back after each recomputation, for a caller that renders an arrow or
  *  reflects the resolved side (which `flip()` may have changed) into a part name or attribute. */
@@ -32,8 +53,11 @@ export interface PlacementResult {
  * Which CSS positioning scheme the popup is laid out with. `fixed` (this library's default)
  * normally positions against the viewport, but transformed, filtered or containing ancestors can
  * establish its containing block and clipping still applies. It does not guarantee escape from
- * every ancestor. `absolute` positions against its containing block and can scroll with that
- * content; choose the strategy to match the surrounding layout.
+ * every ancestor: `place()` itself never promotes an element into the top layer. An element that
+ * is already in the native top layer (an open `popover`, a modal `<dialog>`) is positioned against
+ * the viewport. A `fixed` popup under a CSS `zoom` ancestor is positioned in zoomed coordinates,
+ * so keep the popup outside the zoomed subtree. `absolute` positions against its containing block
+ * and can scroll with that content; choose the strategy to match the surrounding layout.
  */
 export type PlaceStrategy = 'absolute' | 'fixed';
 
@@ -418,127 +442,10 @@ function writeHoverBridge(
 }
 
 /**
- * `place()`'s popup defaults to `position: fixed`, so Floating UI must resolve the same
- * containing block the browser itself will use for `left`/`top`. `@floating-ui/utils/dom`'s own
- * (unexported -- reimplemented below rather than imported, since this package declares only
- * `@floating-ui/dom` and pnpm's strict `node_modules` layout does not resolve
- * `@floating-ui/utils` as a phantom transitive import) `isContainingBlock()` treats
- * `backdrop-filter`/`filter` as containing-block triggers only under `!isWebKit()` -- a carve-out
- * for older Safari/WebKitGTK builds that did not establish a containing block for either
- * property. Current WebKit (verified against this repo's own Playwright WebKit build) now
- * implements the CSS Filter Effects / Compositing spec the same way Chromium and Firefox already
- * do: an ancestor with `backdrop-filter` or `filter` *does* become the containing block for a
- * `position: fixed` descendant there too. Because Floating UI's own detection still skips both
- * properties on WebKit, `getOffsetParent()` walks straight past that ancestor and falls back to
- * the window, so `computePosition()` hands back coordinates meant to be resolved against the
- * viewport -- while the browser actually resolves the popup's `left`/`top` against the filtered
- * ancestor's box. The ancestor's own offset from the viewport origin then effectively gets added
- * a second time, landing the popup far outside the viewport (reported: an `lr-select hoist`
- * listbox roughly 1,000px past the right edge under a `backdrop-filter` ancestor, WebKit only --
- * Chromium and Firefox already detect the same ancestor correctly).
- *
- * Every other trigger `isContainingBlock()` checks (`transform`, `translate`, `scale`, `rotate`,
- * `perspective`, `will-change`, `contain`) already applies on every engine unconditionally --
- * only `backdrop-filter`/`filter` carry the stale WebKit exclusion, so this replica differs from
- * upstream only by dropping it.
- */
-const FIXED_CONTAINING_BLOCK_WILL_CHANGE = new Set([
-  'transform', 'translate', 'scale', 'rotate', 'perspective', 'filter', 'backdrop-filter',
-  'contain', 'offset-path', 'transform-style',
-]);
-const FIXED_CONTAINING_BLOCK_CONTAIN_RE = /paint|layout|strict|content/;
-
-function isNonNoneCssValue(value: string): boolean {
-  return value !== '' && value !== 'none';
-}
-
-function establishesFixedContainingBlock(element: Element): boolean {
-  const view = element.ownerDocument.defaultView;
-  if (!view) return false;
-  const css = view.getComputedStyle(element);
-  return (
-    isNonNoneCssValue(css.transform) ||
-    isNonNoneCssValue(css.translate) ||
-    isNonNoneCssValue(css.scale) ||
-    isNonNoneCssValue(css.rotate) ||
-    isNonNoneCssValue(css.perspective) ||
-    isNonNoneCssValue(css.backdropFilter) ||
-    isNonNoneCssValue(css.filter) ||
-    isNonNoneCssValue(css.offsetPath) ||
-    css.contentVisibility === 'auto' || css.contentVisibility === 'hidden' ||
-    css.transformStyle === 'preserve-3d' ||
-    css.willChange.split(',').some((token) => FIXED_CONTAINING_BLOCK_WILL_CHANGE.has(token.trim())) ||
-    FIXED_CONTAINING_BLOCK_CONTAIN_RE.test(css.contain || '')
-  );
-}
-
-function nativePopoverSupported(): boolean {
-  if (typeof CSS === 'undefined' || typeof HTMLElement === 'undefined') return true;
-  return typeof HTMLElement.prototype.showPopover === 'function' && CSS.supports('selector(:popover-open)');
-}
-
-/** Mirrors `@floating-ui/utils/dom`'s own unexported `isTopLayer()`: a native top-layer element
- *  (an open popover, or a `<dialog>` shown modally) has no containing-block ancestor of its own. */
-function isNativeTopLayerElement(element: Element): boolean {
-  if (nativePopoverSupported()) {
-    try {
-      if (element.matches(':popover-open')) return true;
-    } catch {
-      // Older engines may not support the :popover-open pseudo-class; fall through to :modal.
-    }
-  }
-  try {
-    return element.matches(':modal');
-  } catch {
-    return false;
-  }
-}
-
-function fixedContainingBlockNodeName(node: Node): string {
-  return node.nodeType === Node.DOCUMENT_NODE ? '#document' : ((node as Element).localName ?? '');
-}
-
-/** Replicates `@floating-ui/utils/dom`'s own unexported `getParentNode()`, including its
- *  shadow-boundary crossing: a hoisted popup's real ancestor chain runs from the component's
- *  shadow root out to its host element and beyond, into the light-DOM ancestors (like a
- *  `backdrop-filter` panel) that establish the containing block this module cares about. */
-function fixedContainingBlockParentNode(node: Node): Node {
-  if (fixedContainingBlockNodeName(node) === 'html') return node;
-  const assignedSlot = node instanceof Element ? node.assignedSlot : null;
-  const result: Node =
-    assignedSlot ??
-    node.parentNode ??
-    (node instanceof ShadowRoot ? node.host : null) ??
-    node.ownerDocument?.documentElement ??
-    node;
-  return result instanceof ShadowRoot ? result.host : result;
-}
-
-function isLastTraversableFixedContainingBlockNode(node: Node): boolean {
-  const name = fixedContainingBlockNodeName(node);
-  return name === 'html' || name === 'body' || name === '#document';
-}
-
-/**
- * Finds the nearest ancestor establishing a containing block for a `position: fixed` popup,
- * including the `backdrop-filter`/`filter` triggers WebKit's engine now honors but Floating UI's
- * own detection still misses there (see the block comment above). Returns `null` when none
- * exists -- the real containing block is the viewport, the common case every engine agrees on.
- */
-function findFixedContainingBlockAncestor(element: Element): HTMLElement | null {
-  let node: Node = fixedContainingBlockParentNode(element);
-  while (node instanceof HTMLElement && !isLastTraversableFixedContainingBlockNode(node)) {
-    if (establishesFixedContainingBlock(node)) return node;
-    if (isNativeTopLayerElement(node)) return null;
-    node = fixedContainingBlockParentNode(node);
-  }
-  return null;
-}
-
-/**
  * Overrides only `@floating-ui/dom`'s default `platform.getOffsetParent` -- merged over every
  * other default platform method wherever it is passed as `{ ...platform, getOffsetParent:
- * correctedGetOffsetParent }` -- to correct the WebKit blind spot above. Only intervenes when the
+ * correctedGetOffsetParent }` -- to correct the WebKit blind spot described in
+ * `fixed-containing-block.ts`. Only intervenes when the
  * default implementation already fell all the way back to the window AND the element being
  * positioned is itself `position: fixed` (exactly the path a hoisted `place()` popup takes):
  * every other case (a real offset parent, an `absolute`-strategy popup, an SVG or top-layer
@@ -548,7 +455,13 @@ async function correctedGetOffsetParent(
   element: Element,
   polyfill?: (element: HTMLElement) => Element | null,
 ): Promise<Element | Window> {
-  const defaultOffsetParent = await platform.getOffsetParent(element, polyfill);
+  return correctOffsetParent(element, await platform.getOffsetParent(element, polyfill));
+}
+
+function correctOffsetParent(
+  element: Element,
+  defaultOffsetParent: Element | Window,
+): Element | Window {
   if (!(element instanceof HTMLElement)) return defaultOffsetParent;
   const view = element.ownerDocument.defaultView;
   if (!view) return defaultOffsetParent;
@@ -630,6 +543,33 @@ export function place(
   popup: HTMLElement,
   opts: PlaceOptions = {},
 ): () => void {
+  return placeImpl(anchor, popup, opts);
+}
+
+/** Library-internal hooks `placeAnchoredSurface()` threads through one placement run. Public
+ *  `place()` never passes them, so `PlaceOptions` stays unchanged. */
+interface PlacementEscapeHooks {
+  /** Before every computation. */
+  beforeCompute(): void;
+  /** Extra middleware appended after the public chain. */
+  middleware: Middleware[];
+  /** Resolves the popup's offset parent in place of the corrected platform method. */
+  resolveOffsetParent?: typeof correctedGetOffsetParent;
+  /** After every computation, with the offset parent the (corrected) platform resolved for the
+   *  popup and that pass's middleware data. Returning true rolls this pass back and runs the
+   *  update once more. */
+  afterResolve(offsetParent: Element | Window, data: MiddlewareData): boolean;
+}
+
+/** Consecutive roll-back-and-rerun passes one run may take before it commits regardless. */
+const MAX_ESCAPE_RERUNS = 2;
+
+function placeImpl(
+  anchor: Element | VirtualAnchor,
+  popup: HTMLElement,
+  opts: PlaceOptions,
+  hooks?: PlacementEscapeHooks,
+): () => void {
   // Reject hostile JS inputs before claiming placement ownership, touching inline styles, adding
   // observers, or scheduling a callback. A valid virtual anchor can later become invalid, so each
   // update repeats the rect preflight below and disposes without committing partial coordinates.
@@ -653,6 +593,7 @@ export function place(
   const autoSize = opts.autoSize;
   const hoverBridge = opts.hoverBridge;
   let disposed = false;
+  let escapeReruns = 0;
   let stopAutoUpdate: (() => void) | undefined;
   const openStyleTransactions = new Set<PlacementStyleTransaction>();
   const visualViewport = popup.ownerDocument.defaultView?.visualViewport;
@@ -782,6 +723,7 @@ export function place(
             },
           })
         : undefined,
+      ...(hooks?.middleware ?? []),
     ].filter((entry) => entry !== undefined);
 
   function update(): void {
@@ -792,17 +734,34 @@ export function place(
       dispose();
       return;
     }
+    try {
+      hooks?.beforeCompute();
+    } catch {
+      // The escape is best-effort; a failure leaves the surface on the ordinary fixed path.
+    }
     const updateRun = placementSyncOwnership.beginUpdate(placementRun);
     const styleTransaction = createPlacementStyleTransaction();
     const stagedStyles: StagedPlacementStyles = {};
     openStyleTransactions.add(styleTransaction);
+    let resolvedOffsetParent: Element | Window | undefined;
+    const recordingGetOffsetParent: typeof correctedGetOffsetParent = async (element, polyfill) => {
+      const result =
+        element === popup && hooks?.resolveOffsetParent
+          ? await hooks.resolveOffsetParent(element, polyfill)
+          : await correctedGetOffsetParent(element, polyfill);
+      if (element === popup) resolvedOffsetParent = result;
+      return result;
+    };
     void computePosition(anchor, popup, {
       strategy,
       placement: opts.placement ?? 'bottom-start',
       middleware: middlewareFor(styleTransaction, stagedStyles),
       // Corrects a WebKit-only blind spot in Floating UI's own containing-block detection for
       // `backdrop-filter`/`filter` ancestors -- see `correctedGetOffsetParent`'s block comment.
-      platform: { ...platform, getOffsetParent: correctedGetOffsetParent },
+      platform: {
+        ...platform,
+        getOffsetParent: hooks ? recordingGetOffsetParent : correctedGetOffsetParent,
+      },
     }).then(
       async ({ x, y, placement, middlewareData }) => {
         if (disposed) {
@@ -820,6 +779,23 @@ export function place(
           if (middlewareData.arrow?.y !== undefined) {
             finiteGeometry(middlewareData.arrow.y, 'place() resolved arrow y');
           }
+          if (hooks && escapeReruns < MAX_ESCAPE_RERUNS) {
+            const view = popup.ownerDocument.defaultView ?? window;
+            let rerun = false;
+            try {
+              rerun = hooks.afterResolve(resolvedOffsetParent ?? view, middlewareData);
+            } catch {
+              rerun = false;
+            }
+            if (rerun) {
+              escapeReruns++;
+              styleTransaction.rollback();
+              openStyleTransactions.delete(styleTransaction);
+              update();
+              return;
+            }
+          }
+          escapeReruns = 0;
           if (hoverBridge) {
             const anchorRect = validatedClientRect(
               anchor.getBoundingClientRect(),
@@ -903,6 +879,105 @@ export function place(
   visualViewport?.addEventListener('scroll', updateFromVisualViewport);
 
   return dispose;
+}
+
+function isWindowLike(value: Element | Window): value is Window {
+  return !(value instanceof Element);
+}
+
+/** The containing block of an absolutely positioned element: its nearest flat-tree ancestor that
+ *  is positioned or establishes a containing block, or `null` for the initial containing block. */
+function absoluteContainingBlock(element: HTMLElement): Element | null {
+  let node: Node = fixedContainingBlockParentNode(element);
+  while (node instanceof Element && !isLastTraversableFixedContainingBlockNode(node)) {
+    const view = node.ownerDocument.defaultView;
+    if (view && view.getComputedStyle(node).position !== 'static') return node;
+    if (establishesFixedContainingBlock(node)) return node;
+    const parent = fixedContainingBlockParentNode(node);
+    if (parent === node) break;
+    node = parent;
+  }
+  return null;
+}
+
+/**
+ * Library-internal `place()` for anchored surfaces: identical geometry, plus the top-layer escape
+ * (`top-layer-escape.ts`). A `fixed` popup whose containing block is an ancestor -- a transformed
+ * virtual-list row, a filtered card, a `contain`ed panel -- is shown in the browser top layer
+ * where the native Popover API exists, re-tested on every update, so it lays out against the
+ * viewport and no ancestor clips it. The hover bridge, which is `position: fixed` whatever the
+ * popup strategy, is judged on its own. Both are compensated for an ancestor CSS `zoom` (an
+ * `absolute` popup only for the zoom between its offset parent and itself), and a promoted popup
+ * whose reference scrolls out of view is hidden until it returns. Disposing a run never demotes:
+ * a promotion lasts until the popup settles with `[hidden]` or `releaseTopLayer()` is called.
+ * `src/utilities/positioner.ts` does not re-export this.
+ * @internal
+ */
+export function placeAnchoredSurface(
+  anchor: Element | VirtualAnchor,
+  popup: HTMLElement,
+  opts: PlaceOptions = {},
+): () => void {
+  // Validate before any escape write, exactly like place() itself.
+  validatePlaceNumericOptions(opts);
+  validateAnchorBeforeSetup(anchor);
+  const bridge = opts.hoverBridge;
+  const fixed = (opts.strategy ?? 'fixed') === 'fixed';
+  const escape = (element: HTMLElement, eligible: boolean): void => {
+    if (isLibraryPromotedAndShowing(element)) return;
+    if (eligible && needsTopLayerEscape(element)) promoteToTopLayer(element, popup);
+    else stripStaleTopLayer(element);
+  };
+  const referenceHidden = hide({ strategy: 'referenceHidden' });
+  const referenceElement =
+    anchor instanceof Element
+      ? anchor
+      : ((anchor as { contextElement?: Element }).contextElement ?? null);
+  // Only a reference whose clipping ancestors Floating UI can measure truthfully: one inside
+  // another top-layer surface (a submenu's parent item) is not clipped by the scrollers beyond it.
+  const referenceMeasurable = (): boolean =>
+    referenceElement !== null && !hasTopLayerAncestor(referenceElement);
+  // Shown first, so the bridge stacks under the popup.
+  if (bridge) escape(bridge, true);
+  escape(popup, fixed);
+  return placeImpl(anchor, popup, opts, {
+    // Chromium reports the nearest ancestor with a different effective zoom as `offsetParent`,
+    // which under an ancestor CSS `zoom` is not the element an absolute popup is laid out against.
+    // Resolve the real containing block there instead.
+    resolveOffsetParent(element, polyfill) {
+      if (!fixed && element instanceof HTMLElement && Math.abs(ancestorZoom(element) - 1) > 1e-6) {
+        return Promise.resolve(
+          absoluteContainingBlock(element) ?? element.ownerDocument.defaultView ?? window,
+        );
+      }
+      return correctedGetOffsetParent(element, polyfill);
+    },
+    beforeCompute() {
+      if (bridge) escape(bridge, true);
+      if (fixed) compensateAncestorZoom(popup, null);
+      if (bridge) compensateAncestorZoom(bridge, null, popup);
+    },
+    middleware: [
+      {
+        name: referenceHidden.name,
+        options: referenceHidden.options,
+        fn: (state) =>
+          isLibraryPromotedAndShowing(popup) && referenceMeasurable()
+            ? referenceHidden.fn(state)
+            : {},
+      },
+    ],
+    afterResolve(offsetParent, data) {
+      applyReferenceHidden(popup, data.hide?.referenceHidden === true);
+      if (!fixed) {
+        return compensateAncestorZoom(popup, isWindowLike(offsetParent) ? null : offsetParent);
+      }
+      if (isWindowLike(offsetParent) || isLibraryPromotedAndShowing(popup)) return false;
+      // A trap that appeared while open (a hover-lift transform, an animation wrapper): promote,
+      // roll this pass back and re-run it once against top-layer geometry.
+      return promoteToTopLayer(popup);
+    },
+  });
 }
 
 /**

@@ -11,7 +11,8 @@ function tooltip(el: LyraAppRailItem): HTMLElement {
 async function openTooltip(wrapper: HTMLElement): Promise<LyraAppRailItem> {
   const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  base.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+  // The subject is positioning, not focus modality, so the ungated hover path opens it.
+  base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
   await el.updateComplete;
   await waitUntil(() => tooltip(el).style.left !== '', 'the flyout tooltip was never positioned');
   return el;

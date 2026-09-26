@@ -51,7 +51,8 @@ export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change': CustomEven
  * @csspart run-status-message - Optional caller-supplied detail for a run status.
  * @csspart empty - The empty history message.
  * @cssprop [--lr-agent-eval-dashboard-active-border=var(--lr-color-brand)] - Active metric border.
- * @cssprop [--lr-agent-eval-dashboard-active-background=var(--lr-color-brand-quiet)] - Active metric background.
+ * @cssprop [--lr-agent-eval-dashboard-active-background=var(--lr-color-brand-quiet)] - Active metric background,
+ *   and the base its hover/press mixes from.
  * @status stable
  * @since 6.2.0
  */

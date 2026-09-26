@@ -1448,3 +1448,15 @@ it('no longer answers to the pre-8.0.0 appearance attribute — frame replaced i
   expect(chrome.borderTopWidth).to.equal('1px');
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
+
+// A passive tile's edge is decorative; a linked tile's edge is its only visible boundary at rest
+// (WCAG 2.2 SC 1.4.11), so only the passive tile moves to the subtle tier.
+it('rests a passive tile on the subtle tier and a linked tile on the control tier', async () => {
+  const themed = '--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)';
+  const passive = (await fixture(html`<lr-stat label="Memories" value="128" style=${themed}></lr-stat>`)) as LyraStat;
+  const linked = (await fixture(html`<lr-stat label="Memories" value="128" href="/memories" style=${themed}></lr-stat>`)) as LyraStat;
+  const edge = (el: LyraStat): string => getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!).borderTopColor;
+  expect(edge(passive)).to.equal('rgb(7, 8, 9)');
+  expect(edge(linked)).to.equal('rgb(10, 20, 30)');
+});
+

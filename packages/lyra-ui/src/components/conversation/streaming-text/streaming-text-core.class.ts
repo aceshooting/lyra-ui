@@ -29,6 +29,11 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * renders the plain-text fallback here -- there is no default/full-table highlighter to fall back
  * to, mirroring `<lr-markdown-core>`'s own contract.
  *
+ * Direction: Markdown mode inherits the composed Markdown element's code direction (code reads
+ * left-to-right inside a right-to-left document; see that element's docs), and the forwarded
+ * `code-block`/`inline-code` parts accept an outer `direction` override. Plain mode, including
+ * a fenced block shown as plain text, follows the page direction.
+ *
  * @customElement lr-streaming-text-core
  * @event lr-content-settled - Fired after newly-coalesced content actually reaches the rendered
  *   DOM (plain-text mode only -- see `<lr-streaming-text>`'s class doc). `detail: null`.

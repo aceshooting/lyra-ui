@@ -97,15 +97,6 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     });
   }
 
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    if (changed.has('size')) this.syncItemSize();
-  }
-
-  private syncItemSize(): void {
-    for (const item of this.items) item.setAttribute('data-size', this.size);
-  }
-
   private isNavigable(item: LyraMenubarItem): boolean {
     return !item.disabled && !item.hidden && item.getAttribute('aria-hidden') !== 'true' &&
       !item.inert && !item.closest('[inert]');
@@ -134,7 +125,6 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
       (this.focusedItem === previous && (!active || active === this.ownerDocument.body)));
     for (const item of this.items) if (!assigned.includes(item)) item[menubarItemOwner](null, this.owner);
     this.items = assigned;
-    this.syncItemSize();
     for (const item of this.items) item[menubarItemOwner](this.owner);
     this.observeItems();
     if (previous && assigned.includes(previous) && this.isNavigable(previous)) this.setActive(previous);

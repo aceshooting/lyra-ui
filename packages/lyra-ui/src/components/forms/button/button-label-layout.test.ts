@@ -225,3 +225,35 @@ describe('lr-button: label layout', () => {
     expect(base.hasAttribute('data-icon-button')).to.equal(false);
   });
 });
+
+// A slotted text adornment is a flex item of the inline-flex start/end part, so the part's own
+// `text-overflow` never fires: the span needs its own shrinkable block, the lr-input pattern.
+describe('lr-button slotted adornment truncation', () => {
+  const LONG = 'Adornment text that is far too long.';
+
+  function expectTruncatedInside(adornment: HTMLElement, part: HTMLElement, label: string): void {
+    const box = adornment.getBoundingClientRect();
+    const partBox = part.getBoundingClientRect();
+    expect(box.left, `${label}: start edge stays inside the part`).to.be.at.least(partBox.left - 0.5);
+    expect(box.right, `${label}: end edge stays inside the part`).to.be.at.most(partBox.right + 0.5);
+    expect(getComputedStyle(adornment).textOverflow, `${label}: ellipsis on the adornment`).to.equal(
+      'ellipsis'
+    );
+    expect(adornment.scrollWidth > adornment.clientWidth, `${label}: text overflows its box`).to.equal(
+      true
+    );
+  }
+
+  for (const slot of ['start', 'end'] as const) {
+    it(`truncates a long slotted ${slot} text adornment with an ellipsis`, async () => {
+      const el = (await fixture(html`
+        <lr-button style="inline-size: 240px"
+          >Save<span slot=${slot} id="adornment">${LONG}</span></lr-button
+        >
+      `)) as LyraButton;
+      await el.updateComplete;
+      const part = el.shadowRoot!.querySelector(`[part~="${slot}"]`) as HTMLElement;
+      expectTruncatedInside(el.querySelector('#adornment') as HTMLElement, part, slot);
+    });
+  }
+});

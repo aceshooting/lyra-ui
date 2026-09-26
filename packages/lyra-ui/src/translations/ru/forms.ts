@@ -90,6 +90,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'Текущий цвет: {color}',
   selectSelectedOverflow: 'ещё {n}',
   emojiPickerSearchLabel: 'Поиск эмодзи',
+  emojiPickerSearchPlaceholder: 'Поиск эмодзи…',
   emojiPickerGridLabel: 'Эмодзи',
   emojiPickerEmpty: 'Эмодзи не найдены',
   emojiPickerLoadError: 'Не удалось загрузить эмодзи.',

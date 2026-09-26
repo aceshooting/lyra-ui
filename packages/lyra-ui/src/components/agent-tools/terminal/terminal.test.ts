@@ -1899,3 +1899,35 @@ describe('card chrome theming hooks', () => {
     expect(getComputedStyle(part(el, 'download-button')).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
 });
+
+function glyphRect(root: Node, needle: string): DOMRect {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const index = (node as Text).data.indexOf(needle);
+    if (index === -1) continue;
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + needle.length);
+    return range.getClientRects()[0] ?? range.getBoundingClientRect();
+  }
+  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
+}
+
+it('scrolls an unwrapped terminal from the start of its lines under RTL and follows the page when wrapping', async () => {
+  const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 360px">
+    <lr-terminal wrap="false"></lr-terminal>
+  </div>`);
+  const el = host.querySelector('lr-terminal') as LyraTerminal;
+  el.content = `short\n${'x'.repeat(200)}`;
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+  await waitUntil(() => Boolean(list.shadowRoot?.querySelector('[part~="line"]')), 'terminal lines never rendered');
+  const scrollport = list.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  expect(getComputedStyle(scrollport).direction).to.equal('ltr');
+  const port = scrollport.getBoundingClientRect();
+  const first = glyphRect(list.shadowRoot!, 'short');
+  expect(first.left).to.be.within(port.left, port.right);
+  el.wrap = true;
+  await el.updateComplete;
+  expect(getComputedStyle(scrollport).direction).to.equal('rtl');
+});

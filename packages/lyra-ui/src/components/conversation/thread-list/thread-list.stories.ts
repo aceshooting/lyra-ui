@@ -118,6 +118,36 @@ export const CustomRowActions: Story = {
     </div>`,
 };
 
+/** A short list: the row-action menu of any row opens at full size outside the 100px list, below
+ *  or above its trigger, instead of being squeezed and clipped by the virtual viewport. Rows default
+ *  their overlays to the `fixed` strategy, so no consumer CSS is needed. */
+export const ShortListRowActions: Story = {
+  render: () =>
+    html`<div style="block-size:100px;inline-size:320px;display:flex;flex-direction:column;border:1px solid var(--lr-color-border);">
+      <lr-thread-list
+        grouping="none"
+        style="flex:1;min-block-size:0"
+        .threads=${threads}
+        .renderActions=${() => html`
+          <lr-dropdown placement="bottom-end">
+            <button
+              slot="trigger"
+              aria-label="Conversation actions"
+              style="border:none;background:none;cursor:pointer;font-size:1.25rem;line-height:1;padding:0.25rem;"
+            >
+              ⋮
+            </button>
+            <lr-menu label="Conversation actions">
+              <lr-menu-item value="rename">Rename</lr-menu-item>
+              <lr-menu-item value="archive">Archive</lr-menu-item>
+              <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+            </lr-menu>
+          </lr-dropdown>
+        `}
+      ></lr-thread-list>
+    </div>`,
+};
+
 export const WithArchivedShown: Story = {
   render: () =>
     html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">

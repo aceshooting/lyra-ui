@@ -10,8 +10,8 @@ function popover(el: LyraEntityChip): HTMLElement {
 
 async function openPopover(wrapper: HTMLElement): Promise<LyraEntityChip> {
   const el = wrapper.querySelector('lr-entity-chip') as LyraEntityChip;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
-  base.focus();
+  // The subject is positioning, not focus modality, so the ungated hover path opens it.
+  (el.shadowRoot!.querySelector('.wrapper') as HTMLElement).dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
   await el.updateComplete;
   await waitUntil(() => !popover(el).hidden, 'the preview popover never opened');
   await waitUntil(() => popover(el).style.left !== '', 'the preview popover was never positioned');

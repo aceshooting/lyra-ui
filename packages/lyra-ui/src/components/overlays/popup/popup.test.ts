@@ -48,11 +48,15 @@ it('exposes the positioned popup and consumes the mapped transition aliases', as
   await waitUntil(() => el.popup.hasAttribute('data-active'));
   expect(el.popup.localName).to.equal('div');
   expect(partsOf(el.popup)).to.include('popup');
-  expect(getComputedStyle(el.popup).transitionDuration).to.equal('0.123s');
+  // Opacity fades over the alias; visibility flips instantly on show and after the fade on hide.
+  expect(getComputedStyle(el.popup).transitionProperty).to.equal('opacity, visibility');
+  expect(getComputedStyle(el.popup).transitionDuration).to.equal('0.123s, 0s');
+  expect(getComputedStyle(el.popup).transitionDelay).to.equal('0s, 0s');
 
   el.active = false;
   await el.updateComplete;
-  expect(getComputedStyle(el.popup).transitionDuration).to.equal('0.234s');
+  expect(getComputedStyle(el.popup).transitionDuration).to.equal('0.234s, 0s');
+  expect(getComputedStyle(el.popup).transitionDelay).to.equal('0s, 0.234s');
   expect(getComputedStyle(el.popup).pointerEvents).to.equal('none');
   // Leave a real-timer margin above 234ms: under a parallel three-engine run Firefox can defer
   // the transition's first sampled frame, so a 26ms margin is not enough to prove the end state.

@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './copy-button.js';
 import type { LyraCopyButton } from './copy-button.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
@@ -195,7 +196,7 @@ describe('lr-copy-button', () => {
       <lr-copy-button value="hello" copy-label="Copy greeting"></lr-copy-button>
     `)) as LyraCopyButton;
     const tip = tooltip(el);
-    baseButton(el).focus();
+    await focusByKeyboard(baseButton(el));
     await aTimeout(250);
     await tip.updateComplete;
     expect(tip.open).to.be.true;
@@ -205,6 +206,27 @@ describe('lr-copy-button', () => {
     await aTimeout(50);
     await tip.updateComplete;
     expect(tip.open).to.be.false;
+  });
+
+  it('keeps the resting tooltip closed but describes the button on pointer-then-script focus', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button value="hello" copy-label="Copy greeting"></lr-copy-button>
+    `)) as LyraCopyButton;
+    const tip = tooltip(el);
+    const button = baseButton(el) as HTMLElement & { ariaDescribedByElements?: Element[] | null };
+    const proxy = tip.querySelector('[data-lyra-tooltip-description]')!;
+    const described = (): boolean =>
+      (button.ariaDescribedByElements ?? []).includes(proxy)
+      || (button.getAttribute('aria-describedby') ?? '').split(/\s+/).includes(proxy.id);
+
+    await focusAfterPointer(button);
+    await aTimeout(250);
+    await tip.updateComplete;
+    expect(tip.open, 'pointer-then-script focus does not open').to.be.false;
+    expect(described(), 'focus of any kind describes the button').to.equal(true);
+    button.blur();
+    await tip.updateComplete;
+    expect(described()).to.equal(false);
   });
 
   it('contains every nested tooltip lifecycle event inside the copy-button boundary', async () => {

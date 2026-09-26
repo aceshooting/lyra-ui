@@ -8950,3 +8950,56 @@ describe("ResizeObserver callback batching (perf)", () => {
     }
   });
 });
+
+describe("grid-line colour tier", () => {
+  const themed =
+    "--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)";
+  const lines = (element: LyraDataGrid<Person>): Record<string, string> => {
+    const root = element.shadowRoot!;
+    const part = (selector: string): CSSStyleDeclaration =>
+      getComputedStyle(root.querySelector<HTMLElement>(selector)!);
+    return {
+      edge: part('[part="data-grid"]').borderTopColor,
+      header: part('[part="header"]').borderBottomColor,
+      cell: part('[part~="cell"]').borderInlineEndColor,
+      row: part('[part~="row"]').borderBottomColor,
+      pager: part('[part="pager"]').borderTopColor,
+    };
+  };
+  const controls = (element: LyraDataGrid<Person>): Record<string, string> => {
+    const root = element.shadowRoot!;
+    const part = (selector: string): CSSStyleDeclaration =>
+      getComputedStyle(root.querySelector<HTMLElement>(selector)!);
+    return {
+      search: part('[part="search"]').borderTopColor,
+      pageSize: part('[part="page-size"]').borderTopColor,
+    };
+  };
+
+  it("draws grid lines on the subtle tier and keeps control boundaries on the control tier", async () => {
+    const element = await dataGrid(html`
+      <lr-data-grid paginate with-search label="People" style=${themed} .columns=${columns} .data=${rows}></lr-data-grid>
+    `);
+    expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(7, 8, 9)"));
+    expect(Object.values(controls(element))).to.deep.equal(Array(2).fill("rgb(10, 20, 30)"));
+  });
+
+  it("lets --border-color recolour both, and --lr-data-grid-line-color only the grid lines", async () => {
+    const element = await dataGrid(html`
+      <lr-data-grid paginate with-search label="People" style=${`${themed}; --border-color: rgb(40, 50, 60)`} .columns=${columns} .data=${rows}></lr-data-grid>
+    `);
+    expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(40, 50, 60)"));
+    expect(Object.values(controls(element))).to.deep.equal(Array(2).fill("rgb(40, 50, 60)"));
+    element.style.setProperty("--lr-data-grid-line-color", "rgb(70, 80, 90)");
+    expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(70, 80, 90)"));
+    expect(Object.values(controls(element))).to.deep.equal(Array(2).fill("rgb(40, 50, 60)"));
+  });
+
+  it("renders exactly the former colours when the subtle input is unset", async () => {
+    const element = await dataGrid(html`
+      <lr-data-grid paginate with-search label="People" style="--lr-theme-color-surface-border: rgb(10, 20, 30)" .columns=${columns} .data=${rows}></lr-data-grid>
+    `);
+    expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(10, 20, 30)"));
+  });
+});
+

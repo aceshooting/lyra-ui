@@ -9,6 +9,7 @@ import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import {
   deferredPlaceReady as place,
+  loadAnchoredOverlayRuntime,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
@@ -459,7 +460,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
    * CSS positioning scheme the popup panel is laid out with -- the same property, spelled the same
    * way, as on `<lr-popover>`, `<lr-dropdown>` and `<lr-select>`. `absolute` (this control's
    * mirrored default) keeps the panel in the component's local scrolling context; `fixed` escapes
-   * most clipping ancestors. An unsupported value resolves back to the default. Changes apply live
+   * most clipping ancestors, and escapes transformed, filtered or contained ancestors by promoting
+   * the panel into the browser top layer where the native Popover API exists (otherwise, as
+   * before, such an ancestor contains and clips it). An unsupported value resolves back to the
+   * default. Changes apply live
    * while open.
    * This property reports only the instance's own authored value (or the mirrored default); the
    * panel is actually placed with the `--lr-positioning-strategy` cascading custom property
@@ -734,7 +738,17 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     } else if (changed.has('inline')) {
       if (this.inline) {
         this.teardownOverlay();
-        this.panelEl()?.style.removeProperty('position');
+        const panel = this.panelEl();
+        panel?.style.removeProperty('position');
+        // The panel stays rendered and visible, so it never settles through [hidden]: release a
+        // top-layer promotion explicitly or it would stay out of flow. A promotion implies the
+        // runtime already resolved, so this lands in a microtask, before paint.
+        if (panel?.hasAttribute('data-lr-top-layer')) {
+          void loadAnchoredOverlayRuntime().then(
+            (runtime) => runtime.releaseTopLayer?.(panel),
+            () => undefined,
+          );
+        }
         const announceOpen = (this.pendingPlacementEffects & 1) !== 0;
         this.pendingPlacementEffects = 0;
         if (announceOpen) this.emit('lr-after-show');

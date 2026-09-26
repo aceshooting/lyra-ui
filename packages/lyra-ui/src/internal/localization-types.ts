@@ -793,6 +793,7 @@ export type LyraMessageKey =
   | 'tourDone'
   | 'tourStepOf'
   | 'emojiPickerSearchLabel'
+  | 'emojiPickerSearchPlaceholder'
   | 'emojiPickerGridLabel'
   | 'emojiPickerEmpty'
   | 'emojiPickerLoadError'

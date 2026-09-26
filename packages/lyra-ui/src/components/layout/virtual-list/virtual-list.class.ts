@@ -14,6 +14,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { nativePopoverSupported } from '../../../internal/native-popover.js';
 import {
   finiteAdd,
   finiteCount,
@@ -251,6 +252,17 @@ export interface LyraVirtualListEventMap {
  *   cheap style recompute, not a layout-affecting padding change.
  * - **Fixed numeric `row-height`.** No measurement needed — the offset is `i * rowHeightPx` for an
  *   indexed source, while arrays retain the same cached cumulative path as auto-height arrays.
+ *
+ * **Overlays inside rows.** That per-row transform makes every row the containing block of any
+ * `position: fixed` descendant, inside this element's own clipping scroller, so an `absolute`
+ * overlay in a row can never extend past the list. Rows therefore default anchored Lyra overlays
+ * (dropdowns, tooltips, popovers, selects, context menus) to the `fixed` strategy, and a trapped
+ * `fixed` overlay opens at full size in the browser top layer where the native Popover API exists.
+ * Every authored value still wins: an instance's `positioning-strategy`/`hoist`, an ancestor's
+ * `--lr-positioning-strategy` (even on `:root`), or `::part(row) { --lr-positioning-strategy:
+ * absolute }` to opt a list's rows out. Where the Popover API is absent, a row holding an open
+ * `lr-dropdown` (in `renderItem` mode) stops transforming while it is open, so its menu is no
+ * longer clipped.
  *
  * An array source's offsets cache is rebuilt only when `items`/`source`, `row-height`, or
  * `keyFunction` change, or a row's measured height changes -- not on every
@@ -873,6 +885,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  `ResizeObserver` -- deliberately never by `rowResizeObserver`, which would fold this *copy* of a
    *  row into `offsets` and double-count the group header's height. */
   @state() private stickyHeight = 0;
+  /**
+   * Engines without the native Popover API cannot lift a row's open dropdown into the top layer,
+   * so `[part="base"]` carries `data-lr-no-top-layer` and the stylesheet stops that row from being
+   * a containing block while the dropdown is open. A state, never a read inside `render()`: this
+   * element is render-and-hydrate, and hydration primes attribute parts without committing them,
+   * so the client value must land in a post-hydration update (see `firstUpdated()`).
+   */
+  @state() private noTopLayer = false;
 
   private rowResizeObserver?: ResizeObserver;
   private groupResizeObserver?: ResizeObserver;
@@ -1109,6 +1129,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
     this.attachContainerListeners();
+    // A microtask, not a synchronous write: a state change inside firstUpdated() schedules an
+    // update after the first one completed. Either way the value lands after hydration.
+    queueMicrotask(() => {
+      if (this.isConnected) this.noTopLayer = !nativePopoverSupported();
+    });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -1130,6 +1155,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     )
       this.seedFirstRenderState(this.releaseRowProjection);
     this.isFirstUpdate = !this.hasUpdated;
+    if (this.hasUpdated) this.noTopLayer = !nativePopoverSupported();
     if (
       changed.has('items') ||
       changed.has('source') ||
@@ -2313,7 +2339,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         aria-posinset=${isRowMode ? nothing : index + 1}
         aria-rowindex=${isRowMode ? this.computedAriaRowIndex(index) : nothing}
         aria-current=${isActive ? 'true' : 'false'}
-        style=${styleMap({ transform: `translateY(${top}px)` })}
+        style=${styleMap({
+          transform: `translateY(${top}px)`,
+          '--_lr-virtual-list-row-offset': `${top}px`,
+        })}
       >
         ${this.projectionActive
           ? html`<slot name=${this.rowSlotName(identity)}></slot>`
@@ -2529,6 +2558,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         part="base"
         role=${isRowMode ? 'rowgroup' : 'list'}
         ?data-external-scroll=${isExternallyScrolled}
+        ?data-lr-no-top-layer=${this.noTopLayer}
         tabindex=${isExternallyScrolled ? nothing : '0'}
         style=${stickyInset > 0
           ? `scroll-padding-block-start:${stickyInset}px`

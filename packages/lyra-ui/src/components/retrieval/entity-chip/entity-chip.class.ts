@@ -24,7 +24,8 @@ const HIDE_DELAY_MS = 200;
 
 /**
  * `<lr-entity-chip>` — an inline `@entity` mention for agent prose: flow content,
- * keyboard-focusable, with a hover/focus preview popover. The knowledge-graph sibling of
+ * keyboard-focusable, with a hover or keyboard-focus preview popover (the focused control matches
+ * `:focus-visible` and no pointer press preceded it). The knowledge-graph sibling of
  * `lr-citation-badge`, reusing its interaction contract wholesale. Carries ids through events
  * only -- no entity data resolution, no navigation.
  *
@@ -34,7 +35,7 @@ const HIDE_DELAY_MS = 200;
  *
  * @customElement lr-entity-chip
  * @slot - Rich preview content (typically a compact `lr-entity-card`), shown in a floating
- * popover on hover/focus. No content -> no popover and no hover affordance at all. An open
+ * popover on hover or keyboard focus. No content -> no popover and no hover affordance at all. An open
  * popover participates in shared Escape ordering even while only hovered, deferring to a
  * genuinely topmost overlay opened on top of it.
  * @event lr-entity-select - Click, or Enter while focused. `detail: { entityId }`.

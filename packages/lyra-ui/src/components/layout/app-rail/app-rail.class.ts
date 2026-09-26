@@ -132,7 +132,6 @@ export interface LyraAppRailEventMap {
  * violation (verified against axe), whereas an explicit `role="navigation"`
  * on a generic element can be swapped for `role="dialog"` freely.
  *
- * @cssprop [--lr-app-rail-panel-shadow=var(--lr-shadow-l)] - Mobile panel elevation, read only while open; closed panels never paint it.
  * @cssprop [--lr-app-rail-frame-gap=var(--lr-space-s)] - Margin around a card frame.
  * @cssprop [--lr-app-rail-frame-radius=var(--lr-radius)] - Card-frame corner radius.
  * @cssprop [--lr-app-rail-frame-shadow=var(--lr-shadow-s)] - Card-frame elevation.
@@ -206,7 +205,12 @@ export interface LyraAppRailEventMap {
  *   direction-aware through this wrapper's own `transform` (never a second, mirrored icon), so it
  *   always points toward the edge the rail is about to move to, under both `dir` values.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
- *   for why it's the same element as `base`, never both at once.
+ *   for why it's the same element as `base`, never both at once. Casts its elevation
+ *   (`--lr-app-rail-panel-shadow`, default `--lr-shadow-l`) only while the overlay is open; closed,
+ *   it is parked just off-canvas without a shadow, so nothing paints along the viewport edge.
+ *   Retune that elevation through `--lr-app-rail-panel-shadow`. A `::part(panel)` `box-shadow`
+ *   override must be scoped to the open state, `lr-app-rail[mode="mobile"][open]::part(panel)`: an
+ *   unqualified one also applies while closed and paints that edge band again.
  * @csspart resizer - The `resizable` opt-in's drag handle -- its interactive hit target, sized to
  *   the shared minimum tappable size (`--lr-icon-button-size`), independent of the slimmer
  *   visible line rendered by its `resizer-track` child. Its numeric ARIA range remains in CSS
@@ -265,6 +269,9 @@ export interface LyraAppRailEventMap {
  *   background (the mobile overlay presentation) -- kept separate from
  *   `--lr-app-rail-background`/`--lr-app-rail-overlay-color` (the backdrop scrim) since the panel
  *   is deliberately themed as a modal surface, not the docked rail chrome.
+ * @cssprop [--lr-app-rail-panel-shadow=var(--lr-shadow-l)] - `[part="panel"]`'s elevation while the
+ *   mobile overlay is open. Read only in the open state: the closed, off-canvas panel never casts a
+ *   shadow, whatever this is set to. Set `none` to remove the open elevation.
  * @cssprop [--lr-app-rail-header-padding=var(--lr-space-m)] - `[part="header"]`'s padding.
  * @cssprop [--lr-app-rail-footer-padding=var(--lr-space-m)] - `[part="footer"]`'s padding.
  * @cssprop [--lr-app-rail-nav-padding=var(--lr-space-s)] - `[part="nav"]`'s padding, unset
@@ -300,6 +307,34 @@ export interface LyraAppRailEventMap {
  *     <svg slot="icon" aria-hidden="true">...</svg>Inbox
  *   </lr-app-rail-item>
  * </lr-app-rail>
+ * ```
+ * @example
+ * A standalone app sidebar: a card-framed rail collapsed to icons by an external trigger or
+ * the Mod+B chord, remembering the reader's choice. Below `mobile-breakpoint` it becomes the
+ * off-canvas overlay and the same trigger opens it:
+ * ```html
+ * <style>
+ *   .shell { display: flex; block-size: 100dvh; }
+ *   lr-app-rail lr-divider { align-self: stretch; }
+ * </style>
+ * <div class="shell">
+ *   <lr-app-rail id="nav" label="Workspace" frame="card" hide-toggle trigger-collapses
+ *     for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
+ *     <lr-app-rail-group heading="Platform">
+ *       <lr-app-rail-item href="/inbox" current tooltip>
+ *         <svg slot="icon" aria-hidden="true">...</svg>Inbox
+ *       </lr-app-rail-item>
+ *     </lr-app-rail-group>
+ *     <lr-divider></lr-divider>
+ *   </lr-app-rail>
+ *   <main>
+ *     <button id="sidebar-trigger" type="button" aria-label="Toggle sidebar">...</button>
+ *   </main>
+ * </div>
+ * <script type="module">
+ *   const nav = document.getElementById('nav');
+ *   document.getElementById('sidebar-trigger').addEventListener('click', () => nav.toggle());
+ * </script>
  * ```
  * @status stable
  * @since 4.0.0

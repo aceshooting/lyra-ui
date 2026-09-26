@@ -128,7 +128,7 @@ export interface LyraTraceTreeEventMap {
  * @csspart limit - Localized notice shown when the shared 500-span projection ceiling is reached.
  * @csspart live-region - The internal status-announcement live region.
  * @cssprop [--lr-trace-tree-row-active-bg=var(--lr-color-brand-quiet)] - Background of the active
- *   (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active
+ *   (`activeSpanId`) row, and the base its hover/press mixes from. Shadow Parts forbids an attribute selector after `::part()`, so the active
  *   row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
  *   Pairs with `--lr-trace-tree-row-active-color`: set both together, since the defaults assume the
  *   active background stays on the same side of the lightness midpoint as the ambient surface — a

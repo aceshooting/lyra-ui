@@ -743,3 +743,11 @@ describe('a slotted [hidden] glyph', () => {
     expect(shown.getClientRects().length).to.equal(1);
   });
 });
+
+// The neutral disc is a surface behind the initials, so it follows the neutral quiet FILL role
+// (a preset's muted grey), never the control-border token.
+it('paints the neutral disc from the neutral quiet fill role, not the border token', async () => {
+  const el = (await fixture(html`<lr-avatar initials="AB" label="Account owner" style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-neutral-fill-quiet: rgb(1, 2, 3); --lr-theme-color-neutral-fill-normal: rgb(4, 5, 6); --lr-theme-color-text-quiet: rgb(7, 8, 9)"></lr-avatar>`)) as LyraAvatar;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+});

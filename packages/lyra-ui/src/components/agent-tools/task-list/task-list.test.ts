@@ -1,7 +1,8 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './task-list.js';
 import type { LyraTaskList, TaskItem } from './task-list.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
@@ -745,7 +746,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-task-list
         .items=${items}
-        style="--lr-task-list-background: var(--lr-color-surface); --lr-task-list-border-color: var(--lr-color-border-subtle); --lr-task-list-radius: var(--lr-radius)"
+        style="--lr-task-list-background: var(--lr-color-surface); --lr-task-list-border-color: var(--lr-color-border); --lr-task-list-radius: var(--lr-radius)"
       ></lr-task-list>
     `)) as LyraTaskList;
     const unset = getComputedStyle(part(control, 'base'));
@@ -759,14 +760,67 @@ describe('card chrome theming hooks', () => {
     );
   });
 
-  it('draws the card edge and divider on the decorative --lr-color-border-subtle tier', async () => {
+  // The header is a borderless button, so the card edge is that control's only visible boundary
+  // (WCAG 2.2 SC 1.4.11): it stays on the control tier even when the decorative input is set.
+  it('keeps the card edge and divider on the --lr-color-border control tier, not the subtle tier', async () => {
     const el = (await fixture(html`
       <lr-task-list
         .items=${items}
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
       ></lr-task-list>
     `)) as LyraTaskList;
-    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(7, 8, 9)');
-    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(part(el, 'body')).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
+});
+
+describe('header text contrast at rest, hover and press', () => {
+  afterEach(async () => {
+    await resetMouse();
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`keeps the label and summary readable and following the header colour (${theme})`, async () => {
+      const wrapper = await fixture<HTMLElement>(
+        html`<div data-lr-theme=${theme}><lr-task-list style="--lr-transition-fast: 0s" .items=${items}></lr-task-list></div>`,
+      );
+      const el = wrapper.querySelector('lr-task-list') as LyraTaskList;
+      await el.updateComplete;
+      const root = el.shadowRoot!;
+      const header = root.querySelector<HTMLElement>('button[part="header"]')!;
+      const base = root.querySelector<HTMLElement>('[part="base"]')!;
+      const texts = ['label', 'summary'].map((partName) => root.querySelector<HTMLElement>(`[part="${partName}"]`)!);
+      const assertContrast = (state: string): void => {
+        const background = effectiveBackground(header, base);
+        for (const node of texts) {
+          expect(
+            contrastRatio(getComputedStyle(node).color, background),
+            `${state} ${node.getAttribute('part')}`,
+          ).to.be.at.least(4.5);
+        }
+      };
+      assertContrast('rest');
+
+      const restBackground = getComputedStyle(header).backgroundColor;
+      await hoverUntilMatched(header, 'task-list header under the pointer');
+      await waitUntil(() => getComputedStyle(header).backgroundColor !== restBackground, 'hover background');
+      const brand = resolvedColorToken(root, '--lr-color-brand');
+      expect(texts.map((node) => getComputedStyle(node).color)).to.deep.equal([brand, brand]);
+      assertContrast('hover');
+      const hoverBackground = getComputedStyle(header).backgroundColor;
+
+      await sendMouse({ type: 'down' });
+      try {
+        await waitUntil(() => getComputedStyle(header).backgroundColor !== hoverBackground, 'pressed background');
+        const body = resolvedColorToken(root, '--lr-color-text');
+        await waitUntil(
+          () => texts.every((node) => getComputedStyle(node).color === body),
+          'pressed header text returns to the body colour',
+        );
+        assertContrast('pressed');
+      } finally {
+        await sendMouse({ type: 'up' });
+      }
+    });
+  }
 });

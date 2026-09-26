@@ -804,11 +804,11 @@ jobs:
           exit "$failed"
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
-  # packages/lyra-ui/visual-baselines/README.md): the manifest's 97 stories now produce 280
+  # packages/lyra-ui/visual-baselines/README.md): the manifest's 107 stories now produce 307
   # live light/dark/RTL plus applicable forced-colors/narrow captures. Pending human review leaves
-  # 117 compared with retained baselines and 163 as explicit ephemeral semantic/pixel evidence; all
+  # 111 compared with retained baselines and 196 as explicit ephemeral semantic/pixel evidence; all
   # capture or console errors remain blocking. The axis-level capture inventory is sorted and
-  # round-robin partitioned into three deterministic shards (94/93/93 captures) so the historical
+  # round-robin partitioned into three deterministic shards (103/102/102 captures) so the historical
   # ~3.5min browser sweep no longer sits on one runner's critical path.
   visual-regression:
     name: visual-regression / shard ${{ matrix.shard }}/3

@@ -1,6 +1,11 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './test-results.js';
+// Registers the shipped `ar` catalog slices the `lang="ar-EG"` locale-formatting test resolves
+// against, so it renders real catalog text instead of tripping the dev-mode locale-fallback
+// warning that strict-console browser lanes treat as fatal.
+import '../../../translations/ar/agent-tools.js';
+import '../../../translations/ar/shared.js';
 import { testResultDetailSlotName, type LyraTestResults, type TestSuiteResult } from './test-results.js';
 import type { LyraEmpty } from '../../overlays/empty/empty.js';
 
@@ -946,4 +951,35 @@ describe('lr-test-results', () => {
       await resetMouse();
     }
   });
+});
+
+const isWebKit = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent);
+
+function glyphRect(root: Node, needle: string): DOMRect {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const index = (node as Text).data.indexOf(needle);
+    if (index === -1) continue;
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + needle.length);
+    return range.getClientRects()[0] ?? range.getBoundingClientRect();
+  }
+  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
+}
+
+it('reads each failure-message line in its own direction under RTL', async () => {
+  const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 480px">
+    <lr-test-results .suites=${[{ id: 's', name: 'suite', tests: [{ id: 't', name: 'test', status: 'failed', message: "expected 'a' to equal 'b'\nat Object.<anonymous>\nفشل الاختبار" }] }]}></lr-test-results>
+  </div>`);
+  const el = host.querySelector('lr-test-results') as HTMLElement & { updateComplete: Promise<boolean> };
+  await el.updateComplete;
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part="failure-message"]')));
+  const message = el.shadowRoot!.querySelector<HTMLElement>('[part="failure-message"]')!;
+  expect(getComputedStyle(message).unicodeBidi).to.equal('plaintext');
+  expect(glyphRect(message, "'a'").left).to.be.lessThan(glyphRect(message, "'b'").left);
+  expect(glyphRect(message, 'Object').left).to.be.lessThan(glyphRect(message, 'anonymous').left);
+  // WebKit resolves `unicode-bidi: plaintext` once from the block's first strong character rather
+  // than per line, so the per-line right-to-left behavior is asserted only where engines implement it.
+  if (!isWebKit) expect(glyphRect(message, 'فشل').left).to.be.greaterThan(glyphRect(message, 'الاختبار').left);
 });

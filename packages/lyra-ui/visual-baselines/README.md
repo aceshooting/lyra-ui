@@ -24,9 +24,9 @@ webfont swap-in, wall-clock reads, the browser's default timezone, and the defau
 `system-ui`/`ui-monospace` font stacks resolving to whatever substitution the capturing host
 happens to have installed are all pinned (see `../scripts/visual-regression.mjs`'s header
 comment). The font substitution gap alone once cascaded into a 3.6% diff for word-cloud's
-spiral-search layout. The configured v8 matrix is 97 stories and 280 live captures, spanning
+spiral-search layout. The configured v8 matrix is 107 stories and 307 live captures, spanning
 light, dark, and RTL plus targeted forced-colors and narrow axes. While human review is pending,
-117 captures compare with retained tracked baselines and 163 are semantic, nonblank, or
+111 captures compare with retained tracked baselines and 196 are semantic, nonblank, or
 painted-pixel evidence only. `manifest.json` computes
 that matrix and records every exemption. The CI step (`.github/workflows/ci.yml`) remains blocking:
 semantic errors, console errors, missing reviewed baselines, and mismatches outside an explicit
@@ -86,9 +86,9 @@ exemption. To extend coverage, add another `<title>--<name>` story id from
 blocking `new` result; an evidence-only capture runs its assertions and stays under
 `.visual-diff-output/evidence/` until a human explicitly promotes that axis.
 
-The runner expands the 97 stories into 280 capture axes before partitioning. Its three CI shards
-contain 94, 93, and 93 captures; the blocking unit/config tests prove the shards are deterministic,
-disjoint, exhaustive, and balanced without changing the 117 retained-baseline plus 163
+The runner expands the 107 stories into 307 capture axes before partitioning. Its three CI shards
+contain 103, 102, and 102 captures; the blocking unit/config tests prove the shards are deterministic,
+disjoint, exhaustive, and balanced without changing the 111 retained-baseline plus 196
 evidence-only policy.
 
 Before any PNG is compared or retained as evidence, the harness recursively checks rendered shadow

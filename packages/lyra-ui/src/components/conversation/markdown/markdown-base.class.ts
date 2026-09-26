@@ -47,6 +47,7 @@ import {
   internalLinkHrefFrom,
   markdownAnchorFromTarget,
   markdownTableRegionLabel,
+  markdownHasTableWrappers,
   labelMarkdownTableWrappers,
   markdownHighlightConfigChanged,
   markdownLanguageSetChanged,
@@ -236,6 +237,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   private readonly boundLocalize = this.localize.bind(this);
   private tableRegionLabel: string | undefined;
+  private hasTableWrappers = false;
   private readonly fallbackCode = new MarkdownFallbackCodeScanner();
   private deps?: MarkdownDeps;
   private readonly parser = new MarkdownParserController();
@@ -420,10 +422,20 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     applyMarkdownAriaBusy(this, !this.deps || this.streaming);
-    const tableLabel = markdownTableRegionLabel(this.boundLocalize);
-    if (changed.has('renderedHtml') || changed.has('renderedBlocks') || tableLabel !== this.tableRegionLabel) {
-      this.tableRegionLabel = tableLabel;
-      labelMarkdownTableWrappers(this.contentRoot(), tableLabel);
+    // Resolve the table label only while the rendered document actually holds a wrapper: a
+    // table-free document under a `lang` with no registered catalog would otherwise raise the
+    // dev-mode locale-fallback warning on every update. Wrappers arrive only through the rendered
+    // HTML/blocks, so the (cheap) existence probe reruns only when those change.
+    const renderedChanged = changed.has('renderedHtml') || changed.has('renderedBlocks');
+    if (renderedChanged) this.hasTableWrappers = markdownHasTableWrappers(this.contentRoot());
+    if (!this.hasTableWrappers) {
+      this.tableRegionLabel = undefined;
+    } else {
+      const tableLabel = markdownTableRegionLabel(this.boundLocalize);
+      if (renderedChanged || tableLabel !== this.tableRegionLabel) {
+        this.tableRegionLabel = tableLabel;
+        labelMarkdownTableWrappers(this.contentRoot(), tableLabel);
+      }
     }
     const remembered = this.rememberedFocus;
     this.rememberedFocus = undefined;
@@ -431,7 +443,11 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       let active = this.ownerDocument.activeElement;
       while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
       if (!active || active === this.ownerDocument.body || active === this.ownerDocument.documentElement) {
-        this.renderRoot.querySelectorAll<HTMLElement>(remembered.selector)[remembered.index]?.focus({ preventScroll: true });
+        const target = this.renderRoot.querySelectorAll<HTMLElement>(remembered.selector)[remembered.index];
+        if (target) target.focus({ preventScroll: true });
+        // A closing fence removes the open-fence preview one update before the settled block that
+        // replaces it is committed; keep the target pending while the stream can still commit it.
+        else if (this.streaming) this.rememberedFocus = remembered;
       }
     }
     const locale = this.effectiveLocale;
@@ -701,7 +717,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     };
   }
 
-  /** Returns a defensive copy of the latest document-ordered heading outline. */
+  /** Returns a defensive copy of the latest document-ordered heading outline. During a progressive
+   *  stream it returns the headings of settled blocks. */
   getHeadingTree(): MarkdownHeadingItem[] {
     return [...this.headingTree];
   }

@@ -62,7 +62,9 @@ export const styles = css`
      whatever ancestor establishes this popup's CSS containing block. */
   [part~='popup'][hidden] { display: none; }
   [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
-  [part~='popup'] { opacity: 1; transform: translateY(0); }
+  /* none, not an identity translate: an identity transform is still a containing block, and
+     would trap every fixed surface nested in the open popup (hoisted selects, submenus). */
+  [part~='popup'] { opacity: 1; transform: none; }
   :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
   [part~='content'] { padding: var(--lr-space-m); }
   /* An arrow protrudes past the popup's edge, so the scroll container moves inwards for it -- an

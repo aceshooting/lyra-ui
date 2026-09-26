@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { focusAfterPointer, focusByKeyboard as focusBaseByKeyboard } from '../../../../test/wtr-focus.js';
 import './entity-chip.js';
 import type { LyraEntityChip } from './entity-chip.js';
 
@@ -314,7 +315,7 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
     >`
   )) as LyraEntityChip;
   const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
-  button.focus();
+  await focusBaseByKeyboard(button);
   await waitUntil(
     () => !(el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).hidden
   );
@@ -393,6 +394,15 @@ describe('preview show/hide across pointer and focus', () => {
     await waitUntil(() => el.shadowRoot?.activeElement === base, 'keyboard focus reached the chip');
     sentinel.remove();
   };
+
+  it('opens nothing on pointer-then-script focus', async () => {
+    const el = await chip();
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await focusAfterPointer(base);
+    await el.updateComplete;
+    expect(hidden(el), 'pointer-then-script focus opens nothing').to.be.true;
+    base.blur();
+  });
 
   it('pointerleave schedules the hide rather than closing immediately', async () => {
     const el = await chip();

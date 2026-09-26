@@ -100,6 +100,13 @@ export interface LyraCodeBlockCoreEventMap {
  * surviving line through both plain and highlighted DOM replacement; an explicit move to another
  * control during the update is never overridden.
  *
+ * Direction: inside a right-to-left document the code body (`::part(body)`) is laid out
+ * left-to-right and its scroll area opens at the start of the code, so under `dir="rtl"` its
+ * vertical scrollbar sits on the physical right. The language badge is a left-to-right isolate and
+ * the file name renders inside a first-strong `<bdi>` (its text content is unchanged); the header
+ * row itself still follows the page direction. An outer `::part(body) { direction: rtl }` rule
+ * restores right-to-left code. Bidi formatting characters inside code are rendered as authored.
+ *
  * @customElement lr-code-block-core
  * @event lr-copy - The raw `code` was written to the clipboard. Frozen detail:
  *   `{ ok: true, text }`.

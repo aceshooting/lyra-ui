@@ -1121,13 +1121,12 @@ it("setting open directly does not emit lr-toggle (mirrors lr-dialog open/close 
 // -- RTL mobile panel offset ------------------------------------------------
 
 it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the LTR closed-state transform', async () => {
-  // Reaching mobile mode now goes through fireMobileChange() (a post-connect breakpoint-match
-  // mutation, since `mode` can no longer be forced via markup -- see forceMode's own doc) rather
-  // than an initial `mode="mobile"` attribute, so the panel's part flips from "base" to "panel"
-  // -- and its offscreen `transform` rule starts applying -- as a live style change on an
-  // already-connected element. That makes the adjacent `transition: transform` rule engage,
-  // same hazard the dir="rtl" rationale below already describes; zeroing the token keeps the
-  // computed transform read below settled instead of mid-transition.
+  // Reaching mobile mode goes through fireMobileChange() (a post-connect breakpoint-match
+  // mutation, since `mode` can no longer be forced via markup -- see forceMode's own doc), so the
+  // panel's part flips from "base" to "panel" and its parked `transform` applies as a live style
+  // change. The slide transition is scoped to a real open/close (`[data-sliding]`), so that flip
+  // snaps rather than animates; app-rail-mobile-shadow.test.ts locks that. The token is zeroed
+  // anyway so this read of the parked transform never depends on that guard.
   const ltrEl = (await fixture(
     html`<lr-app-rail style="--lr-transition-base: 0ms;"><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
@@ -1141,10 +1140,11 @@ it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the
 
   // dir="rtl" is set on the fixture markup itself (not mutated after
   // connection) so the RTL computed style is this element's very first
-  // style resolution -- mutating it post-connect would instead trigger the
-  // real transition on `transform` declared alongside these rules, making
-  // an immediate getComputedStyle() read a mid-transition value rather than
-  // the final one.
+  // style resolution. A post-connect direction flip on a closed panel no
+  // longer animates either -- only a real open/close marks the panel
+  // `data-sliding` -- but authoring it up front keeps this comparison about
+  // the RTL rule alone, not about that transition scoping, which
+  // app-rail-mobile-shadow.test.ts covers.
   const rtlEl = (await fixture(
     html`<lr-app-rail dir="rtl" style="--lr-transition-base: 0ms;"><button>a</button></lr-app-rail>`
   )) as LyraAppRail;

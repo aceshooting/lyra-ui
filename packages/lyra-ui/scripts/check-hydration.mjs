@@ -563,6 +563,46 @@ const statefulProbeMarkup = new Map([
       )
     ),
   ],
+  // The code-LTR fallback fixture from check-ssr.mjs: server-segmented `.fallback-code` /
+  // `.fallback-inline-code` spans (with escaped code) must hydrate in place, not be re-rendered.
+  // Every model below is attribute-driven, so no property restore is needed before upgrade.
+  [
+    'lr-markdown',
+    await collectResult(
+      render(
+        html`<lr-markdown
+          data-ssr-probe="lr-markdown"
+          content=${'Use `--verbose` here\n```html\n<script>alert(1)</script>\n```\n'}
+        ></lr-markdown>`,
+        { elementRenderers }
+      )
+    ),
+  ],
+  [
+    'lr-code-block',
+    await collectResult(
+      render(
+        html`<lr-code-block
+          data-ssr-probe="lr-code-block"
+          filename="./src/main.cpp"
+          code=${'int main() { return 0; }'}
+        ></lr-code-block>`,
+        { elementRenderers }
+      )
+    ),
+  ],
+  [
+    'lr-stack-trace',
+    await collectResult(
+      render(
+        html`<lr-stack-trace
+          data-ssr-probe="lr-stack-trace"
+          trace=${'TypeError: boom\n    at Object.<anonymous> (/app/src/index.js:10:5)'}
+        ></lr-stack-trace>`,
+        { elementRenderers }
+      )
+    ),
+  ],
   [
     'lr-context-menu',
     await collectResult(
@@ -613,6 +653,9 @@ const populatedHydrationTags = new Set([
   'lr-multi-split',
   'lr-navigation-menu',
   'lr-context-menu',
+  'lr-markdown',
+  'lr-code-block',
+  'lr-stack-trace',
 ]);
 for (const [tag, markup] of statefulProbeMarkup) {
   const entry = entries.find((candidate) => candidate.tag === tag);
@@ -800,6 +843,14 @@ const documentHtml = `<!doctype html>
             return host.shadowRoot?.querySelector('[part~="list"]');
           case 'lr-context-menu':
             return host.shadowRoot?.querySelector('.shell');
+          // querySelector() yields null for a missing node, and null === null would read as
+          // "reused"; normalize to undefined so an absent populated node fails the identity check.
+          case 'lr-markdown':
+            return host.shadowRoot?.querySelector('[part~="content"] .fallback-code') ?? undefined;
+          case 'lr-code-block':
+            return host.shadowRoot?.querySelector('[part~="filename"] > bdi') ?? undefined;
+          case 'lr-stack-trace':
+            return host.shadowRoot?.querySelector('[part~="frame-function"][dir="ltr"]') ?? undefined;
           case 'lr-badge':
           case 'lr-tag':
           case 'lr-chip':
@@ -1587,6 +1638,55 @@ try {
       { shows: 1, open: true, nativeAllowed: false },
       'lr-context-menu must open from a right-click on its hydrated region'
     );
+  }
+
+  if (shouldAssertHydrationTag('lr-virtual-list')) {
+    // The pre-Popover row fallback marker is client-only state: the server never emits it, and a
+    // Popover-capable browser never adds it. Where the native Popover API is absent it must still
+    // reach the DOM after hydration, which primes attribute parts without committing them.
+    const virtualListEntry = entries.find(({ tag }) => tag === 'lr-virtual-list');
+    assert.ok(virtualListEntry, 'lr-virtual-list must be present in the SSR matrix');
+    assert.ok(
+      !virtualListEntry.html.includes('data-lr-no-top-layer'),
+      'lr-virtual-list server output must not carry the pre-Popover fallback marker'
+    );
+    const readMarker = () =>
+      document
+        .querySelector('[data-fixture-tag="lr-virtual-list"] > *')
+        ?.shadowRoot?.querySelector('[part="base"]')
+        ?.hasAttribute('data-lr-no-top-layer') ?? null;
+    await page.evaluate(
+      () => new Promise((resolveFrame) => requestAnimationFrame(() => resolveFrame(undefined)))
+    );
+    assert.equal(
+      await page.evaluate(readMarker),
+      false,
+      'a Popover-capable browser must keep the fallback marker absent after hydration'
+    );
+    const fallbackPage = await browser.newPage();
+    try {
+      await fallbackPage.addInitScript(() => {
+        const supports = CSS.supports.bind(CSS);
+        CSS.supports = (...args) =>
+          args.length === 1 && args[0] === 'selector(:popover-open)' ? false : supports(...args);
+      });
+      await fallbackPage.goto(`http://127.0.0.1:${address.port}/`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60_000,
+      });
+      await fallbackPage.waitForFunction(() => globalThis.__lyraHydrationDone === true, undefined, {
+        timeout: 60_000,
+      });
+      await fallbackPage.waitForFunction(readMarker, undefined, { timeout: 10_000 });
+    } catch (error) {
+      throw new Error(
+        'lr-virtual-list must render the pre-Popover fallback marker after hydration where the ' +
+          'native Popover API is absent',
+        { cause: error }
+      );
+    } finally {
+      await fallbackPage.close();
+    }
   }
 
   const failures = [...outcome.result.updateErrors, ...browserFindings];

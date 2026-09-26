@@ -583,7 +583,10 @@ export class LyraSelect<
    * CSS positioning scheme the listbox is laid out with -- the one property `<lr-select>`,
    * `<lr-dropdown>` and `<lr-popover>` all spell the same way. `absolute` (this control's mirrored
    * default) positions against the nearest containing block and scrolls with it; `fixed` positions
-   * against the viewport and escapes most clipping ancestors. An unsupported value resolves back
+   * against the viewport and escapes most clipping ancestors, and escapes transformed, filtered or
+   * contained ancestors by promoting the listbox into the browser top layer where the native
+   * Popover API exists (otherwise, as before, such an ancestor contains and clips it). An
+   * unsupported value resolves back
    * to the default. Changes apply live while open.
    * This property reports only the instance's own authored value (or the mirrored default); the
    * listbox is actually placed with the `--lr-positioning-strategy` cascading custom property

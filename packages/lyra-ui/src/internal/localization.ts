@@ -817,6 +817,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   tourDone: 'Done',
   tourStepOf: 'Step {current} of {total}',
   emojiPickerSearchLabel: 'Search emoji',
+  emojiPickerSearchPlaceholder: 'Search emoji…',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'No emoji found',
   emojiPickerLoadError: 'Could not load emoji.',

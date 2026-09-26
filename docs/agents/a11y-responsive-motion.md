@@ -90,6 +90,16 @@ component and a release blocker for a new one.
   accessible label, recurse, and include only descendants whose computed visibility is restored;
   `isAccessibilityVisibilityHidden()` supplies that own-text check. The shared predicates live in
   `src/internal/accessibility-visibility.ts` and are re-exported from `internal/a11y.ts`.
+- A *supplementary* hover/focus disclosure (a tooltip-class surface: label, hint, preview or
+  detail content over a control) gates focus-opening on `isKeyboardFocusEvent()`
+  (`src/internal/focus-modality.ts`), which reads the deepest focused element, and keeps its
+  description wired on any focus. Keyboard focus means the focused element matches
+  `:focus-visible` and the window-level recorder saw no pointer press since the last counted key;
+  pointer, touch and scripted focus that follows a press never opens the surface or cancels its
+  pending hide. Reasoned exemptions keep opening on any focus:
+  - a control's primary editing popup (`lr-combobox`, `catalog-picker`/`lr-model-select`/`lr-voice-picker`);
+  - reveals of the focused control itself (`lr-message-actions`);
+  - value or selection feedback (`lr-slider` bubble, `lr-sequence-strip` readout).
 
 ## Native-control wrappers — preserve the useful native contract
 

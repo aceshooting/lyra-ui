@@ -1,0 +1,64 @@
+// The `charts` slice of the sl translation catalog for @aceshooting/lyra-ui: strings owned exclusively by `src/components/charts/**`.
+// A side-effect-only module: a consumer writes a bare
+// `import '@aceshooting/lyra-ui/translations/sl/charts';` and reads nothing from it. Keep the
+// keys in DEFAULT_STRINGS order -- `scripts/check-translations.mjs` enforces coverage, order,
+// placeholder names and the plural-category set for this slice, and a catalog that cannot be
+// diffed against another line-for-line is a catalog nobody will review.
+// Regenerate the SHAPE (never the translations) with:
+//   node scripts/scaffold-translation.mjs sl --force
+import { registerLyraLocale } from '../../internal/localization-runtime.js';
+import type { LyraLocaleStrings } from '../../internal/localization.js';
+
+const strings: LyraLocaleStrings = {
+  chartCategory: 'Kategorija',
+  chartTotal: 'Skupaj',
+  chartAxisTotal: '{axis} skupaj',
+  chartPrimaryAxis: 'Primarna os',
+  chartSecondaryAxis: 'Sekundarna os',
+  chartPointLabel: 'Točka {n}',
+  chartPointCoordinates: 'x {x}, y {y}',
+  chartBubblePointCoordinates: 'x {x}, y {y}, polmer {radius}',
+  chartLabeledPoint: '{label}: {coordinates}',
+  chartTrendIncreasing: 'naraščajoč',
+  chartTrendDecreasing: 'padajoč',
+  chartTrendFlat: 'nespremenjen',
+  chartSummary: '{label}: število vrednosti {count}, razpon od {min} do {max}, trend {trend}',
+  chartSeriesNoData: '{label}: ni podatkov',
+  chartSummaryWithData: 'Grafikon (vrsta: {type}). {summaries}.',
+  chartSummaryEmpty: 'Grafikon (vrsta: {type}) brez podatkov.',
+  chartSummarySeparator: '. ',
+  chartData: 'Podatki grafikona',
+  chartDataSampled: 'Ustvarjena podatkovna tabela prikazuje vzorec z največ 1.000 zapisi. Za dostop do vseh podatkov grafikona zagotovite lastno podatkovno tabelo.',
+  chartZoomUnavailable: 'Povečava ni na voljo, osnovni grafikon pa ostaja na voljo.',
+  chartDataLabelsUnavailable: 'Oznake podatkov niso na voljo, osnovni grafikon pa ostaja na voljo.',
+  chartStackTotalsUnavailable: 'Seštevki skladov niso na voljo, osnovni grafikon pa ostaja na voljo.',
+  chartAnnotationsUnavailable: 'Opombe grafikona niso na voljo, osnovni grafikon pa ostaja na voljo.',
+  chartTypeLine: 'Črtni',
+  chartTypeBar: 'Stolpčni',
+  chartTypeScatter: 'Raztreseni',
+  chartTypePie: 'Tortni',
+  chartTypeDoughnut: 'Kolobarni',
+  chartTypeRadar: 'Radarski',
+  chartTypePolarArea: 'Polarni ploščinski',
+  chartTypeBubble: 'Mehurčni',
+  boxPlotSeriesSummary: '{label}: število porazdelitev {count}, razpon median od {min} do {max}, trend mediane {trend}',
+  boxPlotSummaryWithData: 'Škatlasti diagram. {summaries}.',
+  boxPlotSummaryEmpty: 'Škatlasti diagram brez podatkov.',
+  boxPlotData: 'Podatki škatlastega diagrama',
+  chartSeriesLabel: 'Niz',
+  boxPlotMin: 'Min.',
+  boxPlotQ1: 'Q1',
+  boxPlotMedian: 'Mediana',
+  boxPlotQ3: 'Q3',
+  boxPlotMax: 'Maks.',
+  boxPlot: 'Škatlasti diagram',
+  histogramFrequency: 'Frekvenca',
+  liteChartMarkSummary: '{series}, {label}: {value} ({index} od {total})',
+  liteChartBarLabel: '{series}, {label}: {value}',
+  chartValuePercentageLabel: '{label}: {value} ({percentage})',
+  liteChartCustomMarkSummary: '{content} ({index} od {total})',
+  chartMissingLibrary: 'Ta komponenta za izris grafikonov potrebuje nameščen izbirni paket »chart.js«.',
+  boxPlotMissingLibrary: 'Ta komponenta za izris škatlastih diagramov potrebuje nameščen izbirni paket za škatlaste diagrame.',
+};
+
+registerLyraLocale('sl', strings);

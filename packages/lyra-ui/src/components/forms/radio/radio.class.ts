@@ -151,9 +151,10 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * @cssprop [--lr-radio-checked-dot-color=var(--lr-color-brand)] - Background of `[part='dot']`
  * while `checked`.
  * @cssprop [--lr-radio-hover-border-color=var(--lr-color-brand)] - Indicator border while the
- * interactive row is hovered.
+ * interactive row is hovered. While checked, unset falls back to `--lr-radio-checked-border-color`.
  * @cssprop [--lr-radio-active-border-color=var(--lr-radio-hover-border-color)] - Indicator border
- * while the interactive row is pressed.
+ * while the interactive row is pressed. While checked, unset falls back to
+ * `--lr-radio-checked-border-color`.
  * @cssprop [--lr-radio-active-ring-color=var(--lr-color-brand-quiet)] - Indicator ring while the
  * interactive row is pressed.
  * @cssprop [--checked-icon-color=var(--lr-radio-checked-dot-color)] - WA-compatible selected-glyph

@@ -4,6 +4,7 @@ import type {
   MessagePart,
 } from "../../../ai/types.js";
 import "./message-parts.js";
+import { renderedTemplateWhitespace, inMarkdownCodeBlock } from "../../../../test/rendered-whitespace.js";
 import type {
   LyraMessageParts,
   MessagePartsContentMode,
@@ -78,26 +79,16 @@ it("renders ordered provider-neutral message parts through existing Lyra primiti
     html`<lr-message-parts .parts=${parts}></lr-message-parts>`
   )) as LyraMessageParts;
   const rendered = el.shadowRoot!.querySelectorAll('[part~="part"]');
-  expect(rendered).to.have.lengthOf(parts.length);
+  expect(rendered.length).to.equal(parts.length);
   expect(
     Array.from(rendered).map((node) => node.getAttribute("data-type"))
   ).to.deep.equal(parts.map((part) => part.type));
-  expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(2);
-  expect(el.shadowRoot!.querySelectorAll("lr-thinking-panel")).to.have.lengthOf(
-    1
-  );
-  expect(el.shadowRoot!.querySelectorAll("lr-tool-call-chip")).to.have.lengthOf(
-    1
-  );
-  expect(
-    el.shadowRoot!.querySelectorAll("lr-tool-result-view")
-  ).to.have.lengthOf(1);
-  expect(el.shadowRoot!.querySelectorAll("lr-citation-badge")).to.have.lengthOf(
-    1
-  );
-  expect(
-    el.shadowRoot!.querySelectorAll("lr-attachment-chip")
-  ).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-markdown").length).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll("lr-thinking-panel").length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-tool-call-chip").length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-tool-result-view").length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-citation-badge").length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-attachment-chip").length).to.equal(1);
 });
 
 it("forwards streaming state to text and reasoning Markdown until each same-id part completes", async () => {
@@ -214,13 +205,18 @@ it("renders every part with no ceiling by default, even a very large count", asy
       text: `Chunk ${index}`,
     })
   );
+  // Plain content mode: the windowing contract under test is independent of how a text part
+  // renders, and 800 composed <lr-markdown> instances made this a multi-second WebKit fixture.
   const el = (await fixture(
-    html`<lr-message-parts .parts=${source}></lr-message-parts>`
+    html`<lr-message-parts content-mode="plain" .parts=${source}></lr-message-parts>`
   )) as LyraMessageParts;
   expect(el.maxRenderedParts).to.equal(0);
-  expect(
-    el.shadowRoot!.querySelectorAll('[part~="part"]')
-  ).to.have.lengthOf(800);
+  const rendered = [...el.shadowRoot!.querySelectorAll('[part~="part"]')];
+  expect(rendered.length).to.equal(800);
+  expect([rendered[0]?.textContent, rendered[799]?.textContent]).to.deep.equal([
+    "Chunk 0",
+    "Chunk 799",
+  ]);
 });
 
 it("windows to the newest N parts once max-rendered-parts opts in, keeping citation ranks stable against the full sequence", async () => {
@@ -247,7 +243,7 @@ it("windows to the newest N parts once max-rendered-parts opts in, keeping citat
   )) as LyraMessageParts;
   expect(el.maxRenderedParts).to.equal(4);
   const rendered = el.shadowRoot!.querySelectorAll('[part~="part"]');
-  expect(rendered).to.have.lengthOf(4);
+  expect(rendered.length).to.equal(4);
   // Newest 4 of 10 parts (indices 6..9), oldest 6 dropped.
   expect(
     Array.from(rendered, (node) => node.getAttribute("data-type"))
@@ -275,9 +271,7 @@ it("treats an explicit 0 the same as the unset default -- renders every part", a
       max-rendered-parts="0"
     ></lr-message-parts>`
   )) as LyraMessageParts;
-  expect(
-    el.shadowRoot!.querySelectorAll('[part~="part"]')
-  ).to.have.lengthOf(12);
+  expect(el.shadowRoot!.querySelectorAll('[part~="part"]').length).to.equal(12);
 });
 
 it("declares and preserves intentional composed child-event passthroughs", async () => {
@@ -341,8 +335,8 @@ it("supports host rendering overrides without changing the ordered data model", 
         ? html`<strong>Custom reasoning</strong>`
         : undefined}
   ></lr-message-parts>`)) as LyraMessageParts;
-  expect(el.shadowRoot!.querySelectorAll("strong")).to.have.lengthOf(1);
-  expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelectorAll("strong").length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-markdown").length).to.equal(1);
 });
 
 it("a renderPart override for an interactive part type fully replaces its built-in affordance, per its documented contract", async () => {
@@ -353,8 +347,8 @@ it("a renderPart override for an interactive part type fully replaces its built-
   ></lr-message-parts>`)) as LyraMessageParts;
   // The built-in `error` renderer would have produced a retry `lr-button` (part="retry") wired to
   // emit `lr-part-retry`; a defined renderPart return replaces it entirely, so neither exists.
-  expect(el.shadowRoot!.querySelectorAll("em")).to.have.lengthOf(1);
-  expect(el.shadowRoot!.querySelectorAll("lr-button")).to.have.lengthOf(0);
+  expect(el.shadowRoot!.querySelectorAll("em").length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-button").length).to.equal(0);
 });
 
 it("honors false literals for true-default rendering options", async () => {
@@ -367,13 +361,11 @@ it("honors false literals for true-default rendering options", async () => {
   )) as LyraMessageParts;
   expect(el.contentMode).to.equal("plain");
   expect(el.showReasoning).to.be.false;
-  expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(0);
+  expect(el.shadowRoot!.querySelectorAll("lr-markdown").length).to.equal(0);
   expect(
     el.shadowRoot!.querySelector('[data-type="text"]')?.textContent
   ).to.contain("Answer");
-  expect(
-    el.shadowRoot!.querySelectorAll('[data-type="reasoning"]')
-  ).to.have.lengthOf(0);
+  expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(0);
 });
 
 it("canonicalizes unsupported content modes to reflected markdown across direct, attribute, and lifecycle writes", async () => {
@@ -391,7 +383,7 @@ it("canonicalizes unsupported content modes to reflected markdown across direct,
 
   expect(el.contentMode).to.equal("markdown");
   expect(el.getAttribute("content-mode")).to.equal("markdown");
-  expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-markdown").length).to.equal(1);
 
   (el as unknown as { contentMode: unknown }).contentMode =
     "unsupported-direct-mode";
@@ -399,7 +391,7 @@ it("canonicalizes unsupported content modes to reflected markdown across direct,
 
   expect(el.contentMode).to.equal("markdown");
   expect(el.getAttribute("content-mode")).to.equal("markdown");
-  expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelectorAll("lr-markdown").length).to.equal(1);
 
   const lifecycle = document.createElement(
     "lr-message-parts"
@@ -494,7 +486,7 @@ it("uses safe public fallbacks for optional part fields and media sources", asyn
   };
 
   expect(reasoning.textContent).to.contain("Plain reasoning");
-  expect(reasoning.querySelectorAll("lr-markdown")).to.have.lengthOf(0);
+  expect(reasoning.querySelectorAll("lr-markdown").length).to.equal(0);
   expect([result.toolName, result.result, result.status]).to.deep.equal([
     "",
     null,
@@ -510,16 +502,14 @@ it("uses safe public fallbacks for optional part fields and media sources", asyn
   ]).to.deep.equal(["bare-document", "", "", false, "success"]);
   expect(renderer.document).to.deep.equal({ version: "2", root: widget });
   await renderer.updateComplete;
-  expect(renderer.shadowRoot!.querySelectorAll("lr-stat")).to.have.lengthOf(1);
+  expect(renderer.shadowRoot!.querySelectorAll("lr-stat").length).to.equal(1);
 
   const audio = el.shadowRoot!.querySelectorAll('audio[part="audio-control"]');
-  expect(audio).to.have.lengthOf(1);
+  expect(audio.length).to.equal(1);
   const source = audio[0]!.querySelector("source")!;
   expect(source.getAttribute("src")).to.equal("data:audio/wav;base64,UklGRg==");
   expect(source.getAttribute("type")).to.equal("audio/wav");
-  expect(
-    el.shadowRoot!.querySelectorAll('[part="audio-transcript"]')
-  ).to.have.lengthOf(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="audio-transcript"]').length).to.equal(0);
 });
 
 it("renders discriminated tool failures separately from an optional partial result", async () => {
@@ -561,7 +551,7 @@ it("uses first-wins identity for duplicate part ids", async () => {
     ></lr-message-parts>`
   )) as LyraMessageParts;
   const rendered = el.shadowRoot!.querySelectorAll('[part~="part"]');
-  expect(rendered).to.have.lengthOf(1);
+  expect(rendered.length).to.equal(1);
   expect(rendered[0]!.textContent?.trim()).to.equal("first");
 });
 
@@ -575,9 +565,7 @@ it("drops a tool-call part missing its invocation instead of throwing", async ()
   ];
   await el.updateComplete;
   expect(el.shadowRoot!.textContent).to.contain("kept");
-  expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(
-    1
-  );
+  expect(el.shadowRoot!.querySelectorAll('[part~="part"]').length).to.equal(1);
 });
 
 it("drops a citation part missing its citation instead of throwing", async () => {
@@ -590,9 +578,7 @@ it("drops a citation part missing its citation instead of throwing", async () =>
   ];
   await el.updateComplete;
   expect(el.shadowRoot!.textContent).to.contain("kept");
-  expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(
-    1
-  );
+  expect(el.shadowRoot!.querySelectorAll('[part~="part"]').length).to.equal(1);
 });
 
 it("drops an attachment part missing its document instead of throwing", async () => {
@@ -605,9 +591,7 @@ it("drops an attachment part missing its document instead of throwing", async ()
   ];
   await el.updateComplete;
   expect(el.shadowRoot!.textContent).to.contain("kept");
-  expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(
-    1
-  );
+  expect(el.shadowRoot!.querySelectorAll('[part~="part"]').length).to.equal(1);
 });
 
 it("applies per-instance strings to retry controls", async () => {
@@ -689,7 +673,7 @@ it("wraps ordinary and unbroken error text without overflowing, and centers retr
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="error"]'),
   ];
-  expect(rows).to.have.lengthOf(2);
+  expect(rows.length).to.equal(2);
 
   for (const row of rows) {
     const message = row.querySelector("span") as HTMLSpanElement | null;
@@ -869,9 +853,7 @@ it("is accessible with populated mixed content", async () => {
   const el = await fixture(
     html`<lr-message-parts .parts=${parts}></lr-message-parts>`
   );
-  expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(
-    parts.length
-  );
+  expect(el.shadowRoot!.querySelectorAll('[part~="part"]').length).to.equal(parts.length);
   await expect(el).to.be.accessible();
 });
 
@@ -907,7 +889,7 @@ it("uses one nonempty first-wins part projection for rendering and error announc
   await el.updateComplete;
 
   const rendered = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="part"]')];
-  expect(rendered).to.have.lengthOf(1);
+  expect(rendered.length).to.equal(1);
   expect(rendered[0]!.textContent).to.contain("First failure");
   expect(assertiveSinkTexts()).to.deep.equal(["First failure"]);
 });
@@ -939,9 +921,9 @@ describe('tool-display', () => {
     ></lr-message-parts>`)) as LyraMessageParts;
     expect(el.toolDisplay).to.equal('chip');
     expect(el.getAttribute('tool-display')).to.equal('chip');
-    expect(el.shadowRoot!.querySelectorAll('lr-tool-call-chip')).to.have.lengthOf(1);
-    expect(el.shadowRoot!.querySelectorAll('lr-tool-result-view')).to.have.lengthOf(1);
-    expect(blocks(el)).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-tool-call-chip').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('lr-tool-result-view').length).to.equal(1);
+    expect(blocks(el).length).to.equal(0);
     const view = el.shadowRoot!.querySelector('lr-tool-result-view') as HTMLElement & { result: unknown };
     const owned = el.parts[1] as { result: unknown };
     expect(view.result === owned.result).to.equal(true);
@@ -954,15 +936,15 @@ describe('tool-display', () => {
       .parts=${[call('call'), result('result')]}
     ></lr-message-parts>`)) as LyraMessageParts;
     const [block] = blocks(el);
-    expect(blocks(el)).to.have.lengthOf(1);
+    expect(blocks(el).length).to.equal(1);
     expect(block!.name).to.equal('search');
     expect(block!.callId).to.equal('call-1');
     expect(block!.args).to.deep.equal({ query: 'Lyra' });
     expect(block!.result).to.deep.equal({ hits: 2 });
     expect(block!.status).to.equal('success');
-    expect(wrappers(el, 'tool-result')).to.have.lengthOf(0);
-    expect(wrappers(el, 'tool-call')).to.have.lengthOf(1);
-    expect(el.shadowRoot!.querySelectorAll('lr-tool-call-chip')).to.have.lengthOf(0);
+    expect(wrappers(el, 'tool-result').length).to.equal(0);
+    expect(wrappers(el, 'tool-call').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('lr-tool-call-chip').length).to.equal(0);
   });
 
   it('keeps the same block instance and its user-expanded state when the result arrives', async () => {
@@ -1001,23 +983,23 @@ describe('tool-display', () => {
   it('renders unpaired, duplicate and windowed-out results on their own, and folds a result that precedes its call', async () => {
     const unpaired = (await fixture(html`<lr-message-parts tool-display="block"
       .parts=${[result('orphan', { invocationId: 'nobody' })]}></lr-message-parts>`)) as LyraMessageParts;
-    expect(wrappers(unpaired, 'tool-result')).to.have.lengthOf(1);
+    expect(wrappers(unpaired, 'tool-result').length).to.equal(1);
 
     const early = (await fixture(html`<lr-message-parts tool-display="block"
       .parts=${[result('r'), call('c')]}></lr-message-parts>`)) as LyraMessageParts;
-    expect(wrappers(early, 'tool-result')).to.have.lengthOf(0);
+    expect(wrappers(early, 'tool-result').length).to.equal(0);
     expect(blocks(early)[0]!.status).to.equal('success');
 
     const duplicate = (await fixture(html`<lr-message-parts tool-display="block"
       .parts=${[call('c'), result('r1'), result('r2', { result: { hits: 9 } })]}></lr-message-parts>`)) as LyraMessageParts;
-    expect(wrappers(duplicate, 'tool-result')).to.have.lengthOf(1);
+    expect(wrappers(duplicate, 'tool-result').length).to.equal(1);
     expect(blocks(duplicate)[0]!.result).to.deep.equal({ hits: 2 });
 
     const citation = (id: string): MessagePart => ({ id, type: 'citation', citation: { id, label: id } });
     const windowed = (await fixture(html`<lr-message-parts tool-display="block" max-rendered-parts="2"
       .parts=${[citation('cite-a'), call('c'), result('r'), citation('cite-b')]}></lr-message-parts>`)) as LyraMessageParts;
-    expect(blocks(windowed)).to.have.lengthOf(0);
-    expect(wrappers(windowed, 'tool-result')).to.have.lengthOf(1);
+    expect(blocks(windowed).length).to.equal(0);
+    expect(wrappers(windowed, 'tool-result').length).to.equal(1);
     const badge = windowed.shadowRoot!.querySelector('lr-citation-badge') as HTMLElement & { index: number };
     expect(badge.index).to.equal(2);
   });
@@ -1027,16 +1009,16 @@ describe('tool-display', () => {
       .parts=${[call('c'), result('r')]}
       .renderPart=${(part: MessagePart) => (part.type === 'tool-call' ? html`<em>custom call</em>` : undefined)}
     ></lr-message-parts>`)) as LyraMessageParts;
-    expect(blocks(customCall)).to.have.lengthOf(0);
-    expect(customCall.shadowRoot!.querySelectorAll('em')).to.have.lengthOf(1);
-    expect(wrappers(customCall, 'tool-result')).to.have.lengthOf(1);
+    expect(blocks(customCall).length).to.equal(0);
+    expect(customCall.shadowRoot!.querySelectorAll('em').length).to.equal(1);
+    expect(wrappers(customCall, 'tool-result').length).to.equal(1);
 
     const customResult = (await fixture(html`<lr-message-parts tool-display="block"
       .parts=${[call('c', { result: { own: true } }), result('r')]}
       .renderPart=${(part: MessagePart) => (part.type === 'tool-result' ? html`<em>custom result</em>` : undefined)}
     ></lr-message-parts>`)) as LyraMessageParts;
     expect(blocks(customResult)[0]!.result).to.deep.equal({ own: true });
-    expect(customResult.shadowRoot!.querySelectorAll('em')).to.have.lengthOf(1);
+    expect(customResult.shadowRoot!.querySelectorAll('em').length).to.equal(1);
   });
 
   it('normalizes an unsupported tool display to reflected chip', async () => {
@@ -1209,5 +1191,124 @@ describe('tool-display', () => {
     await waitUntil(() => details.length > 0, 'block render error reaches the host');
     expect(details[0]!['callId']).to.equal('call-1');
     expect(details[0]!['toolName']).to.equal(name);
+  });
+});
+
+describe("lr-message-parts rendered whitespace, code direction and code headers", () => {
+  type Parts = HTMLElement & { parts: readonly MessagePart[]; updateComplete: Promise<boolean> };
+  const markdownIn = (el: Parts): Array<HTMLElement & { content: string; shadowRoot: ShadowRoot }> =>
+    [...el.shadowRoot!.querySelectorAll("lr-markdown")] as Array<HTMLElement & { content: string; shadowRoot: ShadowRoot }>;
+  const contentText = (markdown: HTMLElement): string =>
+    markdown.shadowRoot!.querySelector('[part="content"]')?.textContent ?? "";
+  const whitespace = (el: Parts): string[] => renderedTemplateWhitespace(el.shadowRoot!, { allow: inMarkdownCodeBlock });
+
+  it("renders a streaming text part's growing plain text exactly", async () => {
+    const el = await fixture<Parts>(html`<lr-message-parts></lr-message-parts>`);
+    let text = "";
+    for (const chunk of ["Hello", " there,", "\n```js\nconst a = 1;\n", "```\ndone"]) {
+      text += chunk;
+      el.parts = [{ id: "answer", type: "text", state: "streaming", text }];
+      await el.updateComplete;
+      const [markdown] = markdownIn(el);
+      await waitUntil(() => contentText(markdown!) === text, `streamed text never rendered: ${JSON.stringify(text)}`);
+      expect(whitespace(el)).to.deep.equal([]);
+    }
+  });
+
+  it("renders a streaming reasoning part inside the thinking panel exactly", async () => {
+    const el = await fixture<Parts>(html`<lr-message-parts></lr-message-parts>`);
+    let text = "";
+    for (const chunk of ["Checking", " the sources", "\nthen `--flag`", " again"]) {
+      text += chunk;
+      el.parts = [{ id: "thought", type: "reasoning", state: "streaming", collapsed: false, text }];
+      await el.updateComplete;
+      const markdown = el.shadowRoot!.querySelector("lr-thinking-panel")?.querySelector("lr-markdown")
+        ?? markdownIn(el)[0];
+      await waitUntil(() => contentText(markdown!) === text, `streamed reasoning never rendered: ${JSON.stringify(text)}`);
+      expect(whitespace(el)).to.deep.equal([]);
+    }
+  });
+
+  it("parses a completed part and drops the streaming part token", async () => {
+    const el = await fixture<Parts>(html`<lr-message-parts></lr-message-parts>`);
+    el.parts = [{ id: "answer", type: "text", state: "streaming", text: "**Bold** answer" }];
+    await el.updateComplete;
+    el.parts = [{ id: "answer", type: "text", state: "complete", text: "**Bold** answer" }];
+    await el.updateComplete;
+    const [markdown] = markdownIn(el);
+    await waitUntil(() => Boolean(markdown!.shadowRoot!.querySelector("strong")), "completed part never parsed");
+    expect(whitespace(el)).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part~="part-streaming"]').length).to.equal(0);
+  });
+
+  it("adds no template whitespace inside a consumer pre-wrap container", async () => {
+    const cases: Array<[string, MessagePart]> = [
+      ["markdown", { id: "t", type: "text", state: "streaming", text: "Streaming reply" }],
+      ["plain", { id: "t", type: "text", text: "Hello" }],
+    ];
+    for (const [mode, part] of cases) {
+      const wrapper = await fixture<HTMLElement>(html`<div>
+        <div style="white-space: pre-wrap"><lr-message-parts content-mode=${mode} .parts=${[part]}></lr-message-parts></div>
+        <div><lr-message-parts content-mode=${mode} .parts=${[part]}></lr-message-parts></div>
+      </div>`);
+      const [preserved, normal] = [...wrapper.querySelectorAll("lr-message-parts")] as Parts[];
+      await preserved!.updateComplete;
+      await normal!.updateComplete;
+      if (mode === "markdown") await waitUntil(() => contentText(markdownIn(preserved!)[0]!) === "Streaming reply");
+      expect(whitespace(preserved!), mode).to.deep.equal([]);
+      expect(Math.abs(preserved!.getBoundingClientRect().height - normal!.getBoundingClientRect().height), mode).to.be.at.most(1);
+      if (mode === "plain") await expect(preserved!).to.be.accessible();
+    }
+    const lines = await fixture<HTMLElement>(html`<div style="white-space: pre-wrap">
+      <lr-message-parts content-mode="plain" .parts=${[{ id: "t", type: "text", text: "a" }]}></lr-message-parts><lr-message-parts content-mode="plain" .parts=${[{ id: "t", type: "text", text: "a\nb" }]}></lr-message-parts>
+    </div>`);
+    const [one, two] = [...lines.querySelectorAll("lr-message-parts")] as Parts[];
+    await one!.updateComplete;
+    await two!.updateComplete;
+    const height = (el: Parts): number => el.shadowRoot!.querySelector<HTMLElement>('[part~="part"]')!.getBoundingClientRect().height;
+    expect(Math.abs(height(two!) - 2 * height(one!))).to.be.at.most(1);
+  });
+
+  it("keeps built-in text and reasoning code left-to-right under RTL", async () => {
+    const host = await fixture<HTMLElement>(html`<div dir="rtl"></div>`);
+    const el = document.createElement("lr-message-parts") as Parts;
+    el.parts = [
+      { id: "thought", type: "reasoning", collapsed: false, text: "فحص `--flag`" },
+      { id: "answer", type: "text", state: "streaming", text: "نص\n```js\nconst a = 1;\n" },
+    ];
+    host.append(el);
+    await el.updateComplete;
+    const markdown = markdownIn(el);
+    await waitUntil(() => markdown.every((node) => Boolean(node.shadowRoot?.querySelector('[part="inline-code"], .fallback-code'))));
+    const code = markdown.map((node) => node.shadowRoot!.querySelector<HTMLElement>('[part="inline-code"], .fallback-code')!);
+    expect(code.map((node) => getComputedStyle(node).direction)).to.deep.equal(["ltr", "ltr"]);
+    el.parts = [el.parts[0]!, { id: "answer", type: "text", state: "complete", text: "نص\n```js\nconst a = 1;\n```" }];
+    await el.updateComplete;
+    await waitUntil(() => Boolean(markdownIn(el)[1]?.shadowRoot?.querySelector('pre[part~="code-block"]')));
+    expect(getComputedStyle(markdownIn(el)[1]!.shadowRoot!.querySelector('pre[part~="code-block"]')!).direction).to.equal("ltr");
+    await expect(el).to.be.accessible();
+  });
+
+  it("forwards code-block headers to text and reasoning parts and passes lr-copy through", async () => {
+    const plain = await fixture<Parts>(html`<lr-message-parts .parts=${[{ id: "a", type: "text", text: "```js\nx\n```" }]}></lr-message-parts>`);
+    await waitUntil(() => Boolean(markdownIn(plain)[0]?.shadowRoot?.querySelector('pre[part~="code-block"]')));
+    expect(markdownIn(plain)[0]!.shadowRoot!.querySelectorAll('[part~="code-block-frame"]').length).to.equal(0);
+
+    const el = await fixture<Parts>(html`<lr-message-parts code-block-header .parts=${[
+      { id: "r", type: "reasoning", collapsed: false, text: "```ts\nreasoned();\n```" },
+      { id: "a", type: "text", text: "```js\nanswer();\n```" },
+    ]}></lr-message-parts>`);
+    await waitUntil(() => markdownIn(el).length === 2 && markdownIn(el).every((node) => Boolean(node.shadowRoot?.querySelector('[part="code-block-copy"]'))), "headers never rendered");
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => undefined } });
+    try {
+      const copied = oneEvent(el, "lr-copy");
+      markdownIn(el)[1]!.shadowRoot!.querySelector<HTMLButtonElement>('[part="code-block-copy"]')!.click();
+      const event = (await copied) as CustomEvent<{ ok: boolean; text: string }>;
+      expect(event.detail.text).to.equal("answer();");
+    } finally {
+      if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
   });
 });

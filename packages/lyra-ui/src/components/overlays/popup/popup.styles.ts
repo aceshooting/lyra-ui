@@ -30,15 +30,21 @@ export const styles = css`
     max-block-size: var(--lr-positioner-available-block-size, none);
     visibility: visible;
     opacity: 1;
+    /* Opacity fades; visibility never interpolates. A discrete visibility transition still reads
+       its start value ('hidden') at progress 0, so an engine that samples the style in the same
+       task as activation would report an active popup as hidden. On show it therefore flips at
+       once, and on hide it holds 'visible' through the fade and flips when the fade ends. */
     transition-property: opacity, visibility;
-    transition-duration: var(--show-duration, var(--lr-duration-fast));
+    transition-duration: var(--show-duration, var(--lr-duration-fast)), 0s;
+    transition-delay: 0s, 0s;
     transition-timing-function: var(--lr-easing-standard);
   }
   [part~='popup']:not([data-active]) {
     visibility: hidden;
     opacity: 0;
     pointer-events: none;
-    transition-duration: var(--hide-duration, var(--lr-duration-fast));
+    transition-duration: var(--hide-duration, var(--lr-duration-fast)), 0s;
+    transition-delay: 0s, var(--hide-duration, var(--lr-duration-fast));
   }
   [part~='popup'][data-awaits-position] {
     /* An active request without a live, placed anchor is not a hide transition -- fading the old

@@ -147,6 +147,23 @@ for (const template of [
   );
 }
 
+// The fallback isolates recognizable code runs so code reads left-to-right under RTL before the
+// parser peers load. The server markup must segment them, keep the code escaped, and never claim a
+// parsed code block.
+{
+  const content = 'Use `--verbose` here\n```html\n<script>alert(1)</script>\n```\n';
+  const markdownHtml = await collectResult(
+    render(html`<lr-markdown .content=${content}></lr-markdown>`, {
+      elementRenderers: animatedImageContext.elementRenderers,
+    })
+  );
+  assert.match(markdownHtml, /class="fallback-code"/, 'lr-markdown SSR fallback must isolate fenced code');
+  assert.match(markdownHtml, /class="fallback-inline-code"/, 'lr-markdown SSR fallback must isolate inline code');
+  assert.match(markdownHtml, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/, 'lr-markdown SSR fallback must escape code');
+  assert.doesNotMatch(markdownHtml, /<script>alert/, 'lr-markdown SSR fallback must never emit authored markup');
+  assert.doesNotMatch(markdownHtml, /part="code-block"/, 'lr-markdown SSR fallback must not claim a parsed code block');
+}
+
 // Checkbox seeds browser slot-presence state on its first connection. Keep that optimization from
 // making server rendering depend on a browser-owned render root or light-DOM child collections.
 const checkboxHtml = await renderSsrProbe(

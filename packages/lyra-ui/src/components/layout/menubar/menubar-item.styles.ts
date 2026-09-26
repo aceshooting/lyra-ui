@@ -9,42 +9,15 @@ export const styles = css`
     outline: none;
     border-radius: var(--lr-form-control-radius);
   }
-  :host([data-size='2xs']) {
-    --lr-form-control-height: var(--lr-theme-form-control-height-2xs, var(--lr-size-1-25rem));
-    --lr-form-control-font-size: var(--lr-font-size-2xs);
-    --lr-form-control-padding-inline: var(--lr-space-2xs);
-    --lr-form-control-padding-block: 0;
-  }
-  :host([data-size='xs']) {
-    --lr-form-control-height: var(--lr-theme-form-control-height-xs, var(--lr-size-1-5rem));
-    --lr-form-control-font-size: var(--lr-font-size-xs);
-    --lr-form-control-padding-inline: var(--lr-space-xs);
-    --lr-form-control-padding-block: 0;
-  }
-  :host([data-size='s']) {
-    --lr-form-control-height: var(--lr-theme-form-control-height-s, var(--lr-size-1-875rem));
-    --lr-form-control-font-size: var(--lr-font-size-sm);
-    --lr-form-control-padding-inline: var(--lr-space-s);
-    --lr-form-control-padding-block: var(--lr-space-2xs);
-  }
-  :host([data-size='l']) {
-    --lr-form-control-height: var(--lr-theme-form-control-height-l, var(--lr-size-3rem));
-    --lr-form-control-font-size: var(--lr-font-size-lg);
-    --lr-form-control-padding-inline: var(--lr-space-l);
-    --lr-form-control-padding-block: var(--lr-space-s);
-  }
-  :host([data-size='xl']) {
-    --lr-form-control-height: var(--lr-theme-form-control-height-xl, var(--lr-size-3-5rem));
-    --lr-form-control-font-size: var(--lr-font-size-xl);
-    --lr-form-control-padding-inline: var(--lr-space-l);
-    --lr-form-control-padding-block: var(--lr-space-s);
-  }
   [part='base'] {
     display: flex;
     align-items: center;
     box-sizing: border-box;
     min-inline-size: var(--lr-size-24px);
-    min-block-size: max(var(--lr-form-control-height), var(--lr-size-24px));
+    min-block-size: max(
+      calc(var(--lr-form-control-height) - 2 * var(--lr-form-control-padding-block) - 2 * var(--lr-border-width-thin)),
+      var(--lr-size-24px)
+    );
     padding-block: 0;
     padding-inline: var(--lr-form-control-padding-inline);
     border-radius: var(--lr-form-control-radius);
@@ -67,16 +40,7 @@ export const styles = css`
   :host(:where([aria-expanded='true'])) [part='base'] {
     background: var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet));
   }
-  :host(:focus-visible) [part='base'] {
-    background: var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet));
-  }
-  [part='base'][data-focus-visible] {
-    background: var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet));
-  }
   :host(:where(:active:not([disabled]))) [part='base'] {
-    background: var(--lr-menubar-item-active-bg, color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
-  }
-  [part='base'][data-pressed] {
     background: var(--lr-menubar-item-active-bg, color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   :host(:focus-visible) [part='base'] {

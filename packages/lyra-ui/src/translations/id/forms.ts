@@ -84,6 +84,7 @@ const strings: LyraLocaleStrings = {
   colorPickerCurrentValue: 'Warna saat ini: {color}',
   selectSelectedOverflow: '+{n} lainnya',
   emojiPickerSearchLabel: 'Cari emoji',
+  emojiPickerSearchPlaceholder: 'Cari emoji…',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Emoji tidak ditemukan',
   emojiPickerLoadError: 'Tidak dapat memuat emoji.',

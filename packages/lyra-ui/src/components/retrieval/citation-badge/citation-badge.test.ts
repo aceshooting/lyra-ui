@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './citation-badge.js';
 import type { LyraCitationBadge } from './citation-badge.js';
 
@@ -306,7 +307,7 @@ describe('hover/focus preview popover', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(popover.hidden).to.be.false;
 
@@ -323,7 +324,7 @@ describe('hover/focus preview popover', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     wrapper.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
     await el.updateComplete;
     expect(popover.hidden).to.be.false;
@@ -357,7 +358,7 @@ describe('hover/focus preview popover', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(popover.hidden).to.be.false;
 
@@ -394,7 +395,7 @@ describe('hover/focus preview popover', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
 
-    base.focus();
+    await focusByKeyboard(base);
     await el.updateComplete;
     expect(popover.hidden).to.be.false;
 
@@ -441,7 +442,7 @@ it('is accessible in a populated state with status, href, and an open preview po
     </lr-citation-badge>
   `)) as LyraCitationBadge;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
-  base.focus();
+  await focusByKeyboard(base);
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -454,7 +455,7 @@ it('clamps its focused floating surface width through the shared popover-viewpor
   `)) as LyraCitationBadge;
   const base = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!;
   const popover = el.shadowRoot!.querySelector<HTMLElement>('[part="popover"]')!;
-  base.focus();
+  await focusByKeyboard(base);
   await waitUntil(
     () => !popover.hidden,
     'the focused citation badge did not open its preview'
@@ -477,4 +478,29 @@ it('formats the visible and accessible citation index with the effective locale'
   const formatted = new Intl.NumberFormat('ar-EG').format(3);
   expect(el.shadowRoot!.querySelector('[part="index"]')!.textContent).to.equal(formatted);
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.include(formatted);
+});
+
+describe('keyboard-only preview focus', () => {
+  it('opens and holds on keyboard focus, but not on pointer-then-script focus', async () => {
+    const el = (await fixture(
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
+    )) as LyraCitationBadge;
+    const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+
+    await focusByKeyboard(base);
+    wrapper.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    wrapper.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    await aTimeout(400);
+    expect(popover.hidden, 'keyboard focus holds it after pointer leave').to.equal(false);
+    base.blur();
+    await el.updateComplete;
+    expect(popover.hidden).to.equal(true);
+
+    await focusAfterPointer(base);
+    await el.updateComplete;
+    expect(popover.hidden, 'pointer-then-script focus opens nothing').to.equal(true);
+    base.blur();
+  });
 });

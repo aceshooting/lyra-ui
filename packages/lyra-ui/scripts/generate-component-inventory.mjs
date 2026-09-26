@@ -7551,13 +7551,13 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
           memberKind: 'attribute',
           member: 'label',
           upstream: '',
-          target: 'localized file picker label',
+          target: 'unset: no form-control label, rendered identically to the empty upstream default',
         },
         {
           memberKind: 'property',
           member: 'label',
           upstream: '',
-          target: 'localized file picker label',
+          target: 'unset: no form-control label, rendered identically to the empty upstream default',
         },
       ],
       cancelabilityEquivalences: [

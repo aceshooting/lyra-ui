@@ -2,6 +2,12 @@ import { expect } from '@open-wc/testing';
 import './all.js';
 import { ROOT_BARREL_TAGS } from './internal/root-registration-allowlist.js';
 import { renderedTemplateWhitespace } from '../test/rendered-whitespace.js';
+import { trackInputModality } from './internal/focus-modality.js';
+
+// The input-modality recorder arms three passive listeners on each window once, for the window's
+// lifetime; it is not a per-element leak. Pre-arming keeps the window/document listener tally
+// below independent of which describe block connects the first Lyra element.
+before(() => trackInputModality(document));
 
 /**
  * Universal lifecycle contracts, applied uniformly to every tag the all.js

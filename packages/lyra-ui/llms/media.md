@@ -1185,8 +1185,9 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 
 Removing `label` or `hint` consumes it as absent without changing the property's `null` readback. An
 explicit empty string remains empty. Text chrome and label/description associations disappear when
-no corresponding slot or explicit presence hint remains, and a later value restores them. Removing
-the label leaves the localized dropzone instruction available. Disabled file removal buttons,
+no corresponding slot or explicit presence hint remains, and a later value restores them. The
+form label (`label`) and the dropzone instruction are independent surfaces: setting, clearing or
+removing `label` never changes the dropzone text. Disabled file removal buttons,
 including fieldset disablement, retain resting foreground and background under hover and press;
 enabled buttons retain pointer feedback.
 
@@ -1246,17 +1247,15 @@ enabled buttons retain pointer feedback.
   `nonRetaining` is `false`.
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
-- `compact: boolean = false` (reflected) — tighter dropzone padding, gap and label font for
+- `compact: boolean = false` (reflected) — tighter dropzone padding, gap and dropzone instruction font for
   constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
-- `label?: string` — form-control label. Omission uses the localized dropzone instruction
-  (`fileInputDefaultLabel`); an explicit empty string suppresses the form-label chrome too. The
-  dropzone independently keeps its localized instruction when a form label is supplied or empty,
-  so a short label such as “Reference files” does not replace the drop-or-browse text. Use the
-  `dropzone` slot when you want to replace that instruction. With no nonempty label, that localized
-  instruction also supplies the fallback accessible name unless `accessibleLabel` or host
-  `aria-label` is provided. `hint: string = ''`
+- `label?: string` — form-control label, rendered in `form-control-label` and naming the dropzone
+  button (unless `accessible-label`/host `aria-label` is set). It never replaces the dropzone
+  instruction — customize that with the `dropzone` slot or the `fileInputDefaultLabel` string.
+  Omitted, `''` and whitespace-only values render identically: no visible label, and the button is
+  named by the localized instruction. `hint: string = ''`
   remains empty when omitted and can be supplied through the named slot as well
 - `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
   it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
@@ -1296,8 +1295,10 @@ enabled buttons retain pointer feedback.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
   is anchored; assign `undefined` to restore the default focusable base
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
-  dropzone/button accessible name without changing visible copy
+- `accessibleLabel: string = ''` (attribute `accessible-label`) — accessible name forwarded to the
+  semantic dropzone and native file input, without changing visible copy. A host `aria-label` wins
+  over it. When neither is set, the form label (`label` or the `label` slot) names the dropzone,
+  then the localized instruction
 - `acceptedMessage?: string` (attribute `accepted-message`) — live-region message after an
   accepted selection; `{count}` is replaced with the accepted count. Absence uses the localized
   singular/plural `fileInputAcceptedOne`/`fileInputAcceptedMany` default. Every explicit string,
@@ -1347,12 +1348,27 @@ caller-supplied data, never localized itself. The same per-reason text is announ
 the region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
-content; `label`, `hint`, and `error` supply form chrome. The semantic button's accessible name comes from
-`accessibleLabel`/host `aria-label`,
-then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
+content; `label`, `hint`, and `error` supply form chrome. Slotted dropzone content does not name the
+control: the semantic button's accessible name comes from a host `aria-label`/`accessible-label`,
+then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
+content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
 content still activates the dropzone.
+
+**Form label vs. dropzone instruction.** The two are separate surfaces; pick one of these patterns:
+
+- `label` plus the default instruction: `<lr-file-input label="Reference files">` shows the form
+  label above the localized drop-or-browse text.
+- `label` plus a custom instruction: add `<span slot="dropzone">Drop PDFs here or browse</span>`.
+- App-wide or per-instance copy: override `fileInputDefaultLabel` through `registerLyraLocale()` or
+  `.strings`.
+- Icon-only: a slotted glyph plus a host `aria-label` (the `AccessibleNameOverride` story).
+
+Custom slotted text without a `label` should carry a matching host `aria-label`, so the accessible
+name contains the visible text. A component that renders `lr-file-input` inside its own shadow root
+must slot that copy itself, because per-instance `.strings` does not cascade into nested components;
+`lr-eval-dataset` is the in-library example.
 
 The semantic button describes its rendered owned error and hint in that order. A supplied
 `errorText` or `error` slot marks it `aria-invalid="true"`; a required intrinsic message appears
@@ -1665,7 +1681,9 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 **Properties:**
 
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
-  `zoomStep: number = 0.25` — bounded, finite zoom configuration
+  `zoomStep: number = 0.25` — bounded, finite zoom configuration. Lyra anchored overlays opened in
+  zoomed content (dropdowns, tooltips, popovers, selects) align with their trigger at any zoom, with
+  either strategy, and render at UI scale rather than at the content's zoom
 - `src: string = ''` and `alt: string = ''` — optional safe image source. A rejected URL is treated
   as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
 - `fit: LyraImageFit = 'actual'` (reflected) — base sizing policy for an image supplied through
@@ -2333,7 +2351,7 @@ fallback slot while it is the winning tier), `image` (the `<img>`, only while a 
 **Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
 `--lr-avatar-size` (default `var(--lr-size-3rem)`, with a private default stepped across the ladder
 from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl`), `--lr-avatar-bg` (default
-`var(--lr-color-border)`, whose private default changes for a non-neutral `variant` to that
+`var(--lr-color-neutral-fill-quiet)`, the same quiet fill tier the variants use, whose private default changes for a non-neutral `variant` to that
 variant's `-quiet` fill; there is no `--lr-color-surface-alt` token in this library, despite what
 older copies of this page claimed), `--lr-avatar-color` (default `var(--lr-color-text)`, whose
 private default changes for a non-neutral `variant` to that variant's loud color),
@@ -2613,7 +2631,7 @@ a logical `margin-inline-start`, so it auto-mirrors
 under `dir="rtl"` — setting `0` or a positive length turns the stack into normal spacing),
 `--lr-avatar-group-ring-color` (default `var(--lr-color-surface)`),
 `--lr-avatar-group-ring-width` (default `var(--lr-border-width-medium)`),
-`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, with a private default that follows
+`--lr-avatar-group-badge-bg` (default `var(--lr-color-neutral-fill-quiet)`, with a private default that follows
 `variant`), `--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, with a private default
 that follows `variant`),
 `--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-m)`) — the font size of the "+N"
@@ -3258,7 +3276,8 @@ are not playlist items.
 
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
 `var(--lr-color-brand)`) and `--lr-video-playlist-item-current-background` (default
-`var(--lr-color-brand-fill-quiet)`) style the active playlist row.
+`var(--lr-color-brand-fill-quiet)`) style the active playlist row, and are kept under the pointer:
+its hover and press mix from the current background rather than the plain-row surface.
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an

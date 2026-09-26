@@ -421,13 +421,39 @@
     },
     {
       "id": "codeblock--default",
-      "profile": "standard"
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Under a right-to-left host the code body now stays left-to-right (direction: ltr; unicode-bidi: isolate), so its lines start at the left edge and a long line's scroll origin is the start of the code instead of its right-hand end; the header keeps the page direction. The rtl capture reflects that intentional change and awaits human visual review."
+    },
+    {
+      "id": "codeblock--right-to-left",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new right-to-left fixture (left-to-right code body opening at the start of the code, c++ badge and ./src/main.cpp file name in character order, header in page direction) is enrolled as automated evidence and awaits human visual review before its baseline is promoted."
     },
     {
       "id": "markdown--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
-      "comparisonReason": "The v8 markdown API replaced the sanitize boolean with a tri-state html-mode attribute; the story copy now documents html-mode=\"trusted\" instead of .sanitize=${false}. The current capture reflects that intentional content change and awaits human visual review."
+      "comparisonReason": "The v8 markdown API replaced the sanitize boolean with a tri-state html-mode attribute; the story copy now documents html-mode=\"trusted\" instead of .sanitize=${false}. The current capture reflects that intentional content change and awaits human visual review. The rtl capture additionally changes because inline code now isolates left-to-right (direction: ltr; unicode-bidi: isolate) inside right-to-left prose, so a code span's dashes and punctuation keep their source order; that intentional change also awaits human visual review."
+    },
+    {
+      "id": "markdown--task-lists",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new GFM task-list fixture (mixed, all-task, loose, nested and ordered lists with checked and unchecked read-only boxes, LTR and RTL) is enrolled as automated evidence and awaits human visual review before its baseline is promoted; after promotion a dropped check glyph, lost fill or broken bullet-gutter hang fails as a pixel mismatch."
+    },
+    {
+      "id": "markdown--wide-gfm-tables",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new GFM table fixture (word-wrapping prose cell, GFM column alignment and a six-column identifier table scrolling inside its keyboard-focusable table-wrapper at 390px, LTR and RTL) is enrolled as automated evidence and awaits human visual review before its baseline is promoted."
+    },
+    {
+      "id": "markdown--right-to-left-code",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new right-to-left code fixture (Arabic prose with left-to-right inline, fenced and indented code, a code-block header, and an authored Arabic <pre>) is enrolled as automated evidence and awaits human visual review before its baseline is promoted."
     },
     {
       "id": "documentviewer-csvviewer--quoted-fields",
@@ -461,7 +487,7 @@
       "id": "documentviewer-notebookviewer--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
-      "comparisonReason": "The virtualized cell's stream-output part now carries direction: ltr; unicode-bidi: isolate, matching the code-input block rendered above it, instead of inheriting the ambient RTL host direction and right-aligning independently of the input. The current rtl capture reflects that fix and awaits human visual review."
+      "comparisonReason": "The virtualized cell's stream-output part now carries direction: ltr; unicode-bidi: isolate, matching the code-input block rendered above it, instead of inheriting the ambient RTL host direction and right-aligning independently of the input. The current rtl capture reflects that fix and awaits human visual review. The rtl capture additionally changes because rendered Markdown code in notebook cells now reads left-to-right (direction: ltr; unicode-bidi: isolate) under a right-to-left host; that intentional change also awaits human visual review."
     },
     {
       "id": "neighbor-list--default",
@@ -534,6 +560,18 @@
       "comparisonReason": "This new 320px RTL retryable error fixture is enrolled as automated evidence pending human visual review."
     },
     {
+      "id": "message-parts--right-to-left-code",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new right-to-left fixture (text and expanded reasoning parts whose inline and fenced Markdown code reads left-to-right) is enrolled as automated evidence and awaits human visual review before its baseline is promoted."
+    },
+    {
+      "id": "streamingtext--right-to-left-code-stream",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new right-to-left stream fixture is captured after the harness runs its timer-driven stream to completion (the settled Markdown with left-to-right inline and fenced code); it is enrolled as automated evidence and awaits human visual review before its baseline is promoted."
+    },
+    {
       "id": "navigation-tree-node--declarative",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
@@ -566,6 +604,19 @@
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "layout-menubar--default",
+      "profile": "forced-colors-state",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New lr-menubar open-state fixture enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "layout-menubar--narrow",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New lr-menubar 320px wrap fixture enrolled as automated evidence pending human visual review."
     },
     {
       "id": "layout-navigation-menu--open-panel",
@@ -708,7 +759,8 @@
       "chunk-inspector--default"
     ],
     "lr-code-block": [
-      "codeblock--default"
+      "codeblock--default",
+      "codeblock--right-to-left"
     ],
     "lr-color-picker": [
       "form-color-picker--open",
@@ -774,16 +826,27 @@
       "map--default"
     ],
     "lr-markdown": [
-      "markdown--default"
+      "markdown--default",
+      "markdown--task-lists",
+      "markdown--wide-gfm-tables",
+      "markdown--right-to-left-code"
     ],
     "lr-message-parts": [
-      "message-parts--narrow-error-retry"
+      "message-parts--narrow-error-retry",
+      "message-parts--right-to-left-code"
     ],
     "lr-menu": [
       "menu--standalone-mapped-menu"
     ],
     "lr-menu-label": [
       "layout-menu-label--default"
+    ],
+    "lr-menubar": [
+      "layout-menubar--default",
+      "layout-menubar--narrow"
+    ],
+    "lr-menubar-item": [
+      "layout-menubar--default"
     ],
     "lr-native-time-input": [
       "input-native-time-input--default"
@@ -932,6 +995,9 @@
     "lr-navigation-menu-item": [
       "layout-navigation-menu--open-panel",
       "layout-navigation-menu--collapsed-expanded"
+    ],
+    "lr-streaming-text": [
+      "streamingtext--right-to-left-code-stream"
     ]
   },
   "untaggedStories": {

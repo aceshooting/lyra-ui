@@ -587,3 +587,34 @@ it('registers and upgrades the copy button it renders, through its own entry poi
   ).to.be.true;
   expect(copy!.value).to.equal('copy me');
 });
+
+const isWebKit = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent);
+
+function glyphRect(root: Node, needle: string): DOMRect {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const index = (node as Text).data.indexOf(needle);
+    if (index === -1) continue;
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + needle.length);
+    return range.getClientRects()[0] ?? range.getBoundingClientRect();
+  }
+  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
+}
+
+it('gives each fallback-text line its own first-strong direction under RTL', async () => {
+  const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 360px">
+    <lr-tool-result-view tool-name="unregistered" fallback="text" .result=${'{"ok": true}\nتم التنفيذ'}></lr-tool-result-view>
+  </div>`);
+  const el = host.querySelector('lr-tool-result-view') as LyraToolResultView;
+  await el.updateComplete;
+  const pre = base(el).querySelector<HTMLElement>('[part="fallback-text"]')!;
+  expect(getComputedStyle(pre).unicodeBidi).to.equal('plaintext');
+  const box = pre.getBoundingClientRect();
+  const style = getComputedStyle(pre);
+  expect(glyphRect(pre, '{').left - (box.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth))).to.be.at.most(2);
+  // WebKit resolves `unicode-bidi: plaintext` once from the block's first strong character rather
+  // than per line, so the per-line right-to-left behavior is asserted only where engines implement it.
+  if (!isWebKit) expect((box.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth)) - glyphRect(pre, 'تم').right).to.be.at.most(2);
+});

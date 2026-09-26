@@ -27,7 +27,7 @@ import { loadEmojiDataCached } from './emoji-data-loader.js';
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_emojiPickerSearchPlaceholder, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { EmojiPickerItem, EmojiPickerGroup };
@@ -338,6 +338,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     emojiPickerGroupUnknown: LYRA_DEFAULT_emojiPickerGroupUnknown,
     emojiPickerLoadError: LYRA_DEFAULT_emojiPickerLoadError,
     emojiPickerSearchLabel: LYRA_DEFAULT_emojiPickerSearchLabel,
+    emojiPickerSearchPlaceholder: LYRA_DEFAULT_emojiPickerSearchPlaceholder,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     item: LYRA_DEFAULT_item,
     map: LYRA_DEFAULT_map,
@@ -408,6 +409,12 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   /** Accessible name forwarded from the host to the internal emoji listbox. Omission falls back
    *  to the visible label or localized default; an explicitly empty host attribute stays empty. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+
+  /** Visible placeholder of the search field. `undefined` (the default) uses the localized
+   *  `emojiPickerSearchPlaceholder` string; a blank value, or a blank localized string, falls back
+   *  to the search field's accessible name (`emojiPickerSearchLabel`) so the field never renders as
+   *  an unlabeled empty box. It never changes that accessible name. */
+  @property({ attribute: 'search-placeholder' }) searchPlaceholder?: string;
 
   /** Visual size — scales the emoji glyph and preferred item box while keeping the interactive
    *  target floored at `--lr-icon-button-size`; not pixel-matched to `lr-input`'s row-height scale. The Web Awesome / Shoelace spellings
@@ -1296,6 +1303,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const invalid = this.touched && !this.internals.validity.valid;
     const gridLabel = hostAriaLabel(this);
     const searchLabel = this.localize('emojiPickerSearchLabel');
+    const placeholder = this.searchPlaceholder ?? this.localize('emojiPickerSearchPlaceholder');
+    const searchPlaceholder = placeholder.trim() ? placeholder : searchLabel;
     return html`
       <div part="form-control">
         <div part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>
@@ -1311,7 +1320,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
               aria-autocomplete="list"
               .value=${this.queryText}
               aria-label=${searchLabel}
-              placeholder=${searchLabel}
+              placeholder=${searchPlaceholder}
               aria-controls=${this.gridId}
               ?disabled=${this.effectiveDisabled}
               @input=${this.onSearchInput}
