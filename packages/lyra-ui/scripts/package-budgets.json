@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-18 on the current 18.2.0 source tree with the pending export-button, heatmap, and lightbox changes: 8,351,628 packed bytes, 33,935,107 unpacked bytes, 3,551 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-26 on the integrated 21.0.0 source tree before the version bump: 9,072,236 packed bytes, 36,903,298 unpacked bytes, 4,184 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short; the 21.0.0 release tree must be re-measured before publishing. The approved exception still fails closed above this exact reviewed ceiling.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,36 +10,36 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 8473147,
+    "reviewedMeasurementBytes": 9072236,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928,
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
-      "approvedOn": "2026-09-23",
-      "reason": "Re-measured for the 20.0.0 major on a release-shaped tree (changeset version applied, so the shipped CHANGELOG section and package metadata are included), per this file's rule that a pre-bump measurement under-counts. The prior ceiling of 8385628 was set on the 18.2.0 release commit; 20.0.0 measures 8473147 packed and 34396551 unpacked bytes. The growth is the release's full-library remediation (closed popups removed from layout, render caps with localized notices in twelve catalogs, the lr-diff-view search surface, readonly/loading/appearance additions, event renames with deprecated aliases) plus the regenerated manifest, editor data and llms references that describe it, and the 20.0.0 CHANGELOG section. Drift headroom is unchanged at 34000 packed and 140000 unpacked bytes; fileCount stays within its reviewed ceiling.",
-      "approvedMaximumPackedBytes": 8507147
+      "approvedOn": "2026-09-26",
+      "reason": "Re-measured on the integrated 21.0.0 source tree before the version bump, to keep main green while the release is prepared: 9072236 packed and 36903298 unpacked bytes, 4184 files. The growth is twenty additional translation catalogs (whole-catalog and per-family slice modules with declarations), the new lr-menubar, lr-toggle, lr-toggle-group, lr-context-menu, lr-navigation-menu and tool-call-block surfaces, the shared keyboard-focus and top-layer escape modules, theme presets and typography utilities, plus the regenerated manifest, editor data and llms references that describe them. The maintainer approved this ceiling with the usual drift headroom and asked for a re-measurement on the version-bumped 21.0.0 release tree, where the CHANGELOG section is included.",
+      "approvedMaximumPackedBytes": 9106236
     }
   },
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 34396551,
+    "reviewedMeasurementBytes": 36903298,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563,
-    "reviewedOn": "2026-09-23"
+    "reviewedOn": "2026-09-26"
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
     "stableTagAliasCount": 296,
     "emittedFilesPerAlias": 2,
-    "measuredEntrypointRemainder": 473,
+    "measuredEntrypointRemainder": 1092,
     "nextComponentArtifactHeadroom": 7,
-    "entrypointHeadroom": 480
+    "entrypointHeadroom": 1099
   },
   "maximum": {
-    "packedBytes": 8507147,
-    "unpackedBytes": 34536551,
-    "fileCount": 3572
+    "packedBytes": 9106236,
+    "unpackedBytes": 37043298,
+    "fileCount": 4191
   }
 }

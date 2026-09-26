@@ -25,6 +25,15 @@ caller aliases, and reports edit intent for the host to apply.
 Input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
 optional labels cannot suppress a later valid handle with the same ID.
 
+Anchored Lyra overlays in a node's slotted content (a node menu, a tooltip) resolve the `fixed`
+strategy by default, because a node is translated inside a scaled, clipped world where an
+`absolute` overlay could never extend past the canvas; a trapped `fixed` overlay opens in the
+browser top layer where the native Popover API exists. An authored `positioning-strategy`, an
+ancestor `--lr-positioning-strategy`, or `lr-flow-canvas::part(node) { --lr-positioning-strategy:
+absolute }` still wins. Wheel and pointer gestures that start inside an open node overlay stay its
+own: scrolling a long menu scrolls it instead of zooming the canvas, and pressing its chrome does
+not drag the node.
+
 Horizontal RTL reflects the coordinate plane while authored cards, generated `lr-flow-node` cards,
 native portable fallback cards and SVG edge labels retain readable content. Explicit physical model
 coordinates remain unchanged.

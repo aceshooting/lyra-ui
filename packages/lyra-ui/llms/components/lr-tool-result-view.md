@@ -24,6 +24,8 @@ owns none of the actual visual weight of a populated tool result — that's enti
 registered renderer returns; `<lr-tool-result-view>` is just the dispatch + fallback + loading-state
 shell around it.
 
+Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — JSON reads left-to-right and an Arabic line right-to-left inside either document direction. WebKit resolves this once per block from its first strong character rather than per line.
+
 **Properties:**
 
 - `registry?: ToolRendererRegistry` (property only, no attribute) — a custom

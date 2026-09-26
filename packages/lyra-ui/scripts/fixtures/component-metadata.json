@@ -20354,7 +20354,7 @@
     "current": {
       "version": "20.0.1",
       "sourceCommit": null,
-      "manifestSha256": "b63e8ea71ef9c98b0e48c09dc1ab50b702a9bc2fa7afcda4f9a57f38df6033a8",
+      "manifestSha256": "df05ecc3249d4a46cb264a7bd8a69e6cb80e810b19be3286100e4c867b5bb3a3",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

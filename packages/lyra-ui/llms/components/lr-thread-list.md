@@ -121,10 +121,14 @@ icon — the item has no default slot to receive one); unset renders the built-i
 `renderActions?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. an `lr-dropdown` containing `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
-the host normally and never trigger `lr-select`. When its resolved positioning strategy is `fixed`
-and the browser supports `showPopover()`, the popup escapes the transformed virtual row into the
-browser top layer, so the row cannot clip or cover its menu. Otherwise it retains fixed-position
-fallback behavior. Unset renders only the built-in
+the host normally and never trigger `lr-select`. Overlays returned here resolve the `fixed`
+strategy inside the virtual row by default (an explicit `positioning-strategy`/`hoist` or an
+ancestor `--lr-positioning-strategy` still wins), and a trapped `fixed` menu opens at full size
+outside the list, in the browser top layer where the native Popover API exists, in left-to-right
+and right-to-left documents, with no consumer CSS. A promoted menu whose trigger scrolls out of the
+list is hidden until the trigger returns. Where the Popover API is absent, the row holding an open
+`lr-dropdown` stops transforming while it is open, so its menu is still not clipped. Unset renders
+only the built-in
 `rowActions`.
 `renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`

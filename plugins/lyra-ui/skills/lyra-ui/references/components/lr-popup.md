@@ -48,9 +48,10 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   under RTL. The shared positioner's physical coordinates remain authoritative in either
   direction, so RTL never stretches a fixed-width popup against an opposite logical inset.
 - `strategy: 'absolute' | 'fixed' = 'absolute'` (reflected) — the CSS positioning scheme. `fixed`
-  normally positions relative to the viewport, but ancestors using transforms, filters or
-  containment can establish a different containing block, and ancestor clipping may still apply.
-  `absolute` positions relative to its containing block and scrolls with its containing content.
+  positions relative to the viewport; under a transformed, filtered or contained ancestor the popup
+  is promoted into the browser top layer where the native Popover API exists, and otherwise that
+  ancestor establishes its containing block and may clip it. `absolute` positions relative to its
+  containing block and scrolls with its containing content.
 - `distance: number = 0` — offset from the anchor along the placement axis, in px
 - `skidding: number = 0` — offset along the anchor's edge, in px
 - `flip: boolean = false` (not reflected), with `flipFallbackPlacements: string = ''` (attribute

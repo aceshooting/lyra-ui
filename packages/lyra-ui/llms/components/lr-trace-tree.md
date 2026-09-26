@@ -56,7 +56,8 @@ least their start, unknown kinds become `other`, and unknown statuses become `pe
 `live-region`.
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
-`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row — and
+`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row, and the base
+its hover/press mixes from — and
 `--lr-trace-tree-row-active-color` (default `var(--lr-color-text)`) — the color of that row's
 secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the `pending`
 `status-text` label). Same state-scoped-property convention described under `lr-span-waterfall`

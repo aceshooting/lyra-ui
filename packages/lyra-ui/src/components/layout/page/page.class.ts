@@ -12,12 +12,15 @@ import {
   type AriaOwnershipLease,
 } from '../../../internal/aria-ownership.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import {
   activateOverlay,
+  composedContains,
+  deepActiveElement,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { styles } from './page.styles.js';
@@ -69,6 +72,17 @@ export interface LyraPageEventMap {
  * the Page host for that inward shadow relationship. Replacement, removal, and disconnect restore
  * exact authored baselines, including writes made while ownership was active. Disabled,
  * `aria-disabled`, hidden, or inert assigned controls do not toggle the drawer.
+ *
+ * Closing the mobile drawer returns focus to the control that opened it: the activated
+ * `navigation-toggle`/`data-toggle-nav` control, or -- for `showNavigation()`/`navOpen` opened from
+ * script -- whatever held focus outside the drawer when it opened. When that control cannot take
+ * focus, the default navigation toggle, then the main landmark, receive it instead. The return is
+ * attempted as the drawer closes and, when that attempt could not reach the opening control (a host
+ * commonly hides its menu button while the drawer is open and re-shows it from its own render in
+ * response to `lr-nav-toggle`), again once the close's update has completed and one animation frame
+ * has passed. That second pass only acts while focus is still inside the closed drawer, on the
+ * fallback the first attempt chose, or lost to `<body>` -- focus moved elsewhere in the meantime is
+ * never taken back -- and it follows the same order. A reopen, or a disconnect, abandons it.
  *
  * @customElement lr-page
  * @attr {string} disable-sticky - Whitespace-separated Page regions whose sticky positioning is
@@ -219,6 +233,10 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
   private navigationTriggerOwner?: HTMLElement;
+  /** Whatever held focus outside the drawer when it opened -- the return target of a drawer opened
+   *  from script, and the deferred return's candidate when no toggle owns the open. */
+  private navigationOpener: HTMLElement | null = null;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private customToggle?: HTMLElement;
   private customToggles: HTMLElement[] = [];
   private readonly customToggleOwnership = new Map<
@@ -251,6 +269,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     this.overlayHandle?.suspend();
+    this.deferredFocusReturn.cancel();
     this.releaseCustomToggleA11y();
     super.disconnectedCallback();
   }
@@ -352,6 +371,14 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
         }
         return;
       }
+      this.deferredFocusReturn.cancel();
+      const active = deepActiveElement(this.ownerDocument);
+      this.navigationOpener =
+        active &&
+        typeof (active as HTMLElement).focus === 'function' &&
+        !(this.drawerElement && composedContains(this.drawerElement, active))
+          ? (active as HTMLElement)
+          : null;
       this.overlayHandle = activateOverlay({
         host: this,
         panel: () => this.drawerElement ?? null,
@@ -370,12 +397,40 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
     if (this.overlayHandle) {
       const restoreFocus = Boolean(changed?.has('navOpen') && !this.navOpen);
+      // The synchronous attempt keeps the established timing whenever the opening control can
+      // already take focus; the deferred pass covers one the host only re-shows afterward.
       this.overlayHandle.deactivate({ restoreFocus });
       this.overlayHandle = undefined;
+      if (restoreFocus) this.scheduleDeferredNavigationReturn();
     }
     if (!this.navOpen) {
       this.navigationTriggerOwner = undefined;
     }
+  }
+
+  /** Retries the drawer's focus return once the host has reacted to the close -- see the class
+   *  doc. Candidates are resolved when the pass runs, in the synchronous return's own order. */
+  private scheduleDeferredNavigationReturn(): void {
+    const owner = this.navigationTriggerOwner;
+    const opener = owner ? null : this.navigationOpener;
+    this.navigationOpener = null;
+    if (!owner && !opener) return;
+    this.deferredFocusReturn.schedule({
+      host: this,
+      candidates: () => [
+        owner?.isConnected ? resolveAccessibleTrigger(owner) : null,
+        opener,
+        this.disableNavigationToggle
+          ? null
+          : this.renderRoot.querySelector<HTMLElement>(
+              '[part~="navigation-toggle"]'
+            ),
+        this.mainElement,
+      ],
+      stranded: (active) =>
+        !!this.drawerElement && composedContains(this.drawerElement, active),
+      isCurrent: () => !this.navOpen,
+    });
   }
 
   /** Resolves only after overlay cleanup has released Page-owned inerting. A disappearing opening

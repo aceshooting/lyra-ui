@@ -43,4 +43,4 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Additional API surface:**
 
 - `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
-- `--lr-agent-eval-dashboard-active-background` — Active metric background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-agent-eval-dashboard-active-background` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.

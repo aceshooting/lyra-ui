@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import "./responsive-panel.js";
 import type {
   LyraResponsivePanel,
@@ -1236,5 +1236,102 @@ describe("overlay state cssprops", () => {
       resolvedInShadow(inline, "background: var(--lr-color-surface)", "background-color")
     );
     expect(getComputedStyle(inlinePanel).boxShadow).to.equal("none");
+  });
+});
+
+describe('overlay focus return to a host-hidden opener', () => {
+  const deepActive = (): Element | null => {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  };
+  const describeActive = (): string => {
+    const active = deepActive();
+    return active ? `${active.localName}${active.id ? `#${active.id}` : ''}` : 'null';
+  };
+
+  async function openFromHiddenOpener(): Promise<{
+    panel: LyraResponsivePanel;
+    opener: HTMLButtonElement;
+    inside: HTMLButtonElement;
+    cleanup(): void;
+  }> {
+    const opener = document.createElement('button');
+    opener.type = 'button';
+    opener.id = 'panel-opener';
+    opener.textContent = 'Filters';
+    document.body.append(opener);
+    const panel = await fixture<LyraResponsivePanel>(html`
+      <lr-responsive-panel mode="overlay" label="Filters">
+        <button id="panel-inside" type="button">Apply</button>
+      </lr-responsive-panel>
+    `);
+    // The host hides its own opener while the panel is open and re-shows it from its own render a
+    // frame after it learns of the close.
+    const onClose = (): void => {
+      requestAnimationFrame(() => {
+        opener.style.visibility = '';
+      });
+    };
+    panel.addEventListener('lr-close', onClose);
+    opener.focus();
+    panel.open = true;
+    opener.style.visibility = 'hidden';
+    await panel.updateComplete;
+    const inside = panel.querySelector<HTMLButtonElement>('#panel-inside')!;
+    await waitUntil(() => deepActive() === inside, `initial focus stayed on ${describeActive()}`);
+    return {
+      panel,
+      opener,
+      inside,
+      cleanup: () => {
+        panel.removeEventListener('lr-close', onClose);
+        opener.remove();
+      },
+    };
+  }
+
+  it('returns focus to an opener the host re-shows after close()', async () => {
+    const { panel, opener, cleanup } = await openFromHiddenOpener();
+    try {
+      panel.close('escape');
+      await panel.updateComplete;
+      expect(panel.open).to.equal(false);
+      await waitUntil(() => deepActive() === opener, `focus stayed on ${describeActive()}`);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('returns focus to an opener the host re-shows after writing open = false', async () => {
+    const { panel, opener, cleanup } = await openFromHiddenOpener();
+    try {
+      panel.open = false;
+      requestAnimationFrame(() => {
+        opener.style.visibility = '';
+      });
+      await panel.updateComplete;
+      await waitUntil(() => deepActive() === opener, `focus stayed on ${describeActive()}`);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('never takes back focus moved elsewhere before the deferred return runs', async () => {
+    const { panel, opener, cleanup } = await openFromHiddenOpener();
+    const elsewhere = document.createElement('input');
+    elsewhere.setAttribute('aria-label', 'Elsewhere');
+    document.body.append(elsewhere);
+    try {
+      panel.close();
+      await panel.updateComplete;
+      elsewhere.focus();
+      await waitUntil(() => getComputedStyle(opener).visibility === 'visible', 'the host never re-showed its opener');
+      for (let frame = 0; frame < 3; frame++) await nextFrame();
+      expect(deepActive() === elsewhere, `focus moved to ${describeActive()}`).to.equal(true);
+    } finally {
+      elsewhere.remove();
+      cleanup();
+    }
   });
 });

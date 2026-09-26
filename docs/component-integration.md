@@ -19,7 +19,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24 KiB (24566 bytes; bundle SHA-256 `60a6f5d1eb0988ec5e45da08a2e5e1db0a26456c10f6d9e6f0fbd38db3597c7c`)
+- Standalone gzip: 24.1 KiB (24647 bytes; bundle SHA-256 `fc7d2f8160fc8e7df0364ef5d56cf02fa0ec68706e74e41110d139a868cf8206`)
 
 </details>
 
@@ -31,7 +31,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28.4 KiB (29115 bytes; bundle SHA-256 `e8ba8ad4896fedf487948e765d0896545a7993c59a2f1b826a69d11ebb654066`)
+- Standalone gzip: 28.5 KiB (29199 bytes; bundle SHA-256 `b6a78f55ef020517c2d1d17c2aa2c14cb865b7cef72bc54857cbd5064679060d`)
 
 </details>
 
@@ -43,7 +43,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.2 KiB (42190 bytes; bundle SHA-256 `52f52208db33beb9a2bf632b29c0bacabf182020fef8af1e4153d3393ec0eb4d`)
+- Standalone gzip: 41.5 KiB (42471 bytes; bundle SHA-256 `2a105c5bca3d1f27fe9556448e948c7501e2743b5f229ed046a6c7fad47737ba`)
 
 </details>
 
@@ -55,7 +55,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-lite-chart`, `lr-stat`
 - Transitive Lyra dependencies: `lr-live-region`
-- Standalone gzip: 49 KiB (50221 bytes; bundle SHA-256 `8a175cf02872d7df1198263a154e837bf278a5bffd6c736bdd8c63a32f19e58e`)
+- Standalone gzip: 49.4 KiB (50616 bytes; bundle SHA-256 `c565fde194a586e68d0d9ff21c9fffce7ce2e10a65e7fcada0807a94082a1715`)
 
 </details>
 
@@ -67,7 +67,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-empty`, `lr-generation-metrics`, `lr-live-region`, `lr-task-list`, `lr-usage-badge`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 58.7 KiB (60159 bytes; bundle SHA-256 `5a7442f9f724ccb2cd0493d59d700af20ed94d4e952a3d09e8b7292778719b01`)
+- Standalone gzip: 60.8 KiB (62290 bytes; bundle SHA-256 `c1aeccc47929895d5fdd50c57e737c22a9f6322ae604a09bf235ad6ef6050b32`)
 
 </details>
 
@@ -79,7 +79,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-graph-legend`, `lr-handoff-divider`, `lr-trace-tree`
 - Transitive Lyra dependencies: `lr-empty`, `lr-live-region`
-- Standalone gzip: 40.4 KiB (41344 bytes; bundle SHA-256 `4c6cb57a1f8c335bfe7e1f2a15e7009ab720d3b93773c6bcf9da645ade52d4b3`)
+- Standalone gzip: 40.5 KiB (41433 bytes; bundle SHA-256 `00129c08aea905741257cfacc22820d07e4fc77462c4ff3258a94117ebd6a702`)
 
 </details>
 
@@ -91,7 +91,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-agent-run`, `lr-chat-composer`, `lr-chat-message`, `lr-chat-viewport`, `lr-context-inspector`, `lr-empty`, `lr-grounding-summary`, `lr-markdown`, `lr-message-parts`, `lr-retrieval-results`, `lr-tool-timeline`
 - Transitive Lyra dependencies: `lr-attachment-chip`, `lr-badge`, `lr-button`, `lr-card`, `lr-checkbox`, `lr-chunk-inspector`, `lr-citation-badge`, `lr-claim-evidence`, `lr-context-meter`, `lr-copy-button`, `lr-details`, `lr-export-button`, `lr-generation-metrics`, `lr-icon-button`, `lr-json-viewer`, `lr-live-region`, `lr-media-card`, `lr-result-card`, `lr-result-field`, `lr-skeleton`, `lr-spinner`, `lr-stat`, `lr-task-list`, `lr-thinking-panel`, `lr-tool-approval-dialog`, `lr-tool-call-block`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-tooltip`, `lr-usage-badge`, `lr-virtual-list`, `lr-widget-renderer`
-- Standalone gzip: 219.9 KiB (225145 bytes; bundle SHA-256 `a541ca6432cd701238c3972c4effaf2a570f9c602bcfe620642f29095a4a4677`)
+- Standalone gzip: 222.7 KiB (228015 bytes; bundle SHA-256 `64d8106e25613979d3bf82e27762440aa5dd915ef5a51cc7db004989832130d5`)
 
 </details>
 
@@ -103,7 +103,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-toast`
 - Transitive Lyra dependencies: `lr-toast-item`
-- Standalone gzip: 41.1 KiB (42076 bytes; bundle SHA-256 `6536ea5af979cde5bffa5fd3dc1d10f934afa63e63d61c0153c687ffa2946284`)
+- Standalone gzip: 41.2 KiB (42153 bytes; bundle SHA-256 `4a07df0cc36a2992a4b37fca57cf9bcdeee8a35198711c8966b27891d7745ea3`)
 
 </details>
 
@@ -115,7 +115,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.5 KiB (25084 bytes; bundle SHA-256 `2e14e53a3073bf9738ca70fabdae03b05aec01011f7bb4b313115f6ff6516b73`)
+- Standalone gzip: 24.6 KiB (25169 bytes; bundle SHA-256 `3d21c24d5eedfd048aee509d9977fadd07de7a8e116a9d4134aee6bdf5c1426c`)
 
 </details>
 
@@ -127,7 +127,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.9 KiB (27583 bytes; bundle SHA-256 `cbec62020d04745d7dfaa07cafcf1223c46ce3bb7b47cd2000867c643feda756`)
+- Standalone gzip: 27 KiB (27657 bytes; bundle SHA-256 `4614d2b634cb653e64272ea38fb91b48fea409ae11542845996ea8a25ffe65ab`)
 
 </details>
 
@@ -139,7 +139,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-app-rail-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 55.3 KiB (56580 bytes; bundle SHA-256 `105710d1c913095ef6f9e0dc3d271f0e81b32a719da17608b8ea708add7b7d4c`)
+- Standalone gzip: 57.5 KiB (58928 bytes; bundle SHA-256 `0bc12a67038f24999d187f53e0bb95a3d3735c02372612846e5bc380cd656884`)
 
 </details>
 
@@ -151,7 +151,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.1 KiB (24650 bytes; bundle SHA-256 `0e4ca96628fab910040889f6ef83559c8203ec2976de73bf591adbefd1565a40`)
+- Standalone gzip: 24.2 KiB (24734 bytes; bundle SHA-256 `611099846ebb0191d942d6c821c737da96fa9d94e010d31fe4f93c57dd0fc47c`)
 
 </details>
 
@@ -163,7 +163,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.1 KiB (38011 bytes; bundle SHA-256 `47664d52da397997006c670077a0e5fe4b6277f5ca4baa3a7ea0825294805da2`)
+- Standalone gzip: 39.1 KiB (40073 bytes; bundle SHA-256 `361c116807dc2f109de0230a146f5da52d6e86bebee002ee9bc1117edfeaaeea`)
 
 </details>
 
@@ -175,7 +175,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-tool-approval-dialog`
 - Transitive Lyra dependencies: `lr-button`, `lr-json-viewer`
-- Standalone gzip: 56.1 KiB (57483 bytes; bundle SHA-256 `cf29290c12fc6681a42da418d2b79f036784c9c7fc3b64e624202e810954e2a3`)
+- Standalone gzip: 56.2 KiB (57587 bytes; bundle SHA-256 `04e990abf86acee2d2e08cab5a4f2bc9fafd2154f941de646b5df6e261eed6e1`)
 
 </details>
 
@@ -187,7 +187,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 54.4 KiB (55676 bytes; bundle SHA-256 `3aa190fd365670a65224162978bb8830df8a15d4675aaed3132e1f556c51a651`)
+- Standalone gzip: 54.7 KiB (55968 bytes; bundle SHA-256 `2f950ae9112fce942f6ce38762f8244c8f5cb42ea0b18e385361db03dcbe8191`)
 
 </details>
 
@@ -199,7 +199,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.9 KiB (27525 bytes; bundle SHA-256 `a124ea648297de78a6d48919aa80415021b88b39b95820817056974522a5ce62`)
+- Standalone gzip: 27 KiB (27604 bytes; bundle SHA-256 `c0e3ebcfea9866237a3fc655b057ea9818d7257aa8b7b86af0ab9350a4a6b05f`)
 
 </details>
 
@@ -211,7 +211,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.4 KiB (28028 bytes; bundle SHA-256 `14767e9d3ea5499328deb7b60377e036bc82fe7b9f3d0a4f79e0833e20105048`)
+- Standalone gzip: 27.5 KiB (28110 bytes; bundle SHA-256 `07255ea6fa9b678e74fc9fe62ea1c4f855ab5817d9d22427db87d4e33f09fa28`)
 
 </details>
 
@@ -223,7 +223,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-dropdown`, `lr-icon-button`, `lr-menu`, `lr-menu-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 69.9 KiB (71541 bytes; bundle SHA-256 `6b95afe03b0663743ff4f4b812eb42b614708c980f0f94a846728e6e06693a8a`)
+- Standalone gzip: 71.9 KiB (73624 bytes; bundle SHA-256 `86e303bb31b1c3cd38b867133489d290f41734c9a3d961904a2baa293b2b5efd`)
 
 </details>
 
@@ -235,7 +235,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.2 KiB (27894 bytes; bundle SHA-256 `a4faf47fe287ccdfb048795caf671ad7963d198968d041979d1d6ecada3e31ab`)
+- Standalone gzip: 27.3 KiB (27967 bytes; bundle SHA-256 `3e4704c8007dafd92fec760ce9e3def8ffe4e9781bbda66f227603bd02cc6bcd`)
 
 </details>
 
@@ -247,7 +247,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 56.9 KiB (58221 bytes; bundle SHA-256 `c5add66c8b88975be0cdce68d560e19bcfaf45b5f962dfa51ad4473a0bcc7072`)
+- Standalone gzip: 57.2 KiB (58536 bytes; bundle SHA-256 `33a3a886f9fb8a7190b41f874d994785972835ef252ad246f208df85a2514852`)
 
 </details>
 
@@ -259,7 +259,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23 KiB (23521 bytes; bundle SHA-256 `79603f6c160922d70a447b0a8c005b494a0744360428d6b5ee0aed5038bd62da`)
+- Standalone gzip: 23 KiB (23602 bytes; bundle SHA-256 `8889ac216018bfd6481aecb66faf1584acdf48a780f3212955ec54ef9186dd37`)
 
 </details>
 
@@ -271,7 +271,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.6 KiB (25174 bytes; bundle SHA-256 `56fa8f2e96f04a3ee61611e11fb1d5d483e993e979e0071d38081818e54ce362`)
+- Standalone gzip: 24.7 KiB (25245 bytes; bundle SHA-256 `84b213d9dc56eca50a4f6b1908a9e9b92b174756606bc188c36dfff90d4f6023`)
 
 </details>
 
@@ -283,7 +283,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.3 KiB (23907 bytes; bundle SHA-256 `697d376915bff2119943e901d528243d30579a91ffa6a2382ecf039fa400184e`)
+- Standalone gzip: 23.4 KiB (23985 bytes; bundle SHA-256 `836f15ef9703705bb113d129f847fa57e5d0aa6a6b5aabc9c3d913a141b75761`)
 
 </details>
 
@@ -295,7 +295,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.8 KiB (54108 bytes; bundle SHA-256 `05d7cc8571736ca7039207346a46c9ea5312aa11198b0a38fa67a8beb369c484`)
+- Standalone gzip: 52.9 KiB (54189 bytes; bundle SHA-256 `14479f260e045bcd3ca50aa42447163ebb110fc3960c6060d7f5e18a8c4ca8a9`)
 
 </details>
 
@@ -307,7 +307,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `@sgratzl/chartjs-chart-boxplot`, `chart.js`
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.4 KiB (39326 bytes; bundle SHA-256 `21cdd903c70e755d90d4c89d33d69733acb7ea8c1db42789632657a96cbeada5`)
+- Standalone gzip: 38.5 KiB (39418 bytes; bundle SHA-256 `7ff33e7b0ea4858a5f9513f4be7283b0a46eb7e9a9b49fb9f88df8e924611a00`)
 
 </details>
 
@@ -319,7 +319,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26 KiB (26653 bytes; bundle SHA-256 `985308d9b880f6b2127e1136849a59c42b2ea5a1c0e7817fa89ba17cd65c8121`)
+- Standalone gzip: 26.1 KiB (26731 bytes; bundle SHA-256 `89797adbd2f35003a6e94e7dd54abb01468a822ae59bce654e6058f1bd18244d`)
 
 </details>
 
@@ -331,7 +331,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 22.4 KiB (22887 bytes; bundle SHA-256 `8f46f571225d168b161adb1a29117fe0c07080d8b700ab3ffaef8c7aeb3c1351`)
+- Standalone gzip: 22.4 KiB (22962 bytes; bundle SHA-256 `d683971e9338bd281dd262eeb223fd6084b8c41e4559096c257dff1c72673305`)
 
 </details>
 
@@ -343,7 +343,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.4 KiB (23933 bytes; bundle SHA-256 `5a48f0bed4cfa6652f7928170b69d928b7d9c5445b55009a85d02c475bb2c62a`)
+- Standalone gzip: 23.4 KiB (24011 bytes; bundle SHA-256 `42b7515f7d73719c453038b681ef74ae86c43815083c6c0471a960c5e2d145db`)
 
 </details>
 
@@ -355,7 +355,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.9 KiB (27511 bytes; bundle SHA-256 `dfb42dbb9befcde31cd3515db06e298138a71a66a0f8f3cc9551ba827440db21`)
+- Standalone gzip: 26.9 KiB (27594 bytes; bundle SHA-256 `6d9e554eb9b64b6f08b53c31a786ec36f708fa18e284de8cb989b2531bb95e3b`)
 
 </details>
 
@@ -367,7 +367,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.8 KiB (54109 bytes; bundle SHA-256 `b1f9cfd0e6d747e734e625b24c5b0a82f3978eaf2bcde1765b59cdea2a923341`)
+- Standalone gzip: 52.9 KiB (54189 bytes; bundle SHA-256 `a1f3fc91bc72c3bc06e7c705d6ffa1f63ac5e50e4135c91548feca9d3e7a1843`)
 
 </details>
 
@@ -379,7 +379,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.9 KiB (32654 bytes; bundle SHA-256 `05db2b10131bc6e7c4af1abd7601b69d4615f65a70e954276d84e821fbf02c00`)
+- Standalone gzip: 32 KiB (32763 bytes; bundle SHA-256 `844602bc7a49d3c09fcf158efee4f586dd03633f7ab7768bde13c044350e51c9`)
 
 </details>
 
@@ -391,7 +391,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.7 KiB (22243 bytes; bundle SHA-256 `aa75d069b777c81d984583d2590ed645a2afc8fdc51d66f9db3cfbee3141f1c4`)
+- Standalone gzip: 21.8 KiB (22320 bytes; bundle SHA-256 `70b9562475ae282741baf5d5b74d590901e83387cc6a9fb15ed62af216ef255c`)
 
 </details>
 
@@ -403,7 +403,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.9 KiB (26549 bytes; bundle SHA-256 `81deb5404aad43b78bc12b34b08ab68843dd34ddd6a312e6fca9eb01a78729da`)
+- Standalone gzip: 26 KiB (26622 bytes; bundle SHA-256 `9bf3af37fcbd8eff85fc4020d8b0eb4f7e637a6ee7d4aad9ca77174dc60967b9`)
 
 </details>
 
@@ -415,7 +415,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `ical.js`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.2 KiB (40154 bytes; bundle SHA-256 `ec270a8c2c2770257542224edc521c0e837bd5b535f6ad98f49fb600940a29cc`)
+- Standalone gzip: 39.3 KiB (40216 bytes; bundle SHA-256 `d7d451fdfc4b47bd6aa4f1168bc9c61f94f1499931de5033fe13118e9b9b6365`)
 
 </details>
 
@@ -427,7 +427,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-icon-button`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.3 KiB (39225 bytes; bundle SHA-256 `ad7b909309d0bd27e4118fa20a20a3da7b65102873f3be38102078c6c8e14ec3`)
+- Standalone gzip: 38.4 KiB (39305 bytes; bundle SHA-256 `f57360430e3fe38be5503b45f5113dad30c048bd759b98ea649febf8931cdd01`)
 
 </details>
 
@@ -439,7 +439,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28 KiB (28718 bytes; bundle SHA-256 `8efc6d10e373f6b00659660786848ae0184133d4eb41d873c51731ed38674524`)
+- Standalone gzip: 28.1 KiB (28797 bytes; bundle SHA-256 `fd63150729bc10f75c7d7f8675d420badd865092b6c2ae0e1d3915fb23887c33`)
 
 </details>
 
@@ -451,7 +451,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 33.9 KiB (34667 bytes; bundle SHA-256 `21193ada59012270772f23228cee97225193ece965180c1c2e27b9e40b1cc6d1`)
+- Standalone gzip: 33.9 KiB (34745 bytes; bundle SHA-256 `9a182aef97a850fc37d5b9a3bb727692048ed69cdc384e932babfbd41c33f4ec`)
 
 </details>
 
@@ -463,7 +463,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.2 KiB (21684 bytes; bundle SHA-256 `ad0c8618d644e4a1775801151e1abafc702f17f57908584ea67834f26eaaa77c`)
+- Standalone gzip: 21.3 KiB (21773 bytes; bundle SHA-256 `50f8beaff3fb8f3c09a2a3d8a1fc062462d6363f8528d3bd0357fc193b96d32b`)
 
 </details>
 
@@ -475,7 +475,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.7 KiB (53961 bytes; bundle SHA-256 `e30bd814dab8edfab3e5ecbf0984dd73ad91d96150a995a3e897b39986fdced1`)
+- Standalone gzip: 52.8 KiB (54049 bytes; bundle SHA-256 `aa2706eb4056dcd98a4f0ad946a44d48b58e36b5dd0fe7b103a14ccfb74fca8e`)
 
 </details>
 
@@ -487,7 +487,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 32.7 KiB (33469 bytes; bundle SHA-256 `ba6d9c71360d8d1449e2cc8a15c1437e9dd4d049892f8f15858b617cc2713a80`)
+- Standalone gzip: 32.8 KiB (33548 bytes; bundle SHA-256 `48eec4f00e09b73d9db026e862d1e1a7ebf854b24c7402ca825228ad57a6aa58`)
 
 </details>
 
@@ -499,7 +499,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.8 KiB (28442 bytes; bundle SHA-256 `a1c0e3b43cdacc32954dc4e1b40900bd8e058fbeaf81866cad94904fa8d3b273`)
+- Standalone gzip: 27.9 KiB (28535 bytes; bundle SHA-256 `65eb6b67bd13261a68aadae9d05d19959476da874ff275d8c469196d754ade47`)
 
 </details>
 
@@ -511,7 +511,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 42.5 KiB (43533 bytes; bundle SHA-256 `75749a4d6116193013d81709ed12c9372486d16af15c8688bab7ccaafaecf427`)
+- Standalone gzip: 43 KiB (43983 bytes; bundle SHA-256 `7ab159a31b917b03a97b46b5d71d758e7ea05cea4bd19d493193b1ad32d5c2a3`)
 
 </details>
 
@@ -523,7 +523,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34 KiB (34808 bytes; bundle SHA-256 `8f989281fb3317993ff025f57420178a5ceec4ade4f0fa5eaf6d59ad96347227`)
+- Standalone gzip: 34.1 KiB (34899 bytes; bundle SHA-256 `fe742bc4884f538fcaf2a29326accb5a5a8898ff72ac0115b63cc021ebd5e033`)
 
 </details>
 
@@ -535,7 +535,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 33.5 KiB (34264 bytes; bundle SHA-256 `1a585a6a006d1acfb650c2031432d620246f376caab0485d526975de19418905`)
+- Standalone gzip: 33.5 KiB (34334 bytes; bundle SHA-256 `2303489a8b9970d06cd2d7aeb740ff6583726ff598c5baf8525cd7a98a73a4ab`)
 
 </details>
 
@@ -547,7 +547,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.7 KiB (24295 bytes; bundle SHA-256 `e4e9ac97e859d7bd6562a1a4e19595c85bd9bb96451f78f196e1b067bccc8254`)
+- Standalone gzip: 23.8 KiB (24383 bytes; bundle SHA-256 `7ae0943fe37eec5ed9782160e3dac87996dbdbf85e077b9e4dd6e193a576cb5a`)
 
 </details>
 
@@ -559,7 +559,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.3 KiB (32033 bytes; bundle SHA-256 `78c455285d20cf8d455767935aa46077e5f10dacaffc9f3455ec995891ae0133`)
+- Standalone gzip: 31.4 KiB (32117 bytes; bundle SHA-256 `a66e38b8bccf330caecc5394116f053245bd45703d19c2de54dae0e330bfd3e5`)
 
 </details>
 
@@ -571,7 +571,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.6 KiB (28222 bytes; bundle SHA-256 `1cff6c96026aaff595641d4be657ad8e35f779a6713fac021a70d0b5ae6bfa67`)
+- Standalone gzip: 27.6 KiB (28300 bytes; bundle SHA-256 `faa10c7ea2fb052c61f3ac85bd320d2e1b29df2cb09e25a0369c8c224c63b78d`)
 
 </details>
 
@@ -583,7 +583,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.6 KiB (41532 bytes; bundle SHA-256 `066f35990c2cce510021ebfb49c8e813b357c8a4162118a497a29831416714c1`)
+- Standalone gzip: 40.8 KiB (41823 bytes; bundle SHA-256 `65a0a73cc6473fce1c7757086ac130fab87128da84cf80991c744010697a047b`)
 
 </details>
 
@@ -595,7 +595,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.4 KiB (41357 bytes; bundle SHA-256 `7026a52bfc358414abe6330bc0ea74b18af82a133d2b7733e6c4c5b34dc859c2`)
+- Standalone gzip: 42.3 KiB (43349 bytes; bundle SHA-256 `43eaa06518dd2510f1f15ebd281aceb1d0f5fb42674bb002f3f55c8a6ae42541`)
 
 </details>
 
@@ -607,7 +607,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-citation-badge`, `lr-empty`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 49.8 KiB (50944 bytes; bundle SHA-256 `1815013cf09d6e30c994124cf791c58d02ee52fc6da3e37b6512a8c9c8adcbdb`)
+- Standalone gzip: 51.7 KiB (52980 bytes; bundle SHA-256 `6a29119cb41c77afca16161ee779a1a4f07d3fa42d67ea954d888f2d54b38aee`)
 
 </details>
 
@@ -619,7 +619,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `shiki`
 - Direct Lyra dependencies: `lr-icon-button`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 42.2 KiB (43196 bytes; bundle SHA-256 `359404b433dc78298be6f15e71f9a8d27ca07a0fa6a57aa6ac799fc6e3c58a1c`)
+- Standalone gzip: 42.3 KiB (43295 bytes; bundle SHA-256 `0a28d0017873836d4da75a0d5ed59c9d4152c908c1d7b249addb425dee97c60f`)
 
 </details>
 
@@ -631,7 +631,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `shiki`
 - Direct Lyra dependencies: `lr-icon-button`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.6 KiB (42583 bytes; bundle SHA-256 `8ed488ce22a43730d3c2ca756e9d8db502cf358ba70bf3d03370c0c12040df1a`)
+- Standalone gzip: 41.7 KiB (42673 bytes; bundle SHA-256 `1235a0d0dfb574657398434df91baf51c0c541ef65eac53c9ca2138ec6310664`)
 
 </details>
 
@@ -643,7 +643,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.3 KiB (38179 bytes; bundle SHA-256 `633acdf5c2f7d7a2dc489e300511855e0f79b791efa1f29b7a11c38a6034d602`)
+- Standalone gzip: 37.4 KiB (38248 bytes; bundle SHA-256 `f10b1d9cbebf15aa4869e50438577c1897840d448bc71a59a1697374cfd0c8e1`)
 
 </details>
 
@@ -655,7 +655,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 56.9 KiB (58218 bytes; bundle SHA-256 `db1646f996b0bf8832ca3c52457e2c01dfbc5b1e64eb349de5e88622d0a03727`)
+- Standalone gzip: 58.7 KiB (60079 bytes; bundle SHA-256 `eb823bdbb331e53597ff7fc7ef29339b4dc7ec021cc4d2b180947570965ffa30`)
 
 </details>
 
@@ -667,7 +667,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-option`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 69.4 KiB (71070 bytes; bundle SHA-256 `5de6304d3dfbe83a807d14c8c25397f02433a077977c9d0460c2c37e78d5ab58`)
+- Standalone gzip: 71.3 KiB (72967 bytes; bundle SHA-256 `a0cee85d29c93d1d3926d56f1e9b33311a2353c064d1743408cbbfddcb4e0d5a`)
 
 </details>
 
@@ -679,7 +679,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-icon`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 43.4 KiB (44394 bytes; bundle SHA-256 `dea47adbc0b1cff30952480110f4a5fd02cf69556351ca47a94a32e59868691b`)
+- Standalone gzip: 43.4 KiB (44466 bytes; bundle SHA-256 `53358150bb038cd96ad04f500657ea4c788e58ec7202accf0cad8c38f1375772`)
 
 </details>
 
@@ -691,7 +691,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.8 KiB (41779 bytes; bundle SHA-256 `5978503e40956f99e08dfffa39c36dc5be3b5f5b2b205bfe8b71615c636fb341`)
+- Standalone gzip: 40.9 KiB (41867 bytes; bundle SHA-256 `59871f219bc9bbd3513a80082763750ea5211759f2e4e51aec0631a655fdb7bb`)
 
 </details>
 
@@ -703,7 +703,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-chip`, `lr-empty`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 45.9 KiB (46976 bytes; bundle SHA-256 `f3252e29764bb545877b8b23ed80c59ebc10e565946750b3478ca8a1947d6606`)
+- Standalone gzip: 46 KiB (47096 bytes; bundle SHA-256 `7268646c5e4abed51b6ef64cd9235cd060b5a846ab0baee9c576fb42e76f6155`)
 
 </details>
 
@@ -715,7 +715,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.6 KiB (27227 bytes; bundle SHA-256 `3c2c8a4b43e1ac3db6dc034cf94a8ab9a4b44759ded7c46e3e177b6f36a51902`)
+- Standalone gzip: 26.7 KiB (27297 bytes; bundle SHA-256 `8c3f9daacf7846637c30edaa84e794b63e3fe4a462b2a1dd11c7128291b75611`)
 
 </details>
 
@@ -727,7 +727,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-combobox`, `lr-date-input`, `lr-icon-button`, `lr-input`, `lr-option`, `lr-select`
 - Transitive Lyra dependencies: `lr-date-picker`, `lr-empty`, `lr-icon`
-- Standalone gzip: 126.8 KiB (129874 bytes; bundle SHA-256 `5f5c0794428c51852e62525baf13afff51a5b90c2fbebeca26c475439723d142`)
+- Standalone gzip: 128.7 KiB (131822 bytes; bundle SHA-256 `f277a2bd29f14356377d7f3fb17c45bc1407bed6fdcca6f1b1bd2bd5e557f5c6`)
 
 </details>
 
@@ -739,7 +739,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-details`, `lr-json-viewer`, `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 50.9 KiB (52118 bytes; bundle SHA-256 `7c8132a88cded786380c02c20fe4f5201e9d287bb76b68e89c5d139de584c7f8`)
+- Standalone gzip: 51 KiB (52231 bytes; bundle SHA-256 `5307905d1d05fda0960df5b1a9879d7dcc60f96d79d879b9651245f93b87479a`)
 
 </details>
 
@@ -751,7 +751,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.9 KiB (41903 bytes; bundle SHA-256 `60c32a130c6c672398ed07a735dc6420687b5bbc80f41bbdeafae9d94a1b343a`)
+- Standalone gzip: 41 KiB (41988 bytes; bundle SHA-256 `86df6e1d28f078ba0fd3728389cd8137d88b940f365c07d7f08c13e4572c9e71`)
 
 </details>
 
@@ -763,7 +763,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-citation-badge`, `lr-context-meter`, `lr-copy-button`, `lr-empty`, `lr-export-button`
 - Transitive Lyra dependencies: `lr-icon-button`, `lr-tooltip`
-- Standalone gzip: 81.3 KiB (83207 bytes; bundle SHA-256 `86a392a13b9bb18916d908b9c7a038711aa5e36456afeec9f13bf53eeb9f7ebe`)
+- Standalone gzip: 83.3 KiB (85256 bytes; bundle SHA-256 `d339296f1dd4eba866cbaf7a393fa5ee0fdc259da01156a705fea987ac9e39ce`)
 
 </details>
 
@@ -775,7 +775,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-dropdown`
 - Transitive Lyra dependencies: `lr-menu`, `lr-menu-item`
-- Standalone gzip: 66.5 KiB (68084 bytes; bundle SHA-256 `764428681b9d1fdf62500cdedf9604b6dc33c155bd8590e2af7b521d9bf63c3c`)
+- Standalone gzip: 68.5 KiB (70125 bytes; bundle SHA-256 `78275c3744e7d3b4a84c9a6ce5023d71592c4f1cbb7f48e2d4b4a2093f472b72`)
 
 </details>
 
@@ -787,7 +787,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.5 KiB (27177 bytes; bundle SHA-256 `bd973e322231953d394016407da4a09b701f22739e2c25d3fa45300c4142297b`)
+- Standalone gzip: 26.6 KiB (27246 bytes; bundle SHA-256 `07a39e8f772db1e79afee07d146c9a589f9b21eff1b25a9ab1837ad7923a6317`)
 
 </details>
 
@@ -799,7 +799,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.6 KiB (22148 bytes; bundle SHA-256 `36aff3f4ccce6e5b8e2937200f7f8e32fbd31423d83028da70d439bce47cf060`)
+- Standalone gzip: 21.7 KiB (22230 bytes; bundle SHA-256 `8c7234f46874771c72d661e2cda3bee82a5832f36398d4a8272651a7cb383c96`)
 
 </details>
 
@@ -811,7 +811,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.5 KiB (25062 bytes; bundle SHA-256 `d3644b959d57a26a9fde55a9ef7baacaf9cb4d399d909f56d82c6ab4c87c2d34`)
+- Standalone gzip: 24.6 KiB (25150 bytes; bundle SHA-256 `840da2044f221dfc2172525065e8d706a0813eacbce90360b1e28000753ce009`)
 
 </details>
 
@@ -823,7 +823,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-icon-button`, `lr-tooltip`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 63.8 KiB (65288 bytes; bundle SHA-256 `dc6ce8e2c70ff389cc2599539e0f7d0aa431dfda698931e5499983205a7602c4`)
+- Standalone gzip: 65.6 KiB (67191 bytes; bundle SHA-256 `5a4f2ce91dd5bfb444d483a05cf2ed5c5045a3136a920031bbde3a114532b575`)
 
 </details>
 
@@ -835,7 +835,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `papaparse`
 - Direct Lyra dependencies: `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 46.5 KiB (47604 bytes; bundle SHA-256 `024f53a8668311ed92535a074b0645baecb9d793e281ae0a13b805cb96c0edcf`)
+- Standalone gzip: 46.8 KiB (47922 bytes; bundle SHA-256 `699d7d50ea131eb7ff8c8e59b22d1ec035f2c893b20d2010f5053478d2c301b6`)
 
 </details>
 
@@ -847,7 +847,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-empty`, `lr-widget`, `lr-widget-renderer`
 - Transitive Lyra dependencies: `lr-badge`, `lr-button`, `lr-card`, `lr-markdown`, `lr-media-card`, `lr-result-card`, `lr-result-field`, `lr-stat`
-- Standalone gzip: 112.1 KiB (114820 bytes; bundle SHA-256 `74746dc2b5d3a1f951ad45d272649dd90ce7f5d6eddfe1f90053f27d6ac8166e`)
+- Standalone gzip: 112.3 KiB (114993 bytes; bundle SHA-256 `9b6c43cf8398634c639bf552140352d5deeea08663e290e476e43a8473bcfdb9`)
 
 </details>
 
@@ -859,7 +859,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-dropdown`, `lr-dropdown-item`, `lr-empty`
 - Transitive Lyra dependencies: `lr-menu`, `lr-menu-item`
-- Standalone gzip: 105.6 KiB (108126 bytes; bundle SHA-256 `f1057ba3dea81e12d066539d3e18f7134060d68e1089906dcbb977511a4f74ba`)
+- Standalone gzip: 107.7 KiB (110310 bytes; bundle SHA-256 `ff385dae3016b78d0053a43854997608a8a956bf8f274bea7a99a82b07435923`)
 
 </details>
 
@@ -871,7 +871,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `papaparse`
 - Direct Lyra dependencies: `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 46.9 KiB (48017 bytes; bundle SHA-256 `3a1f6db57a8b49dc6be658bd82ff5a857e5af383d0c0a54b3159ffe576c2d971`)
+- Standalone gzip: 47.2 KiB (48329 bytes; bundle SHA-256 `173efb9179d893514d3aaf8c8117dcd99a8f9d87a7aa873248abe28ac4b03321`)
 
 </details>
 
@@ -883,7 +883,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-date-picker`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 65.5 KiB (67118 bytes; bundle SHA-256 `b653b170b9a7c6597081cffd9bd2ad7b29c5629ee8c905eaad6e46ef424dc337`)
+- Standalone gzip: 67.3 KiB (68958 bytes; bundle SHA-256 `14cebbc4b6a926e088561ee3ab7ebd74988d782cb1c518f2e800f9a88ff96e8e`)
 
 </details>
 
@@ -895,7 +895,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 36.4 KiB (37292 bytes; bundle SHA-256 `dd6b0e3ca5d18ecca7043b88dd71d08b01248945c54a105c5080bf6ae63467f4`)
+- Standalone gzip: 36.5 KiB (37368 bytes; bundle SHA-256 `d646e5b7a98fbff7ead7c7a1d9530af4ebf732aaaa2653f5923523fd5589b68a`)
 
 </details>
 
@@ -907,7 +907,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29.8 KiB (30523 bytes; bundle SHA-256 `346277c5b32329c4a674fa89e335899d29051365361dbb64d7af0a195ff0cda8`)
+- Standalone gzip: 29.9 KiB (30602 bytes; bundle SHA-256 `baeb9a4d7174ce1912d92bcbc1e4debd990f46d5d48a670de849d7ec2287f55c`)
 
 </details>
 
@@ -919,7 +919,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-icon-button`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 43.4 KiB (44418 bytes; bundle SHA-256 `c3cb483906e58faa251c5889273764d660cff31a0906acec675472c43aadec29`)
+- Standalone gzip: 43.8 KiB (44900 bytes; bundle SHA-256 `f9314aad2eaeea82351825fedc0ed62029d62fc14148abfdbdfadbd39be35ca4`)
 
 </details>
 
@@ -931,7 +931,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `shiki`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.2 KiB (38142 bytes; bundle SHA-256 `e9c5efdae3b7d65b9753d4f9ca380da65f422c4241fa38c8f79663b20af657c2`)
+- Standalone gzip: 37.3 KiB (38221 bytes; bundle SHA-256 `0a16a2109a18cf5419281f6e420683b6c04df1f415881d5499026e29643796b6`)
 
 </details>
 
@@ -943,7 +943,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.4 KiB (21916 bytes; bundle SHA-256 `ed594ad281bbf9ccad07e496c684628c1178eb94a0759b0b452614dee5fdcf68`)
+- Standalone gzip: 21.5 KiB (22004 bytes; bundle SHA-256 `22caacddf9df15e4c5d90c5e2b6dc512e85695eba45efda9657e026be51a9330`)
 
 </details>
 
@@ -955,7 +955,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.2 KiB (25819 bytes; bundle SHA-256 `6d4ea9c6a5333dc3aef637574af70ed27b08c5dbda5ca7618eae2a25d1a55a9f`)
+- Standalone gzip: 25.3 KiB (25902 bytes; bundle SHA-256 `cfdf1de4ab340589adcdca786df164c3db196372bab60eea21a65de74e9f1e75`)
 
 </details>
 
@@ -967,7 +967,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `shiki`
 - Direct Lyra dependencies: `lr-diff-view`, `lr-document-preview`
 - Transitive Lyra dependencies: `lr-pan-zoom`
-- Standalone gzip: 47.4 KiB (48549 bytes; bundle SHA-256 `ace676a06745c141437a7172db084cc0e92ccd4f48a3992502cbc6e5b4f014ca`)
+- Standalone gzip: 47.5 KiB (48636 bytes; bundle SHA-256 `9d453d4caeac403b1db5968e300df482a0bf69127a7c03af9c0c1e585243c087`)
 
 </details>
 
@@ -979,7 +979,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-checkbox`, `lr-chip`, `lr-chip-group`, `lr-combobox`, `lr-file-icon`, `lr-input`, `lr-option`, `lr-table`
 - Transitive Lyra dependencies: `lr-empty`, `lr-pagination`, `lr-skeleton`, `lr-spinner`
-- Standalone gzip: 121 KiB (123906 bytes; bundle SHA-256 `4578014fe402a4da707ed67cc6c96022176163651c3fe71ae14c3a010c5ca131`)
+- Standalone gzip: 123.1 KiB (126015 bytes; bundle SHA-256 `85dc61ee842ea6ee7d970cd3ae912889d433913d750dc5694966479698f6b749`)
 
 </details>
 
@@ -991,7 +991,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-pan-zoom`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 32.8 KiB (33587 bytes; bundle SHA-256 `fdabe830f77be26e6980f50c372540ccdfe8ab78efcb1c6a3e8164bb22bc7b64`)
+- Standalone gzip: 32.9 KiB (33684 bytes; bundle SHA-256 `c1c71c16b7f93ae618923a2d6e540b534cd74573da71ea9be74bb133b5534091`)
 
 </details>
 
@@ -1003,7 +1003,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-dialog`, `lr-document-preview`
 - Transitive Lyra dependencies: `lr-icon-button`, `lr-pan-zoom`
-- Standalone gzip: 57.9 KiB (59267 bytes; bundle SHA-256 `4cb2b96d35fe708fbc5d59c8fec20c0ef33fe87f6ba834ce1802ba6ee893fb31`)
+- Standalone gzip: 58.4 KiB (59788 bytes; bundle SHA-256 `47c707bb4f6c739fd943590ab470390c8383074f33fe26110734d43a32a0fd7b`)
 
 </details>
 
@@ -1015,7 +1015,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `mammoth`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 43 KiB (44026 bytes; bundle SHA-256 `fdd9e1308db0500ca443151887f432c9f2842800537c6e0d3f15e4324e615810`)
+- Standalone gzip: 43.1 KiB (44086 bytes; bundle SHA-256 `1939652ca27ff29c22eaa640845b41b5fa4c8675de21a3f108c3e6517e5abeac`)
 
 </details>
 
@@ -1027,7 +1027,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.8 KiB (54109 bytes; bundle SHA-256 `4ff38440b0cdca6031c3605f01adc52dd2491596272ff9d48d24df1e6b609912`)
+- Standalone gzip: 52.9 KiB (54189 bytes; bundle SHA-256 `c788a1f5a6bf4e20f5efa57cb14ac37e8d29d8cb8f6b39f7baa2aaa844c9fb8a`)
 
 </details>
 
@@ -1039,7 +1039,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-icon-button`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 44.1 KiB (45188 bytes; bundle SHA-256 `d04585a04d394eb4f346d4ef7dcb071d1535e982fc855f8c6a9c1cb57d6819b9`)
+- Standalone gzip: 44.6 KiB (45721 bytes; bundle SHA-256 `6911a524143d628bee3dfa3e57ec99017ed2d54826adbf7a0454e31f97d26d4b`)
 
 </details>
 
@@ -1051,7 +1051,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-breadcrumb`, `lr-breadcrumb-item`, `lr-button`, `lr-document-preview`, `lr-empty`, `lr-entity-card`, `lr-source-card`, `lr-tab`, `lr-tab-group`, `lr-tab-panel`
 - Transitive Lyra dependencies: `lr-badge`, `lr-chip`, `lr-pan-zoom`, `lr-result-field`
-- Standalone gzip: 71.3 KiB (72993 bytes; bundle SHA-256 `d91c33e6d4b9bac0d79e07e695c09ff00aded08d3c1830c599f3fe885fbd77a7`)
+- Standalone gzip: 71.4 KiB (73094 bytes; bundle SHA-256 `cd80184e403f262ad82d18d87698f954bb897599698720b580bed77f45bbd23e`)
 
 </details>
 
@@ -1063,7 +1063,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.1 KiB (31846 bytes; bundle SHA-256 `e180cdaaceceea9d6aad45a56de5cf394697c2cd84a4ef1912f8fb7438e50f49`)
+- Standalone gzip: 31.2 KiB (31929 bytes; bundle SHA-256 `e1366bbf40bfdb3866e057e6b7fd5ea6f1e943266de84e1d69e192eb1391c41a`)
 
 </details>
 
@@ -1075,7 +1075,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-menu`
 - Transitive Lyra dependencies: `lr-menu-item`
-- Standalone gzip: 63.2 KiB (64739 bytes; bundle SHA-256 `7e8771a32bbba7a9b487b4099f88a651654a67ad3e3845dd32ae51d08418f332`)
+- Standalone gzip: 65.2 KiB (66799 bytes; bundle SHA-256 `885628d3ad7601905e4081657fac418c3b47e56ed6d7e17238123452d45c1df4`)
 
 </details>
 
@@ -1087,7 +1087,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-menu`
 - Transitive Lyra dependencies: `lr-menu-item`
-- Standalone gzip: 48.4 KiB (49582 bytes; bundle SHA-256 `a1189cf47628cc88e69e254ca8c01888d544466b36c04ae6a9b0bc3862741900`)
+- Standalone gzip: 50.2 KiB (51386 bytes; bundle SHA-256 `3cce90a1adb0bd563014211b44d0aae5b133447a4d16caa2856cd58bb11ea85e`)
 
 </details>
 
@@ -1099,7 +1099,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `epubjs`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.6 KiB (42616 bytes; bundle SHA-256 `972602c1d3e57cdd95159e6f09d45c970df4e4cbd21966bc91230cdf00f39c78`)
+- Standalone gzip: 41.7 KiB (42700 bytes; bundle SHA-256 `07854832c249b18410287031f35bdea8b04f8580323397445ffcea3221f9b339`)
 
 </details>
 
@@ -1111,7 +1111,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `postal-mime`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 47.1 KiB (48261 bytes; bundle SHA-256 `de6126c2a328259d67c6e0587abff5dab515623c2fb3c471bee10c85f2c9bbfc`)
+- Standalone gzip: 47.2 KiB (48346 bytes; bundle SHA-256 `0d715916dbb1633ea703f99c0bf4ac049266b33ced2272ca2a1b3ab485eb1c0a`)
 
 </details>
 
@@ -1123,7 +1123,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26 KiB (26617 bytes; bundle SHA-256 `cee6993785afb3e0e35165a3a5370594ebde70ef56cf9c9aced283b6b13a03a2`)
+- Standalone gzip: 26.1 KiB (26696 bytes; bundle SHA-256 `043e07a4ca03b42d5287fa2d9fba23f5203df2000e035f9ccb340f759cc81fee`)
 
 </details>
 
@@ -1135,7 +1135,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `emoji-picker-element-data`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.6 KiB (42588 bytes; bundle SHA-256 `e7cd254b483333c475d319593fea044148bfee9512e7748c540ecbfa22eb9705`)
+- Standalone gzip: 41.7 KiB (42709 bytes; bundle SHA-256 `79245cf1a554e6c5bf3a878141f27631f395485167ff03aa57a55e554b4d47f7`)
 
 </details>
 
@@ -1147,7 +1147,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.9 KiB (28532 bytes; bundle SHA-256 `ea755ec05f5022831d91f4503120d3d0500cc4076f0d08ea1b6aed1039b9fc7b`)
+- Standalone gzip: 27.9 KiB (28607 bytes; bundle SHA-256 `1a6ebf35add87b1a2ac309bfea651efc2de624805c95af07681a767c17ac5fbf`)
 
 </details>
 
@@ -1159,7 +1159,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-button`, `lr-chip`, `lr-empty`, `lr-result-field`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 48.4 KiB (49598 bytes; bundle SHA-256 `cd1740c929f8fc9eebef472b87280055f64d9183a129f7d0c23fb2b0371d6195`)
+- Standalone gzip: 48.6 KiB (49721 bytes; bundle SHA-256 `925088f85b38e18b695d94814eecb326bf67db9510af3a4d5009817de68f8f6e`)
 
 </details>
 
@@ -1171,7 +1171,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.8 KiB (40706 bytes; bundle SHA-256 `2d30555dbcb9e75bf14cf7896a07f2fde9cf902e3cfa452708cd4500be7730fb`)
+- Standalone gzip: 41.7 KiB (42677 bytes; bundle SHA-256 `16bee90e0c50842859c2088d901c6745811b99ed895bb6a9bb3f99d8fb29945b`)
 
 </details>
 
@@ -1183,7 +1183,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chunk-inspector`, `lr-empty`, `lr-entity-card`, `lr-neighbor-list`, `lr-provenance-panel`, `lr-stat`, `lr-tab`, `lr-tab-group`, `lr-tab-panel`
 - Transitive Lyra dependencies: `lr-badge`, `lr-button`, `lr-chip`, `lr-community-card`, `lr-entity-chip`, `lr-path-strip`, `lr-result-field`, `lr-scroller`, `lr-virtual-list`
-- Standalone gzip: 92.3 KiB (94509 bytes; bundle SHA-256 `e599f894ae369ff0cafb3341bd8e229df68f4e9eb52f2705f7b1b2c42e54aba0`)
+- Standalone gzip: 94.5 KiB (96782 bytes; bundle SHA-256 `cd50112b91a197fd9482f641af71e9914afd79ba30200ff7cc2b43da1aad7b11`)
 
 </details>
 
@@ -1195,7 +1195,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29.7 KiB (30456 bytes; bundle SHA-256 `72a1dc8c3f7a8d3a47ee7739d4b55ac6bd0c8f81907b1b087f9f1a6ed3295ad5`)
+- Standalone gzip: 29.8 KiB (30522 bytes; bundle SHA-256 `b947f055cb0c137bdade8d6bafbe303737bad2f87f6acb74555816cfb6d2cdb9`)
 
 </details>
 
@@ -1207,7 +1207,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chip`, `lr-chip-group`, `lr-export-button`, `lr-file-input`, `lr-table`
 - Transitive Lyra dependencies: `lr-empty`, `lr-pagination`, `lr-skeleton`, `lr-spinner`
-- Standalone gzip: 101 KiB (103400 bytes; bundle SHA-256 `4008224a9ff462881603ffb6f52f23cfce2f89edd3fe8192ff6bb353ae79596b`)
+- Standalone gzip: 102.8 KiB (105229 bytes; bundle SHA-256 `26ac30e02c7216d75e07844c4c7d600effc9d2d7acd51f401f18e78a3c6939b5`)
 
 </details>
 
@@ -1219,7 +1219,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `shiki`
 - Direct Lyra dependencies: `lr-diff-view`, `lr-rubric-form`, `lr-table`
 - Transitive Lyra dependencies: `lr-checkbox`, `lr-checkbox-group`, `lr-empty`, `lr-option`, `lr-pagination`, `lr-segmented`, `lr-select`, `lr-skeleton`, `lr-slider`, `lr-spinner`, `lr-textarea`
-- Standalone gzip: 137.1 KiB (140372 bytes; bundle SHA-256 `3cd9ed76c2112a23aceb777fa6e6aebf4b1b63c102b82acda45b9796fbe81bbe`)
+- Standalone gzip: 139 KiB (142298 bytes; bundle SHA-256 `d70c43ce11ecb32ba6b5926db541678ec27e7147794538383f65e5d02ec5e6a8`)
 
 </details>
 
@@ -1231,7 +1231,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-badge`, `lr-code-block`, `lr-details`, `lr-empty`, `lr-grounding-summary`, `lr-live-region`, `lr-markdown`, `lr-progress-bar`, `lr-tool-timeline`
 - Transitive Lyra dependencies: `lr-button`, `lr-citation-badge`, `lr-claim-evidence`, `lr-copy-button`, `lr-icon-button`, `lr-json-viewer`, `lr-skeleton`, `lr-stat`, `lr-tool-approval-dialog`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-tooltip`
-- Standalone gzip: 156.7 KiB (160457 bytes; bundle SHA-256 `9fbce12103d96637a9c88f705be9a2119c6d76ceda55209cbe1e4f4c340ac22f`)
+- Standalone gzip: 159 KiB (162863 bytes; bundle SHA-256 `04cc8f97f97a8acb1e6e0d18cbfb3bcc0eabb01ee17d31669c93752034c17d34`)
 
 </details>
 
@@ -1243,7 +1243,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 45.5 KiB (46583 bytes; bundle SHA-256 `969903eb8bb22fb848ca288481dd9205dc2eecac4019c4dfd27d3d39170bf11a`)
+- Standalone gzip: 47.3 KiB (48399 bytes; bundle SHA-256 `0ddeb6a5abfa1427d9eb77d36a9851a7cad09215d1c30924d51be3db83927476`)
 
 </details>
 
@@ -1255,7 +1255,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.8 KiB (26395 bytes; bundle SHA-256 `2912583c9c3baaf858d3b91c2bbb019b37f5fca805bf8e231ede09be1f60280e`)
+- Standalone gzip: 25.9 KiB (26471 bytes; bundle SHA-256 `14777c57263b514a83136a7a291dd18af2a916ab4f315cd468050acb7fee50b1`)
 
 </details>
 
@@ -1267,7 +1267,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.2 KiB (42141 bytes; bundle SHA-256 `1e1ab7f17182bb1fc9a14d216c79aa84c61961de6b2cf709b202ea75b3396392`)
+- Standalone gzip: 41.2 KiB (42208 bytes; bundle SHA-256 `88f1f37d328c9665058337033ac6b21d59c60576cd35910b4bc44fd3380e26b2`)
 
 </details>
 
@@ -1279,7 +1279,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-file-icon`, `lr-tree`
 - Transitive Lyra dependencies: `lr-empty`, `lr-live-region`, `lr-tree-item`
-- Standalone gzip: 51.8 KiB (53004 bytes; bundle SHA-256 `e0e4cdf671a47116146edce213a164ab3d972fd42a90286211ffa63d4fa12cd6`)
+- Standalone gzip: 51.9 KiB (53104 bytes; bundle SHA-256 `ddaaa91fcb5108479690b3a16250e8863408ed3a1a5e2a7db11d5c38c30bd29c`)
 
 </details>
 
@@ -1291,7 +1291,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-chip`, `lr-chip-group`, `lr-combobox`, `lr-date-input`, `lr-dropdown`, `lr-dropdown-item`, `lr-input`, `lr-option`, `lr-select`, `lr-spinner`
 - Transitive Lyra dependencies: `lr-date-picker`, `lr-empty`, `lr-menu`, `lr-menu-item`
-- Standalone gzip: 148.4 KiB (151955 bytes; bundle SHA-256 `54b3409e06d19d7c9368fbcb577018614c850d9fa6d9eb45c1c534e352b1f451`)
+- Standalone gzip: 150.8 KiB (154385 bytes; bundle SHA-256 `33b600470af345cc6f81a59ddcd84a620ae268f96cc402d94850cbcf5c0e2174`)
 
 </details>
 
@@ -1303,7 +1303,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28.3 KiB (28980 bytes; bundle SHA-256 `ca5d77884993d959cebe32dc6b4a64a4b08976184545e27576dfd356277430ab`)
+- Standalone gzip: 28.4 KiB (29074 bytes; bundle SHA-256 `c63d3c9ec2a87fde776a29b3e526ef97f112b2fdec5912653953f3ccbc4b03bf`)
 
 </details>
 
@@ -1315,7 +1315,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-flow-node`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 49.7 KiB (50875 bytes; bundle SHA-256 `0233eb8ac118e8fc6852b694631f883ddf51d115de263e8c93c3479861b4fefe`)
+- Standalone gzip: 50 KiB (51180 bytes; bundle SHA-256 `f11c06580197b8babde8156991f856e2efd8e5096d4cd049c980c2ac92a3de20`)
 
 </details>
 
@@ -1327,7 +1327,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.5 KiB (24083 bytes; bundle SHA-256 `5e7c74bc4cfb00dea057875dd53e47b48f56314d729618ec9d9df4f17f6da3bb`)
+- Standalone gzip: 23.6 KiB (24170 bytes; bundle SHA-256 `e0ffbfa2dc2069c89ace5cd1130f47398e10f04637d257a8e47434add6a581ec`)
 
 </details>
 
@@ -1339,7 +1339,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.6 KiB (28220 bytes; bundle SHA-256 `f6d3ba2e97b3ca54a8922bd4290daf168c5099245a3d32261890415db0109e24`)
+- Standalone gzip: 27.6 KiB (28296 bytes; bundle SHA-256 `b16ee1b81202c7e3a189bd5fed7d0b75e82b6c266b3a1e5a39e32f97c5371005`)
 
 </details>
 
@@ -1351,7 +1351,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.1 KiB (24649 bytes; bundle SHA-256 `7b2e92946818578ab2cac6698a130857adbfa70ed123de3d572e6339257a94b6`)
+- Standalone gzip: 24.2 KiB (24742 bytes; bundle SHA-256 `2cc0adb55499d6084d3b93dcfc3f4d43db997e300ef1dc8293a5cf74276f0e9b`)
 
 </details>
 
@@ -1363,7 +1363,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.8 KiB (26409 bytes; bundle SHA-256 `a47cac0ab6867bb0962036c5c45ea7169452ba80733bcb80d9c9a7e754abd665`)
+- Standalone gzip: 25.9 KiB (26489 bytes; bundle SHA-256 `2349f2e8889f823c588edc11e57ae1aa17abab056f6bb76421ab7a6b1562c48a`)
 
 </details>
 
@@ -1375,7 +1375,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.9 KiB (22406 bytes; bundle SHA-256 `e6a4f1437b5a0296adb2e02cc38df77b0a15ee04eef00ecbfa717bf7e213fc81`)
+- Standalone gzip: 22 KiB (22485 bytes; bundle SHA-256 `f35457b2226dde0576123e7e54a250b449d0443db3fffe0e5a66a79e717c2b3c`)
 
 </details>
 
@@ -1387,7 +1387,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 22 KiB (22533 bytes; bundle SHA-256 `dfdae9ac565c751c25f48b8ecb716449a0f9b6b11275ac06d2d6117d52dd05a0`)
+- Standalone gzip: 22.1 KiB (22610 bytes; bundle SHA-256 `3192427bf43aff71c1b280e50d26b04f84dbfb3ae068958939b413aca72fcda3`)
 
 </details>
 
@@ -1399,7 +1399,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 22.2 KiB (22743 bytes; bundle SHA-256 `64d6d3548728fef10ec5e32d4ac25c7d81dc612f4163f9f95bcbe931130d7e68`)
+- Standalone gzip: 22.3 KiB (22829 bytes; bundle SHA-256 `0487a494edec2034c0f3a6990184bd4a148471bdd4cb47a51eb72f6eba278a5f`)
 
 </details>
 
@@ -1411,7 +1411,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.2 KiB (24733 bytes; bundle SHA-256 `ce378a0c70e38aa816e192e2dd0c07439760ba635088713f0efb8da2a148ba5e`)
+- Standalone gzip: 24.2 KiB (24817 bytes; bundle SHA-256 `2e3a0c67288cdf35eed4d207e444fd2cc7d47e4c4e566f7e75b0ced5462c1a52`)
 
 </details>
 
@@ -1423,7 +1423,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.5 KiB (25132 bytes; bundle SHA-256 `3ca4fdb09e3edfe23c9abf985be9acaefc334419ea5f320febe6020a28311bd2`)
+- Standalone gzip: 24.6 KiB (25208 bytes; bundle SHA-256 `8302d4d023a2301e5c233c6da6f5ab1b92fe9073080954e1db527055a32d04e4`)
 
 </details>
 
@@ -1435,7 +1435,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.5 KiB (24067 bytes; bundle SHA-256 `6ad540807a88b78e04f9354f625c0f305f0a1ba1934cf3b04536efec3a4f50dd`)
+- Standalone gzip: 23.6 KiB (24147 bytes; bundle SHA-256 `fa092859d834da098f72e4775c978a49473c0f6c8b8e22d61f7fccf562c0c5d2`)
 
 </details>
 
@@ -1447,7 +1447,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `maplibre-gl`
 - Direct Lyra dependencies: `lr-geojson-viewer`, `lr-json-viewer`, `lr-map`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 70.4 KiB (72100 bytes; bundle SHA-256 `545e2b3edd75dd31c38e628ed23dbe736ab8ff6cb77453222933d392e6e6996c`)
+- Standalone gzip: 70.5 KiB (72198 bytes; bundle SHA-256 `267fa5078f1657f842d6c662d582447e7c65647dca079488677bf6bf78d6ddc1`)
 
 </details>
 
@@ -1459,7 +1459,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `maplibre-gl`
 - Direct Lyra dependencies: `lr-json-viewer`, `lr-map`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 70.4 KiB (72096 bytes; bundle SHA-256 `a0d337f14e3ee5ab04f16d91206eb984afba40eb416bc73f22d1785fc3de1e91`)
+- Standalone gzip: 70.5 KiB (72173 bytes; bundle SHA-256 `ac822f0de40ac9ff995fea6bfb5ec43a9f357983807561030247031438ab8a13`)
 
 </details>
 
@@ -1471,7 +1471,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom`
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 50 KiB (51158 bytes; bundle SHA-256 `b0da1d8691a870a86b5e45c121df1dfe86502cb6363b333e6b9a1abbfafa3205`)
+- Standalone gzip: 50 KiB (51247 bytes; bundle SHA-256 `4e7392065bd6599ba6d93777a5fcb7af835c8ee0370046cf9a5b4d17493da72b`)
 
 </details>
 
@@ -1483,7 +1483,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.8 KiB (27464 bytes; bundle SHA-256 `6ae3ad48bbfbd75e1eaab5e11cc36d32a127e5638f0672fbb1e25660026448fc`)
+- Standalone gzip: 26.9 KiB (27532 bytes; bundle SHA-256 `2a4354405dd968bd1a19eb765181f76371f2738e8cdcd9033605cca8d3f85869`)
 
 </details>
 
@@ -1495,7 +1495,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chip`, `lr-chip-group`, `lr-input`, `lr-option`, `lr-select`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 84 KiB (86035 bytes; bundle SHA-256 `4a0e91edce0ec2f3f31359cace1ac412226a38f8c720a19048cc3d1b8955051a`)
+- Standalone gzip: 85.8 KiB (87849 bytes; bundle SHA-256 `24630b0ba994d574bf4f2cb8a2216e0fd8f2571d5d0733d37f8f7c57b18c425a`)
 
 </details>
 
@@ -1507,7 +1507,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-citation-badge`, `lr-claim-evidence`, `lr-empty`, `lr-stat`
 - Transitive Lyra dependencies: `lr-badge`
-- Standalone gzip: 55.6 KiB (56918 bytes; bundle SHA-256 `cf568e1ae7cebdaf36e714aaed5d3732fc87b0df5964a248c043e5f7b546a323`)
+- Standalone gzip: 57.6 KiB (58940 bytes; bundle SHA-256 `dfb73588aecfaf022ca3b74de930dc743d145b6501cea1aa05bb79f566cfa07c`)
 
 </details>
 
@@ -1519,7 +1519,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.9 KiB (25485 bytes; bundle SHA-256 `01d8f6235c6875023a4ec55a2e090653291f566ede2526e6e8e14573608be74b`)
+- Standalone gzip: 25 KiB (25554 bytes; bundle SHA-256 `0299e6cbdc96e1c4702764f24220413861b0c34a12f61e35d68151646fa1036e`)
 
 </details>
 
@@ -1531,7 +1531,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 46.2 KiB (47270 bytes; bundle SHA-256 `79ac894c57864f1fdbc6837c11330e3c358da787499149a3d0e6a1bab3e46363`)
+- Standalone gzip: 46.6 KiB (47765 bytes; bundle SHA-256 `e84c3d7fdc4159acec3cd13547016c16ca6ee297531a17da021980230e5a5ea8`)
 
 </details>
 
@@ -1543,7 +1543,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.9 KiB (25488 bytes; bundle SHA-256 `02ce45cc94e971f4ef7f989e33e7483a947a775d6a603c8515da74a4036af4e2`)
+- Standalone gzip: 25 KiB (25581 bytes; bundle SHA-256 `50003153471a9c8cca13beb9f2d455cf92f5cee014ad844c0ae00be3d8271a7c`)
 
 </details>
 
@@ -1555,7 +1555,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 54 KiB (55319 bytes; bundle SHA-256 `801619a6d4bbf1874b847f168753c47b58c8a19f8f2c0448e3f8eed3c6d60aa6`)
+- Standalone gzip: 54.1 KiB (55415 bytes; bundle SHA-256 `7caefa92bcecbddd00dee851be06b57912635fa632b2a0b080979f842baf5d8c`)
 
 </details>
 
@@ -1567,7 +1567,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.2 KiB (40143 bytes; bundle SHA-256 `d1b8a0b75e01aec5373826ff50cb10372b04d1444fd433595a7258574a4126d0`)
+- Standalone gzip: 39.3 KiB (40235 bytes; bundle SHA-256 `3d6a473ee69f31a5a0a10670e8d0cff0248eee8f12f015d99e1abfc53f7b1b1b`)
 
 </details>
 
@@ -1579,7 +1579,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29.5 KiB (30192 bytes; bundle SHA-256 `3140166ba5e24889737f9c33591e1e7a228eba5174568526cca9e84a7f539276`)
+- Standalone gzip: 29.6 KiB (30262 bytes; bundle SHA-256 `b731366e2d17afdefcb29be79df0447652cf14825b11751260c2a734dd08f923`)
 
 </details>
 
@@ -1591,7 +1591,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`
 - Direct Lyra dependencies: `lr-icon`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34.2 KiB (35061 bytes; bundle SHA-256 `8a1fdf5b546b2357f98b6051ee4853fda61875e90d00d0d656585783501b2062`)
+- Standalone gzip: 34.3 KiB (35127 bytes; bundle SHA-256 `eec6dc773b103d027b213390f97a1c98cfa845b6b191d73474464ba4819d4051`)
 
 </details>
 
@@ -1603,7 +1603,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 30.3 KiB (31066 bytes; bundle SHA-256 `e2c5706f4931a7c55278870941d7e4b89ba29881ea502feb348eaf2d49dc0c32`)
+- Standalone gzip: 30.4 KiB (31127 bytes; bundle SHA-256 `3093621b624bc9bb317d124c8607df5461c537fb1c4ba6989abfbca3875bbca2`)
 
 </details>
 
@@ -1615,7 +1615,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`, `lr-pan-zoom`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.7 KiB (39632 bytes; bundle SHA-256 `b0212a621958f5ec03e14db02616c86b85187e5cabf621f488bf5f120ff3463c`)
+- Standalone gzip: 38.8 KiB (39736 bytes; bundle SHA-256 `82a961d6bb165d6b00e3819a59ae366e012185e190818ba25cc42b90d6f1cf48`)
 
 </details>
 
@@ -1627,7 +1627,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.9 KiB (38829 bytes; bundle SHA-256 `525ad95ab4253b38592a38a1e258b3534353e2f129f0c1f2ee16d40dd344acb6`)
+- Standalone gzip: 38 KiB (38903 bytes; bundle SHA-256 `25d54dd981f1d0c7e4d6bcdfc0ecb2fb7a600175859694f9dd007898d12c4aa6`)
 
 </details>
 
@@ -1639,7 +1639,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-empty`, `lr-progress-bar`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 45.2 KiB (46295 bytes; bundle SHA-256 `31814e72fafac92747bf84f35421fc3ae0c7a6b8d506e9c1a1b0493613dac1f5`)
+- Standalone gzip: 45.5 KiB (46584 bytes; bundle SHA-256 `7e0244ce60caaf7e7ea64679c07dcbce58d06cbbb4c090fd746373449b6ec978`)
 
 </details>
 
@@ -1651,7 +1651,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.5 KiB (39438 bytes; bundle SHA-256 `d3c2cdb288991cd4a87a08b17f11aecce9cbd7e536ca919d389d24e0fb1a134b`)
+- Standalone gzip: 38.6 KiB (39521 bytes; bundle SHA-256 `805e5686c967b15ca8f0246223a82cee96fa89b9f1466cdb79680541ded2a957`)
 
 </details>
 
@@ -1663,7 +1663,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 22.3 KiB (22801 bytes; bundle SHA-256 `464bcf55e480de24eb5fb020888e46981b229323bbeb802603df2a31050a5348`)
+- Standalone gzip: 22.3 KiB (22884 bytes; bundle SHA-256 `b57ae5fd7d3c72afca35a3e09cab8461a9b219454861b30304c63aa8044b565f`)
 
 </details>
 
@@ -1675,7 +1675,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-empty`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34.4 KiB (35187 bytes; bundle SHA-256 `5e98ea1d10835ec7b7c1aa55157ea02c229ed5452fbfd9e82d9c8d01550b5ff4`)
+- Standalone gzip: 34.4 KiB (35272 bytes; bundle SHA-256 `25a702533fedf029ac5654578d79bcd31e08bb2a3710b057e4db36691362b3d6`)
 
 </details>
 
@@ -1687,7 +1687,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 30.6 KiB (31317 bytes; bundle SHA-256 `3f8f442f7613c8b4db563e9d7e9b318ac9807b0f7bbb5005159c9a77dbc3750b`)
+- Standalone gzip: 30.7 KiB (31398 bytes; bundle SHA-256 `32799593fd105f38367abe49ecf6f229343992b851c02526d00600ef7dc1b9ad`)
 
 </details>
 
@@ -1699,7 +1699,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.2 KiB (23807 bytes; bundle SHA-256 `a03974ce87149bc0cb19bd571f5cc433678b99e1a2c5569556d55d8342063cb3`)
+- Standalone gzip: 23.3 KiB (23884 bytes; bundle SHA-256 `3484f43d6ffebbe0a7a7d07255e3ab6e753bc23a0c3b1e8df5a0a7df21480987`)
 
 </details>
 
@@ -1711,7 +1711,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-button`, `lr-dropdown`, `lr-menu`, `lr-menu-item`, `lr-stat`, `lr-table`
 - Transitive Lyra dependencies: `lr-empty`, `lr-pagination`, `lr-skeleton`, `lr-spinner`
-- Standalone gzip: 113.3 KiB (116066 bytes; bundle SHA-256 `a146b5fbf780862a51961fdd32cbc02656c9e0f3d71f403847046c48ff332d6f`)
+- Standalone gzip: 115.5 KiB (118317 bytes; bundle SHA-256 `3c1115d56d281fc7294d4254c3ef77d50fe040c83f736f968852c9743e45a0d7`)
 
 </details>
 
@@ -1723,7 +1723,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-ingestion-queue`, `lr-knowledge-base`
 - Transitive Lyra dependencies: `lr-badge`, `lr-button`, `lr-dropdown`, `lr-empty`, `lr-menu`, `lr-menu-item`, `lr-pagination`, `lr-progress-bar`, `lr-skeleton`, `lr-spinner`, `lr-stat`, `lr-table`, `lr-virtual-list`
-- Standalone gzip: 127.8 KiB (130874 bytes; bundle SHA-256 `836d2a1ef1460c93eaa346d3a7fdf183866502dcf65ad1288a62c01ba56df834`)
+- Standalone gzip: 130.3 KiB (133382 bytes; bundle SHA-256 `809df21072980f5aa3091e3c33fd7b9a5a57e3355728a5db85eb8e51afa85f77`)
 
 </details>
 
@@ -1735,7 +1735,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom`
 - Direct Lyra dependencies: `lr-button`, `lr-chip`, `lr-entity-card`, `lr-graph`, `lr-graph-legend`, `lr-input`, `lr-neighbor-list`, `lr-path-strip`, `lr-popover`
 - Transitive Lyra dependencies: `lr-badge`, `lr-empty`, `lr-result-field`, `lr-scroller`, `lr-skeleton`, `lr-virtual-list`
-- Standalone gzip: 129.2 KiB (132327 bytes; bundle SHA-256 `22ae337528a07ac90a05e82f9301764346399bf74ce2c78f43ffd8c67fbe0302`)
+- Standalone gzip: 131.8 KiB (134961 bytes; bundle SHA-256 `eecb8e50144911e615f42881337cf07e47c1c90434bc9b5692588211e37f887b`)
 
 </details>
 
@@ -1747,7 +1747,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.6 KiB (39508 bytes; bundle SHA-256 `3c1d22484ffe4641863eb6bfdc7bbe45fb9b473af940de03d7b7ca20d8c1b4b0`)
+- Standalone gzip: 38.7 KiB (39584 bytes; bundle SHA-256 `7362e2c7622c5146974c48d4b402eb1f333e65e7a72e2ffdfc59f82d04dcf021`)
 
 </details>
 
@@ -1759,7 +1759,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-pan-zoom`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.2 KiB (39123 bytes; bundle SHA-256 `4c2b41bc4e670e7e4a8f3086749dce447c9fab93ccd3e51c3339994d8ed1e9d3`)
+- Standalone gzip: 38.3 KiB (39196 bytes; bundle SHA-256 `a65be35d0095dabf04ff0163ffebecb7afd89de0ddb30d36c07d6a45427db22c`)
 
 </details>
 
@@ -1771,7 +1771,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.8 KiB (54108 bytes; bundle SHA-256 `3678dc1ba61b1370fbef73b2f06c190ffe3d29ddc9031b5747f9c60b59c7a532`)
+- Standalone gzip: 52.9 KiB (54189 bytes; bundle SHA-256 `0e52ce34481314795dc469abeec7604d7562be95df63ba3c2cbee9ffd9c14f7e`)
 
 </details>
 
@@ -1783,7 +1783,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.5 KiB (41449 bytes; bundle SHA-256 `4506b5b7f287522dc19d405e645e9bfcb05b52b07f52cd278848725b0c3acfb5`)
+- Standalone gzip: 40.9 KiB (41846 bytes; bundle SHA-256 `d2637394a701e1e36ce7d4592f3be8e4d2ee67929b3f26bb8482d98587fe6cc6`)
 
 </details>
 
@@ -1795,7 +1795,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.9 KiB (24454 bytes; bundle SHA-256 `db650148d47a2ad5bc428066586b3d4751a6ebebd72c2997a2b24e16eecb07c0`)
+- Standalone gzip: 24 KiB (24533 bytes; bundle SHA-256 `6bfa44fc05a194309187fc6c7f3ab99a2264c16a0a0783288172bae4171c3f53`)
 
 </details>
 
@@ -1807,7 +1807,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-flag`
 - Transitive Lyra dependencies: `lr-skeleton`
-- Standalone gzip: 57 KiB (58370 bytes; bundle SHA-256 `bceee8148b1ec0dc3a6edc466a0c4d30eee15c04751efd7069a0501201dc8eda`)
+- Standalone gzip: 58.8 KiB (60173 bytes; bundle SHA-256 `d0970109e1ba04f600f1c1877fdd585f1253dd5f7ac8e5285892177a7e69c2fe`)
 
 </details>
 
@@ -1819,7 +1819,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `maplibre-gl`
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 47.9 KiB (49064 bytes; bundle SHA-256 `01ad2c9e7db5caaa4260a8eddfc076285c0ad1a913b47fdc3df4e7f6a0ec4a50`)
+- Standalone gzip: 48 KiB (49144 bytes; bundle SHA-256 `87da953a491a0e927ad651e066cb3a902505b1c47c611c591bccbf4adad599e2`)
 
 </details>
 
@@ -1831,7 +1831,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 58.5 KiB (59895 bytes; bundle SHA-256 `a056552bdef2633b5ec3e476b44d48fc851eb063afbee426f00cd3d365617e4a`)
+- Standalone gzip: 58.6 KiB (60025 bytes; bundle SHA-256 `c30ab448fb99dc03e62196850bf19526d3988b9d0e14bf86e3fee0d7adc9a012`)
 
 </details>
 
@@ -1843,7 +1843,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 57.7 KiB (59130 bytes; bundle SHA-256 `bccdc03046814763d125d90a56d21c441c4465d58100b80e5fd3c21662c90d6e`)
+- Standalone gzip: 57.9 KiB (59271 bytes; bundle SHA-256 `9212285d19b5c88a791622086e56f8cd7e51fb6e74e9135f896940473161797d`)
 
 </details>
 
@@ -1855,7 +1855,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.6 KiB (27267 bytes; bundle SHA-256 `84a2cccdcfc869ed279970bb875c1fbf6ef1a38c054859dea6dcbb55cfcdb39f`)
+- Standalone gzip: 26.7 KiB (27336 bytes; bundle SHA-256 `21bb7dca7617df122d195a8e5e06eb43ea1ce0dcf0e5a302e886980f59555e08`)
 
 </details>
 
@@ -1867,7 +1867,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25 KiB (25614 bytes; bundle SHA-256 `9807f63c99893001fc7ef85cc35e5e2f7c4a039f9c1d3f9acac8fc7ef3984f9d`)
+- Standalone gzip: 25.1 KiB (25693 bytes; bundle SHA-256 `9dcb88fcc7fb1f7d81e17d794c4bf879a07881b2e73bdd96df714c0c840b644b`)
 
 </details>
 
@@ -1879,7 +1879,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-confirm-bar`, `lr-empty`, `lr-provenance-panel`
 - Transitive Lyra dependencies: `lr-button`, `lr-chip`, `lr-chunk-inspector`, `lr-community-card`, `lr-details`, `lr-entity-chip`, `lr-json-viewer`, `lr-live-region`, `lr-path-strip`, `lr-scroller`, `lr-virtual-list`
-- Standalone gzip: 94.4 KiB (96642 bytes; bundle SHA-256 `34552607b9eadf3ab8880e65641f0cdf4d544f4356e2b8ec85e9d44808f47d5d`)
+- Standalone gzip: 96.6 KiB (98892 bytes; bundle SHA-256 `fd9578c808c34805af09cc82853ef8d0b8c26ab984ea13087ed05c5bcfcac2de`)
 
 </details>
 
@@ -1891,7 +1891,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.8 KiB (39779 bytes; bundle SHA-256 `ee4f47b91bc019dcaa14623f7e1bf8eaa5894049f55a6c2efdf15d6f861b64f2`)
+- Standalone gzip: 40.6 KiB (41602 bytes; bundle SHA-256 `93f5d3373a20174a9fde8072f2441aeb72de137e8656963dd08da08ded11d970`)
 
 </details>
 
@@ -1903,7 +1903,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-menu-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 48.1 KiB (49240 bytes; bundle SHA-256 `bd0c0838cdaf4632383a2bcf1aafff743ce2aeb1b5b2f2def4022ebb376eff3b`)
+- Standalone gzip: 49.9 KiB (51072 bytes; bundle SHA-256 `d7a11d242cf71da9324dd7bd4b82c059e46112d55c4d0b5ed7984b7156b42015`)
 
 </details>
 
@@ -1915,7 +1915,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-menu`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29.6 KiB (30345 bytes; bundle SHA-256 `35e7931de59282ab0a9a622662c1e67087bb556cf7635495c2bb798305a36053`)
+- Standalone gzip: 29.7 KiB (30424 bytes; bundle SHA-256 `6bae30757dd7f0cf45b7f642c4dd96f9770d6bbcd8dceb2b8980357d25524102`)
 
 </details>
 
@@ -1927,7 +1927,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.3 KiB (21800 bytes; bundle SHA-256 `ac636ab8714b801a7861b8ec09d720d677d89db64634dc85b4ee867ad3386188`)
+- Standalone gzip: 21.4 KiB (21893 bytes; bundle SHA-256 `1398b04f08d56e0b8a8ed04849d3fbfe23fdfe01ffbdc22687247fd38e0f5f76`)
 
 </details>
 
@@ -1939,7 +1939,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-menubar-item`
 - Transitive Lyra dependencies: `lr-menu`, `lr-menu-item`
-- Standalone gzip: 54.1 KiB (55350 bytes; bundle SHA-256 `67e7ee23e69d38bba828ad755f7e1604fc7de405929a721a5c67a70a1c357812`)
+- Standalone gzip: 55.2 KiB (56574 bytes; bundle SHA-256 `c6a457d6f680992e3a939d704d6b86d47c54bbbfb81ba7b79c776e1c5492608d`)
 
 </details>
 
@@ -1951,7 +1951,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-menu`
 - Transitive Lyra dependencies: `lr-menu-item`
-- Standalone gzip: 50 KiB (51202 bytes; bundle SHA-256 `2845db53e6a07018de011806b1d511964a466e0ac01135a5edf75681e62d3c47`)
+- Standalone gzip: 51.3 KiB (52503 bytes; bundle SHA-256 `d0373717c3b08c5177ef7274f9cc4be270c04ae3c1c9fa7bcbe08c80e9edaec5`)
 
 </details>
 
@@ -1963,7 +1963,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-copy-button`, `lr-icon-button`, `lr-message-feedback`
 - Transitive Lyra dependencies: `lr-chip`, `lr-live-region`, `lr-tooltip`
-- Standalone gzip: 77.5 KiB (79339 bytes; bundle SHA-256 `c76ddbbd047f942cbc7ce83797581f12cdeef901a47fbd81ad225f4432499957`)
+- Standalone gzip: 79.5 KiB (81370 bytes; bundle SHA-256 `c34803dee8e30d276d008764453df3b2f81fa6834754a40766821d1d3765421e`)
 
 </details>
 
@@ -1975,7 +1975,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chip`, `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.9 KiB (38760 bytes; bundle SHA-256 `0429228ca5b2c52c05bb7fff0b4dac8b7033367e9110f7c11ba8fca842c2e4d7`)
+- Standalone gzip: 37.9 KiB (38836 bytes; bundle SHA-256 `81fe1e27e7f9909d8c17b7186836b53f797f5b577842e469d204269c069e16da`)
 
 </details>
 
@@ -1987,7 +1987,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-attachment-chip`, `lr-button`, `lr-citation-badge`, `lr-details`, `lr-json-viewer`, `lr-markdown`, `lr-thinking-panel`, `lr-tool-call-block`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-widget-renderer`
 - Transitive Lyra dependencies: `lr-badge`, `lr-card`, `lr-copy-button`, `lr-icon-button`, `lr-media-card`, `lr-result-card`, `lr-result-field`, `lr-skeleton`, `lr-stat`, `lr-tooltip`
-- Standalone gzip: 150 KiB (153589 bytes; bundle SHA-256 `15108795317bcbf68f846330c1d60ece7de77985120d5875fd8cba3bcf37e113`)
+- Standalone gzip: 152.4 KiB (156011 bytes; bundle SHA-256 `e2cc06160f2c561facbf0e8c0bbd14dfddfe8f6fa9ab6e177e553553c167da46`)
 
 </details>
 
@@ -1999,7 +1999,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.7 KiB (28395 bytes; bundle SHA-256 `98ab15270dcfecfd7297e87b3cd366a2eb6b7deba73ee0e3e5e449c3213d6bf9`)
+- Standalone gzip: 27.8 KiB (28479 bytes; bundle SHA-256 `f281b36470485c10a9c50e1a3486daf28b21b13611a967a9aa0ad5380ee4e53b`)
 
 </details>
 
@@ -2011,7 +2011,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52 KiB (53295 bytes; bundle SHA-256 `7aafba28428bbb76719da0bb133f82350e319c7482dc39db44e10d9fea3a923c`)
+- Standalone gzip: 53.7 KiB (55009 bytes; bundle SHA-256 `259d2c0fb285739ef3897b64e2432d2aa9f1b1a4d135e499b934f84031232a6b`)
 
 </details>
 
@@ -2023,7 +2023,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-model-select`, `lr-slider`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 64.5 KiB (66010 bytes; bundle SHA-256 `c3e98e0e6842b396aa25216ed481884d7fa72524ad1f2c2840df58ae165f3ec8`)
+- Standalone gzip: 66.2 KiB (67805 bytes; bundle SHA-256 `db3dda7351a971002f9ca48f7372c4e3a02b4687e6335167d01a7f517e45c0b3`)
 
 </details>
 
@@ -2035,7 +2035,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.8 KiB (40774 bytes; bundle SHA-256 `dbf3be4b957d5715bfdeb6a90b78bb98a7c2192afa2754b7900237394f82149a`)
+- Standalone gzip: 39.9 KiB (40845 bytes; bundle SHA-256 `d21446d5a577a7b78318139aa21311ec2adb823d6c8a6b1fcadf733316853538`)
 
 </details>
 
@@ -2047,7 +2047,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 22.1 KiB (22669 bytes; bundle SHA-256 `a7c003859eb72892a2c78c03bb0fa1af691f65443e7d0b9daacd40d45b0ed466`)
+- Standalone gzip: 22.2 KiB (22754 bytes; bundle SHA-256 `3993cec99a7dc7874a425d3606117ff64ee3c02a6ab72887337e71ead9498d6a`)
 
 </details>
 
@@ -2059,7 +2059,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.6 KiB (39564 bytes; bundle SHA-256 `daaa3d38bfeb2baba08ae4cebf1650e978e0dc76e752d6a2a7764d6370dfde86`)
+- Standalone gzip: 38.7 KiB (39638 bytes; bundle SHA-256 `b12fea95246f6d4393184c7aabac18381641648a9df49f5d78902ad45ac9ad1c`)
 
 </details>
 
@@ -2071,7 +2071,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-navigation-menu-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 51 KiB (52234 bytes; bundle SHA-256 `9dd367a6969d3b0ccc2fbbcc1011e6b4232f2fc4ef17d801331c6e748d74bf54`)
+- Standalone gzip: 52.8 KiB (54099 bytes; bundle SHA-256 `664651cdeb5cc701a97ba3f359bf507e8be092a8e6dc1d0a3b2e53248e04712d`)
 
 </details>
 
@@ -2083,7 +2083,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 44.2 KiB (45217 bytes; bundle SHA-256 `09cf5877ac6f7c77902978b6a4cb3e3a05befec119f7c3fec2bd45cabd32f667`)
+- Standalone gzip: 46 KiB (47093 bytes; bundle SHA-256 `e9afb7c9e5db221f4609b6d2a08bd6c9090ad98a4eabc8f3d2039152e8c4d375`)
 
 </details>
 
@@ -2095,7 +2095,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.5 KiB (41435 bytes; bundle SHA-256 `063bfe2d27f5efd798be4bafb9305c0b91f20fb43060ce1c0597749c0cf9a441`)
+- Standalone gzip: 40.8 KiB (41734 bytes; bundle SHA-256 `9a0179099a30a8798c701d67dbf9c7460f67e4d5ca7be1f2954391ba9a093460`)
 
 </details>
 
@@ -2107,7 +2107,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28.2 KiB (28860 bytes; bundle SHA-256 `5a2b81b4684e11dcfc16acd7027763398906dc358d5e29c84be2b8faeb8ce8bd`)
+- Standalone gzip: 28.3 KiB (28947 bytes; bundle SHA-256 `9784b7cdd273b021fc6d4c93598938a2c4b7b5382d8e0335a8cb5545c98bbd11`)
 
 </details>
 
@@ -2119,7 +2119,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-code-block`, `lr-json-viewer`, `lr-markdown`, `lr-virtual-list`
 - Transitive Lyra dependencies: `lr-icon-button`, `lr-skeleton`
-- Standalone gzip: 99.1 KiB (101449 bytes; bundle SHA-256 `6bb04961331c929c2d3bbbdaf803174329999cb8fab6a55b226307734caa8bab`)
+- Standalone gzip: 99.4 KiB (101834 bytes; bundle SHA-256 `dd8c7414f97fc4bdc31f4f9e99701c0f13b294e46189ba4a1d7d7c47efeb2868`)
 
 </details>
 
@@ -2131,7 +2131,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.4 KiB (40386 bytes; bundle SHA-256 `70bc4036a7d50a45b3a5da6d5bc76a718f0b3da673ff2856b4495a758ea3bb54`)
+- Standalone gzip: 39.5 KiB (40477 bytes; bundle SHA-256 `54fa1f23224948d2f2a1f24b451d793d30635b51c9c4fb169f8e446a2fed13db`)
 
 </details>
 
@@ -2143,7 +2143,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.3 KiB (32065 bytes; bundle SHA-256 `8ea93c08127c3972315838f416402c442f8d3acc789d25635168b5abe420736a`)
+- Standalone gzip: 31.4 KiB (32169 bytes; bundle SHA-256 `f64389a931ca622a7839f8668d0dde1b72587f0193d56fe223a6c74cd02988e9`)
 
 </details>
 
@@ -2155,7 +2155,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.3 KiB (39257 bytes; bundle SHA-256 `da93afd54e3ee467363c7c2dfec18ac8ca58181bc1cc90318810c12d95906451`)
+- Standalone gzip: 38.4 KiB (39331 bytes; bundle SHA-256 `b129a3259867adf210646efc94ba9bc1b400c96b75bb7d9a963988ae49af2984`)
 
 </details>
 
@@ -2167,7 +2167,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.3 KiB (39267 bytes; bundle SHA-256 `8c398244e9b87da5d2873bad9fbbcd88776b0e22b4fdc08c52f1dd868ff66ee2`)
+- Standalone gzip: 38.9 KiB (39819 bytes; bundle SHA-256 `5c737472d36a6dd2c52d166d15f1700df36caf3ef05a5cb5656b6bf956689e89`)
 
 </details>
 
@@ -2179,7 +2179,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-file-icon`, `lr-skeleton`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.3 KiB (42251 bytes; bundle SHA-256 `c29c573ca80db26dd36912f6b072e382b3ffe9ae7d766630274663e519697253`)
+- Standalone gzip: 41.6 KiB (42551 bytes; bundle SHA-256 `b9d3b12b712a957d5add28878b5029e7cde4c619b083074612768eee1dad103b`)
 
 </details>
 
@@ -2191,7 +2191,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 33.9 KiB (34762 bytes; bundle SHA-256 `eb060a731400f2bb36023598b830e99771b8a406da53c60b2cb3e7261f9b42e7`)
+- Standalone gzip: 34 KiB (34844 bytes; bundle SHA-256 `91785aa229a22851ffe0ed8202edaf0827bab8a8871bf3fb39e876adac0d1f92`)
 
 </details>
 
@@ -2203,7 +2203,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.8 KiB (24367 bytes; bundle SHA-256 `f2d9ae848c9e673f975c4a57db12a2d547d492a36b2703c5caaa6772a89ba551`)
+- Standalone gzip: 23.9 KiB (24450 bytes; bundle SHA-256 `35527db1cba4b381c22cf8d2df8504637e1da80d1492a87a45a38b08aa6c9abd`)
 
 </details>
 
@@ -2215,7 +2215,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-scroller`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.4 KiB (28087 bytes; bundle SHA-256 `48dbad8804c971eb74fba47fb8268ad395ab8337703c5c4a218eb64af5954857`)
+- Standalone gzip: 27.5 KiB (28175 bytes; bundle SHA-256 `1772058efb2f061b52793008279ea10b8ff84d2f34e8b98738052312d3353a88`)
 
 </details>
 
@@ -2227,7 +2227,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `pdfjs-dist`
 - Direct Lyra dependencies: `lr-highlight-layer`, `lr-skeleton`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 59.3 KiB (60772 bytes; bundle SHA-256 `02a37d89c486ee636ffc9497c587844445347df54a2244fd1add78aef72d84c4`)
+- Standalone gzip: 59.7 KiB (61100 bytes; bundle SHA-256 `1c5ace71cc157197afd72c75b96dfbbee52b3fdf8e334950b52066fbf179bbc1`)
 
 </details>
 
@@ -2239,7 +2239,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-flag`
 - Transitive Lyra dependencies: `lr-skeleton`
-- Standalone gzip: 46.6 KiB (47679 bytes; bundle SHA-256 `4be83c3eaee05646c3d75b8b2aa5fb4783ed712bab14d4709a247f2df363f245`)
+- Standalone gzip: 46.6 KiB (47739 bytes; bundle SHA-256 `28ce9708140bb1a6726094e366deb6705f9253e0c0313ad8f45231b99468b698`)
 
 </details>
 
@@ -2251,7 +2251,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.8 KiB (54108 bytes; bundle SHA-256 `fac68f1e08cb67158be3c95120754c36d046d573f4e246725ea483152031a733`)
+- Standalone gzip: 52.9 KiB (54189 bytes; bundle SHA-256 `843f488e233bbf2be18a92cebbfbc546e6035c83805456a4516c810d2af7a052`)
 
 </details>
 
@@ -2263,7 +2263,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.8 KiB (54113 bytes; bundle SHA-256 `6c1f924410ecd57d44e7436f3d6bba25aeafd23cec39544eddd51709900dee45`)
+- Standalone gzip: 52.9 KiB (54192 bytes; bundle SHA-256 `7c0c70d006a52d53320d983321c3b009dd8d3137781706ef6250e2a5fa4dcd8d`)
 
 </details>
 
@@ -2275,7 +2275,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-details`, `lr-empty`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.7 KiB (40624 bytes; bundle SHA-256 `05be5f13e539b975b6a064c300869bae469c4c0872f21f1160242bfcc96e26a9`)
+- Standalone gzip: 39.7 KiB (40698 bytes; bundle SHA-256 `d41d09082917cef04c39917723669b34ce0e7fb02c7d41c5b2cdf0d8de0967e9`)
 
 </details>
 
@@ -2287,7 +2287,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.2 KiB (26780 bytes; bundle SHA-256 `c2480422785e4e2dacf2df56df151ae1b78b3e27f160cdbb64d7009e7514e8e8`)
+- Standalone gzip: 26.2 KiB (26857 bytes; bundle SHA-256 `ab01691f41ffb90bdc803233ef9b5bf3dae649f122249a96b14affea92a0f595`)
 
 </details>
 
@@ -2299,7 +2299,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 49.4 KiB (50615 bytes; bundle SHA-256 `906035fedfa2dc17a8868f3563a3097752a82f34a3da37a0eb22fd37424aeb48`)
+- Standalone gzip: 51.7 KiB (52893 bytes; bundle SHA-256 `5ba34c3180c78a7b1bf411e478539a069ce32f32ab65a21786272907bcb491fc`)
 
 </details>
 
@@ -2311,7 +2311,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34.7 KiB (35571 bytes; bundle SHA-256 `e85b02cfb2986ac4da6e08dee97d39a096ec3c77b64b0708f8e3100a750b2855`)
+- Standalone gzip: 36.5 KiB (37353 bytes; bundle SHA-256 `610492da695a26e7d026fa08cb82731a30e8e4f1c5b0052fe2af6154ed562dd7`)
 
 </details>
 
@@ -2323,7 +2323,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `@aiden0z/pptx-renderer`
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 43.8 KiB (44811 bytes; bundle SHA-256 `30f704dca4ce9f0f259884ad55a6638f8eb490530c1cbe8992ad7917d63a2a71`)
+- Standalone gzip: 43.8 KiB (44898 bytes; bundle SHA-256 `fff0c23d40c31bb6f38bc41b99230073d82267d12d925c8df71198e68bd004a2`)
 
 </details>
 
@@ -2335,7 +2335,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.2 KiB (27807 bytes; bundle SHA-256 `f41052e99b9ec42879f5ab25a99f4332e3b7b3ca6b7169ad202c659de7cf618f`)
+- Standalone gzip: 27.2 KiB (27885 bytes; bundle SHA-256 `ac59e525c360b2f3f8bb548e24437a8dc4a6b32535faee316a29d028710a15a4`)
 
 </details>
 
@@ -2347,7 +2347,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27 KiB (27675 bytes; bundle SHA-256 `bc4f33e315b1dfa0150063f9453e69fc9a50b83179c98f2eed37713c386779f7`)
+- Standalone gzip: 27.1 KiB (27749 bytes; bundle SHA-256 `08c3e4ec8dfa474ce21da45aa02aa244cc47b7272d8898f09ff3abeb4654d994`)
 
 </details>
 
@@ -2359,7 +2359,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-attachment-chip`, `lr-attachment-trigger`, `lr-chat-composer`, `lr-mention-popover`, `lr-model-select`, `lr-prompt-queue`, `lr-source-picker`, `lr-voice-picker`
 - Transitive Lyra dependencies: `lr-button`, `lr-checkbox`, `lr-dropdown`, `lr-empty`, `lr-file-icon`, `lr-icon-button`, `lr-input`, `lr-menu`, `lr-menu-item`, `lr-textarea`
-- Standalone gzip: 138.2 KiB (141479 bytes; bundle SHA-256 `82db0a7a0e4883d11b7758a0af0e914a1cefbf8ccb75abca146bbe7922014234`)
+- Standalone gzip: 140.4 KiB (143777 bytes; bundle SHA-256 `777f3466a70a6eb2aa37c193a32282d508a6a27f4bc1966abeeb27cc9a88c410`)
 
 </details>
 
@@ -2371,7 +2371,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-textarea`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 48.7 KiB (49824 bytes; bundle SHA-256 `cd0936ee15cf4461646b455a5f8931344c7c25349695220225c907f2cdf05701`)
+- Standalone gzip: 48.8 KiB (49922 bytes; bundle SHA-256 `07f93e305bc6acc9c164a9cc609402f6f094e48d5d2ea56edd2cd8c1c5a6ae02`)
 
 </details>
 
@@ -2383,7 +2383,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.7 KiB (27334 bytes; bundle SHA-256 `b671a811dbea93a157a07959356ff61f505dde591b48db557865cbbe98cb9fb0`)
+- Standalone gzip: 26.8 KiB (27396 bytes; bundle SHA-256 `d91698a938037d38f2460b9e0c1fa7d08c11a17ccdf89f91b7029bfa9f0ffacd`)
 
 </details>
 
@@ -2395,7 +2395,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chunk-inspector`, `lr-community-card`, `lr-empty`, `lr-entity-chip`, `lr-path-strip`
 - Transitive Lyra dependencies: `lr-button`, `lr-chip`, `lr-scroller`, `lr-virtual-list`
-- Standalone gzip: 76.9 KiB (78698 bytes; bundle SHA-256 `1658f7fc8305581d170109d43a878e8e89dc92b4760394193829fb4c43cbd211`)
+- Standalone gzip: 79 KiB (80901 bytes; bundle SHA-256 `c4f75d049442a08ba41f656f85d78d3a86b3d58f57ac3cedb9a0e5892ee18518`)
 
 </details>
 
@@ -2407,7 +2407,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29.2 KiB (29897 bytes; bundle SHA-256 `e4f243de7795fca01d848ba19ac2936d052aa18c530ac0b4a60941a5a3bf3356`)
+- Standalone gzip: 29.3 KiB (29983 bytes; bundle SHA-256 `949b15bc59c318faeeefbe15e782522ea6e8476d5eb51e6ae23edd7621d0ca4a`)
 
 </details>
 
@@ -2419,7 +2419,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `qrcode`
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29.2 KiB (29882 bytes; bundle SHA-256 `ea0223a7493d99a7c4a990230381a8fc3923066cae0bfc4a89516f15cb72c9cf`)
+- Standalone gzip: 29.3 KiB (29954 bytes; bundle SHA-256 `3f7db0f9b964a2d433c29b0770e9189fc72ec098f90f465605db1bef19eba9dc`)
 
 </details>
 
@@ -2431,7 +2431,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.8 KiB (54109 bytes; bundle SHA-256 `51c3c0941708d953f862b37d36cba777dfe5988b7fa57af3383da95b6b90f1a4`)
+- Standalone gzip: 52.9 KiB (54189 bytes; bundle SHA-256 `4be09c2466b888f0bec1eb2d98dae6a32fbfcfb84c4d8ec08efe2b8e7186f34c`)
 
 </details>
 
@@ -2443,7 +2443,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 35 KiB (35887 bytes; bundle SHA-256 `34b380ea784873f3ff8f51ab884c07e7d560d06256020665922bd1747765f2a0`)
+- Standalone gzip: 35.1 KiB (35963 bytes; bundle SHA-256 `c0f44bf7a100c26d4a8feb430f43b1795fa451d59906a90c9a42bd2c5043b91d`)
 
 </details>
 
@@ -2455,7 +2455,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34.8 KiB (35647 bytes; bundle SHA-256 `006ffa8a1a5dc3d017023f3cee693ca6fc65ef1d8d001c3973c81378c9e796e5`)
+- Standalone gzip: 34.9 KiB (35722 bytes; bundle SHA-256 `54dd04b047eafc18f8119a146beece1ef5832b7003a59244d665a50759f9abaf`)
 
 </details>
 
@@ -2467,7 +2467,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34.4 KiB (35197 bytes; bundle SHA-256 `254895b53a2c49f8727a8fec733297a05dc571a084b7938eeadd1e2092bb5149`)
+- Standalone gzip: 34.4 KiB (35273 bytes; bundle SHA-256 `f2db1173723aa199e4f54ef470de9920f4fb1d148cc89f6aace977b5c6c25670`)
 
 </details>
 
@@ -2479,7 +2479,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-button`, `lr-citation-badge`, `lr-grounding-summary`, `lr-markdown`, `lr-source-card`, `lr-source-list`, `lr-spinner`
 - Transitive Lyra dependencies: `lr-badge`, `lr-claim-evidence`, `lr-empty`, `lr-stat`
-- Standalone gzip: 105.7 KiB (108194 bytes; bundle SHA-256 `d791f84046f80bce2725341c6cd1c1ed2c8d0c7cdcec176636f5ff5ea0652bd9`)
+- Standalone gzip: 107.8 KiB (110410 bytes; bundle SHA-256 `74437d6e337106236ca89619a7495c0360be14aee28b71637cf79f317fa0ec36`)
 
 </details>
 
@@ -2491,7 +2491,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-lite-chart`, `lr-stat`
 - Transitive Lyra dependencies: `lr-live-region`
-- Standalone gzip: 51.3 KiB (52563 bytes; bundle SHA-256 `318249d75ec3e20857782360a1df0762f9458a300bfd859c2a9d57b8ee8b3115`)
+- Standalone gzip: 51.7 KiB (52954 bytes; bundle SHA-256 `5aeb7182006b0e57a1e53049edd677b5285c27d2ef7d1b90e85d1d95c12c8152`)
 
 </details>
 
@@ -2503,7 +2503,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29.9 KiB (30588 bytes; bundle SHA-256 `b015601fe7461bbd2bbcfa5efd3135a440a67eaa6aa3af0ba84a3a6abed1aa83`)
+- Standalone gzip: 30 KiB (30671 bytes; bundle SHA-256 `06aa48bac9d6c15360430761292860b28491d02fde9ebfc364053f86c1e82ed0`)
 
 </details>
 
@@ -2515,7 +2515,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 30.4 KiB (31130 bytes; bundle SHA-256 `a8d98587b226539a7f25124a19b23c87de5b444d0db34a56a2700b105912f5f7`)
+- Standalone gzip: 30.5 KiB (31200 bytes; bundle SHA-256 `c90d403148c55e85fd74ca40ada945c93ec6f9536fed3c96bf620805d1dc458d`)
 
 </details>
 
@@ -2527,7 +2527,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-audio-visualizer`, `lr-badge`, `lr-push-to-talk`, `lr-transcript-feed`
 - Transitive Lyra dependencies: `lr-live-region`
-- Standalone gzip: 42.2 KiB (43195 bytes; bundle SHA-256 `630f688a93879ec1167c3c5213182e6b93778bb0e06f9993cec939c23ba57c6c`)
+- Standalone gzip: 42.3 KiB (43268 bytes; bundle SHA-256 `ca043e6c400551c7482d70f392b8a25e52b55b26eb97db0e9202f814b4951d07`)
 
 </details>
 
@@ -2539,7 +2539,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 22.4 KiB (22913 bytes; bundle SHA-256 `78794e3ccd6cb52c95fa26cdfaea1b7bda4c82d5eabc3e337b306aadd07e15a0`)
+- Standalone gzip: 22.4 KiB (22983 bytes; bundle SHA-256 `00455f5881543417e0bed5c430a5e5d434b1dc0a823ea59795825ebbac99ea06`)
 
 </details>
 
@@ -2551,7 +2551,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-icon-button`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 32 KiB (32796 bytes; bundle SHA-256 `bdf0f9045f8c5f36ab8e6ff03044eb4b93c07ff048c986630624d745963e6be1`)
+- Standalone gzip: 32.1 KiB (32894 bytes; bundle SHA-256 `d77118f128d9b69babde1f35dd6a1b133429037fd72c0418f043da03329a29c0`)
 
 </details>
 
@@ -2563,7 +2563,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`, `lr-reorder-item`
 - Transitive Lyra dependencies: `lr-icon-button`
-- Standalone gzip: 36.4 KiB (37259 bytes; bundle SHA-256 `53433e428d57d30a027e9efbd6dd70dbf402d6a274e40fa5eff5618f1c58c17c`)
+- Standalone gzip: 36.5 KiB (37333 bytes; bundle SHA-256 `da4040bc18399755a12d7ea8d119f89f98e825d6b01cded2bac6e747e882a833`)
 
 </details>
 
@@ -2575,7 +2575,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.5 KiB (22058 bytes; bundle SHA-256 `7340bfa027933acc7161251aa433265699eae800a4460199257ebd7c14ec31e2`)
+- Standalone gzip: 21.6 KiB (22136 bytes; bundle SHA-256 `550ef9fd9d177ae2dfef2d803e3bb3ec71a72bac2238d40788859e3995f93fe1`)
 
 </details>
 
@@ -2587,7 +2587,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 32.3 KiB (33035 bytes; bundle SHA-256 `b3b4f87b31d8831d85a40a53bac87f3b5871f387fb3aa98eabe4d55e22df7953`)
+- Standalone gzip: 32.8 KiB (33617 bytes; bundle SHA-256 `0792e5418c094ea46588353ec3bfbee349d643ea66fbf1e8d1a9118367092483`)
 
 </details>
 
@@ -2599,7 +2599,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.9 KiB (22414 bytes; bundle SHA-256 `bf47ec7415222b2ff5fd8200ee2d823601a0c573fdbbcc6e4139f6f8b68b8912`)
+- Standalone gzip: 22 KiB (22493 bytes; bundle SHA-256 `6afcc1e897b0c7785ef62055d17a80a00e233b8a4b61ab526c35f7d1b4aff1bf`)
 
 </details>
 
@@ -2611,7 +2611,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.8 KiB (22283 bytes; bundle SHA-256 `a3ef3702a06a3921cf1ac6796db6e53c7cd8f648c2c24b3379c1bca7dbcd4164`)
+- Standalone gzip: 21.8 KiB (22356 bytes; bundle SHA-256 `ec94efafa3d32ac57d6a38e73e5273d75c4bb7615ce5b0ef435c686fe2000cbd`)
 
 </details>
 
@@ -2623,7 +2623,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 30.1 KiB (30796 bytes; bundle SHA-256 `76b73095baa4139f36f631dccc5abf5622fe49897a246fd9a5a5a89ffc7c0583`)
+- Standalone gzip: 30.1 KiB (30869 bytes; bundle SHA-256 `7aaab5a3ee77a4ca804b76e0f628151b35adc8510107a6d4917a300e99527407`)
 
 </details>
 
@@ -2635,7 +2635,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-checkbox`, `lr-chunk-inspector`, `lr-empty`, `lr-spinner`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 58.2 KiB (59605 bytes; bundle SHA-256 `f61c1f608e25ba6739a8d35e1f327505195cab0a25edab98a86cf631d3ecc16f`)
+- Standalone gzip: 58.5 KiB (59872 bytes; bundle SHA-256 `63b6b439189563673518a0aadd28212df20b696dc5b9a1f637c314d6908c2260`)
 
 </details>
 
@@ -2647,7 +2647,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chip`, `lr-chip-group`, `lr-empty`, `lr-input`, `lr-segmented`, `lr-spinner`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 60.7 KiB (62204 bytes; bundle SHA-256 `46eec92cdb23057b23eb6b7d80343139fbf3062812d12000160ac8a116ddfbfa`)
+- Standalone gzip: 60.8 KiB (62282 bytes; bundle SHA-256 `82c13ff35b8bfeb753d2c3493db031c15b6ba2a74f91281453f77e62716d3b60`)
 
 </details>
 
@@ -2659,7 +2659,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chunk-inspector`, `lr-span-waterfall`
 - Transitive Lyra dependencies: `lr-empty`, `lr-live-region`, `lr-virtual-list`
-- Standalone gzip: 48.5 KiB (49682 bytes; bundle SHA-256 `67b493c564358a85ccad0088128b544f74b499abf4a0d15ad0e7f5e8dbd46e4b`)
+- Standalone gzip: 48.8 KiB (49943 bytes; bundle SHA-256 `819fd3637041f434aa470c8bc8e7c6ab4d3cb129529c4f43c7aa390e7ebf0f5e`)
 
 </details>
 
@@ -2671,7 +2671,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-checkbox`, `lr-checkbox-group`, `lr-option`, `lr-segmented`, `lr-select`, `lr-slider`, `lr-textarea`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 96.2 KiB (98551 bytes; bundle SHA-256 `685da5ebd864313f9649b40524d728249ce8961f60dbdd47e47e09127021c816`)
+- Standalone gzip: 98.2 KiB (100520 bytes; bundle SHA-256 `68f6be19ea44b5f5fda42156b1398fa13412cee7f60e64360cfdf24c2e3fe0a4`)
 
 </details>
 
@@ -2683,7 +2683,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom`
 - Direct Lyra dependencies: `lr-chart`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.8 KiB (54109 bytes; bundle SHA-256 `ea51089942c36ee6993f4b3d18f8fe7c2b51ea461ba2bc2c27f882d7d2454269`)
+- Standalone gzip: 52.9 KiB (54189 bytes; bundle SHA-256 `3f7200b878e0c6d80926bf3f09a80b5a45d0b004c457c2f8d15bfb07828cd893`)
 
 </details>
 
@@ -2695,7 +2695,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.9 KiB (24481 bytes; bundle SHA-256 `1df1b142e782fb1814aafa468191b9dff4ea6e7fb9b492ca868961415ccbb5d0`)
+- Standalone gzip: 24 KiB (24569 bytes; bundle SHA-256 `3013ef54de0e414210f6214e881bab13084651a4046836de31a7bb34fb33f3e9`)
 
 </details>
 
@@ -2707,7 +2707,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.3 KiB (25911 bytes; bundle SHA-256 `eff6f6626d09e9bc05d87af33bb6c6781944e0b0d2b23671997238d48b39b167`)
+- Standalone gzip: 25.4 KiB (25999 bytes; bundle SHA-256 `0fb7f0d7ad3c864c05906710df6a678f355b46c5cba385c3ed1e04cf2d0c1262`)
 
 </details>
 
@@ -2719,7 +2719,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-option`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 62.3 KiB (63818 bytes; bundle SHA-256 `7558cad1fcdae7dd36dab740a33bd23e12fc37adf3ac6fedd5d707a0d577dba6`)
+- Standalone gzip: 64.1 KiB (65655 bytes; bundle SHA-256 `a8d72aa4495fae12f34f768edaaaa04b8ef19dac51fbf48a3e1f7a69a3452389`)
 
 </details>
 
@@ -2731,7 +2731,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 45.3 KiB (46372 bytes; bundle SHA-256 `298c5e24281920e872c13b6f1621598290915acce148d2aefe84310746aa98d7`)
+- Standalone gzip: 46.5 KiB (47627 bytes; bundle SHA-256 `a19bdaab2037d187d897099846147ccc1e427b87ce38b2c45b9253f643079a45`)
 
 </details>
 
@@ -2743,7 +2743,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.1 KiB (24650 bytes; bundle SHA-256 `a2fa60d34242e6b4b07597d63d0bdcecac51fd901a7dcc22e1043d1235268a02`)
+- Standalone gzip: 24.2 KiB (24733 bytes; bundle SHA-256 `1d45bf64e3f7dba5dd0893c11291db354f6f5580249ae8a1aded89c10196214a`)
 
 </details>
 
@@ -2755,7 +2755,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.9 KiB (26554 bytes; bundle SHA-256 `e103b084df64db5927068fb3dd004b84e9bca5b4cdbc8007897e3325b2b9f371`)
+- Standalone gzip: 26 KiB (26633 bytes; bundle SHA-256 `a4d17114ca7d32f57667ca4fcd83242fcfcbd2a5c94753e4207f83790897468d`)
 
 </details>
 
@@ -2767,7 +2767,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 22 KiB (22501 bytes; bundle SHA-256 `07c295175b540316a55c9450abc609b6abbf11c4223c6da58a8170702e42d59f`)
+- Standalone gzip: 22.1 KiB (22600 bytes; bundle SHA-256 `4d40ff5d5b9eaa418f407b1737a892dd23b73eb4fa1b978e099026b7d47ea999`)
 
 </details>
 
@@ -2779,7 +2779,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.7 KiB (39634 bytes; bundle SHA-256 `757434f92c5f3964a6cc097d7b777b5195bf250963cc527d93c74b727e2ca308`)
+- Standalone gzip: 38.8 KiB (39709 bytes; bundle SHA-256 `bd51aeae026dbf966107a3e2771a4ebfdf8574146de46dc8a9ab53bb359b03d3`)
 
 </details>
 
@@ -2791,7 +2791,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.1 KiB (23665 bytes; bundle SHA-256 `7fbc2ba23141f333aaf16ad3f4a0098104712264f0e1208ada2508842cbfdd9a`)
+- Standalone gzip: 23.2 KiB (23740 bytes; bundle SHA-256 `8f2328832b1ccdc1f969129c43f32f1a11ce2c32fb88b805049f96a2fe923b40`)
 
 </details>
 
@@ -2803,7 +2803,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.4 KiB (23987 bytes; bundle SHA-256 `2516c2b8314034e7f4078671841c8d5f41fc3785846e07623d0e2619235698e0`)
+- Standalone gzip: 23.5 KiB (24066 bytes; bundle SHA-256 `10f2e0e3e396a707f027735b7c0e5c0de52e6f8913e2baf7aff271ba304c5f03`)
 
 </details>
 
@@ -2815,7 +2815,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-checkbox`, `lr-empty`, `lr-file-icon`, `lr-input`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 57.5 KiB (58900 bytes; bundle SHA-256 `302e3abac1ca41fc3ce4b4f5f730e9a402353d28158c5ba9ac5b1c060f663850`)
+- Standalone gzip: 57.6 KiB (58982 bytes; bundle SHA-256 `802909ab4126a64e2be5fed7126e1c405b785366131be2554c8457d142350e8f`)
 
 </details>
 
@@ -2827,7 +2827,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 33.8 KiB (34571 bytes; bundle SHA-256 `517e4974bf78ce3e4efc152878a29fd5f37963515d0a64a3621b75466008433f`)
+- Standalone gzip: 33.8 KiB (34640 bytes; bundle SHA-256 `69c96522d8ecb674bfb8ff5e00bfd2791e83be96123e7b512f02601a35b257f5`)
 
 </details>
 
@@ -2839,7 +2839,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 23.5 KiB (24084 bytes; bundle SHA-256 `b6124f1f320737e44ac5d7f5a10046c172bbb8ccb660fbb2a2df90980e96f819`)
+- Standalone gzip: 23.6 KiB (24157 bytes; bundle SHA-256 `ee2963998ee5dd2e0ea7d72e2a920c73270e52855198aa1504b55ff2ca8305ef`)
 
 </details>
 
@@ -2851,7 +2851,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.5 KiB (26110 bytes; bundle SHA-256 `dc7e89054caac7a73ec09ff52d5996b4a55a067f5628616b12c13b9e84507fbd`)
+- Standalone gzip: 25.6 KiB (26186 bytes; bundle SHA-256 `79d5af0270c326fc2c7f5739a1a8ce2b06f7b70f58ee3071fa0c203c69a4c994`)
 
 </details>
 
@@ -2863,7 +2863,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26.2 KiB (26878 bytes; bundle SHA-256 `423c8477ebc54f5e2a347ecb581119b2edf4942893ab7eea8c7f54c37e4bc9df`)
+- Standalone gzip: 26.3 KiB (26958 bytes; bundle SHA-256 `58660c1d38445e6f3893f1db10febad0ab882d43a1086442a78305a2aed48614`)
 
 </details>
 
@@ -2875,7 +2875,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `xlsx`
 - Direct Lyra dependencies: `lr-tab`, `lr-tab-group`, `lr-tab-panel`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 56.3 KiB (57611 bytes; bundle SHA-256 `d9db5420dcc0a9d79d5410dadcdc8ba5f9dcc280f979b4a6a6d65167d7fe6294`)
+- Standalone gzip: 56.5 KiB (57902 bytes; bundle SHA-256 `1da7faaa73cd62f8210bf6ab85bd0fbd2f54ae51da78e2b32d147a61dd336f36`)
 
 </details>
 
@@ -2887,7 +2887,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28.8 KiB (29540 bytes; bundle SHA-256 `d9048ff98446e4747e2a462c9dcb462c38835a0aaf888d56ae64bbc13cf425c1`)
+- Standalone gzip: 28.9 KiB (29626 bytes; bundle SHA-256 `f1ca66389bc6082c77d988404e22b11d795840c6a6632637cb0173be63ebce25`)
 
 </details>
 
@@ -2899,7 +2899,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.5 KiB (26118 bytes; bundle SHA-256 `d65667bb7fd45466e87d919d66f7195ac8a6f494af20a8ed0fb65d540668d869`)
+- Standalone gzip: 25.6 KiB (26218 bytes; bundle SHA-256 `c32a6c1954ef56c652df5faf6d3624215e9ade3f0c09be1e59365efe90eeb29a`)
 
 </details>
 
@@ -2911,7 +2911,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.1 KiB (27707 bytes; bundle SHA-256 `65189df910e196b89f4c1c0835d00446a31b01b99bd77b0bcf0b22063a9e3b4c`)
+- Standalone gzip: 27.1 KiB (27787 bytes; bundle SHA-256 `6f0b5cfe60eef50af696a0d06d3c737759969e95c4295918b580e7d4655ddfc5`)
 
 </details>
 
@@ -2923,7 +2923,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 26 KiB (26595 bytes; bundle SHA-256 `b7829473eeeea235c28e1daa4b1aa0e4ab8a2455b6018a05c47f5e091b5b48f6`)
+- Standalone gzip: 26 KiB (26667 bytes; bundle SHA-256 `b480dfbc23dd30be2112f52431f7bb05637763f44f9de81219336d0c2018d67e`)
 
 </details>
 
@@ -2935,7 +2935,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-markdown`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 60.4 KiB (61837 bytes; bundle SHA-256 `c19626cc4766922bcaf1b861825b8b86747c3a5f72f2f495689bb3e892759653`)
+- Standalone gzip: 60.5 KiB (61982 bytes; bundle SHA-256 `09e903dc1565b37d860c06045045737e5bf3320f57ab7c38aa7a552db4dd0b43`)
 
 </details>
 
@@ -2947,7 +2947,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-markdown-core`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 59.6 KiB (60984 bytes; bundle SHA-256 `fae6aa820de1eb7678436ce949cb698b5c08b227dfc9b8047b45103d1d4ecd71`)
+- Standalone gzip: 59.7 KiB (61132 bytes; bundle SHA-256 `b63faa5c0a0d8c1a0cf2b7dc26b7da01d1ae32bbbccc4cb2768335986ac010c8`)
 
 </details>
 
@@ -2959,7 +2959,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-badge`, `lr-empty`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 33.6 KiB (34379 bytes; bundle SHA-256 `55dd4b3c3e67bbda38c0c82d41f9dc8cc0deeb22e6d8e3312b1e22c5ca64222e`)
+- Standalone gzip: 33.6 KiB (34452 bytes; bundle SHA-256 `23a83e2ea2ef1a4990ebb50c5986c9a4564e585871160c7a841e99963a60edfe`)
 
 </details>
 
@@ -2971,7 +2971,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-scroller`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.7 KiB (28366 bytes; bundle SHA-256 `2bc991c2a117014fc3b697acf719ae89b5191aa5cebec07517bc65acd13ee00b`)
+- Standalone gzip: 27.8 KiB (28444 bytes; bundle SHA-256 `cf29363252ff374b1b8c82272fd9c19c0d311a14b65edcfa0a6b6b22fa6d64b9`)
 
 </details>
 
@@ -2983,7 +2983,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`
 - Direct Lyra dependencies: `lr-pan-zoom`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.2 KiB (38140 bytes; bundle SHA-256 `27a10d8d37dd06ac6e951a31ea48437c283437768417de5420f9d4c77afefcb0`)
+- Standalone gzip: 37.3 KiB (38220 bytes; bundle SHA-256 `4fb4cd381270a1e9b9f0e8878dddfa0a6b69a9433d2224cfa968cbce4f28a000`)
 
 </details>
 
@@ -2995,7 +2995,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 25.7 KiB (26360 bytes; bundle SHA-256 `80ddc0322308e94c71096b413c3000e46d8459da3413f33f285edfeb4752c6fe`)
+- Standalone gzip: 25.8 KiB (26445 bytes; bundle SHA-256 `c7a0d1feddd0228df9b5ae6209ead8de012fc0607c63cbf99538c03bed01eb52`)
 
 </details>
 
@@ -3007,7 +3007,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34.5 KiB (35300 bytes; bundle SHA-256 `b0068abaf54aefd4fbc8360960a2e2109231531af0b88691410f64c5fe318a84`)
+- Standalone gzip: 34.5 KiB (35379 bytes; bundle SHA-256 `b4434db4f4a4a53eba755eac2a85d0f356d6286de27f7918a553e1d14b9901dd`)
 
 </details>
 
@@ -3019,7 +3019,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.9 KiB (22429 bytes; bundle SHA-256 `d530673dc934c359a931d9f0fc7b48b48d32cb870b2b8fc55fd17e27eb9a43fa`)
+- Standalone gzip: 22 KiB (22524 bytes; bundle SHA-256 `0ca7f860ea71b35fa08c31dfccd366d3066c28d3743f60af4e1ced78c3d4d768`)
 
 </details>
 
@@ -3031,7 +3031,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.8 KiB (32565 bytes; bundle SHA-256 `41e34e15d2a78e5f273394f8c577a481eb279c160758c77ab2db954c732ab241`)
+- Standalone gzip: 31.9 KiB (32646 bytes; bundle SHA-256 `3db043a8d7006f22a0f01f7361cc0b873bb08c80cfa9cfd1acd15a9dd68abd4e`)
 
 </details>
 
@@ -3043,7 +3043,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.2 KiB (21737 bytes; bundle SHA-256 `b7940d3eea6f8581ea7d4333be1800c9538efeaa3679973ac3835b4b6943bbab`)
+- Standalone gzip: 21.3 KiB (21829 bytes; bundle SHA-256 `bf02e29bc4fe8aaf5fbf96a16f127a89a3a84ffd3389e3f78ff4463e1eec19d0`)
 
 </details>
 
@@ -3055,7 +3055,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-pagination`, `lr-skeleton`, `lr-spinner`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 60.3 KiB (61717 bytes; bundle SHA-256 `5440df001644d9fc0cd30833f954b1932f6b9f539c041b6ea8d7dab12702be0e`)
+- Standalone gzip: 60.4 KiB (61822 bytes; bundle SHA-256 `ddfd074f5975ce866bd102c87e298417eb136764d8ee6a888c7d5c3042c74117`)
 
 </details>
 
@@ -3067,7 +3067,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.4 KiB (32185 bytes; bundle SHA-256 `bff7efe6025034b004b23590af2071f865630c6585a66099c379f032f5aaacb1`)
+- Standalone gzip: 31.5 KiB (32288 bytes; bundle SHA-256 `a1d2cb263dc0d356ccce971419817054f8aeafd3b9e38773f2479d48ce22f64d`)
 
 </details>
 
@@ -3079,7 +3079,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29 KiB (29686 bytes; bundle SHA-256 `6db971ecdc0fcdf420688c7ef318b0d22d357e53f2bd7bd3649b7f8bcdf1fc77`)
+- Standalone gzip: 29.1 KiB (29822 bytes; bundle SHA-256 `9ca4363700cfcd65f89dd62cb9478a2fbac0538dabda5756eae7f583b51aafe2`)
 
 </details>
 
@@ -3091,7 +3091,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 42.9 KiB (43923 bytes; bundle SHA-256 `3fe81da5402ac5756c842ca737e080610df4460f68edc034883d204b0654423b`)
+- Standalone gzip: 43.2 KiB (44212 bytes; bundle SHA-256 `4af9319cc53ebecbe9f700648bda15205b9c9a159a81f1027e70df780a8c42d9`)
 
 </details>
 
@@ -3103,7 +3103,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-live-region`, `lr-spinner`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34 KiB (34822 bytes; bundle SHA-256 `af84e025679455ac76fc642441ac309aaafbd29be428d2be056fa0d037e89a5b`)
+- Standalone gzip: 34.1 KiB (34899 bytes; bundle SHA-256 `027f8bea88e78f76c872b5fdebf11a5133db898956947f8fc669721e7917b628`)
 
 </details>
 
@@ -3115,7 +3115,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.8 KiB (39704 bytes; bundle SHA-256 `121a30f1e58f41cefdba8a518cdcb7e80c3886dd1cdfdb2b02beee4a4fb88acb`)
+- Standalone gzip: 38.9 KiB (39799 bytes; bundle SHA-256 `cb4be76f2e9b09de6bf069d622fd5455321af8f00bee106259d76f1dfca3ef68`)
 
 </details>
 
@@ -3127,7 +3127,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.3 KiB (24889 bytes; bundle SHA-256 `2587705abb63a04f711332fd5c4a391ff091e47c046c390e25de68d0738b023a`)
+- Standalone gzip: 24.5 KiB (25070 bytes; bundle SHA-256 `b51cb9fd8d9db3b8b4676ccf75f26c8254d528780cd5546d83468d1f875fb8b5`)
 
 </details>
 
@@ -3139,7 +3139,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-conversation-item`, `lr-empty`, `lr-live-region`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 50.2 KiB (51454 bytes; bundle SHA-256 `cb185646c77d98fe6b65316dae294e510a29e48d5438ba4ef40fa1905f27d95f`)
+- Standalone gzip: 50.5 KiB (51752 bytes; bundle SHA-256 `8421a2344b7d53b8ffc292b1db249e87aae8f07d4ed955657afa2287da69a1e9`)
 
 </details>
 
@@ -3151,7 +3151,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 58.4 KiB (59813 bytes; bundle SHA-256 `9107f94ef5d73a3c29bf2a2c7e510a03a9d460d073ff8db8043ffd57a5e96bc6`)
+- Standalone gzip: 60.2 KiB (61598 bytes; bundle SHA-256 `2e2421d3b3f4e71f00be23f638111be4e955d61d8f25b00606cb9401791bb23a`)
 
 </details>
 
@@ -3163,7 +3163,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.3 KiB (32060 bytes; bundle SHA-256 `475052e20294b1a877305b6bd6578e6824aff83400b0c99afecaac58a4d60335`)
+- Standalone gzip: 31.4 KiB (32150 bytes; bundle SHA-256 `3252c0ec0ca875065ff1a1574950d76df2d1b495b553948bcecb793c116a9061`)
 
 </details>
 
@@ -3175,7 +3175,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-timeline-item`
 - Transitive Lyra dependencies: `lr-relative-time`
-- Standalone gzip: 32.5 KiB (33234 bytes; bundle SHA-256 `066554dcf459e535a551ad3b352cb479905d21b46eaf580ab090814c301a70d0`)
+- Standalone gzip: 32.5 KiB (33316 bytes; bundle SHA-256 `684cba38ea71cdbe9091ddcea66d1b3dc87e6e1013cbbefae63a9c9f2822dc6b`)
 
 </details>
 
@@ -3187,7 +3187,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-relative-time`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 24.9 KiB (25469 bytes; bundle SHA-256 `199a4b661d725c601a4aac95a8c2f0c6da075a16c11b7cf4399b685d13415a24`)
+- Standalone gzip: 24.9 KiB (25543 bytes; bundle SHA-256 `936ccca680575ef34c53eb04a56dbb3131aae481ace4ca83b6ebfe11a733ad22`)
 
 </details>
 
@@ -3199,7 +3199,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-toast-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 36.1 KiB (36970 bytes; bundle SHA-256 `83d5b7e624e7933e5d8f54039a1a71c83df1b432a001b47afa728f09f02e3711`)
+- Standalone gzip: 36.2 KiB (37040 bytes; bundle SHA-256 `5a257f8068e944397ac21e4ea6865b468fd91ab3b99a08cd90314d3ce2a2ee51`)
 
 </details>
 
@@ -3211,7 +3211,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 33.6 KiB (34410 bytes; bundle SHA-256 `77c013b4e9cadfb0594f87fc7fb04ed7efaed174dedb88af6174a66c67ee7912`)
+- Standalone gzip: 33.7 KiB (34486 bytes; bundle SHA-256 `1505eef7e5223c0f0f5bcc53ac9adf214fee697149086eb105cf445e779d5bf3`)
 
 </details>
 
@@ -3223,7 +3223,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28.8 KiB (29456 bytes; bundle SHA-256 `9b1bae734006e7bc900738f65bd0ccdc47be23f13251e75c5d168d3953f087e4`)
+- Standalone gzip: 28.8 KiB (29536 bytes; bundle SHA-256 `f1c00e98f428256aa4ff4a97f5cc1c3b0ccc2c7704459e1767b12092680b465c`)
 
 </details>
 
@@ -3235,7 +3235,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 29.4 KiB (30089 bytes; bundle SHA-256 `0ffdb3ec06ca4f2ba407107018c27e3547fbc5954fdb9247cc085ea8328b5a67`)
+- Standalone gzip: 29.5 KiB (30164 bytes; bundle SHA-256 `04e6f1e12fce09c5888e31815b1cbdc515766012a6325086f6cd63db67f27ac8`)
 
 </details>
 
@@ -3247,7 +3247,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.5 KiB (38411 bytes; bundle SHA-256 `f28b253b94e21eb770d59569ae3d676eb0fbbf7de888b16364dd21e442ee1356`)
+- Standalone gzip: 37.6 KiB (38490 bytes; bundle SHA-256 `bde9e6a1c7b6d560aaccaf957f2ad1b143642c07b0d6a46611a01e51f6e6841a`)
 
 </details>
 
@@ -3259,7 +3259,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-button`, `lr-json-viewer`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 52.1 KiB (53350 bytes; bundle SHA-256 `204b1db2b87014583fdbcdb0641bf98fcaefe22fb13d4a95b4062152125b8984`)
+- Standalone gzip: 52.2 KiB (53458 bytes; bundle SHA-256 `ecd785a27b3726549be1e997ed1e7d6cc88ca3ef47d7c5041e1d419a972e1197`)
 
 </details>
 
@@ -3271,7 +3271,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-json-viewer`, `lr-tool-result-view`
 - Transitive Lyra dependencies: `lr-copy-button`, `lr-icon-button`, `lr-skeleton`, `lr-tooltip`
-- Standalone gzip: 76.9 KiB (78750 bytes; bundle SHA-256 `c47a22c1561070b1e5342118ef1ca483a0b14c470aa2d8562ff4289d2532c161`)
+- Standalone gzip: 78.9 KiB (80748 bytes; bundle SHA-256 `f7e59cc694c9a98af9a24d39b6f486e1e568568b66374e0b5371b778cc98ed8c`)
 
 </details>
 
@@ -3283,7 +3283,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 43.2 KiB (44231 bytes; bundle SHA-256 `e17d09c54dd7179f801f885b79bf447f78d673c42bf24c08795d82ee9037d6b0`)
+- Standalone gzip: 45.2 KiB (46271 bytes; bundle SHA-256 `be245f33722aabed13a52b8397e9aeac87a7e861fe91ff6f022ed2942ec13a87`)
 
 </details>
 
@@ -3295,7 +3295,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-number-input`, `lr-option`, `lr-select`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 80.1 KiB (82029 bytes; bundle SHA-256 `29974f9f474aefaab84e7719f014bb57f46c02bb3bc68605511ae640d5dbcfc7`)
+- Standalone gzip: 81.9 KiB (83899 bytes; bundle SHA-256 `77fae7d870d41428b2b68991af0a83f943050caa35b1af6c160448ddef811c39`)
 
 </details>
 
@@ -3307,7 +3307,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 33.2 KiB (33966 bytes; bundle SHA-256 `d54f0314ad4ebd0f0a9e61728f598a5ab901322e9dc613fb4140081d56b946c3`)
+- Standalone gzip: 33.2 KiB (34046 bytes; bundle SHA-256 `74ad159d8a1c3847e6ecb2e99c75a5124b92f1300543dd30063ae092759026b6`)
 
 </details>
 
@@ -3319,7 +3319,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-copy-button`, `lr-json-viewer`, `lr-skeleton`
 - Transitive Lyra dependencies: `lr-icon-button`, `lr-tooltip`
-- Standalone gzip: 72.7 KiB (74474 bytes; bundle SHA-256 `0e3475950891bbdd31df8d8fb51e38b800f11e90d954fa4434d0a7eac89062e6`)
+- Standalone gzip: 74.7 KiB (76453 bytes; bundle SHA-256 `8fde6bca0c56e0223d665c12b678116e2991da77c8607a5e5cf234079abc4027`)
 
 </details>
 
@@ -3331,7 +3331,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-checkbox`, `lr-switch`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 48.7 KiB (49875 bytes; bundle SHA-256 `4c8d6b18f4a37eb8b9f32955708adce6eb628d21e25894356cccd997a3e50564`)
+- Standalone gzip: 48.8 KiB (49947 bytes; bundle SHA-256 `1e6d65aabf3aa04b7fd8f9b121b047ce41a7bd1e38d740d07faaa8b633aef488`)
 
 </details>
 
@@ -3343,7 +3343,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-details`, `lr-empty`, `lr-tool-approval-dialog`, `lr-tool-call-chip`, `lr-tool-result-view`
 - Transitive Lyra dependencies: `lr-button`, `lr-copy-button`, `lr-icon-button`, `lr-json-viewer`, `lr-skeleton`, `lr-tooltip`
-- Standalone gzip: 98.9 KiB (101228 bytes; bundle SHA-256 `a84b6f277bb6bf7a87d4aedef09689b87c7f8cf6081a46a829e1ccf183f2738b`)
+- Standalone gzip: 100.9 KiB (103332 bytes; bundle SHA-256 `932b7580eb59b5babcad4ad3a0d4f404b104d0b7ac2c6455d99c28db9b0b0082`)
 
 </details>
 
@@ -3355,7 +3355,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 51.6 KiB (52878 bytes; bundle SHA-256 `bf4340f872bef2ee62e0254ddcd3591e8f3b82733e4a9646e13a0f9dab4787ef`)
+- Standalone gzip: 53.5 KiB (54789 bytes; bundle SHA-256 `80801fcc08dc446968b1e6d08da7490b537f61b0e45e0ea0e51be9e4c92171bd`)
 
 </details>
 
@@ -3367,7 +3367,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 45.6 KiB (46721 bytes; bundle SHA-256 `e2a8bb123df4597cd2e0e6c4efbc0186ecb41cb43d1285b8b8e8a51b7f1abec8`)
+- Standalone gzip: 47.4 KiB (48496 bytes; bundle SHA-256 `07c17b03d90bb513a22a7eb2677de59f92337dbf2a4aa3170f83ef853db5ef52`)
 
 </details>
 
@@ -3379,7 +3379,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 35.4 KiB (36280 bytes; bundle SHA-256 `c15fb067821a6c4d16afbf1e5bd355c2f4e1b46c68a9a4f9df44b6885dd87e5f`)
+- Standalone gzip: 35.5 KiB (36376 bytes; bundle SHA-256 `323bbc5e39823db2755c15e1cab682d749df9b40f513e7a930c29f80273273dc`)
 
 </details>
 
@@ -3391,7 +3391,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 27.1 KiB (27704 bytes; bundle SHA-256 `7969ca1beb611635c737eb89e38fd7b1f989b90c9c0155c898a4df72dae0b8e8`)
+- Standalone gzip: 27.1 KiB (27778 bytes; bundle SHA-256 `c35ea753a0677432c62871267794f843b6cbf8e1cc9694ede46a5232b8cf2b49`)
 
 </details>
 
@@ -3403,7 +3403,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-empty`, `lr-live-region`, `lr-tree-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 45.8 KiB (46930 bytes; bundle SHA-256 `b4878e1ef69a52b6918cbc2a18cf4f29103961438b3d425ce2c746cea53413cd`)
+- Standalone gzip: 45.9 KiB (47009 bytes; bundle SHA-256 `84ba22b3b7811a53ca32dd953563b82f5d56c7ab9accfa58d77766918cc370ba`)
 
 </details>
 
@@ -3415,7 +3415,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 35.8 KiB (36615 bytes; bundle SHA-256 `ba7d8b1d3b8709d811c56c9615ec37f7879e07ae03867a8091d8b7543858c859`)
+- Standalone gzip: 35.8 KiB (36691 bytes; bundle SHA-256 `eb2988ae2efc967abfbde9be2e7149e35360eee38189fd69ffcbb7b681e8ead1`)
 
 </details>
 
@@ -3427,7 +3427,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 22.3 KiB (22802 bytes; bundle SHA-256 `a1f794369cc94e3331ae68783edb54de54c043021f4625d51f187f85e9e3d84d`)
+- Standalone gzip: 22.3 KiB (22880 bytes; bundle SHA-256 `f3825f0b90901c0b789041b6a3d3f1f391e9e133646f35dbac0a12b3fa541849`)
 
 </details>
 
@@ -3439,7 +3439,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.4 KiB (42415 bytes; bundle SHA-256 `53cee933ebb326bb4bc3fa6a25225b91c877e2eaa954bc30662072b18166c91b`)
+- Standalone gzip: 43.4 KiB (44426 bytes; bundle SHA-256 `426d0355945eb9ebd3b892db867211a56a9e0277f714302beb9fcc68b9b25a93`)
 
 </details>
 
@@ -3451,7 +3451,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`
 - Direct Lyra dependencies: `lr-icon`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 40.4 KiB (41419 bytes; bundle SHA-256 `3239109eaed7c945149738c30a5d3a8063ec70fb819664e4d14a4e458237a8a3`)
+- Standalone gzip: 40.5 KiB (41506 bytes; bundle SHA-256 `32f511817cbe609f7ef15b8f0bbacbd6c9e9d51163d0807e3a55a898a8208f26`)
 
 </details>
 
@@ -3463,7 +3463,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`
 - Direct Lyra dependencies: `lr-icon`, `lr-video`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 44.8 KiB (45834 bytes; bundle SHA-256 `2d1a0f4f2c4bdbf11c805214ef2adcdec728a1099b5a945c0b317293e93d8d4c`)
+- Standalone gzip: 44.8 KiB (45907 bytes; bundle SHA-256 `6fdf9562f81fa6971d7434fd35b8b648cc73edcaf54ebf91f0b5714b9d28c432`)
 
 </details>
 
@@ -3475,7 +3475,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 31.1 KiB (31872 bytes; bundle SHA-256 `103778fb9ca1c0db1247724e33a89e6e1656ece7dbc112cae99c356ee71e3b2d`)
+- Standalone gzip: 31.4 KiB (32150 bytes; bundle SHA-256 `5372fe817714c1dd88390d7c4b46ce4bb03f2f4cf83dc0f7e7df601bddfd5357`)
 
 </details>
 
@@ -3487,7 +3487,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 21.3 KiB (21780 bytes; bundle SHA-256 `7fe05fddf18c43223c1ce362b18e73aa8028ca57abb6e07a2beae68714583f41`)
+- Standalone gzip: 21.4 KiB (21870 bytes; bundle SHA-256 `8c0a39e7c41a639c9c7b7259b19a3eddc9fc94d4188dab0035fa33ea9991b914`)
 
 </details>
 
@@ -3499,7 +3499,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 53.2 KiB (54515 bytes; bundle SHA-256 `f6d716182cb0c5c2e9931bd045367ec1463c80ea4bac9eae1996a00c1fb517f2`)
+- Standalone gzip: 55 KiB (56329 bytes; bundle SHA-256 `d3347475ccb98cd0d613f6c836861d6532219e6c1828428376f700b7f7e949f4`)
 
 </details>
 
@@ -3511,7 +3511,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 38.8 KiB (39763 bytes; bundle SHA-256 `4e36aeafb0caa187f96de777c44b8940e291ab46dbef1286487c5f31b0048d7e`)
+- Standalone gzip: 38.9 KiB (39839 bytes; bundle SHA-256 `2a542ecd6404e52d73b7b9d7ce8ae2e424d365ea6be0877acb165725a3562299`)
 
 </details>
 
@@ -3523,7 +3523,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-badge`, `lr-button`, `lr-card`, `lr-markdown`, `lr-media-card`, `lr-result-card`, `lr-result-field`, `lr-stat`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 89.8 KiB (91928 bytes; bundle SHA-256 `6cce75fb27c91b562ea3a381ace102479099d974d49012474710a605c77dd595`)
+- Standalone gzip: 89.9 KiB (92090 bytes; bundle SHA-256 `6a3c1227a21db057e8a5bdbadba42b00d3414aaade9325a10a7cc247c3b74280`)
 
 </details>
 
@@ -3535,7 +3535,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 34.3 KiB (35159 bytes; bundle SHA-256 `25c4d4cd4d1b1c70861ab8694a9328da9fdf684a271cd718db1a8d4505579703`)
+- Standalone gzip: 34.4 KiB (35219 bytes; bundle SHA-256 `87bc4d0b272f49d4452f999ee47ad5306b3d03d4bde1c220ec2a6c386c7b7466`)
 
 </details>
 
@@ -3547,7 +3547,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 39.2 KiB (40119 bytes; bundle SHA-256 `ef0ad544baa9190d4f241123e3709e095a44e908e291f9c88a9c5653c719b4e2`)
+- Standalone gzip: 39.2 KiB (40182 bytes; bundle SHA-256 `e4e811a7e80e616cd323a5f0673acafcb876f57351be88ddea4ef66e05020f6d`)
 
 </details>
 
@@ -3559,6 +3559,6 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 28.3 KiB (28942 bytes; bundle SHA-256 `c2cd9cc4f59b6893c523f0a4974fed8df8616195a4fc5a8e7b90c4900e9c77bb`)
+- Standalone gzip: 28.3 KiB (29007 bytes; bundle SHA-256 `4170e3910961e86d1e8f83ef625fb16cca4478cd8e754e79a153e8c54a7fa90c`)
 
 </details>

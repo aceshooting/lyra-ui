@@ -16,7 +16,7 @@
 
 ## `lr-citation-badge`
 
-An inline `[n]` citation marker with a hover/focus preview popover and confidence/verification-status
+An inline `[n]` citation marker with a hover or keyboard-focus preview popover (the focused control matches `:focus-visible` and no pointer press preceded it) and confidence/verification-status
 coloring. First-party invention (no Web Awesome equivalent). Meant to sit inline in a chat message's
 text, each badge carrying a `source-id` that matches a corresponding `<lr-source-card>` shown
 elsewhere on the page (a sibling component in this family) — this component never imports or knows
@@ -49,7 +49,7 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   constituent click, standard browser `dblclick` behavior) in addition to the one `lr-citation-open`.
 
 **Slots:** default — rich preview/tooltip content (e.g. a filename + excerpt), shown in a floating
-popover on hover/focus. This is _not_ the badge's visible content (the badge always renders
+popover on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it). This is _not_ the badge's visible content (the badge always renders
 `[index]`); nothing renders at all (no hover affordance) when this slot is empty.
 When populated, the button carries `aria-describedby` referencing the same-shadow-tree popover,
 which owns `role="tooltip"` whether currently shown or hidden.
@@ -103,9 +103,10 @@ ancestor to change every unset citation badge beneath it.
 The popover is positioned with the same internal `place()` helper (`top-start` placement) that
 `<lr-tool-call-chip>` uses for its own detail tooltip, and never traps focus — it's supplementary
 preview content, not a modal, so Tab continues past the badge normally even while the popover happens
-to be visible from a mouse hover. Hovering and focus are tracked as independent "keep it open"
-reasons (mirroring `<lr-toast-item>`'s hovering/focused pair), so the pointer leaving while the
-badge still holds keyboard focus doesn't schedule a hide the focus is still holding open. There's a
+to be visible from a mouse hover. Hovering and keyboard focus are tracked as independent "keep it
+open" reasons (mirroring `<lr-toast-item>`'s hovering/focused pair), so the pointer leaving while
+the badge still holds keyboard focus doesn't schedule a hide the focus is still holding open;
+pointer or scripted focus neither opens nor holds the popover. There's a
 200ms grace period before a hover/focus-out actually hides the popover, so moving the pointer from
 the badge into the popover itself (to select/copy its text) doesn't make it vanish mid-move; Escape
 and blur (Tab away) close it immediately instead, with no delay.

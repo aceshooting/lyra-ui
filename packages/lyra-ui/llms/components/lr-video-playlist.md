@@ -62,7 +62,8 @@ are not playlist items.
 
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
 `var(--lr-color-brand)`) and `--lr-video-playlist-item-current-background` (default
-`var(--lr-color-brand-fill-quiet)`) style the active playlist row.
+`var(--lr-color-brand-fill-quiet)`) style the active playlist row, and are kept under the pointer:
+its hover and press mix from the current background rather than the plain-row surface.
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an

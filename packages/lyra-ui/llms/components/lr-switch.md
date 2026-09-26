@@ -131,6 +131,9 @@ fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independentl
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
 retint the pointer states (their defaults remain mixes from the current state's resting fill, so a
 checked switch mixes from `--lr-switch-checked-track-fill` even when the unchecked fill is set).
+The checked fill never falls back to `--lr-switch-track-fill`: unset, it is `--lr-color-brand`.
+An explicit hover or active fill applies in both states; for a per-state value, set it from
+`lr-switch:state(checked) { --lr-switch-track-hover-fill: …; }`.
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
 renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
 look) without affecting any other switch. `--lr-switch-checked-track-border` (default

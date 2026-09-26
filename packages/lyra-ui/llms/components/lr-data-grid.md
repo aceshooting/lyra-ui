@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 59 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 59 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -291,7 +291,13 @@ localized loading text to that shared polite sink, including repeated loading cy
 `--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,
 `--row-hover-background`, `--selected-background`, `--stripe-background`, `--text-color`, and
 `--transition-duration`. Defaults resolve through Lyra design tokens. Set `--max-height: none` to
-render every row instead of a virtual window. Three grid-specific hooks reach formatter and row
+render every row instead of a virtual window. `--border-color` (default `var(--lr-color-border)`)
+paints the control boundaries (search, buttons, page size) and, unless the separate grid-line hook
+is set, the grid lines too. `--lr-data-grid-line-color` (default
+`var(--border-color, var(--lr-color-border-subtle))`) paints only the decorative grid lines: the
+outer edge, header, row, cell and footer separators, and the toolbar and pager rules. It defaults to
+the subtle tier, so a theme such as the shadcn preset softens the grid while the controls keep a
+3:1 boundary. Three grid-specific hooks reach formatter and row
 detail content inside the shadow root: `--lr-data-grid-cell-color` (default `inherit`) controls
 body-cell text, `--lr-data-grid-cell-link-color` (default `var(--lr-color-brand)`) controls nested
 anchors, and `--lr-data-grid-cell-link-hover-color` (default

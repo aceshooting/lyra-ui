@@ -1905,3 +1905,148 @@ describe('Page state cssprops', () => {
     }
   });
 });
+
+describe('mobile navigation focus return to a host-hidden trigger', () => {
+  const deepActive = (): Element | null => {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  };
+  const describeActive = (): string => {
+    const active = deepActive();
+    if (!active) return 'null';
+    const part = active.getAttribute('part');
+    return `${active.localName}${active.id ? `#${active.id}` : ''}${part ? `[part=${part}]` : ''}`;
+  };
+
+  /** A host that hides `trigger` while the drawer is open and re-shows it from its own render a
+   *  frame after `lr-nav-toggle` proposes the close -- a framework host whose render is scheduled
+   *  rather than synchronous with the event. */
+  function hideWhileOpen(
+    page: LyraPage,
+    trigger: HTMLElement,
+    onClose?: () => void
+  ): () => void {
+    const listener = (event: Event): void => {
+      const { open } = (event as CustomEvent<{ open: boolean }>).detail;
+      if (open) {
+        trigger.style.visibility = 'hidden';
+        return;
+      }
+      onClose?.();
+      requestAnimationFrame(() => {
+        trigger.style.visibility = '';
+      });
+    };
+    page.addEventListener('lr-nav-toggle', listener);
+    return () => page.removeEventListener('lr-nav-toggle', listener);
+  }
+
+  it('returns focus to a slotted navigation toggle the host re-shows after Escape closes the drawer', async () => {
+    const page = (await fixture(html`
+      <lr-page style="inline-size:320px">
+        <button id="custom-toggle" slot="navigation-toggle">Menu</button>
+        <button slot="navigation">Inside</button>
+      </lr-page>
+    `)) as LyraPage;
+    access(page).applyMeasuredInlineSize(320);
+    await page.updateComplete;
+    const custom = page.querySelector<HTMLButtonElement>('#custom-toggle')!;
+    const release = hideWhileOpen(page, custom);
+    try {
+      custom.focus();
+      custom.click();
+      await page.updateComplete;
+      expect(page.navOpen).to.be.true;
+      expect(custom.style.visibility).to.equal('hidden');
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
+      await page.updateComplete;
+      expect(page.navOpen).to.be.false;
+      await waitUntil(
+        () => deepActive() === custom,
+        `focus stayed on ${describeActive()}`
+      );
+    } finally {
+      release();
+    }
+  });
+
+  it('returns focus to an external opener the host re-shows after hideNavigation()', async () => {
+    const opener = document.createElement('button');
+    opener.type = 'button';
+    opener.id = 'external-opener';
+    opener.textContent = 'Open navigation';
+    document.body.append(opener);
+    const page = (await fixture(html`
+      <lr-page style="inline-size:320px" disable-navigation-toggle>
+        <button slot="navigation">Inside</button>
+      </lr-page>
+    `)) as LyraPage;
+    access(page).applyMeasuredInlineSize(320);
+    await page.updateComplete;
+    const release = hideWhileOpen(page, opener);
+    try {
+      opener.focus();
+      page.showNavigation();
+      await page.updateComplete;
+      expect(page.navOpen).to.be.true;
+      // The user works inside the open drawer before closing it.
+      const inside = page.querySelector<HTMLButtonElement>('[slot="navigation"]')!;
+      await waitUntil(() => {
+        inside.focus();
+        return deepActive() === inside;
+      }, `the open drawer's navigation never took focus (${describeActive()})`);
+
+      page.hideNavigation();
+      await page.updateComplete;
+      expect(page.navOpen).to.be.false;
+      await waitUntil(
+        () => deepActive() === opener,
+        `focus stayed on ${describeActive()}`
+      );
+    } finally {
+      release();
+      opener.remove();
+    }
+  });
+
+  it('never takes back focus the host moved elsewhere before the deferred return runs', async () => {
+    const page = (await fixture(html`
+      <lr-page style="inline-size:320px">
+        <button id="custom-toggle" slot="navigation-toggle">Menu</button>
+        <button slot="navigation">Inside</button>
+        <h1 id="page-heading" tabindex="-1">Dashboard</h1>
+      </lr-page>
+    `)) as LyraPage;
+    access(page).applyMeasuredInlineSize(320);
+    await page.updateComplete;
+    const custom = page.querySelector<HTMLButtonElement>('#custom-toggle')!;
+    const heading = page.querySelector<HTMLElement>('#page-heading')!;
+    const release = hideWhileOpen(page, custom);
+    try {
+      custom.focus();
+      custom.click();
+      await page.updateComplete;
+      expect(page.navOpen).to.be.true;
+
+      page.hideNavigation();
+      await page.updateComplete;
+      // A router that moves focus to the new view's heading once the drawer has closed.
+      heading.focus();
+      await waitUntil(
+        () => getComputedStyle(custom).visibility === 'visible',
+        'the host never re-showed its toggle'
+      );
+      for (let frame = 0; frame < 3; frame++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      expect(deepActive() === heading, `focus moved to ${describeActive()}`).to
+        .be.true;
+    } finally {
+      release();
+    }
+  });
+});

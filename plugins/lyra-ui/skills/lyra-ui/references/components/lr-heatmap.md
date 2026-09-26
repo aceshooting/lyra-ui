@@ -84,15 +84,22 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
 - `cellGapX: number = 1` / `cellGapY: number = 1` (attributes `cell-gap-x` / `cell-gap-y`) —
-  matrix-only trailing horizontal/vertical gaps in CSS pixels, subtracted from the square
-  `cellSize` pitch. Negative values clamp to zero, non-finite values use `1`, and oversized gaps
-  leave at least one painted pixel. Custom geometry with `accessibleCells` grows the minimum pitch
-  and caps gaps to preserve the `--lr-icon-button-size` target floor. Calendar spacing is unchanged.
-- `cellRadius: number = 0` (attribute `cell-radius`) — matrix-only painted corner radius in CSS
-  pixels, clamped from zero to half the smaller painted side; non-finite values use zero. Custom
-  cell fills, focus/selection/annotation rings, semantic overlays, and PNG canvas output share the
-  same bounds. Custom gaps are excluded from canvas pointer hits; rounded cells retain rectangular
-  interaction bounds. The default one-pixel separator retains its existing hit area.
+  trailing horizontal/vertical gaps in CSS pixels. In matrix mode they are subtracted from the
+  square `cellSize` pitch. Negative values clamp to zero, non-finite values use `1`, and oversized
+  gaps leave at least one painted pixel. Custom geometry with `accessibleCells` grows the minimum
+  pitch and caps gaps to preserve the `--lr-icon-button-size` target floor. In calendar mode they
+  are opt-in: only an explicitly set property or attribute replaces the calendar's original `2px`
+  spacing between week columns / weekday rows, adding to the pitch (painted cells stay `cellSize`
+  square), clamped from zero to `cellSize - 1`; a non-finite value, or removing the attribute,
+  restores the original spacing. With none set, calendar geometry is unchanged. Explicit gaps feed
+  painting, hit-testing, `fitToWidth`, month/weekday label placement, state rings, and semantic
+  cells; caller-supplied `data.columnX`/`data.rowY` origins still win.
+- `cellRadius: number = 0` (attribute `cell-radius`) — painted corner radius in CSS pixels,
+  clamped from zero to half the smaller painted side; non-finite values use zero. Custom cell
+  fills, focus/selection/annotation rings, semantic overlays, and PNG canvas output share the same
+  bounds, in both modes (calendar cells round only once it is explicitly set). Custom gaps are
+  excluded from canvas pointer hits; rounded cells retain rectangular interaction bounds. The
+  default one-pixel matrix separator retains its existing hit area.
 - `colLabelInterval: number = 1` (attribute `col-label-interval`) — paint every Nth matrix column
   label starting at column zero, including frozen labels and rotated label measurement. Truncated
   to an integer of at least one; non-finite values use `1`. Every original `data.colLabels` value
@@ -368,6 +375,18 @@ with the grid. `LyraHeatmapMatrixGeometryChangeDetail` contains `padLeft`, `padT
 presentation. When those optional fields are absent, painted width/height are `cellSize - 1` and
 radius is zero. The getter and geometry-change event always share one frozen snapshot, including
 changes to the resolved gaps/radius.
+
+`calendarGeometry: Readonly<LyraHeatmapCalendarGeometry> | undefined` (read-only; assignment is
+ignored) is the calendar-mode counterpart: the frozen snapshot of the last calendar draw with
+`padLeft` (weekday gutter), `padTop` (month band), `cellSize`, `cellWidth`, `cellHeight`,
+`cellGapX`, `cellGapY`, `cellRadius`, `weekCount`, and `firstDayOfWeek`. `undefined` outside
+calendar mode and before the first calendar draw; the same object is returned until the painted
+geometry changes, and no event is fired for it. With `data.columnX`/`data.rowY`, those callbacks
+position individual columns/rows instead of `padLeft`/`padTop` plus the gaps.
+
+For a GitHub-style contribution graph with rounded, visibly spaced cells, stay in calendar mode and
+set `cell-gap-x="3" cell-gap-y="3" cell-radius="2"` — week columns, weekday/month labels, date
+selection, `lr-cell-click`, and `cellText` keep working with no matrix rebuild.
 
 For a fluid day/hour matrix, keep all 24 hour strings in `data.colLabels` and use
 `fit-to-width cell-gap-x="1" cell-gap-y="2" cell-radius="2" col-label-interval="3"`.

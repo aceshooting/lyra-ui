@@ -78,6 +78,17 @@ return when a toggle is replaced, removed, or the Page disconnects. If the openi
 replaced while the drawer is open, both the ARIA owner and eventual focus-return target retarget to
 the next available assigned toggle's real composed control.
 
+Closing the drawer returns focus to the control that opened it: the activated `navigation-toggle`
+or `data-toggle-nav` control, or — for `showNavigation()`/`navOpen` opened from script — whatever
+held focus outside the drawer when it opened. When that control cannot take focus, the default
+navigation toggle, then the main landmark, receive it instead. The return is attempted as the
+drawer closes and, if that attempt could not reach the opening control (a host commonly hides its
+menu button while the drawer is open and re-shows it from its own render in response to
+`lr-nav-toggle`), again once the close's update has completed and one animation frame has passed.
+That second pass only acts while focus is still inside the closed drawer, on the fallback the first
+attempt chose, or lost to `<body>` — focus moved elsewhere in the meantime (a router focusing the
+new view's heading, say) is never taken back — and it follows the same order.
+
 `navigation-toggle-icon` is decorative visual content: its assigned subtree is inert and hidden
 from assistive technology, while the native toggle retains the sole action and localized name.
 Likewise, `skip-to-content` replaces only visible skip-link text; its assigned subtree is inert and

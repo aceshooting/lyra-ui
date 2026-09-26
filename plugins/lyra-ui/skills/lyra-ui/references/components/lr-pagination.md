@@ -215,7 +215,9 @@ page has `--lr-pagination-current-bg`, `--lr-pagination-current-border-color`, a
 `--lr-pagination-active-border-color`; the applied page has independent
 `--lr-pagination-current-hover-bg`, `--lr-pagination-current-hover-border-color`,
 `--lr-pagination-current-active-bg`, and `--lr-pagination-current-active-border-color` hooks. Each
-defaults to the exact shared brand/quiet-brand/active-mix treatment used previously. These state
+defaults to the exact shared brand/quiet-brand/active-mix treatment used previously. Unset, the
+applied page's hover and press start from its own `--lr-pagination-current-bg` and
+`--lr-pagination-current-border-color`, so a themed current chip keeps its paint under the pointer. These state
 hooks and the resting background/border hooks are consumed through inline fallbacks, so they work
 when inherited from an ancestor as well as when set directly on one pager. Shared spacing,
 disabled-opacity, and focus-ring tokens remain available as usual.

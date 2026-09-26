@@ -21,6 +21,13 @@ blinking cursor and auto-detected Markdown rendering. First-party invention (no 
 equivalent). The host is expected to assign the _entire_ current text on every update to `content`,
 not a delta — this component does no accumulation or ordering of its own.
 
+**Direction.** Markdown mode inherits `<lr-markdown>`'s code direction (see its **Direction**
+paragraph), including the isolated fenced runs and code spans of the streaming plain-text view,
+and the forwarded `code-block`/`inline-code` parts accept an outer `direction` override once the
+content has settled. Plain `content-mode`, including a fenced block shown as plain text, follows
+the page direction; use `content-mode="markdown"` when code must read left-to-right while
+streaming.
+
 **Properties:**
 
 - `content: string = ''` — the full current text so far.
@@ -54,9 +61,13 @@ properties existed:
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
 - `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
-  and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the composed
-  Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
+  and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its compatibility
+  alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the
+  composed Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
+  Use `streaming-render="progressive"` with `content-mode="markdown"`: in `auto` mode the element
+  switches from plain text to Markdown when detection first succeeds, which replaces the displayed
+  reply once, mid-stream.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
   `<lr-markdown>`'s own `highlightCode`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
@@ -122,7 +133,7 @@ sets `math` here.
   coalesce-ms="80"
   streaming
   streaming-render="progressive"
-  code-block-chrome
+  code-block-header
 ></lr-streaming-text>
 <script type="module">
   import "@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.js";
@@ -148,7 +159,7 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-  `streamingRender`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
+  `streamingRender`, `codeBlockHeader`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
   configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
@@ -178,6 +189,7 @@ happens to end with.
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.

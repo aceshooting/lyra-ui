@@ -59,7 +59,8 @@ the host to apply to its controlled `examples` array.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
 search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
-`grid`, `add-button`, `remove-button`, `import`, `export`.
+`grid`, `add-button`, `remove-button`, `import` (the internal `compact` `lr-file-input`; its
+dropzone text and accessible name are the localized `evalDatasetImportLabel`), `export`.
 
 **Themeable custom properties:** `--lr-eval-dataset-search-min-height` (default `auto`),
 `--lr-eval-dataset-search-font-size` (default `inherit`),

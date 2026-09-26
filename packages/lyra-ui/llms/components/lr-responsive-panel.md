@@ -115,7 +115,13 @@ Inline and overlay presentations share the same shadow DOM, so slotted content a
 survive the transition. Focus already inside the panel is preserved. If focus is outside when an
 open inline panel becomes an overlay, focus moves to the first composed focus target (falling back
 to the panel), so it cannot remain behind `aria-modal="true"`. An allowed close restores the element
-captured when the panel originally opened, even when that original open happened inline. The overlay
+captured when the panel originally opened, even when that original open happened inline. The return
+is attempted as the overlay closes and, if that attempt could not land (a host commonly hides its
+own opener while the panel is open and re-shows it in response to `lr-close` or its own
+`open = false` write), again once the close's update has completed and one animation frame has
+passed. That second pass only acts while focus is still inside the closed panel or has fallen to
+`<body>` — focus moved elsewhere in the meantime is never taken back — and when the opener still
+cannot take focus, focus is left where it is. The overlay
 presentation participates in the shared modal stack rather than nesting a `<lr-dialog>`.
 
 The granular route exports the pure

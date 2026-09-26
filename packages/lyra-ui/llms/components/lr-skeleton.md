@@ -47,7 +47,7 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 
 **Themeable custom properties:** `--lr-skeleton-w`, `--lr-skeleton-h` (set/cleared by the
 `width`/`height` properties; defaults `100%` / `var(--lr-size-1em)`),
-`--lr-skeleton-color` (default `var(--lr-color-border)`), `--lr-skeleton-sheen-color` (default
+`--lr-skeleton-color` (default `var(--lr-color-neutral-fill-normal)`), `--lr-skeleton-sheen-color` (default
 `var(--lr-color-surface)`), `--lr-skeleton-border-radius` (default `var(--lr-radius)` for text and
 rectangle shapes); upstream `--color`, `--sheen-color`, and `--border-radius` feed those same
 values. The shared `--lr-transition-ambient` (default `1.8s ease-in-out`) controls the pulse/sheen

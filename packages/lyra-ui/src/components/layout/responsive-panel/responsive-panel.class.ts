@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import {
@@ -88,6 +89,14 @@ export function resolveResponsivePanelEffectiveMode(
  * it for free. When an open inline panel becomes modal, focus already inside
  * is preserved and outside focus moves to the first available target. Closing
  * still returns to the opener captured by the original inline open.
+ *
+ * Closing the overlay presentation returns focus to that opener as the panel closes and, when that
+ * attempt could not land (a host commonly hides its own opener while the panel is open and
+ * re-shows it from its own render in response to `lr-close` or its own `open = false` write), again
+ * once the close's update has completed and one animation frame has passed. That second pass only
+ * acts while focus is still inside the closed panel or has fallen to `<body>` -- focus moved
+ * elsewhere in the meantime is never taken back -- and when the opener still cannot take focus,
+ * focus is left where it is. A reopen, or a disconnect, abandons it.
  *
  * The overlay presentation uses the library's shared overlay coordinator for
  * focus trapping, Escape/backdrop dismissal, inerting, and stack ordering,
@@ -224,6 +233,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private resizeObserver?: ResizeObserver;
   private resizeView?: Window;
   private lastTrigger?: HTMLElement;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private overlayHandle?: OverlayHandle;
   private headerObserver?: MutationObserver;
   private headerObserverDocument?: Document;
@@ -297,7 +307,18 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
         // Removing modal chrome while the still-open panel becomes inline
         // must preserve focus in that same panel. Only a real open -> closed
         // transition restores the opener.
-        this.deactivateOverlayChrome(changed.has('open') && !this.open);
+        const restoreFocus = changed.has('open') && !this.open;
+        this.deactivateOverlayChrome(restoreFocus);
+        // The synchronous attempt above keeps the established timing whenever the opener can
+        // already take focus; this covers an opener the host only re-shows afterward.
+        const opener = this.lastTrigger;
+        if (restoreFocus && opener) {
+          this.deferredFocusReturn.schedule({
+            host: this,
+            candidates: () => [opener],
+            isCurrent: () => !this.open,
+          });
+        }
       }
     }
     if (changed.has('open') && !this.open) this.lastTrigger = undefined;
@@ -354,6 +375,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     this.overlayHandle?.suspend();
+    this.deferredFocusReturn.cancel();
     this.resetOwnerRealmWork();
     super.disconnectedCallback();
   }
@@ -394,6 +416,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private activateOverlayChrome(): void {
+    this.deferredFocusReturn.cancel();
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () =>

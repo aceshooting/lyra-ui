@@ -964,12 +964,12 @@ export type LyraCopyEvent =
   | LyraXmlViewerEventMap['lr-copy'];
 
 /**
- * `lr-copy-error` — dispatched by 21 components: `<lr-artifact-panel>`, `<lr-code-block-core>`,
+ * `lr-copy-error` — dispatched by 22 components: `<lr-artifact-panel>`, `<lr-code-block-core>`,
  * `<lr-code-block>`, `<lr-commit-card>`, `<lr-context-inspector>`, `<lr-copy-button>`,
  * `<lr-data-grid>`, `<lr-diff-view>`, `<lr-document-compare>`, `<lr-env-list>`,
  * `<lr-json-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-actions>`,
- * `<lr-selection-toolbar>`, `<lr-stack-trace>`, `<lr-streaming-text-core>`, `<lr-streaming-text>`,
- * `<lr-terminal>`, `<lr-tool-call-block>`, `<lr-xml-viewer>`.
+ * `<lr-message-parts>`, `<lr-selection-toolbar>`, `<lr-stack-trace>`, `<lr-streaming-text-core>`,
+ * `<lr-streaming-text>`, `<lr-terminal>`, `<lr-tool-call-block>`, `<lr-xml-viewer>`.
  *
  * A union of 18 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.

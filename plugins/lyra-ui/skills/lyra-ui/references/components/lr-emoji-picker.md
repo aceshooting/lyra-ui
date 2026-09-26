@@ -53,8 +53,12 @@ label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji,
 shortcodes? }`; assignment captures a bounded frozen owned snapshot, including the current contents
 of reused source item objects. Earlier snapshots remain frozen and unchanged; in-place source edits
 become visible only after an explicit `groups` assignment. The search field matches
-`name` and every `shortcodes` entry, case-insensitively. Its accessible name and visible placeholder
-use the same localized `emojiPickerSearchLabel` string. Consumer group labels render verbatim.
+`name` and every `shortcodes` entry, case-insensitively. Its accessible name is the localized
+`emojiPickerSearchLabel` string; its visible placeholder is the separate localized
+`emojiPickerSearchPlaceholder` string (English `'Search emoji…'`), overridable per instance with
+`searchPlaceholder?: string` (attribute `search-placeholder`). A blank placeholder, from the property
+or the string, falls back to the search label, so the field never renders empty; the placeholder
+never changes the accessible name. Consumer group labels render verbatim.
 Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
 headings follow `registerLyraLocale()`/`.strings` through filtering and windowed rendering, including
 same-locale `.strings` changes, without exposing localization keys as consumer data. Caller-authored

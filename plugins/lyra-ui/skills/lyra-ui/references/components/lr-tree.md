@@ -292,7 +292,8 @@ from `<lr-tree>`. `--lr-tree-depth` is internal and set inline per row for inden
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
-fallbacks); and paired
+fallbacks). The selected-row background is also the base its hover/press mixes from, and each
+checkbox border token also paints that state's border under the pointer; and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
 badge property falls back to its corresponding shared semantic token. The expanded names are

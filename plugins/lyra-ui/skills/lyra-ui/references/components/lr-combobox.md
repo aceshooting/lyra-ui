@@ -90,7 +90,8 @@ the full form-label, option, overlay, and first-open positioning contracts arriv
 chunks instead of being weakened in a separate partial combobox implementation.
 
 An `lr-option` row remains bounded by its owning listbox: the default label ellipsizes and each
-`start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
+`start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row, where a long slotted text adornment truncates with an
+ellipsis. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
 
 **Adornments in the popup (fixed in 11.0.0).** Before 11.0.0 this paragraph described behavior the
@@ -174,7 +175,9 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
   `lr-popover`, `lr-dropdown`, `lr-tooltip` and `lr-color-picker`. `fixed` is this control's
   default and what it has always rendered: it positions against the viewport and escapes most
-  clipping ancestors, which suits a typeahead list that usually sits inside a scrollable region.
+  clipping ancestors, which suits a typeahead list that usually sits inside a scrollable region;
+  under a transformed, filtered or contained ancestor the listbox is promoted into the browser top
+  layer where the native Popover API exists (otherwise, as before, that ancestor clips it).
   `absolute` positions against the nearest containing block and scrolls with it. An unsupported
   value resolves to the default. Like `placement`, a change takes effect the next time the listbox
   opens. When the instance sets nothing, the cascading `--lr-positioning-strategy` custom property
@@ -336,7 +339,7 @@ readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
 the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
-`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
+`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. A string or number `start`/`end` truncates with an ellipsis when it outgrows the part; template content should render an element at its top level to do the same. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
 put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
 provide richer spoken text than the visible label, and `data` is retained without being rendered

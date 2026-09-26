@@ -29,6 +29,8 @@ dynamic-import table at all. A fenced code block whose language isn't a key in `
 renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
 mirroring `<lr-markdown-core>`'s own contract.
 
+Direction behaves exactly as described for `<lr-streaming-text>` (**Direction** above).
+
 **Properties:** `content: string = ''` — the full current text so far, identical contract to
 `<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
 (attribute `coalesce-ms`) — same trailing-edge coalesce window described in
@@ -46,11 +48,13 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its compatibility alias
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
 (attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
-progressive output, and `codeBlockChrome` enables the localized code label and source-copy action.
+progressive output, and `codeBlockHeader` (or its `codeBlockChrome` alias) enables the localized
+code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
 `<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
@@ -99,6 +103,7 @@ shared behavior.
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.

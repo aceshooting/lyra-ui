@@ -41,7 +41,8 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 
 **Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
-`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle.
+`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle. The background is also the
+base its hover/press mixes from.
 Both are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either
 can be set on the element _or any ancestor_. They exist because
 `::part(reveal-button)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute

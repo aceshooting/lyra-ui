@@ -24,7 +24,9 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 **Properties:**
 
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
-  `zoomStep: number = 0.25` — bounded, finite zoom configuration
+  `zoomStep: number = 0.25` — bounded, finite zoom configuration. Lyra anchored overlays opened in
+  zoomed content (dropdowns, tooltips, popovers, selects) align with their trigger at any zoom, with
+  either strategy, and render at UI scale rather than at the content's zoom
 - `src: string = ''` and `alt: string = ''` — optional safe image source. A rejected URL is treated
   as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
 - `fit: LyraImageFit = 'actual'` (reflected) — base sizing policy for an image supplied through

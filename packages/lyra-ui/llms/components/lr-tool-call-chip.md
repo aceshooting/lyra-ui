@@ -52,7 +52,7 @@ button, so programmatic focus/activation reaches the same semantic owner as poin
 interaction.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
-shown in a floating tooltip on hover/focus; nothing renders at all, no hover affordance, when this
+shown in a floating tooltip on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it); nothing renders at all, no hover affordance, when this
 slot is empty), `icon` (overrides the built-in per-status glyph entirely via native slot-fallback
 content — assigned content wins; otherwise the `icon` prop is rendered as a literal hint; otherwise
 the built-in glyph for the current `status` is used)
@@ -115,7 +115,7 @@ ancestor to change every unset chip beneath it.
 
 The default slot's tooltip uses the same `'top-start'` placement as `<lr-combobox>`'s listbox, and
 appears/disappears instantly
-on hover/focus/blur/mouseleave with no fade transition and no "pointer moved into the tooltip"
+on hover or keyboard focus, and on blur/mouseleave, with no fade transition and no "pointer moved into the tooltip"
 tracking — it's documented as read-only preview content, not an interactive surface meant to retain
 focus of its own. `denied` gets its own warning-toned glyph and color (a policy rejection, not a
 runtime failure) distinct from `error`'s danger tone, matching `<lr-tool-result-dialog>`'s

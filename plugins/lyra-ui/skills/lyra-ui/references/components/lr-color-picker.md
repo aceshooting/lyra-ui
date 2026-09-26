@@ -123,8 +123,11 @@ and:
   see `<lr-popover>` (`llms/components/lr-popover.md`): the one property `<lr-popover>`,
   `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell the same way,
   `'absolute' | 'fixed'`. `absolute` is this control's mirrored default and keeps the panel in the
-  component's local scrolling context; `fixed` escapes most clipping ancestors. An unsupported value
-  resolves back to the default, and a change applies live while the panel is open.
+  component's local scrolling context; `fixed` escapes most clipping ancestors, and escapes
+  transformed, filtered or contained ancestors by promoting the panel into the browser top layer
+  where the native Popover API exists (otherwise, as before, such an ancestor contains and clips
+  it). An unsupported value resolves back to the default, and a change applies live while the panel
+  is open.
   `hoist: boolean = false` is its retained exact alias (`hoist` ⇔ `positioning-strategy="fixed"`);
   writing either spelling updates the other, so the two attributes can never disagree. Prefer
   `positioning-strategy` in new code. This property always reports the instance's own authored

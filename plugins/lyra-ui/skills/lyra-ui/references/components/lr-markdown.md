@@ -116,6 +116,15 @@ uses for its own `[part="body"]`.
   follows the surrounding direction, while its open-fence preview uses code direction. Work is
   bounded per animation frame; after 2,000 settled groups the remaining source stays plain until
   completion. Large code blocks defer highlighting until completion.
+  Known limits of progressive mode: an in-progress list or table stays plain text until another
+  block follows it (and a code fence inside it reads in page direction until then); raw HTML or a
+  consumer renderer override that leaves an element open, and a reference definition whose title is
+  still open, hold rendering until they close; the `<mark>` highlight fallback (browsers without the
+  CSS Custom Highlight API) repaints at settle; producers should stream raw Markdown rather than
+  pre-closing open constructs, because a later edit that is not an append rebuilds from the first
+  changed block. With `<lr-streaming-text>`, use `content-mode="markdown"` so auto-detection does
+  not replace the displayed reply mid-stream. During a progressive stream `getHeadingTree()` returns
+  the headings of settled blocks.
 - `codeBlockHeader: boolean = false` (attribute `code-block-header`) — adds a language label and
   an icon-only native copy button to the first 200 non-empty built-in code blocks, fenced or
   indented. It copies source text without the renderer's terminal newline, preserving leading tabs
@@ -137,7 +146,9 @@ uses for its own `[part="body"]`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
-  lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
+  lazy-loaded the same way as `marked`/`dompurify`/`shiki`. Inline delimiters follow pandoc's rule:
+  the opening `$` must be followed by a non-space, and the closing `$` must follow a non-space and
+  not precede a digit, so prose such as `$500 and $200` stays text. `\$` escapes a literal dollar.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set,
   `[part="content"]` scrolls internally past this height instead of growing the page. Invalid
   values are ignored.
@@ -224,8 +235,27 @@ reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignmen
 HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
 and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore
 letter wrapping with `::part(table) { overflow-wrap: anywhere }`, or Korean/CJK word grouping with
-`::part(table) { word-break: keep-all }`. Inline code and code blocks keep LTR character order in RTL documents while
-their surrounding layout continues to follow the page direction.
+`::part(table) { word-break: keep-all }`.
+
+**Direction.** Inside a right-to-left document, fenced, indented and inline code
+(`::part(code-block)`, `::part(inline-code)`, and any other `code` outside a `pre` that has no
+`dir`) computes `direction: ltr; unicode-bidi: isolate; text-align: start`, plain or highlighted; a
+block's inner `<code>` inherits from its `pre`. Prose, list markers, block margins, table layout and
+the code-block header still follow the page direction, and the rendered HTML carries no `dir`
+attribute. An authored `pre` with neither `part="code-block"` nor `dir` gets
+`unicode-bidi: plaintext`, so each line takes the direction of its first strong character (WebKit
+resolves it once from the block's first strong character instead of per line), and an explicit
+`dir` on authored `pre`/`code` always wins. Consumers restore right-to-left code with an
+outer rule such as `lr-markdown::part(code-block), lr-markdown::part(inline-code) { direction: rtl }`
+(the block's `<code>` follows its `pre`). The plain-text view shown while streaming, loading or
+after a failure renders exactly `content`, isolating recognizable fenced runs as left-to-right
+blocks and same-line code spans as left-to-right isolates. Those internal runs carry no part, so a
+`::part()` override does not reach them. The recognition is a heuristic: indented (four-space)
+code blocks, fences inside blockquotes or on a list-marker line, and code spans that cross a line
+break are not isolated until the final parse; at most 128 fenced runs and 128 code spans are
+isolated. In progressive streaming a text tail follows the page direction while an open-fence
+preview uses code direction. Bidi formatting characters inside code (for example U+202E) are
+rendered as authored, not neutralized.
 
 **Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
@@ -295,7 +325,10 @@ HTML parsing at all — the raw `content` string itself) and fires `lr-render-er
 `html-mode="sanitize"`, an unavailable or failed `dompurify` peer takes that same fail-closed path:
 the component never renders `marked`'s raw HTML output when sanitization was requested. Use
 `html-mode="escape"` when authored raw HTML should remain visible as text, or
-`html-mode="trusted"` only for content whose complete HTML output is already trusted. While the
+`html-mode="trusted"` only for content whose complete HTML output is already trusted. Trusted
+content is painted inside a clipped (`contain: paint`) surface, so plain positioned HTML in it stays
+clipped to the component; Lyra anchored overlays authored inside it (like `lr-dialog`) open in the
+browser top layer and can paint over the surrounding app while they are open. While the
 optional peers are still resolving, the host carries `aria-busy="true"` (set/
 cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
 rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already

@@ -365,6 +365,20 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
   decides: groups render before the rows, so an active row wins while (and only while) it needs to,
   which is right — a group header is a non-interactive `pointer-events: none` label.
+- **Overlays in rows escape the list.** The per-row transform also makes each row the containing
+  block of any `position: fixed` descendant, inside the list's own clipping scroller, so an
+  `absolute` overlay in a row can never extend past the list. Rows therefore default anchored Lyra
+  overlays (dropdowns, tooltips, popovers, selects, context menus) to the `fixed` strategy, and a
+  trapped `fixed` overlay opens at full size in the browser top layer where the native Popover API
+  exists — a row-action menu in a short list is no longer squeezed or clipped, in either direction.
+  An authored value still wins: an instance's `positioning-strategy`/`hoist`, an ancestor's
+  `--lr-positioning-strategy` (even on `:root`), or
+  `lr-virtual-list::part(row) { --lr-positioning-strategy: absolute }` to opt rows out. A promoted
+  overlay whose trigger scrolls out of the list is hidden until the trigger returns. Where the
+  Popover API is absent, a row holding an open `lr-dropdown` in `renderItem` mode stops
+  transforming while the dropdown is open (it keeps its position and is raised to the popover
+  layer), so the menu is not clipped; other overlays there keep the clipped geometry. `:has()`
+  cannot see slotted rows, so that fallback does not apply under `rowProjection="light"`.
 
 ### Light-DOM row projection
 

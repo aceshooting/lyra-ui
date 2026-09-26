@@ -2414,10 +2414,19 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   that opens this rail's mobile overlay (e.g. an application-chrome hamburger button used together
   with `hideToggle`). When set (or resolved through `for`), closing the overlay by any path —
   Escape, backdrop click, a nav-item click, or the built-in toggle itself — returns focus to it, the
-  same guarantee the built-in toggle's own click already gets. Needed because a consumer's own
+  same guarantee the built-in toggle's own click already gets. The return is attempted as the
+  overlay closes and, if that attempt could not land (a host commonly keeps its own menu button
+  `visibility: hidden` while the drawer is open and re-shows it from its own render in response to
+  `lr-toggle`), again once the close's update has completed and one animation frame has passed, so
+  the host's re-render has applied. That second pass only acts while focus is still inside the
+  rail or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
+  focuses the first candidate that can actually hold focus: the trigger, then the element that held
+  focus when the overlay opened, then the built-in `[part='toggle']` (unavailable under
+  `hideToggle`). When none can, focus is left where it is. Needed because a consumer's own
   JS-driven `open = true` never focuses anything, and even a real click does not reliably focus its
-  target in every browser. Resolved once when the overlay opens; reassigning afterward changes the
-  return target for the remainder of that overlay's open lifetime. Read alongside `for`; this direct
+  target in every browser. Resolved when the overlay opens and again when it closes, so reassigning
+  it (or `for`) while the overlay is open changes where focus returns; when the association no
+  longer resolves at close, the target resolved at open still applies. Read alongside `for`; this direct
   reference wins when both resolve to different elements. Unset (the default, `null`) reproduces the
   exact existing behavior: only the built-in toggle's own click supplies a return target, for that
   interaction alone. The resolved trigger also receives `aria-expanded` (rendered in both states)
@@ -2429,8 +2438,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   Disconnect also releases it, and reassigning `trigger` moves the state to the new element.
 - `for: string = ''` — id of an external element that opens this rail's mobile overlay, the
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
-  `for`). Resolved against this element's own root (shadow root or document) when the overlay opens.
-  Ignored once `trigger` is itself set.
+  `for`). Resolved against this element's own root (shadow root or document) when the overlay opens
+  and again when it closes. Ignored once `trigger` is itself set.
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
   state, exposing a `[part='resizer']` handle clamped to `[minRailWidthPx, maxRailWidthPx]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
@@ -3113,7 +3122,13 @@ Inline and overlay presentations share the same shadow DOM, so slotted content a
 survive the transition. Focus already inside the panel is preserved. If focus is outside when an
 open inline panel becomes an overlay, focus moves to the first composed focus target (falling back
 to the panel), so it cannot remain behind `aria-modal="true"`. An allowed close restores the element
-captured when the panel originally opened, even when that original open happened inline. The overlay
+captured when the panel originally opened, even when that original open happened inline. The return
+is attempted as the overlay closes and, if that attempt could not land (a host commonly hides its
+own opener while the panel is open and re-shows it in response to `lr-close` or its own
+`open = false` write), again once the close's update has completed and one animation frame has
+passed. That second pass only acts while focus is still inside the closed panel or has fallen to
+`<body>` — focus moved elsewhere in the meantime is never taken back — and when the opener still
+cannot take focus, focus is left where it is. The overlay
 presentation participates in the shared modal stack rather than nesting a `<lr-dialog>`.
 
 The granular route exports the pure
@@ -5199,6 +5214,17 @@ while assigned, authored relationship tokens compose, and exact initial or late-
 return when a toggle is replaced, removed, or the Page disconnects. If the opening toggle is
 replaced while the drawer is open, both the ARIA owner and eventual focus-return target retarget to
 the next available assigned toggle's real composed control.
+
+Closing the drawer returns focus to the control that opened it: the activated `navigation-toggle`
+or `data-toggle-nav` control, or — for `showNavigation()`/`navOpen` opened from script — whatever
+held focus outside the drawer when it opened. When that control cannot take focus, the default
+navigation toggle, then the main landmark, receive it instead. The return is attempted as the
+drawer closes and, if that attempt could not reach the opening control (a host commonly hides its
+menu button while the drawer is open and re-shows it from its own render in response to
+`lr-nav-toggle`), again once the close's update has completed and one animation frame has passed.
+That second pass only acts while focus is still inside the closed drawer, on the fallback the first
+attempt chose, or lost to `<body>` — focus moved elsewhere in the meantime (a router focusing the
+new view's heading, say) is never taken back — and it follows the same order.
 
 `navigation-toggle-icon` is decorative visual content: its assigned subtree is inert and hidden
 from assistive technology, while the native toggle retains the sole action and localized name.

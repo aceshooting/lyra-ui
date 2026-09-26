@@ -10186,7 +10186,7 @@
             "name": "--lr-avatar-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-neutral-fill-quiet)"
           },
           {
             "name": "--lr-avatar-color",
@@ -10428,7 +10428,7 @@
             "name": "--lr-avatar-group-badge-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-neutral-fill-quiet)"
           },
           {
             "name": "--lr-avatar-group-badge-color",
@@ -36368,6 +36368,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-data-grid-line-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--border-color,var(--lr-color-border-subtle))"
+          },
+          {
             "name": "--lr-data-grid-page-size-active-background",
             "deprecated": null,
             "hasDefault": false
@@ -49023,6 +49029,15 @@
             "default": false
           },
           {
+            "name": "search-placeholder",
+            "property": "searchPlaceholder",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "size",
             "property": "size",
             "type": "LyraSize",
@@ -49171,6 +49186,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "searchPlaceholder",
+            "attribute": "search-placeholder",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "size",
@@ -61691,6 +61715,15 @@
             "hasDefault": false
           },
           {
+            "name": "calendarGeometry",
+            "attribute": null,
+            "type": "Readonly<LyraHeatmapCalendarGeometry> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "cellColor",
             "attribute": null,
             "type": "( pos: MatrixCellPos | CalendarCellPos, value: number ) => string | undefined | undefined",
@@ -73174,6 +73207,15 @@
             "hasDefault": false
           },
           {
+            "name": "bar-slot-width",
+            "property": "barSlotWidth",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "bar-width",
             "property": "barWidth",
             "type": "number",
@@ -73422,6 +73464,15 @@
           {
             "name": "barGapRatio",
             "attribute": "bar-gap-ratio",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "barSlotWidth",
+            "attribute": "bar-slot-width",
             "type": "number | undefined",
             "readonly": false,
             "reflects": false,
@@ -80580,6 +80631,12 @@
           {
             "name": "lr-copy",
             "type": "CustomEvent<LyraClipboardWriteSuccess>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-copy-error",
+            "type": "CustomEvent<LyraClipboardWriteFailure>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -115025,7 +115082,7 @@
             "name": "--lr-skeleton-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border)"
+            "default": "var(--lr-color-neutral-fill-normal)"
           },
           {
             "name": "--lr-skeleton-h",
@@ -126626,7 +126683,7 @@
             "name": "--lr-task-list-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border-subtle)"
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-task-list-compact-body-padding",
@@ -129295,7 +129352,7 @@
             "name": "--lr-thinking-panel-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border-subtle)"
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-thinking-panel-compact-body-font-size",

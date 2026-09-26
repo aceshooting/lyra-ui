@@ -113,7 +113,9 @@ while `checked` — a component-scoped indirection (the same pattern `lr-checkbo
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
 The pointer states are independently themeable with `--lr-radio-hover-border-color` (default
 `var(--lr-color-brand)`), `--lr-radio-active-border-color` (defaulting through the hover border),
-and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`).
+and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`). While checked, an unset
+hover or active border falls back to `--lr-radio-checked-border-color`, so a themed checked border
+survives the pointer.
 WA's `--checked-icon-color` and `--checked-icon-scale` aliases feed the selected indicator's color
 and scale.
 

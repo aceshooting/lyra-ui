@@ -6,9 +6,12 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import {
   activateOverlay,
   collectFocusableElements,
+  composedContains,
+  deepActiveElement,
   type OverlayDeactivateOptions,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
+import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   composedAccessibilityText,
@@ -91,6 +94,15 @@ export interface LyraDialogEventMap {
  * has finished — `lr-after-hide`. Assigning `open` runs the same lifecycle, so the property, the
  * reflected attribute, and the two method calls can never disagree. Markup that renders open
  * from the start emits nothing, matching `<lr-menu>`.
+ *
+ * Closing returns focus to the element that held it when the dialog opened. The return is
+ * attempted as the close begins and, when that attempt could not land (a host commonly hides its
+ * own opener while the dialog is open and re-shows it from its own render in response to
+ * `lr-hide`, `lr-close` or `lr-after-hide`), again once the exit animation has finished and one
+ * animation frame has passed. That second pass only acts while focus is still inside the dialog or
+ * has fallen to `<body>` -- focus moved elsewhere in the meantime is never taken back -- and when
+ * the opener still cannot take focus, focus is left where it is. A reopen, or a disconnect,
+ * abandons it.
  * The panel resolves `dialog.show`/`dialog.hide` through the public animation registry; the
  * backdrop resolves `dialog.overlay.show`/`dialog.overlay.hide`. A per-element registration wins
  * over a page default, while keyframes-only overrides retain the dialog's token-derived timing.
@@ -367,6 +379,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   @state() private headingText?: string;
 
   private overlay?: OverlayHandle;
+  /** Whatever held focus outside this dialog when it opened -- the deferred focus return's target. */
+  private focusReturnOpener: HTMLElement | null = null;
+  /** The pending close's `lr-after-hide` settle, awaited by the deferred focus return. */
+  private hideSettled?: Promise<void>;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   /** Set by `deactivateOverlay()` when a close defers releasing the scroll lock. Flushed once the
    *  exit animation actually finishes (`settleTransition()`'s `'lr-after-hide'` branch), or right
    *  away on disconnect/reopen, since nothing is left to visually protect in either case. */
@@ -420,10 +437,30 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     if (changed.has('open')) {
       this.flushPendingScrollLockRelease();
       if (this.open) {
+        this.deferredFocusReturn.cancel();
+        const active = deepActiveElement(this.ownerDocument);
+        this.focusReturnOpener =
+          active && typeof (active as HTMLElement).focus === 'function' && !composedContains(this, active)
+            ? (active as HTMLElement)
+            : null;
         if (this.isConnected && this.modalSurface) this.activateOverlay();
       } else {
+        const hadOverlay = this.overlay !== undefined;
         this.pendingScrollLockRelease = this.deactivateOverlay({ deferScrollLockRelease: true });
+        // The synchronous return above keeps the established timing whenever the opener can
+        // already take focus; this covers an opener the host only re-shows afterward.
+        const opener = this.focusReturnOpener;
+        this.focusReturnOpener = null;
+        if (hadOverlay && opener && this.isConnected) {
+          this.deferredFocusReturn.schedule({
+            host: this,
+            candidates: () => [opener],
+            settled: this.hideSettled,
+            isCurrent: () => !this.open,
+          });
+        }
       }
+      this.hideSettled = undefined;
     }
   }
 
@@ -475,6 +512,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.resetBodyOverflowObserver();
     super.disconnectedCallback();
     this.overlay?.suspend();
+    this.deferredFocusReturn.cancel();
     // Transient exit-animation state never survives a detach: a reattached dialog re-runs its
     // own lifecycle from scratch, and a pending after-event must not fire for a transition the
     // element is no longer part of. A scroll lock held past `willUpdate` to survive that
@@ -734,7 +772,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.cancelTransitionAnimations();
     if (this.isConnected) this.setAttribute('data-closing', '');
     this.applyOpenState(false);
-    return this.settleTransition('lr-after-hide');
+    const settled = this.settleTransition('lr-after-hide');
+    this.hideSettled = settled;
+    return settled;
   }
 
   private coalesceOpenRequest(next: boolean): boolean {

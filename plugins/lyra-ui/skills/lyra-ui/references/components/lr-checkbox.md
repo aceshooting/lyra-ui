@@ -130,7 +130,9 @@ below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
 State paint is independently themeable through `--lr-checkbox-hover-border`,
 `--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
 `--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
-corresponding brand/brand-quiet/danger token.
+corresponding brand/brand-quiet/danger token. While checked or indeterminate, an unset
+`--lr-checkbox-hover-border` / `--lr-checkbox-active-border` falls back to
+`--lr-checkbox-checked-border`, so a themed checked border survives the pointer.
 `--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
 `[part='box']`'s corner radius without a `::part(box)` rule.
 

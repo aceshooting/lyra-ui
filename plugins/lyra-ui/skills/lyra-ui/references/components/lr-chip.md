@@ -138,7 +138,8 @@ rule covers all four non-neutral variants, because the shared variants sheet has
 the chip reads those generic slots and never names a variant, and sets its border `transparent`),
 `--lr-chip-pressed-border` (border color while pressed/selected — falls back to
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
-back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
+back to `--lr-chip-bg`; a selected chip's hover/press wash mixes from it, an unselected toggleable
+chip's from `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
 `--lr-chip-padding-inline`, `--lr-chip-gap`, `--lr-chip-icon-size` (all five have private defaults
 that follow each `size`, so setting one on the element or a theme ancestor remains authoritative; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /

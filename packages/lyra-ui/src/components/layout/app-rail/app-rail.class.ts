@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
+import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 export type { LyraFrame } from '../../../internal/variants.js';
 import { detectPlatform } from '../../../internal/platform.js';
@@ -494,11 +495,20 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  `[part="toggle"]` (typically paired with `hideToggle`). When set (or resolved through
    *  `for`), closing the overlay by ANY path -- Escape, backdrop click, a nav-item click, or the
    *  built-in toggle itself -- returns focus to it, the same guarantee the built-in toggle's own
-   *  click already gets. An external trigger needs this explicit association instead of relying
+   *  click already gets. The return is attempted as the overlay closes and, when that attempt
+   *  could not land (a host commonly keeps its own menu button `visibility: hidden` while the
+   *  overlay is open and re-shows it from its own render in response to `lr-toggle`), again once the
+   *  close's update has completed and one animation frame has passed. That second pass only acts
+   *  while focus is still inside the rail or has fallen to `<body>` -- focus moved elsewhere in the
+   *  meantime is never taken back -- and focuses the first candidate that can hold focus: this
+   *  trigger, then the element that held focus when the overlay opened, then the built-in
+   *  `[part="toggle"]` (unavailable under `hideToggle`); when none can, focus is left where it is.
+   *  An external trigger needs this explicit association instead of relying
    *  on whatever last held focus: a consumer's own JS-driven `open = true` (rather than a real
    *  click) never focuses anything, and even a real click does not reliably focus its target in
-   *  every browser. Resolved once when the overlay opens; reassign after that point to change the
-   *  return target for the overlay's remaining lifetime. Read alongside `for`; this direct
+   *  every browser. Resolved when the overlay opens and again when it closes, so reassigning it
+   *  (or `for`) while the overlay is open changes where focus returns; when the association no
+   *  longer resolves at close, the target resolved at open still applies. Read alongside `for`; this direct
    *  reference wins when both resolve to different elements. Unset (the default, `null`)
    *  reproduces today's exact behavior: only the built-in toggle's own click supplies a return
    *  target, for that interaction alone. With trigger-collapses, the same association manages
@@ -507,8 +517,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** Id of an external element that opens this rail's mobile overlay, the label/`htmlFor`-style
    *  alternative to assigning `trigger` directly -- mirrors `<lr-page-rail>`'s `for`. Resolved
-   *  against this element's own root (shadow root or document) when the overlay opens. Ignored
-   *  once `trigger` is itself set. */
+   *  against this element's own root (shadow root or document) when the overlay opens and again
+   *  when it closes. Ignored once `trigger` is itself set. */
   @property() for = '';
 
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
@@ -637,6 +647,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private justOpened = false;
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
+  /** The focus-return target the open overlay was activated with, and whatever held focus outside
+   *  this rail at that moment -- the first two candidates of the deferred focus return. */
+  private overlayReturnTarget: HTMLElement | null = null;
+  private overlayOpener: HTMLElement | null = null;
+  /** Whether `overlayReturnTarget` came from the built-in toggle's own click, which outranks the
+   *  external `trigger`/`for` association and is therefore not re-resolved at close. */
+  private overlayReturnIsExplicit = false;
+  /** Cancelled by every open and close, so a deferred focus return that a later transition (or a
+   *  disconnect) overtook never runs. */
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private triggerAria?: AriaOwnershipLease;
   // Repairs focus after a responsive mobile close or removal of a focused inline resizer.
   private recoverInlineFocusAfterResponsiveClose = false;
@@ -1025,6 +1045,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.hotkeyWindow = undefined;
     }
     this.baseEl?.removeAttribute('data-sliding');
+    this.deferredFocusReturn.cancel();
     super.disconnectedCallback();
     this.teardownMediaQueries();
     this.overlayHandle?.suspend();
@@ -1061,10 +1082,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // unset) is passed through as-is, not wrapped in a resolver -- `activateOverlayStack()` reads
     // an `undefined` `restoreFocusTo` as "capture whatever holds focus right now" (see
     // internal/overlay-stack.ts), the fallback this component relied on before either property
-    // existed. Resolving eagerly, once, here (rather than via a live resolver invoked at close
-    // time) matches `trigger`'s own doc: the association is fixed for the overlay's lifetime once
-    // it opens.
+    // existed. The external association is resolved again at close (see deactivateMobileOverlay()),
+    // so reassigning `trigger`/`for` while the overlay is open retargets the return, as documented.
     const restoreFocusTo = explicitTrigger ?? this.resolveExternalTrigger() ?? undefined;
+    this.overlayReturnIsExplicit = explicitTrigger !== undefined;
+    this.deferredFocusReturn.cancel();
+    const active = deepActiveElement(this.ownerDocument);
+    this.overlayOpener =
+      active && typeof (active as HTMLElement).focus === 'function' && !composedContains(this, active)
+        ? (active as HTMLElement)
+        : null;
+    this.overlayReturnTarget = restoreFocusTo ?? this.overlayOpener;
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
@@ -1089,8 +1117,46 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private deactivateMobileOverlay(restoreFocus = true): void {
-    this.overlayHandle?.deactivate({ restoreFocus });
+    const handle = this.overlayHandle;
     this.overlayHandle = undefined;
+    this.deferredFocusReturn.cancel();
+    if (handle && restoreFocus && !this.overlayReturnIsExplicit) {
+      // `trigger`/`for` may have been reassigned while the overlay was open; the association as it
+      // stands now wins. When it no longer resolves, the target resolved at open still applies.
+      const external = this.resolveExternalTrigger();
+      if (external && external !== this.overlayReturnTarget) {
+        this.overlayReturnTarget = external;
+        handle.updateRestoreFocusTo(external);
+      }
+    }
+    // The synchronous attempt keeps the established timing whenever the return target can already
+    // take focus; the deferred pass below covers a target the host only re-shows afterward.
+    handle?.deactivate({ restoreFocus });
+    if (handle && restoreFocus) this.scheduleDeferredFocusReturn();
+  }
+
+  /** Finishes the close's focus return once the close has been published and the host has had a
+   *  chance to react to it. A host commonly hides its own menu button while the overlay is open and
+   *  re-shows it from its own render in response to `lr-toggle`; the synchronous return inside this
+   *  update runs before that render, while the button is still `visibility: hidden`, so `focus()`
+   *  silently no-ops and focus falls to `<body>`. This pass waits for this update to complete and
+   *  then one animation frame, so a host render scheduled from the `lr-toggle` listener -- whether a
+   *  microtask, a task or a frame callback registered during that event -- has already landed.
+   *
+   *  It only acts while focus is still inside this rail (its now-hidden panel) or has fallen to
+   *  `<body>`: focus the user or host deliberately moved elsewhere in the meantime is never taken
+   *  back. It then focuses the first candidate that can actually hold focus -- the return target
+   *  (built-in toggle click, external `trigger`/`for`, or the element focused when the overlay
+   *  opened), then the element focused when the overlay opened, then the built-in `[part="toggle"]`
+   *  (unavailable under `hideToggle`). When none can, focus is left where it is. A reopen, another
+   *  close, or a disconnect before the frame arrives abandons the pass. */
+  private scheduleDeferredFocusReturn(): void {
+    const candidates = [this.overlayReturnTarget, this.overlayOpener];
+    this.deferredFocusReturn.schedule({
+      host: this,
+      candidates: () => [...candidates, this.toggleEl],
+      isCurrent: () => !this.overlayActive,
+    });
   }
 
   /** Reparents the (never destroyed/recreated) toggle button between its two valid DOM positions:

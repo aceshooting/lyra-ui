@@ -26,6 +26,8 @@ plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
 
+Direction behaves exactly as described for `<lr-code-block>` (**Direction** above).
+
 Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
 an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
 `null` property readback; an explicitly empty attribute stays an empty string, and a later value

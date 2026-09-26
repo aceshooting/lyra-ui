@@ -173,8 +173,9 @@ parent; set `lr-context-menu { display: block }` to get a box.
 `--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), and `--show-duration` / `--hide-duration`
 (`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
 The popup always uses fixed positioning (the anchor is a viewport point), so the cascading
-`--lr-positioning-strategy` is not consulted. It is not promoted to the top layer: it stacks exactly
-like `lr-dropdown` (`--lr-overlay-stack-index`). Motion uses the `dropdown.show` /
+`--lr-positioning-strategy` is not consulted. Like `lr-dropdown`, it is promoted to the top layer
+only when a transformed, filtered or contained ancestor (such as an `lr-virtual-list` row) would
+trap it; otherwise it stacks like `lr-dropdown` (`--lr-overlay-stack-index`). Motion uses the `dropdown.show` /
 `dropdown.hide` registry entries, flattened under `prefers-reduced-motion`; overriding those
 entries also affects context menus.
 

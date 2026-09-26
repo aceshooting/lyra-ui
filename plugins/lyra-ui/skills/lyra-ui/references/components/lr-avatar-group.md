@@ -62,7 +62,7 @@ a logical `margin-inline-start`, so it auto-mirrors
 under `dir="rtl"` — setting `0` or a positive length turns the stack into normal spacing),
 `--lr-avatar-group-ring-color` (default `var(--lr-color-surface)`),
 `--lr-avatar-group-ring-width` (default `var(--lr-border-width-medium)`),
-`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, with a private default that follows
+`--lr-avatar-group-badge-bg` (default `var(--lr-color-neutral-fill-quiet)`, with a private default that follows
 `variant`), `--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, with a private default
 that follows `variant`),
 `--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-m)`) — the font size of the "+N"

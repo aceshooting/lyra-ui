@@ -25,6 +25,10 @@ parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
+Direction: built-in text and reasoning parts inherit `<lr-markdown>`'s code direction, so code reads
+left-to-right inside a right-to-left document. `lr-message-parts` forwards no Markdown part, so that
+nested code direction cannot be overridden from outside with `::part()`.
+
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
@@ -92,10 +96,10 @@ standalone result, and a later call part for the same id cannot unmask what the 
 original reference.
 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
-'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
-`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is also exported from
-`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js` and the package
-root. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
+'chip' | 'block'`; `MessagePart` and its discriminated part shapes come from the
+`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is exported from the component module
+(`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js`, or the side-effect-free
+`message-parts.class.js`); it is not a package-root export. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
 `lr-markdown-core` component modules. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
 retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
@@ -103,9 +107,9 @@ and data parts carry exactly one of `data` or `widget`. Empty ids and later dupl
 are ignored so each rendered identity and announcement remains unambiguous.
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
-events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
+events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
+`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
@@ -142,9 +146,9 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 
 ```html
 <lr-message-parts
-  tool-display="disclosure"
+  tool-display="block"
   streaming-render="progressive"
-  code-block-chrome
+  code-block-header
 ></lr-message-parts>
 ```
 
@@ -152,7 +156,8 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 
 - `lr-anchor-result` event — Passthrough from rendered Markdown.
 - `lr-citation-open` event — Passthrough from a rendered citation's full-preview action.
-- `lr-copy` event — Passthrough from rendered JSON content.
+- `lr-copy` event — Passthrough from rendered JSON content or a Markdown code-block header.
+- `lr-copy-error` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
 - `lr-link-click` event — Passthrough from rendered Markdown.
 - `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:

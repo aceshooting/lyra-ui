@@ -228,7 +228,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-ui/translations/<locale>.js` (the twenty-one shipped message catalogs),
+  `@aceshooting/lyra-ui/translations/<locale>.js` (the thirty-two shipped message catalogs),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
@@ -2287,13 +2287,15 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
 
-Twenty-one full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`, `hi`, `id`,
-`it`, `ja`, `ko`, `nl`, `pl`, `pt-BR`, `pt-PT`, `ro`, `ru`, `tr`, `uk`, `zh-CN`, `zh-TW`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
+Thirty-two full catalogs ship with the package — **`ar`, `cs`, `da`, `de`, `de-CH`, `es`, `fa`, `fi`,
+`fr`, `he`, `hi`, `hr`, `hu`, `id`, `it`, `ja`, `kk`, `ko`, `nb`, `nl`, `nn`, `pl`, `pt-BR`, `pt-PT`, `ro`,
+`ru`, `sl`, `sv`, `tr`, `uk`, `zh-CN`, `zh-TW`** — each covering every key in `LYRA_DEFAULT_STRINGS`. They are
 **side-effect-only modules**: import one bare, read nothing from it, and it calls
 `registerLyraLocale()` for you.
 
 ```ts
 import "@aceshooting/lyra-ui/translations/de.js";
+import "@aceshooting/lyra-ui/translations/de-CH.js"; // Swiss Standard German
 import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
 import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
@@ -2308,14 +2310,15 @@ import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional Chinese
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
 `one`/`two`/`other`); Italian uses a non-default set too (`it`: `one`/`many`/`other`), and so does
 Romanian (`ro`: `one`/`few`/`other`, where `few` covers `0` and `2`-`19` and `other` is the
-`de`-requiring form from `20` upward). `ar`, `fa`
+`de`-requiring form from `20` upward). The Slavic catalogs carry their own sets as well (`cs`:
+`one`/`few`/`many`/`other`; `hr`: `one`/`few`/`other`; `sl`: `one`/`two`/`few`/`other`). `ar`, `fa`
 and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
-`pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs. Step 2 of the lookup order above
-still makes each reachable from a less-specific language tag, while an exact `lang="pt-PT"` or
-`lang="zh-TW"` selects its dedicated regional catalog. They are listed under their real tags in
+`de-CH`, `pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs. Step 2 of the lookup order above
+still makes each reachable from a less-specific language tag, while an exact `lang="de-CH"`,
+`lang="pt-PT"` or `lang="zh-TW"` selects its dedicated regional catalog. They are listed under their real tags in
 `getRegisteredLyraLocales()`.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
@@ -2777,6 +2780,23 @@ control) is a single tab stop using a roving `tabindex`; arrow keys move within 
 `aria-hidden` and `inert` items; `Home`/`End` jump to the ends; `Enter` and `Space` both activate;
 `Escape` dismisses the topmost dismissible overlay and returns focus to whatever opened it.
 `ArrowLeft`/`ArrowRight` mean previous/next and swap under `dir="rtl"`.
+
+**Hover/focus surfaces open on keyboard focus.** The `focus` trigger of `lr-tooltip` (default
+`hover focus`), `lr-popover` and `lr-dropdown`, and the hover/focus surfaces of `lr-copy-button`,
+`lr-app-rail-item`, `lr-usage-badge`, `lr-tool-call-chip`, `lr-citation-badge` and
+`lr-entity-chip`, open on focus only when the element that actually holds focus matches
+`:focus-visible` and no pointer press has been seen since the last key press. So pointer, touch and
+scripted focus that follows them — a drawer or dialog moving initial focus to its first control
+after a tap, focus restored after a click-closed overlay, a click handler focusing a button — no
+longer pops a surface, and a non-keyboard focus never cancels a pending hide. Focus that re-enters
+the document from outside it (browser UI, another window, a child frame) is judged by the
+browser's own focus ring. A keyboard-opened drawer shows its initial-focus control's tooltip, and
+Escape closing another overlay restores focus with the tooltip open wherever the browser shows the
+ring. Focus of any kind still gives `lr-tooltip`, `lr-copy-button`, `lr-usage-badge` and
+`lr-tool-call-chip` triggers their accessible description while focus stays on them. A direct tap
+still opens hover surfaces through the browser's compatibility `mouseenter`. Call `show()` for a
+scripted reveal; tests should move focus with a real Tab key or call `show()` rather than `.focus()`
+or synthetic focus events.
 
 **`accessibleLabel` binds to one of two different attributes depending on the component, and the
 two are not interchangeable.** Most components (e.g. `lr-card`, `lr-stat`) expose it as a direct
@@ -5373,7 +5393,8 @@ the full form-label, option, overlay, and first-open positioning contracts arriv
 chunks instead of being weakened in a separate partial combobox implementation.
 
 An `lr-option` row remains bounded by its owning listbox: the default label ellipsizes and each
-`start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
+`start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row, where a long slotted text adornment truncates with an
+ellipsis. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
 
 **Adornments in the popup (fixed in 11.0.0).** Before 11.0.0 this paragraph described behavior the
@@ -5457,7 +5478,9 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
   `lr-popover`, `lr-dropdown`, `lr-tooltip` and `lr-color-picker`. `fixed` is this control's
   default and what it has always rendered: it positions against the viewport and escapes most
-  clipping ancestors, which suits a typeahead list that usually sits inside a scrollable region.
+  clipping ancestors, which suits a typeahead list that usually sits inside a scrollable region;
+  under a transformed, filtered or contained ancestor the listbox is promoted into the browser top
+  layer where the native Popover API exists (otherwise, as before, that ancestor clips it).
   `absolute` positions against the nearest containing block and scrolls with it. An unsupported
   value resolves to the default. Like `placement`, a change takes effect the next time the listbox
   opens. When the instance sets nothing, the cascading `--lr-positioning-strategy` custom property
@@ -5619,7 +5642,7 @@ readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
 the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
-`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
+`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. A string or number `start`/`end` truncates with an ellipsis when it outgrows the part; template content should render an element at its top level to do the same. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
 put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
 provide richer spoken text than the visible label, and `data` is retained without being rendered
@@ -9423,7 +9446,9 @@ below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
 State paint is independently themeable through `--lr-checkbox-hover-border`,
 `--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
 `--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
-corresponding brand/brand-quiet/danger token.
+corresponding brand/brand-quiet/danger token. While checked or indeterminate, an unset
+`--lr-checkbox-hover-border` / `--lr-checkbox-active-border` falls back to
+`--lr-checkbox-checked-border`, so a themed checked border survives the pointer.
 `--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
 `[part='box']`'s corner radius without a `::part(box)` rule.
 
@@ -9621,6 +9646,9 @@ fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independentl
 checked fill, and `--lr-switch-track-hover-fill` / `--lr-switch-track-active-fill` independently
 retint the pointer states (their defaults remain mixes from the current state's resting fill, so a
 checked switch mixes from `--lr-switch-checked-track-fill` even when the unchecked fill is set).
+The checked fill never falls back to `--lr-switch-track-fill`: unset, it is `--lr-color-brand`.
+An explicit hover or active fill applies in both states; for a per-state value, set it from
+`lr-switch:state(checked) { --lr-switch-track-hover-fill: …; }`.
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
 renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
 look) without affecting any other switch. `--lr-switch-checked-track-border` (default
@@ -10074,7 +10102,9 @@ while `checked` — a component-scoped indirection (the same pattern `lr-checkbo
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
 The pointer states are independently themeable with `--lr-radio-hover-border-color` (default
 `var(--lr-color-brand)`), `--lr-radio-active-border-color` (defaulting through the hover border),
-and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`).
+and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`). While checked, an unset
+hover or active border falls back to `--lr-radio-checked-border-color`, so a themed checked border
+survives the pointer.
 WA's `--checked-icon-color` and `--checked-icon-scale` aliases feed the selected indicator's color
 and scale.
 
@@ -11002,8 +11032,11 @@ and:
   see `<lr-popover>` (`llms/components/lr-popover.md`): the one property `<lr-popover>`,
   `<lr-dropdown>`, `<lr-select>`, `<lr-tooltip>` and `<lr-color-picker>` all spell the same way,
   `'absolute' | 'fixed'`. `absolute` is this control's mirrored default and keeps the panel in the
-  component's local scrolling context; `fixed` escapes most clipping ancestors. An unsupported value
-  resolves back to the default, and a change applies live while the panel is open.
+  component's local scrolling context; `fixed` escapes most clipping ancestors, and escapes
+  transformed, filtered or contained ancestors by promoting the panel into the browser top layer
+  where the native Popover API exists (otherwise, as before, such an ancestor contains and clips
+  it). An unsupported value resolves back to the default, and a change applies live while the panel
+  is open.
   `hoist: boolean = false` is its retained exact alias (`hoist` ⇔ `positioning-strategy="fixed"`);
   writing either spelling updates the other, so the two attributes can never disagree. Prefer
   `positioning-strategy` in new code. This property always reports the instance's own authored
@@ -11257,8 +11290,12 @@ label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji,
 shortcodes? }`; assignment captures a bounded frozen owned snapshot, including the current contents
 of reused source item objects. Earlier snapshots remain frozen and unchanged; in-place source edits
 become visible only after an explicit `groups` assignment. The search field matches
-`name` and every `shortcodes` entry, case-insensitively. Its accessible name and visible placeholder
-use the same localized `emojiPickerSearchLabel` string. Consumer group labels render verbatim.
+`name` and every `shortcodes` entry, case-insensitively. Its accessible name is the localized
+`emojiPickerSearchLabel` string; its visible placeholder is the separate localized
+`emojiPickerSearchPlaceholder` string (English `'Search emoji…'`), overridable per instance with
+`searchPlaceholder?: string` (attribute `search-placeholder`). A blank placeholder, from the property
+or the string, falls back to the search label, so the field never renders empty; the placeholder
+never changes the accessible name. Consumer group labels render verbatim.
 Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
 headings follow `registerLyraLocale()`/`.strings` through filtering and windowed rendering, including
 same-locale `.strings` changes, without exposing localization keys as consumer data. Caller-authored
@@ -12756,7 +12793,13 @@ localized loading text to that shared polite sink, including repeated loading cy
 `--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,
 `--row-hover-background`, `--selected-background`, `--stripe-background`, `--text-color`, and
 `--transition-duration`. Defaults resolve through Lyra design tokens. Set `--max-height: none` to
-render every row instead of a virtual window. Three grid-specific hooks reach formatter and row
+render every row instead of a virtual window. `--border-color` (default `var(--lr-color-border)`)
+paints the control boundaries (search, buttons, page size) and, unless the separate grid-line hook
+is set, the grid lines too. `--lr-data-grid-line-color` (default
+`var(--border-color, var(--lr-color-border-subtle))`) paints only the decorative grid lines: the
+outer edge, header, row, cell and footer separators, and the toolbar and pager rules. It defaults to
+the subtle tier, so a theme such as the shadcn preset softens the grid while the controls keep a
+3:1 boundary. Three grid-specific hooks reach formatter and row
 detail content inside the shadow root: `--lr-data-grid-cell-color` (default `inherit`) controls
 body-cell text, `--lr-data-grid-cell-link-color` (default `var(--lr-color-brand)`) controls nested
 anchors, and `--lr-data-grid-cell-link-hover-color` (default
@@ -13731,7 +13774,9 @@ page has `--lr-pagination-current-bg`, `--lr-pagination-current-border-color`, a
 `--lr-pagination-active-border-color`; the applied page has independent
 `--lr-pagination-current-hover-bg`, `--lr-pagination-current-hover-border-color`,
 `--lr-pagination-current-active-bg`, and `--lr-pagination-current-active-border-color` hooks. Each
-defaults to the exact shared brand/quiet-brand/active-mix treatment used previously. These state
+defaults to the exact shared brand/quiet-brand/active-mix treatment used previously. Unset, the
+applied page's hover and press start from its own `--lr-pagination-current-bg` and
+`--lr-pagination-current-border-color`, so a themed current chip keeps its paint under the pointer. These state
 hooks and the resting background/border hooks are consumed through inline fallbacks, so they work
 when inherited from an ancestor as well as when set directly on one pager. Shared spacing,
 disabled-opacity, and focus-ring tokens remain available as usual.
@@ -14290,15 +14335,22 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
 - `cellGapX: number = 1` / `cellGapY: number = 1` (attributes `cell-gap-x` / `cell-gap-y`) —
-  matrix-only trailing horizontal/vertical gaps in CSS pixels, subtracted from the square
-  `cellSize` pitch. Negative values clamp to zero, non-finite values use `1`, and oversized gaps
-  leave at least one painted pixel. Custom geometry with `accessibleCells` grows the minimum pitch
-  and caps gaps to preserve the `--lr-icon-button-size` target floor. Calendar spacing is unchanged.
-- `cellRadius: number = 0` (attribute `cell-radius`) — matrix-only painted corner radius in CSS
-  pixels, clamped from zero to half the smaller painted side; non-finite values use zero. Custom
-  cell fills, focus/selection/annotation rings, semantic overlays, and PNG canvas output share the
-  same bounds. Custom gaps are excluded from canvas pointer hits; rounded cells retain rectangular
-  interaction bounds. The default one-pixel separator retains its existing hit area.
+  trailing horizontal/vertical gaps in CSS pixels. In matrix mode they are subtracted from the
+  square `cellSize` pitch. Negative values clamp to zero, non-finite values use `1`, and oversized
+  gaps leave at least one painted pixel. Custom geometry with `accessibleCells` grows the minimum
+  pitch and caps gaps to preserve the `--lr-icon-button-size` target floor. In calendar mode they
+  are opt-in: only an explicitly set property or attribute replaces the calendar's original `2px`
+  spacing between week columns / weekday rows, adding to the pitch (painted cells stay `cellSize`
+  square), clamped from zero to `cellSize - 1`; a non-finite value, or removing the attribute,
+  restores the original spacing. With none set, calendar geometry is unchanged. Explicit gaps feed
+  painting, hit-testing, `fitToWidth`, month/weekday label placement, state rings, and semantic
+  cells; caller-supplied `data.columnX`/`data.rowY` origins still win.
+- `cellRadius: number = 0` (attribute `cell-radius`) — painted corner radius in CSS pixels,
+  clamped from zero to half the smaller painted side; non-finite values use zero. Custom cell
+  fills, focus/selection/annotation rings, semantic overlays, and PNG canvas output share the same
+  bounds, in both modes (calendar cells round only once it is explicitly set). Custom gaps are
+  excluded from canvas pointer hits; rounded cells retain rectangular interaction bounds. The
+  default one-pixel matrix separator retains its existing hit area.
 - `colLabelInterval: number = 1` (attribute `col-label-interval`) — paint every Nth matrix column
   label starting at column zero, including frozen labels and rotated label measurement. Truncated
   to an integer of at least one; non-finite values use `1`. Every original `data.colLabels` value
@@ -14574,6 +14626,18 @@ with the grid. `LyraHeatmapMatrixGeometryChangeDetail` contains `padLeft`, `padT
 presentation. When those optional fields are absent, painted width/height are `cellSize - 1` and
 radius is zero. The getter and geometry-change event always share one frozen snapshot, including
 changes to the resolved gaps/radius.
+
+`calendarGeometry: Readonly<LyraHeatmapCalendarGeometry> | undefined` (read-only; assignment is
+ignored) is the calendar-mode counterpart: the frozen snapshot of the last calendar draw with
+`padLeft` (weekday gutter), `padTop` (month band), `cellSize`, `cellWidth`, `cellHeight`,
+`cellGapX`, `cellGapY`, `cellRadius`, `weekCount`, and `firstDayOfWeek`. `undefined` outside
+calendar mode and before the first calendar draw; the same object is returned until the painted
+geometry changes, and no event is fired for it. With `data.columnX`/`data.rowY`, those callbacks
+position individual columns/rows instead of `padLeft`/`padTop` plus the gaps.
+
+For a GitHub-style contribution graph with rounded, visibly spaced cells, stay in calendar mode and
+set `cell-gap-x="3" cell-gap-y="3" cell-radius="2"` — week columns, weekday/month labels, date
+selection, `lr-cell-click`, and `cellText` keep working with no matrix rebuild.
 
 For a fluid day/hour matrix, keep all 24 hour strings in `data.colLabels` and use
 `fit-to-width cell-gap-x="1" cell-gap-y="2" cell-radius="2" col-label-interval="3"`.
@@ -15210,7 +15274,8 @@ from `<lr-tree>`. `--lr-tree-depth` is internal and set inline per row for inden
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
-fallbacks); and paired
+fallbacks). The selected-row background is also the base its hover/press mixes from, and each
+checkbox border token also paints that state's border under the pointer; and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
 badge property falls back to its corresponding shared semantic token. The expanded names are
@@ -15292,6 +15357,15 @@ caller aliases, and reports edit intent for the host to apply.
 
 Input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
 optional labels cannot suppress a later valid handle with the same ID.
+
+Anchored Lyra overlays in a node's slotted content (a node menu, a tooltip) resolve the `fixed`
+strategy by default, because a node is translated inside a scaled, clipped world where an
+`absolute` overlay could never extend past the canvas; a trapped `fixed` overlay opens in the
+browser top layer where the native Popover API exists. An authored `positioning-strategy`, an
+ancestor `--lr-positioning-strategy`, or `lr-flow-canvas::part(node) { --lr-positioning-strategy:
+absolute }` still wins. Wheel and pointer gestures that start inside an open node overlay stay its
+own: scrolling a long menu scrolls it instead of zooming the canvas, and pressing its chrome does
+not drag the node.
 
 Horizontal RTL reflects the coordinate plane while authored cards, generated `lr-flow-node` cards,
 native portable fallback cards and SVG edge labels retain readable content. Explicit physical model
@@ -16238,7 +16312,8 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 
 **Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
-`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle.
+`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle. The background is also the
+base its hover/press mixes from.
 Both are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either
 can be set on the element _or any ancestor_. They exist because
 `::part(reveal-button)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
@@ -19406,6 +19481,20 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
   decides: groups render before the rows, so an active row wins while (and only while) it needs to,
   which is right — a group header is a non-interactive `pointer-events: none` label.
+- **Overlays in rows escape the list.** The per-row transform also makes each row the containing
+  block of any `position: fixed` descendant, inside the list's own clipping scroller, so an
+  `absolute` overlay in a row can never extend past the list. Rows therefore default anchored Lyra
+  overlays (dropdowns, tooltips, popovers, selects, context menus) to the `fixed` strategy, and a
+  trapped `fixed` overlay opens at full size in the browser top layer where the native Popover API
+  exists — a row-action menu in a short list is no longer squeezed or clipped, in either direction.
+  An authored value still wins: an instance's `positioning-strategy`/`hoist`, an ancestor's
+  `--lr-positioning-strategy` (even on `:root`), or
+  `lr-virtual-list::part(row) { --lr-positioning-strategy: absolute }` to opt rows out. A promoted
+  overlay whose trigger scrolls out of the list is hidden until the trigger returns. Where the
+  Popover API is absent, a row holding an open `lr-dropdown` in `renderItem` mode stops
+  transforming while the dropdown is open (it keeps its position and is raised to the popover
+  layer), so the menu is not clipped; other overlays there keep the clipped geometry. `:has()`
+  cannot see slotted rows, so that fallback does not apply under `rowProjection="light"`.
 
 ### Light-DOM row projection
 
@@ -19552,10 +19641,19 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   that opens this rail's mobile overlay (e.g. an application-chrome hamburger button used together
   with `hideToggle`). When set (or resolved through `for`), closing the overlay by any path —
   Escape, backdrop click, a nav-item click, or the built-in toggle itself — returns focus to it, the
-  same guarantee the built-in toggle's own click already gets. Needed because a consumer's own
+  same guarantee the built-in toggle's own click already gets. The return is attempted as the
+  overlay closes and, if that attempt could not land (a host commonly keeps its own menu button
+  `visibility: hidden` while the drawer is open and re-shows it from its own render in response to
+  `lr-toggle`), again once the close's update has completed and one animation frame has passed, so
+  the host's re-render has applied. That second pass only acts while focus is still inside the
+  rail or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
+  focuses the first candidate that can actually hold focus: the trigger, then the element that held
+  focus when the overlay opened, then the built-in `[part='toggle']` (unavailable under
+  `hideToggle`). When none can, focus is left where it is. Needed because a consumer's own
   JS-driven `open = true` never focuses anything, and even a real click does not reliably focus its
-  target in every browser. Resolved once when the overlay opens; reassigning afterward changes the
-  return target for the remainder of that overlay's open lifetime. Read alongside `for`; this direct
+  target in every browser. Resolved when the overlay opens and again when it closes, so reassigning
+  it (or `for`) while the overlay is open changes where focus returns; when the association no
+  longer resolves at close, the target resolved at open still applies. Read alongside `for`; this direct
   reference wins when both resolve to different elements. Unset (the default, `null`) reproduces the
   exact existing behavior: only the built-in toggle's own click supplies a return target, for that
   interaction alone. The resolved trigger also receives `aria-expanded` (rendered in both states)
@@ -19567,8 +19665,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   Disconnect also releases it, and reassigning `trigger` moves the state to the new element.
 - `for: string = ''` — id of an external element that opens this rail's mobile overlay, the
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
-  `for`). Resolved against this element's own root (shadow root or document) when the overlay opens.
-  Ignored once `trigger` is itself set.
+  `for`). Resolved against this element's own root (shadow root or document) when the overlay opens
+  and again when it closes. Ignored once `trigger` is itself set.
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
   state, exposing a `[part='resizer']` handle clamped to `[minRailWidthPx, maxRailWidthPx]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
@@ -19710,7 +19808,8 @@ existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's v
 previously reachable only through `::part(nav)`. Plus shared
 tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
-`--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
+`--lr-space-*`, `--lr-radius`, `--lr-shadow-l` (the mobile overlay panel's default elevation, while
+open only), `--lr-shadow-s` (the `frame="card"` default elevation), `--lr-icon-button-size`,
 `--lr-focus-ring-*`, `--lr-transition-base`). The rail's inline-end edge and its header/footer rules
 use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
 `'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
@@ -19909,16 +20008,16 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 ### `lr-app-rail-item`
 
+An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
+set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
+removing the label from the accessibility tree.
+
 In icon-only presentation the nested disclosure and children list are hidden while `expanded`
 is preserved. Returning full restores the list. If a disclosure or descendant had focus, it moves
 to the outermost visible parent item's base control. The parent link remains operable. The `end`
 slot stays visible; reserve an icon-only rail width of at least twice the nav padding plus the icon
 square, item gap and end content. A 1.5rem badge requires 5.5rem with default tokens. Keep end actions
 out of default-width compact rails, or use a rail that never collapses.
-
-An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
-set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
-removing the label from the accessibility tree.
 
 **Properties:**
 
@@ -19930,7 +20029,8 @@ removing the label from the accessibility tree.
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location). `active`, a deprecated alias in both property and attribute form, was removed
   in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
-- `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
+- `tooltip: boolean = false` (reflected) — opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it)
+  (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
   since the label is already visible there. `false` (the default) reproduces the exact existing
@@ -20003,8 +20103,8 @@ nav-slot behaviour, not new to these slots.
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
 shipped `active-indicator` part — suppressed by default while `icon-only`, see the current-ring
-tokens below), `tooltip` (the hover/focus label flyout, only rendered while `tooltip` is set, the
-item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around the `meta` slot,
+tokens below), `tooltip` (the hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it), only rendered while
+`tooltip` is set, the item is `icon-only`, and it is hovered or keyboard-focused), `meta` (the wrapper around the `meta` slot,
 hidden while empty), `end` (the wrapper around the `end` slot, hidden while empty), `toggle` (the
 `children` disclosure, rendered only while something is slotted into `children`; a sibling of
 `base`, never nested inside it), `toggle-icon` (the wrapper around the disclosure chevron,
@@ -20249,7 +20349,13 @@ Inline and overlay presentations share the same shadow DOM, so slotted content a
 survive the transition. Focus already inside the panel is preserved. If focus is outside when an
 open inline panel becomes an overlay, focus moves to the first composed focus target (falling back
 to the panel), so it cannot remain behind `aria-modal="true"`. An allowed close restores the element
-captured when the panel originally opened, even when that original open happened inline. The overlay
+captured when the panel originally opened, even when that original open happened inline. The return
+is attempted as the overlay closes and, if that attempt could not land (a host commonly hides its
+own opener while the panel is open and re-shows it in response to `lr-close` or its own
+`open = false` write), again once the close's update has completed and one animation frame has
+passed. That second pass only acts while focus is still inside the closed panel or has fallen to
+`<body>` — focus moved elsewhere in the meantime is never taken back — and when the opener still
+cannot take focus, focus is left where it is. The overlay
 presentation participates in the shared modal stack rather than nesting a `<lr-dialog>`.
 
 The granular route exports the pure
@@ -21077,15 +21183,15 @@ card given only a resting shadow keeps that exact shadow on hover.
 
 ## `lr-command-palette`
 
+Searchable application command menu. Renders nothing at all while closed. Uses the same shared
+overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
+dismissal, ref-counted document scroll lock).
+
 Hotkeys share last-connected eligible ownership with `lr-app-rail` in the same window. Removing the
 `hotkey` attribute disables the chord, and key-less browser autofill events are ignored. Non-ASCII
 layout keys may match a single ASCII letter/digit chord through `event.code`; printed ASCII keys
 remain authoritative. Existing palette behavior in editable content and for already-prevented events
 is unchanged.
-
-Searchable application command menu. Renders nothing at all while closed. Uses the same shared
-overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
-dismissal, ref-counted document scroll lock).
 
 Valid string keywords still participate in search alongside the command's label, description, and
 group. Unsafe keyword entries are skipped without invoking accessors, and selection returns the
@@ -22336,6 +22442,17 @@ return when a toggle is replaced, removed, or the Page disconnects. If the openi
 replaced while the drawer is open, both the ARIA owner and eventual focus-return target retarget to
 the next available assigned toggle's real composed control.
 
+Closing the drawer returns focus to the control that opened it: the activated `navigation-toggle`
+or `data-toggle-nav` control, or — for `showNavigation()`/`navOpen` opened from script — whatever
+held focus outside the drawer when it opened. When that control cannot take focus, the default
+navigation toggle, then the main landmark, receive it instead. The return is attempted as the
+drawer closes and, if that attempt could not reach the opening control (a host commonly hides its
+menu button while the drawer is open and re-shows it from its own render in response to
+`lr-nav-toggle`), again once the close's update has completed and one animation frame has passed.
+That second pass only acts while focus is still inside the closed drawer, on the fallback the first
+attempt chose, or lost to `<body>` — focus moved elsewhere in the meantime (a router focusing the
+new view's heading, say) is never taken back — and it follows the same order.
+
 `navigation-toggle-icon` is decorative visual content: its assigned subtree is inert and hidden
 from assistive technology, while the native toggle retains the sole action and localized name.
 Likewise, `skip-to-content` replaces only visible skip-link text; its assigned subtree is inert and
@@ -23349,8 +23466,31 @@ wrapper or a `z-index: 2147483647` sticky header can no longer paint over it or 
 that override no longer decides anything for their modal instances and can be dropped — the token
 still resolves the `z-index` in their stylesheet, but only as the fallback for a user agent without
 popover support. A `contained` drawer is deliberately nonmodal and is not promoted. The token keeps
-doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are _not_
-promoted, and go on stacking at `--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
+doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are not
+promoted unless trapped (below), and otherwise go on stacking at `--lr-overlay-stack-index`,
+falling back to `--lr-layer-popover`.
+
+**Anchored overlays and the top layer.** An anchored overlay that resolves the `fixed` strategy
+(dropdowns, popovers, tooltips, selects, comboboxes, date/time inputs, colour pickers, submenus,
+context menus, navigation-menu panels, chips' and badges' popovers, `lr-popup strategy="fixed"`,
+and `lr-selection-toolbar`) is promoted into the browser top layer only while it is **trapped**: when
+a `transform`ed, `filter`ed, `contain`ed (or `will-change: transform`, `content-visibility`,
+`offset-path`, `transform-style: preserve-3d`) ancestor would otherwise become its containing block
+and clip it. It then opens at full size, positioned against the viewport, in left-to-right and
+right-to-left documents, without moving any DOM node, so slots, styling, ARIA relationships and
+events are unchanged. The check is repeated on every placement update, so an ancestor that becomes
+transformed while the overlay is open (a hover lift, an animation wrapper) is handled too. A
+promoted instance no longer stacks at `--lr-overlay-stack-index`/`--lr-layer-popover` while open:
+it paints above everything outside the top layer, including toasts. A promoted overlay whose
+trigger scrolls out of its scroller is hidden until the trigger returns. An overlay that is not
+trapped keeps the z-index layering above. Promotion needs the native Popover API; a popover
+polyfill does not count, and without it (older Firefox and Safari releases in the support window)
+such an ancestor still contains and clips the overlay, except inside `lr-virtual-list` rows (see
+`lr-virtual-list`). Overlays opened inside `lr-pan-zoom` content align with their trigger and render
+at UI scale with either strategy. The full-viewport modal surfaces that are not anchored overlays
+(`lr-command-palette`, `lr-lightbox`, the tool approval/result/select dialogs, a fullscreen
+`lr-widget`, the `lr-responsive-panel` overlay and `lr-tour`'s spotlight) still stack with
+`z-index`: do not place them under a transformed, filtered or contained ancestor.
 
 **Initial focus.** An `[autofocus]` element anywhere in the slotted content takes focus when the
 overlay opens — including one inside a slotted custom element's own open shadow root, so
@@ -23732,7 +23872,7 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 
 **Themeable custom properties:** `--lr-skeleton-w`, `--lr-skeleton-h` (set/cleared by the
 `width`/`height` properties; defaults `100%` / `var(--lr-size-1em)`),
-`--lr-skeleton-color` (default `var(--lr-color-border)`), `--lr-skeleton-sheen-color` (default
+`--lr-skeleton-color` (default `var(--lr-color-neutral-fill-normal)`), `--lr-skeleton-sheen-color` (default
 `var(--lr-color-surface)`), `--lr-skeleton-border-radius` (default `var(--lr-radius)` for text and
 rectangle shapes); upstream `--color`, `--sheen-color`, and `--border-radius` feed those same
 values. The shared `--lr-transition-ambient` (default `1.8s ease-in-out`) controls the pulse/sheen
@@ -23956,7 +24096,13 @@ chrome remains visible. The fallback order appears below.
   an already-resolved promise
 - `hide(): Promise<void>` — identical to `close('api')`, resolving after `lr-after-hide`
 - `close(reason: DialogCloseReason = 'api'): Promise<void>` — closes the dialog, returns focus to
-  whatever had it right before opening, and resolves after `lr-after-hide`.
+  whatever had it right before opening, and resolves after `lr-after-hide`. The return is attempted
+  as the close begins and, if that attempt could not land (a host commonly hides its own opener
+  while the dialog is open and re-shows it in response to `lr-hide`, `lr-close` or
+  `lr-after-hide`), again once the exit animation has finished and one animation frame has passed.
+  That second pass only acts while focus is still inside the dialog or has fallen to `<body>` —
+  focus moved elsewhere in the meantime is never taken back — and when the opener still cannot take
+  focus, focus is left where it is. `lr-drawer` inherits the same behavior.
   `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
   `'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers;
   `'close-button'` by the built-in header close button (rendered when `closable` is set); `'api'`
@@ -24414,7 +24560,8 @@ rule covers all four non-neutral variants, because the shared variants sheet has
 the chip reads those generic slots and never names a variant, and sets its border `transparent`),
 `--lr-chip-pressed-border` (border color while pressed/selected — falls back to
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
-back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
+back to `--lr-chip-bg`; a selected chip's hover/press wash mixes from it, an unselected toggleable
+chip's from `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
 `--lr-chip-padding-inline`, `--lr-chip-gap`, `--lr-chip-icon-size` (all five have private defaults
 that follow each `size`, so setting one on the element or a theme ancestor remains authoritative; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
@@ -24670,9 +24817,10 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   under RTL. The shared positioner's physical coordinates remain authoritative in either
   direction, so RTL never stretches a fixed-width popup against an opposite logical inset.
 - `strategy: 'absolute' | 'fixed' = 'absolute'` (reflected) — the CSS positioning scheme. `fixed`
-  normally positions relative to the viewport, but ancestors using transforms, filters or
-  containment can establish a different containing block, and ancestor clipping may still apply.
-  `absolute` positions relative to its containing block and scrolls with its containing content.
+  positions relative to the viewport; under a transformed, filtered or contained ancestor the popup
+  is promoted into the browser top layer where the native Popover API exists, and otherwise that
+  ancestor establishes its containing block and may clip it. `absolute` positions relative to its
+  containing block and scrolls with its containing content.
 - `distance: number = 0` — offset from the anchor along the placement axis, in px
 - `skidding: number = 0` — offset along the anchor's edge, in px
 - `flip: boolean = false` (not reflected), with `flipFallbackPlacements: string = ''` (attribute
@@ -24806,14 +24954,23 @@ If the import fails, leave the native disclosure visible and usable.
   the same way; each keeps its own default, so setting nothing changes nothing. An unsupported value
   resolves back to that default. This property always reports the instance's own authored value (or
   its mirrored default) — see the cascading `--lr-positioning-strategy` custom property below for a
-  theme-level way to change the *rendered* strategy of every instance that sets neither.
+  theme-level way to change the *rendered* strategy of every instance that sets neither. `fixed`
+  escapes transformed, filtered or contained ancestors by promoting the popup into the browser top
+  layer where the native Popover API exists; otherwise, as before, such an ancestor contains and
+  clips it (see **Anchored overlays and the top layer**).
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
   keyword. The two transient modes open after `showDelay`, close after `hideDelay` once the
-  interaction ends, never move focus into the surface, and stay open while focus rests anywhere
-  inside it. A click on the trigger pins a transient surface open; the next click releases the pin
-  and closes it. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
+  interaction ends, never move focus into the surface they opened themselves, and stay open while
+  focus rests anywhere inside it. `focus` means keyboard focus: the focused element must match
+  `:focus-visible` and the last input must not have been a pointer press, so pointer, touch and
+  scripted focus that follows them do not open it; call `show()` for scripted reveals. A click on
+  the trigger pins a transient surface open; the next click releases the pin and closes it. A click
+  that opens a *closed* transient surface opens it pinned like click mode, including pulling
+  `[autofocus]` (and, for `lr-dropdown`, focusing the active menu item); a click on a surface hover
+  already opened only pins it. Migrating from `wa-popover`/`wa-dropdown`/`sl-dropdown`: the same
+  keyboard-focus narrowing as `lr-tooltip` applies. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
   and wins over any keyword beside it. Unrecognized tokens are dropped and the property reads back
   as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
   `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
@@ -24995,8 +25152,8 @@ the same colour.
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
 placement/anchor change while open — never per animation frame). Setting nothing anywhere leaves
 every default exactly as before. Precedence: an explicit `positioning-strategy`/`hoist` on the
-instance always wins; otherwise this inherited custom property; otherwise the component's own
-mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
+instance always wins; otherwise this inherited custom property; otherwise `fixed` inside
+`lr-virtual-list` rows and `lr-flow-canvas` nodes; otherwise the component's own mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
 theme, or a single clipping ancestor (an `overflow: hidden` card or a scroller) changes every unset
 overlay beneath it — no need to author `positioning-strategy`/`hoist` on each instance individually,
 or to remember it on every new one:
@@ -25039,7 +25196,8 @@ or to remember it on every new one:
 ## `lr-tooltip`
 
 A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
-interactions open it is configurable as of 8.0.0; by default it is still hover and focus.
+interactions open it is configurable as of 8.0.0; by default it is still hover and focus. Focus
+means keyboard focus; see `trigger`.
 
 An open lr-tooltip repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.
@@ -25053,10 +25211,15 @@ later text renders normally.
   Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
   already closed, so a pending timer can't reopen it behind the caller's back.
 - `trigger: string = 'hover focus'` — **new in 8.0.0.** A _space-separated_ list of `hover`,
-  `focus`, `focus-visible`, `click` and `manual`. `focus` opens on any focus, preserving the default
-  and existing behavior; `focus-visible` opens only when the trigger's actual focus target matches
-  `:focus-visible`, including a focused control inside a shadow-root trigger. Use it when opening a
-  tooltip on programmatic or pointer focus would obscure nearby content. `manual` (or an empty list)
+  `focus`, `click` and `manual`. `focus` means keyboard focus: the focused element must match
+  `:focus-visible` and the last input must not have been a pointer press. Pointer, touch and
+  scripted focus that follows them do not open it, but any focus inside the trigger still wires its
+  description; use `show()` for scripted reveals. This narrows `wa-tooltip`/`sl-tooltip` focus
+  activation deliberately, following the WAI-ARIA tooltip pattern, and the check reads the control
+  that actually holds focus, including one inside a shadow-root trigger. Migrating from
+  `wa-tooltip`/`sl-tooltip`: focus activation is narrowed to keyboard focus. If you removed `focus`
+  from `trigger` to stop pointer or programmatic pops, restore the default; call `show()` for
+  scripted reveals. `manual` (or an empty list)
   leaves the tooltip entirely under programmatic control. Note the name collision: this string
   property and the `trigger` _slot_ are different things — the slot holds the element, this property
   says which of its interactions count.
@@ -25176,7 +25339,8 @@ default, when neither `positioning-strategy` nor `hoist` is authored on the inst
 </lr-tooltip>
 ```
 
-While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
+While open, and whenever focus is inside the trigger (when `focus` is among the active keywords),
+trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
 not the shadow-private popup. Native triggers resolve that ID directly. A description is only
 announced on the node that actually holds focus, so when the trigger is a custom element the same
 proxy is applied to the first focusable descendant as well — across slots and nested open shadow
@@ -25185,8 +25349,9 @@ just the components that forward their own host `aria-describedby`. A descendant
 receives the serialized ID; one inside a shadow root is linked through `ariaDescribedByElements`,
 whose explicit element-reference assignment intentionally leaves that control's serialized
 `aria-describedby` value empty in supporting browsers. Existing author-provided descriptions —
-including a control's own internal hint/error text — are merged while open and restored when the
-tooltip closes, the trigger is replaced, or the tooltip disconnects. Late author writes remain the
+including a control's own internal hint/error text — are merged while described and restored once
+the tooltip is neither open nor focused, when the trigger is replaced, or when the tooltip
+disconnects. Late author writes remain the
 release baseline while Lyra's active description stays composed into the owned value.
 
 With no slotted trigger, a live HTML `for` target receives those same interactions and description;
@@ -25259,13 +25424,15 @@ The inner menu list owns scrolling within the popup's height limit, keeping a co
 header and footer visible. The outer `popup` and `content` parts allow overflow so nested submenus
 remain clickable outside the parent menu in every supported browser. This works with either
 submenu authoring shape, with or without `hoist` or an arrow; no overflow override is required.
-When the resolved strategy is `fixed` (from `positioning-strategy="fixed"`, `hoist`, or an
-inherited `--lr-positioning-strategy: fixed`) and `showPopover()` is supported, an open popup is
-promoted to the browser's top layer. This lets a fixed dropdown inside a transformed virtual-list
-row escape that row's clipping and stacking context. The popup stays promoted through its hide
-transition and returns to its ordinary shadow-tree stacking context after `lr-after-hide`;
-disconnecting also removes it from the top layer. If the browser lacks the Popover API, fixed
-positioning remains in use without promotion.
+When the resolved strategy is `fixed` (from `positioning-strategy="fixed"`, `hoist`, an inherited
+`--lr-positioning-strategy: fixed`, or the `fixed` default inside `lr-virtual-list` rows, so
+`lr-thread-list` row actions, and `lr-flow-canvas` nodes) and a transformed, filtered or contained
+ancestor would trap it, an open popup is promoted to the browser's top layer where the native
+Popover API exists (see **Anchored overlays and the top layer**). A dropdown in a short virtual
+list therefore opens at full size below its row. The popup stays promoted through its hide
+transition and returns to its ordinary shadow-tree stacking context once it settles closed; a
+submenu nested in a promoted menu is promoted above it. An untrapped fixed dropdown keeps the
+z-index layering.
 
 An open lr-dropdown repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.
@@ -25551,8 +25718,9 @@ parent; set `lr-context-menu { display: block }` to get a box.
 `--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), and `--show-duration` / `--hide-duration`
 (`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
 The popup always uses fixed positioning (the anchor is a viewport point), so the cascading
-`--lr-positioning-strategy` is not consulted. It is not promoted to the top layer: it stacks exactly
-like `lr-dropdown` (`--lr-overlay-stack-index`). Motion uses the `dropdown.show` /
+`--lr-positioning-strategy` is not consulted. Like `lr-dropdown`, it is promoted to the top layer
+only when a transformed, filtered or contained ancestor (such as an `lr-virtual-list` row) would
+trap it; otherwise it stacks like `lr-dropdown` (`--lr-overlay-stack-index`). Motion uses the `dropdown.show` /
 `dropdown.hide` registry entries, flattened under `prefers-reduced-motion`; overriding those
 entries also affects context menus.
 
@@ -26779,7 +26947,7 @@ buttons.
 - `errorLabel?: string` (attribute `error-label`) — failure name/tooltip text; omission uses
   localized `copyFailed`, while an explicit empty string suppresses it.
 - `tooltip: 'full' | 'copy' | 'none' = 'full'` (reflected) — `full` shows the resting tooltip on
-  hover/focus and feedback after activation, `copy` shows feedback only, and `none` disables it.
+  hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it) and feedback after activation, `copy` shows feedback only, and `none` disables it.
 - `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` (attribute
   `tooltip-placement`, reflected).
 - `hoist: boolean = false` (reflected) — uses fixed tooltip positioning to escape clipped
@@ -29905,8 +30073,9 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 
 Removing `label` or `hint` consumes it as absent without changing the property's `null` readback. An
 explicit empty string remains empty. Text chrome and label/description associations disappear when
-no corresponding slot or explicit presence hint remains, and a later value restores them. Removing
-the label leaves the localized dropzone instruction available. Disabled file removal buttons,
+no corresponding slot or explicit presence hint remains, and a later value restores them. The
+form label (`label`) and the dropzone instruction are independent surfaces: setting, clearing or
+removing `label` never changes the dropzone text. Disabled file removal buttons,
 including fieldset disablement, retain resting foreground and background under hover and press;
 enabled buttons retain pointer feedback.
 
@@ -29966,17 +30135,15 @@ enabled buttons retain pointer feedback.
   `nonRetaining` is `false`.
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
-- `compact: boolean = false` (reflected) — tighter dropzone padding, gap and label font for
+- `compact: boolean = false` (reflected) — tighter dropzone padding, gap and dropzone instruction font for
   constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
   dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
   `--lr-space-l` dropzone.
-- `label?: string` — form-control label. Omission uses the localized dropzone instruction
-  (`fileInputDefaultLabel`); an explicit empty string suppresses the form-label chrome too. The
-  dropzone independently keeps its localized instruction when a form label is supplied or empty,
-  so a short label such as “Reference files” does not replace the drop-or-browse text. Use the
-  `dropzone` slot when you want to replace that instruction. With no nonempty label, that localized
-  instruction also supplies the fallback accessible name unless `accessibleLabel` or host
-  `aria-label` is provided. `hint: string = ''`
+- `label?: string` — form-control label, rendered in `form-control-label` and naming the dropzone
+  button (unless `accessible-label`/host `aria-label` is set). It never replaces the dropzone
+  instruction — customize that with the `dropzone` slot or the `fileInputDefaultLabel` string.
+  Omitted, `''` and whitespace-only values render identically: no visible label, and the button is
+  named by the localized instruction. `hint: string = ''`
   remains empty when omitted and can be supplied through the named slot as well
 - `errorText: string = ''` (attribute `error-text`) — plain-text owned validation feedback. When
   it is empty, a `customError` message is rendered when present; otherwise an intrinsic validation
@@ -30016,8 +30183,10 @@ enabled buttons retain pointer feedback.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
   is anchored; assign `undefined` to restore the default focusable base
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
-  dropzone/button accessible name without changing visible copy
+- `accessibleLabel: string = ''` (attribute `accessible-label`) — accessible name forwarded to the
+  semantic dropzone and native file input, without changing visible copy. A host `aria-label` wins
+  over it. When neither is set, the form label (`label` or the `label` slot) names the dropzone,
+  then the localized instruction
 - `acceptedMessage?: string` (attribute `accepted-message`) — live-region message after an
   accepted selection; `{count}` is replaced with the accepted count. Absence uses the localized
   singular/plural `fileInputAcceptedOne`/`fileInputAcceptedMany` default. Every explicit string,
@@ -30067,12 +30236,27 @@ caller-supplied data, never localized itself. The same per-reason text is announ
 the region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
-content; `label`, `hint`, and `error` supply form chrome. The semantic button's accessible name comes from
-`accessibleLabel`/host `aria-label`,
-then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
+content; `label`, `hint`, and `error` supply form chrome. Slotted dropzone content does not name the
+control: the semantic button's accessible name comes from a host `aria-label`/`accessible-label`,
+then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
+content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
 content still activates the dropzone.
+
+**Form label vs. dropzone instruction.** The two are separate surfaces; pick one of these patterns:
+
+- `label` plus the default instruction: `<lr-file-input label="Reference files">` shows the form
+  label above the localized drop-or-browse text.
+- `label` plus a custom instruction: add `<span slot="dropzone">Drop PDFs here or browse</span>`.
+- App-wide or per-instance copy: override `fileInputDefaultLabel` through `registerLyraLocale()` or
+  `.strings`.
+- Icon-only: a slotted glyph plus a host `aria-label` (the `AccessibleNameOverride` story).
+
+Custom slotted text without a `label` should carry a matching host `aria-label`, so the accessible
+name contains the visible text. A component that renders `lr-file-input` inside its own shadow root
+must slot that copy itself, because per-instance `.strings` does not cascade into nested components;
+`lr-eval-dataset` is the in-library example.
 
 The semantic button describes its rendered owned error and hint in that order. A supplied
 `errorText` or `error` slot marks it `aria-invalid="true"`; a required intrinsic message appears
@@ -30385,7 +30569,9 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 **Properties:**
 
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
-  `zoomStep: number = 0.25` — bounded, finite zoom configuration
+  `zoomStep: number = 0.25` — bounded, finite zoom configuration. Lyra anchored overlays opened in
+  zoomed content (dropdowns, tooltips, popovers, selects) align with their trigger at any zoom, with
+  either strategy, and render at UI scale rather than at the content's zoom
 - `src: string = ''` and `alt: string = ''` — optional safe image source. A rejected URL is treated
   as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
 - `fit: LyraImageFit = 'actual'` (reflected) — base sizing policy for an image supplied through
@@ -31053,7 +31239,7 @@ fallback slot while it is the winning tier), `image` (the `<img>`, only while a 
 **Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
 `--lr-avatar-size` (default `var(--lr-size-3rem)`, with a private default stepped across the ladder
 from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl`), `--lr-avatar-bg` (default
-`var(--lr-color-border)`, whose private default changes for a non-neutral `variant` to that
+`var(--lr-color-neutral-fill-quiet)`, the same quiet fill tier the variants use, whose private default changes for a non-neutral `variant` to that
 variant's `-quiet` fill; there is no `--lr-color-surface-alt` token in this library, despite what
 older copies of this page claimed), `--lr-avatar-color` (default `var(--lr-color-text)`, whose
 private default changes for a non-neutral `variant` to that variant's loud color),
@@ -31333,7 +31519,7 @@ a logical `margin-inline-start`, so it auto-mirrors
 under `dir="rtl"` — setting `0` or a positive length turns the stack into normal spacing),
 `--lr-avatar-group-ring-color` (default `var(--lr-color-surface)`),
 `--lr-avatar-group-ring-width` (default `var(--lr-border-width-medium)`),
-`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, with a private default that follows
+`--lr-avatar-group-badge-bg` (default `var(--lr-color-neutral-fill-quiet)`, with a private default that follows
 `variant`), `--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, with a private default
 that follows `variant`),
 `--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-m)`) — the font size of the "+N"
@@ -31978,7 +32164,8 @@ are not playlist items.
 
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
 `var(--lr-color-brand)`) and `--lr-video-playlist-item-current-background` (default
-`var(--lr-color-brand-fill-quiet)`) style the active playlist row.
+`var(--lr-color-brand-fill-quiet)`) style the active playlist row, and are kept under the pointer:
+its hover and press mix from the current background rather than the plain-row surface.
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an
@@ -33255,6 +33442,19 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `barWidth: number = 32` (attribute `bar-width`, px) — each bar's fixed width in `layout="scroll"`
   mode; ignored in the default `'fit'` mode. An excessive value is reduced as needed by the
   1,000,000px scroll-content ceiling.
+- `barSlotWidth?: number` (attribute `bar-slot-width`, px, bar type only) — a fixed per-category slot
+  width (category pitch) for the default `layout="fit"`, replacing the derived
+  `plotW / labels.length` slot. Bar group width follows from that slot and `barGapRatio` as usual,
+  default x-origins stay `plotX + index * barSlotWidth`, and `barX` still overrides each origin — so
+  bars can share an external column pitch (e.g. a sibling `<lr-heatmap>`'s cell pitch) without
+  `layout="scroll"`. The plot never overflows or scrolls: the SVG keeps the measured host width,
+  gridlines span the whole plot, and a pitch too wide for the host is clipped at the chart's edge.
+  Under `dir="rtl"` category order stays physical left-to-right exactly like the derived slot (the
+  plot starts after the small right-hand pad because the value axis sits on the right), with no
+  scroll-induced shift. Ignored in `layout="scroll"`, where `barWidth` is the pitch, and for
+  `type="line"`. Unset reads `undefined` and keeps the derived slot; `NaN`, `Infinity`, `0` and
+  negative values fall back to it, and a finite value is capped so the category run stays within
+  1,000,000px.
 - `maxLabels?: number | 'auto'` (attribute `max-labels`) — decimates which category axis labels
   actually render *text*: after the global record sampler runs, it selects from those retained
   categories, always shows the first and last sampled label, and roughly evenly distributes the
@@ -33270,8 +33470,10 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns
-  (see that component's own `columnX`) by supplying the same coordinate function to both. Unset (the
-  default) is the original formula, unchanged. The callback runs once per rendered category per
+  (see that component's own `columnX`) by supplying the same coordinate function to both — pair it
+  with `barSlotWidth` set to the heatmap's cell pitch so the bar widths match the columns too. Unset
+  (the default) is the original formula, unchanged. Neither this callback nor the default origins
+  mirror under `dir="rtl"`. The callback runs once per rendered category per
   render and its finite result is shared by that category's bars and label; a non-finite result
   falls back to the normal slot position.
 - `pointText?: (label: string, value: number, datasetIndex: number) => string` (attribute: false) —
@@ -33293,7 +33495,11 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   external grouping boundary (a month, a release, a shift change) and leave `maxLabels` unset there.
   The returned string is ellipsized to the tick's own slot exactly like a source label, with the
   full text kept as the tick's accessible name; a return value that is neither a string nor `null`
-  falls back to the source label rather than reaching the DOM.
+  falls back to the source label rather than reaching the DOM. A sparse tick (e.g. one month name
+  every few weeks) may grow into adjacent ticks whose resolved text is `null` or empty before it is
+  ellipsized, in either `layout`: a centered tick grows symmetrically, up to half the gap to the
+  nearest labelled tick on each side, so it never reaches into a labelled neighbor's slot. A tick
+  whose adjacent ticks are all labelled is ellipsized exactly as before.
 - `roundedBars: boolean = false` (attribute `rounded-bars`, bar type only) — draws each bar as a
   rounded-top-corner shape instead of a square-cornered `<rect>`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
@@ -37054,6 +37260,15 @@ uses for its own `[part="body"]`.
   follows the surrounding direction, while its open-fence preview uses code direction. Work is
   bounded per animation frame; after 2,000 settled groups the remaining source stays plain until
   completion. Large code blocks defer highlighting until completion.
+  Known limits of progressive mode: an in-progress list or table stays plain text until another
+  block follows it (and a code fence inside it reads in page direction until then); raw HTML or a
+  consumer renderer override that leaves an element open, and a reference definition whose title is
+  still open, hold rendering until they close; the `<mark>` highlight fallback (browsers without the
+  CSS Custom Highlight API) repaints at settle; producers should stream raw Markdown rather than
+  pre-closing open constructs, because a later edit that is not an append rebuilds from the first
+  changed block. With `<lr-streaming-text>`, use `content-mode="markdown"` so auto-detection does
+  not replace the displayed reply mid-stream. During a progressive stream `getHeadingTree()` returns
+  the headings of settled blocks.
 - `codeBlockHeader: boolean = false` (attribute `code-block-header`) — adds a language label and
   an icon-only native copy button to the first 200 non-empty built-in code blocks, fenced or
   indented. It copies source text without the renderer's terminal newline, preserving leading tabs
@@ -37075,7 +37290,9 @@ uses for its own `[part="body"]`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
-  lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
+  lazy-loaded the same way as `marked`/`dompurify`/`shiki`. Inline delimiters follow pandoc's rule:
+  the opening `$` must be followed by a non-space, and the closing `$` must follow a non-space and
+  not precede a digit, so prose such as `$500 and $200` stays text. `\$` escapes a literal dollar.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set,
   `[part="content"]` scrolls internally past this height instead of growing the page. Invalid
   values are ignored.
@@ -37162,8 +37379,27 @@ reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignmen
 HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
 and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore
 letter wrapping with `::part(table) { overflow-wrap: anywhere }`, or Korean/CJK word grouping with
-`::part(table) { word-break: keep-all }`. Inline code and code blocks keep LTR character order in RTL documents while
-their surrounding layout continues to follow the page direction.
+`::part(table) { word-break: keep-all }`.
+
+**Direction.** Inside a right-to-left document, fenced, indented and inline code
+(`::part(code-block)`, `::part(inline-code)`, and any other `code` outside a `pre` that has no
+`dir`) computes `direction: ltr; unicode-bidi: isolate; text-align: start`, plain or highlighted; a
+block's inner `<code>` inherits from its `pre`. Prose, list markers, block margins, table layout and
+the code-block header still follow the page direction, and the rendered HTML carries no `dir`
+attribute. An authored `pre` with neither `part="code-block"` nor `dir` gets
+`unicode-bidi: plaintext`, so each line takes the direction of its first strong character (WebKit
+resolves it once from the block's first strong character instead of per line), and an explicit
+`dir` on authored `pre`/`code` always wins. Consumers restore right-to-left code with an
+outer rule such as `lr-markdown::part(code-block), lr-markdown::part(inline-code) { direction: rtl }`
+(the block's `<code>` follows its `pre`). The plain-text view shown while streaming, loading or
+after a failure renders exactly `content`, isolating recognizable fenced runs as left-to-right
+blocks and same-line code spans as left-to-right isolates. Those internal runs carry no part, so a
+`::part()` override does not reach them. The recognition is a heuristic: indented (four-space)
+code blocks, fences inside blockquotes or on a list-marker line, and code spans that cross a line
+break are not isolated until the final parse; at most 128 fenced runs and 128 code spans are
+isolated. In progressive streaming a text tail follows the page direction while an open-fence
+preview uses code direction. Bidi formatting characters inside code (for example U+202E) are
+rendered as authored, not neutralized.
 
 **Themeable custom properties:** `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
@@ -37233,7 +37469,10 @@ HTML parsing at all — the raw `content` string itself) and fires `lr-render-er
 `html-mode="sanitize"`, an unavailable or failed `dompurify` peer takes that same fail-closed path:
 the component never renders `marked`'s raw HTML output when sanitization was requested. Use
 `html-mode="escape"` when authored raw HTML should remain visible as text, or
-`html-mode="trusted"` only for content whose complete HTML output is already trusted. While the
+`html-mode="trusted"` only for content whose complete HTML output is already trusted. Trusted
+content is painted inside a clipped (`contain: paint`) surface, so plain positioned HTML in it stays
+clipped to the component; Lyra anchored overlays authored inside it (like `lr-dialog`) open in the
+browser top layer and can paint over the surrounding app while they are open. While the
 optional peers are still resolving, the host carries `aria-busy="true"` (set/
 cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
 rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
@@ -37298,6 +37537,8 @@ this component's own module never imports or calls that function at all; it only
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
+Direction behaves exactly as described for `<lr-markdown>` (**Direction** above).
+
 Removing `content` clears the document and its empty-document tab stop, including while streaming.
 The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
 empty string. Later source text renders normally.
@@ -37324,6 +37565,7 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) with its compatibility alias
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
@@ -37413,7 +37655,8 @@ const view = html`<lr-markdown-core
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -38487,6 +38730,13 @@ blinking cursor and auto-detected Markdown rendering. First-party invention (no 
 equivalent). The host is expected to assign the _entire_ current text on every update to `content`,
 not a delta — this component does no accumulation or ordering of its own.
 
+**Direction.** Markdown mode inherits `<lr-markdown>`'s code direction (see its **Direction**
+paragraph), including the isolated fenced runs and code spans of the streaming plain-text view,
+and the forwarded `code-block`/`inline-code` parts accept an outer `direction` override once the
+content has settled. Plain `content-mode`, including a fenced block shown as plain text, follows
+the page direction; use `content-mode="markdown"` when code must read left-to-right while
+streaming.
+
 **Properties:**
 
 - `content: string = ''` — the full current text so far.
@@ -38520,9 +38770,13 @@ properties existed:
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
 - `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
-  and `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the composed
-  Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
+  and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its compatibility
+  alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the
+  composed Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
+  Use `streaming-render="progressive"` with `content-mode="markdown"`: in `auto` mode the element
+  switches from plain text to Markdown when detection first succeeds, which replaces the displayed
+  reply once, mid-stream.
 - `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
   `<lr-markdown>`'s own `highlightCode`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
@@ -38588,7 +38842,7 @@ sets `math` here.
   coalesce-ms="80"
   streaming
   streaming-render="progressive"
-  code-block-chrome
+  code-block-header
 ></lr-streaming-text>
 <script type="module">
   import "@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.js";
@@ -38614,7 +38868,7 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-  `streamingRender`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
+  `streamingRender`, `codeBlockHeader`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
   configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
@@ -38644,7 +38898,8 @@ happens to end with.
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -38663,6 +38918,8 @@ dynamic-import table at all. A fenced code block whose language isn't a key in `
 renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
 mirroring `<lr-markdown-core>`'s own contract.
 
+Direction behaves exactly as described for `<lr-streaming-text>` (**Direction** above).
+
 **Properties:** `content: string = ''` — the full current text so far, identical contract to
 `<lr-streaming-text>`'s own; `streaming: boolean = false` (reflected); `coalesceMs: number = 50`
 (attribute `coalesce-ms`) — same trailing-edge coalesce window described in
@@ -38680,11 +38937,13 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its compatibility alias
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
 (attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
-progressive output, and `codeBlockChrome` enables the localized code label and source-copy action.
+progressive output, and `codeBlockHeader` (or its `codeBlockChrome` alias) enables the localized
+code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
 `<lr-streaming-text>` exports and documents, in `llms/components/lr-streaming-text.md`; both tags
@@ -38733,7 +38992,8 @@ shared behavior.
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -38860,6 +39120,14 @@ Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer
 `language` is unset/unrecognized. That
 fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
 and it's what every instance renders at zero extra bytes until shiki resolves.
+
+**Direction.** Inside a right-to-left document `::part(body)` computes `direction: ltr`, so code
+reads left-to-right and its scroll area opens at the start of the code; as a result, under
+`dir="rtl"` the vertical scrollbar, when present, sits on the physical right. `::part(language)` is
+a left-to-right isolate, and `::part(filename)` wraps the file name in a first-strong `<bdi>` (its
+`textContent` is unchanged). The header row and copy button follow the page direction; the
+line-number gutter belongs to the body, so it sits at the physical left. An outer `lr-code-block::part(body) { direction: rtl }` rule restores
+right-to-left code. Bidi formatting characters inside code are rendered as authored.
 
 Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
 an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
@@ -39091,6 +39359,8 @@ this component's own module never imports or calls that function at all. It only
 plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages`), so a consumer
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
+
+Direction behaves exactly as described for `<lr-code-block>` (**Direction** above).
 
 Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
 an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
@@ -39986,10 +40256,14 @@ icon — the item has no default slot to receive one); unset renders the built-i
 `renderActions?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. an `lr-dropdown` containing `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
-the host normally and never trigger `lr-select`. When its resolved positioning strategy is `fixed`
-and the browser supports `showPopover()`, the popup escapes the transformed virtual row into the
-browser top layer, so the row cannot clip or cover its menu. Otherwise it retains fixed-position
-fallback behavior. Unset renders only the built-in
+the host normally and never trigger `lr-select`. Overlays returned here resolve the `fixed`
+strategy inside the virtual row by default (an explicit `positioning-strategy`/`hoist` or an
+ancestor `--lr-positioning-strategy` still wins), and a trapped `fixed` menu opens at full size
+outside the list, in the browser top layer where the native Popover API exists, in left-to-right
+and right-to-left documents, with no consumer CSS. A promoted menu whose trigger scrolls out of the
+list is hidden until the trigger returns. Where the Popover API is absent, the row holding an open
+`lr-dropdown` stops transforming while it is open, so its menu is still not clipped. Unset renders
+only the built-in
 `rowActions`.
 `renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`
@@ -40219,9 +40493,10 @@ assigned to `animation-duration` alone. The spinner stops outright under
 ## `lr-usage-badge`
 
 Compact, static resource strip for one message or run — tokens in/out, cost, latency — with a
-hover/focus tooltip breakdown. Purely formatting: computes no counts, rates, or prices; every segment
+hover or keyboard-focus tooltip breakdown. Purely formatting: computes no counts, rates, or prices; every segment
 is independently optional, and with nothing set, nothing renders at all (not even a focusable shell).
-The tooltip reuses `lr-tool-call-chip`'s hover/focus/Escape/`aria-describedby` contract wholesale.
+The tooltip reuses `lr-tool-call-chip`'s hover/keyboard-focus/Escape/`aria-describedby` contract
+wholesale; focus of any kind describes the badge.
 Not `lr-context-meter` (occupancy of a fixed capacity); not `lr-generation-metrics` (live, with a
 Stop button) — this is static after the fact.
 
@@ -40829,6 +41104,10 @@ parses and renders the final content.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
+Direction: built-in text and reasoning parts inherit `<lr-markdown>`'s code direction, so code reads
+left-to-right inside a right-to-left document. `lr-message-parts` forwards no Markdown part, so that
+nested code direction cannot be overridden from outside with `::part()`.
+
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
 `show-reasoning`, reflected, with string-aware true-default conversion);
@@ -40896,10 +41175,10 @@ standalone result, and a later call part for the same id cannot unmask what the 
 original reference.
 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
-'chip' | 'disclosure'`; `MessagePart` and its discriminated part shapes come from the
-`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is also exported from
-`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js` and the package
-root. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
+'chip' | 'block'`; `MessagePart` and its discriminated part shapes come from the
+`@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is exported from the component module
+(`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js`, or the side-effect-free
+`message-parts.class.js`); it is not a package-root export. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
 `lr-markdown-core` component modules. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
 retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
@@ -40907,9 +41186,9 @@ and data parts carry exactly one of `data` or `widget`. Empty ids and later dupl
 are ignored so each rendered identity and announcement remains unambiguous.
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
-events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
+events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
 `lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool disclosures),
+`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
@@ -40946,9 +41225,9 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 
 ```html
 <lr-message-parts
-  tool-display="disclosure"
+  tool-display="block"
   streaming-render="progressive"
-  code-block-chrome
+  code-block-header
 ></lr-message-parts>
 ```
 
@@ -40956,7 +41235,8 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 
 - `lr-anchor-result` event — Passthrough from rendered Markdown.
 - `lr-citation-open` event — Passthrough from a rendered citation's full-preview action.
-- `lr-copy` event — Passthrough from rendered JSON content.
+- `lr-copy` event — Passthrough from rendered JSON content or a Markdown code-block header.
+- `lr-copy-error` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
 - `lr-link-click` event — Passthrough from rendered Markdown.
 - `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
@@ -41113,7 +41393,10 @@ import "@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.j
 ## `lr-selection-toolbar`
 
 Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
-`DocumentLocator` into ask, quote, cite, and copy actions.
+`DocumentLocator` into ask, quote, cite, and copy actions. The toolbar is positioned in viewport
+coordinates; inside a transformed, filtered or contained ancestor (a per-message toolbar in a
+virtualized transcript row) it is shown in the browser top layer where the native Popover API
+exists, so it stays aligned with the selection and unclipped.
 
 **Properties:** `open: boolean = false` (reflected); `text: string = ''`;
 clone-owned `anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
@@ -41730,7 +42013,7 @@ button, so programmatic focus/activation reaches the same semantic owner as poin
 interaction.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
-shown in a floating tooltip on hover/focus; nothing renders at all, no hover affordance, when this
+shown in a floating tooltip on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it); nothing renders at all, no hover affordance, when this
 slot is empty), `icon` (overrides the built-in per-status glyph entirely via native slot-fallback
 content — assigned content wins; otherwise the `icon` prop is rendered as a literal hint; otherwise
 the built-in glyph for the current `status` is used)
@@ -41793,7 +42076,7 @@ ancestor to change every unset chip beneath it.
 
 The default slot's tooltip uses the same `'top-start'` placement as `<lr-combobox>`'s listbox, and
 appears/disappears instantly
-on hover/focus/blur/mouseleave with no fade transition and no "pointer moved into the tooltip"
+on hover or keyboard focus, and on blur/mouseleave, with no fade transition and no "pointer moved into the tooltip"
 tracking — it's documented as read-only preview content, not an interactive surface meant to retain
 focus of its own. `denied` gets its own warning-toned glyph and color (a policy rejection, not a
 runtime failure) distinct from `error`'s danger tone, matching `<lr-tool-result-dialog>`'s
@@ -41825,6 +42108,8 @@ falling back to `<lr-json-viewer>` whenever no renderer matches, a candidate ren
 owns none of the actual visual weight of a populated tool result — that's entirely whatever the
 registered renderer returns; `<lr-tool-result-view>` is just the dispatch + fallback + loading-state
 shell around it.
+
+Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — JSON reads left-to-right and an Arabic line right-to-left inside either document direction. WebKit resolves this once per block from its first strong character rather than per line.
 
 **Properties:**
 
@@ -42498,6 +42783,8 @@ cause"/"During handling" separators) into separate groups. Frames matching `inte
 behind a count-labeled toggle. A malformed or non-safe-integer location remains visible as raw,
 non-activatable text. Falls back to verbatim raw text when nothing parses. First-party invention
 (no Web Awesome equivalent).
+
+Direction: function names (`::part(frame-function)`) and locations (`::part(frame-location)`) carry `dir="ltr"`, so `Object.<anonymous>` and file paths read left-to-right inside a right-to-left document; the frame button itself follows the page direction.
 
 Removing the `trace` attribute clears parsed content and copies empty text; the property retains
 `null` until assigned again.
@@ -43348,6 +43635,8 @@ cursor-addressed full-screen apps. An ANSI sequence split across chunks retains 
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
 clean parser boundary.
 
+Direction: every line is left-to-right. Without `wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. With `wrap`, the scrollport follows the page direction.
+
 A search with no matches clears earlier rendered match markers. Removing the `content` attribute
 clears output and preserves the normal `null` property readback.
 
@@ -43537,7 +43826,8 @@ least their start, unknown kinds become `other`, and unknown statuses become `pe
 `live-region`.
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
-`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row — and
+`var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row, and the base
+its hover/press mixes from — and
 `--lr-trace-tree-row-active-color` (default `var(--lr-color-text)`) — the color of that row's
 secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the `pending`
 `status-text` label). Same state-scoped-property convention described under `lr-span-waterfall`
@@ -43740,6 +44030,8 @@ A pass/fail suite summary with per-status counts, status filter toggles, and per
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
 
+Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
+
 **Properties:** `suites: readonly TestSuiteResult[] = []` (attribute: false) — `TestSuiteResult { id: string;
 name: string; tests: readonly TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
@@ -43792,7 +44084,7 @@ adjacent localized status word carries the meaning. Running rows use the decorat
 `var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
 `var(--lr-color-brand)`) and `--lr-test-results-filter-active-color` (default
 `var(--lr-color-brand)`) — the background, border color and text color of a pressed (active) status
-filter toggle. All three follow the state-scoped-property convention described under
+filter toggle. The background is also the base its hover/press mixes from. All three follow the state-scoped-property convention described under
 `lr-span-waterfall`: inline `var()` fallbacks rather than `:host` declarations, so each can be set on
 the element or on any ancestor. They exist because
 `::part(filter-toggle)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
@@ -44420,7 +44712,8 @@ the host to apply to its controlled `examples` array.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
 search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
-`grid`, `add-button`, `remove-button`, `import`, `export`.
+`grid`, `add-button`, `remove-button`, `import` (the internal `compact` `lr-file-input`; its
+dropzone text and accessible name are the localized `evalDatasetImportLabel`), `export`.
 
 **Themeable custom properties:** `--lr-eval-dataset-search-min-height` (default `auto`),
 `--lr-eval-dataset-search-font-size` (default `inherit`),
@@ -44719,7 +45012,7 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Additional API surface:**
 
 - `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
-- `--lr-agent-eval-dashboard-active-background` — Active metric background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-agent-eval-dashboard-active-background` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.
 
 ## `lr-approval-queue`
 
@@ -44919,7 +45212,7 @@ import "@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.
 - `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
 - `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
-- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.
+- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Unset, mixes from `--lr-prompt-studio-version-selected-bg` (its own default shown). Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.
 
 ## `lr-json-schema-viewer`
 
@@ -46359,8 +46652,8 @@ from tokens.
 
 ## `lr-entity-chip`
 
-An inline `@entity` mention for agent prose: flow content, keyboard-focusable, with a hover/focus
-preview popover. The knowledge-graph sibling of `lr-citation-badge`, reusing its interaction
+An inline `@entity` mention for agent prose: flow content, keyboard-focusable, with a hover or
+keyboard-focus preview popover (the focused control matches `:focus-visible` and no pointer press preceded it). The knowledge-graph sibling of `lr-citation-badge`, reusing its interaction
 contract wholesale. Carries ids through events only — no entity data resolution, no navigation.
 
 Removing `text` or `type` leaves the property readback as `null` and treats it as absent when
@@ -46385,7 +46678,7 @@ it is not copied onto the shadow button because host naming does not cross that 
 `lr-entity-open` (`detail: { entityId }`, dblclick, or Space while focused).
 
 **Slots:** default — rich preview content (typically a compact `lr-entity-card`), shown in a
-floating popover on hover/focus. No content means no popover and no hover affordance at all.
+floating popover on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it). No content means no popover and no hover affordance at all.
 
 **CSS parts:** `base` (the clickable `<button>`), `label`, `popover`.
 
@@ -46991,7 +47284,7 @@ clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 
 ## `lr-citation-badge`
 
-An inline `[n]` citation marker with a hover/focus preview popover and confidence/verification-status
+An inline `[n]` citation marker with a hover or keyboard-focus preview popover (the focused control matches `:focus-visible` and no pointer press preceded it) and confidence/verification-status
 coloring. First-party invention (no Web Awesome equivalent). Meant to sit inline in a chat message's
 text, each badge carrying a `source-id` that matches a corresponding `<lr-source-card>` shown
 elsewhere on the page (a sibling component in this family) — this component never imports or knows
@@ -47024,7 +47317,7 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   constituent click, standard browser `dblclick` behavior) in addition to the one `lr-citation-open`.
 
 **Slots:** default — rich preview/tooltip content (e.g. a filename + excerpt), shown in a floating
-popover on hover/focus. This is _not_ the badge's visible content (the badge always renders
+popover on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it). This is _not_ the badge's visible content (the badge always renders
 `[index]`); nothing renders at all (no hover affordance) when this slot is empty.
 When populated, the button carries `aria-describedby` referencing the same-shadow-tree popover,
 which owns `role="tooltip"` whether currently shown or hidden.
@@ -47078,9 +47371,10 @@ ancestor to change every unset citation badge beneath it.
 The popover is positioned with the same internal `place()` helper (`top-start` placement) that
 `<lr-tool-call-chip>` uses for its own detail tooltip, and never traps focus — it's supplementary
 preview content, not a modal, so Tab continues past the badge normally even while the popover happens
-to be visible from a mouse hover. Hovering and focus are tracked as independent "keep it open"
-reasons (mirroring `<lr-toast-item>`'s hovering/focused pair), so the pointer leaving while the
-badge still holds keyboard focus doesn't schedule a hide the focus is still holding open. There's a
+to be visible from a mouse hover. Hovering and keyboard focus are tracked as independent "keep it
+open" reasons (mirroring `<lr-toast-item>`'s hovering/focused pair), so the pointer leaving while
+the badge still holds keyboard focus doesn't schedule a hide the focus is still holding open;
+pointer or scripted focus neither opens nor holds the popover. There's a
 200ms grace period before a hover/focus-out actually hides the popover, so moving the pointer from
 the badge into the popover itself (to select/copy its text) doesn't make it vanish mid-move; Escape
 and blur (Tab away) close it immediately instead, with no delay.

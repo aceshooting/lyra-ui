@@ -76,7 +76,7 @@ fallback slot while it is the winning tier), `image` (the `<img>`, only while a 
 **Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
 `--lr-avatar-size` (default `var(--lr-size-3rem)`, with a private default stepped across the ladder
 from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl`), `--lr-avatar-bg` (default
-`var(--lr-color-border)`, whose private default changes for a non-neutral `variant` to that
+`var(--lr-color-neutral-fill-quiet)`, the same quiet fill tier the variants use, whose private default changes for a non-neutral `variant` to that
 variant's `-quiet` fill; there is no `--lr-color-surface-alt` token in this library, despite what
 older copies of this page claimed), `--lr-avatar-color` (default `var(--lr-color-text)`, whose
 private default changes for a non-neutral `variant` to that variant's loud color),

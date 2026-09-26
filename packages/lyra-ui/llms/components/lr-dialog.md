@@ -80,7 +80,13 @@ chrome remains visible. The fallback order appears below.
   an already-resolved promise
 - `hide(): Promise<void>` — identical to `close('api')`, resolving after `lr-after-hide`
 - `close(reason: DialogCloseReason = 'api'): Promise<void>` — closes the dialog, returns focus to
-  whatever had it right before opening, and resolves after `lr-after-hide`.
+  whatever had it right before opening, and resolves after `lr-after-hide`. The return is attempted
+  as the close begins and, if that attempt could not land (a host commonly hides its own opener
+  while the dialog is open and re-shows it in response to `lr-hide`, `lr-close` or
+  `lr-after-hide`), again once the exit animation has finished and one animation frame has passed.
+  That second pass only acts while focus is still inside the dialog or has fallen to `<body>` —
+  focus moved elsewhere in the meantime is never taken back — and when the opener still cannot take
+  focus, focus is left where it is. `lr-drawer` inherits the same behavior.
   `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
   `'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers;
   `'close-button'` by the built-in header close button (rendered when `closable` is set); `'api'`

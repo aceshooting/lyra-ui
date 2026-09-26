@@ -3235,6 +3235,7 @@ export type LyraDataGridReactProps = LyraReactElementProps<
   | '--lr-data-grid-cell-link-hover-color'
   | '--lr-data-grid-control-active-background'
   | '--lr-data-grid-control-hover-background'
+  | '--lr-data-grid-line-color'
   | '--lr-data-grid-page-size-active-background'
   | '--lr-data-grid-row-active-background'
   | '--lr-data-grid-sortable-header-active-background'
@@ -4314,6 +4315,7 @@ export type LyraEmojiPickerReactProps = LyraReactElementProps<
   | 'locale'
   | 'name'
   | 'required'
+  | 'searchPlaceholder'
   | 'size'
   | 'strings'
   | 'value',
@@ -4359,6 +4361,7 @@ export type LyraEmojiPickerReactProps = LyraReactElementProps<
     'aria-label'?: LyraEmojiPicker['accessibleLabel'];
     'custom-error'?: LyraEmojiPicker['customError'];
     'error-text'?: LyraEmojiPicker['errorText'];
+    'search-placeholder'?: LyraEmojiPicker['searchPlaceholder'];
     'value'?: LyraEmojiPicker['defaultValue'];
   }
 >;
@@ -5345,6 +5348,7 @@ export type LyraHeatmapReactProps = LyraReactElementProps<
   | 'accessibleCells'
   | 'annotations'
   | 'bucketCount'
+  | 'calendarGeometry'
   | 'cellColor'
   | 'cellGapX'
   | 'cellGapY'
@@ -6342,6 +6346,7 @@ export type LyraLiteChartReactProps = LyraReactElementProps<
   | 'accessibleLabel'
   | 'axisLabelText'
   | 'barGapRatio'
+  | 'barSlotWidth'
   | 'barWidth'
   | 'barX'
   | 'beginAtZero'
@@ -6401,6 +6406,7 @@ export type LyraLiteChartReactProps = LyraReactElementProps<
   {
     'accessible-label'?: LyraLiteChart['accessibleLabel'];
     'bar-gap-ratio'?: LyraLiteChart['barGapRatio'];
+    'bar-slot-width'?: LyraLiteChart['barSlotWidth'];
     'bar-width'?: LyraLiteChart['barWidth'];
     'begin-at-zero'?: LyraLiteChart['beginAtZero'];
     'data-table-toggle'?: LyraLiteChart['dataTableToggle'];
@@ -6960,6 +6966,7 @@ export type LyraMessagePartsReactProps = LyraReactElementProps<
   | 'lr-citation-open'
   | 'lr-citation-select'
   | 'lr-copy'
+  | 'lr-copy-error'
   | 'lr-highlight-activate'
   | 'lr-link-click'
   | 'lr-part-retry'

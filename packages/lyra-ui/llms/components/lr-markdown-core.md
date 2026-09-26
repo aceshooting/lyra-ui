@@ -25,6 +25,8 @@ this component's own module never imports or calls that function at all; it only
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
+Direction behaves exactly as described for `<lr-markdown>` (**Direction** above).
+
 Removing `content` clears the document and its empty-document tab stop, including while streaming.
 The property keeps Lit's `null` readback after removal; an explicitly empty attribute remains an
 empty string. Later source text renders normally.
@@ -51,6 +53,7 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) with its compatibility alias
 `codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
@@ -140,7 +143,8 @@ const view = html`<lr-markdown-core
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the same header as `codeBlockChrome`. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its compatibility alias. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 

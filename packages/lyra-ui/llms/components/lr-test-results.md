@@ -20,6 +20,8 @@ A pass/fail suite summary with per-status counts, status filter toggles, and per
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
 
+Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
+
 **Properties:** `suites: readonly TestSuiteResult[] = []` (attribute: false) — `TestSuiteResult { id: string;
 name: string; tests: readonly TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
@@ -72,7 +74,7 @@ adjacent localized status word carries the meaning. Running rows use the decorat
 `var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
 `var(--lr-color-brand)`) and `--lr-test-results-filter-active-color` (default
 `var(--lr-color-brand)`) — the background, border color and text color of a pressed (active) status
-filter toggle. All three follow the state-scoped-property convention described under
+filter toggle. The background is also the base its hover/press mixes from. All three follow the state-scoped-property convention described under
 `lr-span-waterfall`: inline `var()` fallbacks rather than `:host` declarations, so each can be set on
 the element or on any ancestor. They exist because
 `::part(filter-toggle)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute

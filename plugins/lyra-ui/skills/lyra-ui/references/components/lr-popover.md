@@ -72,14 +72,23 @@ If the import fails, leave the native disclosure visible and usable.
   the same way; each keeps its own default, so setting nothing changes nothing. An unsupported value
   resolves back to that default. This property always reports the instance's own authored value (or
   its mirrored default) — see the cascading `--lr-positioning-strategy` custom property below for a
-  theme-level way to change the *rendered* strategy of every instance that sets neither.
+  theme-level way to change the *rendered* strategy of every instance that sets neither. `fixed`
+  escapes transformed, filtered or contained ancestors by promoting the popup into the browser top
+  layer where the native Popover API exists; otherwise, as before, such an ancestor contains and
+  clips it (see **Anchored overlays and the top layer**).
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
   keyword. The two transient modes open after `showDelay`, close after `hideDelay` once the
-  interaction ends, never move focus into the surface, and stay open while focus rests anywhere
-  inside it. A click on the trigger pins a transient surface open; the next click releases the pin
-  and closes it. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
+  interaction ends, never move focus into the surface they opened themselves, and stay open while
+  focus rests anywhere inside it. `focus` means keyboard focus: the focused element must match
+  `:focus-visible` and the last input must not have been a pointer press, so pointer, touch and
+  scripted focus that follows them do not open it; call `show()` for scripted reveals. A click on
+  the trigger pins a transient surface open; the next click releases the pin and closes it. A click
+  that opens a *closed* transient surface opens it pinned like click mode, including pulling
+  `[autofocus]` (and, for `lr-dropdown`, focusing the active menu item); a click on a surface hover
+  already opened only pins it. Migrating from `wa-popover`/`wa-dropdown`/`sl-dropdown`: the same
+  keyboard-focus narrowing as `lr-tooltip` applies. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
   and wins over any keyword beside it. Unrecognized tokens are dropped and the property reads back
   as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
   `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
@@ -261,8 +270,8 @@ the same colour.
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
 placement/anchor change while open — never per animation frame). Setting nothing anywhere leaves
 every default exactly as before. Precedence: an explicit `positioning-strategy`/`hoist` on the
-instance always wins; otherwise this inherited custom property; otherwise the component's own
-mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
+instance always wins; otherwise this inherited custom property; otherwise `fixed` inside
+`lr-virtual-list` rows and `lr-flow-canvas` nodes; otherwise the component's own mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
 theme, or a single clipping ancestor (an `overflow: hidden` card or a scroller) changes every unset
 overlay beneath it — no need to author `positioning-strategy`/`hoist` on each instance individually,
 or to remember it on every new one:

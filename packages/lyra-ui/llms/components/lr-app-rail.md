@@ -117,10 +117,19 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   that opens this rail's mobile overlay (e.g. an application-chrome hamburger button used together
   with `hideToggle`). When set (or resolved through `for`), closing the overlay by any path —
   Escape, backdrop click, a nav-item click, or the built-in toggle itself — returns focus to it, the
-  same guarantee the built-in toggle's own click already gets. Needed because a consumer's own
+  same guarantee the built-in toggle's own click already gets. The return is attempted as the
+  overlay closes and, if that attempt could not land (a host commonly keeps its own menu button
+  `visibility: hidden` while the drawer is open and re-shows it from its own render in response to
+  `lr-toggle`), again once the close's update has completed and one animation frame has passed, so
+  the host's re-render has applied. That second pass only acts while focus is still inside the
+  rail or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
+  focuses the first candidate that can actually hold focus: the trigger, then the element that held
+  focus when the overlay opened, then the built-in `[part='toggle']` (unavailable under
+  `hideToggle`). When none can, focus is left where it is. Needed because a consumer's own
   JS-driven `open = true` never focuses anything, and even a real click does not reliably focus its
-  target in every browser. Resolved once when the overlay opens; reassigning afterward changes the
-  return target for the remainder of that overlay's open lifetime. Read alongside `for`; this direct
+  target in every browser. Resolved when the overlay opens and again when it closes, so reassigning
+  it (or `for`) while the overlay is open changes where focus returns; when the association no
+  longer resolves at close, the target resolved at open still applies. Read alongside `for`; this direct
   reference wins when both resolve to different elements. Unset (the default, `null`) reproduces the
   exact existing behavior: only the built-in toggle's own click supplies a return target, for that
   interaction alone. The resolved trigger also receives `aria-expanded` (rendered in both states)
@@ -132,8 +141,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   Disconnect also releases it, and reassigning `trigger` moves the state to the new element.
 - `for: string = ''` — id of an external element that opens this rail's mobile overlay, the
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
-  `for`). Resolved against this element's own root (shadow root or document) when the overlay opens.
-  Ignored once `trigger` is itself set.
+  `for`). Resolved against this element's own root (shadow root or document) when the overlay opens
+  and again when it closes. Ignored once `trigger` is itself set.
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
   state, exposing a `[part='resizer']` handle clamped to `[minRailWidthPx, maxRailWidthPx]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
@@ -275,7 +284,8 @@ existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's v
 previously reachable only through `::part(nav)`. Plus shared
 tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
-`--lr-space-*`, `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`,
+`--lr-space-*`, `--lr-radius`, `--lr-shadow-l` (the mobile overlay panel's default elevation, while
+open only), `--lr-shadow-s` (the `frame="card"` default elevation), `--lr-icon-button-size`,
 `--lr-focus-ring-*`, `--lr-transition-base`). The rail's inline-end edge and its header/footer rules
 use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
 `'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
@@ -474,17 +484,16 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 ### `lr-app-rail-item`
 
+An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
+set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
+removing the label from the accessibility tree.
+
 In icon-only presentation the nested disclosure and children list are hidden while `expanded`
 is preserved. Returning full restores the list. If a disclosure or descendant had focus, it moves
 to the outermost visible parent item's base control. The parent link remains operable. The `end`
 slot stays visible; reserve an icon-only rail width of at least twice the nav padding plus the icon
 square, item gap and end content. A 1.5rem badge requires 5.5rem with default tokens. Keep end actions
 out of default-width compact rails, or use a rail that never collapses.
-
-
-An explicit navigation item for `<lr-app-rail>`. It renders an accessible link when `href` is
-set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
-removing the label from the accessibility tree.
 
 **Properties:**
 
@@ -496,7 +505,8 @@ removing the label from the accessibility tree.
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location). `active`, a deprecated alias in both property and attribute form, was removed
   in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
-- `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
+- `tooltip: boolean = false` (reflected) — opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it)
+  (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
   since the label is already visible there. `false` (the default) reproduces the exact existing
@@ -569,8 +579,8 @@ nav-slot behaviour, not new to these slots.
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
 shipped `active-indicator` part — suppressed by default while `icon-only`, see the current-ring
-tokens below), `tooltip` (the hover/focus label flyout, only rendered while `tooltip` is set, the
-item is `icon-only`, and it is hovered or focused), `meta` (the wrapper around the `meta` slot,
+tokens below), `tooltip` (the hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it), only rendered while
+`tooltip` is set, the item is `icon-only`, and it is hovered or keyboard-focused), `meta` (the wrapper around the `meta` slot,
 hidden while empty), `end` (the wrapper around the `end` slot, hidden while empty), `toggle` (the
 `children` disclosure, rendered only while something is slotted into `children`; a sibling of
 `base`, never nested inside it), `toggle-icon` (the wrapper around the disclosure chevron,

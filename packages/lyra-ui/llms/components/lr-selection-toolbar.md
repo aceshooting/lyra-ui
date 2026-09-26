@@ -17,7 +17,10 @@
 ## `lr-selection-toolbar`
 
 Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
-`DocumentLocator` into ask, quote, cite, and copy actions.
+`DocumentLocator` into ask, quote, cite, and copy actions. The toolbar is positioned in viewport
+coordinates; inside a transformed, filtered or contained ancestor (a per-message toolbar in a
+virtualized transcript row) it is shown in the browser top layer where the native Popover API
+exists, so it stays aligned with the selection and unclipped.
 
 **Properties:** `open: boolean = false` (reflected); `text: string = ''`;
 clone-owned `anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and

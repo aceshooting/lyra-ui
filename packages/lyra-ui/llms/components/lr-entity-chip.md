@@ -16,8 +16,8 @@
 
 ## `lr-entity-chip`
 
-An inline `@entity` mention for agent prose: flow content, keyboard-focusable, with a hover/focus
-preview popover. The knowledge-graph sibling of `lr-citation-badge`, reusing its interaction
+An inline `@entity` mention for agent prose: flow content, keyboard-focusable, with a hover or
+keyboard-focus preview popover (the focused control matches `:focus-visible` and no pointer press preceded it). The knowledge-graph sibling of `lr-citation-badge`, reusing its interaction
 contract wholesale. Carries ids through events only — no entity data resolution, no navigation.
 
 Removing `text` or `type` leaves the property readback as `null` and treats it as absent when
@@ -42,7 +42,7 @@ it is not copied onto the shadow button because host naming does not cross that 
 `lr-entity-open` (`detail: { entityId }`, dblclick, or Space while focused).
 
 **Slots:** default — rich preview content (typically a compact `lr-entity-card`), shown in a
-floating popover on hover/focus. No content means no popover and no hover affordance at all.
+floating popover on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it). No content means no popover and no hover affordance at all.
 
 **CSS parts:** `base` (the clickable `<button>`), `label`, `popover`.
 

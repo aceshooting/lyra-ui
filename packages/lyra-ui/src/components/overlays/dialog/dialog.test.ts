@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './dialog.js';
 import '../../forms/input/input.js';
@@ -2125,4 +2125,92 @@ it('draws the header and footer dividing rules in the subtle border tier while -
   } finally {
     await el.close('api');
   }
+});
+
+describe('focus return to a host-hidden opener', () => {
+  const deepActive = (): Element | null => {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  };
+  const describeActive = (): string => {
+    const active = deepActive();
+    return active ? `${active.localName}${active.id ? `#${active.id}` : ''}` : 'null';
+  };
+
+  /** A host that hides its own opener while the dialog is open and re-shows it from its own render
+   *  once it learns of the close -- a frame after `reShowOn`. */
+  async function openFromHiddenOpener(reShowOn: 'lr-hide' | 'lr-after-hide'): Promise<{
+    dialog: LyraDialog;
+    opener: HTMLButtonElement;
+    cleanup(): void;
+  }> {
+    const opener = document.createElement('button');
+    opener.type = 'button';
+    opener.id = 'dialog-opener';
+    opener.textContent = 'Open';
+    document.body.append(opener);
+    const dialog = (await fixture(html`
+      <lr-dialog label="Settings" style="--show-duration: 0ms; --hide-duration: 0ms">
+        <button id="dialog-inside" type="button">Inside</button>
+      </lr-dialog>
+    `)) as LyraDialog;
+    const onShow = (): void => {
+      opener.style.visibility = 'hidden';
+    };
+    const onClose = (): void => {
+      requestAnimationFrame(() => {
+        opener.style.visibility = '';
+      });
+    };
+    dialog.addEventListener('lr-show', onShow);
+    dialog.addEventListener(reShowOn, onClose);
+    opener.focus();
+    await dialog.show();
+    const inside = dialog.querySelector<HTMLButtonElement>('#dialog-inside')!;
+    expect(deepActive() === inside, `initial focus stayed on ${describeActive()}`).to.equal(true);
+    expect(opener.style.visibility).to.equal('hidden');
+    return {
+      dialog,
+      opener,
+      cleanup: () => {
+        dialog.removeEventListener('lr-show', onShow);
+        dialog.removeEventListener(reShowOn, onClose);
+        opener.remove();
+      },
+    };
+  }
+
+  for (const reShowOn of ['lr-hide', 'lr-after-hide'] as const) {
+    it(`returns focus to an opener the host re-shows after ${reShowOn}`, async () => {
+      const { dialog, opener, cleanup } = await openFromHiddenOpener(reShowOn);
+      try {
+        await sendKeys({ press: 'Escape' });
+        await dialog.updateComplete;
+        expect(dialog.open).to.equal(false);
+        await waitUntil(() => deepActive() === opener, `focus stayed on ${describeActive()}`);
+      } finally {
+        cleanup();
+      }
+    });
+  }
+
+  it('never takes back focus moved elsewhere before the deferred return runs', async () => {
+    const { dialog, opener, cleanup } = await openFromHiddenOpener('lr-hide');
+    const elsewhere = document.createElement('input');
+    elsewhere.setAttribute('aria-label', 'Elsewhere');
+    document.body.append(elsewhere);
+    try {
+      const closed = dialog.hide();
+      await dialog.updateComplete;
+      elsewhere.focus();
+      await closed;
+      await waitUntil(() => getComputedStyle(opener).visibility === 'visible', 'the host never re-showed its opener');
+      for (let frame = 0; frame < 3; frame++) await nextFrame();
+      expect(deepActive() === elsewhere, `focus moved to ${describeActive()}`).to.equal(true);
+    } finally {
+      elsewhere.remove();
+      cleanup();
+    }
+  });
 });

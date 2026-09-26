@@ -24,6 +24,14 @@ Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer
 fallback is the _default_ rendering path, not a degraded one: unhighlighted code is perfectly usable,
 and it's what every instance renders at zero extra bytes until shiki resolves.
 
+**Direction.** Inside a right-to-left document `::part(body)` computes `direction: ltr`, so code
+reads left-to-right and its scroll area opens at the start of the code; as a result, under
+`dir="rtl"` the vertical scrollbar, when present, sits on the physical right. `::part(language)` is
+a left-to-right isolate, and `::part(filename)` wraps the file name in a first-strong `<bdi>` (its
+`textContent` is unchanged). The header row and copy button follow the page direction; the
+line-number gutter belongs to the body, so it sits at the physical left. An outer `lr-code-block::part(body) { direction: rtl }` rule restores
+right-to-left code. Bidi formatting characters inside code are rendered as authored.
+
 Removing `code`, `language`, or `highlight-lines` treats that input as absent: source becomes empty,
 an absent language selects plain text, and attribute-based emphasis clears. Removal preserves Lit's
 `null` property readback; an explicitly empty attribute stays an empty string, and a later value

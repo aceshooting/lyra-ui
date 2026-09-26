@@ -17,7 +17,8 @@
 ## `lr-tooltip`
 
 A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
-interactions open it is configurable as of 8.0.0; by default it is still hover and focus.
+interactions open it is configurable as of 8.0.0; by default it is still hover and focus. Focus
+means keyboard focus; see `trigger`.
 
 An open lr-tooltip repositions when its effective host or inherited text direction changes,
 preserving open state without emitting lifecycle events.
@@ -31,10 +32,15 @@ later text renders normally.
   Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
   already closed, so a pending timer can't reopen it behind the caller's back.
 - `trigger: string = 'hover focus'` — **new in 8.0.0.** A _space-separated_ list of `hover`,
-  `focus`, `focus-visible`, `click` and `manual`. `focus` opens on any focus, preserving the default
-  and existing behavior; `focus-visible` opens only when the trigger's actual focus target matches
-  `:focus-visible`, including a focused control inside a shadow-root trigger. Use it when opening a
-  tooltip on programmatic or pointer focus would obscure nearby content. `manual` (or an empty list)
+  `focus`, `click` and `manual`. `focus` means keyboard focus: the focused element must match
+  `:focus-visible` and the last input must not have been a pointer press. Pointer, touch and
+  scripted focus that follows them do not open it, but any focus inside the trigger still wires its
+  description; use `show()` for scripted reveals. This narrows `wa-tooltip`/`sl-tooltip` focus
+  activation deliberately, following the WAI-ARIA tooltip pattern, and the check reads the control
+  that actually holds focus, including one inside a shadow-root trigger. Migrating from
+  `wa-tooltip`/`sl-tooltip`: focus activation is narrowed to keyboard focus. If you removed `focus`
+  from `trigger` to stop pointer or programmatic pops, restore the default; call `show()` for
+  scripted reveals. `manual` (or an empty list)
   leaves the tooltip entirely under programmatic control. Note the name collision: this string
   property and the `trigger` _slot_ are different things — the slot holds the element, this property
   says which of its interactions count.
@@ -154,7 +160,8 @@ default, when neither `positioning-strategy` nor `hoist` is authored on the inst
 </lr-tooltip>
 ```
 
-While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
+While open, and whenever focus is inside the trigger (when `focus` is among the active keywords),
+trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
 not the shadow-private popup. Native triggers resolve that ID directly. A description is only
 announced on the node that actually holds focus, so when the trigger is a custom element the same
 proxy is applied to the first focusable descendant as well — across slots and nested open shadow
@@ -163,8 +170,9 @@ just the components that forward their own host `aria-describedby`. A descendant
 receives the serialized ID; one inside a shadow root is linked through `ariaDescribedByElements`,
 whose explicit element-reference assignment intentionally leaves that control's serialized
 `aria-describedby` value empty in supporting browsers. Existing author-provided descriptions —
-including a control's own internal hint/error text — are merged while open and restored when the
-tooltip closes, the trigger is replaced, or the tooltip disconnects. Late author writes remain the
+including a control's own internal hint/error text — are merged while described and restored once
+the tooltip is neither open nor focused, when the trigger is replaced, or when the tooltip
+disconnects. Late author writes remain the
 release baseline while Lyra's active description stays composed into the owned value.
 
 With no slotted trigger, a live HTML `for` target receives those same interactions and description;

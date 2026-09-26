@@ -21,6 +21,8 @@ cursor-addressed full-screen apps. An ANSI sequence split across chunks retains 
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
 clean parser boundary.
 
+Direction: every line is left-to-right. Without `wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. With `wrap`, the scrollport follows the page direction.
+
 A search with no matches clears earlier rendered match markers. Removing the `content` attribute
 clears output and preserves the normal `null` property readback.
 

@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import "./drawer.js";
 import type { LyraDrawer } from "./drawer.js";
@@ -845,4 +845,43 @@ describe("contained drawer compatibility", () => {
     expect(document.activeElement?.id).to.not.equal("opener");
     await el.hide();
   });
+});
+
+it('returns focus to an opener the host hides while open and re-shows after lr-hide', async () => {
+  const opener = document.createElement('button');
+  opener.type = 'button';
+  opener.id = 'drawer-opener';
+  opener.textContent = 'Open';
+  document.body.append(opener);
+  const el = await fixture<LyraDrawer>(html`
+    <lr-drawer label="Filters" style="--show-duration: 0ms; --hide-duration: 0ms">
+      <button id="drawer-inside" type="button">Inside</button>
+    </lr-drawer>
+  `);
+  const onShow = (): void => {
+    opener.style.visibility = 'hidden';
+  };
+  const onHide = (): void => {
+    requestAnimationFrame(() => {
+      opener.style.visibility = '';
+    });
+  };
+  el.addEventListener('lr-show', onShow);
+  el.addEventListener('lr-hide', onHide);
+  try {
+    opener.focus();
+    await el.show();
+    expect(document.activeElement?.id).to.equal('drawer-inside');
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    await waitUntil(
+      () => document.activeElement === opener,
+      `focus stayed on ${document.activeElement?.localName ?? 'null'}`,
+    );
+  } finally {
+    el.removeEventListener('lr-show', onShow);
+    el.removeEventListener('lr-hide', onHide);
+    opener.remove();
+  }
 });
