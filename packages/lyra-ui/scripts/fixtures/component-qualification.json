@@ -50137,28 +50137,28 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 523,
+              "line": 534,
               "test": "scrolls a wide renderer inside the result section and makes it a keyboard stop only while it overflows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 696,
+              "line": 707,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 696,
+              "line": 707,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 696,
+              "line": 707,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
@@ -50183,7 +50183,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 489,
+              "line": 500,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -50200,7 +50200,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 505,
+              "line": 516,
               "kind": "320px allocation test signal"
             }
           ]
