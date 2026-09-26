@@ -2,15 +2,20 @@ name: lyra-ui CodeQL configuration
 
 # The JavaScript/TypeScript extractor skips hidden directories unless a path names them, which
 # left .storybook/ (Storybook configuration, stories and generated docs helpers) unscanned. Name
-# every directory that holds code so the status page reports full coverage; add a new top-level
-# code directory here when one is created.
+# every directory that holds code, plus the root manifests CodeQL also reads, so the status page
+# reports full coverage; add a new top-level code directory or root manifest here when one is created.
 paths:
   - .github
   - .storybook
   - examples
   - packages
+  - plugins
   - scripts
+  - codecov.yml
   - knip.config.js
+  - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
 
 # Tiny before/after samples for the wa-* to lr-* migration script. They are test data rather
 # than code the project runs, and are compared as text by the migration tests.
