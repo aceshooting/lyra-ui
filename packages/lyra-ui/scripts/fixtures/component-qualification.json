@@ -27603,91 +27603,91 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 7145,
+              "line": 7150,
               "test": "keeps the collapsible legend accessible open and collapsed",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 7145,
+              "line": 7150,
               "test": "keeps the collapsible legend accessible open and collapsed",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1643,
+              "line": 1648,
               "test": "keeps the interactive legend accessible in both visible and hidden states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1643,
+              "line": 1648,
               "test": "keeps the interactive legend accessible in both visible and hidden states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1964,
+              "line": 1969,
               "test": "stays axe-clean with a checkbox legend, populated and collapsed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1964,
+              "line": 1969,
               "test": "stays axe-clean with a checkbox legend, populated and collapsed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2256,
+              "line": 2261,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3139,
+              "line": 3144,
               "test": "adds a maplibregl.Marker per entry in markers",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 6676,
+              "line": 6681,
               "test": "styles and localizes peer-added controls inside the shadow root",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 6771,
+              "line": 6776,
               "test": "clusters sized categories, restores filled and stroked icons after a style reload and exports them",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 7397,
+              "line": 7402,
               "test": "keeps a grouped legend and a grouped interactive legend accessible",
               "target": "readOnly",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 7397,
+              "line": 7402,
               "test": "keeps a grouped legend and a grouped interactive legend accessible",
               "target": "interactive",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 7397,
+              "line": 7402,
               "test": "keeps a grouped legend and a grouped interactive legend accessible",
               "target": "interactive",
               "state": "populated"
@@ -27712,7 +27712,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1701,
+              "line": 1706,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27797,7 +27797,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 257,
+              "line": 258,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -27809,7 +27809,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3286,
+              "line": 3632,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30471,21 +30471,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 853,
+              "line": 854,
               "test": "is accessible with populated mixed content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 1075,
+              "line": 1103,
               "test": "is accessible with populated blocks, one expanded, and does not announce tool errors",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 1273,
+              "line": 1301,
               "test": "keeps built-in text and reasoning code left-to-right under RTL",
               "target": "el",
               "state": "populated"
@@ -30505,7 +30505,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 1274,
+              "line": 1302,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -50156,28 +50156,35 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 534,
+              "line": 354,
+              "test": "shows an incomplete call as a terminal, unanimated, neutral state with localized header and status text",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
+              "line": 611,
               "test": "scrolls a wide renderer inside the result section and makes it a keyboard stop only while it overflows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 707,
+              "line": 784,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 707,
+              "line": 784,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 707,
+              "line": 784,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
@@ -50202,7 +50209,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 500,
+              "line": 577,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -50219,7 +50226,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 516,
+              "line": 593,
               "kind": "320px allocation test signal"
             }
           ]
@@ -50341,7 +50348,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts",
-              "line": 670,
+              "line": 113,
+              "test": "keeps an incomplete status as a neutral, unanimated terminal state with visible and accessible text",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts",
+              "line": 740,
               "test": "is accessible in a populated state with category, duration, and an open detail tooltip",
               "target": "el",
               "state": "populated"
@@ -50372,7 +50386,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts",
-              "line": 199,
+              "line": 269,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -50662,14 +50676,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 598,
+              "line": 619,
               "test": "is accessible while open with body and footer content",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 591,
+              "line": 612,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -50683,7 +50697,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 282,
+              "line": 303,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -50706,7 +50720,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 645,
+              "line": 666,
               "kind": "320px allocation test signal"
             }
           ]
@@ -51185,7 +51199,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 1013,
+              "line": 1084,
               "test": "is accessible with a populated timeline and the approval dialog open",
               "target": "el",
               "state": "populated"
@@ -51205,7 +51219,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 917,
+              "line": 963,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -51222,7 +51236,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 925,
+              "line": 971,
               "kind": "320px allocation test signal"
             }
           ]

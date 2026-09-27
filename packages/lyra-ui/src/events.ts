@@ -1687,6 +1687,11 @@ export type LyraMapLoadEvent = LyraMapEventMap['lr-map-load'];
 export type LyraMapMarkerActivateEvent = LyraMapEventMap['lr-map-marker-activate'];
 
 /**
+ * `lr-map-view-change` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-view-change']`.
+ */
+export type LyraMapViewChangeEvent = LyraMapEventMap['lr-map-view-change'];
+
+/**
  * `lr-matrix-geometry-change` — dispatched by `<lr-heatmap>`; detail
  * `LyraHeatmapEventMap['lr-matrix-geometry-change']`.
  */
@@ -1730,6 +1735,12 @@ export type LyraMcpSendMessageEvent = LyraMcpAppEventMap['lr-mcp-send-message'];
  * `LyraMcpAppEventMap['lr-mcp-tool-call']`.
  */
 export type LyraMcpToolCallEvent = LyraMcpAppEventMap['lr-mcp-tool-call'];
+
+/**
+ * `lr-media-download-request` — dispatched by `<lr-media-card>`; detail
+ * `LyraMediaCardEventMap['lr-media-download-request']`.
+ */
+export type LyraMediaDownloadRequestEvent = LyraMediaCardEventMap['lr-media-download-request'];
 
 /**
  * `lr-media-open` — dispatched by `<lr-media-card>`; detail
@@ -3327,6 +3338,7 @@ export interface LyraGlobalEventMap {
   'lr-map-legend-toggle': LyraMapLegendToggleEvent;
   'lr-map-load': LyraMapLoadEvent;
   'lr-map-marker-activate': LyraMapMarkerActivateEvent;
+  'lr-map-view-change': LyraMapViewChangeEvent;
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
   'lr-maximize-change': LyraMaximizeChangeEvent;
   'lr-mcp-log': LyraMcpLogEvent;
@@ -3335,6 +3347,7 @@ export interface LyraGlobalEventMap {
   'lr-mcp-resize': LyraMcpResizeEvent;
   'lr-mcp-send-message': LyraMcpSendMessageEvent;
   'lr-mcp-tool-call': LyraMcpToolCallEvent;
+  'lr-media-download-request': LyraMediaDownloadRequestEvent;
   'lr-media-open': LyraMediaOpenEvent;
   'lr-mention-close': LyraMentionCloseEvent;
   'lr-mention-select': LyraMentionSelectEvent;

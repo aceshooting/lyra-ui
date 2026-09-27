@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,9 +22,9 @@ primitives, with retry counts and sensitive-field redaction.
 **Properties:**
 
 - `entries: readonly ToolTimelineEntry[] = []` (attribute: false) — `ToolTimelineEntry` **extends
-  `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; args:
-Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
-  `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied'`) with `{ startedAt?:
+  `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; displayName?:
+string; args: Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
+  `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete'`) with `{ startedAt?:
 number; endedAt?: number; retryCount?: number; redactedFields?: readonly string[]; needsApproval?: boolean;
 approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies the owning run or
   source generation when invocation ids can be reused; every expansion, activation, renderer error,
@@ -32,7 +32,12 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   are omitted; a blank optional `sourceKey` is treated as absent. Duplicate occurrences of the same
   pair are normalized before any lookup with a deterministic first-occurrence-wins policy. `icon` is a
   literal hint forwarded to the composed tool-call chip. A foreign runtime `status` normalizes once
-  to `pending` before both the timeline row and its composed chip render.
+  to `pending` before both the timeline row and its composed chip render. `displayName` (21.1.0),
+  the application's own translated tool label, is forwarded to the chip's `displayName` and names
+  the entry's details disclosure (`Details for Lecture d’un fichier`); an empty, omitted or
+  non-string value shows `name`. `name` still selects the result renderer, is still the `toolName`
+  in `lr-tool-render-error`, and still names the tool in the approval dialog, so the reviewer
+  authorizes the exact tool.
   Timestamps are epoch milliseconds; entries sort ascending by `startedAt`,
   and an entry with none sorts after every timed entry (keeping its relative position among other
   untimed ones) and renders no visible timestamp. `startedAt`+`endedAt` derive the `durationMs`
@@ -113,6 +118,8 @@ per-entry timeline marker dot's size, which also sets the entry grid's leading c
 `status="denied"` entry, decoupled from the pending-approval border color below so either can be
 retinted independently; `--lr-tool-timeline-pending-marker-color` (default
 `var(--lr-color-text-quiet)`) — rail-dot color for a `status="pending"` entry;
+`--lr-tool-timeline-incomplete-marker-color` (21.1.0, default `var(--lr-color-text-quiet)`) —
+rail-dot color for a `status="incomplete"` entry, independent of the pending one;
 `--lr-tool-timeline-pending-approval-border-color` (default
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.

@@ -75570,6 +75570,12 @@
             "type": "CustomEvent<LyraMapMarkerActivationDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-view-change",
+            "type": "CustomEvent<LyraMapViewChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -75729,7 +75735,31 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "fitBounds",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "bounds",
+                    "type": "LyraMapBounds",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "options",
+                    "type": "LyraMapFitBoundsOptions",
+                    "optional": false,
+                    "hasDefault": true,
+                    "default": "{}"
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [
           {
@@ -136303,6 +136333,15 @@
             "default": ""
           },
           {
+            "name": "display-name",
+            "property": "displayName",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "duration-ms",
             "property": "durationMs",
             "type": "number | undefined",
@@ -136388,6 +136427,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "displayName",
+            "attribute": "display-name",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "durationMs",
@@ -136685,6 +136733,15 @@
             "default": ""
           },
           {
+            "name": "display-name",
+            "property": "displayName",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "duration-ms",
             "property": "durationMs",
             "type": "number | undefined",
@@ -136764,6 +136821,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "displayName",
+            "attribute": "display-name",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "durationMs",
@@ -137801,6 +137867,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-tool-result-dialog-incomplete-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-tool-result-dialog-incomplete-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
           },
           {
             "name": "--lr-tool-result-dialog-maximized-inset",
@@ -138975,6 +139053,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-l)"
+          },
+          {
+            "name": "--lr-tool-timeline-incomplete-marker-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
           },
           {
             "name": "--lr-tool-timeline-marker-size",

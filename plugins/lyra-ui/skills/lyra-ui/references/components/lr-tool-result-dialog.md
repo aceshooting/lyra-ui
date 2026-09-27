@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,8 +39,10 @@ title.
   cloning that name. A direct property assignment made without the attribute can name the panel
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
-  header's status badge; same status vocabulary as `<lr-tool-call-chip>`
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
+  drives the header's status badge; same status vocabulary as `<lr-tool-call-chip>`. `incomplete`
+  (21.1.0) is a call that ended without a result; its badge reads `Incomplete` in the neutral
+  pending look, through its own `--lr-tool-result-dialog-incomplete-*` pair
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; omitted
   from the header entirely when unset
 - `maximized: boolean = false` (reflected) — near-fullscreen presentation of the same open dialog
@@ -143,5 +145,7 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 - `--lr-tool-result-dialog-error-bg` — Error status background. Default: `var(--lr-color-danger-quiet)`.
 - `--lr-tool-result-dialog-denied-color` — Denied status foreground. Default: `var(--lr-color-warning)`.
 - `--lr-tool-result-dialog-denied-bg` — Denied status background. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-tool-result-dialog-incomplete-color` — Incomplete status foreground (21.1.0). Default: `var(--lr-color-text-quiet)`.
+- `--lr-tool-result-dialog-incomplete-bg` — Incomplete status background (21.1.0). Default: `transparent`.
 
 ---

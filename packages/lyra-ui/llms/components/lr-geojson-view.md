@@ -7,7 +7,7 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated component** `lr-geojson-view` since `unreleased`; use component `<lr-geojson-viewer>`; removal not before `23.0.0` — lr-geojson-view is the pre-v9 name of lr-geojson-viewer and adds no behavior of its own; it survives only as a distinct subclass so both names can share one registry. This reverses the earlier promise to keep the alias permanently: the tag, the LyraGeojsonView class and its geojson-view routes keep working unchanged through the 22.x line, and connecting the tag logs a one-time development warning.
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
 - **Themeable via** 7 parts, 1 custom property — see `lr-geojson-viewer.md`
 - **Documented with** `lr-geojson-viewer`: see [lr-geojson-viewer.md](./lr-geojson-viewer.md).

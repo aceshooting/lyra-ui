@@ -6541,7 +6541,8 @@ export type LyraMapReactProps = LyraReactElementProps<
   | 'lr-map-legend-panel-toggle'
   | 'lr-map-legend-toggle'
   | 'lr-map-load'
-  | 'lr-map-marker-activate',
+  | 'lr-map-marker-activate'
+  | 'lr-map-view-change',
   | '--lr-map-choropleth-fill-opacity'
   | '--lr-map-height'
   | '--lr-map-hidden-category-opacity'
@@ -11438,6 +11439,7 @@ export type LyraToolCallBlockReactProps = LyraReactElementProps<
   LyraToolCallBlock,
   | 'args'
   | 'callId'
+  | 'displayName'
   | 'durationMs'
   | 'error'
   | 'expanded'
@@ -11463,6 +11465,7 @@ export type LyraToolCallBlockReactProps = LyraReactElementProps<
   | '--lr-tool-call-block-radius',
   {
     'call-id'?: LyraToolCallBlock['callId'];
+    'display-name'?: LyraToolCallBlock['displayName'];
     'duration-ms'?: LyraToolCallBlock['durationMs'];
   }
 >;
@@ -11471,6 +11474,7 @@ export type LyraToolCallChipReactProps = LyraReactElementProps<
   LyraToolCallChip,
   | 'callId'
   | 'category'
+  | 'displayName'
   | 'durationMs'
   | 'icon'
   | 'locale'
@@ -11493,6 +11497,7 @@ export type LyraToolCallChipReactProps = LyraReactElementProps<
   | '--lr-transition-ambient',
   {
     'call-id'?: LyraToolCallChip['callId'];
+    'display-name'?: LyraToolCallChip['displayName'];
     'duration-ms'?: LyraToolCallChip['durationMs'];
   }
 >;
@@ -11544,6 +11549,8 @@ export type LyraToolResultDialogReactProps = LyraReactElementProps<
   | '--lr-tool-result-dialog-denied-color'
   | '--lr-tool-result-dialog-error-bg'
   | '--lr-tool-result-dialog-error-color'
+  | '--lr-tool-result-dialog-incomplete-bg'
+  | '--lr-tool-result-dialog-incomplete-color'
   | '--lr-tool-result-dialog-maximized-inset'
   | '--lr-tool-result-dialog-overlay-color'
   | '--lr-tool-result-dialog-pending-bg'
@@ -11647,6 +11654,7 @@ export type LyraToolTimelineReactProps = LyraReactElementProps<
   | '--lr-tool-timeline-error-color'
   | '--lr-tool-timeline-error-marker-color'
   | '--lr-tool-timeline-gap'
+  | '--lr-tool-timeline-incomplete-marker-color'
   | '--lr-tool-timeline-marker-size'
   | '--lr-tool-timeline-pending-approval-border-color'
   | '--lr-tool-timeline-pending-marker-color'

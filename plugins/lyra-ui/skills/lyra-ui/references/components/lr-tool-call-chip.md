@@ -29,11 +29,17 @@ its content.
 **Properties:**
 
 - `name: string = ''` — the tool/function name, e.g. `web_search`
+- `displayName?: string` (attribute `display-name`, 21.1.0) — the application's own,
+  already-translated label for the tool (e.g. `Lecture d’un fichier`). It replaces `name` in the
+  visible `name` part and the chip's accessible name only; `lr-tool-call-chip-select` still reports
+  the raw `name`. Unset or empty shows `name`
 - `category: string = ''` — optional grouping label, e.g. `research`
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
-  glyph, accent color, and `status-text`; same status vocabulary as `<lr-tool-result-dialog>` so a
-  call's chip and its detail dialog always agree; unknown runtime values render the pending icon,
-  text, and accessible label instead of failing the update
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
+  drives the glyph, accent color, and `status-text`; same status vocabulary as
+  `<lr-tool-result-dialog>` so a call's chip and its detail dialog always agree; `incomplete`
+  (21.1.0) is a call that ended without a result (an interrupted stream, a cancelled run) and reads
+  `Incomplete` (`statusIncomplete`) with its own static glyph in the neutral `pending` tone; unknown
+  runtime values render the pending icon, text, and accessible label instead of failing the update
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset
@@ -58,7 +64,7 @@ content — assigned content wins; otherwise the `icon` prop is rendered as a li
 the built-in glyph for the current `status` is used)
 
 **CSS parts:** `base` (the clickable `<button>`), `icon`, `label` (wrapper around `category`, `name`,
-`summary`), `category`, `name`, `summary`, `meta` (wrapper around `status-text` and `duration`),
+`summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
 `status-text`, `duration`, `tooltip` (the floating detail popup, only meaningful while open)
 
 **Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-transition-ambient)`,
@@ -66,7 +72,7 @@ i.e. `1.8s ease-in-out` at the shipped token value and `0.001ms linear` under
 `prefers-reduced-motion` — running-icon animation duration/timing) and `--lr-transition-ambient`
 (default `1.8s ease-in-out` — pending-icon pulse duration/timing).
 `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and `--lr-tool-call-chip-border` are public
-component hooks whose private defaults follow `status` (e.g. `pending` →
+component hooks whose private defaults follow `status` (e.g. `pending` and `incomplete` →
 `--lr-color-text-quiet`/`--lr-color-surface`/`--lr-color-border`; `running` → brand; `success` →
 success; `error` → danger; `denied` → warning). Set them on an ancestor to retheme a subtree or
 directly on one chip; either public value remains authoritative in every status. Shared tokens

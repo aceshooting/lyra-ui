@@ -2180,17 +2180,21 @@ override takes precedence over either page-level choice.
 
 To keep `<html lang>`/`dir` in step with `setLyraLocale()` — which everything _outside_ this library
 reads, from `:lang()` rules to spellcheck to a screen reader's pronunciation — use
-`bridgeLyraLocale()` from `@aceshooting/lyra-ui/utilities/localization.js` (see
+`bridgeLyraLocale()` from `@aceshooting/lyra-ui/localization.js` (see
 [Shared helpers](#shared-helpers-utilities)).
 
 The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getLyraLocaleDirection`,
 `getRegisteredLyraLocales`, `getRegisteredLyraLocaleKeys`, `subscribeLyraLocaleRegistry`,
-`resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
+`subscribeLyraLocale`, `bridgeLyraLocale`, `resolveLyraLocale`, `resolveLyraDirection`,
+`resolveLyraString`, `resolveLyraScopedString`, `LYRA_DEFAULT_STRINGS`, and the types
 `LyraLocaleStrings`, `LyraLocaleMeta`, `LyraLocaleDirection`, `LyraMessageKey`, `LyraMessage`,
-`LyraPluralMessage` and `LyraPluralCategory`. The package root continues to re-export the same
-surface for compatibility and remains registration-free; use the dedicated entry when the
-application only needs locale setup and the narrower import graph.
+`LyraPluralMessage`, `LyraPluralCategory`, `LyraLocaleBridgeOptions` and `LyraLocaleBridgeCleanup`.
+The package root continues to re-export the runtime for compatibility and remains registration-free;
+use the dedicated entry when the application only needs locale setup and the narrower import graph.
+The `@aceshooting/lyra-ui/utilities/localization.js` entry point is deprecated, with removal not
+before 23.0.0: every name it exports is exported here as the identical binding, so change the import
+specifier to `@aceshooting/lyra-ui/localization.js` and nothing else.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
 read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
 calendar output goes through `Intl`.
@@ -2269,7 +2273,7 @@ through to the next valid tier.
 sorted, deduped and canonically spelled. `subscribeLyraLocaleRegistry(listener: () => void): () =>
 void` fires when registry membership grows, including for a newly registered locale that is not
 active; extending an existing catalog does not change membership and does not fire it.
-`subscribeLyraLocale()` (on `@aceshooting/lyra-ui/utilities/localization.js`) instead fires when the
+`subscribeLyraLocale()` (also on `@aceshooting/lyra-ui/localization.js`) instead fires when the
 active selection changes or a registration can alter the active locale's messages/direction, and
 filters unrelated registrations. Both return an idempotent unsubscribe. Delivery uses the eligible
 starting listener snapshots: one callback failure cannot prevent later active, component or
@@ -2468,6 +2472,14 @@ import {
   validates them on `tool-upsert` events and `tool-call` parts: a non-finite or non-number time, or
   a `redactedFields` that is not an array of at most 100 strings of at most 4,096 characters, fails
   the event as `invalid_stream_event`.
+- **Tool display name and incomplete calls** (21.1.0) — `ToolInvocation.displayName` is the
+  application's own, already-translated tool label; `<lr-message-parts>` (both `tool-display`
+  modes) and `<lr-tool-timeline>` show it in place of `name`, which still selects the result
+  renderer. `status: 'incomplete'` marks a call that ended without a result (an interrupted stream,
+  a cancelled run); set it yourself on a `tool-upsert` or `tool-call` part, since the adapters never
+  infer it. The runtime accepts both on `tool-upsert` events, `tool-call` parts and message
+  snapshots; a `displayName` that is not a string of at most `maxIdentifierCharacters` fails the
+  event as `invalid_stream_event`, and a later upsert that omits it keeps the retained one.
 - **Resource limits** — pass a partial `AgentStreamLimits` to `createAgentStreamState()`, or adapter
   limit options to the relevant adapter. The exported `DEFAULT_AGENT_STREAM_LIMITS`,
   `DEFAULT_AI_SDK_ADAPTER_LIMITS`, `DEFAULT_AG_UI_ADAPTER_LIMITS`, and
@@ -3308,9 +3320,12 @@ readonly politeness: AnnouncementPoliteness; messageTtlMs: number; announce(text
 release(): void }`, and `AnnouncerTimerHost { setTimeout(handler: () => void, timeout: number):
 number; clearTimeout(handle: number): void }`.
 - **`localization` → `subscribeLyraLocale(listener): () => void` and
-  `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime,
-  which the side-effect-free `@aceshooting/lyra-ui/localization.js` entry does not carry (that one
-  has `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization").
+  `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime.
+  **This `utilities/localization.js` entry point is deprecated**, with removal not before 23.0.0:
+  import every name below from the side-effect-free `@aceshooting/lyra-ui/localization.js` entry,
+  which exports the identical bindings and types. The extensionless `@aceshooting/lyra-ui/utilities`
+  barrel keeps exporting them. `subscribeLyraLocale()` is distinct from
+  `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization".
   `subscribeLyraLocale()` fires whenever the active selection changes, and when a newly registered
   or extended catalog can alter that selection's messages or direction. Registrations unrelated to
   the active lookup chain are filtered. An application can therefore re-render its **own**
@@ -3333,8 +3348,7 @@ number; clearTimeout(handle: number): void }`.
   Its exact options record is `LyraLocaleBridgeOptions { target?: Element; direction?: boolean }`.
 
   ```ts
-  import { bridgeLyraLocale } from "@aceshooting/lyra-ui/utilities/localization.js";
-  import { setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
+  import { bridgeLyraLocale, setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
   import "@aceshooting/lyra-ui/translations/ar.js";
 
   const stop = bridgeLyraLocale(); // mirrors onto <html>
@@ -3345,13 +3359,13 @@ number; clearTimeout(handle: number): void }`.
   `resolveLyraScopedString(/* public names: host, key, defaults, overrides, fallback, values */):
 unknown` is a scoped variant of `resolveLyraString()` (see "Localization"): the same
 override → fallback → registered-locale-catalog resolution chain, but against a caller-supplied
-`defaults` record instead of the complete `LYRA_DEFAULT_STRINGS` catalog. It lives on this
-tree-shakable entry rather than the side-effect-free `@aceshooting/lyra-ui/localization.js` one so
-that resolving a handful of an application's own messages never pulls in the full compatibility
-catalog to do it — pass a small `defaults` object of just the keys used.
+`defaults` record instead of the complete `LYRA_DEFAULT_STRINGS` catalog, so resolving a handful
+of an application's own messages never needs the full compatibility catalog — pass a small
+`defaults` object of just the keys used. `@aceshooting/lyra-ui/localization.js` is side-effect-free,
+so a bundler drops the unused catalog; an unbundled graph that imports it still loads the catalog.
 
   ```ts
-  import { resolveLyraScopedString } from "@aceshooting/lyra-ui/utilities/localization.js";
+  import { resolveLyraScopedString } from "@aceshooting/lyra-ui/localization.js";
 
   const label = resolveLyraScopedString(host, "save", { save: "Save" });
   ```
@@ -3748,6 +3762,7 @@ These named interfaces and helper signatures are available to typed integrations
   `ToolInvocation {
   id: unknown;
   name: unknown;
+  displayName: unknown;
   args: unknown;
   status: unknown;
   result: unknown;
@@ -29436,7 +29451,16 @@ modes use the same expression semantics at initial render and after a theme chan
 **Properties:**
 
 - `center: [number, number] = [0, 0]`
-- `zoom: number = 2`
+- `zoom: number = 2` — `center` and `zoom` are the declarative camera. Assigning either moves the
+  map without emitting anything. When the camera settles after a user gesture or `fitBounds()`, the
+  element writes that camera into both and reports it through `lr-map-view-change`, so its next
+  update never resets it, and a later, different assignment still moves the map. Assigning a value
+  the map already shows moves nothing, so echoing a reported camera back, however late, never stops
+  an animation or gesture. An assignment that does interrupt one (a fit still animating, a
+  gesture's inertia) applies the whole declared camera, `center` and `zoom` alike, so the axis you
+  did not assign is not left wherever the interrupted movement stopped; with nothing in flight,
+  only the assigned axis moves. Because both track the settled camera, a map rebuilt after a
+  disconnect/reconnect opens at the last settled camera rather than the originally declared one.
 - `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
   constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
   construction to stop repeating the world horizontally. This is a construction-time option, so a
@@ -29851,6 +29875,73 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 `false` when the peer is unavailable, allowing an application to choose a fallback before connecting
 an element.
 
+`fitBounds(bounds: LyraMapBounds, options?: LyraMapFitBoundsOptions): boolean` frames a box
+`[[west, south], [east, north]]` in the viewport: the way to show every current marker, or a
+selected region, whenever the data set changes. Use it instead of calling the peer's own
+`fitBounds()` through `map`, which the element neither knows about nor reports. Once the camera
+settles, the element writes it into `center`/`zoom` and emits `lr-map-view-change` with
+`source: 'fit'`, so declarative state stays in sync and the element never resets the fitted camera.
+
+- `options.padding` — screen pixels kept clear around the box: one number for every side, or a
+  `LyraMapPadding { top?, right?, bottom?, left? }`. The sides are the viewport's physical sides in
+  both text directions, because the map's projected space is physical. A negative or non-finite
+  side counts as `0`. Defaults to `0`.
+- `options.maxZoom` — the highest zoom the fit may reach, so one marker or a tight cluster does not
+  zoom to the street. Clamped into `[0, 22]`; a non-finite value sets no ceiling.
+- `options.animate` — defaults to `true`. The camera never animates under
+  `prefers-reduced-motion: reduce`.
+- Latitudes lie in `[-90, 90]`, with `south <= north`, and longitudes in `[-180, 180]`. A box
+  crossing the antimeridian takes either of MapLibre's forms: `west > east`, or `east` unwrapped
+  past 180, up to one full turn east of `west` (`[[170, -10], [190, 10]]`, the form MapLibre's
+  `LngLatBounds` produces). A single point is a valid zero-size box; pair it with `maxZoom`.
+  Anything else (non-finite or non-number values, out-of-range coordinates, an inverted latitude
+  span, the wrong shape) returns `false` without moving or queueing anything, with a
+  development-mode warning.
+- Callable before the map exists, whether the peer is still loading or an off-screen map has not
+  been constructed yet. The most recent request is queued and applied without animation right
+  after construction, unless `center` or `zoom` has been given a different value since the call.
+  Re-assigning the value already held (a framework re-render building an equal array, say) keeps
+  the queued fit.
+- A `center`/`zoom` assignment made while a fit is still animating wins: the interrupted fit is
+  neither written back nor reported, and the camera lands on the whole declared `center`/`zoom`.
+- Returns `true` once the fit is running or queued, and `false` when the loaded peer cannot fit a
+  box. When the padded box cannot fit the map's current size (padding wider or taller than the
+  map), MapLibre leaves the camera where it is and logs its own warning: the call still returns
+  `true`, and no `lr-map-view-change` fires.
+
+There is deliberately no declarative `bounds` property. `center` and `zoom` already describe the
+camera; a third camera input would need a precedence rule against them, and a framework that
+rebuilds its arrays on every render would refit on every render, pulling the camera away from a user
+who has just panned. A one-shot command whose result lands in `center`/`zoom` keeps one camera input.
+
+```ts
+import type {
+  LyraMap,
+  LyraMapBounds,
+  LyraMapMarker,
+  LyraMapViewChangeDetail,
+} from '@aceshooting/lyra-ui/components/media/map/map.class.js';
+
+let camera: LyraMapViewChangeDetail | undefined;
+const mapEl = document.querySelector('lr-map') as LyraMap;
+mapEl.addEventListener('lr-map-view-change', (event) => {
+  // Keep the host's own camera state in step: { center, zoom, source }.
+  camera = event.detail;
+});
+
+function showMarkers(markers: LyraMapMarker[]): void {
+  mapEl.markers = markers;
+  if (markers.length === 0) return;
+  const lngs = markers.map((marker) => marker.lngLat[0]);
+  const lats = markers.map((marker) => marker.lngLat[1]);
+  const box: LyraMapBounds = [
+    [Math.min(...lngs), Math.min(...lats)],
+    [Math.max(...lngs), Math.max(...lats)],
+  ];
+  mapEl.fitBounds(box, { padding: 48, maxZoom: 14 });
+}
+```
+
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
 `lr-map-legend-toggle` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
 hiddenCategories }` — the activated row's category key, its proposed visibility, and the complete
@@ -29883,7 +29974,16 @@ separately because it is a synthetic aggregate rather than one of your features:
 is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, which is what a
 zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
 the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
-layer is never queried at all — MapLibre returns no features for a rendered density surface
+layer is never queried at all — MapLibre returns no features for a rendered density surface.
+Also `lr-map-view-change` (non-cancelable; frozen `LyraMapViewChangeDetail { center, zoom, source }`,
+`source` being `LyraMapViewChangeSource = 'user' | 'fit'`), fired once each time the camera settles
+after a user gesture (drag, wheel, touch, keyboard, Shift+drag box zoom, or a standard peer
+navigation button) or a `fitBounds()` call. `center` is `[longitude, latitude]` with the longitude
+wrapped into `[-180, 180]`. The element has already written the camera into `center` and `zoom`
+when it fires, so a host that mirrors camera state assigns the detail back, at any later time,
+without moving the map. Assigning `center`/`zoom` reconciles without emitting it, so a controlled
+host cannot loop, and camera moves made directly through `map` are not reported — which is why
+`'user'` and `'fit'` are the only sources.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
@@ -32623,11 +32723,15 @@ These named interfaces and helper signatures are available to typed integrations
     setZoom(zoom: number): unknown;
     resize(): unknown;
     setMaxBounds?(bounds: readonly [readonly [number, number], readonly [number, number]] | null): unknown;
+    fitBounds?(bounds: [[number, number], [number, number]], options: Record<string, unknown>, eventData: Record<string, unknown>): unknown;
+    isMoving?(): boolean;
     remove(): void;
     on(type: 'error', listener: (event: {
       error?: unknown;
     }) => void): this;
     on(type: 'load', listener: () => void): this;
+    on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
+    on(type: 'boxzoomend', listener: () => void): this;
     on(type: 'click', listener: (event: {
       point: unknown;
       lngLat: {
@@ -32816,6 +32920,26 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraMapLegendPanelToggleDetail {
     readonly open: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapPadding {
+    readonly top?: number;
+    readonly right?: number;
+    readonly bottom?: number;
+    readonly left?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapFitBoundsOptions {
+    readonly padding?: number | LyraMapPadding;
+    readonly maxZoom?: number;
+    readonly animate?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapViewChangeDetail {
+    readonly center: readonly [number, number];
+    readonly zoom: number;
+    readonly source: LyraMapViewChangeSource;
+  }`
+  `LyraMapViewChangeSource = 'user' | 'fit'`.
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapStyleSpecification {
     readonly version: 8;
@@ -41403,16 +41527,23 @@ duration; expanding shows arguments, error and result in place) and pairs it wit
 - Everything else renders as in chip display: unpaired results, a result whose call is outside the
   rendered window, duplicate results after the first, and custom-rendered calls or results. A
   second call part with the same invocation id renders its own unpaired block.
-- The block binds `name`, `callId` and `args` from the invocation, and `redactedFields` from the
+- The block binds `name`, `displayName`, `callId` and `args` from the invocation, and `redactedFields` from the
   invocation-level paths described under redaction below; `result` from
   the paired part (else `invocation.result`); `error` from the paired part when it carries one (else
   `invocation.error`); and `durationMs = endedAt - startedAt` when both are set (else no duration).
   `expanded` is never bound, so a user-expanded block stays open across `parts` updates.
-- Block status, first match wins: invocation `denied` → `denied`; invocation `error` or a paired
-  error result → `error`; a paired result still `streaming` → `running`; any paired result →
+- Block status, first match wins: invocation `denied` → `denied`; invocation `incomplete` (a call
+  that ended without a result, 21.1.0) → `incomplete`, whatever result part is paired; invocation
+  `error` or a paired error result → `error`; a paired result still `streaming` → `running`; any paired result →
   `success`; otherwise the invocation's own status (an unknown value → `pending`), so a call still
   waiting on its result keeps showing `pending`/`running`.
 - The tool-call wrapper stretches to the message width in block display.
+
+**Display name in both displays** (21.1.0). An invocation's `displayName` (the application's own,
+already-translated tool label) is bound to the chip's or the block's `displayName`, so the visible
+and announced tool name is the translated one while `name` still selects the result renderer and
+is still what `lr-tool-call-chip-select` and `lr-render-error` report. A non-string value is not
+forwarded.
 
 **Redaction in both displays.** An invocation's `redactedFields` (dotted paths rooted at
 `args`/`result`/`error`, see `<lr-tool-call-block>`) masks every built-in rendering of its payload
@@ -42243,11 +42374,17 @@ its content.
 **Properties:**
 
 - `name: string = ''` — the tool/function name, e.g. `web_search`
+- `displayName?: string` (attribute `display-name`, 21.1.0) — the application's own,
+  already-translated label for the tool (e.g. `Lecture d’un fichier`). It replaces `name` in the
+  visible `name` part and the chip's accessible name only; `lr-tool-call-chip-select` still reports
+  the raw `name`. Unset or empty shows `name`
 - `category: string = ''` — optional grouping label, e.g. `research`
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
-  glyph, accent color, and `status-text`; same status vocabulary as `<lr-tool-result-dialog>` so a
-  call's chip and its detail dialog always agree; unknown runtime values render the pending icon,
-  text, and accessible label instead of failing the update
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
+  drives the glyph, accent color, and `status-text`; same status vocabulary as
+  `<lr-tool-result-dialog>` so a call's chip and its detail dialog always agree; `incomplete`
+  (21.1.0) is a call that ended without a result (an interrupted stream, a cancelled run) and reads
+  `Incomplete` (`statusIncomplete`) with its own static glyph in the neutral `pending` tone; unknown
+  runtime values render the pending icon, text, and accessible label instead of failing the update
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset
@@ -42272,7 +42409,7 @@ content — assigned content wins; otherwise the `icon` prop is rendered as a li
 the built-in glyph for the current `status` is used)
 
 **CSS parts:** `base` (the clickable `<button>`), `icon`, `label` (wrapper around `category`, `name`,
-`summary`), `category`, `name`, `summary`, `meta` (wrapper around `status-text` and `duration`),
+`summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
 `status-text`, `duration`, `tooltip` (the floating detail popup, only meaningful while open)
 
 **Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-transition-ambient)`,
@@ -42280,7 +42417,7 @@ i.e. `1.8s ease-in-out` at the shipped token value and `0.001ms linear` under
 `prefers-reduced-motion` — running-icon animation duration/timing) and `--lr-transition-ambient`
 (default `1.8s ease-in-out` — pending-icon pulse duration/timing).
 `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and `--lr-tool-call-chip-border` are public
-component hooks whose private defaults follow `status` (e.g. `pending` →
+component hooks whose private defaults follow `status` (e.g. `pending` and `incomplete` →
 `--lr-color-text-quiet`/`--lr-color-surface`/`--lr-color-border`; `running` → brand; `success` →
 success; `error` → danger; `denied` → warning). Set them on an ancestor to retheme a subtree or
 directly on one chip; either public value remains authoritative in every status. Shared tokens
@@ -42387,7 +42524,7 @@ Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plainte
 - `copyable: boolean = false` (reflected) — shows a copy-to-clipboard affordance alongside the
   fallback view, for either `fallback` kind: forwarded to `<lr-json-viewer>`'s own `copyable` for
   `"json"`, or a `<lr-copy-button>` rendered next to the text for `"text"`.
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'success'` (reflected) — the outcome of
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'success'` (reflected) — the outcome of
   the currently-rendered result, as reported by the matched renderer's own `context.reportStatus()`
   (see below). Reset to `'success'` immediately before every `render()` call, so a renderer that
   never calls `reportStatus` — including every pre-existing 2-arg renderer written before this
@@ -42469,8 +42606,9 @@ DirectToolRendererDefinition }>` and `render?: never` — lazy loader
 **`ToolRenderContext`** — the shape of `render()`'s 3rd argument:
 
 - `reportStatus: (status: ToolResultStatus) => void` — reports this render's outcome without
-  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied'`, the same
-  union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported from this module. Calling
+  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied' |
+  'incomplete'`, the same union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported
+  from this module. Calling
   it is entirely optional: a renderer that never calls it leaves `<lr-tool-result-view>`'s `status`
   property at its default, `'success'`. This threads through the lazy `load()` path exactly the
   same way — a `render()` resolved via `load()` receives the same 3rd `context` argument as one
@@ -42602,8 +42740,10 @@ title.
   cloning that name. A direct property assignment made without the attribute can name the panel
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
-  header's status badge; same status vocabulary as `<lr-tool-call-chip>`
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
+  drives the header's status badge; same status vocabulary as `<lr-tool-call-chip>`. `incomplete`
+  (21.1.0) is a call that ended without a result; its badge reads `Incomplete` in the neutral
+  pending look, through its own `--lr-tool-result-dialog-incomplete-*` pair
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; omitted
   from the header entirely when unset
 - `maximized: boolean = false` (reflected) — near-fullscreen presentation of the same open dialog
@@ -42706,6 +42846,8 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 - `--lr-tool-result-dialog-error-bg` — Error status background. Default: `var(--lr-color-danger-quiet)`.
 - `--lr-tool-result-dialog-denied-color` — Denied status foreground. Default: `var(--lr-color-warning)`.
 - `--lr-tool-result-dialog-denied-bg` — Denied status background. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-tool-result-dialog-incomplete-color` — Incomplete status foreground (21.1.0). Default: `var(--lr-color-text-quiet)`.
+- `--lr-tool-result-dialog-incomplete-bg` — Incomplete status background (21.1.0). Default: `transparent`.
 
 ---
 
@@ -45140,9 +45282,9 @@ primitives, with retry counts and sensitive-field redaction.
 **Properties:**
 
 - `entries: readonly ToolTimelineEntry[] = []` (attribute: false) — `ToolTimelineEntry` **extends
-  `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; args:
-Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
-  `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied'`) with `{ startedAt?:
+  `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; displayName?:
+string; args: Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
+  `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete'`) with `{ startedAt?:
 number; endedAt?: number; retryCount?: number; redactedFields?: readonly string[]; needsApproval?: boolean;
 approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies the owning run or
   source generation when invocation ids can be reused; every expansion, activation, renderer error,
@@ -45150,7 +45292,12 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   are omitted; a blank optional `sourceKey` is treated as absent. Duplicate occurrences of the same
   pair are normalized before any lookup with a deterministic first-occurrence-wins policy. `icon` is a
   literal hint forwarded to the composed tool-call chip. A foreign runtime `status` normalizes once
-  to `pending` before both the timeline row and its composed chip render.
+  to `pending` before both the timeline row and its composed chip render. `displayName` (21.1.0),
+  the application's own translated tool label, is forwarded to the chip's `displayName` and names
+  the entry's details disclosure (`Details for Lecture d’un fichier`); an empty, omitted or
+  non-string value shows `name`. `name` still selects the result renderer, is still the `toolName`
+  in `lr-tool-render-error`, and still names the tool in the approval dialog, so the reviewer
+  authorizes the exact tool.
   Timestamps are epoch milliseconds; entries sort ascending by `startedAt`,
   and an entry with none sorts after every timed entry (keeping its relative position among other
   untimed ones) and renders no visible timestamp. `startedAt`+`endedAt` derive the `durationMs`
@@ -45231,6 +45378,8 @@ per-entry timeline marker dot's size, which also sets the entry grid's leading c
 `status="denied"` entry, decoupled from the pending-approval border color below so either can be
 retinted independently; `--lr-tool-timeline-pending-marker-color` (default
 `var(--lr-color-text-quiet)`) — rail-dot color for a `status="pending"` entry;
+`--lr-tool-timeline-incomplete-marker-color` (21.1.0, default `var(--lr-color-text-quiet)`) —
+rail-dot color for a `status="incomplete"` entry, independent of the pending one;
 `--lr-tool-timeline-pending-approval-border-color` (default
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
@@ -46141,6 +46290,7 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from ToolInvocation.
     id: string;
     name: string;
+    displayName?: string;
     args: Record<string, unknown>;
     status: ToolCallStatus;
     result?: unknown;
@@ -46201,11 +46351,19 @@ progress, and `No data` only for a terminal status.
 **Properties:**
 
 - `name: string = ''` — tool name; an empty name renders the localized generic `Tool call` label
+- `displayName?: string` (attribute `display-name`, 21.1.0) — the application's own,
+  already-translated label for the tool. It replaces `name` inside the localized header verb only
+  (`Used Lecture d’un fichier`), so the status wording stays localized; `name` still selects the
+  result renderer and is still reported in `lr-render-error`. Unset or empty shows `name`; a
+  `label` override replaces the whole header, this included
 - `callId: string = ''` (attribute `call-id`) — invocation id echoed in `lr-toggle` and
   `lr-render-error` details
 - `status: ToolCallStatus = 'pending'` (reflected, including the default) —
-  `'pending'|'running'|'success'|'error'|'denied'`; selects the header verb, glyph and accent.
-  Values outside the set normalize and reflect as `pending`
+  `'pending'|'running'|'success'|'error'|'denied'|'incomplete'`; selects the header verb, glyph
+  and accent. `incomplete` (21.1.0) is a call that ended without a result (an interrupted stream, a
+  cancelled run): it reads `Did not finish using {name}` (`toolCallBlockHeaderIncomplete`), or
+  `Incomplete` (`statusIncomplete`) in `status-text` beside a `label`, with a static glyph and the
+  neutral accent. Values outside the set normalize and reflect as `pending`
 - `expanded: boolean = false` (reflected) — whether the details are shown
 - `label?: string` — header override, used verbatim (including `''`); when set, the localized
   status text renders beside it in `status-text`. Unset renders the localized status verb
@@ -46256,7 +46414,8 @@ set), `duration` (only while finite), `body` (the disclosed region), `args`, `ar
   header/body divider
 - `--lr-tool-call-block-radius` (default `var(--lr-radius)`) — card radius
 - `--lr-tool-call-block-accent` — status glyph colour; its private default follows `status`
-  (`--lr-color-text-quiet`, then brand while running, success, danger on error, warning when denied)
+  (`--lr-color-text-quiet` while pending or incomplete, then brand while running, success, danger
+  on error, warning when denied)
 - `--lr-tool-call-block-error-color` (default `var(--lr-color-danger)`) — error section text
 
 The running glyph spins and the pending glyph pulses at `--lr-transition-ambient`; both stop under

@@ -31,11 +31,19 @@ progress, and `No data` only for a terminal status.
 **Properties:**
 
 - `name: string = ''` — tool name; an empty name renders the localized generic `Tool call` label
+- `displayName?: string` (attribute `display-name`, 21.1.0) — the application's own,
+  already-translated label for the tool. It replaces `name` inside the localized header verb only
+  (`Used Lecture d’un fichier`), so the status wording stays localized; `name` still selects the
+  result renderer and is still reported in `lr-render-error`. Unset or empty shows `name`; a
+  `label` override replaces the whole header, this included
 - `callId: string = ''` (attribute `call-id`) — invocation id echoed in `lr-toggle` and
   `lr-render-error` details
 - `status: ToolCallStatus = 'pending'` (reflected, including the default) —
-  `'pending'|'running'|'success'|'error'|'denied'`; selects the header verb, glyph and accent.
-  Values outside the set normalize and reflect as `pending`
+  `'pending'|'running'|'success'|'error'|'denied'|'incomplete'`; selects the header verb, glyph
+  and accent. `incomplete` (21.1.0) is a call that ended without a result (an interrupted stream, a
+  cancelled run): it reads `Did not finish using {name}` (`toolCallBlockHeaderIncomplete`), or
+  `Incomplete` (`statusIncomplete`) in `status-text` beside a `label`, with a static glyph and the
+  neutral accent. Values outside the set normalize and reflect as `pending`
 - `expanded: boolean = false` (reflected) — whether the details are shown
 - `label?: string` — header override, used verbatim (including `''`); when set, the localized
   status text renders beside it in `status-text`. Unset renders the localized status verb
@@ -86,7 +94,8 @@ set), `duration` (only while finite), `body` (the disclosed region), `args`, `ar
   header/body divider
 - `--lr-tool-call-block-radius` (default `var(--lr-radius)`) — card radius
 - `--lr-tool-call-block-accent` — status glyph colour; its private default follows `status`
-  (`--lr-color-text-quiet`, then brand while running, success, danger on error, warning when denied)
+  (`--lr-color-text-quiet` while pending or incomplete, then brand while running, success, danger
+  on error, warning when denied)
 - `--lr-tool-call-block-error-color` (default `var(--lr-color-danger)`) — error section text
 
 The running glyph spins and the pending glyph pulses at `--lr-transition-ambient`; both stop under

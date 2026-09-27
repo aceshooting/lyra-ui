@@ -49,7 +49,7 @@ Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plainte
 - `copyable: boolean = false` (reflected) — shows a copy-to-clipboard affordance alongside the
   fallback view, for either `fallback` kind: forwarded to `<lr-json-viewer>`'s own `copyable` for
   `"json"`, or a `<lr-copy-button>` rendered next to the text for `"text"`.
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'success'` (reflected) — the outcome of
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'success'` (reflected) — the outcome of
   the currently-rendered result, as reported by the matched renderer's own `context.reportStatus()`
   (see below). Reset to `'success'` immediately before every `render()` call, so a renderer that
   never calls `reportStatus` — including every pre-existing 2-arg renderer written before this
@@ -131,8 +131,9 @@ DirectToolRendererDefinition }>` and `render?: never` — lazy loader
 **`ToolRenderContext`** — the shape of `render()`'s 3rd argument:
 
 - `reportStatus: (status: ToolResultStatus) => void` — reports this render's outcome without
-  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied'`, the same
-  union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported from this module. Calling
+  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied' |
+  'incomplete'`, the same union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported
+  from this module. Calling
   it is entirely optional: a renderer that never calls it leaves `<lr-tool-result-view>`'s `status`
   property at its default, `'success'`. This threads through the lazy `load()` path exactly the
   same way — a `render()` resolved via `load()` receives the same 3rd `context` argument as one
