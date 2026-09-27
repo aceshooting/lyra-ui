@@ -1557,6 +1557,132 @@ it('maxLabels="auto" derives a deterministic category-label density from the res
   expect(narrowCount).to.equal(2);
 });
 
+describe('maxLabels="auto" with inward-anchored boundary labels', () => {
+  // A day of 10-minute readings: 144 chronological HH:mm categories, 00:00 through 23:50.
+  const DAY_LABELS = Array.from({ length: 144 }, (_, index) => {
+    const minutes = index * 10;
+    return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  });
+  const DAY_DATASETS = [
+    { label: 'Load', data: DAY_LABELS.map((_, index) => 40 + 20 * Math.sin(index / 12)) },
+    { label: 'Solar', data: DAY_LABELS.map((_, index) => Math.max(0, 60 * Math.sin((index - 36) / 23))) },
+    { label: 'Grid', data: DAY_LABELS.map((_, index) => 25 + (index % 7)) },
+  ];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // The documented automatic-density model (llms/charts.md, `maxLabels`): a 7px-per-character
+  // width estimate plus 10px of breathing room between adjacent labels.
+  const ESTIMATED_CHARACTER_WIDTH = 7;
+  const BREATHING_ROOM = 10;
+
+  async function mountAuto(
+    dir: 'ltr' | 'rtl',
+    type: 'line' | 'bar',
+    width: number,
+    labels: readonly string[],
+    datasets: readonly { label: string; data: number[] }[],
+  ): Promise<LyraLiteChart> {
+    const el = await mount(html`<lr-lite-chart
+      dir=${dir}
+      type=${type}
+      max-labels="auto"
+      value-axis-gutter="auto"
+      style="inline-size: ${width}px"
+      .labels=${labels}
+      .datasets=${datasets}
+    ></lr-lite-chart>`);
+    await waitUntil(
+      () => Math.abs((el as unknown as { plotWidth: number }).plotWidth - width) < 1,
+      `the ${width}px chart never resolved its plot width`,
+    );
+    await el.updateComplete;
+    return el;
+  }
+
+  /** Asserts the automatic-density contract on the rendered category row: both endpoints, source
+   *  order, full (unellipsized) text, and the breathing room between every adjacent pair -- both
+   *  as painted and under the deterministic estimate the selection is documented to use. */
+  function expectSpacedAutoLabels(el: LyraLiteChart, source: readonly string[], context: string): void {
+    const rtl = el.getAttribute('dir') === 'rtl';
+    const labels = categoryAxisLabels(el);
+    expect(labels.length, `${context}: auto density still decimates`).to.be.within(3, source.length - 1);
+    const texts = labels.map((label) => label.getAttribute('data-full-label') ?? '');
+    expect(texts[0], `${context}: first label`).to.equal(source[0]);
+    expect(texts.at(-1), `${context}: last label`).to.equal(source.at(-1));
+    const order = texts.map((text) => source.indexOf(text));
+    expect(order, `${context}: chronological order`).to.deep.equal([...order].sort((a, b) => a - b));
+    expect(new Set(order).size, `${context}: no duplicate label`).to.equal(order.length);
+
+    const estimatedLeft = (label: SVGTextElement, text: string): number => {
+      const x = Number(label.getAttribute('x'));
+      const width = text.length * ESTIMATED_CHARACTER_WIDTH;
+      const anchor = label.getAttribute('text-anchor');
+      if (anchor === 'middle') return x - width / 2;
+      // `start`/`end` are direction-relative: the visual side they grow toward swaps under RTL.
+      return (anchor === 'start') !== rtl ? x : x - width;
+    };
+    const boxes = labels.map(textGeometryBox);
+    for (let index = 0; index < labels.length; index++) {
+      // Density must make room for the real label, not ellipsize it into space it lacks.
+      expect(labels[index]!.textContent, `${context}: ${texts[index]} is not ellipsized`).to.equal(texts[index]);
+      if (index === 0) continue;
+      const pair = `${context}: ${texts[index - 1]} and ${texts[index]}`;
+      const painted = boxes[index]!.left - boxes[index - 1]!.right;
+      expect(painted, `${pair} paint only ${painted.toFixed(1)}px apart`).to.be.at.least(BREATHING_ROOM);
+      const estimated = estimatedLeft(labels[index]!, texts[index]!) -
+        (estimatedLeft(labels[index - 1]!, texts[index - 1]!) + texts[index - 1]!.length * ESTIMATED_CHARACTER_WIDTH);
+      expect(estimated, `${pair} are only ${estimated.toFixed(1)}px apart by the estimate`)
+        .to.be.at.least(BREATHING_ROOM - 1e-6);
+    }
+  }
+
+  for (const dir of ['ltr', 'rtl'] as const) {
+    it(`keeps the breathing room beside an inward-anchored first and last label (${dir})`, async () => {
+      for (const width of [1180, 1100, 960, 820, 640, 480]) {
+        const el = await mountAuto(dir, 'line', width, DAY_LABELS, DAY_DATASETS);
+        expectSpacedAutoLabels(el, DAY_LABELS, `${dir} ${width}px`);
+        el.remove();
+      }
+    });
+
+    it(`keeps the breathing room between coarse categories that cannot sit evenly (${dir})`, async () => {
+      // Twelve categories over a narrow plot: the old even-index rounding placed Mar and Apr (and
+      // Jun/Jul, Sep/Oct) a single category apart, 2px under the estimate.
+      for (const type of ['line', 'bar'] as const) {
+        for (const width of [300, 400]) {
+          const el = await mountAuto(dir, type, width, MONTHS, [
+            { label: 'Output', data: MONTHS.map((_, index) => index * 3 + 5) },
+          ]);
+          expectSpacedAutoLabels(el, MONTHS, `${dir} ${type} ${width}px`);
+          el.remove();
+        }
+      }
+    });
+  }
+
+  it('keeps every label when all of them already fit, even beside the anchored endpoints', async () => {
+    const el = await mountAuto('ltr', 'line', 600, MONTHS, [
+      { label: 'Output', data: MONTHS.map((_, index) => index + 1) },
+    ]);
+    expect(categoryAxisLabels(el).map((label) => label.textContent)).to.deep.equal(MONTHS);
+  });
+
+  it('still keeps the first and last label when a reordering barX leaves no source-order neighbors', async () => {
+    const labels = Array.from({ length: 40 }, (_, index) => `Week ${index + 1}`);
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      max-labels="auto"
+      style="inline-size: 400px"
+      .labels=${labels}
+      .datasets=${[{ label: 'Hours', data: labels.map((_, index) => index + 1) }]}
+      .barX=${(index: number) => 36 + (39 - index) * 8}
+    ></lr-lite-chart>`);
+    const texts = categoryAxisLabels(el).map((label) => label.getAttribute('data-full-label'));
+    expect(texts.length).to.be.within(2, labels.length - 1);
+    expect(texts).to.include('Week 1');
+    expect(texts).to.include('Week 40');
+  });
+});
+
 it('keeps an explicit numeric maxLabels authoritative over automatic density', async () => {
   const labels = Array.from({ length: 12 }, (_, index) =>
     `2026-08-${String(index + 1).padStart(2, '0')}`,
