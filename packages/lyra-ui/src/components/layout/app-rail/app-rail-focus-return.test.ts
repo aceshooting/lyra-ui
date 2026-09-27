@@ -1,5 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraAppRail, LyraAppRailToggleDetail } from './app-rail.class.js';
 import './app-rail.js';
 
@@ -361,6 +362,494 @@ describe('app rail mobile overlay focus return', () => {
       rail.open = false;
       await rail.updateComplete;
       cleanup();
+    }
+  });
+});
+
+async function settleFrames(count = 4): Promise<void> {
+  for (let frame = 0; frame < count; frame++) await nextFrame();
+}
+
+function blurActive(): void {
+  (document.activeElement as HTMLElement | null)?.blur();
+}
+
+async function openByKeyboard(rail: LyraAppRail, trigger: HTMLButtonElement): Promise<void> {
+  await focusByKeyboard(trigger);
+  rail.toggle();
+  await rail.updateComplete;
+  expect(rail.open).to.equal(true);
+}
+
+/** A focusable application region, the typical last-resort focus target. */
+function fallbackTarget(id: string, parent: Node = document.body): HTMLElement {
+  const main = document.createElement('main');
+  main.id = id;
+  main.tabIndex = -1;
+  main.textContent = 'View';
+  parent.appendChild(main);
+  return main;
+}
+
+/** `focusFallback` as a stable primitive for assertions: the id string, `null`, or the element's id. */
+function fallbackValue(rail: LyraAppRail): string | null {
+  const value = rail.focusFallback;
+  return value === null || typeof value === 'string' ? value : `element#${value.id}`;
+}
+
+type HostLoss = 'hidden' | 'inert ancestor';
+
+/** A host that takes the rail itself out of the layout as the overlay closes -- `hidden` on the
+ *  rail, or `inert` on its parent -- and puts it back when the overlay reopens. */
+function loseHostOnClose(rail: LyraAppRail, loss: HostLoss): () => void {
+  const parent = rail.parentElement!;
+  const onToggle = (event: Event): void => {
+    if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.open) {
+      rail.hidden = false;
+      parent.inert = false;
+      return;
+    }
+    if (loss === 'hidden') rail.hidden = true;
+    else parent.inert = true;
+  };
+  rail.addEventListener('lr-toggle', onToggle);
+  return () => {
+    rail.removeEventListener('lr-toggle', onToggle);
+    rail.hidden = false;
+    parent.inert = false;
+  };
+}
+
+describe('app rail focus return when nothing held focus at open', () => {
+  async function scriptOpenedRail(hideToggle: boolean): Promise<LyraAppRail> {
+    const rail = await fixture<LyraAppRail>(html`
+      <lr-app-rail ?hide-toggle=${hideToggle} style="--lr-transition-base:0ms">
+        <button type="button">Home</button>
+      </lr-app-rail>
+    `);
+    mobile(rail);
+    await rail.updateComplete;
+    blurActive();
+    rail.open = true;
+    await rail.updateComplete;
+    expect(rail.open).to.equal(true);
+    return rail;
+  }
+
+  it('continues past an overlay opened with nothing focused to the built-in toggle', async () => {
+    const rail = await scriptOpenedRail(false);
+    rail.open = false;
+    await rail.updateComplete;
+    const toggle = rail.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
+    await waitUntil(() => deepActive() === toggle, `focus stayed on ${describeActive()}`);
+  });
+
+  it('continues past an overlay opened with nothing focused to the rail host under hide-toggle', async () => {
+    const rail = await scriptOpenedRail(true);
+    rail.open = false;
+    await rail.updateComplete;
+    await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+    expect(rail.getAttribute('tabindex')).to.equal('-1');
+  });
+});
+
+describe('app rail focus fallback', () => {
+  const losses: HostLoss[] = ['hidden', 'inert ancestor'];
+  for (const path of closePaths) {
+    for (const loss of losses) {
+      it(`moves focus to focusFallback after ${path.name} when the rail host is lost (${loss})`, async () => {
+        const { rail, trigger, navItem, cleanup } = await hostWithHidingTrigger({ reShow: false });
+        const main = fallbackTarget('fallback-main');
+        const release = loseHostOnClose(rail, loss);
+        try {
+          rail.focusFallback = main;
+          await openByKeyboard(rail, trigger);
+          await path.close(rail, navItem);
+          await rail.updateComplete;
+          expect(rail.open).to.equal(false);
+          await waitUntil(() => deepActive() === main, `focus stayed on ${describeActive()}`);
+          expect(rail.hasAttribute('tabindex')).to.equal(false);
+        } finally {
+          release();
+          main.remove();
+          cleanup();
+        }
+      });
+    }
+  }
+
+  it('resolves the focus-fallback attribute as an id in the root of the rail', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const main = fallbackTarget('fb-main');
+    const release = loseHostOnClose(rail, 'hidden');
+    try {
+      rail.setAttribute('focus-fallback', 'fb-main');
+      await openByKeyboard(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === main, `focus stayed on ${describeActive()}`);
+    } finally {
+      release();
+      main.remove();
+      cleanup();
+    }
+  });
+
+  it('resolves focus-fallback inside the shadow root that contains the rail, never the document', async () => {
+    const decoy = fallbackTarget('scoped-main');
+    const outer = document.createElement('div');
+    document.body.appendChild(outer);
+    const root = outer.attachShadow({ mode: 'open' });
+    root.innerHTML = '<button id="scoped-trigger" type="button">Menu</button>'
+      + '<lr-app-rail hide-toggle focus-fallback="scoped-main" style="--lr-transition-base:0ms">'
+      + '<button type="button">Home</button></lr-app-rail>'
+      + '<main id="scoped-main" tabindex="-1">View</main>';
+    const rail = root.querySelector<LyraAppRail>('lr-app-rail')!;
+    const trigger = root.querySelector<HTMLButtonElement>('#scoped-trigger')!;
+    const scopedMain = root.querySelector<HTMLElement>('#scoped-main')!;
+    const onToggle = (event: Event): void => {
+      if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.open) trigger.style.visibility = 'hidden';
+      else rail.hidden = true;
+    };
+    try {
+      await rail.updateComplete;
+      rail.trigger = trigger;
+      mobile(rail);
+      await rail.updateComplete;
+      rail.addEventListener('lr-toggle', onToggle);
+      await openByKeyboard(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === scopedMain, `focus stayed on ${describeActive()}`);
+      expect(deepActive() === decoy, `focus moved to ${describeActive()}`).to.equal(false);
+    } finally {
+      rail.removeEventListener('lr-toggle', onToggle);
+      outer.remove();
+      decoy.remove();
+    }
+  });
+
+  it('prefers an available rail host over focusFallback', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const main = fallbackTarget('fallback-main');
+    try {
+      rail.focusFallback = main;
+      await openByKeyboard(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === rail, `focus stayed on ${describeActive()}`);
+      await settleFrames(2);
+      expect(deepActive() === main, `focus moved to ${describeActive()}`).to.equal(false);
+    } finally {
+      main.remove();
+      cleanup();
+    }
+  });
+
+  it('prefers a trigger the host re-shows over focusFallback', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: true });
+    const main = fallbackTarget('fallback-main');
+    const release = loseHostOnClose(rail, 'hidden');
+    try {
+      rail.focusFallback = main;
+      await openByKeyboard(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === trigger, `focus stayed on ${describeActive()}`);
+    } finally {
+      release();
+      main.remove();
+      cleanup();
+    }
+  });
+
+  const unavailable: Array<{ name: string; setUp(rail: LyraAppRail): { candidate: HTMLElement; dispose(): void } }> = [
+    {
+      name: 'hidden',
+      setUp: (rail) => {
+        const candidate = fallbackTarget('unavailable-main');
+        candidate.hidden = true;
+        rail.focusFallback = candidate;
+        return { candidate, dispose: () => candidate.remove() };
+      },
+    },
+    {
+      name: 'under an inert ancestor',
+      setUp: (rail) => {
+        const wrapper = document.createElement('div');
+        wrapper.inert = true;
+        document.body.appendChild(wrapper);
+        const candidate = fallbackTarget('unavailable-main', wrapper);
+        rail.focusFallback = candidate;
+        return { candidate, dispose: () => wrapper.remove() };
+      },
+    },
+    {
+      name: 'aria-hidden',
+      setUp: (rail) => {
+        const candidate = fallbackTarget('unavailable-main');
+        candidate.setAttribute('aria-hidden', 'true');
+        rail.focusFallback = candidate;
+        return { candidate, dispose: () => candidate.remove() };
+      },
+    },
+    {
+      name: 'an element removed from the document before the close',
+      setUp: (rail) => {
+        const candidate = fallbackTarget('unavailable-main');
+        rail.focusFallback = candidate;
+        candidate.remove();
+        return { candidate, dispose: () => candidate.remove() };
+      },
+    },
+    {
+      name: 'an id that resolves to nothing',
+      setUp: (rail) => {
+        const candidate = fallbackTarget('present-main');
+        rail.setAttribute('focus-fallback', 'missing-main');
+        return { candidate, dispose: () => candidate.remove() };
+      },
+    },
+    {
+      name: 'a region without a tabindex',
+      setUp: (rail) => {
+        const candidate = document.createElement('main');
+        candidate.id = 'unfocusable-main';
+        candidate.textContent = 'View';
+        document.body.appendChild(candidate);
+        rail.focusFallback = candidate;
+        return { candidate, dispose: () => candidate.remove() };
+      },
+    },
+    {
+      // Characterization only: anything inside the rail is unavailable whenever the rail host is.
+      name: 'content slotted into the rail itself',
+      setUp: (rail) => {
+        const candidate = document.createElement('button');
+        candidate.type = 'button';
+        candidate.slot = 'header';
+        candidate.textContent = 'Brand';
+        rail.appendChild(candidate);
+        rail.focusFallback = candidate;
+        return { candidate, dispose: () => candidate.remove() };
+      },
+    },
+  ];
+  for (const scenario of unavailable) {
+    it(`leaves focus where it is when focusFallback is ${scenario.name}`, async () => {
+      const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+      const { candidate, dispose } = scenario.setUp(rail);
+      const hadTabIndex = candidate.hasAttribute('tabindex');
+      const release = loseHostOnClose(rail, 'hidden');
+      try {
+        await openByKeyboard(rail, trigger);
+        await sendKeys({ press: 'Escape' });
+        await rail.updateComplete;
+        await settleFrames();
+        expect(deepActive() === candidate, `focus moved to ${describeActive()}`).to.equal(false);
+        expect(rail.hasAttribute('tabindex')).to.equal(false);
+        expect(candidate.hasAttribute('tabindex')).to.equal(hadTabIndex);
+      } finally {
+        release();
+        dispose();
+        cleanup();
+      }
+    });
+  }
+
+  it('resolves focusFallback when the pass runs, honoring a reassignment made while the overlay is open', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const first = fallbackTarget('first-main');
+    const second = fallbackTarget('second-main');
+    const release = loseHostOnClose(rail, 'hidden');
+    try {
+      rail.focusFallback = first;
+      await openByKeyboard(rail, trigger);
+      rail.focusFallback = second;
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === second, `focus stayed on ${describeActive()}`);
+    } finally {
+      release();
+      first.remove();
+      second.remove();
+      cleanup();
+    }
+  });
+
+  it('resolves focusFallback when the pass runs, honoring a reassignment made right after the close', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const first = fallbackTarget('first-main');
+    const second = fallbackTarget('second-main');
+    const release = loseHostOnClose(rail, 'hidden');
+    try {
+      rail.focusFallback = first;
+      await openByKeyboard(rail, trigger);
+      rail.toggle();
+      rail.focusFallback = second;
+      await rail.updateComplete;
+      expect(rail.open).to.equal(false);
+      await waitUntil(() => deepActive() === second, `focus stayed on ${describeActive()}`);
+    } finally {
+      release();
+      first.remove();
+      second.remove();
+      cleanup();
+    }
+  });
+
+  it('finds an id-named fallback the host re-creates from its own frame callback after the close', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    let current = fallbackTarget('re-main');
+    const release = loseHostOnClose(rail, 'hidden');
+    const recreate = (event: Event): void => {
+      if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.open) return;
+      requestAnimationFrame(() => {
+        current.remove();
+        current = fallbackTarget('re-main');
+      });
+    };
+    const original = current;
+    rail.addEventListener('lr-toggle', recreate);
+    try {
+      rail.setAttribute('focus-fallback', 're-main');
+      await openByKeyboard(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await waitUntil(() => current !== original && deepActive() === current, `focus stayed on ${describeActive()}`);
+    } finally {
+      rail.removeEventListener('lr-toggle', recreate);
+      release();
+      current.remove();
+      cleanup();
+    }
+  });
+
+  it('never takes back focus moved elsewhere before the pass, even with focusFallback set', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const main = fallbackTarget('fallback-main');
+    const elsewhere = document.createElement('input');
+    elsewhere.id = 'elsewhere';
+    elsewhere.setAttribute('aria-label', 'Elsewhere');
+    document.body.appendChild(elsewhere);
+    const release = loseHostOnClose(rail, 'hidden');
+    try {
+      rail.focusFallback = main;
+      await openByKeyboard(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      elsewhere.focus();
+      await settleFrames();
+      expect(deepActive() === elsewhere, `focus moved to ${describeActive()}`).to.equal(true);
+    } finally {
+      release();
+      elsewhere.remove();
+      main.remove();
+      cleanup();
+    }
+  });
+
+  it('abandons the fallback when the overlay reopens before the pass runs', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const main = fallbackTarget('fallback-main');
+    const release = loseHostOnClose(rail, 'hidden');
+    try {
+      rail.focusFallback = main;
+      await openByKeyboard(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      rail.toggle();
+      await rail.updateComplete;
+      await settleFrames();
+      expect(rail.open).to.equal(true);
+      expect(deepActive() === main, `focus moved to ${describeActive()}`).to.equal(false);
+    } finally {
+      rail.open = false;
+      await rail.updateComplete;
+      release();
+      main.remove();
+      cleanup();
+    }
+  });
+
+  it('is not consulted when a breakpoint change closes the overlay by leaving mobile', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const main = fallbackTarget('fallback-main');
+    try {
+      rail.focusFallback = main;
+      await openByKeyboard(rail, trigger);
+      (rail as unknown as { onMobileChange(event: { matches: boolean }): void }).onMobileChange({ matches: false });
+      await rail.updateComplete;
+      await settleFrames();
+      expect(rail.open).to.equal(false);
+      expect(deepActive() === main, `focus moved to ${describeActive()}`).to.equal(false);
+      const active = deepActive();
+      expect(rail.contains(active) || rail.shadowRoot!.contains(active), `focus moved to ${describeActive()}`)
+        .to.equal(true);
+    } finally {
+      main.remove();
+      cleanup();
+    }
+  });
+
+  it('reaches focusFallback after a script open with nothing focused', async () => {
+    const rail = await fixture<LyraAppRail>(html`
+      <lr-app-rail hide-toggle style="--lr-transition-base:0ms">
+        <button type="button">Home</button>
+      </lr-app-rail>
+    `);
+    const main = fallbackTarget('fallback-main');
+    try {
+      rail.focusFallback = main;
+      mobile(rail);
+      await rail.updateComplete;
+      blurActive();
+      rail.open = true;
+      await rail.updateComplete;
+      rail.hidden = true;
+      rail.open = false;
+      await rail.updateComplete;
+      await waitUntil(() => deepActive() === main, `focus stayed on ${describeActive()}`);
+    } finally {
+      rail.hidden = false;
+      main.remove();
+    }
+  });
+
+  it('unset (the default), a close with every target unavailable leaves focus where it is and hands the temporary tabindex back', async () => {
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false });
+    const release = loseHostOnClose(rail, 'hidden');
+    try {
+      expect(fallbackValue(rail)).to.equal(null);
+      expect(rail.hasAttribute('focus-fallback')).to.equal(false);
+      await openByKeyboard(rail, trigger);
+      await sendKeys({ press: 'Escape' });
+      await rail.updateComplete;
+      await settleFrames();
+      expect(deepActive() === trigger, `focus moved to ${describeActive()}`).to.equal(false);
+      expect(deepActive() === rail, `focus moved to ${describeActive()}`).to.equal(false);
+      expect(rail.hasAttribute('tabindex')).to.equal(false);
+    } finally {
+      release();
+      cleanup();
+    }
+  });
+
+  it('reads the focus-fallback attribute back as a string, clears to null on removal, and writes no attribute for an element', async () => {
+    const rail = await fixture<LyraAppRail>(html`<lr-app-rail><button type="button">Home</button></lr-app-rail>`);
+    const main = fallbackTarget('contract-main');
+    try {
+      rail.setAttribute('focus-fallback', 'contract-main');
+      expect(fallbackValue(rail)).to.equal('contract-main');
+      rail.removeAttribute('focus-fallback');
+      expect(fallbackValue(rail)).to.equal(null);
+      rail.focusFallback = main;
+      await rail.updateComplete;
+      expect(rail.focusFallback === main).to.equal(true);
+      expect(fallbackValue(rail)).to.equal('element#contract-main');
+      expect(rail.hasAttribute('focus-fallback')).to.equal(false);
+    } finally {
+      main.remove();
     }
   });
 });

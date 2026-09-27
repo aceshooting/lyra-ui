@@ -6,7 +6,7 @@ import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import "./app-rail.js";
 import "../app-rail-group/app-rail-group.js";
-import type { LyraAppRail } from "./app-rail.js";
+import type { LyraAppRail, LyraAppRailToggleDetail } from "./app-rail.js";
 import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
 const meta: Meta = {
@@ -134,7 +134,7 @@ export const ExternalMobileControl: Story = {
     docs: {
       description: {
         story:
-          'Set `hide-toggle` when application-owned mobile navigation already has its own trigger, and assign that trigger to the rail\'s `trigger` property (or reference its id via `for`) so closing the overlay -- by any path, not just this button -- returns focus to it. If the trigger, opener, and built-in toggle are unavailable, focus returns to the rail host with a temporary tabindex that is removed on blur. The built-in `[part="toggle"]` stays hidden while closed, but survives `hide-toggle` once the overlay opens: reparented inside the trapped panel, it becomes the only in-panel dismiss control.',
+          'Set `hide-toggle` when application-owned mobile navigation already has its own trigger, and assign that trigger to the rail\'s `trigger` property (or reference its id via `for`) so closing the overlay -- by any path, not just this button -- returns focus to it. If the trigger, opener, and built-in toggle are unavailable, focus returns to the rail host with a temporary tabindex that is removed on blur. When the host is hidden or inert too, `focus-fallback` names a last-resort target. The built-in `[part="toggle"]` stays hidden while closed, but survives `hide-toggle` once the overlay opens: reparented inside the trapped panel, it becomes the only in-panel dismiss control.',
       },
     },
   },
@@ -157,6 +157,66 @@ export const ExternalMobileControl: Story = {
           <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
         </lr-app-rail>
       `)}
+    </div>
+  `,
+};
+
+function launchFocusFallbackRail(event: Event): void {
+  const demo = (event.currentTarget as HTMLElement).closest('[data-demo]')!;
+  const rail = demo.querySelector<LyraAppRail>('lr-app-rail')!;
+  rail.hidden = false;
+  rail.open = true;
+}
+
+/** A navigation item that opens a full-screen view: the app bar and the rail leave the layout
+ *  as the overlay closes, taking every built-in focus return target with them. */
+function enterViewOnClose(event: Event): void {
+  if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.open) return;
+  const rail = event.currentTarget as LyraAppRail;
+  rail.closest('[data-demo]')!.querySelector<HTMLElement>('[data-app-bar]')!.hidden = true;
+  rail.hidden = true;
+}
+
+function restoreFocusFallbackShell(event: Event): void {
+  const demo = (event.currentTarget as HTMLElement).closest('[data-demo]')!;
+  demo.querySelector<HTMLElement>('[data-app-bar]')!.hidden = false;
+}
+
+export const FocusFallback: Story = {
+  name: 'Focus fallback (focus-fallback)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'When closing the overlay also removes the navigation from the layout, the launcher, the opener, the built-in toggle and the rail host are all unavailable; `focus-fallback` names the view\'s main region (`tabindex="-1"`), so keyboard focus lands there instead of on `<body>`. Open the navigation and choose an item: the app bar and the rail leave the layout, as when a navigation item opens a full-screen view.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      data-demo
+      style="display: flex; flex-direction: column; block-size: var(--lr-size-22rem); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); overflow: hidden;"
+    >
+      <header data-app-bar style="display: flex; align-items: center; padding: var(--lr-space-s);">
+        <button id="ff-launch" type="button" @click=${launchFocusFallbackRail}>
+          Open navigation
+        </button>
+      </header>
+      <lr-app-rail
+        hide-toggle
+        for="ff-launch"
+        focus-fallback="ff-view"
+        label="Primary"
+        mobile-breakpoint="9999px"
+        @lr-toggle=${enterViewOnClose}
+      >
+        ${navItems}
+      </lr-app-rail>
+      <main id="ff-view" tabindex="-1" style="flex: 1; padding: var(--lr-space-l); overflow: auto;">
+        <h2 style="margin-block-start: 0;">Inbox</h2>
+        <p>Closing the navigation moved keyboard focus to this region.</p>
+        <button type="button" @click=${restoreFocusFallbackShell}>Show the app bar again</button>
+      </main>
     </div>
   `,
 };

@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `16.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `unreleased`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 25 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -48,12 +48,14 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
-`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its compatibility alias
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its deprecated
+compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
+before 23.0.0); `highlightCode: boolean = true`
 (attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
-progressive output, and `codeBlockHeader` (or its `codeBlockChrome` alias) enables the localized
+progressive output, and `codeBlockHeader` (or its deprecated `codeBlockChrome` alias, which reaches
+the composed element as `codeBlockHeader`) enables the localized
 code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
@@ -104,6 +106,6 @@ The Markdown part set also includes `task-list`, `task-item`, `task-item-checked
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
 (attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its compatibility alias. Successful and
+`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.

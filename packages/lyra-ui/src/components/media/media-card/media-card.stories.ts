@@ -286,14 +286,14 @@ export const OpenEvent: Story = {
 };
 
 export const BeforeDownloadEvent: Story = {
-  name: 'lr-before-media-download veto',
+  name: 'lr-media-download-request veto',
   render: () => html`
     <div>
       <lr-media-card
         src="https://example.com/reports/summary.pdf"
         kind="file"
         filename="summary.pdf"
-        @lr-before-media-download=${(event: CustomEvent<LyraMediaCardOpenDetail>) => {
+        @lr-media-download-request=${(event: CustomEvent<LyraMediaCardOpenDetail>) => {
           event.preventDefault();
           const output = document.getElementById('media-card-download-log');
           if (output) output.textContent = `Download intercepted: ${event.detail.filename}`;
@@ -329,7 +329,7 @@ export const Disabled: Story = {
     docs: {
       description: {
         story:
-          '`disabled` turns off this card\'s own action: the image button and the video `open-button` render `disabled`, a file chip\'s anchor loses its `href`/`download` and leaves the tab order, `lr-media-open`/`lr-before-media-download` stop firing, and the affordance paints at `--lr-opacity-disabled`. The `kind="video"` player keeps its own native transport — that is media, not this card\'s action.',
+          '`disabled` turns off this card\'s own action: the image button and the video `open-button` render `disabled`, a file chip\'s anchor loses its `href`/`download` and leaves the tab order, `lr-media-open`/`lr-media-download-request` (and its deprecated `lr-before-media-download` alias) stop firing, and the affordance paints at `--lr-opacity-disabled`. The `kind="video"` player keeps its own native transport — that is media, not this card\'s action.',
       },
     },
   },

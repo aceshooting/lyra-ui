@@ -34,6 +34,7 @@ import {
   webTypesValue,
 } from './editor-type-values.mjs';
 import { cssPropertyDescription } from './editor-css-descriptions.mjs';
+import { formatDeprecationSubject } from './component-metadata.mjs';
 import { deprecationDescription, webTypesElementContributions } from './editor-web-types.mjs';
 import { mergeDesignTokenEditorProperties } from './design-token-editor.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
@@ -111,9 +112,7 @@ function componentMetadataDescription(declaration) {
     lines.push(`- Graduation: ${declaration.maturity.graduationCriteria}`);
   }
   for (const entry of declaration.deprecations ?? []) {
-    const subject = entry.kind === 'component'
-      ? `\`${declaration.tagName}\``
-      : `\`${entry.name}\`${entry.attribute ? ` / \`${entry.attribute}\`` : ''}`;
+    const subject = formatDeprecationSubject(entry, declaration.tagName);
     lines.push(`- Deprecated ${entry.kind} ${subject}: ${deprecationDescription(entry)}`);
   }
   return lines.join('\n');

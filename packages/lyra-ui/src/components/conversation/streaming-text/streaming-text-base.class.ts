@@ -4,6 +4,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
 import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -84,12 +85,10 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   @property({ attribute: 'streaming-render' })
   streamingRender: MarkdownStreamingRender = 'plain';
 
-  /** Compatibility spelling for source-copy headers in the composed Markdown element. */
-  @property({ type: Boolean, attribute: 'code-block-chrome' })
-  codeBlockChrome = false;
-
-  /** Enables source-copy headers in the composed Markdown element. */
-  @property({ type: Boolean, attribute: 'code-block-header' }) codeBlockHeader = false;
+  // Declared by each concrete tag, as the Markdown elements do, so each tag's own manifest entry
+  // carries the header option and its deprecated spelling.
+  abstract codeBlockChrome: boolean;
+  abstract codeBlockHeader: boolean;
 
   /** Trailing-edge coalesce window, in ms, for `content` updates -- see the
    *  class doc. */
@@ -210,6 +209,9 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('codeBlockChrome') && this.codeBlockChrome === true) {
+      warnDeprecatedUsage(this, 'property', 'codeBlockChrome', 'code-block-header');
+    }
     if (changed.has('coalesceMs')) {
       this.coalescer.throttleMs = this.safeCoalesceMs;
     }

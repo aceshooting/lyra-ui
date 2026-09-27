@@ -7,7 +7,7 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-before-media-download` since `unreleased`; use event `addEventListener('lr-media-download-request', ...)`; removal not before `23.0.0` — Renamed to the library's dominant *-request veto-event convention. Both names fire from the same activation of a safe file anchor with an equal { src, filename } detail during the compatibility window, the canonical name first, and either may veto the native download/open. A veto through the alias logs a one-time development warning.
 - **Optional peers** none
 - **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -61,7 +61,8 @@ and later MIME values restore detection.
   button and the `kind="video"` `open-button` render `disabled`; a safe file chip's anchor loses
   its `href` and `download`, so it genuinely cannot fetch, and gains an explicit `role="link"` so
   its accessible name and `aria-current` stay valid on an element that no longer has an implicit
-  role. `lr-media-open` and `lr-before-media-download` stop firing from every path, `click()`
+  role. `lr-media-open`, `lr-media-download-request` and its deprecated `lr-before-media-download`
+  alias stop firing from every path, `click()`
   included, the action leaves the tab order, and it paints at `--lr-opacity-disabled` with a
   `not-allowed` cursor. Deliberately does NOT reach into the `kind="video"` player: `<video
   controls>` is media content with its own native transport, not this card's action. An
@@ -93,9 +94,13 @@ not exports from the component entry.
 **Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
 noncancelable) notifies
 after image-card or video open-button activation; those kinds have no component-owned navigation,
-so a host decides what "open" means. `lr-before-media-download` carries the same detail and is
+so a host decides what "open" means. `lr-media-download-request` carries the same detail and is
 cancelable only for a safe file anchor immediately before its native download/open default; calling
-`preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
+`preventDefault()` there suppresses that exact default. `lr-before-media-download` is its deprecated
+alias (removal not before 23.0.0): it still fires right after the canonical event from the same
+activation, with an equal but separate `detail`, and either event's `preventDefault()` vetoes the
+download/open. A veto through the alias logs a one-time development warning, so move listeners to
+`lr-media-download-request`. `detail.src` is whichever internally
 validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
 whitespace-padded value is trimmed, so it matches the rendered sink.
 The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
@@ -151,7 +156,7 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
     .addEventListener("lr-media-open", (e) => openLightbox(e.detail.src));
   document
     .getElementById("file-card")
-    .addEventListener("lr-before-media-download", (e) => shouldUseNativeDownload || e.preventDefault());
+    .addEventListener("lr-media-download-request", (e) => shouldUseNativeDownload || e.preventDefault());
 </script>
 ```
 

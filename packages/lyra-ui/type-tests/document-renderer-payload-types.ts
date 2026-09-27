@@ -62,6 +62,19 @@ declare const canonicalTypes: [
   LyraAdaptedDocumentRenderer,
 ];
 
+// `DocumentFile` and `DocumentRendererDefinition` are deprecated in favour of their prefixed names.
+// Until their removal the two spellings must stay interchangeable in both directions, so code
+// annotated with either name keeps compiling against every exported signature. Exported so
+// `noUnusedLocals` treats these compile-time assertions as used; evaluating the alias IS the test.
+type Assert<T extends true> = T;
+type MutuallyAssignable<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+export type _DeprecatedFileNameIsInterchangeable = Assert<
+  MutuallyAssignable<DocumentFile, LyraDocumentFile>
+>;
+export type _DeprecatedDefinitionNameIsInterchangeable = Assert<
+  MutuallyAssignable<DocumentRendererDefinition, LyraDocumentRendererDefinition>
+>;
+
 void canonicalTypes;
 void legacyInvocation;
 void adaptedInvocation;

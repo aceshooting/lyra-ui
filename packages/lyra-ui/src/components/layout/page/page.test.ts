@@ -2070,4 +2070,45 @@ describe('mobile navigation focus return to a host-hidden trigger', () => {
       release();
     }
   });
+
+  for (const { name, disableToggle, part } of [
+    {
+      name: 'the navigation toggle',
+      disableToggle: false,
+      part: 'navigation-toggle',
+    },
+    {
+      name: 'the main landmark under disable-navigation-toggle',
+      disableToggle: true,
+      part: 'main',
+    },
+  ]) {
+    it(`returns focus to ${name} when a drawer opened from script while nothing held focus closes`, async () => {
+      const page = (await fixture(html`
+        <lr-page
+          style="inline-size:320px"
+          ?disable-navigation-toggle=${disableToggle}
+        >
+          <button slot="navigation">Inside</button>
+        </lr-page>
+      `)) as LyraPage;
+      access(page).applyMeasuredInlineSize(320);
+      await page.updateComplete;
+      (document.activeElement as HTMLElement | null)?.blur();
+      page.showNavigation();
+      await page.updateComplete;
+      expect(page.navOpen).to.be.true;
+
+      page.hideNavigation();
+      await page.updateComplete;
+      expect(page.navOpen).to.be.false;
+      const target = page.shadowRoot!.querySelector<HTMLElement>(
+        `[part~="${part}"]`
+      )!;
+      await waitUntil(
+        () => deepActive() === target,
+        `focus stayed on ${describeActive()}`
+      );
+    });
+  }
 });

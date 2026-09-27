@@ -11,9 +11,10 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Permanent compatibility tag for the pre-v9 `lr-geojson-view` name. Use `lr-geojson-viewer` ' +
-          'for new code -- see its own docs page for the full story set. This subclass preserves ' +
-          '`instanceof LyraGeoJsonViewer` while allowing both tag names in one custom-elements registry.',
+          'Deprecated compatibility tag for the pre-v9 `lr-geojson-view` name, kept working until its ' +
+          'removal no earlier than 23.0.0. Use `lr-geojson-viewer` instead -- see its own docs page for ' +
+          'the full story set. This subclass preserves `instanceof LyraGeoJsonViewer` while allowing ' +
+          'both tag names in one custom-elements registry.',
       },
     },
   },

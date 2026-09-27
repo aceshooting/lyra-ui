@@ -30,10 +30,16 @@ while doing something else. The vocabulary rules apply to every component, mirro
   (`part="password-toggle password-toggle-button"`, `part="base button"` — a space-separated part
   list is valid, and `scripts/check-part-reachability.mjs` keeps the added token honest), and a
   property keeps its canonical accessor while gaining a compatibility alias read alongside it. Web
-  Awesome has deprecated the generic `base` part in favor of one named after the component, so a
-  mirrored component's outer wrapper carries both tokens and documents both with `@csspart`. Never
-  resolve the collision by deleting lyra's own spelling — that breaks shipped consumers to help
-  migrating ones.
+  Awesome has deprecated the generic `base` part in favor of one named after the component, so
+  where a pinned upstream publishes that component-named wrapper part (or its own deprecated
+  `base`), the mirrored component's outer wrapper carries both tokens and documents both with
+  `@csspart`. A component-named alias is kept only where an upstream publishes one: when neither
+  pinned upstream exposes a wrapper part at all, `base` alone is the supported spelling, and a
+  Lyra-only component-named token is deprecated rather than kept (`lr-split-panel`'s
+  `split-panel`, since `wa-split-panel`/`sl-split-panel` publish only `start`, `end`, `panel` and
+  `divider`). If an upstream later publishes the wrapper part, the alias stays for as long as it
+  ships. Never resolve the collision by deleting lyra's own spelling — that breaks shipped
+  consumers to help migrating ones.
 
 - **Where the two upstreams disagree, accept both spellings and deprecate neither.** They diverge on
   names for identical concepts (`with-clear` vs `clearable`, `without-scroll-controls` vs

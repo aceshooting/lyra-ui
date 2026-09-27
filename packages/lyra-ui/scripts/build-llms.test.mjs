@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import {
   build,
   buildComponentFile,
+  buildExportDeprecationsSection,
   buildMigration,
   buildPeers,
   COMPOUND_USAGE_REGISTRATIONS,
@@ -191,6 +192,104 @@ assert.match(
   /- \*\*Import\*\* `import '@aceshooting\/lyra-ui\/components\/lr-secondary-fixture\.js';`/,
   'a secondary tag file must keep its own generated header facts',
 );
+// A default-slot record has no name to quote, and a slot-content record covers content inside a
+// slot that survives; both used to render as empty backticks.
+const slotDeprecationFixture = buildComponentFile(
+  'lr-fixture',
+  { tags: ['lr-fixture'], text: '## `lr-fixture`\n\nFixture component.' },
+  new Map([
+    [
+      'lr-fixture',
+      {
+        family: 'forms',
+        className: 'LyraFixture',
+        importPath: '@aceshooting/lyra-ui/components/forms/fixture/fixture.js',
+        status: 'stable',
+        since: '1.0.0',
+        deprecations: [
+          {
+            kind: 'slot',
+            name: '',
+            since: '2.0.0',
+            replacement: { kind: 'slot', name: 'start', usage: 'slot="start"' },
+            removalNotBefore: '4.0.0',
+            rationale: 'The start slot is the library-wide adornment slot.',
+          },
+          {
+            kind: 'slot-content',
+            name: '',
+            permittedContent: ['hr', 'lr-menu-item'],
+            since: 'unreleased',
+            replacement: { kind: 'slot', name: 'header', usage: 'slot="header"' },
+            removalNotBefore: '23.0.0',
+            rationale: 'Other content renders inside the list without a role.',
+          },
+        ],
+        cssParts: [],
+        cssProperties: [],
+      },
+    ],
+  ]),
+  new Map(),
+);
+assert.doesNotMatch(slotDeprecationFixture, /``/u, 'a deprecation subject never renders empty backticks');
+assert.match(
+  slotDeprecationFixture,
+  /- \*\*Deprecated slot\*\* default slot since `2\.0\.0`; use slot `slot="start"`/u,
+);
+assert.match(
+  slotDeprecationFixture,
+  /- \*\*Deprecated slot-content\*\* default-slot content other than `<hr>`, `<lr-menu-item>` since `unreleased`; use slot `slot="header"`; removal not before `23\.0\.0`/u,
+);
+
+// Package-level deprecations (entry points and exported types) have no component reference to
+// live in, so the component index carries them.
+assert.equal(buildExportDeprecationsSection([]), '', 'no records, no section');
+const exportDeprecationSection = buildExportDeprecationsSection([
+  {
+    kind: 'entry-point',
+    name: './components/lr-legacy.js',
+    since: 'unreleased',
+    replacement: {
+      kind: 'entry-point',
+      name: './components/lr-current.js',
+      usage: "import '@aceshooting/lyra-ui/components/lr-current.js';",
+    },
+    removalNotBefore: '23.0.0',
+    rationale: 'The legacy route registers the same element under its pre-rename name.',
+  },
+  {
+    kind: 'type',
+    module: './components/registry.js',
+    name: 'File',
+    since: '9.9.0',
+    replacement: { kind: 'type', name: 'LyraFile' },
+    removalNotBefore: '23.0.0',
+    rationale: 'The Lyra-prefixed name is structurally identical.',
+  },
+]);
+assert.match(exportDeprecationSection, /^## Deprecated package exports\n/u);
+assert.match(
+  exportDeprecationSection,
+  /\n- \*\*Deprecated entry point\*\* `@aceshooting\/lyra-ui\/components\/lr-legacy\.js` since `unreleased`; use entry point `import '@aceshooting\/lyra-ui\/components\/lr-current\.js';`; removal not before `23\.0\.0` — The legacy route registers/u,
+);
+assert.match(
+  exportDeprecationSection,
+  /\n- \*\*Deprecated type\*\* `File` from `@aceshooting\/lyra-ui\/components\/registry\.js` since `9\.9\.0`; use type `LyraFile`; removal not before `23\.0\.0` — The Lyra-prefixed name/u,
+);
+const currentMetadata = JSON.parse(
+  readFileSync(new URL('./fixtures/component-metadata.json', import.meta.url), 'utf8'),
+);
+const generatedIndex = [...build({ write: false })].find(([file]) => file.endsWith('/llms/index.md'))?.[1];
+assert.ok(generatedIndex, 'build({ write: false }) must produce llms/index.md');
+assert.equal(
+  generatedIndex.includes('\n## Deprecated package exports\n'),
+  currentMetadata.exportDeprecations.length > 0,
+  'the component index lists the ledger\'s package export deprecations exactly when there are any',
+);
+if (currentMetadata.exportDeprecations.length > 0) {
+  assert.ok(generatedIndex.endsWith(`\n${buildExportDeprecationsSection(currentMetadata.exportDeprecations)}`));
+}
 
 const currentManifest = JSON.parse(
   readFileSync(new URL('../custom-elements.json', import.meta.url), 'utf8'),

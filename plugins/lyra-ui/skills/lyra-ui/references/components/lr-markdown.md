@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `unreleased`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -130,7 +130,9 @@ uses for its own `[part="body"]`.
   indented. It copies source text without the renderer's terminal newline, preserving leading tabs
   whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
   code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
-  compatibility spelling; either property enables the header. Plain streaming defers headers until
+  deprecated compatibility spelling (removal not before 23.0.0; setting it logs a one-time
+  development warning): either property enables the header, so use `code-block-header`. Plain
+  streaming defers headers until
   settle; progressive streaming adds them to committed blocks. The button has a localized accessible
   name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
   the header also removes authored style elements and their CSS text to prevent visual copy

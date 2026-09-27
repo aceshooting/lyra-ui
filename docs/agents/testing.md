@@ -215,6 +215,28 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   restore in `afterEach`). A leaked stub bleeds into later, unrelated tests and produces
   state-dependent failures — this bit `lr-push-to-talk`'s
   `MediaRecorder`/`getUserMedia`/`AudioContext` stubs during the voice-component work.
+- **Deprecated usage is seeded or captured, never left to warn.** A component that observes a
+  deprecated usage (property/attribute set, tag connect, alias veto; never slotted content — that
+  detection ships in every production bundle, so `lr-stat`/`lr-menu` slot deprecations stay silent) calls `warnDeprecatedUsage(host, kind, name, replacement)`
+  (`src/internal/dev-mode-attribute-warning.ts`; `kind`/`name` are the deprecation record's). The
+  WTR page always installs Lit's dev-mode store, and under `WTR_STRICT_CONSOLE=1` — set by the
+  full-engine, Test All Browsers and platform lanes, not by a plain local `wtr` run — the first
+  `console.warn` of a page throws. The warning is once per page, so an unseeded file fails only in
+  whichever shard happens to render the deprecated form first. `test/expected-deprecations.ts`
+  covers both needs:
+  - `expectDeprecatedUsage(tag, kind, name)` at module scope, before any fixture mounts, in every
+    test file that still exercises the deprecated form (the compatibility tests an alias keeps
+    until its removal). It seeds exactly that key into the existing store — the
+    `expectStaleAttribute()` pattern — and leaves every other diagnostic armed.
+  - `captureDeprecationWarnings([{ tag, kind, name }], async () => { ...; await el.updateComplete; })`
+    to assert the warning itself. It re-arms the listed keys, returns every deprecation warning
+    issued inside the body as `{ key, message }` (so `expect(captured).to.have.length(1)` also
+    catches an extra one from a composed child), passes any other `console.warn` through so strict
+    lanes still fail on it, and restores `console.warn` and the seeds even when the body throws.
+    Pair each warns-once test with a replacement-spelling case that captures nothing.
+
+  Reproduce with `WTR_STRICT_CONSOLE=1 WTR_BROWSER=<engine> pnpm exec wtr --files <file>`; a green
+  plain local run proves nothing about these lanes.
 - **Only the merged coverage summary is the library-wide headline.** `pnpm test:coverage` runs four
   sequential shards, and Web Test Runner prints a `Code coverage: X %` line for each partial shard.
   Each such line is the arithmetic mean of that shard's statements/branches/functions/lines, not

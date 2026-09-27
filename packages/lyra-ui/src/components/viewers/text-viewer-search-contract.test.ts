@@ -8,6 +8,11 @@ import './html-viewer/html-viewer.js';
 import './include/include.js';
 import './pptx-viewer/pptx-viewer.js';
 import type { LyraTextViewerTarget } from '../../internal/text-viewer-target.js';
+import { expectDeprecatedUsage } from '../../../test/expected-deprecations.js';
+
+// The deprecated `lr-geojson-view` alias must keep meeting this contract until its removal, so
+// its one-time connect warning is expected here.
+expectDeprecatedUsage('lr-geojson-view', 'component', 'lr-geojson-view');
 
 const TEXT_VIEWER_TAGS = [
   'lr-archive-viewer',

@@ -19,7 +19,7 @@ import {
   type HighlightHandle,
 } from '../../../internal/text-highlights.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { devWarnOnce, warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import type { Slugger } from '../../../internal/slugger.js';
 import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { MarkdownCodeHeaderController, renderMarkdownCodeHeader, type MarkdownCodeBlockRecord } from './markdown-code-header.js';
@@ -344,6 +344,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('codeBlockChrome') && this.codeBlockChrome === true) {
+      warnDeprecatedUsage(this, 'property', 'codeBlockChrome', 'code-block-header');
+    }
     const active = this.shadowRoot?.activeElement as HTMLElement | null;
     const selector = '[part~="code-block"], [part~="code-block-copy"], [part~="table-wrapper"]';
     if (active?.matches(selector)) {

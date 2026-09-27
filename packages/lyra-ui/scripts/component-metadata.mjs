@@ -1,9 +1,20 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const COMPONENT_METADATA_SCHEMA_VERSION = 1;
+import { parseSync } from 'oxc-parser';
+
+// 2 added the required top-level `exportDeprecations` ledger for package entry points and types.
+const COMPONENT_METADATA_SCHEMA_VERSION = 2;
 const COMPONENT_STATUSES = Object.freeze(['stable', 'experimental']);
 export const UNRELEASED_VERSION = 'unreleased';
+/** Host declarations a consumer can write on the tag itself instead of a deprecated member. */
+const HOST_CSS_REPLACEMENTS = Object.freeze(['background', 'color', 'inline-size']);
+const EXPORT_DEPRECATION_KINDS = Object.freeze(['entry-point', 'type']);
+const ELEMENT_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?$/;
 const GIT_OBJECT_ID_PATTERN = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
@@ -371,6 +382,93 @@ function deprecatedManifestEntries(tag, declaration) {
   return entries;
 }
 
+/** Whether a record names a replacement at all; the shape itself is reported once, below. */
+function namesReplacement(replacement) {
+  return Boolean(replacement) && typeof replacement === 'object' && Boolean(text(replacement.name));
+}
+
+/**
+ * The version-window, rationale, and replacement rules every deprecation record shares, whether it
+ * names a component member or a package export.
+ *
+ * `since: 'unreleased'` marks a deprecation that lands after the current release tag and ships in
+ * the next release. It is only meaningful while `history.taggedCurrent` records that tag (the same
+ * condition under which a post-tag component resolves to `unreleased`), and its removal floor is
+ * measured from the current major: the lowest major the next release can have. The version
+ * rollover in `generate-component-metadata.mjs --write` stamps the released version in place of
+ * `unreleased`, and this same check then fails closed if that release turned out to be a major the
+ * recorded floor no longer clears.
+ */
+function validateDeprecationWindow(label, entry, context, findings) {
+  const { currentVersion, minimumFullMajors, taggedCurrent, introducedIn = null } = context;
+  const unreleased = entry?.since === UNRELEASED_VERSION;
+  const since = unreleased ? null : parseVersion(entry?.since);
+  const removal = parseVersion(entry?.removalNotBefore);
+  if (unreleased) {
+    if (!taggedCurrent) {
+      findings.push(
+        `${label}: an unreleased deprecation is only valid while history.taggedCurrent records the current release`,
+      );
+    }
+  } else if (!since) {
+    findings.push(`${label}: deprecation needs a valid since version`);
+  }
+  if (!removal) findings.push(`${label}: deprecation needs a valid removalNotBefore version`);
+  if (since && introducedIn && compareVersions(entry.since, introducedIn) < 0) {
+    findings.push(`${label}: deprecation cannot predate the component's ${introducedIn} introduction`);
+  }
+  if (since && parseVersion(currentVersion) && compareVersions(entry.since, currentVersion) > 0) {
+    findings.push(`${label}: deprecation cannot start after the current package version`);
+  }
+  const floorMajor = unreleased ? parseVersion(currentVersion)?.major : since?.major;
+  if (Number.isInteger(floorMajor) && removal && Number.isInteger(minimumFullMajors)) {
+    const earliestRemovalMajor = floorMajor + minimumFullMajors + 1;
+    if (removal.major < earliestRemovalMajor) {
+      findings.push(
+        `${label}: removalNotBefore must preserve the API through ${minimumFullMajors} complete subsequent major release(s)`,
+      );
+    }
+  }
+  if (text(entry?.rationale).length < 24) findings.push(`${label}: deprecation needs a rationale`);
+  if (!namesReplacement(entry?.replacement)) {
+    findings.push(`${label}: deprecation must name a replacement`);
+  }
+}
+
+/**
+ * A `slot-content` record deprecates a kind of content inside a slot that itself survives -- for
+ * example non-item children of a menu's default slot. The slot therefore must exist and must NOT be
+ * marked deprecated (that would be a `slot` record, and for a mirrored tag a false deprecation
+ * mismatch against upstream); its description carries the authored marker instead, saying which
+ * content is deprecated without starting with "Deprecated".
+ */
+function validateSlotContentRecord(key, entry, declaration, componentsByTag, findings) {
+  const slot = manifestMember(declaration, 'slot', entry.name);
+  if (!slot) {
+    findings.push(`${key}: ${entry.name ? `slot ${entry.name}` : 'the default slot'} does not exist`);
+  } else if (isDeprecatedEntry(slot)) {
+    findings.push(`${key}: the slot itself is deprecated; record a slot deprecation instead`);
+  } else if (!/\bdeprecated\b/i.test(slot.description ?? '')) {
+    findings.push(`${key}: the slot description must say which content is deprecated`);
+  }
+  if (entry.permittedContent === undefined) return;
+  const permitted = entry.permittedContent;
+  if (!Array.isArray(permitted) || permitted.length === 0) {
+    findings.push(`${key}: permittedContent must be a non-empty array when present`);
+    return;
+  }
+  if (!sameJson(permitted, [...new Set(permitted)].sort(compareText))) {
+    findings.push(`${key}: permittedContent must be sorted and unique`);
+  }
+  for (const name of permitted) {
+    if (typeof name !== 'string' || !ELEMENT_NAME_PATTERN.test(name)) {
+      findings.push(`${key}: permitted content ${String(name)} is not an element name`);
+    } else if (name.includes('-') && !componentsByTag.has(name)) {
+      findings.push(`${key}: permitted content ${name} is not a known component`);
+    }
+  }
+}
+
 function validateDeprecations(metadata, componentsByTag, manifest, findings) {
   const deprecations = metadata?.deprecations;
   if (!Array.isArray(deprecations)) {
@@ -382,6 +480,7 @@ function validateDeprecations(metadata, componentsByTag, manifest, findings) {
   const declarationsByTag = manifestDeclarationsByTag(manifest);
   const componentSinceByTag = deriveSinceByTag(metadata?.history);
   const currentVersion = metadata?.history?.current?.version;
+  const taggedCurrent = metadata?.history?.taggedCurrent ?? null;
   const minimumFullMajors = metadata?.policy?.deprecation?.minimumFullMajorsAfterDeprecation;
   if (!Number.isInteger(minimumFullMajors) || minimumFullMajors < 1) {
     findings.push('policy.deprecation.minimumFullMajorsAfterDeprecation must be at least 1');
@@ -402,30 +501,14 @@ function validateDeprecations(metadata, componentsByTag, manifest, findings) {
       findings.push(`${key}: deprecation references an unknown component`);
       continue;
     }
-    const since = parseVersion(entry.since);
-    const removal = parseVersion(entry.removalNotBefore);
-    if (!since) findings.push(`${key}: deprecation needs a valid since version`);
-    if (!removal) findings.push(`${key}: deprecation needs a valid removalNotBefore version`);
-    const componentSince = componentSinceByTag.get(entry.tag);
-    if (since && componentSince && compareVersions(entry.since, componentSince) < 0) {
-      findings.push(`${key}: deprecation cannot predate the component's ${componentSince} introduction`);
-    }
-    if (since && parseVersion(currentVersion) && compareVersions(entry.since, currentVersion) > 0) {
-      findings.push(`${key}: deprecation cannot start after the current package version`);
-    }
-    if (since && removal && Number.isInteger(minimumFullMajors)) {
-      const earliestRemovalMajor = since.major + minimumFullMajors + 1;
-      if (removal.major < earliestRemovalMajor) {
-        findings.push(
-          `${key}: removalNotBefore must preserve the API through ${minimumFullMajors} complete subsequent major release(s)`,
-        );
-      }
-    }
-    if (text(entry.rationale).length < 24) findings.push(`${key}: deprecation needs a rationale`);
+    validateDeprecationWindow(key, entry, {
+      currentVersion,
+      minimumFullMajors,
+      taggedCurrent,
+      introducedIn: componentSinceByTag.get(entry.tag) ?? null,
+    }, findings);
     const replacement = entry.replacement;
-    if (!replacement || typeof replacement !== 'object' || !text(replacement.name)) {
-      findings.push(`${key}: deprecation must name a replacement`);
-    }
+    const hasReplacement = namesReplacement(replacement);
 
     if (entry.kind === 'component') {
       if (entry.name !== entry.tag) findings.push(`${key}: component deprecation name must equal its tag`);
@@ -435,29 +518,34 @@ function validateDeprecations(metadata, componentsByTag, manifest, findings) {
       }
       continue;
     }
-    const member = manifestMember(declaration, entry.kind, entry.name);
-    if (!member) findings.push(`${key}: deprecated public member does not exist`);
-    else if (!isDeprecatedEntry(member)) findings.push(`${key}: public member is not marked deprecated in the manifest`);
-    covered.add(`${entry.tag}:${entry.kind}:${entry.name}`);
+    if (entry.kind === 'slot-content') {
+      validateSlotContentRecord(key, entry, declaration, componentsByTag, findings);
+    } else {
+      const member = manifestMember(declaration, entry.kind, entry.name);
+      if (!member) findings.push(`${key}: deprecated public member does not exist`);
+      else if (!isDeprecatedEntry(member)) findings.push(`${key}: public member is not marked deprecated in the manifest`);
+      covered.add(`${entry.tag}:${entry.kind}:${entry.name}`);
+    }
 
     if (entry.kind === 'property' && entry.attribute) {
       const attribute = manifestMember(declaration, 'attribute', entry.attribute);
       if (!isDeprecatedEntry(attribute)) findings.push(`${key}: paired attribute ${entry.attribute} is not deprecated`);
       covered.add(`${entry.tag}:attribute:${entry.attribute}`);
     }
+    if (!hasReplacement) continue;
     if (
-      replacement?.kind === 'host-css-property' &&
-      !['color', 'background'].includes(replacement.name)
+      replacement.kind === 'host-css-property' &&
+      !HOST_CSS_REPLACEMENTS.includes(replacement.name)
     ) {
       findings.push(`${key}: unsupported host CSS replacement ${replacement.name}`);
     } else if (
-      replacement?.kind !== 'component' &&
-      replacement?.kind !== 'host-css-property' &&
-      !manifestMember(declaration, replacement?.kind, replacement?.name)
+      replacement.kind !== 'component' &&
+      replacement.kind !== 'host-css-property' &&
+      !manifestMember(declaration, replacement.kind, replacement.name)
     ) {
       findings.push(`${key}: replacement ${replacement.kind} ${replacement.name} does not exist`);
     }
-    if (replacement?.kind === 'component' && !componentsByTag.has(replacement.name)) {
+    if (replacement.kind === 'component' && !componentsByTag.has(replacement.name)) {
       findings.push(`${key}: replacement component ${replacement.name} does not exist`);
     }
   }
@@ -468,6 +556,236 @@ function validateDeprecations(metadata, componentsByTag, manifest, findings) {
       if (!covered.has(key)) findings.push(`${key}: manifest deprecation has no policy record`);
     }
   }
+}
+
+function defaultReadSource(relativePath) {
+  try {
+    return fs.readFileSync(path.join(packageDir, relativePath), 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+function exportDeprecationKey(entry) {
+  return `${entry?.kind}:${entry?.module ?? ''}:${entry?.name}`;
+}
+
+function exportDeprecationLabel(entry) {
+  return entry?.kind === 'type'
+    ? `exportDeprecations type ${entry?.module}#${entry?.name}`
+    : `exportDeprecations ${entry?.kind} ${entry?.name}`;
+}
+
+/** The runtime target a package export resolves to, preferring the import/default condition. */
+function exportTarget(value) {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') return exportTarget(value.import ?? value.default ?? null);
+  return null;
+}
+
+/**
+ * Resolves one exact `package.json#exports` specifier to its TypeScript source (`./dist/X.js` is
+ * built from `src/X.ts`), reporting why it cannot be a deprecation subject or replacement.
+ */
+function exportSource(label, specifier, subject, { exportsMap, readSource }, findings) {
+  if (typeof specifier !== 'string' || !Object.hasOwn(exportsMap, specifier)) {
+    findings.push(`${label}: ${subject} is not a package export`);
+    return null;
+  }
+  if (specifier.includes('*')) {
+    findings.push(`${label}: ${subject} must name one exact export, not a pattern`);
+    return null;
+  }
+  const match = /^\.\/dist\/(.+)\.js$/.exec(exportTarget(exportsMap[specifier]) ?? '');
+  if (!match) {
+    findings.push(`${label}: ${subject} does not resolve to a built JavaScript module`);
+    return null;
+  }
+  const sourcePath = `src/${match[1]}.ts`;
+  const source = readSource(sourcePath);
+  if (typeof source !== 'string') {
+    findings.push(`${label}: ${subject} has no TypeScript source at ${sourcePath}`);
+    return null;
+  }
+  return { sourcePath, source };
+}
+
+/** The JSDoc block that ends immediately (whitespace only) before `position`, if any. */
+function leadingJsDoc(comments, source, position) {
+  const comment = comments.findLast((candidate) => candidate.end <= position);
+  if (!comment || !/^\s*$/.test(source.slice(comment.end, position))) return null;
+  return comment.value;
+}
+
+/**
+ * Maps each name a module exports to whether it is type-only and whether a `@deprecated` JSDoc sits
+ * directly above it -- above the individual re-export specifier, or else above the statement.
+ */
+function moduleExportsByName({ sourcePath, source }) {
+  const result = parseSync(sourcePath, source);
+  if (result.errors.length) return null;
+  const comments = result.comments.filter((comment) =>
+    comment.type === 'Block' && comment.value.startsWith('*'));
+  const byName = new Map();
+  for (const statement of result.module.staticExports) {
+    for (const entry of statement.entries) {
+      const name = entry.exportName?.name;
+      if (!name) continue;
+      const doc = leadingJsDoc(comments, source, entry.start) ??
+        leadingJsDoc(comments, source, statement.start) ?? '';
+      byName.set(name, { isType: entry.isType === true, deprecated: /@deprecated\b/.test(doc) });
+    }
+  }
+  return byName;
+}
+
+function moduleExportsOrFinding(label, resolved, subject, findings) {
+  const exportsByName = moduleExportsByName(resolved);
+  if (!exportsByName) findings.push(`${label}: ${subject} source ${resolved.sourcePath} does not parse`);
+  return exportsByName;
+}
+
+function validateEntryPointDeprecation(label, entry, deprecatedEntryPoints, resolveContext, findings) {
+  exportSource(label, entry.name, entry.name, resolveContext, findings);
+  const replacement = entry.replacement;
+  if (!namesReplacement(replacement)) return;
+  if (replacement.kind !== 'entry-point') {
+    findings.push(`${label}: replacement must be another entry point`);
+  } else if (deprecatedEntryPoints.has(replacement.name)) {
+    findings.push(`${label}: replacement ${replacement.name} is itself deprecated`);
+  } else {
+    exportSource(label, replacement.name, `replacement entry point ${replacement.name}`, resolveContext, findings);
+  }
+}
+
+function validateTypeDeprecation(label, entry, resolveContext, findings) {
+  const resolved = exportSource(label, entry.module, entry.module, resolveContext, findings);
+  if (!resolved) return;
+  const exportsByName = moduleExportsOrFinding(label, resolved, entry.module, findings);
+  if (!exportsByName) return;
+  const own = exportsByName.get(entry.name);
+  if (!own) findings.push(`${label}: ${entry.module} does not export ${entry.name}`);
+  else if (!own.isType) findings.push(`${label}: ${entry.name} is not a type-only export`);
+  else if (!own.deprecated) {
+    findings.push(`${label}: ${entry.name} has no @deprecated JSDoc directly above its export`);
+  }
+
+  const replacement = entry.replacement;
+  if (!namesReplacement(replacement)) return;
+  if (replacement.kind !== 'type') {
+    findings.push(`${label}: replacement must be another type`);
+    return;
+  }
+  const replacementModule = replacement.module ?? entry.module;
+  let replacementExports = exportsByName;
+  if (replacementModule !== entry.module) {
+    const replacementSource = exportSource(
+      label,
+      replacementModule,
+      `replacement module ${replacementModule}`,
+      resolveContext,
+      findings,
+    );
+    if (!replacementSource) return;
+    replacementExports = moduleExportsOrFinding(label, replacementSource, replacementModule, findings);
+    if (!replacementExports) return;
+  }
+  const target = replacementExports.get(replacement.name);
+  if (!target) {
+    findings.push(`${label}: replacement type ${replacement.name} is not exported by ${replacementModule}`);
+  } else if (target.deprecated) {
+    findings.push(`${label}: replacement type ${replacement.name} is itself deprecated`);
+  }
+}
+
+/**
+ * Validates `exportDeprecations`: package-level deprecations that no component declaration can
+ * carry. An `entry-point` record deprecates one exact `package.json#exports` specifier (every
+ * import of that path) in favour of another; a `type` record deprecates one type-only export of an
+ * exact specifier, whose declaring source must carry `@deprecated` directly above that export so
+ * editors strike it through. Both share the tag-scoped ledger's window and rationale rules.
+ */
+function validateExportDeprecations(metadata, { packageJson, readSource }, findings) {
+  const records = metadata?.exportDeprecations;
+  if (!Array.isArray(records)) {
+    findings.push('exportDeprecations must be an array');
+    return;
+  }
+  const keys = records.map(exportDeprecationKey);
+  if (!sameJson(keys, [...keys].sort(compareText))) {
+    findings.push('exportDeprecations must be sorted by kind, module, and name');
+  }
+  const context = {
+    currentVersion: metadata?.history?.current?.version,
+    minimumFullMajors: metadata?.policy?.deprecation?.minimumFullMajorsAfterDeprecation,
+    taggedCurrent: metadata?.history?.taggedCurrent ?? null,
+  };
+  const resolveContext = {
+    exportsMap: packageJson?.exports && typeof packageJson.exports === 'object' ? packageJson.exports : {},
+    readSource,
+  };
+  const deprecatedEntryPoints = new Set(records
+    .filter((entry) => entry?.kind === 'entry-point')
+    .map((entry) => entry.name));
+  const seen = new Set();
+  for (const entry of records) {
+    const label = exportDeprecationLabel(entry);
+    const key = exportDeprecationKey(entry);
+    if (seen.has(key)) {
+      findings.push(`${label}: duplicate deprecation record`);
+      continue;
+    }
+    seen.add(key);
+    if (!EXPORT_DEPRECATION_KINDS.includes(entry?.kind)) {
+      findings.push(`${label}: kind must be entry-point or type`);
+      continue;
+    }
+    validateDeprecationWindow(label, entry, context, findings);
+    if (entry.kind === 'entry-point') {
+      validateEntryPointDeprecation(label, entry, deprecatedEntryPoints, resolveContext, findings);
+    } else {
+      validateTypeDeprecation(label, entry, resolveContext, findings);
+    }
+  }
+}
+
+/**
+ * Replaces every `since: 'unreleased'` deprecation (tag-scoped and export-level) with the version
+ * being released. `generate-component-metadata.mjs --write` applies it on the version rollover,
+ * before validation, so a record never ships reading `unreleased`, and a record whose removal floor
+ * was set against a lower major fails validation instead of silently shipping one major short.
+ */
+export function stampUnreleasedDeprecations(metadata, version) {
+  if (!parseVersion(version)) {
+    throw new Error(`Cannot stamp unreleased deprecations with ${String(version)}; expected a released version.`);
+  }
+  const stamp = (entries) => entries.map((entry) =>
+    entry?.since === UNRELEASED_VERSION ? { ...entry, since: version } : entry);
+  const stamped = { ...metadata };
+  if (Array.isArray(metadata?.deprecations)) stamped.deprecations = stamp(metadata.deprecations);
+  if (Array.isArray(metadata?.exportDeprecations)) {
+    stamped.exportDeprecations = stamp(metadata.exportDeprecations);
+  }
+  return stamped;
+}
+
+/**
+ * The Markdown subject of one tag-scoped deprecation record, shared by the generated component
+ * references and editor data: the default slot has no name to quote, and a `slot-content` record
+ * names the content it covers rather than a member.
+ */
+export function formatDeprecationSubject(entry, tagName) {
+  if (entry?.kind === 'component') return `\`${tagName}\``;
+  if (entry?.kind === 'slot' && !entry.name) return 'default slot';
+  if (entry?.kind === 'slot-content') {
+    const subject = entry.name ? `\`${entry.name}\`-slot content` : 'default-slot content';
+    const permitted = Array.isArray(entry.permittedContent) ? entry.permittedContent : [];
+    return permitted.length
+      ? `${subject} other than ${permitted.map((name) => `\`<${name}>\``).join(', ')}`
+      : subject;
+  }
+  return `\`${entry?.name}\`${entry?.attribute ? ` / \`${entry.attribute}\`` : ''}`;
 }
 
 function expectedMaturity(metadata, inventory) {
@@ -611,6 +929,14 @@ export function applyComponentMetadataToManifest(metadata, manifest, { packageVe
         declaration.deprecated ??= entry.rationale;
         continue;
       }
+      if (entry.kind === 'slot-content') {
+        // The slot survives, so the record lives only in `declaration.deprecations`: marking the
+        // slot entry itself would publish a slot deprecation that does not exist.
+        if (!manifestMember(declaration, 'slot', entry.name)) {
+          throw new Error(`${tag}:slot-content:${entry.name}: the slot whose content is deprecated does not exist`);
+        }
+        continue;
+      }
       const member = manifestMember(declaration, entry.kind, entry.name);
       if (!member) throw new Error(`${tag}:${entry.kind}:${entry.name}: deprecated public member does not exist`);
       member.deprecation = structuredClone(entry);
@@ -672,7 +998,15 @@ export function validateManifestMetadataProjection(metadata, manifest, { package
     .map((entry) => `${entry.tag}: manifest maturity/deprecation projection drifted`);
 }
 
-export function validateComponentMetadata(metadata, { inventory, manifest, packageJson, rawManifest }) {
+/**
+ * `readSource(relativePath)` returns a package-relative source file's text, or `null` when it does
+ * not exist; it defaults to the package checkout and is injectable so export deprecations can be
+ * validated against fixture sources.
+ */
+export function validateComponentMetadata(
+  metadata,
+  { inventory, manifest, packageJson, rawManifest, readSource = defaultReadSource },
+) {
   const findings = [];
   if (metadata?.schemaVersion !== COMPONENT_METADATA_SCHEMA_VERSION) {
     findings.push(`schemaVersion must be ${COMPONENT_METADATA_SCHEMA_VERSION}`);
@@ -818,6 +1152,7 @@ export function validateComponentMetadata(metadata, { inventory, manifest, packa
 
   const componentsByTag = new Map((inventory?.components ?? []).map((component) => [component.tag, component]));
   validateDeprecations(metadata, componentsByTag, manifest, findings);
+  validateExportDeprecations(metadata, { packageJson, readSource }, findings);
   if (findings.length === 0) {
     const expected = expectedMaturity(metadata, inventory);
     for (const component of inventory.components) {

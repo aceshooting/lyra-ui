@@ -482,9 +482,11 @@ custom-handle content inside the separator; its assigned subtree is inert, so th
 the sole pointer/keyboard resize control). Under RTL, logical start/end and horizontal pointer/arrow
 behavior mirror together; vertical behavior does not invert.
 
-**CSS parts:** `base split-panel` (both tokens are on the same outer wrapper), `start panel` and
+**CSS parts:** `base split-panel` (both tokens are on the same outer wrapper; `split-panel` is a
+deprecated alias of `base`, removal not before 23.0.0, so style `::part(base)`), `start panel` and
 `end panel` (each pane exposes its individual token plus the shared `panel` token), `divider`
-(focusable `role="separator"`, with value/min/max and disabled ARIA state).
+(focusable `role="separator"`, with value/min/max and disabled ARIA state). The deprecated part
+still matches until its removal; being a stylesheet selector, it logs no runtime warning.
 
 **Themeable custom properties:** `--divider-width` (default `4px`), `--divider-hit-area` (requested
 default `12px`, with Lyra's `--lr-icon-button-size` minimum target remaining the floor), `--min`
@@ -2441,9 +2443,10 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   the host's re-render has applied. That second pass only acts while focus is still inside the rail
   or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
   focuses the first candidate that can actually hold focus: the trigger, then the element that held
-  focus when the overlay opened, then the built-in `[part='toggle']` (unavailable under
-  `hideToggle`), and finally the rail host; when even the host cannot take focus (hidden, or inert —
-  under an inert ancestor or behind a stacked modal), focus is left where it is. The host
+  focus when the overlay opened (none when focus was on `<body>`), then the built-in
+  `[part='toggle']` (unavailable under `hideToggle`), then the rail host, and finally
+  `focusFallback` when set; when none of them can take focus (the host hidden, or inert — under an
+  inert ancestor or behind a stacked modal), focus is left where it is. The host
   temporarily receives `tabindex="-1"` only when it has no authored tabindex; the temporary
   attribute is removed once focus moves off the host or the rail disconnects, while a blur caused
   only by the window or tab losing system focus (the host stays the focused element) leaves it in
@@ -2456,7 +2459,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   `null`), no external element is a return candidate: a close still returns focus to the built-in
   toggle when its own click opened the overlay, otherwise to the element that held focus at open,
   and the deferred pass still runs over its remaining candidates (that element, the built-in toggle,
-  then the rail host) — only the trigger candidate depends on the association. The resolved trigger
+  the rail host, then `focusFallback`) — only the trigger candidate depends on the association. The
+  resolved trigger
   also receives `aria-expanded` (rendered in both states) and `aria-controls` pointing at the rail's
   own panel, so an external control announces the overlay's state across the shadow boundary.
   Because a light-DOM element cannot hold a raw reference into another element's shadow tree,
@@ -2468,6 +2472,29 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
   `for`). Resolved against this element's own root (shadow root or document) when the overlay opens
   and again when it closes. Ignored once `trigger` is itself set.
+- `focusFallback: HTMLElement | string | null = null` (attribute `focus-fallback`) — opt-in
+  last-resort target for the mobile overlay's deferred focus return, tried only after every built-in
+  target (the `trigger`/`for` association, the element that held focus at open, `[part='toggle']`,
+  the rail host) is unavailable — typically the application's main region, for a host that takes the
+  navigation, or the region around it, out of the layout as the overlay closes. Accepts an element or
+  an id, the same element-or-id shape as `<lr-intersection-observer>`'s `root`; an id (the attribute
+  always holds one — an id, not a selector) is resolved like `for`, against the rail's own root
+  (shadow root or document), and `''` means unset. Resolved when the deferred pass runs, so
+  reassigning it after opening, or re-creating the element under the same id before the pass runs,
+  is honored; property and attribute writes set the same value and the last write wins. It never
+  outranks a target that can take focus, so it changes no close that already lands, and it is not
+  used by the synchronous attempt, by a close caused by leaving `'mobile'` (a breakpoint or
+  `forceMode` change), or in the full/icon-only presentations. A target that is missing,
+  disconnected, in another document, hidden, inert or under an inert ancestor, `aria-hidden`,
+  disabled, or not focusable leaves focus where it is, and so does anything inside this rail
+  (unavailable whenever the rail host is). The target needs `tabindex="-1"` (or another way to take
+  focus): unlike the host, the rail never adds a tabindex to it. Unset (`null`) reproduces the
+  existing behavior exactly.
+
+  ```html
+  <main id="content" tabindex="-1">…</main>
+  <lr-app-rail hide-toggle for="menu-button" focus-fallback="content">…</lr-app-rail>
+  ```
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
   state, exposing a `[part='resizer']` handle clamped to `[minRailWidthPx, maxRailWidthPx]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
@@ -3274,11 +3301,14 @@ is neutral. This is also the composition used for direct `<lr-dropdown-item>` ch
   Preventing it anywhere keeps the current menu/submenu chain open. There are no
   `lr-menu-select`, `lr-menu-item-select`, or nested-selection aliases.
 
-**Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` plus semantic separators), `header`, and
-`footer`. Header and footer are composed controls or explanatory regions outside the
-`role="menu"` list, so filters, counts, or footer actions do not violate the menu required-child
-contract. Arbitrary non-item content in the default slot still renders, but is not enrolled as a
-menu item.
+**Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` rows, `<lr-menu-label>` captions, and
+`<hr>`/`<lr-divider>` separators), `header`, and `footer`. Header and footer are composed controls
+or explanatory regions outside the `role="menu"` list, so filters, counts, or footer actions do not
+violate the menu required-child contract. Any other default-slot content is deprecated (removal not
+before 23.0.0): it still renders, but inside `role="menu"` without a menu-item role and skipped by
+keyboard navigation, so move it to `slot="header"` or `slot="footer"`. Content that `lr-dropdown`
+forwards into its own menu is not covered: its default slot mirrors `sl-dropdown`'s free-form
+content.
 
 **CSS parts:** `header`, `list`, and `footer`. Root `trigger` and `popup` parts do not exist;
 style those on `<lr-dropdown>` when using the overlay composition.

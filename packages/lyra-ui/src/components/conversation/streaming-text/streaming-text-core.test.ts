@@ -2,6 +2,7 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './streaming-text-core.js';
 import type { LyraStreamingTextCore } from './streaming-text-core.js';
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 /** True once the browser has actually fetched a module whose URL ends with `suffix` -- the
  *  reliable proxy for "reached by the static import graph" under `@web/test-runner`'s unbundled
@@ -500,3 +501,62 @@ describe('lr-streaming-text-core forwarded Markdown parts and code direction', (
 function aTimeoutMs(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+describe('deprecated code-block-chrome spelling', () => {
+  type InnerMarkdown = HTMLElement & {
+    codeBlockChrome: boolean;
+    codeBlockHeader: boolean;
+    updateComplete: Promise<unknown>;
+  };
+  const usages = [
+    { tag: 'lr-streaming-text-core', kind: 'property', name: 'codeBlockChrome' },
+    { tag: 'lr-markdown-core', kind: 'property', name: 'codeBlockChrome' },
+  ] as const;
+  const fenced = '```js\nconst answer = 42;\n```';
+  const innerMarkdown = (el: LyraStreamingTextCore): InnerMarkdown =>
+    el.shadowRoot!.querySelector('lr-markdown-core') as InnerMarkdown;
+  const headerCount = (el: LyraStreamingTextCore): number =>
+    innerMarkdown(el)?.shadowRoot?.querySelectorAll('[part="code-block-header"]').length ?? 0;
+
+  it('warns once for this element only and forwards the header to lr-markdown-core as code-block-header', async () => {
+    let forwarded = { chrome: true, header: false };
+    const warnings = await captureDeprecationWarnings(usages, async () => {
+      const el = await fixture<LyraStreamingTextCore>(
+        html`<lr-streaming-text-core content-mode="markdown" code-block-chrome .content=${fenced}></lr-streaming-text-core>`
+      );
+      await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
+      const inner = innerMarkdown(el);
+      forwarded = { chrome: inner.codeBlockChrome, header: inner.codeBlockHeader };
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-streaming-text-core:property:codeBlockChrome',
+    ]);
+    expect(warnings[0]!.message).to.contain('code-block-header');
+    expect(forwarded).to.deep.equal({ chrome: false, header: true });
+  });
+
+  it('never warns for code-block-header', async () => {
+    const warnings = await captureDeprecationWarnings(usages, async () => {
+      const el = await fixture<LyraStreamingTextCore>(
+        html`<lr-streaming-text-core content-mode="markdown" code-block-header .content=${fenced}></lr-streaming-text-core>`
+      );
+      await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('removes the header again when code-block-chrome is removed', async () => {
+    let after = -1;
+    await captureDeprecationWarnings(usages, async () => {
+      const el = await fixture<LyraStreamingTextCore>(
+        html`<lr-streaming-text-core content-mode="markdown" code-block-chrome .content=${fenced}></lr-streaming-text-core>`
+      );
+      await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
+      el.removeAttribute('code-block-chrome');
+      await el.updateComplete;
+      await waitUntil(() => headerCount(el) === 0, 'the code-block header was never removed', { timeout: 5000 });
+      after = headerCount(el);
+    });
+    expect(after).to.equal(0);
+  });
+});

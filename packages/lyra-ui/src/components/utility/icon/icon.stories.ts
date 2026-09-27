@@ -115,14 +115,28 @@ export const RotateAndFlip: Story = {
   `,
 };
 
-export const FixedWidth: Story = {
+export const AlignedColumn: Story = {
+  name: 'Aligned icon column',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The default canvas already gives every icon the same 1.25em box, so a column of icons lines its labels up with no extra attribute. For a wider 1.5em box, set `inline-size` on the host; this replaces the deprecated `fixed-width` attribute. A glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em.',
+      },
+    },
+  },
   render: () => html`
-    <ul
-      style="list-style:none;margin:0;padding:0;display:grid;gap:0.5rem;font-size:1.25rem"
-    >
-      <li><lr-icon name="search" fixed-width></lr-icon> Search</li>
-      <li><lr-icon name="calendar" fixed-width></lr-icon> Calendar</li>
-      <li><lr-icon name="trash" fixed-width></lr-icon> Delete</li>
-    </ul>
+    <div style="display:flex;gap:2rem;font-size:1.25rem">
+      <ul style="list-style:none;margin:0;padding:0;display:grid;gap:0.5rem">
+        <li><lr-icon name="search"></lr-icon> Search</li>
+        <li><lr-icon name="calendar"></lr-icon> Calendar</li>
+        <li><lr-icon name="trash"></lr-icon> Delete</li>
+      </ul>
+      <ul style="list-style:none;margin:0;padding:0;display:grid;gap:0.5rem">
+        <li><lr-icon name="search" style="inline-size: var(--lr-size-1-5em)"></lr-icon> Search</li>
+        <li><lr-icon name="calendar" style="inline-size: var(--lr-size-1-5em)"></lr-icon> Calendar</li>
+        <li><lr-icon name="trash" style="inline-size: var(--lr-size-1-5em)"></lr-icon> Delete</li>
+      </ul>
+    </div>
   `,
 };

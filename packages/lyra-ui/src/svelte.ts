@@ -715,6 +715,7 @@ export type LyraAnimationSvelteProps = LyraSvelteElementProps<
 export type LyraAppRailSvelteProps = LyraSvelteElementProps<
   LyraAppRail,
   | 'collapsible'
+  | 'focusFallback'
   | 'for'
   | 'forceMode'
   | 'frame'
@@ -776,6 +777,7 @@ export type LyraAppRailSvelteProps = LyraSvelteElementProps<
   | '--lr-app-rail-width',
   {
     'aria-label'?: LyraAttributeValue<string | null>;
+    'focus-fallback'?: LyraAppRail['focusFallback'];
     'force-mode'?: LyraAppRail['forceMode'];
     'hide-toggle'?: LyraAppRail['hideToggle'];
     'icon-only-breakpoint'?: LyraAppRail['iconOnlyBreakpoint'];
@@ -6738,6 +6740,7 @@ export type LyraMediaCardSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'focus'
   | 'lr-before-media-download'
+  | 'lr-media-download-request'
   | 'lr-media-open',
   | '--lr-media-card-active-bg'
   | '--lr-media-card-active-border-color'

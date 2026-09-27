@@ -13,6 +13,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import type { LyraToolCallBlock } from "../../agent-tools/tool-call-block/tool-call-block.class.js";
 import type { LyraToolCallChip } from "../../agent-tools/tool-call-chip/tool-call-chip.class.js";
 import { adaptAiSdkMessage } from "../../../ai/adapters/ai-sdk.js";
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import type { ToolInvocation } from "../../../ai/types.js";
 
 function assertiveSinkTexts(doc: Document = document): string[] {
@@ -1338,5 +1339,66 @@ describe("lr-message-parts rendered whitespace, code direction and code headers"
       if (original) Object.defineProperty(navigator, "clipboard", original);
       else Reflect.deleteProperty(navigator, "clipboard");
     }
+  });
+});
+
+describe('lr-message-parts deprecated code-block-chrome spelling', () => {
+  type Parts = LyraMessageParts & { shadowRoot: ShadowRoot };
+  type InnerMarkdown = HTMLElement & { codeBlockChrome: boolean; codeBlockHeader: boolean };
+  const usages = [
+    { tag: 'lr-message-parts', kind: 'property', name: 'codeBlockChrome' },
+    { tag: 'lr-markdown', kind: 'property', name: 'codeBlockChrome' },
+  ] as const;
+  const fencedParts: MessagePart[] = [
+    { id: 'r', type: 'reasoning', collapsed: false, text: '```ts\nreasoned();\n```' },
+    { id: 'a', type: 'text', text: '```js\nanswer();\n```' },
+  ];
+  const markdownIn = (el: Parts): InnerMarkdown[] =>
+    [...el.shadowRoot.querySelectorAll('lr-markdown')] as InnerMarkdown[];
+  const headerCounts = (el: Parts): number[] =>
+    markdownIn(el).map((node) => node.shadowRoot?.querySelectorAll('[part="code-block-header"]').length ?? 0);
+
+  it('warns once for lr-message-parts only and forwards headers as code-block-header', async () => {
+    let forwarded: Array<{ chrome: boolean; header: boolean }> = [];
+    const warnings = await captureDeprecationWarnings(usages, async () => {
+      const el = await fixture<Parts>(
+        html`<lr-message-parts code-block-chrome .parts=${fencedParts}></lr-message-parts>`
+      );
+      await waitUntil(() => headerCounts(el).join() === '1,1', 'headers never rendered', { timeout: 5000 });
+      forwarded = markdownIn(el).map((node) => ({ chrome: node.codeBlockChrome, header: node.codeBlockHeader }));
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-message-parts:property:codeBlockChrome',
+    ]);
+    expect(warnings[0]!.message).to.contain('code-block-header');
+    expect(forwarded).to.deep.equal([
+      { chrome: false, header: true },
+      { chrome: false, header: true },
+    ]);
+  });
+
+  it('never warns for code-block-header', async () => {
+    const warnings = await captureDeprecationWarnings(usages, async () => {
+      const el = await fixture<Parts>(
+        html`<lr-message-parts code-block-header .parts=${fencedParts}></lr-message-parts>`
+      );
+      await waitUntil(() => headerCounts(el).join() === '1,1', 'headers never rendered', { timeout: 5000 });
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('removes the headers again when code-block-chrome is removed', async () => {
+    let after = '';
+    await captureDeprecationWarnings(usages, async () => {
+      const el = await fixture<Parts>(
+        html`<lr-message-parts code-block-chrome .parts=${fencedParts}></lr-message-parts>`
+      );
+      await waitUntil(() => headerCounts(el).join() === '1,1', 'headers never rendered', { timeout: 5000 });
+      el.removeAttribute('code-block-chrome');
+      await el.updateComplete;
+      await waitUntil(() => headerCounts(el).join() === '0,0', 'headers were never removed', { timeout: 5000 });
+      after = headerCounts(el).join();
+    });
+    expect(after).to.equal('0,0');
   });
 });

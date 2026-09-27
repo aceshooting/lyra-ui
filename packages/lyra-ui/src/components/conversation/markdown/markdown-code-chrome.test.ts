@@ -5,13 +5,21 @@ import './markdown.js';
 import './markdown-core.js';
 import type { MarkdownStreamingRenderMode } from './markdown-base.class.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 const tags = ['lr-markdown', 'lr-markdown-core'] as const;
+// The header tests below keep exercising the deprecated `codeBlockChrome` spelling as parity
+// coverage for `codeBlockHeader`; it must keep enabling the header until its removal.
+for (const tagName of tags) expectDeprecatedUsage(tagName, 'property', 'codeBlockChrome');
 const fencedSource = 'const message = "<b> & café 🚀";\n';
 const fencedContent = `\`\`\`json\n${fencedSource}\`\`\``;
 
 interface MarkdownChromeElement extends HTMLElement {
   codeBlockChrome: boolean;
+  codeBlockHeader: boolean;
   content: string;
   highlightCode: boolean;
   htmlMode: 'sanitize' | 'escape' | 'trusted';
@@ -25,7 +33,7 @@ interface MarkdownChromeElement extends HTMLElement {
 
 async function mount(
   tagName: (typeof tags)[number],
-  options: Partial<Pick<MarkdownChromeElement, 'content' | 'codeBlockChrome' | 'highlightCode' | 'htmlMode' | 'languages' | 'streaming' | 'streamingRender' | 'strings'>> = {},
+  options: Partial<Pick<MarkdownChromeElement, 'content' | 'codeBlockChrome' | 'codeBlockHeader' | 'highlightCode' | 'htmlMode' | 'languages' | 'streaming' | 'streamingRender' | 'strings'>> = {},
 ): Promise<MarkdownChromeElement> {
   await loadMarkdownDeps();
   const wrapper = await fixture<HTMLElement>(html`<div></div>`);
@@ -183,6 +191,51 @@ for (const tagName of tags) {
       await el.updateComplete;
       await waitUntil(() => el.shadowRoot?.querySelector('[part="code-block"] span') != null);
       expect(headers(el)).to.have.length(1);
+    });
+  });
+}
+
+for (const tagName of tags) {
+  describe(`${tagName} deprecated code-block-chrome spelling`, () => {
+    const usage = [{ tag: tagName, kind: 'property', name: 'codeBlockChrome' }] as const;
+
+    it('warns once, naming code-block-header, and still renders the header', async () => {
+      let headerCount = 0;
+      const warnings = await captureDeprecationWarnings(usage, async () => {
+        const el = await mount(tagName, { content: fencedContent, codeBlockChrome: true, highlightCode: false });
+        await waitForMarkdown(el, '[part="code-block-header"]');
+        headerCount = headers(el).length;
+        const second = await mount(tagName, { content: fencedContent, codeBlockChrome: true, highlightCode: false });
+        await second.updateComplete;
+      });
+      expect(headerCount).to.equal(1);
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        `lyra-deprecated:${tagName}:property:codeBlockChrome`,
+      ]);
+      expect(warnings[0]!.message).to.contain('code-block-header');
+    });
+
+    it('warns when the code-block-chrome attribute is authored', async () => {
+      const warnings = await captureDeprecationWarnings(usage, async () => {
+        await loadMarkdownDeps();
+        const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+        wrapper.innerHTML = `<${tagName} code-block-chrome></${tagName}>`;
+        await (wrapper.firstElementChild as MarkdownChromeElement).updateComplete;
+      });
+      expect(warnings).to.have.length(1);
+    });
+
+    it('never warns for code-block-header or an unset alias', async () => {
+      let headerCount = 0;
+      const warnings = await captureDeprecationWarnings(usage, async () => {
+        const el = await mount(tagName, { content: fencedContent, codeBlockHeader: true, highlightCode: false });
+        await waitForMarkdown(el, '[part="code-block-header"]');
+        headerCount = headers(el).length;
+        el.codeBlockChrome = false;
+        await el.updateComplete;
+      });
+      expect(headerCount).to.equal(1);
+      expect(warnings).to.have.length(0);
     });
   });
 }

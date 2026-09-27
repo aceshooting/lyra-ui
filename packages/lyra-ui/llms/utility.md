@@ -456,11 +456,16 @@ adds no layout.
 needed; reflected), `attr: string | null = null` (reflected; `*` observes every attribute; otherwise a
 space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
 false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
-mapped attributes reflect. Lyra's
-existing aliases remain and also reflect: `observeAttributes` (`attributes`; unfiltered boolean
-form of `attr`, equivalent to `attr: '*'`) and `characterData` (`character-data`, equivalent to
-`charData`). Plus `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`
-(neither reflects).
+mapped attributes reflect. Plus `subtree: boolean = true`, and programmatic
+`attributeFilter: string[] = []` (neither reflects).
+
+**Deprecated aliases** (still functional and still reflecting until their removal, no earlier than
+23.0.0; setting either logs a one-time development warning): `observeAttributes` (`attributes`)
+turns on attribute observation, and `characterData` (`character-data`) is identical to `charData`.
+Replace `character-data` with `char-data`. Replace `attributes` with `attr="*"` only when `attr`,
+`attr-old-value` and `attributeFilter` are all unset; otherwise just remove it. Those already turn
+attribute observation on, and a non-null `attr` ignores `attributeFilter`, so adding `attr="*"` next
+to a filter would widen the observer to every attribute.
 
 The browser capability is optional. A missing or throwing owner-window lookup, or an unavailable or
 throwing constructor, leaves that rebuild inert rather than leaking an exception. Individual
@@ -1318,9 +1323,14 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
   `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
   `prefers-reduced-motion: reduce`.
-- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon _box_ to
-  `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
-  of differently-shaped icons lines its labels up.
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected, deprecated; removal not before
+  23.0.0) — widens the icon _box_ to `--lr-icon-fixed-width` while the glyph's svg is pinned to
+  `--lr-icon-size` (1em by default) and centres inside it, so a column of differently-shaped icons
+  lines its labels up. It keeps working unchanged, and setting it logs a one-time development
+  warning. Omit it: the default canvas already gives every icon the same 1.25em box. For the wider
+  1.5em box set `lr-icon { inline-size: var(--lr-size-1-5em); }` on the host instead. One geometry
+  difference: a glyph wider than 1em keeps its intrinsic width (up to the box) instead of being
+  squeezed to 1em.
 
 **Events:**
 
@@ -1355,8 +1365,9 @@ source tree.
 - `--lr-icon-size` (unset by default) — when supplied, overrides both canvas dimensions. Without
   it, the selected `canvas` uses the font-relative sizes above. Stroke color is `currentColor` and
   the host is `color: inherit`, so color comes from surrounding text with no configuration.
-- `--lr-icon-fixed-width` (default `--lr-size-1-5em`) — inline size of the box while `fixed-width`
-  is set.
+- `--lr-icon-fixed-width` (default `--lr-size-1-5em`; deprecated together with `fixed-width`,
+  removal not before 23.0.0) — inline size of the box while `fixed-width` is set. Set `inline-size`
+  on the host instead.
 - `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
   the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
   factors are set to `-1` by `flip`, so set those properties rather than these tokens.
@@ -1424,7 +1435,7 @@ unregisterIconLibrary("material"); // icons using it revert to the built-in glyp
   name="star"
   label="Favourite"
 ></lr-icon>
-<lr-icon library="material" name="delete" fixed-width></lr-icon>
+<lr-icon library="material" name="delete"></lr-icon>
 <lr-icon name="search" canvas="square" animation="beat"></lr-icon>
 ```
 

@@ -5,6 +5,7 @@ import { activateOverlay, collectFocusableElements, composedContains, deepActive
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
 import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 export type { LyraFrame } from '../../../internal/variants.js';
 import { detectPlatform } from '../../../internal/platform.js';
@@ -502,10 +503,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  close's update has completed and one animation frame has passed. That second pass only acts
    *  while focus is still inside the rail or has fallen to `<body>` -- focus moved elsewhere in the
    *  meantime is never taken back -- and focuses the first candidate that can hold focus: this
-   *  trigger, then the element that held focus when the overlay opened, then the built-in
-   *  `[part="toggle"]` (unavailable under `hideToggle`), then this rail's host; when even the host
-   *  cannot take focus (hidden, or inert -- under an inert ancestor or behind a stacked modal),
-   *  focus is left where it is. The host receives a temporary `tabindex="-1"` only when it has no
+   *  trigger, then the element that held focus when the overlay opened (none when focus was on
+   *  `<body>`), then the built-in `[part="toggle"]` (unavailable under `hideToggle`), then this
+   *  rail's host, then `focusFallback` when set; when none of them can take focus (the host hidden,
+   *  or inert -- under an inert ancestor or behind a stacked modal), focus is left where it is. The
+   *  host receives a temporary `tabindex="-1"` only when it has no
    *  authored tabindex; that attribute is removed once focus moves off the host (a blur caused only
    *  by the window or tab losing system focus leaves it in place) or the rail disconnects, and an
    *  authored tabindex is never changed. An external trigger needs this explicit association
@@ -518,7 +520,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  (the default, `null`), no external element is a return candidate: a close still returns focus
    *  to the built-in toggle when its own click opened the overlay, otherwise to the element that
    *  held focus at open, and the second pass above still runs over its remaining candidates,
-   *  ending at this rail's host -- only the trigger candidate depends on this association. With
+   *  ending at this rail's host and `focusFallback` -- only the trigger candidate depends on this
+   *  association. With
    *  trigger-collapses, the same association manages desktop disclosure state and shortcuts; wire
    *  the trigger to toggle(). */
   @property({ attribute: false }) trigger: HTMLElement | null = null;
@@ -528,6 +531,35 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  against this element's own root (shadow root or document) when the overlay opens and again
    *  when it closes. Ignored once `trigger` is itself set. */
   @property() for = '';
+
+  /** Opt-in last-resort focus target for closing the mobile overlay, used only when every built-in
+   *  return target is unavailable: the external `trigger`/`for` association, the element that held
+   *  focus when the overlay opened, the built-in `[part="toggle"]`, and this rail's host itself
+   *  (hidden, or inert -- under an inert ancestor or behind a stacked modal). Typically the
+   *  application's main region, for a host that takes the navigation, or the region around it, out
+   *  of the layout as the overlay closes.
+   *
+   *  Accepts an element reference or an id, the same element-or-id shape as
+   *  `<lr-intersection-observer>`'s `root`. An id -- the `focus-fallback` attribute always holds one,
+   *  never a selector -- is resolved like `for`, against this element's own root (shadow root or
+   *  document); an empty string means unset. It is resolved only when the return needs it, so
+   *  reassigning it after the overlay opened, or re-creating the element under the same id before
+   *  the return runs, is honored. Property and attribute writes set the same value and the last
+   *  write wins: a later attribute write or removal replaces an element assigned to the property.
+   *
+   *  Tried only by the second, deferred pass described under `trigger`, after this rail's host and
+   *  under that pass's own conditions (focus still inside the rail or fallen to `<body>`; focus
+   *  moved elsewhere is never taken back). It never outranks a target that can take focus, so it
+   *  changes no close that already lands. It is not used by the synchronous attempt, by a close
+   *  caused by leaving `'mobile'` (a breakpoint or `forceMode` change), or by the full/icon-only
+   *  presentations.
+   *
+   *  A target that is missing, disconnected, in another document, hidden, inert or under an inert
+   *  ancestor, `aria-hidden`, disabled, or not focusable leaves focus where it is, and so does
+   *  anything inside this rail (unavailable whenever the rail host is). Give a landmark
+   *  `tabindex="-1"`: unlike the host, it never receives a temporary tabindex. Unset (the default,
+   *  `null`) reproduces the existing behavior exactly. */
+  @property({ attribute: 'focus-fallback' }) focusFallback: HTMLElement | string | null = null;
 
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
@@ -1085,6 +1117,19 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     return found instanceof HTMLElement ? found : null;
   }
 
+  /** Resolves `focusFallback` when the deferred return reaches it: the element itself, or the one
+   *  its id names in this element's own root. `null` when unset or when it does not name an
+   *  element of this rail's own document. */
+  private resolveFocusFallback(): HTMLElement | null {
+    const value = this.focusFallback;
+    if (!value) return null;
+    const target =
+      typeof value === 'string'
+        ? ((this.getRootNode() as Document | ShadowRoot).getElementById?.(value) ?? null)
+        : value;
+    return isHtmlElement(target) && target.ownerDocument === this.ownerDocument ? target : null;
+  }
+
   private activateMobileOverlay(): void {
     const explicitTrigger = this.explicitTrigger;
     this.explicitTrigger = undefined;
@@ -1157,10 +1202,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  `<body>`: focus the user or host deliberately moved elsewhere in the meantime is never taken
    *  back. It then focuses the first candidate that can actually hold focus -- the return target
    *  (built-in toggle click, external `trigger`/`for`, or the element focused when the overlay
-   *  opened), then the element focused when the overlay opened, then the built-in `[part="toggle"]`
-   *  (unavailable under `hideToggle`), then the rail host; when even the host cannot take focus
-   *  (hidden, or inert -- under an inert ancestor or behind a stacked modal), focus is left where
-   *  it is. The pass runs whether or not `trigger`/`for` is set -- only the trigger candidate
+   *  opened), then the element focused when the overlay opened (none when focus was on `<body>`),
+   *  then the built-in `[part="toggle"]` (unavailable under `hideToggle`), then the rail host, then
+   *  `focusFallback` when set; when none of them can take focus (the host hidden, or inert -- under
+   *  an inert ancestor or behind a stacked modal), focus is left where it is. The pass runs whether
+   *  or not `trigger`/`for` is set -- only the trigger candidate
    *  depends on that association. A reopen, another close, or a disconnect before the frame
    *  arrives abandons the pass. */
   private scheduleDeferredFocusReturn(): void {
@@ -1169,11 +1215,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       host: this,
       candidates: () => [...candidates, this.toggleEl],
       isCurrent: () => !this.overlayActive,
-      fallback: () => this.focusHostFallback(),
+      fallback: () => {
+        if (!this.focusHostFallback()) focusFirstAvailable([this.resolveFocusFallback()]);
+      },
     });
   }
 
-  private focusHostFallback(): void {
+  /** Focuses this rail's host as the deferred return's last built-in target, giving it a temporary
+   *  `tabindex="-1"` when it has no authored one. Returns whether focus landed on the host; when it
+   *  did not, that temporary tabindex is handed back immediately. */
+  private focusHostFallback(): boolean {
     if (!this.hasAttribute('tabindex')) {
       this.setAttribute('tabindex', '-1');
       // A window or tab losing system focus also fires blur at the focused element, yet the host
@@ -1197,7 +1248,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.addEventListener('blur', onFocusChange);
       view?.addEventListener('focus', onFocusChange);
     }
-    if (!focusFirstAvailable(this)) this.restoreFallbackTabIndex?.();
+    if (focusFirstAvailable(this)) return true;
+    this.restoreFallbackTabIndex?.();
+    return false;
   }
 
   /** Reparents the (never destroyed/recreated) toggle button between its two valid DOM positions:

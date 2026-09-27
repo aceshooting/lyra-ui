@@ -1,0 +1,5 @@
+---
+"@aceshooting/lyra-ui": minor
+---
+
+The pre-v9 `lr-geojson-view` tag, its `LyraGeojsonView` class and its `LyraGeojsonViewEventMap` type are deprecated in favour of `lr-geojson-viewer`, `LyraGeoJsonViewer` and `LyraGeoJsonViewerEventMap`, with removal no earlier than 23.0.0. This reverses the earlier promise, made when the viewer was renamed, to keep `lr-geojson-view` as a permanent compatibility tag: it adds no behavior of its own, and one name per viewer is simpler to document and to migrate. The alias keeps working unchanged until then, and connecting an `lr-geojson-view` logs one development-mode warning per page. The `components/lr-geojson-view.js`, `components/viewers/geojson-view/geojson-view.js` and `components/viewers/geojson-view/geojson-view.class.js` entry points are deprecated with it. The two registration routes also register `lr-geojson-viewer`, so an application that imports one of them only to register the canonical tag switches to `components/lr-geojson-viewer.js`.

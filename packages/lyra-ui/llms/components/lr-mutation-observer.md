@@ -7,7 +7,8 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `characterData` / `character-data` since `unreleased`; use property `char-data`; removal not before `23.0.0` — character-data is a Lyra-only spelling of the mirrored char-data attribute (the Web Awesome and Shoelace name) with identical behavior. It keeps reflecting and enabling character-data observation through the 22.x line, and setting it logs a one-time development warning.
+- **Deprecated property** `observeAttributes` / `attributes` since `unreleased`; use property `attr="*"`; removal not before `23.0.0` — attributes is a Lyra-only boolean spelling of the mirrored attr="*" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr="*" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning.
 - **Optional peers** none
 - **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -25,11 +26,16 @@ adds no layout.
 needed; reflected), `attr: string | null = null` (reflected; `*` observes every attribute; otherwise a
 space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
 false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
-mapped attributes reflect. Lyra's
-existing aliases remain and also reflect: `observeAttributes` (`attributes`; unfiltered boolean
-form of `attr`, equivalent to `attr: '*'`) and `characterData` (`character-data`, equivalent to
-`charData`). Plus `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`
-(neither reflects).
+mapped attributes reflect. Plus `subtree: boolean = true`, and programmatic
+`attributeFilter: string[] = []` (neither reflects).
+
+**Deprecated aliases** (still functional and still reflecting until their removal, no earlier than
+23.0.0; setting either logs a one-time development warning): `observeAttributes` (`attributes`)
+turns on attribute observation, and `characterData` (`character-data`) is identical to `charData`.
+Replace `character-data` with `char-data`. Replace `attributes` with `attr="*"` only when `attr`,
+`attr-old-value` and `attributeFilter` are all unset; otherwise just remove it. Those already turn
+attribute observation on, and a non-null `attr` ignores `attributeFilter`, so adding `attr="*"` next
+to a filter would widen the observer to every attribute.
 
 The browser capability is optional. A missing or throwing owner-window lookup, or an unavailable or
 throwing constructor, leaves that rebuild inert rather than leaking an exception. Individual

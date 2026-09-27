@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policy": {
     "semverCoverage": {
       "stable": "full",
@@ -456,6 +456,19 @@
       "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
     },
     {
+      "tag": "lr-geojson-view",
+      "kind": "component",
+      "name": "lr-geojson-view",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "component",
+        "name": "lr-geojson-viewer",
+        "usage": "<lr-geojson-viewer>"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "lr-geojson-view is the pre-v9 name of lr-geojson-viewer and adds no behavior of its own; it survives only as a distinct subclass so both names can share one registry. This reverses the earlier promise to keep the alias permanently: the tag, the LyraGeojsonView class and its geojson-view routes keep working unchanged through the 22.x line, and connecting the tag logs a one-time development warning."
+    },
+    {
       "tag": "lr-graph-legend",
       "kind": "event",
       "name": "lr-before-visibility-change",
@@ -522,6 +535,19 @@
     },
     {
       "tag": "lr-icon",
+      "kind": "css-property",
+      "name": "--lr-icon-fixed-width",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "host-css-property",
+        "name": "inline-size",
+        "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "This property only sizes the box while the deprecated fixed-width attribute is set, so it shares that attribute's removal window. A host inline-size declaration reproduces the wider box without a component-specific custom property; a glyph wider than 1em then keeps its intrinsic width instead of being squeezed to 1em."
+    },
+    {
+      "tag": "lr-icon",
       "kind": "property",
       "name": "autoWidth",
       "attribute": "auto-width",
@@ -535,6 +561,20 @@
       "rationale": "autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is."
     },
     {
+      "tag": "lr-icon",
+      "kind": "property",
+      "name": "fixedWidth",
+      "attribute": "fixed-width",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "host-css-property",
+        "name": "inline-size",
+        "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "fixed-width predates the mirrored canvas vocabulary, whose default fixed canvas already gives every icon the same 1.25em box so a column of icons lines its labels up. Where the wider 1.5em box matters, a host inline-size reproduces it, except that a glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em. Neither pinned upstream publishes fixed-width, so it is a Lyra-only spelling."
+    },
+    {
       "tag": "lr-known-date",
       "kind": "part",
       "name": "label",
@@ -546,6 +586,109 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-known-date` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-markdown-core",
+      "kind": "property",
+      "name": "codeBlockChrome",
+      "attribute": "code-block-chrome",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "property",
+        "name": "codeBlockHeader",
+        "usage": "code-block-header"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning."
+    },
+    {
+      "tag": "lr-markdown",
+      "kind": "property",
+      "name": "codeBlockChrome",
+      "attribute": "code-block-chrome",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "property",
+        "name": "codeBlockHeader",
+        "usage": "code-block-header"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning."
+    },
+    {
+      "tag": "lr-media-card",
+      "kind": "event",
+      "name": "lr-before-media-download",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-media-download-request",
+        "usage": "addEventListener('lr-media-download-request', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention. Both names fire from the same activation of a safe file anchor with an equal { src, filename } detail during the compatibility window, the canonical name first, and either may veto the native download/open. A veto through the alias logs a one-time development warning."
+    },
+    {
+      "tag": "lr-menu",
+      "kind": "slot-content",
+      "name": "",
+      "permittedContent": [
+        "hr",
+        "lr-divider",
+        "lr-dropdown-item",
+        "lr-menu-item",
+        "lr-menu-label"
+      ],
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "header",
+        "usage": "slot=\"header\" (or slot=\"footer\")"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Content other than items, labels and separators renders inside role=\"menu\" without a menu-item role and is skipped by roving focus; the header and footer slots render the same content outside the list with its native keyboard behavior. Content that lr-dropdown forwards into its own menu is not covered: it mirrors sl-dropdown's free-form default slot."
+    },
+    {
+      "tag": "lr-message-parts",
+      "kind": "property",
+      "name": "codeBlockChrome",
+      "attribute": "code-block-chrome",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "property",
+        "name": "codeBlockHeader",
+        "usage": "code-block-header"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the built-in text and reasoning Markdown parts, which now always receive code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+    },
+    {
+      "tag": "lr-mutation-observer",
+      "kind": "property",
+      "name": "characterData",
+      "attribute": "character-data",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "property",
+        "name": "charData",
+        "usage": "char-data"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "character-data is a Lyra-only spelling of the mirrored char-data attribute (the Web Awesome and Shoelace name) with identical behavior. It keeps reflecting and enabling character-data observation through the 22.x line, and setting it logs a one-time development warning."
+    },
+    {
+      "tag": "lr-mutation-observer",
+      "kind": "property",
+      "name": "observeAttributes",
+      "attribute": "attributes",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "property",
+        "name": "attr",
+        "usage": "attr=\"*\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "attributes is a Lyra-only boolean spelling of the mirrored attr=\"*\" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr=\"*\" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning."
     },
     {
       "tag": "lr-qr-code",
@@ -562,6 +705,32 @@
     },
     {
       "tag": "lr-sparkline",
+      "kind": "css-property",
+      "name": "--lr-sparkline-stroke-width",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--line-width",
+        "usage": "lr-sparkline { --line-width: 2px; }"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "--lr-sparkline-stroke-width predates the mirrored Web Awesome --line-width and is read only as its fallback, so it has no effect wherever --line-width is set. Scope the replacement to lr-sparkline, because the unprefixed --line-width also reaches any other element that reads it. It keeps working through the 22.x line; a stylesheet cannot be observed using it, so it never logs a warning."
+    },
+    {
+      "tag": "lr-sparkline",
+      "kind": "part",
+      "name": "area",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "part",
+        "name": "fill",
+        "usage": "::part(fill)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "area is a Lyra-only alias for the mirrored fill part on the same path; fill is the Web Awesome name. The area token stays on that path through the 22.x line; a stylesheet cannot be observed using a part, so it never logs a warning."
+    },
+    {
+      "tag": "lr-sparkline",
       "kind": "part",
       "name": "base",
       "since": "8.0.0",
@@ -572,6 +741,60 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-split-panel",
+      "kind": "part",
+      "name": "split-panel",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "part",
+        "name": "base",
+        "usage": "::part(base)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "split-panel is a Lyra-only second token on the same outer wrapper as base. Neither pinned wa-split-panel nor sl-split-panel publishes a wrapper part, so base, the root part name used across the library, remains the single supported spelling. The removal-not-before version is a policy floor, not a plan: should either upstream publish a component-named wrapper part, this alias stays for as long as upstream ships it."
+    },
+    {
+      "tag": "lr-stat",
+      "kind": "slot",
+      "name": "",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "start",
+        "usage": "slot=\"start\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "start is the library-wide adornment slot and already takes precedence when both are filled; retiring the unnamed icon alias stops an unnamed child from silently becoming the leading icon. lr-stat has no upstream counterpart, so no mirrored slot is affected."
+    },
+    {
+      "tag": "lr-streaming-text-core",
+      "kind": "property",
+      "name": "codeBlockChrome",
+      "attribute": "code-block-chrome",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "property",
+        "name": "codeBlockHeader",
+        "usage": "code-block-header"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+    },
+    {
+      "tag": "lr-streaming-text",
+      "kind": "property",
+      "name": "codeBlockChrome",
+      "attribute": "code-block-chrome",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "property",
+        "name": "codeBlockHeader",
+        "usage": "code-block-header"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
     },
     {
       "tag": "lr-video-playlist",
@@ -585,6 +808,84 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    }
+  ],
+  "exportDeprecations": [
+    {
+      "kind": "entry-point",
+      "name": "./components/lr-geojson-view.js",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "entry-point",
+        "name": "./components/lr-geojson-viewer.js",
+        "usage": "import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "This tag-shaped route registers the deprecated lr-geojson-view alias (and, through it, lr-geojson-viewer). Import the lr-geojson-viewer route instead; this one keeps working unchanged through the 22.x line."
+    },
+    {
+      "kind": "entry-point",
+      "name": "./components/viewers/geojson-view/geojson-view.class.js",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "entry-point",
+        "name": "./components/viewers/geojson-view/geojson-viewer.class.js",
+        "usage": "import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "This route exists for the deprecated LyraGeojsonView alias class and its event map; its re-exports of LyraGeoJsonViewer and its types duplicate the canonical geojson-viewer class route. Import from that route instead; this one keeps working unchanged through the 22.x line."
+    },
+    {
+      "kind": "entry-point",
+      "name": "./components/viewers/geojson-view/geojson-view.js",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "entry-point",
+        "name": "./components/viewers/geojson-view/geojson-viewer.js",
+        "usage": "import '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.js';"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "This route registers the deprecated lr-geojson-view alias and, as a side effect, lr-geojson-viewer. Import the geojson-viewer route to register the canonical tag alone; this one keeps working unchanged through the 22.x line."
+    },
+    {
+      "kind": "type",
+      "module": "./components/viewers/document-viewer/registry.js",
+      "name": "DocumentFile",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "type",
+        "name": "LyraDocumentFile",
+        "usage": "import type { LyraDocumentFile } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "LyraDocumentFile is the structurally identical interface under the library's prefixed type naming, and each is assignable to the other. Exported signatures keep the unprefixed name until the removal, so no existing signature changes in a minor release."
+    },
+    {
+      "kind": "type",
+      "module": "./components/viewers/document-viewer/registry.js",
+      "name": "DocumentRendererDefinition",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "type",
+        "name": "LyraDocumentRendererDefinition",
+        "usage": "import type { LyraDocumentRendererDefinition } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "LyraDocumentRendererDefinition is the same union under the library's prefixed type naming. Exported signatures keep the unprefixed name until the removal, so no existing signature changes in a minor release."
+    },
+    {
+      "kind": "type",
+      "module": "./components/viewers/geojson-view/geojson-view.class.js",
+      "name": "LyraGeojsonViewEventMap",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "type",
+        "module": "./components/viewers/geojson-view/geojson-viewer.class.js",
+        "name": "LyraGeoJsonViewerEventMap",
+        "usage": "import type { LyraGeoJsonViewerEventMap } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "The event contract of the deprecated lr-geojson-view alias is exactly LyraGeoJsonViewerEventMap under a second name. The alias type keeps resolving to it, from this route and the package root, through the 22.x line."
     }
   ],
   "history": {
@@ -20652,7 +20953,7 @@
     "current": {
       "version": "21.0.0",
       "sourceCommit": null,
-      "manifestSha256": "ab491715f073df9a5188bd781cd2b72316157429d9a984dfd1acdfb35dc75c12",
+      "manifestSha256": "f51ab659a63e04563674c23b2a2520a05f04dfc78135ab018eb8a2aed6f1f1bc",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

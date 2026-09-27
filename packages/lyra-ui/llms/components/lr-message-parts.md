@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `unreleased`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the built-in text and reasoning Markdown parts, which now always receive code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 21 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -37,7 +37,9 @@ and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwa
 and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
 blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
 source language label and localized copy action to built-in code blocks.
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is an equivalent enabling alias. These settings do not replace
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a deprecated equivalent
+enabling alias (removal not before 23.0.0; setting it logs a one-time development warning), and the
+parts' Markdown elements receive either option as `codeBlockHeader`. These settings do not replace
 the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N

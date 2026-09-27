@@ -10,7 +10,8 @@ export interface DeferredFocusReturnRequest {
   host: HTMLElement & { readonly updateComplete: Promise<unknown> };
   /** Return targets in priority order, resolved when the pass runs rather than when it is
    *  scheduled, so a target the host re-shows or re-creates in the meantime is seen. The first one
-   *  that can actually hold focus receives it. */
+   *  that can actually hold focus receives it. `<body>` and `<html>` are skipped: a component that
+   *  recorded one as its opener (nothing held focus when it opened) has no opener candidate. */
   candidates: () => readonly FocusReturnCandidate[];
   /** Whether focus sitting on `active` is stranded by the close (typically: inside the component or
    *  its now-closed panel). Defaults to composed containment in `host`. Focus that has fallen to
@@ -22,7 +23,8 @@ export interface DeferredFocusReturnRequest {
   settled?: Promise<unknown>;
   /** Extra validity check evaluated before the pass acts (for example "still closed"). */
   isCurrent?: () => boolean;
-  /** Final component-owned target, used only when every ordinary return candidate is unavailable. */
+  /** Final component-owned target step, invoked once every ordinary return candidate is
+   *  unavailable. */
   fallback?: () => void;
 }
 
@@ -43,8 +45,9 @@ export interface DeferredFocusReturnRequest {
  * registered during that event -- has already landed. It acts only while focus is still stranded:
  * lost to `<body>`, still on whatever the synchronous return landed on, or inside the region
  * `stranded` names. Focus the user or host deliberately moved elsewhere in the meantime is never
- * taken back. It then focuses the first candidate that can hold focus, or invokes the optional
- * component-owned fallback when none can. One bounded pass, not a poll.
+ * taken back. It then focuses the first candidate that can hold focus -- never `<body>` or the
+ * document element, where lost focus already sits -- or invokes the optional component-owned
+ * fallback when none can. One bounded pass, not a poll.
  *
  * `cancel()` -- and a later `schedule()` -- abandons a pending pass. Call it when the overlay
  * reopens, closes again, or the component disconnects.
@@ -83,7 +86,10 @@ export class DeferredFocusReturn {
         // A resolver must not throw out of a deferred frame callback.
         return;
       }
-      if (!focusFirstAvailable([...candidates])) request.fallback?.();
+      // `<body>` and the document element are where lost focus already sits, never a place to return
+      // it to -- and focusing either reads back as success, since every focused element is inside it.
+      const returnable = candidates.filter((c) => c !== doc.body && c !== doc.documentElement);
+      if (!focusFirstAvailable(returnable)) request.fallback?.();
     };
     void (async () => {
       await host.updateComplete;

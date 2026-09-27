@@ -150,6 +150,29 @@ it('renders the exact two-pane slots, shared panel part, divider slot, and wrapp
   expect(base(element).style.getPropertyValue('--_lr-split-panel-start-position')).to.equal('50%');
 });
 
+// `split-panel` is a deprecated second token on the wrapper that `base` names; until its removal
+// both must keep reaching the same node, so a consumer rule written against either still paints.
+it('styles the same wrapper through ::part(split-panel) and ::part(base) during the compatibility window', async () => {
+  const style = document.createElement('style');
+  style.textContent =
+    'lr-split-panel.alias-probe::part(split-panel) { outline: 1px solid rgb(1, 2, 3); }' +
+    'lr-split-panel.alias-probe::part(base) { outline-offset: 3px; }';
+  document.head.append(style);
+  try {
+    const element = (await fixture(html`
+      <lr-split-panel class="alias-probe" style="inline-size: 400px; block-size: 200px">
+        <div slot="start">Start</div>
+        <div slot="end">End</div>
+      </lr-split-panel>
+    `)) as LyraSplitPanel;
+    const wrapper = getComputedStyle(base(element));
+    expect(wrapper.outlineColor).to.equal('rgb(1, 2, 3)');
+    expect(wrapper.outlineOffset).to.equal('3px');
+  } finally {
+    style.remove();
+  }
+});
+
 // `data-primary` used to be written onto [part~="base"]. Nothing ever read it: no stylesheet rule
 // matched it, and `::part(base)[data-primary]` can never match per Selectors L4 (a compound after
 // ::part() may only add pseudo-classes), so no consumer could have depended on it either.

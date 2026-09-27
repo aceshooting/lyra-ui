@@ -18,6 +18,11 @@ import './svg-viewer/svg-viewer.js';
 import './xml-viewer/xml-viewer.js';
 import type { LyraDocumentPreview } from './document-preview/document-preview.class.js';
 import type { LyraSvgViewer } from './svg-viewer/svg-viewer.class.js';
+import { expectDeprecatedUsage } from '../../../test/expected-deprecations.js';
+
+// The deprecated `lr-geojson-view` alias must keep meeting this contract until its removal, so
+// its one-time connect warning is expected here.
+expectDeprecatedUsage('lr-geojson-view', 'component', 'lr-geojson-view');
 
 const REMOTE_VIEWER_TAGS = [
   'lr-archive-viewer',

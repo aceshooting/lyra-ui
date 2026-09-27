@@ -285,8 +285,17 @@ Release blockers for new components, bugs in existing ones. Full rules:
   `./package.sh`; verify numbers by hand; helper examples import granular subpaths, never the root
   barrel.
 - New or changed events: `pnpm run events` + `pnpm run framework-types` (`check:event-types`,
-  `check:framework-types`); new `@deprecated`: a `component-metadata.json#deprecations` record
-  (`since` ≤ current version, `removalNotBefore` a whole major later).
+  `check:framework-types`).
+- New `@deprecated`: a `component-metadata.json#deprecations` record (`kind: 'slot-content'` for
+  deprecated content in a surviving slot, whose description must not start with "Deprecated"); a
+  deprecated entry point or exported type goes in `#exportDeprecations`. A record after the current
+  release tag uses `since: 'unreleased'` (stamped on the version bump; otherwise `since` ≤ current
+  version); `removalNotBefore` clears one whole later major; no doc, JSDoc or message names the
+  pending version.
+- Cheaply observable deprecated usage (property/attribute set, tag connect, alias veto — never
+  slotted content or styling hooks, which would ship in every bundle) calls `warnDeprecatedUsage()`
+  (`src/internal/dev-mode-attribute-warning.ts`); tests seed or capture it with
+  `test/expected-deprecations.ts` ([testing.md](docs/agents/testing.md)).
 
 ## Testing conventions — digest
 

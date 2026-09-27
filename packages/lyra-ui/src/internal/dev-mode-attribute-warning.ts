@@ -140,6 +140,67 @@ export function devWarnOnce(key: string, message: string): void {
 }
 
 /**
+ * Kinds of deprecated usage a component can observe at runtime. Each is a `kind` of the tag-scoped
+ * records in the package's deprecation metadata (`scripts/fixtures/component-metadata.json`), so a
+ * warning key names exactly one record. The styling kinds (`part`, `css-property`, `css-state`) are
+ * absent because a component cannot observe a stylesheet's use of them; `slot`/`slot-content`
+ * records are absent because detecting slotted content would ship in every production bundle of
+ * the component. Those deprecations are recorded and documented but never warn.
+ */
+export type LyraDeprecatedUsageKind =
+  | 'component'
+  | 'property'
+  | 'attribute'
+  | 'method'
+  | 'event';
+
+/**
+ * The page-wide dedupe key for one deprecated usage: `lyra-deprecated:<tag>:<kind>:<name>`.
+ * `tagName` is the live element name, so a custom prefix
+ * or a consumer subclass registered under its own tag gets its own key.
+ */
+export function deprecationWarningKey(
+  tagName: string,
+  kind: LyraDeprecatedUsageKind,
+  name: string
+): string {
+  return `lyra-deprecated:${tagName}:${kind}:${name}`;
+}
+
+/**
+ * Dev-mode-only: reports that `host` was used through a deprecated API, once per page for each
+ * (tag, `kind`, `name`) -- the same gate and dedupe store as {@link devWarnOnce}, so it is silent in
+ * production and whenever Lit itself is not in development mode.
+ *
+ * `kind` and `name` are the deprecation record's own `kind` and `name`, so the key {@link deprecationWarningKey} derives maps to exactly one record, and the message
+ * names the API in that same vocabulary: `<lr-markdown>: deprecated property 'codeBlockChrome'; use
+ * code-block-header.`. `replacement` is the record's replacement, written tersely the way an
+ * author uses it (`attr="*"`, `code-block-header`, `<lr-geojson-viewer>`) — every string ships in each
+ * bundle that composes the component. The message
+ * names no version -- removal floors live in the deprecation metadata -- and, as a developer
+ * diagnostic, is not localized.
+ *
+ * Call it only at an exact, cheap usage signal: a deprecated property or attribute being set
+ * (`willUpdate`, guarded on the truthy value so a default never warns), a deprecated tag
+ * connecting, or a deprecated alias event actually vetoing.
+ * Never add a style probe or a listener hook just to detect usage. Tests seed or capture the
+ * warning with `test/expected-deprecations.ts`.
+ */
+export function warnDeprecatedUsage(
+  host: Element,
+  kind: LyraDeprecatedUsageKind,
+  name: string,
+  replacement: string
+): void {
+  const tagName = host.localName;
+  // The key is built inline (not through deprecationWarningKey) so bundles never carry both.
+  devWarnOnce(
+    `lyra-deprecated:${tagName}:${kind}:${name}`,
+    `<${tagName}>: deprecated ${kind} '${name}'; use ${replacement}.`
+  );
+}
+
+/**
  * Dev-mode-only: warns once per (tag, attribute-name) when `host` carries an attribute that
  * isn't in `observedAttributes`, isn't in `knownUnobservedAttributes`, and isn't in the
  * always-exempt global/data/aria set. No-op when Lit's own dev-mode signal isn't present

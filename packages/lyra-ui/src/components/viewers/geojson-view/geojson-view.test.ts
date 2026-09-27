@@ -11,6 +11,15 @@ import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
+
+// The fixtures below deliberately stay on the deprecated `lr-geojson-view` alias: it must keep
+// passing the full viewer contract until its removal, so its connect warning is expected here.
+expectDeprecatedUsage('lr-geojson-view', 'component', 'lr-geojson-view');
 
 const GEOJSON_URL = 'https://example.test/zones.geojson';
 
@@ -48,6 +57,62 @@ describe('GeoJSON viewer identity', () => {
     expect(customElements.get('lr-geojson-view') === LyraGeojsonView).to.equal(
       true
     );
+  });
+});
+
+describe('deprecated lr-geojson-view alias', () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: 'lr-geojson-view', kind: 'component', name: 'lr-geojson-view' },
+  ];
+
+  it('logs one development warning naming lr-geojson-viewer, however many aliases connect', async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+      const first = document.createElement('lr-geojson-view');
+      const second = document.createElement('lr-geojson-view');
+      wrapper.append(first, second);
+      await first.updateComplete;
+      await second.updateComplete;
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-geojson-view:component:lr-geojson-view',
+    ]);
+    expect(warnings[0]!.message).to.contain('<lr-geojson-viewer>');
+    expect(warnings[0]!.message).to.contain("deprecated component 'lr-geojson-view'");
+  });
+
+  it('keeps the alias fully functional after warning', async () => {
+    let tagName = '';
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await fixture<LyraGeojsonView>(
+        html`<lr-geojson-view max-height="12rem"></lr-geojson-view>`
+      );
+      tagName = el.localName;
+      expect(
+        (
+          el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+        ).style.getPropertyValue('--lr-geojson-viewer-max-height')
+      ).to.equal('12rem');
+    });
+    expect(tagName).to.equal('lr-geojson-view');
+    expect(warnings).to.have.length(1);
+  });
+
+  it('never warns for the canonical lr-geojson-viewer', async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await fixture<LyraGeoJsonViewer>(
+        html`<lr-geojson-viewer></lr-geojson-viewer>`
+      );
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('does not warn for an alias that is created but never connected', async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, () => {
+      document.createElement('lr-geojson-view');
+    });
+    expect(warnings).to.have.length(0);
   });
 });
 

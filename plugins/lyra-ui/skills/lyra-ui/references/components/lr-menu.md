@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated slot-content** default-slot content other than `<hr>`, `<lr-divider>`, `<lr-dropdown-item>`, `<lr-menu-item>`, `<lr-menu-label>` since `unreleased`; use slot `slot="header" (or slot="footer")`; removal not before `23.0.0` — Content other than items, labels and separators renders inside role="menu" without a menu-item role and is skipped by roving focus; the header and footer slots render the same content outside the list with its native keyboard behavior. Content that lr-dropdown forwards into its own menu is not covered: it mirrors sl-dropdown's free-form default slot.
 - **Optional peers** none
 - **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)
@@ -63,11 +63,14 @@ is neutral. This is also the composition used for direct `<lr-dropdown-item>` ch
   Preventing it anywhere keeps the current menu/submenu chain open. There are no
   `lr-menu-select`, `lr-menu-item-select`, or nested-selection aliases.
 
-**Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` plus semantic separators), `header`, and
-`footer`. Header and footer are composed controls or explanatory regions outside the
-`role="menu"` list, so filters, counts, or footer actions do not violate the menu required-child
-contract. Arbitrary non-item content in the default slot still renders, but is not enrolled as a
-menu item.
+**Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` rows, `<lr-menu-label>` captions, and
+`<hr>`/`<lr-divider>` separators), `header`, and `footer`. Header and footer are composed controls
+or explanatory regions outside the `role="menu"` list, so filters, counts, or footer actions do not
+violate the menu required-child contract. Any other default-slot content is deprecated (removal not
+before 23.0.0): it still renders, but inside `role="menu"` without a menu-item role and skipped by
+keyboard navigation, so move it to `slot="header"` or `slot="footer"`. Content that `lr-dropdown`
+forwards into its own menu is not covered: its default slot mirrors `sl-dropdown`'s free-form
+content.
 
 **CSS parts:** `header`, `list`, and `footer`. Root `trigger` and `popup` parts do not exist;
 style those on `<lr-dropdown>` when using the overlay composition.

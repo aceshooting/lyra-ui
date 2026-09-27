@@ -71,7 +71,8 @@ export const styles = css`
     --_lr-icon-flip-y: -1;
   }
 
-  /* Legacy Lyra alignment knob retained alongside the mirrored canvas vocabulary. */
+  /* Deprecated Lyra alignment knob, kept working alongside the mirrored canvas vocabulary until its
+     removal; a host inline-size is the replacement. */
   :host(:where([fixed-width])) {
     inline-size: var(--lr-icon-fixed-width, var(--lr-size-1-5em));
     block-size: var(--lr-icon-size, var(--lr-size-1em));

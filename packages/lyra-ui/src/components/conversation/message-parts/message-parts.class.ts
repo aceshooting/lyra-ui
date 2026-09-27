@@ -40,6 +40,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
 import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
 import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -310,7 +311,9 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
   /** Adds source-copy headers to built-in text and reasoning Markdown parts. Custom renderers replace this surface. */
   @property({ type: Boolean, attribute: 'code-block-header' }) codeBlockHeader = false;
-  /** Compatibility spelling for enabling built-in Markdown code headers. */
+  /** Deprecated compatibility spelling of `code-block-header`: either property enables the built-in
+   * Markdown code headers. Setting it logs a one-time development warning.
+   * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'code-block-chrome' }) codeBlockChrome = false;
 
 
@@ -387,6 +390,9 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (changed.has('codeBlockChrome') && this.codeBlockChrome === true) {
+      warnDeprecatedUsage(this, 'property', 'codeBlockChrome', 'code-block-header');
+    }
     if (!changed.has('parts') && this.hasUpdated) return;
     this.redactionByInvocation = this.projectRedactions();
     if (!changed.has('parts')) return;
@@ -533,8 +539,8 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   private renderPartMarkdown(part: Extract<MessagePart, { type: 'text' | 'reasoning' }>): TemplateResult {
     return html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}
-      .streamingRender=${this.streamingRender} .codeBlockHeader=${this.codeBlockHeader}
-      .codeBlockChrome=${this.codeBlockChrome}></lr-markdown>`;
+      .streamingRender=${this.streamingRender}
+      .codeBlockHeader=${this.codeBlockHeader || this.codeBlockChrome}></lr-markdown>`;
   }
 
   private renderBuiltin(part: MessagePart, citationRank: number, pairing?: ToolPairing): unknown {

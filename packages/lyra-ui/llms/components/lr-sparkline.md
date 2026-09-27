@@ -7,6 +7,8 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Deprecated css-property** `--lr-sparkline-stroke-width` since `unreleased`; use css-property `lr-sparkline { --line-width: 2px; }`; removal not before `23.0.0` — --lr-sparkline-stroke-width predates the mirrored Web Awesome --line-width and is read only as its fallback, so it has no effect wherever --line-width is set. Scope the replacement to lr-sparkline, because the unprefixed --line-width also reaches any other element that reads it. It keeps working through the 22.x line; a stylesheet cannot be observed using it, so it never logs a warning.
+- **Deprecated part** `area` since `unreleased`; use part `::part(fill)`; removal not before `23.0.0` — area is a Lyra-only alias for the mirrored fill part on the same path; fill is the Web Awesome name. The area token stays on that path through the 22.x line; a stylesheet cannot be observed using a part, so it never logs a warning.
 - **Deprecated part** `base` since `8.0.0`; use part `::part(sparkline)`; removal not before `10.0.0` — The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
 - **Optional peers** none
 - **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -56,14 +58,17 @@ space-separated samples restores the attribute-driven path.
 **Slots:** none.
 
 **CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
-area path for solid/gradient appearance, `line` is the stroke path. Additive aliases are `area` on
-the same fill path and `bar` on each extension-mode rectangle.
+area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
+extension-mode rectangle. `area` is a deprecated alias of `fill` on the same path (removal not
+before 23.0.0); use `::part(fill)`.
 
 **Themeable custom properties:** `--fill-color` (area/gradient stop color), `--line-color` (stroke
 color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
 default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back through the
-compatibility `--lr-sparkline-stroke-width` to `--lr-border-width-medium`. No canvas bridge or
-manual refresh is needed.
+deprecated `--lr-sparkline-stroke-width` (removal not before 23.0.0) to `--lr-border-width-medium`.
+Replace that alias with `--line-width` scoped to the element (`lr-sparkline { --line-width: 2px; }`),
+since the unprefixed name also reaches any other element that reads it. No canvas bridge or manual
+refresh is needed. Styling hooks cannot be observed, so neither deprecated alias logs a warning.
 
 **Optional peer deps:** none.
 

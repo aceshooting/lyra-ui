@@ -1,4 +1,5 @@
 import { html, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
 import {
   StreamingTextRuntimeBase,
   type LyraStreamingTextEventMap as StreamingTextRuntimeEventMap,
@@ -82,6 +83,14 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * @since 16.0.0
  */
 export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
+  /** Enables source-copy headers in the composed `<lr-markdown-core>`. */
+  @property({ type: Boolean, attribute: 'code-block-header' }) override codeBlockHeader = false;
+
+  /** Deprecated compatibility spelling of `code-block-header`: either property enables the headers.
+   * Setting it logs a one-time development warning.
+   * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'code-block-chrome' }) override codeBlockChrome = false;
+
   protected override renderMarkdown(): TemplateResult {
     // lr-markdown-core's own lr-content-settled is deliberately left unstopped here -- see the
     // shared base's updated() comment -- so it bubbles straight out through this element.
@@ -94,8 +103,7 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
       .content=${this.displayedContent}
       .streaming=${this.streaming}
       .streamingRender=${this.streamingRender}
-      .codeBlockChrome=${this.codeBlockChrome}
-      .codeBlockHeader=${this.codeBlockHeader}
+      .codeBlockHeader=${this.codeBlockHeader || this.codeBlockChrome}
       .languages=${this.languages ?? {}}
       .tabSize=${this.tabSize}
       .htmlMode=${this.htmlMode}

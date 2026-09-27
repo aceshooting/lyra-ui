@@ -713,6 +713,7 @@ export type LyraAnimationReactProps = LyraReactElementProps<
 export type LyraAppRailReactProps = LyraReactElementProps<
   LyraAppRail,
   | 'collapsible'
+  | 'focusFallback'
   | 'for'
   | 'forceMode'
   | 'frame'
@@ -774,6 +775,7 @@ export type LyraAppRailReactProps = LyraReactElementProps<
   | '--lr-app-rail-width',
   {
     'aria-label'?: LyraAttributeValue<string | null>;
+    'focus-fallback'?: LyraAppRail['focusFallback'];
     'force-mode'?: LyraAppRail['forceMode'];
     'hide-toggle'?: LyraAppRail['hideToggle'];
     'icon-only-breakpoint'?: LyraAppRail['iconOnlyBreakpoint'];
@@ -6736,6 +6738,7 @@ export type LyraMediaCardReactProps = LyraReactElementProps<
   | 'blur'
   | 'focus'
   | 'lr-before-media-download'
+  | 'lr-media-download-request'
   | 'lr-media-open',
   | '--lr-media-card-active-bg'
   | '--lr-media-card-active-border-color'

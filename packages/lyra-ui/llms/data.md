@@ -64,14 +64,17 @@ space-separated samples restores the attribute-driven path.
 **Slots:** none.
 
 **CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
-area path for solid/gradient appearance, `line` is the stroke path. Additive aliases are `area` on
-the same fill path and `bar` on each extension-mode rectangle.
+area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
+extension-mode rectangle. `area` is a deprecated alias of `fill` on the same path (removal not
+before 23.0.0); use `::part(fill)`.
 
 **Themeable custom properties:** `--fill-color` (area/gradient stop color), `--line-color` (stroke
 color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
 default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back through the
-compatibility `--lr-sparkline-stroke-width` to `--lr-border-width-medium`. No canvas bridge or
-manual refresh is needed.
+deprecated `--lr-sparkline-stroke-width` (removal not before 23.0.0) to `--lr-border-width-medium`.
+Replace that alias with `--line-width` scoped to the element (`lr-sparkline { --line-width: 2px; }`),
+since the unprefixed name also reaches any other element that reads it. No canvas bridge or manual
+refresh is needed. Styling hooks cannot be observed, so neither deprecated alias logs a warning.
 
 **Optional peer deps:** none.
 
@@ -191,8 +194,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 
 **Events:** none.
 
-**Slots:** `start` (canonical leading icon), default (legacy leading-icon alias, retained as the
-fallback; `start` takes precedence when both are filled), `caption` (rich caption content —
+**Slots:** `start` (canonical leading icon), default (deprecated leading-icon alias, removal not
+before 23.0.0: it still renders while `start` is empty and `start` takes precedence when both are
+filled; move the icon to `slot="start"`), `caption` (rich caption content —
 overrides the `caption` attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
 slot="spark">`, or other compact trend visual — `lr-stat` only reserves the slot and doesn't
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content

@@ -452,7 +452,7 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
 
 // CEM's inheritance pass omits a small class-field edge case: a public readonly field initialized
 // on the base class is not copied to a subclass even though the runtime instance inherits the
-// field normally. Its compact form can likewise prune an event that a permanent registration
+// field normally. Its compact form can likewise prune an event that a deprecated registration
 // alias inherits at runtime. Keep each compatibility projection explicit and source-linked so a
 // rename fails closed.
 export const INHERITED_PUBLIC_MEMBER_CONTRACTS = new Map([
@@ -1527,7 +1527,7 @@ export default {
               );
             }
             const projectedEvent = structuredClone(sourceEvent);
-            // This is the permanent tag alias's own effective manifest contract. Retaining an
+            // This is the deprecated tag alias's own effective manifest contract. Retaining an
             // inheritance marker would make compactManifest remove the event even though the
             // alias dispatches it through the same inherited runtime path.
             delete projectedEvent.inheritedFrom;

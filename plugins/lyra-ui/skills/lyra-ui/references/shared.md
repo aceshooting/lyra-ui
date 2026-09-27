@@ -30,6 +30,33 @@ customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `hor
 a mechanical migration listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward
 the M+2 rule applies as written; treat the above as a documented exception, not a precedent.
 
+Deprecation records also cover three things that are not a single member. Deprecated **slot
+content** is a kind of content inside a slot that stays supported (for example, content other than
+items in a menu's default slot); the slot's own description says which content is deprecated.
+Deprecated **package entry points** (an import path) and deprecated **exported types** are listed
+under "Deprecated package exports" at the end of `llms/index.md`; a deprecated type also carries
+`@deprecated` in its declaration, so editors strike it through. Each component's own deprecations
+are listed in its `llms/components/<tag>.md` header and in `custom-elements.json` (the declaration's
+`deprecations`, plus a `deprecation` on each deprecated member). These records are the complete
+list of deprecated APIs; audit an upgrade against them, not against console output.
+
+**Development warnings.** Some deprecations also log a development-mode `console.warn` naming the
+element, the deprecated API, and its replacement. A warning only ever fires for usage a component
+can observe cheaply and exactly — setting a deprecated property or attribute, connecting a
+deprecated tag, or vetoing through a deprecated alias event — and **not every deprecated API
+warns**: many deprecations have no runtime warning, among them `lr-icon`'s `auto-width`,
+`lr-stat`'s default-slot icon, `lr-menu`'s non-item default-slot content, the `lr-before-*` alias
+events of `lr-chart`, `lr-box-plot`, `lr-graph-legend` and `lr-graph-query-builder`, and
+`lr-command-palette`'s `lr-open` alias event, and deprecated CSS parts, custom properties, and
+custom states are styling hooks a component cannot observe, so they never warn. A silent console
+is therefore not evidence that an application uses no deprecated API. Where a warning exists, it
+fires once per page for each element name and deprecated API, and only when Lit runs its
+development build; production builds never warn. The deprecated form keeps working either
+way, and moving to the replacement removes the warning. A test suite that fails on console output
+while deliberately exercising a deprecated form can pre-seed Lit's development-mode
+`globalThis.litIssuedWarnings` set, before the element renders, with the key
+`lyra-deprecated:<tag>:<kind>:<name>` — `<kind>` and `<name>` as in the deprecation record.
+
 ### Release history and upgrade notes
 
 `since` records when a tag first appeared, not later changes. Before upgrading, read the bundled

@@ -1,6 +1,127 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './mutation-observer.js';
 import type { LyraMutationObserver } from './mutation-observer.class.js';
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
+
+// The compatibility-alias tests below deliberately set the deprecated `attributes` and
+// `character-data` spellings, which must keep working until their removal.
+expectDeprecatedUsage('lr-mutation-observer', 'property', 'observeAttributes');
+expectDeprecatedUsage('lr-mutation-observer', 'property', 'characterData');
+
+const OBSERVER_ALIAS_USAGES: readonly DeprecatedUsage[] = [
+  { tag: 'lr-mutation-observer', kind: 'property', name: 'observeAttributes' },
+  { tag: 'lr-mutation-observer', kind: 'property', name: 'characterData' },
+];
+
+describe('<lr-mutation-observer> deprecated observer aliases', () => {
+  it('warns once when the attributes alias is authored, naming attr="*", and still observes attributes', async () => {
+    let records = 0;
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer attributes><div></div></lr-mutation-observer>`,
+      );
+      await el.updateComplete;
+      await aTimeout(0);
+      const event = oneEvent(el, 'lr-mutation');
+      el.querySelector('div')!.setAttribute('data-x', '1');
+      records = ((await event) as CustomEvent<{ records: MutationRecord[] }>).detail.records.length;
+    });
+    expect(records).to.be.greaterThan(0);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-mutation-observer:property:observeAttributes',
+    ]);
+    expect(warnings[0]!.message).to.contain('attr="*"');
+    expect(warnings[0]!.message).to.contain('attributeFilter');
+  });
+
+  it('warns when observeAttributes is set as a property, once per page', async () => {
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const first = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      const second = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      first.observeAttributes = true;
+      second.observeAttributes = true;
+      await first.updateComplete;
+      await second.updateComplete;
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-mutation-observer:property:observeAttributes',
+    ]);
+  });
+
+  it('warns once when the character-data alias is authored, naming char-data, and still observes text', async () => {
+    let records = 0;
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer character-data><div>Before</div></lr-mutation-observer>`,
+      );
+      await el.updateComplete;
+      await aTimeout(0);
+      const event = oneEvent(el, 'lr-mutation');
+      el.querySelector('div')!.firstChild!.textContent = 'After';
+      records = ((await event) as CustomEvent<{ records: MutationRecord[] }>).detail.records.length;
+    });
+    expect(records).to.be.greaterThan(0);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-mutation-observer:property:characterData',
+    ]);
+    expect(warnings[0]!.message).to.contain('char-data');
+  });
+
+  it('warns when characterData is set as a property', async () => {
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      el.characterData = true;
+      await el.updateComplete;
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-mutation-observer:property:characterData',
+    ]);
+  });
+
+  it('never warns for the mirrored attr and char-data spellings, or for an alias left false', async () => {
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const mirrored = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer attr="*" char-data><div>Text</div></lr-mutation-observer>`,
+      );
+      await mirrored.updateComplete;
+      const unset = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      unset.observeAttributes = false;
+      unset.characterData = false;
+      await unset.updateComplete;
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('documents why attributes is not a mechanical attr="*" rename: attr ignores attributeFilter', async () => {
+    const observed = async (template: ReturnType<typeof html>): Promise<string[]> => {
+      const el = await fixture<LyraMutationObserver>(template);
+      el.attributeFilter = ['data-a'];
+      await el.updateComplete;
+      await aTimeout(0);
+      const names: string[] = [];
+      el.addEventListener('lr-mutation', (event) => {
+        for (const record of event.detail.records) names.push(record.attributeName ?? '');
+      });
+      const target = el.querySelector('div')!;
+      target.setAttribute('data-b', '1');
+      target.setAttribute('data-a', '1');
+      await aTimeout(20);
+      return names;
+    };
+    let alias: string[] = [];
+    let mirrored: string[] = [];
+    await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      alias = await observed(html`<lr-mutation-observer attributes><div></div></lr-mutation-observer>`);
+      mirrored = await observed(html`<lr-mutation-observer attr="*"><div></div></lr-mutation-observer>`);
+    });
+    expect(alias, 'attributes keeps honoring attributeFilter').to.deep.equal(['data-a']);
+    expect(mirrored, 'attr="*" replaces attributeFilter').to.deep.equal(['data-b', 'data-a']);
+  });
+});
 
 describe('<lr-mutation-observer>', () => {
   it('reflects the mapped observer attributes after property assignment', async () => {

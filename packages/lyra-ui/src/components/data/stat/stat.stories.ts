@@ -45,7 +45,7 @@ export const StartAndLegacyIconSlots: Story = {
     docs: {
       description: {
         story:
-          'Use the canonical start slot for a leading icon. The shipped unnamed slot remains a permanent fallback, and start takes precedence if both are filled.',
+          'Use the canonical start slot for a leading icon. The unnamed slot is a deprecated leading-icon alias: it keeps working until a later major release removes it, and start takes precedence if both are filled.',
       },
     },
   },
@@ -54,7 +54,7 @@ export const StartAndLegacyIconSlots: Story = {
       <lr-stat label="Canonical start" value="128">
         <span slot="start" aria-hidden="true">◆</span>
       </lr-stat>
-      <lr-stat label="Legacy fallback" value="42">
+      <lr-stat label="Deprecated unnamed slot" value="42">
         <span aria-hidden="true">◇</span>
       </lr-stat>
     </div>

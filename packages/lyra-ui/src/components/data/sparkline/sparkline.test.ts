@@ -210,8 +210,28 @@ it('renders a filled area through line geometry and solid appearance', async () 
   const el = (await fixture(`<lr-sparkline mark="line" appearance="solid"></lr-sparkline>`)) as LyraSparkline;
   el.values = [1, 2, 3];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part~="area"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="fill"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="line"]')).to.exist;
+});
+
+it('keeps the deprecated area part token on the fill path', async () => {
+  const el = (await fixture(`<lr-sparkline mark="line" appearance="solid"></lr-sparkline>`)) as LyraSparkline;
+  el.values = [1, 2, 3];
+  await el.updateComplete;
+  const fill = el.shadowRoot!.querySelector('[part~="fill"]');
+  expect(fill?.getAttribute('part')?.split(/\s+/)).to.deep.equal(['fill', 'area']);
+});
+
+it('keeps honoring the deprecated --lr-sparkline-stroke-width fallback until --line-width is set', async () => {
+  const el = (await fixture(
+    `<lr-sparkline style="--lr-sparkline-stroke-width: 3px"></lr-sparkline>`,
+  )) as LyraSparkline;
+  el.values = [1, 2, 3];
+  await el.updateComplete;
+  const line = el.shadowRoot!.querySelector('[part="line"]')!;
+  expect(getComputedStyle(line).strokeWidth).to.equal('3px');
+  el.style.setProperty('--line-width', '5px');
+  expect(getComputedStyle(line).strokeWidth).to.equal('5px');
 });
 
 it('centers flat data instead of collapsing to the bottom edge', async () => {
@@ -227,7 +247,7 @@ it('centers flat data instead of collapsing to the bottom edge', async () => {
   const area = (await fixture(`<lr-sparkline mark="line" appearance="solid"></lr-sparkline>`)) as LyraSparkline;
   area.values = [5, 5, 5, 5];
   await area.updateComplete;
-  const areaPath = area.shadowRoot!.querySelector('[part~="area"]')!;
+  const areaPath = area.shadowRoot!.querySelector('[part~="fill"]')!;
   expect(areaPath.getAttribute('d')).to.contain('50');
 });
 

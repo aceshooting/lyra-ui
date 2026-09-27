@@ -13,6 +13,7 @@ import {
   partitionReleaseHistoryAtCurrent,
   reconcileCurrentReleaseHistory,
   requireCompleteGitHistory,
+  stampUnreleasedDeprecations,
   validateComponentMetadata,
 } from './component-metadata.mjs';
 
@@ -61,6 +62,27 @@ function writeSourceAnnotations(changes) {
   for (const { file, expected } of changes) {
     fs.writeFileSync(file, expected);
   }
+}
+
+/**
+ * The metadata a write persists: the reconciled history, plus -- on a version rollover, which is
+ * when `scripts/publish.sh` runs this after `changeset version` -- every `since: 'unreleased'`
+ * deprecation stamped with the version being released, so no record ships reading `unreleased`.
+ */
+export function nextWriteMetadata(
+  metadata,
+  { releases, taggedCurrent, current, rolloverCurrent, packageVersion },
+) {
+  const stamped = rolloverCurrent ? stampUnreleasedDeprecations(metadata, packageVersion) : metadata;
+  return {
+    ...stamped,
+    history: {
+      ...stamped.history,
+      releases,
+      taggedCurrent,
+      current,
+    },
+  };
 }
 
 function parseArguments(argv) {
@@ -116,15 +138,13 @@ export function run(argv = process.argv.slice(2)) {
   }
 
   if (options.write) {
-    metadata = {
-      ...metadata,
-      history: {
-        ...metadata.history,
-        releases: nextReleases,
-        taggedCurrent: nextTaggedCurrent,
-        current: nextCurrent,
-      },
-    };
+    metadata = nextWriteMetadata(metadata, {
+      releases: nextReleases,
+      taggedCurrent: nextTaggedCurrent,
+      current: nextCurrent,
+      rolloverCurrent,
+      packageVersion: packageJson.version,
+    });
     // A metadata transition can itself change the CEM projection (most notably, a post-tag
     // component moves from `unreleased` to the newly bumped version). Predict the deterministic
     // final manifest bytes so history.current records what the required subsequent manifest run

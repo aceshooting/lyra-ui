@@ -708,6 +708,7 @@ export type LyraAnimationVueProps = LyraVueCustomElement<
 export type LyraAppRailVueProps = LyraVueCustomElement<
   LyraAppRail,
   | 'collapsible'
+  | 'focusFallback'
   | 'for'
   | 'forceMode'
   | 'frame'
@@ -769,6 +770,7 @@ export type LyraAppRailVueProps = LyraVueCustomElement<
   | '--lr-app-rail-width',
   {
     'aria-label'?: LyraAttributeValue<string | null>;
+    'focus-fallback'?: LyraAppRail['focusFallback'];
     'force-mode'?: LyraAppRail['forceMode'];
     'hide-toggle'?: LyraAppRail['hideToggle'];
     'icon-only-breakpoint'?: LyraAppRail['iconOnlyBreakpoint'];
@@ -6731,6 +6733,7 @@ export type LyraMediaCardVueProps = LyraVueCustomElement<
   | 'blur'
   | 'focus'
   | 'lr-before-media-download'
+  | 'lr-media-download-request'
   | 'lr-media-open',
   | '--lr-media-card-active-bg'
   | '--lr-media-card-active-border-color'

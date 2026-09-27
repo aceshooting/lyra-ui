@@ -67,8 +67,9 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * "metric row" / "KPI card" pattern common to dashboard UIs.
  *
  * @customElement lr-stat
- * @slot start - Leading icon. Takes precedence over the legacy default slot when both are filled.
- * @slot - Legacy leading-icon alias, retained as the fallback for `start`.
+ * @slot start - Leading icon. Takes precedence over the deprecated default slot when both are filled.
+ * @slot - Deprecated leading-icon alias (removal not before 23.0.0), rendered only while `start` is
+ *   empty; use `slot="start"`.
  * @slot caption - Rich caption content (overrides the `caption` attribute).
  * @slot spark - A sparkline (e.g. `<lr-sparkline>`) or other compact trend
  *   visual. `lr-stat` only reserves the slot; it doesn't render one itself.
@@ -77,7 +78,7 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * slotted descendant is never nested inside the whole-card link. Passive slotted content forwards
  * pointer modifiers; the platform primary modifier and Shift preserve new-context activation.
  * @csspart base - The component's root wrapper (`<div>`, or a stretched real `<a>` when `href` is safe).
- * @csspart icon - Container for the leading icon slot.
+ * @csspart icon - Container for the `start` slot (or the deprecated default-slot icon).
  * @csspart label - The label text. Hidden (and collapsed) whenever `label` is empty, so a
  *   label-less stat doesn't leave a blank line above the value.
  * @csspart value-row - Wrapper around the value and unit.

@@ -13,6 +13,24 @@ export function buildComponentMetadataIndex(customElements) {
 }
 
 /**
+ * Plain-text subject of one structured deprecation record. Mirrors `formatDeprecationSubject` in
+ * `packages/lyra-ui/scripts/component-metadata.mjs` (a Node-only module): the default slot has no
+ * name to show, and a `slot-content` record names the content it covers rather than a member.
+ */
+function deprecationSubject(entry, tagName) {
+  if (entry.kind === 'component') return tagName;
+  if (entry.kind === 'slot' && !entry.name) return 'default slot';
+  if (entry.kind === 'slot-content') {
+    const subject = entry.name ? `${entry.name}-slot content` : 'default-slot content';
+    const permitted = Array.isArray(entry.permittedContent) ? entry.permittedContent : [];
+    return permitted.length
+      ? `${subject} other than ${permitted.map((name) => `<${name}>`).join(', ')}`
+      : subject;
+  }
+  return `${entry.kind} ${entry.name}${entry.attribute ? ` / ${entry.attribute}` : ''}`;
+}
+
+/**
  * Normalizes CEM maturity fields into the small view model rendered by the custom autodocs page.
  * Missing central metadata intentionally suppresses the block instead of displaying partial
  * policy claims.
@@ -28,9 +46,7 @@ export function componentMetadataPresentation(metadata) {
     graduationCriteria: metadata.maturity?.graduationCriteria ?? null,
     deprecations: (metadata.deprecations ?? []).map((entry) => ({
       key: `${entry.kind}:${entry.name}`,
-      subject: entry.kind === 'component'
-        ? metadata.tagName
-        : `${entry.kind} ${entry.name}${entry.attribute ? ` / ${entry.attribute}` : ''}`,
+      subject: deprecationSubject(entry, metadata.tagName),
       since: entry.since,
       replacementKind: entry.replacement?.kind ?? 'API',
       replacement: entry.replacement?.usage ?? entry.replacement?.name,

@@ -2326,7 +2326,7 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
   assert.deepEqual(
     compactGeojsonAlias.events,
     geojsonAlias.events,
-    'the permanent alias event survives published-manifest compaction'
+    'the deprecated alias event survives published-manifest compaction'
   );
   assert.deepEqual(
     synthetic.modules.find(({ path }) => path === 'unrelated.ts')
@@ -3103,7 +3103,7 @@ test('normalization preserves the canonical GeoJSON search API on its compatibil
   assert.deepEqual(
     alias.surface.methods,
     canonical.surface.methods,
-    'the permanent compatibility tag exposes the canonical effective method surface'
+    'the deprecated compatibility tag exposes the canonical effective method surface'
   );
 });
 

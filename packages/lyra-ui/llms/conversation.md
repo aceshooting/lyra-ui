@@ -128,7 +128,9 @@ uses for its own `[part="body"]`.
   indented. It copies source text without the renderer's terminal newline, preserving leading tabs
   whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
   code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
-  compatibility spelling; either property enables the header. Plain streaming defers headers until
+  deprecated compatibility spelling (removal not before 23.0.0; setting it logs a one-time
+  development warning): either property enables the header, so use `code-block-header`. Plain
+  streaming defers headers until
   settle; progressive streaming adds them to committed blocks. The button has a localized accessible
   name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
   the header also removes authored style elements and their CSS text to prevent visual copy
@@ -419,8 +421,9 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
-`codeBlockHeader: boolean = false` (attribute `code-block-header`) with its compatibility alias
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) with its deprecated
+compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
+before 23.0.0),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
@@ -510,7 +513,7 @@ The Markdown part set also includes `task-list`, `task-item`, `task-item-checked
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
 (attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its compatibility alias. Successful and
+`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -1648,9 +1651,11 @@ properties existed:
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
 - `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
-  and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its compatibility
-  alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the
-  composed Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
+  and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its deprecated
+  compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
+  before 23.0.0; setting it logs a one-time development warning) — forwarded to the composed
+  Markdown element, which receives either header option as its own `codeBlockHeader`. Their
+  settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
   Use `streaming-render="progressive"` with `content-mode="markdown"`: in `auto` mode the element
   switches from plain text to Markdown when detection first succeeds, which replaces the displayed
@@ -1746,7 +1751,8 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-  `streamingRender`, `codeBlockHeader`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
+  `streamingRender`, `codeBlockHeader` (on when either this element's `codeBlockHeader` or its
+  deprecated `codeBlockChrome` is), `languages` verbatim, and the rest of `<lr-markdown>`'s
   configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
@@ -1777,7 +1783,7 @@ The Markdown part set also includes `task-list`, `task-item`, `task-item-checked
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
 (attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its compatibility alias. Successful and
+`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -1815,12 +1821,14 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
-`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its compatibility alias
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its deprecated
+compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
+before 23.0.0); `highlightCode: boolean = true`
 (attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
-progressive output, and `codeBlockHeader` (or its `codeBlockChrome` alias) enables the localized
+progressive output, and `codeBlockHeader` (or its deprecated `codeBlockChrome` alias, which reaches
+the composed element as `codeBlockHeader`) enables the localized
 code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
@@ -1871,7 +1879,7 @@ The Markdown part set also includes `task-list`, `task-item`, `task-item-checked
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
 (attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its compatibility alias. Successful and
+`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -4027,7 +4035,9 @@ and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwa
 and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
 blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
 source language label and localized copy action to built-in code blocks.
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is an equivalent enabling alias. These settings do not replace
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a deprecated equivalent
+enabling alias (removal not before 23.0.0; setting it logs a one-time development warning), and the
+parts' Markdown elements receive either option as `codeBlockHeader`. These settings do not replace
 the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N

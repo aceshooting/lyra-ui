@@ -5586,6 +5586,16 @@
             "default": false
           },
           {
+            "name": "focus-fallback",
+            "property": "focusFallback",
+            "type": "HTMLElement | string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "for",
             "property": "for",
             "type": "string",
@@ -5779,6 +5789,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "focusFallback",
+            "attribute": "focus-fallback",
+            "type": "HTMLElement | string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "for",
@@ -58552,7 +58572,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-geojson-view",
+            "kind": "component",
+            "name": "lr-geojson-view",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "component",
+              "name": "lr-geojson-viewer",
+              "usage": "<lr-geojson-viewer>"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "lr-geojson-view is the pre-v9 name of lr-geojson-viewer and adds no behavior of its own; it survives only as a distinct subclass so both names can share one registry. This reverses the earlier promise to keep the alias permanently: the tag, the LyraGeojsonView class and its geojson-view routes keep working unchanged through the 22.x line, and connecting the tag logs a one-time development warning."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -64143,6 +64177,19 @@
         "deprecations": [
           {
             "tag": "lr-icon",
+            "kind": "css-property",
+            "name": "--lr-icon-fixed-width",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "host-css-property",
+              "name": "inline-size",
+              "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "This property only sizes the box while the deprecated fixed-width attribute is set, so it shares that attribute's removal window. A host inline-size declaration reproduces the wider box without a component-specific custom property; a glyph wider than 1em then keeps its intrinsic width instead of being squeezed to 1em."
+          },
+          {
+            "tag": "lr-icon",
             "kind": "property",
             "name": "autoWidth",
             "attribute": "auto-width",
@@ -64154,6 +64201,20 @@
             },
             "removalNotBefore": "10.0.0",
             "rationale": "autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is."
+          },
+          {
+            "tag": "lr-icon",
+            "kind": "property",
+            "name": "fixedWidth",
+            "attribute": "fixed-width",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "host-css-property",
+              "name": "inline-size",
+              "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "fixed-width predates the mirrored canvas vocabulary, whose default fixed canvas already gives every icon the same 1.25em box so a column of icons lines its labels up. Where the wider 1.5em box matters, a host inline-size reproduces it, except that a glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em. Neither pinned upstream publishes fixed-width, so it is a Lyra-only spelling."
           }
         ]
       },
@@ -64243,7 +64304,20 @@
             "type": "boolean",
             "reflects": true,
             "inferred": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-icon",
+              "kind": "property",
+              "name": "fixedWidth",
+              "attribute": "fixed-width",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "host-css-property",
+                "name": "inline-size",
+                "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "fixed-width predates the mirrored canvas vocabulary, whose default fixed canvas already gives every icon the same 1.25em box so a column of icons lines its labels up. Where the wider 1.5em box matters, a host inline-size reproduces it, except that a glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em. Neither pinned upstream publishes fixed-width, so it is a Lyra-only spelling."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -64405,7 +64479,20 @@
             "type": "boolean",
             "readonly": false,
             "reflects": true,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-icon",
+              "kind": "property",
+              "name": "fixedWidth",
+              "attribute": "fixed-width",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "host-css-property",
+                "name": "inline-size",
+                "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "fixed-width predates the mirrored canvas vocabulary, whose default fixed canvas already gives every icon the same 1.25em box so a column of icons lines its labels up. Where the wider 1.5em box matters, a host inline-size reproduces it, except that a glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em. Neither pinned upstream publishes fixed-width, so it is a Lyra-only spelling."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -64754,7 +64841,19 @@
           },
           {
             "name": "--lr-icon-fixed-width",
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-icon",
+              "kind": "css-property",
+              "name": "--lr-icon-fixed-width",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "host-css-property",
+                "name": "inline-size",
+                "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "This property only sizes the box while the deprecated fixed-width attribute is set, so it shares that attribute's removal window. A host inline-size declaration reproduces the wider box without a component-specific custom property; a glyph wider than 1em then keeps its intrinsic width instead of being squeezed to 1em."
+            },
             "hasDefault": true,
             "default": "var(--lr-size-1-5em)"
           },
@@ -75700,7 +75799,22 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-markdown",
+            "kind": "property",
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "property",
+              "name": "codeBlockHeader",
+              "usage": "code-block-header"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -75741,7 +75855,20 @@
             "type": "boolean",
             "reflects": false,
             "inferred": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-markdown",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -75933,7 +76060,20 @@
             "type": "boolean",
             "readonly": false,
             "reflects": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-markdown",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -76473,7 +76613,22 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-markdown-core",
+            "kind": "property",
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "property",
+              "name": "codeBlockHeader",
+              "usage": "code-block-header"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -76507,7 +76662,20 @@
             "type": "boolean",
             "reflects": false,
             "inferred": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-markdown-core",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -76699,7 +76867,20 @@
             "type": "boolean",
             "readonly": false,
             "reflects": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-markdown-core",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -77494,7 +77675,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-media-card",
+            "kind": "event",
+            "name": "lr-before-media-download",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-media-download-request",
+              "usage": "addEventListener('lr-media-download-request', ...)"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Renamed to the library's dominant *-request veto-event convention. Both names fire from the same activation of a safe file anchor with an equal { src, filename } detail during the compatibility window, the canonical name first, and either may veto the native download/open. A veto through the alias logs a one-time development warning."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -77751,6 +77946,25 @@
           },
           {
             "name": "lr-before-media-download",
+            "type": "CustomEvent<LyraMediaCardOpenDetail>",
+            "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-media-card",
+              "kind": "event",
+              "name": "lr-before-media-download",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-media-download-request",
+                "usage": "addEventListener('lr-media-download-request', ...)"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Renamed to the library's dominant *-request veto-event convention. Both names fire from the same activation of a safe file anchor with an equal { src, filename } detail during the compatibility window, the canonical name first, and either may veto the native download/open. A veto through the alias logs a one-time development warning."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-media-download-request",
             "type": "CustomEvent<LyraMediaCardOpenDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -78508,7 +78722,28 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-menu",
+            "kind": "slot-content",
+            "name": "",
+            "permittedContent": [
+              "hr",
+              "lr-divider",
+              "lr-dropdown-item",
+              "lr-menu-item",
+              "lr-menu-label"
+            ],
+            "since": "unreleased",
+            "replacement": {
+              "kind": "slot",
+              "name": "header",
+              "usage": "slot=\"header\" (or slot=\"footer\")"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Content other than items, labels and separators renders inside role=\"menu\" without a menu-item role and is skipped by roving focus; the header and footer slots render the same content outside the list with its native keyboard behavior. Content that lr-dropdown forwards into its own menu is not covered: it mirrors sl-dropdown's free-form default slot."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -80435,7 +80670,22 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-message-parts",
+            "kind": "property",
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "property",
+              "name": "codeBlockHeader",
+              "usage": "code-block-header"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the built-in text and reasoning Markdown parts, which now always receive code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -80492,7 +80742,20 @@
             "type": "boolean",
             "reflects": false,
             "inferred": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-message-parts",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the built-in text and reasoning Markdown parts, which now always receive code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -80582,7 +80845,20 @@
             "type": "boolean",
             "readonly": false,
             "reflects": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-message-parts",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the built-in text and reasoning Markdown parts, which now always receive code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -83142,7 +83418,36 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-mutation-observer",
+            "kind": "property",
+            "name": "characterData",
+            "attribute": "character-data",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "property",
+              "name": "charData",
+              "usage": "char-data"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "character-data is a Lyra-only spelling of the mirrored char-data attribute (the Web Awesome and Shoelace name) with identical behavior. It keeps reflecting and enabling character-data observation through the 22.x line, and setting it logs a one-time development warning."
+          },
+          {
+            "tag": "lr-mutation-observer",
+            "kind": "property",
+            "name": "observeAttributes",
+            "attribute": "attributes",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "property",
+              "name": "attr",
+              "usage": "attr=\"*\""
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "attributes is a Lyra-only boolean spelling of the mirrored attr=\"*\" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr=\"*\" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -83199,7 +83504,20 @@
             "type": "boolean",
             "reflects": true,
             "inferred": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-mutation-observer",
+              "kind": "property",
+              "name": "observeAttributes",
+              "attribute": "attributes",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "attr",
+                "usage": "attr=\"*\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "attributes is a Lyra-only boolean spelling of the mirrored attr=\"*\" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr=\"*\" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -83229,7 +83547,20 @@
             "type": "boolean",
             "reflects": true,
             "inferred": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-mutation-observer",
+              "kind": "property",
+              "name": "characterData",
+              "attribute": "character-data",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "charData",
+                "usage": "char-data"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "character-data is a Lyra-only spelling of the mirrored char-data attribute (the Web Awesome and Shoelace name) with identical behavior. It keeps reflecting and enabling character-data observation through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -83311,7 +83642,20 @@
             "type": "boolean",
             "readonly": false,
             "reflects": true,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-mutation-observer",
+              "kind": "property",
+              "name": "characterData",
+              "attribute": "character-data",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "charData",
+                "usage": "char-data"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "character-data is a Lyra-only spelling of the mirrored char-data attribute (the Web Awesome and Shoelace name) with identical behavior. It keeps reflecting and enabling character-data observation through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -83371,7 +83715,20 @@
             "type": "boolean",
             "readonly": false,
             "reflects": true,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-mutation-observer",
+              "kind": "property",
+              "name": "observeAttributes",
+              "attribute": "attributes",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "attr",
+                "usage": "attr=\"*\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "attributes is a Lyra-only boolean spelling of the mirrored attr=\"*\" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr=\"*\" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -117741,6 +118098,32 @@
         "deprecations": [
           {
             "tag": "lr-sparkline",
+            "kind": "css-property",
+            "name": "--lr-sparkline-stroke-width",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "css-property",
+              "name": "--line-width",
+              "usage": "lr-sparkline { --line-width: 2px; }"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "--lr-sparkline-stroke-width predates the mirrored Web Awesome --line-width and is read only as its fallback, so it has no effect wherever --line-width is set. Scope the replacement to lr-sparkline, because the unprefixed --line-width also reaches any other element that reads it. It keeps working through the 22.x line; a stylesheet cannot be observed using it, so it never logs a warning."
+          },
+          {
+            "tag": "lr-sparkline",
+            "kind": "part",
+            "name": "area",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "part",
+              "name": "fill",
+              "usage": "::part(fill)"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "area is a Lyra-only alias for the mirrored fill part on the same path; fill is the Web Awesome name. The area token stays on that path through the 22.x line; a stylesheet cannot be observed using a part, so it never logs a warning."
+          },
+          {
+            "tag": "lr-sparkline",
             "kind": "part",
             "name": "base",
             "since": "8.0.0",
@@ -117987,7 +118370,19 @@
         "parts": [
           {
             "name": "area",
-            "deprecated": null
+            "deprecated": {
+              "tag": "lr-sparkline",
+              "kind": "part",
+              "name": "area",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "part",
+                "name": "fill",
+                "usage": "::part(fill)"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "area is a Lyra-only alias for the mirrored fill part on the same path; fill is the Web Awesome name. The area token stays on that path through the 22.x line; a stylesheet cannot be observed using a part, so it never logs a warning."
+            }
           },
           {
             "name": "bar",
@@ -118043,7 +118438,19 @@
           },
           {
             "name": "--lr-sparkline-stroke-width",
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-sparkline",
+              "kind": "css-property",
+              "name": "--lr-sparkline-stroke-width",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "css-property",
+                "name": "--line-width",
+                "usage": "lr-sparkline { --line-width: 2px; }"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "--lr-sparkline-stroke-width predates the mirrored Web Awesome --line-width and is read only as its fallback, so it has no effect wherever --line-width is set. Scope the replacement to lr-sparkline, because the unprefixed --line-width also reaches any other element that reads it. It keeps working through the 22.x line; a stylesheet cannot be observed using it, so it never logs a warning."
+            },
             "hasDefault": true,
             "default": "var(--lr-border-width-medium)"
           }
@@ -118273,7 +118680,21 @@
         "profile": "introduced-stable",
         "rationale": "This tag entered Lyra as a stable public API with documented behavior, accessibility, and cross-browser support.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-split-panel",
+            "kind": "part",
+            "name": "split-panel",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "part",
+              "name": "base",
+              "usage": "::part(base)"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "split-panel is a Lyra-only second token on the same outer wrapper as base. Neither pinned wa-split-panel nor sl-split-panel publishes a wrapper part, so base, the root part name used across the library, remains the single supported spelling. The removal-not-before version is a policy floor, not a plan: should either upstream publish a component-named wrapper part, this alias stays for as long as upstream ships it."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -118530,7 +118951,19 @@
           },
           {
             "name": "split-panel",
-            "deprecated": null
+            "deprecated": {
+              "tag": "lr-split-panel",
+              "kind": "part",
+              "name": "split-panel",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "part",
+                "name": "base",
+                "usage": "::part(base)"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "split-panel is a Lyra-only second token on the same outer wrapper as base. Neither pinned wa-split-panel nor sl-split-panel publishes a wrapper part, so base, the root part name used across the library, remains the single supported spelling. The removal-not-before version is a policy floor, not a plan: should either upstream publish a component-named wrapper part, this alias stays for as long as upstream ships it."
+            }
           },
           {
             "name": "start",
@@ -119329,7 +119762,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-stat",
+            "kind": "slot",
+            "name": "",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "slot",
+              "name": "start",
+              "usage": "slot=\"start\""
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "start is the library-wide adornment slot and already takes precedence when both are filled; retiring the unnamed icon alias stops an unnamed child from silently becoming the leading icon. lr-stat has no upstream counterpart, so no mirrored slot is affected."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -119716,7 +120163,19 @@
         "slots": [
           {
             "name": "",
-            "deprecated": null
+            "deprecated": {
+              "tag": "lr-stat",
+              "kind": "slot",
+              "name": "",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "slot",
+                "name": "start",
+                "usage": "slot=\"start\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "start is the library-wide adornment slot and already takes precedence when both are filled; retiring the unnamed icon alias stops an unnamed child from silently becoming the leading icon. lr-stat has no upstream counterpart, so no mirrored slot is affected."
+            }
           },
           {
             "name": "caption",
@@ -120507,7 +120966,22 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-streaming-text",
+            "kind": "property",
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "property",
+              "name": "codeBlockHeader",
+              "usage": "code-block-header"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -120543,7 +121017,20 @@
             "type": "boolean",
             "reflects": false,
             "inferred": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-streaming-text",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -120725,7 +121212,20 @@
             "type": "boolean",
             "readonly": false,
             "reflects": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-streaming-text",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -121091,7 +121591,22 @@
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
         "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-streaming-text-core",
+            "kind": "property",
+            "name": "codeBlockChrome",
+            "attribute": "code-block-chrome",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "property",
+              "name": "codeBlockHeader",
+              "usage": "code-block-header"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -121127,7 +121642,20 @@
             "type": "boolean",
             "reflects": false,
             "inferred": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-streaming-text-core",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },
@@ -121309,7 +121837,20 @@
             "type": "boolean",
             "readonly": false,
             "reflects": false,
-            "deprecated": null,
+            "deprecated": {
+              "tag": "lr-streaming-text-core",
+              "kind": "property",
+              "name": "codeBlockChrome",
+              "attribute": "code-block-chrome",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "property",
+                "name": "codeBlockHeader",
+                "usage": "code-block-header"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning."
+            },
             "hasDefault": true,
             "default": false
           },

@@ -359,7 +359,9 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'code-block-header' })
   override codeBlockHeader = false;
 
-  /** Compatibility spelling for enabling the code-block header. Either property enables it. */
+  /** Deprecated compatibility spelling of `code-block-header`: either property enables the header.
+   * Setting it logs a one-time development warning.
+   * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'code-block-chrome' })
   override codeBlockChrome = false;
 

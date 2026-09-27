@@ -8,7 +8,11 @@ import {
 } from '../../media/av-player/av-metadata.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 
-/** A file supplied to a document renderer. */
+/**
+ * A file supplied to a document renderer.
+ * @deprecated Use the structurally identical `LyraDocumentFile`; each is assignable to the other.
+ * Exported signatures keep this name until its removal, no earlier than 23.0.0.
+ */
 export interface DocumentFile {
   readonly name: string;
   readonly mimeType: string;
@@ -169,13 +173,18 @@ export interface LazyDocumentRendererDefinition extends DocumentRendererDefiniti
   >;
 }
 
-/** A validated renderer definition. Exactly one of `render`, `adapter`, and `load` is present. */
+/**
+ * A validated renderer definition. Exactly one of `render`, `adapter`, and `load` is present.
+ * @deprecated Use `LyraDocumentRendererDefinition`, the same union under the library's prefixed
+ * name. Exported signatures keep this name until its removal, no earlier than 23.0.0.
+ */
 export type DocumentRendererDefinition =
   | DirectDocumentRendererDefinition
   | LyraAdaptedDocumentRendererDefinition
   | LazyDocumentRendererDefinition;
 
-/** Canonically prefixed alias for authored renderer definitions. */
+/** Canonical prefixed name for authored renderer definitions: a validated renderer definition in
+ *  which exactly one of `render`, `adapter`, and `load` is present. */
 export type LyraDocumentRendererDefinition = DocumentRendererDefinition;
 
 /** One payload-bound renderer invocation and its truthful, immutable capabilities. */

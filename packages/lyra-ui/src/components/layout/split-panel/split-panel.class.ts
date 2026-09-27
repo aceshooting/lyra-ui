@@ -206,7 +206,8 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  *   interaction moves the divider. Not fired when a consumer sets `position` or
  *   `positionInPixels` directly.
  * @csspart base - The component's layout wrapper.
- * @csspart split-panel - Compatibility alias on the layout wrapper.
+ * @csspart split-panel - Deprecated alias of `base` on the same layout wrapper (removal not before
+ *   23.0.0); style `::part(base)` instead. Neither mirrored upstream publishes a wrapper part.
  * @csspart panel - Shared part on both pane wrappers.
  * @csspart start - The logical start pane.
  * @csspart end - The logical end pane.

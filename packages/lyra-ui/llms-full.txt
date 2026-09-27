@@ -84,6 +84,33 @@ customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `hor
 a mechanical migration listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward
 the M+2 rule applies as written; treat the above as a documented exception, not a precedent.
 
+Deprecation records also cover three things that are not a single member. Deprecated **slot
+content** is a kind of content inside a slot that stays supported (for example, content other than
+items in a menu's default slot); the slot's own description says which content is deprecated.
+Deprecated **package entry points** (an import path) and deprecated **exported types** are listed
+under "Deprecated package exports" at the end of `llms/index.md`; a deprecated type also carries
+`@deprecated` in its declaration, so editors strike it through. Each component's own deprecations
+are listed in its `llms/components/<tag>.md` header and in `custom-elements.json` (the declaration's
+`deprecations`, plus a `deprecation` on each deprecated member). These records are the complete
+list of deprecated APIs; audit an upgrade against them, not against console output.
+
+**Development warnings.** Some deprecations also log a development-mode `console.warn` naming the
+element, the deprecated API, and its replacement. A warning only ever fires for usage a component
+can observe cheaply and exactly — setting a deprecated property or attribute, connecting a
+deprecated tag, or vetoing through a deprecated alias event — and **not every deprecated API
+warns**: many deprecations have no runtime warning, among them `lr-icon`'s `auto-width`,
+`lr-stat`'s default-slot icon, `lr-menu`'s non-item default-slot content, the `lr-before-*` alias
+events of `lr-chart`, `lr-box-plot`, `lr-graph-legend` and `lr-graph-query-builder`, and
+`lr-command-palette`'s `lr-open` alias event, and deprecated CSS parts, custom properties, and
+custom states are styling hooks a component cannot observe, so they never warn. A silent console
+is therefore not evidence that an application uses no deprecated API. Where a warning exists, it
+fires once per page for each element name and deprecated API, and only when Lit runs its
+development build; production builds never warn. The deprecated form keeps working either
+way, and moving to the replacement removes the warning. A test suite that fails on console output
+while deliberately exercising a deprecated form can pre-seed Lit's development-mode
+`globalThis.litIssuedWarnings` set, before the element renders, with the key
+`lyra-deprecated:<tag>:<kind>:<name>` — `<kind>` and `<name>` as in the deprecation record.
+
 ### Release history and upgrade notes
 
 `since` records when a tag first appeared, not later changes. Before upgrading, read the
@@ -12327,14 +12354,17 @@ space-separated samples restores the attribute-driven path.
 **Slots:** none.
 
 **CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
-area path for solid/gradient appearance, `line` is the stroke path. Additive aliases are `area` on
-the same fill path and `bar` on each extension-mode rectangle.
+area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
+extension-mode rectangle. `area` is a deprecated alias of `fill` on the same path (removal not
+before 23.0.0); use `::part(fill)`.
 
 **Themeable custom properties:** `--fill-color` (area/gradient stop color), `--line-color` (stroke
 color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
 default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back through the
-compatibility `--lr-sparkline-stroke-width` to `--lr-border-width-medium`. No canvas bridge or
-manual refresh is needed.
+deprecated `--lr-sparkline-stroke-width` (removal not before 23.0.0) to `--lr-border-width-medium`.
+Replace that alias with `--line-width` scoped to the element (`lr-sparkline { --line-width: 2px; }`),
+since the unprefixed name also reaches any other element that reads it. No canvas bridge or manual
+refresh is needed. Styling hooks cannot be observed, so neither deprecated alias logs a warning.
 
 **Optional peer deps:** none.
 
@@ -12454,8 +12484,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 
 **Events:** none.
 
-**Slots:** `start` (canonical leading icon), default (legacy leading-icon alias, retained as the
-fallback; `start` takes precedence when both are filled), `caption` (rich caption content —
+**Slots:** `start` (canonical leading icon), default (deprecated leading-icon alias, removal not
+before 23.0.0: it still renders while `start` is empty and `start` takes precedence when both are
+filled; move the icon to `slot="start"`), `caption` (rich caption content —
 overrides the `caption` attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
 slot="spark">`, or other compact trend visual — `lr-stat` only reserves the slot and doesn't
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
@@ -17736,9 +17767,11 @@ custom-handle content inside the separator; its assigned subtree is inert, so th
 the sole pointer/keyboard resize control). Under RTL, logical start/end and horizontal pointer/arrow
 behavior mirror together; vertical behavior does not invert.
 
-**CSS parts:** `base split-panel` (both tokens are on the same outer wrapper), `start panel` and
+**CSS parts:** `base split-panel` (both tokens are on the same outer wrapper; `split-panel` is a
+deprecated alias of `base`, removal not before 23.0.0, so style `::part(base)`), `start panel` and
 `end panel` (each pane exposes its individual token plus the shared `panel` token), `divider`
-(focusable `role="separator"`, with value/min/max and disabled ARIA state).
+(focusable `role="separator"`, with value/min/max and disabled ARIA state). The deprecated part
+still matches until its removal; being a stylesheet selector, it logs no runtime warning.
 
 **Themeable custom properties:** `--divider-width` (default `4px`), `--divider-hit-area` (requested
 default `12px`, with Lyra's `--lr-icon-button-size` minimum target remaining the floor), `--min`
@@ -19694,9 +19727,10 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   the host's re-render has applied. That second pass only acts while focus is still inside the rail
   or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
   focuses the first candidate that can actually hold focus: the trigger, then the element that held
-  focus when the overlay opened, then the built-in `[part='toggle']` (unavailable under
-  `hideToggle`), and finally the rail host; when even the host cannot take focus (hidden, or inert —
-  under an inert ancestor or behind a stacked modal), focus is left where it is. The host
+  focus when the overlay opened (none when focus was on `<body>`), then the built-in
+  `[part='toggle']` (unavailable under `hideToggle`), then the rail host, and finally
+  `focusFallback` when set; when none of them can take focus (the host hidden, or inert — under an
+  inert ancestor or behind a stacked modal), focus is left where it is. The host
   temporarily receives `tabindex="-1"` only when it has no authored tabindex; the temporary
   attribute is removed once focus moves off the host or the rail disconnects, while a blur caused
   only by the window or tab losing system focus (the host stays the focused element) leaves it in
@@ -19709,7 +19743,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   `null`), no external element is a return candidate: a close still returns focus to the built-in
   toggle when its own click opened the overlay, otherwise to the element that held focus at open,
   and the deferred pass still runs over its remaining candidates (that element, the built-in toggle,
-  then the rail host) — only the trigger candidate depends on the association. The resolved trigger
+  the rail host, then `focusFallback`) — only the trigger candidate depends on the association. The
+  resolved trigger
   also receives `aria-expanded` (rendered in both states) and `aria-controls` pointing at the rail's
   own panel, so an external control announces the overlay's state across the shadow boundary.
   Because a light-DOM element cannot hold a raw reference into another element's shadow tree,
@@ -19721,6 +19756,29 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   label/`htmlFor`-style alternative to assigning `trigger` directly (mirrors `<lr-page-rail>`'s
   `for`). Resolved against this element's own root (shadow root or document) when the overlay opens
   and again when it closes. Ignored once `trigger` is itself set.
+- `focusFallback: HTMLElement | string | null = null` (attribute `focus-fallback`) — opt-in
+  last-resort target for the mobile overlay's deferred focus return, tried only after every built-in
+  target (the `trigger`/`for` association, the element that held focus at open, `[part='toggle']`,
+  the rail host) is unavailable — typically the application's main region, for a host that takes the
+  navigation, or the region around it, out of the layout as the overlay closes. Accepts an element or
+  an id, the same element-or-id shape as `<lr-intersection-observer>`'s `root`; an id (the attribute
+  always holds one — an id, not a selector) is resolved like `for`, against the rail's own root
+  (shadow root or document), and `''` means unset. Resolved when the deferred pass runs, so
+  reassigning it after opening, or re-creating the element under the same id before the pass runs,
+  is honored; property and attribute writes set the same value and the last write wins. It never
+  outranks a target that can take focus, so it changes no close that already lands, and it is not
+  used by the synchronous attempt, by a close caused by leaving `'mobile'` (a breakpoint or
+  `forceMode` change), or in the full/icon-only presentations. A target that is missing,
+  disconnected, in another document, hidden, inert or under an inert ancestor, `aria-hidden`,
+  disabled, or not focusable leaves focus where it is, and so does anything inside this rail
+  (unavailable whenever the rail host is). The target needs `tabindex="-1"` (or another way to take
+  focus): unlike the host, the rail never adds a tabindex to it. Unset (`null`) reproduces the
+  existing behavior exactly.
+
+  ```html
+  <main id="content" tabindex="-1">…</main>
+  <lr-app-rail hide-toggle for="menu-button" focus-fallback="content">…</lr-app-rail>
+  ```
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
   state, exposing a `[part='resizer']` handle clamped to `[minRailWidthPx, maxRailWidthPx]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
@@ -20527,11 +20585,14 @@ is neutral. This is also the composition used for direct `<lr-dropdown-item>` ch
   Preventing it anywhere keeps the current menu/submenu chain open. There are no
   `lr-menu-select`, `lr-menu-item-select`, or nested-selection aliases.
 
-**Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` plus semantic separators), `header`, and
-`footer`. Header and footer are composed controls or explanatory regions outside the
-`role="menu"` list, so filters, counts, or footer actions do not violate the menu required-child
-contract. Arbitrary non-item content in the default slot still renders, but is not enrolled as a
-menu item.
+**Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` rows, `<lr-menu-label>` captions, and
+`<hr>`/`<lr-divider>` separators), `header`, and `footer`. Header and footer are composed controls
+or explanatory regions outside the `role="menu"` list, so filters, counts, or footer actions do not
+violate the menu required-child contract. Any other default-slot content is deprecated (removal not
+before 23.0.0): it still renders, but inside `role="menu"` without a menu-item role and skipped by
+keyboard navigation, so move it to `slot="header"` or `slot="footer"`. Content that `lr-dropdown`
+forwards into its own menu is not covered: its default slot mirrors `sl-dropdown`'s free-form
+content.
 
 **CSS parts:** `header`, `list`, and `footer`. Root `trigger` and `popup` parts do not exist;
 style those on `<lr-dropdown>` when using the overlay composition.
@@ -27240,11 +27301,16 @@ adds no layout.
 needed; reflected), `attr: string | null = null` (reflected; `*` observes every attribute; otherwise a
 space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
 false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
-mapped attributes reflect. Lyra's
-existing aliases remain and also reflect: `observeAttributes` (`attributes`; unfiltered boolean
-form of `attr`, equivalent to `attr: '*'`) and `characterData` (`character-data`, equivalent to
-`charData`). Plus `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`
-(neither reflects).
+mapped attributes reflect. Plus `subtree: boolean = true`, and programmatic
+`attributeFilter: string[] = []` (neither reflects).
+
+**Deprecated aliases** (still functional and still reflecting until their removal, no earlier than
+23.0.0; setting either logs a one-time development warning): `observeAttributes` (`attributes`)
+turns on attribute observation, and `characterData` (`character-data`) is identical to `charData`.
+Replace `character-data` with `char-data`. Replace `attributes` with `attr="*"` only when `attr`,
+`attr-old-value` and `attributeFilter` are all unset; otherwise just remove it. Those already turn
+attribute observation on, and a non-null `attr` ignores `attributeFilter`, so adding `attr="*"` next
+to a filter would widen the observer to every attribute.
 
 The browser capability is optional. A missing or throwing owner-window lookup, or an unavailable or
 throwing constructor, leaves that rebuild inert rather than leaking an exception. Individual
@@ -28102,9 +28168,14 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
   `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
   `prefers-reduced-motion: reduce`.
-- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon _box_ to
-  `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
-  of differently-shaped icons lines its labels up.
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected, deprecated; removal not before
+  23.0.0) — widens the icon _box_ to `--lr-icon-fixed-width` while the glyph's svg is pinned to
+  `--lr-icon-size` (1em by default) and centres inside it, so a column of differently-shaped icons
+  lines its labels up. It keeps working unchanged, and setting it logs a one-time development
+  warning. Omit it: the default canvas already gives every icon the same 1.25em box. For the wider
+  1.5em box set `lr-icon { inline-size: var(--lr-size-1-5em); }` on the host instead. One geometry
+  difference: a glyph wider than 1em keeps its intrinsic width (up to the box) instead of being
+  squeezed to 1em.
 
 **Events:**
 
@@ -28139,8 +28210,9 @@ source tree.
 - `--lr-icon-size` (unset by default) — when supplied, overrides both canvas dimensions. Without
   it, the selected `canvas` uses the font-relative sizes above. Stroke color is `currentColor` and
   the host is `color: inherit`, so color comes from surrounding text with no configuration.
-- `--lr-icon-fixed-width` (default `--lr-size-1-5em`) — inline size of the box while `fixed-width`
-  is set.
+- `--lr-icon-fixed-width` (default `--lr-size-1-5em`; deprecated together with `fixed-width`,
+  removal not before 23.0.0) — inline size of the box while `fixed-width` is set. Set `inline-size`
+  on the host instead.
 - `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
   the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
   factors are set to `-1` by `flip`, so set those properties rather than these tokens.
@@ -28208,7 +28280,7 @@ unregisterIconLibrary("material"); // icons using it revert to the built-in glyp
   name="star"
   label="Favourite"
 ></lr-icon>
-<lr-icon library="material" name="delete" fixed-width></lr-icon>
+<lr-icon library="material" name="delete"></lr-icon>
 <lr-icon name="search" canvas="square" animation="beat"></lr-icon>
 ```
 
@@ -31018,7 +31090,8 @@ and later MIME values restore detection.
   button and the `kind="video"` `open-button` render `disabled`; a safe file chip's anchor loses
   its `href` and `download`, so it genuinely cannot fetch, and gains an explicit `role="link"` so
   its accessible name and `aria-current` stay valid on an element that no longer has an implicit
-  role. `lr-media-open` and `lr-before-media-download` stop firing from every path, `click()`
+  role. `lr-media-open`, `lr-media-download-request` and its deprecated `lr-before-media-download`
+  alias stop firing from every path, `click()`
   included, the action leaves the tab order, and it paints at `--lr-opacity-disabled` with a
   `not-allowed` cursor. Deliberately does NOT reach into the `kind="video"` player: `<video
   controls>` is media content with its own native transport, not this card's action. An
@@ -31050,9 +31123,13 @@ not exports from the component entry.
 **Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
 noncancelable) notifies
 after image-card or video open-button activation; those kinds have no component-owned navigation,
-so a host decides what "open" means. `lr-before-media-download` carries the same detail and is
+so a host decides what "open" means. `lr-media-download-request` carries the same detail and is
 cancelable only for a safe file anchor immediately before its native download/open default; calling
-`preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
+`preventDefault()` there suppresses that exact default. `lr-before-media-download` is its deprecated
+alias (removal not before 23.0.0): it still fires right after the canonical event from the same
+activation, with an equal but separate `detail`, and either event's `preventDefault()` vetoes the
+download/open. A veto through the alias logs a one-time development warning, so move listeners to
+`lr-media-download-request`. `detail.src` is whichever internally
 validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
 whitespace-padded value is trimmed, so it matches the rendered sink.
 The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
@@ -31108,7 +31185,7 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
     .addEventListener("lr-media-open", (e) => openLightbox(e.detail.src));
   document
     .getElementById("file-card")
-    .addEventListener("lr-before-media-download", (e) => shouldUseNativeDownload || e.preventDefault());
+    .addEventListener("lr-media-download-request", (e) => shouldUseNativeDownload || e.preventDefault());
 </script>
 ```
 
@@ -34783,11 +34860,15 @@ for the native download action's hover and pressed backgrounds.
 
 **Renderer registry exports:**
 
-- `DocumentFile` — the compatible mutable lookup input passed to `matches(file)` callbacks:
+- `DocumentFile` (deprecated, removal not before 23.0.0; use the structurally identical
+  `LyraDocumentFile`) — the compatible mutable lookup input passed to `matches(file)` callbacks:
   `{ name, mimeType, src, anchor?, highlights?, alt? }`. Adapter and legacy-render boundaries
   receive an immutable file snapshot whose highlights use the shared trimmed, nonempty,
-  first-wins identity projection.
-- `LyraDocumentFile` — the readonly file snapshot wrapped by every discriminated payload.
+  first-wins identity projection. Exported signatures, listed below, keep this name until its
+  removal; the two names are assignable to each other, so annotate your own code with
+  `LyraDocumentFile`.
+- `LyraDocumentFile` — the readonly file snapshot wrapped by every discriminated payload, and the
+  supported name for the file type.
 - `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
   immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
   cues and 64 tracks, clone and freeze every retained record, and bound every retained string.
@@ -34797,7 +34878,8 @@ for the native download action's hover and pressed backgrounds.
 - `LyraDocumentRendererAdapterDefinition<K>` / `LyraDocumentRendererAdapter` — strongly typed
   authoring input and its factory-created, type-erased registry form. The callbacks adapt the legacy
   file to one payload kind, derive capabilities from that retained payload, and render it.
-- `DocumentRendererDefinition` (also `LyraDocumentRendererDefinition`) — a validated direct
+- `LyraDocumentRendererDefinition` (the deprecated `DocumentRendererDefinition` names the same
+  union until its removal, no earlier than 23.0.0) — a validated direct
   `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, or lazy
   `{ load, matches?, capabilities? }` definition; exactly one of `render`, `adapter`, and `load` is
   required. Static capabilities are rejected on adapted definitions so their adapter remains the
@@ -36610,9 +36692,13 @@ clipboard failure bubbles `lr-error` plus `lr-copy-error`
 ## `lr-geojson-viewer` / `lr-geojson-view`
 
 Document-registry bridge that fetches, validates, and renders a GeoJSON file through `<lr-map>`'s
-`dataLayers`. The canonical class is `LyraGeoJsonViewer`; the pre-v9 `lr-geojson-view` tag and
-`LyraGeojsonView` class name remain compatibility aliases. The document registry renders the
-canonical tag and matches `application/geo+json` and `.geojson` filenames.
+`dataLayers`. The canonical class is `LyraGeoJsonViewer`. The pre-v9 `lr-geojson-view` tag, its
+`LyraGeojsonView` class and `LyraGeojsonViewEventMap` type are deprecated compatibility aliases
+(removal not before 23.0.0; this replaces the earlier promise to keep them permanently): they keep
+working unchanged until then, and connecting `lr-geojson-view` logs a one-time development warning.
+Rename them to `lr-geojson-viewer`, `LyraGeoJsonViewer` and `LyraGeoJsonViewerEventMap`. The
+document registry renders the canonical tag and matches `application/geo+json` and `.geojson`
+filenames.
 
 Validates the parsed JSON is a `Feature`/`FeatureCollection`/bare geometry (one of `Point`,
 `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`) before
@@ -36683,8 +36769,12 @@ but working state, since the `lr-json-viewer` fallback below it still renders th
 size of `[part="base"]`, matching every other viewer in this family. It is also settable via the
 `maxHeight` property, which writes this token inline on `[part="base"]`.
 
-The canonical tag is registered by importing `geojson-viewer/geojson-viewer.js`; the permanent
-compatibility tag and old deep route remain available through `geojson-view/geojson-view.js`.
+The canonical tag is registered by importing `components/lr-geojson-viewer.js` (deep route
+`components/viewers/geojson-view/geojson-viewer.js`). The deprecated `components/lr-geojson-view.js`,
+`components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes register or
+export the alias (the registration routes also register `lr-geojson-viewer`) and keep working until
+their removal, no earlier than 23.0.0; an application importing one of them only to register the
+canonical tag switches to `components/lr-geojson-viewer.js`.
 Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
 message instead of the map. Lyra supports MapLibre v5 and v6; consumers must import its CSS.
@@ -37366,7 +37456,9 @@ uses for its own `[part="body"]`.
   indented. It copies source text without the renderer's terminal newline, preserving leading tabs
   whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
   code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
-  compatibility spelling; either property enables the header. Plain streaming defers headers until
+  deprecated compatibility spelling (removal not before 23.0.0; setting it logs a one-time
+  development warning): either property enables the header, so use `code-block-header`. Plain
+  streaming defers headers until
   settle; progressive streaming adds them to committed blocks. The button has a localized accessible
   name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
   the header also removes authored style elements and their CSS text to prevent visual copy
@@ -37657,8 +37749,9 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
-`codeBlockHeader: boolean = false` (attribute `code-block-header`) with its compatibility alias
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`),
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) with its deprecated
+compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
+before 23.0.0),
 `highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
@@ -37748,7 +37841,7 @@ The Markdown part set also includes `task-list`, `task-item`, `task-item-checked
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
 (attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its compatibility alias. Successful and
+`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -38886,9 +38979,11 @@ properties existed:
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
 - `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
-  and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its compatibility
-  alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) — forwarded to the
-  composed Markdown element. Their settled-block streaming behavior, code-copy behavior, and defaults match
+  and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its deprecated
+  compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
+  before 23.0.0; setting it logs a one-time development warning) — forwarded to the composed
+  Markdown element, which receives either header option as its own `codeBlockHeader`. Their
+  settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
   Use `streaming-render="progressive"` with `content-mode="markdown"`: in `auto` mode the element
   switches from plain text to Markdown when detection first succeeds, which replaces the displayed
@@ -38984,7 +39079,8 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-  `streamingRender`, `codeBlockHeader`, `codeBlockChrome`, `languages` verbatim, and the rest of `<lr-markdown>`'s
+  `streamingRender`, `codeBlockHeader` (on when either this element's `codeBlockHeader` or its
+  deprecated `codeBlockChrome` is), `languages` verbatim, and the rest of `<lr-markdown>`'s
   configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
@@ -39015,7 +39111,7 @@ The Markdown part set also includes `task-list`, `task-item`, `task-item-checked
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
 (attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its compatibility alias. Successful and
+`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -39053,12 +39149,14 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
-`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its compatibility alias
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`); `highlightCode: boolean = true`
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its deprecated
+compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
+before 23.0.0); `highlightCode: boolean = true`
 (attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
-progressive output, and `codeBlockHeader` (or its `codeBlockChrome` alias) enables the localized
+progressive output, and `codeBlockHeader` (or its deprecated `codeBlockChrome` alias, which reaches
+the composed element as `codeBlockHeader`) enables the localized
 code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
@@ -39109,7 +39207,7 @@ The Markdown part set also includes `task-list`, `task-item`, `task-item-checked
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
 (attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its compatibility alias. Successful and
+`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 
@@ -41265,7 +41363,9 @@ and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwa
 and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
 blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
 source language label and localized copy action to built-in code blocks.
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is an equivalent enabling alias. These settings do not replace
+`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a deprecated equivalent
+enabling alias (removal not before 23.0.0; setting it logs a one-time development warning), and the
+parts' Markdown elements receive either option as `codeBlockHeader`. These settings do not replace
 the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N

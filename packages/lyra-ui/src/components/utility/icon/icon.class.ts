@@ -2,6 +2,7 @@ import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'li
 import { property, query, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
@@ -95,8 +96,9 @@ export interface LyraIconEventMap {
  *   icon and its composed ancestors are exposed to the accessibility tree.
  * @csspart empty - Marker rendered when a remote icon resolved to an empty but valid document.
  * @cssprop [--lr-icon-size] - Optional inline and block size override for every canvas.
- * @cssprop [--lr-icon-fixed-width=var(--lr-size-1-5em)] - Inline size of the box while
- *   `fixed-width` is set; the glyph keeps `--lr-icon-size` and centers inside it.
+ * @cssprop [--lr-icon-fixed-width=var(--lr-size-1-5em)] - Deprecated together with `fixed-width`
+ *   (removal not before 23.0.0): the inline size of the box while `fixed-width` is set, with the
+ *   glyph kept at `--lr-icon-size` and centered inside it. Set `inline-size` on the host instead.
  * @cssprop [--lr-icon-rotate=0deg] - Rotation applied to the box. Written inline from the `rotate`
  *   property, so set that rather than this property.
  * @cssprop [--lr-icon-flip-x=1] - Horizontal scale factor, set to `-1` by `flip`.
@@ -210,7 +212,12 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   swapOpacity = false;
   /** Optional built-in motion treatment; all variants honor `prefers-reduced-motion`. */
   @property({ reflect: true }) animation?: LyraIconAnimation;
-  /** Widens the icon box to `--lr-icon-fixed-width` so a column of icons aligns its labels. */
+  /** Widens the icon box to `--lr-icon-fixed-width` and pins the glyph to a 1em-wide box, so a
+   *  column of icons aligns its labels. Setting it logs a one-time development warning.
+   * @deprecated The default canvas already gives every icon the same 1.25em box; for the 1.5em box
+   *  set `lr-icon { inline-size: var(--lr-size-1-5em) }` on the host instead. A glyph wider than
+   *  1em then keeps its intrinsic width rather than being squeezed to 1em. Removal not before
+   *  23.0.0. */
   @property({ type: Boolean, reflect: true, attribute: 'fixed-width' })
   fixedWidth = false;
 
@@ -262,6 +269,16 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Client-only, so server rendering stays silent; `changed.has()` alone is also true for the
+    // defaulted `false` on the first update, hence the value guard.
+    if (changed.has('fixedWidth') && this.fixedWidth) {
+      warnDeprecatedUsage(
+        this,
+        'property',
+        'fixedWidth',
+        'the default canvas or inline-size',
+      );
+    }
     if (changed.has('rotate')) {
       const angle = finiteNumber(this.rotate ?? 0, 0);
       if (angle) this.style.setProperty('--lr-icon-rotate', `${angle}deg`);

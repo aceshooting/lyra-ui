@@ -211,11 +211,12 @@ function registerMenuWidthScale(): void {
  * `lr-menu-item-select` nor `lr-menu-select` is part of the public contract.
  *
  * @customElement lr-menu
- * @slot - `<lr-menu-item>` elements, plus optionally plain `<hr>` dividers
- * between groups (native `<hr>` already carries an implicit `separator`
- * role, matching what `role="menu"` expects between item groups). Arbitrary
- * non-item content still renders here for backward compatibility, but the
- * `header`/`footer` slots below are the supported place for it.
+ * @slot - `<lr-menu-item>`/`<lr-dropdown-item>` rows, `<lr-menu-label>` captions, and `<hr>` or
+ * `<lr-divider>` separators between groups (native `<hr>` already carries an implicit `separator`
+ * role, matching what `role="menu"` expects between item groups). Any other default-slot content
+ * is deprecated (removal not before 23.0.0): it still renders, but inside `role="menu"` without a
+ * menu-item role and skipped by keyboard navigation, so put it in the `header` or `footer` slot
+ * below.
  * @slot header - Composed content rendered above the items and *outside* the
  * `role="menu"` list — a filter/search field, a section title, a summary row.
  * Keeps its own full default keyboard behavior, is reachable with Tab from

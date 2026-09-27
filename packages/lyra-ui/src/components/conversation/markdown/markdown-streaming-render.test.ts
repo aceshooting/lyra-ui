@@ -13,7 +13,7 @@ type MarkdownHost = HTMLElement & {
   streaming: boolean;
   streamingRender: 'plain' | 'progressive';
   headingAnchors: boolean;
-  codeBlockChrome: boolean;
+  codeBlockHeader: boolean;
   highlightCode: boolean;
   languages: Record<string, unknown>;
   marked?: unknown;
@@ -140,7 +140,7 @@ it('keeps an open fence literal and LTR without highlight or chrome until its cl
   await preloadMarkdown();
   for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
     const el = mountMarkdown(tag, '# Code\n\n```javascript\nconst answer = 42;\n');
-    el.codeBlockChrome = true;
+    el.codeBlockHeader = true;
     el.highlightCode = true;
     await el.updateComplete;
     const root = await contentRoot(el);

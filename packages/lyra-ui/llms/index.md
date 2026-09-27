@@ -240,7 +240,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-xml-viewer` · lr-xml-viewer.js · `stable` since `4.0.0` — collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s UX (`collapsed-depth`, `copyable`, str...
 - `lr-document-compare` · lr-document-compare.js · `stable` since `4.1.0` — side-by-side or inline comparison of two document versions, composed entirely from two existing primitives rather than reimplementing eit...
 - `lr-geojson-viewer` · lr-geojson-viewer.js · `stable` since `9.0.0` — document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
-- `lr-geojson-view` · lr-geojson-view.js · `stable` since `4.0.0` — Permanent compatibility class for the pre-v9 `lr-geojson-view` tag.
+- `lr-geojson-view` · lr-geojson-view.js · `stable` since `4.0.0` — Deprecated compatibility class for the pre-v9 `lr-geojson-view` tag.
 
 ## Conversation & chat UI — `components/conversation/` (34)
 
@@ -350,3 +350,16 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-claim-evidence` · lr-claim-evidence.js · `stable` since `7.0.0` — a controlled claim-by-claim grounding audit.
 - `lr-retrieval-compare` · lr-retrieval-compare.js · `stable` since `7.0.0` — a side-by-side retrieval/reranking workbench that makes rank, overlap, and dense/sparse/rerank/final score changes inspectable.
 - `lr-rag-eval-dashboard` · lr-rag-eval-dashboard.js · `stable` since `7.0.0` — a controlled RAG quality overview with current metric cards, per-metric trends, evaluation slices, and run history.
+
+## Deprecated package exports
+
+These package entry points and exported types still work but are deprecated. Each names its
+replacement and the earliest release that may remove it, under the deprecation policy in
+`llms/shared.md`.
+
+- **Deprecated entry point** `@aceshooting/lyra-ui/components/lr-geojson-view.js` since `unreleased`; use entry point `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';`; removal not before `23.0.0` — This tag-shaped route registers the deprecated lr-geojson-view alias (and, through it, lr-geojson-viewer). Import the lr-geojson-viewer route instead; this one keeps working unchanged through the 22.x line.
+- **Deprecated entry point** `@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-view.class.js` since `unreleased`; use entry point `import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';`; removal not before `23.0.0` — This route exists for the deprecated LyraGeojsonView alias class and its event map; its re-exports of LyraGeoJsonViewer and its types duplicate the canonical geojson-viewer class route. Import from that route instead; this one keeps working unchanged through the 22.x line.
+- **Deprecated entry point** `@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-view.js` since `unreleased`; use entry point `import '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.js';`; removal not before `23.0.0` — This route registers the deprecated lr-geojson-view alias and, as a side effect, lr-geojson-viewer. Import the geojson-viewer route to register the canonical tag alone; this one keeps working unchanged through the 22.x line.
+- **Deprecated type** `DocumentFile` from `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js` since `unreleased`; use type `import type { LyraDocumentFile } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';`; removal not before `23.0.0` — LyraDocumentFile is the structurally identical interface under the library's prefixed type naming, and each is assignable to the other. Exported signatures keep the unprefixed name until the removal, so no existing signature changes in a minor release.
+- **Deprecated type** `DocumentRendererDefinition` from `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js` since `unreleased`; use type `import type { LyraDocumentRendererDefinition } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';`; removal not before `23.0.0` — LyraDocumentRendererDefinition is the same union under the library's prefixed type naming. Exported signatures keep the unprefixed name until the removal, so no existing signature changes in a minor release.
+- **Deprecated type** `LyraGeojsonViewEventMap` from `@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-view.class.js` since `unreleased`; use type `import type { LyraGeoJsonViewerEventMap } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';`; removal not before `23.0.0` — The event contract of the deprecated lr-geojson-view alias is exactly LyraGeoJsonViewerEventMap under a second name. The alias type keeps resolving to it, from this route and the package root, through the 22.x line.

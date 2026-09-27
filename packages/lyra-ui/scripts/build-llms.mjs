@@ -28,6 +28,7 @@ import {
   optionalPeersForComponent,
   runtimeModuleSpecifiers,
 } from './generate-component-inventory.mjs';
+import { formatDeprecationSubject } from './component-metadata.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { isMainModule } from './is-main-module.mjs';
 
@@ -855,7 +856,42 @@ export function buildMigration() {
   ].join('\n');
 }
 
-function buildIndex(sectionsByFamily, tagFacts) {
+/** A package export specifier (`./x.js`) as the full import specifier a consumer writes. */
+function packageSpecifier(specifier) {
+  return specifier === '.' ? '@aceshooting/lyra-ui' : `@aceshooting/lyra-ui/${specifier.replace(/^\.\//, '')}`;
+}
+
+/**
+ * The generated `llms/index.md` section for `component-metadata.json#exportDeprecations`:
+ * deprecated entry points and exported types have no component reference to live in. Empty when
+ * nothing is deprecated, so the index carries no placeholder heading.
+ */
+export function buildExportDeprecationsSection(records) {
+  if (!records?.length) return '';
+  const lines = records.map((entry) => {
+    const subject = entry.kind === 'type'
+      ? `**Deprecated type** \`${entry.name}\` from \`${packageSpecifier(entry.module)}\``
+      : `**Deprecated entry point** \`${packageSpecifier(entry.name)}\``;
+    const replacementKind = entry.replacement?.kind === 'entry-point'
+      ? 'entry point'
+      : entry.replacement?.kind ?? 'API';
+    const replacement = entry.replacement?.usage ?? entry.replacement?.name;
+    return `- ${subject} since \`${entry.since}\`; use ${replacementKind} \`${replacement}\`; ` +
+      `removal not before \`${entry.removalNotBefore}\` — ${entry.rationale}`;
+  });
+  return [
+    '## Deprecated package exports',
+    '',
+    'These package entry points and exported types still work but are deprecated. Each names its',
+    'replacement and the earliest release that may remove it, under the deprecation policy in',
+    '`llms/shared.md`.',
+    '',
+    ...lines,
+    '',
+  ].join('\n');
+}
+
+function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = []) {
   const out = [
     GENERATED('custom-elements.json + llms/<family>.md'),
     '',
@@ -900,6 +936,8 @@ function buildIndex(sectionsByFamily, tagFacts) {
     }
     out.push('');
   }
+  const exportSection = buildExportDeprecationsSection(exportDeprecations);
+  if (exportSection) out.push(exportSection);
   return out.join('\n');
 }
 
@@ -928,9 +966,7 @@ export function buildComponentFile(
   const cssPropNames = facts.cssProperties?.map((p) => p.name) ?? [];
   const compoundUsageRegistrations = COMPOUND_USAGE_REGISTRATIONS[tag] ?? [];
   const deprecationLines = facts.deprecations.map((entry) => {
-    const subject = entry.kind === 'component'
-      ? `\`${tag}\``
-      : `\`${entry.name}\`${entry.attribute ? ` / \`${entry.attribute}\`` : ''}`;
+    const subject = formatDeprecationSubject(entry, tag);
     const replacement = entry.replacement?.usage ?? entry.replacement?.name;
     return `- **Deprecated ${entry.kind}** ${subject} since \`${entry.since}\`; use ` +
       `${entry.replacement?.kind ?? 'API'} \`${replacement}\`; removal not before ` +
@@ -1118,7 +1154,14 @@ export function build({ write = true } = {}) {
   const artifacts = new Map([
     [path.join(packageDir, 'llms-full.txt'), full],
     [path.join(packageDir, 'llms.txt'), `${shortIndex.join('\n').trimEnd()}\n`],
-    [path.join(llmsDir, 'index.md'), buildIndex(sectionsByFamily, tagFacts)],
+    [
+      path.join(llmsDir, 'index.md'),
+      buildIndex(
+        sectionsByFamily,
+        tagFacts,
+        JSON.parse(read('scripts', 'fixtures', 'component-metadata.json')).exportDeprecations ?? [],
+      ),
+    ],
     [path.join(llmsDir, 'tokens.md'), buildTokens()],
     [path.join(llmsDir, 'peers.md'), peersText],
     [path.join(llmsDir, 'migration.md'), buildMigration()],
