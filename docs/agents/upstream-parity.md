@@ -167,3 +167,12 @@ while doing something else. The vocabulary rules apply to every component, mirro
   accessibility assertion — nothing proves a newly added *attribute, slot, part or event* has any of
   the three. Verify that leg by hand, and verify every parity or count claim in prose against the
   fixture rather than against memory.
+
+- **A property's documented default is gated.** `check:llms-defaults` cross-checks every
+  `` `name: type = default` `` and `` `name?: type` `` claim in the authored `llms/<family>.md`
+  against `custom-elements.json`, in both directions. Changing `foo = ''` to `foo?: string` (or
+  back) without editing the prose now fails `pnpm lint`. It matters because `label: string = ''`
+  promises an unset read of `''` — so `el.label.trim()` is safe and `?? fallback` is dead code —
+  when the real readback is `undefined`. Nothing checked this before, which is how one review found
+  the same class twice and a sweep then found eleven more instances unreported. A deliberate
+  exception opts out with `<!-- llms-default-exempt: reason -->`.

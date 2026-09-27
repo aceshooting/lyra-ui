@@ -1,31 +1,25 @@
 # AGENTS.md — contributor guide for AI coding agents working ON this repo
 
-> **Scope:** for agents (Claude Code, Codex, etc.) modifying lyra-ui's own source — NOT the
-> consumer-facing API reference for apps that merely *depend on* `@aceshooting/lyra-ui`; that's
-> `packages/lyra-ui/llms.txt` (short index) plus the `packages/lyra-ui/llms/` reference it points
-> into. Don't confuse the two.
+> **Scope:** agents modifying lyra-ui's own source; apps that only *depend on*
+> `@aceshooting/lyra-ui` read `packages/lyra-ui/llms.txt` and `llms/` instead.
 >
-> This file is the compact contract. Each section links a file under `docs/agents/` carrying the
-> full normative detail — exact patterns, incidents, greps, rationale. **Read the linked file
-> before working in that area**; the one-liners here are reminders, not the whole rule.
+> Each section links a `docs/agents/` file with the full normative detail (patterns, incidents,
+> rationale). **Read it before working in that area**; these one-liners are reminders only.
 
 ## What this is
 
-`@aceshooting/lyra-ui` (current source version: `packages/lyra-ui/package.json`) is a free,
-clean-room Lit 3 web-component library — an open-source companion to Web Awesome that reimplements
-several Web Awesome **Pro** components plus original extras. Positioning, non-negotiable:
+`@aceshooting/lyra-ui` (version: `packages/lyra-ui/package.json`) is a free, clean-room Lit 3
+web-component library: an open-source companion to Web Awesome reimplementing several WA **Pro**
+components plus original extras. Non-negotiable:
 
-- **Clean-room.** No WA Pro source was ever available or copied; behavior is implemented
-  originally, seeded only from this org's own pre-existing hand-rolled components.
-- **API-mirroring.** Components with a WA counterpart mirror the public surface (attributes,
-  slots, events, parts, CSS custom properties) 1:1 under the `lr-` prefix — migration is a
-  mechanical `wa-` → `lr-` rename. Components with no WA equivalent follow this library's own
-  conventions; there is no upstream docs page to mirror.
-  The `migrate-wa` script (`packages/lyra-ui/scripts/migrate-wa.mjs`, `pnpm run migrate-wa`,
-  tested by `test:migrate-wa`) automates the rename in a *consumer* project's source —
-  best-effort, not a guaranteed 1:1 API match for every renamed tag.
-- **Non-goals:** not a WA fork; no `wa-` prefix or WA trademark/branding; no React wrappers
-  (stack is unifying on Lit; custom elements work in React 19 anyway).
+- **Clean-room.** No WA Pro source was ever available or copied; behavior is original, seeded only
+  from this org's own pre-existing hand-rolled components.
+- **API-mirroring.** A component with a WA counterpart mirrors its public surface 1:1 under `lr-`,
+  so migration is a mechanical `wa-` → `lr-` rename; others follow this library's conventions.
+  `pnpm run migrate-wa` (`packages/lyra-ui/scripts/migrate-wa.mjs`, `test:migrate-wa`) is a
+  best-effort consumer codemod, not a guaranteed 1:1 match.
+- **Non-goals:** no WA fork, `wa-` prefix or WA branding; no React wrappers (the stack is unifying
+  on Lit; React 19 runs custom elements).
 
 ## Workspace hygiene
 
@@ -86,418 +80,243 @@ primary CI work use the exact Node `22.23.2` recorded in [`.nvmrc`](.nvmrc). Run
 those commands rather than relying on an arbitrary Node 22 patch.
 
 ```
-lyra-ui/                          (repo root — this file lives here)
-  packages/
-    lyra-ui/                      @aceshooting/lyra-ui — the library itself
-      src/
-        internal/                 LyraElement base, FormAssociated mixin, Floating UI positioner,
-                                   design tokens (tokens.styles.ts), prefix.ts, a11y.ts
-        components/<family>/<name>/
-                                  11 family dirs (agent-tools, charts, conversation, data, forms,
-                                   layout, media, overlays, retrieval, utility, viewers), one dir
-                                   per component inside each — NOT a flat components/<name>/
-        lyra.ts                   pure package-root barrel with curated named re-exports
-        all.ts                    generated side-effect imports for the compatibility registration entry
-      llms.txt                    CONSUMER-facing entry index (not this file's audience)
-      llms/<family>.md            CONSUMER-facing API reference — AUTHORED, one file per
-                                   src/components/<family>/ directory; edit these
-      llms/{shared,00-*}.md       authored cross-cutting reference + intro prose
-      llms-full.txt               GENERATED concatenation of the above (`pnpm run llms`)
-      llms/{index,tokens,peers,migration}.md, llms/components/<tag>.md
-                                  GENERATED — never edit; CI diffs them
-    lyra-flags/                   optional companion pkg — waving flag SVGs for <lr-flag>, kept
-                                   out of lyra-ui's default install (vendored from Noto Emoji,
-                                   Public Domain — see its THIRD_PARTY_NOTICES.md)
-  docs/agents/                    detailed contributor reference behind this file's digests
-  .storybook/                     Storybook config — the docs site (this pkg + lyra-flags)
-  .agents/skills/                 repo-local Codex discovery links to the plugin's authored skills
-  .agents/plugins/                Codex repo marketplace metadata
-  plugins/lyra-ui/                shared Codex/Claude plugin (manifests, commands/, skills/). Its
-                                   skills/lyra-ui/references/ is GENERATED by ./package.sh — CI
-                                   runs `git diff --exit-code` on it, so hand-editing breaks the
-                                   build
-  skills/*.skill                  packaged skill bundles, also produced by ./package.sh; CI checks
-                                   archive freshness by rerunning that script and diffing the result
+packages/lyra-ui/                 @aceshooting/lyra-ui, the library
+  src/internal/                   LyraElement, FormAssociated, positioner, tokens, prefix, a11y
+  src/components/<family>/<name>/ 11 family dirs (agent-tools, charts, conversation, data, forms,
+                                  layout, media, overlays, retrieval, utility, viewers); not flat
+  src/lyra.ts | src/all.ts        pure curated root barrel | generated registration side effects
+  llms.txt                        consumer entry index
+  llms/<family>.md                AUTHORED, one per src/components/<family>/; edit these
+  llms/{shared,00-*}.md           AUTHORED cross-cutting reference + intro prose
+  llms-full.txt, llms/{index,tokens,peers,migration}.md, llms/components/<tag>.md
+                                  GENERATED; never edit, CI diffs them
+packages/lyra-flags/              optional <lr-flag> SVG companion (Noto Emoji, Public Domain)
+docs/agents/                      detail behind this file's digests
+.storybook/ | .agents/            Storybook docs site | Codex skill links + marketplace metadata
+plugins/lyra-ui/                  shared Codex/Claude plugin; skills/lyra-ui/references/ GENERATED
+skills/*.skill                    packaged skill bundles, GENERATED (both by ./package.sh)
 ```
 
-`./package.sh` regenerates `packages/lyra-ui/llms/` itself before packaging — it never trusts that
-directory to already be fresh. After a doc-affecting change, run `./package.sh` directly rather
-than `pnpm run llms` followed by a separate `./package.sh` call: `pnpm lint`'s freshness checks
-cover `llms/` but not the packaged copy under `plugins/`, so the second step going unrun is easy to
-miss locally. CI catches it in the **`static-checks`** job, which runs `./package.sh` and then
-`git diff --exit-code` over `plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md`,
-`plugins/lyra-ui/skills/lyra-ui/references/`, `skills/lyra-ui.skill` and
-`skills/compose-lyra-interfaces.skill` — so it fails on the very next run, not days later, and not
-in `docs-and-storybook`.
+After a doc change run `./package.sh` directly (it regenerates `llms/` first); `pnpm lint` misses
+the packaged copy, CI's `static-checks` diffs it ([detail](docs/agents/ci-and-gates.md)).
 
 ## Dev commands and gates
 
-Run from repo root unless noted; package-local equivalents exist from `packages/lyra-ui/`
-(plus `pnpm test:watch`). Full gate lists, ordering rationale, and incidents:
-**[docs/agents/ci-and-gates.md](docs/agents/ci-and-gates.md)**.
+From repo root; package-local forms in `packages/lyra-ui/`. Annotated commands, gate lists,
+ordering, incidents: **[docs/agents/ci-and-gates.md](docs/agents/ci-and-gates.md)**.
 
 ```bash
-pnpm install     # workspace install
-pnpm build       # -r: per package -> dist/ (ESM + .d.ts). lyra-ui runs scripts/build.mjs:
-                 #     tsc -p tsconfig.build.json (tsconfig.json with source maps OFF, since
-                 #     package.json#files ships dist and not src), copies the CSS assets, then
-                 #     check:build-artifacts fails on any .map or sourceMappingURL left in dist
-pnpm test        # -r: builds lyra-ui first (its entrypoint tests import dist/), then runs wtr;
-                 #     @aceshooting/lyra-flags has no test runner, just a plain Node script
-pnpm lint        # -r: for lyra-ui NOT just a type check — the full contract-policy chain
-                 #     + source tsc --noEmit + public compile contracts + strict test-tree tsc
-pnpm manifest    # --filter @aceshooting/lyra-ui: cem analyze -> custom-elements.json
-pnpm registrations # regenerate all.ts imports, tag aliases, allowlist, sideEffects, and explicit exports
-pnpm plugin:sync # sync the lyra-ui version into both agent manifests + Claude marketplace entry
-pnpm docs        # Storybook (.storybook/), demos every component live at localhost:6006
-pnpm create:component --family utility --name status-panel # validated new-component scaffold
-./scripts/test.sh # full Chromium+Firefox+WebKit test sweep (parallel lanes) + SSR/hydration/
-                 #     visual/workspace tests -- run before publishing, NOT on every commit
+pnpm install        # workspace install
+pnpm build          # -r; lyra-ui's build chains check:build-artifacts
+pnpm test           # -r; builds lyra-ui first, then wtr
+pnpm lint           # -r; full contract-policy chain + every tsc contract
+pnpm manifest       # custom-elements.json
+pnpm registrations  # all.ts imports, tag aliases, allowlist, sideEffects, subpath exports
+pnpm plugin:sync    # lyra-ui version -> agent manifests + Claude marketplace entry
+pnpm docs           # Storybook on localhost:6006
+pnpm create:component --family utility --name status-panel  # validated scaffold
+./scripts/test.sh   # complete 3-engine + SSR/visual sweep; before publishing, not per commit
 ```
 
-The scaffold accepts an unprefixed name, enrolls every authored inventory/docs surface, and runs
-its baseline in all three engines; see
-**[docs/agents/component-scaffold.md](docs/agents/component-scaffold.md)**.
+The scaffold takes an unprefixed name, enrolls every authored inventory/docs surface, and runs a
+three-engine baseline: **[docs/agents/component-scaffold.md](docs/agents/component-scaffold.md)**.
 
-- `pnpm lint`'s `contract-policy` chains the package's static contract checks; the authoritative
-  list is `packages/lyra-ui/package.json`'s `contract-policy` script entry — restatements drift.
-- `.github/workflows/ci.yml` is the authoritative CI gate list and reproduction sequence — read
-  it directly; reproduce failures locally in the same order. The gates expose six stable check
-  families split along real data dependencies (`lint`, `static-checks`, `build-and-coverage`,
-  `packed-consumer`, `docs-and-storybook`, `visual-regression`) rather than one linear job, so a
-  red check names the specific phase to reproduce instead of "build-test". The `lint` family
-  derives the authoritative `contract-policy` commands plus the three `lint` type-check suffixes and
-  balances them across three hosted workers; a fail-closed aggregate retains the stable check name.
-  Local `pnpm lint` remains the complete sequential command. Within `build-and-coverage`, four
-  independently hosted coverage shards consume the shared `dist/`
-  artifact; a fail-closed merge job requires every raw coverage, JUnit, and test-manifest artifact
-  before it enforces whole-suite floors and reports to Codecov. Local `test:coverage` deliberately
-  retains the complete four-shard sequential run. A separate
-  `platform-contracts` matrix job runs the fast `test:platform` subset on Firefox and Safari
-  (WebKit) under Node 20/22, with Chromium, Chrome, and Edge also covered under Node 22.
-  `.github/workflows/full-engine.yml` runs the complete non-coverage suite in eight
-  deterministic, cost-balanced shards per browser on a weekly schedule and by manual dispatch.
-  `.github/workflows/test-all-browsers.yml` manually runs the same complete suite in Chromium,
-  Firefox, Chrome, Edge, and Safari (WebKit), with four independently hosted shards per browser.
-  Five lightweight browser-named aggregate jobs preserve the stable release checks. Releases
-  require the push CI, all five Test All Browsers aggregates, and all sixteen
-  full-engine shards to succeed for the exact main commit before any release tag is created.
-  `scripts/test.sh` mirrors
-  the full-engine split through
-  `TEST_SH_ENGINE_SHARDS` (default `1`), so a failing CI shard reproduces locally as the
-  identically-numbered shard.
-- `./scripts/test.sh` runs the COMPLETE test suite (not `test:platform`'s curated subset) on
-  Chromium, Firefox, and WebKit, plus SSR/hydration/visual/workspace tests, in parallel lanes —
-  the same coverage `full-engine.yml` gives weekly in CI, on demand and locally. It's heavy (three
-  full browser-engine sweeps); run it before publishing a release, not on every commit. Full
-  detail: [docs/agents/ci-and-gates.md](docs/agents/ci-and-gates.md).
-- `prepack` (run by npm, not CI) begins by stamping package-version metadata, then determines
-  tarball contents and regenerates the editor data
-  (`vscode-html-data.json`/`vscode-css-data.json`/`web-types.json`); CI now regenerates and
-  freshness-checks those files too.
-- `check:hit-area` (WCAG 2.5.8) and `check:numeric-guards` are blocking parts of `pnpm lint`.
-  `ls packages/lyra-ui/scripts/check-*.mjs` remains the real check inventory.
-- Two gates sit outside `contract-policy` because they read build/test output, not source:
-  `check:build-artifacts` (chained inside `build`; no `.map` or `sourceMappingURL` may reach
-  `dist`) and `check:coverage-floors` (CI, after the four coverage artifacts merge; locally, right
-  after `test:coverage`; regenerate `scripts/coverage-floors.json` with `--write-floors`).
+- `packages/lyra-ui/package.json#scripts.contract-policy` and `.github/workflows/ci.yml` are the
+  authoritative gate lists; reproduce CI failures in that order, never from a prose copy.
+- Releases need push CI, all Test All Browsers aggregates and all full-engine shards green on the
+  exact main commit. `./scripts/test.sh` mirrors full-engine's split via `TEST_SH_ENGINE_SHARDS`
+  (a count, default `1`), so a failing CI shard reproduces as the same-numbered local shard.
+- `prepack` stamps version metadata and regenerates editor data; CI freshness-checks it too.
+- `check:hit-area` and `check:numeric-guards` block `pnpm lint`;
+  `ls packages/lyra-ui/scripts/check-*.mjs` is the real inventory.
+- Outside `contract-policy`: `check:build-artifacts` (in `build`; no maps in `dist`) and
+  `check:coverage-floors` (after `test:coverage`; regenerate with `--write-floors`).
 
 ## Coding conventions — digest
 
-Full rules, incidents, and patterns:
-**[docs/agents/coding-conventions.md](docs/agents/coding-conventions.md)**.
+Full rules: **[docs/agents/coding-conventions.md](docs/agents/coding-conventions.md)**.
 
-- Extend `LyraElement` (`src/internal/lyra-element.ts`), never `LitElement` directly.
-- Never hard-code `"lr-"` — `tag()` / `defineElement()` from `src/internal/prefix.ts`.
-- Design tokens only: every style value references a `--lr-*` token from
-  `internal/tokens.styles.ts`; no raw hex/px except algorithm-required literals (expose even
-  those as tokens when data-driven).
-- A `true`-defaulting boolean `@property` needs a custom converter
-  (`trueDefaultBooleanConverter`) — Lit's presence-based converter can't parse `prop="false"`.
-- Numeric properties reaching layout/`Intl`/canvas/timer math go through the `finiteNumber`
-  family (`src/internal/numbers.ts`), never bare `isNaN()`.
-- Closed string sets (`variant`, `placement`, `tone`, ...) are colocated exported literal union
-  types, never a real TS `enum` — `enum` is nominal (breaks `el.prop = 'value'`) and ships a
-  runtime object against the tree-shaking budget; extract a repeated inline union to a named type.
-- Single-quoted string literals only (outside template literals) — `check:source-policy`'s
-  `double-quoted-literal` rule enforces this. Not just style: a public member's printed
-  type/default text is compared verbatim against the pinned upstream manifest by
-  `check:pinned-upstream-manifests`, so a stray double quote silently reclassifies an
-  otherwise-identical mapping as a release-blocking `unsupported` surface drift.
-- Interactive elements carrying `part=` get a `--lr-icon-button-size` min hit-area floor.
+- Extend `LyraElement` (`src/internal/lyra-element.ts`), never `LitElement`.
+- Never hard-code `"lr-"`: `tag()` / `defineElement()` (`src/internal/prefix.ts`).
+- Style values are `--lr-*` tokens (`internal/tokens.styles.ts`); raw hex/px only for
+  algorithm literals, tokenized when data-driven.
+- A `true`-defaulting boolean `@property` uses `trueDefaultBooleanConverter`.
+- Numeric props reaching layout/`Intl`/canvas/timers use the `finiteNumber` family
+  (`src/internal/numbers.ts`), never bare `isNaN()`.
+- Closed string sets are colocated exported literal unions, never a TS `enum`; name a repeated
+  union.
+- Single-quoted literals outside templates (`check:source-policy`); printed types feed
+  `check:pinned-upstream-manifests` verbatim.
+- An interactive element with `part=` gets a `--lr-icon-button-size` min hit area.
 - `rel` is settable, but the `target`-derived guard is not removable: merge author tokens, always
   strip `opener`, and force-add `noopener noreferrer` whenever `target` is set (reverse-tabnabbing
-  vector otherwise). Never let `target` alone produce an anchor with no guard. The former rule —
-  "never a settable `rel`" — over-fired: it also refused a same-tab link, which opens no new
-  browsing context and needs no guard, while silently dropping every `nofollow`/`me`/`license` a
-  migrating `wa-*`/`sl-*` consumer wrote. `resolveGuardedRel()` (`src/internal/link-rel.ts`) is
-  the one implementation: every `resolvedRel` getter (button, icon-button, breadcrumb-item, card,
-  menu-item) delegates to it, so a new author-`rel` anchor calls it rather than re-typing the merge;
-  `app-rail-item.class.ts` still uses the simpler derive-only shape, which remains correct for a
-  control with no author `rel`.
-- Resolve colors through `getComputedStyle` before `ctx.fillStyle`/`strokeStyle` — canvas
-  silently ignores unparseable strings.
-- Resolve token units live (`rem` → root `fontSize`, `em` → own); never hardcode `* 16`.
-- Never `createElementNS` a custom element while cloning DOM — it yields an inert,
-  never-upgrading node; check `localName.includes('-')` first.
-- Reach a template node's parent with `parentNode`, never `parentElement`. A `ShadowRoot` is a
-  `DocumentFragment`, not an `Element`, so `parentElement` is `null` for every top-level node in a
-  component's own render template — and the idiomatic `el.parentElement?.insertBefore(...)` then
-  silently no-ops forever. It shipped that way in `lr-app-rail`, where the sibling branch called
-  `insertBefore` on a real element and worked, so the dead line read as "only one direction is
-  broken" instead of "this never runs."
-- `insertBefore()` is NOT a no-op when the node is already in the requested position — the spec
-  removes it from its current parent before re-inserting it, and removing the focused element drops
-  focus synchronously. So an "idempotent" catch-up call from `updated()` can re-blur a control that
-  a close path just focused. Check the position before writing (`if (parent.firstChild !== node)`);
-  treat idempotency as something you verify, not something you assume.
-- Reset transient open-state (dropdown/preview/tooltip `@state`) in `disconnectedCallback`.
-- Escape-dismissible / focus-returning overlays go through `activateOverlay()`
-  (`src/internal/overlay-manager.ts`), never a raw `document` keydown listener.
-- Events via `this.emit()` (bubbles + composed); `{ cancelable: true }` only for real veto
-  points that actually branch on `defaultPrevented`; library events carry the `lr-` prefix.
-- Sibling `*.styles.ts` per component; `static styles = [LyraElement.styles, styles]`.
-- A backtick inside a `css`/`html` tagged template terminates the literal — including inside a
-  CSS/HTML comment, which JavaScript does not treat as a comment. The parse error then points at
-  an innocent line far below. `${` in a comment is the same trap. A third, quieter one: `*/` inside
-  comment PROSE closes the comment early and reinterprets the rest of the sentence as CSS — writing
-  `--lr-button-padding-*/--lr-button-font-size` is enough to do it. Unlike the first two it leaves
-  the backtick count unchanged, so a backtick audit misses it; only a rendered or parsed CSS
-  comparison catches it.
-- Inside any element whose computed `white-space` preserves breaks (`pre`, `pre-wrap`, `pre-line`,
-  `break-spaces`), bind flush: `>${x}</tag>` or the `\n  >${x}</tag\n>` idiom. That includes
-  elements that only inherit the value (a `<button>` inside `<pre>`) and composed `lr-*` children,
-  because inheritance crosses shadow roots. Assert it with `renderedTemplateWhitespace()` from
-  `test/rendered-whitespace.ts`, never by reading template text.
-- **Composed-child `exportparts` is on-demand, not blanket.** `::part()` pierces exactly one shadow
-  boundary, so a composed `lr-*` child's internals are unreachable unless the parent forwards them.
-  Only ~34 of ~321 composed-child edges forward, and that is deliberate: forwarding invents new
-  permanent public part names, and most composed children are decorative or single-purpose. The rule
-  is therefore **forward when the child is the primary surface a consumer must style** — the
-  discriminator `lr-document-library` demonstrates by forwarding `row`/`cell`/`header-cell` for its
-  `lr-table` while deliberately not forwarding its search input or tag filter. When you do forward,
-  use a **collision-resistant prefix**, because one wrapper part often covers several child types
-  (`lr-condition-builder`'s `part="value"` spans four different controls with different part
-  vocabularies); `lr-image-viewer`/`lr-lightbox`'s `frame-viewport`/`frame-content`/`frame-controls`
-  aliases are the reference. Do NOT retrofit forwarding speculatively — consumers reliably file when
-  genuinely blocked (that is how `lr-filter-bar`'s and `lr-tree`'s forwarding got added), and a part
-  name added on a guess is permanent public API nobody asked for.
-- A state never paints through the resting public token: resolve a per-state private var (public
-  token folded in) and read it bare, and mix hover/press from the state's own fill; an unqualified
-  pointer token applies in every state, a state-named one owns its state
-  (`check-interaction-states` rule 4, opt-out `state-fallback-ok:`).
-- Silently-inert CSS is invisible to all tooling — assert rendered results
-  (`getComputedStyle`/hit test), never stylesheet text; only pseudo-classes may follow
-  `::part(x)`; encode state in the part name; and forward every documented part with
-  `exportparts` when a component recursively renders its own tag behind another shadow root.
-- Tree-shakeable exports: side-effect-free class module + side-effectful registration entry;
-  inventory metadata generates root imports, BOTH dist/src `package.json#sideEffects` forms, and
-  explicit component/AI/utility subpath exports; named root exports stay curated by hand
-  (`pnpm registrations`).
-- Form-associated: `FormAssociated` mixin for string values; otherwise direct
-  `ElementInternals` plus your own `setValidity()`.
-- The JSDoc block sits DIRECTLY above `export class Lyra*`, or `cem` silently empties the
-  manifest entry — verify `custom-elements.json` content after adding a component.
-- Lean/full split pairs (`x.class.ts`/`x-core.class.ts`) share logic via `x-shared.ts`.
+  vector otherwise). Never let `target` alone produce an anchor with no guard. Call
+  `resolveGuardedRel()` (`src/internal/link-rel.ts`); never re-type the merge.
+- Resolve canvas colors via `getComputedStyle` first; resolve token units live (`rem` → root,
+  `em` → own `fontSize`), never `* 16`.
+- Never `createElementNS` a custom element when cloning; check `localName.includes('-')`.
+- Template nodes: `parentNode`, never `parentElement` (null under a `ShadowRoot`);
+  `insertBefore()` in place still drops focus, so check position first.
+- Reset transient open `@state` in `disconnectedCallback`.
+- Escape/focus-return overlays use `activateOverlay()` (`src/internal/overlay-manager.ts`),
+  never a raw `document` keydown listener.
+- `this.emit()` (bubbles + composed); `{ cancelable: true }` only where code branches on
+  `defaultPrevented`; library events are `lr-`-prefixed.
+- Sibling `*.styles.ts`; `static styles = [LyraElement.styles, styles]`.
+- `css`/`html` template comments are template text: no backtick, `${` or prose `*/`.
+- Bind flush (`>${x}</tag>`) inside any element whose computed `white-space` preserves breaks;
+  assert with `renderedTemplateWhitespace()` (`test/rendered-whitespace.ts`), never template text.
+- Composed-child `exportparts` is on-demand: only the primary surface a consumer must style, with a
+  collision-resistant prefix; never speculatively.
+- A state paints from its own private var (public token folded in), never through the resting
+  public token, and mixes hover/press from its own fill; an unqualified pointer token applies in
+  every state, a state-named one owns its state (`check-interaction-states` rule 4,
+  `state-fallback-ok:`).
+- Assert rendered CSS (`getComputedStyle`/hit test), never stylesheet text; only pseudo-classes
+  follow `::part(x)`, so encode state in the part name; recursive self-rendering forwards every
+  documented part via `exportparts`.
+- Class modules stay side-effect-free, registration entries side-effectful; `pnpm registrations`
+  generates root imports, both `sideEffects` forms and subpath exports; named root exports stay
+  hand-curated.
+- `FormAssociated` mixin for string values, else `ElementInternals` plus your own `setValidity()`.
+- JSDoc sits DIRECTLY above `export class Lyra*` or `cem` empties the entry; check
+  `custom-elements.json`.
+- Lean/full pairs (`x.class.ts`/`x-core.class.ts`) share logic via `x-shared.ts`.
 - Never reference internal process (audits, codenames, severity ratings, client names, local
-  paths) in comments or shipped docs — the npm tarball publishes them verbatim.
+  paths) in comments or shipped docs; the npm tarball publishes them.
 - License: MIT. TypeScript strict.
 
 ## Upstream parity and the shared vocabulary — digest
 
-Binds every component whose README `Mirrors` cell names a `wa-*`/`sl-*` tag, plus the styling
-vocabulary every component shares. Full rules:
-**[docs/agents/upstream-parity.md](docs/agents/upstream-parity.md)**.
+Binds components whose README `Mirrors` cell names a `wa-*`/`sl-*` tag, plus the shared
+vocabulary. Full rules: **[docs/agents/upstream-parity.md](docs/agents/upstream-parity.md)**.
 
-- Mirroring a tag obliges its whole documented surface — attributes, slots, parts, events, CSS
-  custom properties, methods — and every deliberate omission carries a stated reason (the class
-  JSDoc, or `scripts/fixtures/upstream-tags.json`'s `noCounterpart`); silence is the defect.
-- Never rename a mirrored member: add the upstream name as a second token
-  (`part="base button"`, a compatibility alias property read alongside the canonical one), not a
-  swap that breaks shipped consumers to help migrating ones.
-- The two upstreams disagree on names (`with-clear`/`clearable`, `image`/`src`) — accept both,
-  deprecate neither, and test that both reach the same behavior.
-- A rename never inverts polarity (`light-dismiss` → `no-light-dismiss`) and a mirror never changes
-  a default; `check-migration-coverage.mjs` gates the first, nothing gates the second.
-- README `Mirrors` cells are executable rewrite rules (`migrate-wa.mjs`'s `buildMirrorMap`, the
-  generated `llms/migration.md`) — `check-migration-coverage.mjs` fails uncovered, fictional,
-  dangling and polarity-inverted rows.
+- Mirroring obliges the whole documented surface; each omission states a reason (class JSDoc, or
+  `noCounterpart` in `scripts/fixtures/upstream-tags.json`).
+- Never rename a mirrored member; add the upstream name as a second token/alias.
+- Where upstreams disagree (`with-clear`/`clearable`), accept both, deprecate neither, test both.
+- Never invert polarity (gated by `check-migration-coverage.mjs`) or change a default (ungated).
+- README `Mirrors` cells are executable rewrite rules (`buildMirrorMap`), gated by
+  `check-migration-coverage.mjs`.
 - A capability an upstream exposes publicly never lives only in `src/internal/`.
-- Refresh `scripts/fixtures/upstream-tags.json` from upstream's own published manifest, bumping the
-  pinned version in the same change; tag names, versions and behavior prose are the only things
-  that cross the boundary — never upstream source, stylesheets, or token values.
-- One property name, one meaning: `src/internal/variants.ts` owns `variant`/`appearance`/`frame`/
-  `size`; `check-style-vocabulary.mjs` fails a local re-declaration of a shared member set.
-- Adornment slots are `start`/`end`, form chrome is `label`/`hint`, glyph overrides are
-  `<purpose>-icon` — binding on lyra-original components too.
-- A surface change lands JSDoc + test + story + `llms/<family>.md` + manifest/editor-data together;
-  `check-component-coverage.mjs` only proves the *tag* has a story and a test, never the new member.
-- A property's **documented default** is gated: `check:llms-defaults` cross-checks every
-  `` `name: type = default` `` and `` `name?: type` `` claim in the authored `llms/<family>.md`
-  against `custom-elements.json`, in both directions. Changing `foo = ''` to `foo?: string` (or
-  back) without editing the prose now fails `pnpm lint`. It matters because `label: string = ''`
-  promises an unset read of `''` — so `el.label.trim()` is safe and `?? fallback` is dead code —
-  when the real readback is `undefined`. Nothing checked this before, which is how one review found
-  the same class twice and a sweep then found eleven more instances unreported. A deliberate
-  exception opts out with `<!-- llms-default-exempt: reason -->`.
+- Refresh `upstream-tags.json` from upstream's published manifest with the pin bump; only names,
+  versions and behavior prose cross over.
+- `src/internal/variants.ts` owns `variant`/`appearance`/`frame`/`size`; never re-declare a
+  shared member set locally (`check-style-vocabulary.mjs`).
+- Slots `start`/`end`, form chrome `label`/`hint`, glyphs `<purpose>-icon`, everywhere.
+- A surface change lands JSDoc + test + story + `llms/<family>.md` + manifest/editor data together;
+  `check-component-coverage.mjs` covers only the tag.
+- Documented `llms/<family>.md` defaults must match the manifest (`check:llms-defaults`,
+  `llms-default-exempt:`).
 
 ## i18n, RTL, and theming — digest
 
-Cross-cutting, verified across every component — a gap is a bug. Full rules:
-**[docs/agents/i18n-rtl-theming.md](docs/agents/i18n-rtl-theming.md)**.
+A gap is a bug. Full rules: **[docs/agents/i18n-rtl-theming.md](docs/agents/i18n-rtl-theming.md)**.
 
-- Every user-facing string (incl. `aria-*`, `title`, `placeholder`, `alt`) goes through
-  `this.localize()`; caller-supplied data does not.
+- User-facing strings (incl. `aria-*`, `title`, `placeholder`, `alt`) go through
+  `this.localize()`; caller data does not.
 - Reuse `DEFAULT_STRINGS` keys; a component-prefixed key beats bending a generic one.
-- Never a literal/unconditional 2nd-arg fallback for a key with a `DEFAULT_STRINGS` entry — it
-  silently defeats `registerLyraLocale()` forever (the single easiest regression to introduce;
-  the source-policy grep misses conditional-looking variants).
-- Never render a raw caught `error.message` in `role="alert"/"status"` — localize it;
-  `LyraUserFacingError` is the one exception.
-- Interpolate with the 3rd `values` arg (`{placeholder}`); never concatenate translated text.
-- Every `Intl.*` / `toLocaleString` call passes `this.effectiveLocale` — never `'en'`, never
-  bare `undefined`; no gate catches a wrong locale argument.
-- Components never set their own `dir`; use `this.effectiveDirection`.
-- Logical CSS properties everywhere (`inset-inline-*`, `margin-inline-*`,
-  `text-align: start/end`); `:host(:dir(rtl))` only as escape hatch.
-- ArrowLeft/ArrowRight "previous/next" semantics swap under RTL; directional glyphs mirror via
-  the wrapping part, not the icon.
-- Tests: the English fallback renders with no locale registered, and a `.strings` override
-  provably reaches the DOM.
+- Never a literal/unconditional 2nd-arg fallback for a `DEFAULT_STRINGS` key; it defeats
+  `registerLyraLocale()` and the grep misses conditional-looking variants.
+- Never show a raw caught `error.message` in an alert/status region (`LyraUserFacingError` aside).
+- Interpolate via the 3rd `values` arg; never concatenate translated text.
+- `Intl.*`/`toLocaleString` get `this.effectiveLocale`, never `'en'` or bare `undefined` (ungated).
+- Never set `dir`; use `this.effectiveDirection` and logical CSS (`:host(:dir(rtl))` as escape).
+- ArrowLeft/ArrowRight swap under RTL; glyphs mirror via the wrapping part, not the icon.
+- Test the unregistered English fallback and that a `.strings` override reaches the DOM.
 
 ## Form-control completeness and native passthrough — digest
 
 Full rules: **[docs/agents/form-controls.md](docs/agents/form-controls.md)**.
 
-- Form-associated controls ship `label`/`hint`/`errorText` props + matching slots + CSS parts,
-  mirroring `lr-select`; only a doc-comment-stated bare primitive is exempt.
+- Form-associated controls ship `label`/`hint`/`errorText` props + slots + parts like `lr-select`,
+  unless documented as a bare primitive.
 - A host `aria-label` wins over any computed internal accessible name.
-- Wrappers of native resizable text surfaces expose the native resize vocabulary (incl.
-  auto-grow) or document the omission.
-- Forward `spellcheck`/`autocapitalize`/`autocorrect`/`wrap`; re-emit internal `blur`/`focus`
-  (they don't cross the shadow boundary).
-- Style `:host(:disabled)`, never `:host([disabled])` — only `:disabled` tracks
-  fieldset-cascaded disablement.
-- Anything overriding `focus()`/`blur()` also overrides host `click()` to forward it.
-- `disabled` gates every self-rendered sub-control, not just the primary one.
-- The required asterisk comes from the shared `formControlRequiredMarker`
-  (`src/internal/form-control.styles.ts`), interpolated into the component's own `css` template —
-  never a re-typed `::after` and never a literal `<span>` in the template.
-- `formResetCallback()` restores the *default* value (and clears the dirty/interacted flags, then
-  re-syncs validity); it never blanks the field, and a `setCustomValidity()` error survives it.
+- Native resizable text wrappers expose the resize vocabulary (incl. auto-grow) or document why not.
+- Forward `spellcheck`/`autocapitalize`/`autocorrect`/`wrap`; re-emit internal `blur`/`focus`.
+- Style `:host(:disabled)`, never `:host([disabled])`.
+- Overriding `focus()`/`blur()` means also forwarding host `click()`.
+- `disabled` gates every self-rendered sub-control.
+- The required asterisk is `formControlRequiredMarker` (`src/internal/form-control.styles.ts`),
+  never a re-typed `::after` or literal `<span>`.
+- `formResetCallback()` restores the default, clears dirty flags, re-syncs validity; never blanks;
+  `setCustomValidity()` survives it.
 - `type="submit"|"reset"` needs `static formAssociated`, `attachInternals()`, and
-  `closest('form')?.requestSubmit()`/`.reset()` — the attribute alone does nothing.
+  `closest('form')?.requestSubmit()`/`.reset()`.
 
 ## Optional peers and remote content — digest
 
-Security-sensitive; no automated gate covers any of it. Full rules:
+Security-sensitive; ungated. Full rules:
 **[docs/agents/peers-and-remote-content.md](docs/agents/peers-and-remote-content.md)**.
 
-- Consumer-supplied `src`: `safeFetchUrl()` → byte-ceiling readers
-  (`readResponseArrayBuffer`/`readResponseText`, plus entry/row caps) → unconditional
-  `DOMPurify.sanitize()` → generation-token guard after every `await`.
-- Peer loaders validate the required capability: prefer a named API when the package provides one,
-  then a validated default export; default-shaped peers use `mod.default ?? mod`. Getting sanitizer
-  normalization wrong makes it silently no-op (a security bug, not an interop nit).
-- Peer load failure fails closed with a visible localized fallback and a separate light-DOM
-  announcement; empty-but-valid results get their own state, never the error path.
-- A new optional peer registers in `peerDependencies` + `peerDependenciesMeta.optional` +
-  `devDependencies` — all three.
+- Consumer `src`: `safeFetchUrl()` → `readResponseArrayBuffer`/`readResponseText` byte ceilings
+  and entry/row caps → unconditional `DOMPurify.sanitize()` → generation-token guard after every
+  `await`.
+- Peer loaders validate the needed capability (named API, then default; `mod.default ?? mod`); a
+  wrong sanitizer normalization silently no-ops.
+- Load failure fails closed with a visible localized fallback and a separate light-DOM
+  announcement; empty-but-valid is its own state, never the error path.
+- New optional peer: `peerDependencies` + `peerDependenciesMeta.optional` + `devDependencies`.
 
 ## Accessibility, native contracts, responsive layout, motion, docs — digest
 
 Release blockers for new components, bugs in existing ones. Full rules:
 **[docs/agents/a11y-responsive-motion.md](docs/agents/a11y-responsive-motion.md)**.
 
-- Name the element that owns the role — host `aria-label` doesn't reach shadow internals, and
-  idrefs don't cross shadow boundaries.
-- Stateful ARIA renders both `"true"` and `"false"` — Lit `?aria-*=` directives are never
-  correct for a stateful role.
-- Decorative icons are `aria-hidden`; icon-only actions get localized accessible names.
-- Live-region announcements from `updated()`/`willUpdate()` guard the first update
-  (`isMounting` flag).
-- Roving tabindex steps past disabled targets and never leaves zero focusable stops; the
-  navigable predicate excludes `inert` and `closest('[inert]')` too — an inert element refuses
-  `focus()` silently, stranding roving focus and killing every later key press.
-- A supplementary hover/focus disclosure (tooltip-class) opens only on keyboard focus through
-  `isKeyboardFocusEvent()` (`src/internal/focus-modality.ts`) and stays described on any focus;
-  a control's primary editing popup, self-reveals and value feedback are the stated exemptions.
-- Live regions live in the host's light DOM, never a shadow root: announce through
-  `acquireAnnouncementSink()` (`src/internal/announcer.ts`), which mounts the region ahead of the
-  text and appends each message as a new child.
+- Name the element that owns the role; host `aria-label` and idrefs don't cross shadow roots.
+- Stateful ARIA renders `"true"` and `"false"`; never Lit `?aria-*=` for it.
+- Decorative icons `aria-hidden`; icon-only actions get localized names.
+- Live-region announcements from `updated()`/`willUpdate()` guard the first update (`isMounting`).
+- Roving tabindex skips disabled and inert (`closest('[inert]')`) targets, never zero tab stops.
+- Tooltip-class disclosures open on keyboard focus only (`isKeyboardFocusEvent()`), described on
+  any focus; editing popups, self-reveals, value feedback exempt.
+- Announce via `acquireAnnouncementSink()` (`src/internal/announcer.ts`), never a shadow-root
+  live region.
 - Native wrappers forward meaningful native attributes, expose focus/selection/editing methods
   that keep value/validity in sync, and specify the event contract before implementation.
-- Every `:focus-visible` / `cursor: pointer` part has a matching `:hover` rule (the
-  most-repeated defect in this library's history).
-- Wrap internal state qualifiers in `:where()` to keep sibling rules within the shadow stylesheet
-  low-specificity; target the node that actually receives the pseudo-class state.
-- Respond to allocation, not viewport: container queries (with `container-type` and a tokenized
-  `contain-intrinsic-inline-size` fallback in the same rule), 320px + long-content and
-  shrink-to-fit coverage; dark mode keys off tokens/`data-*`, with `prefers-color-scheme` demoted
-  to a fallback.
+- Every `:focus-visible`/`cursor: pointer` part has a `:hover` rule (the most-repeated defect in
+  this library's history).
+- Internal state qualifiers go in `:where()`; target the node that receives the state.
+- Respond to allocation: container queries (with `container-type` + tokenized
+  `contain-intrinsic-inline-size`), 320px/long-content/shrink-to-fit coverage; dark mode keys off
+  tokens/`data-*`, `prefers-color-scheme` only as fallback.
 - Motion uses tokens and stops under `prefers-reduced-motion`; test both branches.
-- A public API change is incomplete until JSDoc + tests + story + `llms/<family>.md` + the
-  regenerated manifest agree; run `pnpm manifest`, regenerate editor data, then `./package.sh` so
-  generated llms and packaged references agree too. Verify numeric/parity claims by hand; helper
-  examples import granular subpaths, never the root barrel.
-- A NEW EVENT or a changed event detail needs two more generators that this list used to omit and
-  that nothing else reminds you about: `pnpm run events` (regenerates `src/events.ts`) and
-  `pnpm run framework-types` (regenerates the React/Vue/Svelte declarations). Both are blocking —
-  `check:event-types` and `check:framework-types` — so skipping them fails `pnpm lint` well after
-  the change looks finished. A new `@deprecated` member additionally needs a record in
-  `scripts/fixtures/component-metadata.json#deprecations`, whose `since` may not exceed the current
-  `package.json` version and whose `removalNotBefore` must clear one whole subsequent major.
+- API changes: JSDoc + tests + story + `llms/<family>.md` + `pnpm manifest`, editor data,
+  `./package.sh`; verify numbers by hand; helper examples import granular subpaths, never the root
+  barrel.
+- New or changed events: `pnpm run events` + `pnpm run framework-types` (`check:event-types`,
+  `check:framework-types`); new `@deprecated`: a `component-metadata.json#deprecations` record
+  (`since` ≤ current version, `removalNotBefore` a whole major later).
 
 ## Testing conventions — digest
 
-Full rules and incident write-ups: **[docs/agents/testing.md](docs/agents/testing.md)**.
+Full rules and incidents: **[docs/agents/testing.md](docs/agents/testing.md)**.
 
 - `wtr` + Playwright Chromium + `@open-wc/testing`; TDD failing-test-first; colocated
-  `<name>.test.ts`; `pnpm test` / `pnpm test:watch`.
-- **The local gate is Chromium-only and cannot see a contract that is absent on another engine.**
-  Run `WTR_BROWSER=firefox|webkit pnpm exec wtr --files <path>` for anything touching an `<iframe>`,
-  a re-emitted non-composed native event, or pointer/`:active` state — a full local single-engine
-  sweep also catches what CI's *sharding* hides.
-- **Reading a pointer-driven `:hover`/`:active` state, or a transitioning paint, straight after
-  `sendMouse` is racy per engine.** `sendMouse()` resolves when the synthesized command completes,
-  which does not mean the browser has processed the resulting native pointer event — and a late
-  layout settle can move the target out from under an already-dispatched position. Land the pointer
-  with `hoverUntilMatched()` (`test/wtr-mouse.js`), which re-reads the rect and re-dispatches until
-  `:hover` actually matches, then poll the rendered result with `waitUntil` and/or zero
-  `--lr-transition-fast` on the fixture. Five separate tests have been fixed for exactly this, four
-  of them only reproducing under `Test All Browsers` — the unsharded complete-suite run, whose
-  higher per-process page count is the condition the sharded gates never create.
-  A component-managed `:state(x)` is the strictest case: it needs the event dispatched, the handler
-  run *and* the `CustomStateSet` updated, so never read one synchronously after a press
-  (`image-comparer.test.ts`'s drag assertion is the reference). Reading such state right after a
-  `sendMouse({ type: 'down' })` is a live pattern in ~46 places; converting one is cheap, and the
-  sweep that finds them is a grep for an `expect(` within three lines of a mouse `down`.
-- **Regenerate component-quality after ANY change under `src/`, test files included** — rebuild,
-  then `node scripts/generate-component-quality.mjs --write --measure-gzip`. It measures built gzip
-  size *and* per-component test quality, and a byte-identical `pnpm manifest` is not evidence it is
-  clean.
-- Set up `oneEvent()` BEFORE the dispatch that triggers it, or the test hangs.
-- Move focus for a keyboard-gated surface with `test/wtr-focus.ts` (`focusByKeyboard`/
-  `focusAfterPointer`), never a bare `.focus()` or synthetic focus event; a `window` listener spy
-  pre-arms with `trackInputModality(document)`.
-- Axe-check every component against its own tag AND in populated/open states — the coverage
-  gate's substring check proves neither.
-- Adversarial fixtures: focused-element keyboard activation, `dir="rtl"`, unsorted input,
-  dangling references, data shrinking below the roving index, pointercancel, reconnect.
-- A reported failure already failed twice (auto-retry) — fix or quarantine, never re-run and
-  shrug.
-- Never let a failing assertion carry a DOM node as chai's `actual`/`expected` — the whole file
-  hangs until the per-file watchdog; compare ids/tag names/lengths instead.
-- `?attr=${false}` can never reset a `true`-defaulting boolean property — use
-  `.prop=${false}`.
-- `@sinonjs/fake-timers` does not work under wtr — use real timers with margined thresholds.
-- A stubbed browser global is saved and restored (`try`/`finally` or `afterEach`).
+  `<name>.test.ts`.
+- Local `pnpm test` is Chromium-only: use `WTR_BROWSER=firefox|webkit` for iframes, re-emitted
+  events, pointer/`:active` state.
+- Pointer state after `sendMouse` is racy per engine: `hoverUntilMatched()`
+  (`packages/lyra-ui/test/wtr-mouse.ts`), then `waitUntil`; never read `:state(x)` synchronously
+  after a press.
+- After ANY `src/` change, tests included: rebuild, then
+  `node scripts/generate-component-quality.mjs --write --measure-gzip`.
+- Set up `oneEvent()` BEFORE the dispatch, or the test hangs.
+- Move focus via `test/wtr-focus.ts` (`focusByKeyboard`/`focusAfterPointer`), never bare
+  `.focus()` or synthetic focus events; window spies pre-arm `trackInputModality(document)`.
+- Axe-check each component on its own tag AND populated/open states.
+- Adversarial fixtures: focused keyboard activation, `dir="rtl"`, unsorted, dangling refs,
+  shrinking data, pointercancel, reconnect.
+- A reported failure already failed twice: fix or quarantine, never re-run and shrug.
+- Never let a failing assertion carry a DOM node (the file hangs); compare ids/lengths.
+- `?attr=${false}` can't reset a `true` default; use `.prop=${false}`.
+- No `@sinonjs/fake-timers` under wtr; real timers with margins.
+- Save and restore any stubbed browser global.
 - A new opt-in property gets an explicit unset-regression test.
 
 ## Process for multi-step work
 
-Non-trivial work follows spec → plan → task execution: the spec (goals, non-goals, naming,
-success criteria) is approved before any implementation plan; the plan breaks work into numbered
-tasks with checkbox steps, file lists, and interfaces; each task is implemented, then reviewed
-for spec compliance and quality, with fix rounds until clean. These working docs (specs, plans,
-execution ledger) are intentionally kept out of version control.
+Non-trivial work goes spec → plan → tasks: an approved spec (goals, non-goals, naming, success
+criteria) precedes the plan; the plan has numbered tasks with checkbox steps, file lists and
+interfaces; each task is implemented, then reviewed for spec compliance and quality until clean.
+Specs, plans and ledgers stay out of version control.

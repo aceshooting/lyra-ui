@@ -54,7 +54,8 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   never actually reached the intended state passes vacuously. So: build the populated state,
   assert the state-specific part/element actually rendered, then
   `await expect(el).to.be.accessible()` — see the populated axe test in
-  `src/components/data/table/table.test.ts` for the pattern.
+  `src/components/data/table/table.test.ts` for the pattern. The coverage gate's substring check
+  proves neither the own-tag instance nor the populated/open state.
 - **A test that probes a shared global must scope its evidence to the component under test.**
   Patching a prototype hook (the `LitElement.prototype.willUpdate`/`updated` trick used to prove a
   component chains to `super`) and recording a bare `called = true` boolean is vacuous: almost every
@@ -258,3 +259,24 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   rather than proving the absence of a behavior change; `multi-split.test.ts`'s
   `'defaults to "container", leaving committed behavior unchanged'` and `heatmap.test.ts`'s
   equivalent are the pattern to match.
+
+## Pointer-driven state
+
+- **The local gate is Chromium-only and cannot see a contract that is absent on another engine.**
+  Run `WTR_BROWSER=firefox|webkit pnpm exec wtr --files <path>` for anything touching an `<iframe>`,
+  a re-emitted non-composed native event, or pointer/`:active` state — a full local single-engine
+  sweep also catches what CI's *sharding* hides.
+- **Reading a pointer-driven `:hover`/`:active` state, or a transitioning paint, straight after
+  `sendMouse` is racy per engine.** `sendMouse()` resolves when the synthesized command completes,
+  which does not mean the browser has processed the resulting native pointer event — and a late
+  layout settle can move the target out from under an already-dispatched position. Land the pointer
+  with `hoverUntilMatched()` (`packages/lyra-ui/test/wtr-mouse.ts`), which re-reads the rect and
+  re-dispatches until `:hover` actually matches, then poll the rendered result with `waitUntil`
+  and/or zero `--lr-transition-fast` on the fixture. Five separate tests have been fixed for exactly
+  this, four of them only reproducing under `Test All Browsers` — the unsharded complete-suite run,
+  whose higher per-process page count is the condition the sharded gates never create.
+  A component-managed `:state(x)` is the strictest case: it needs the event dispatched, the handler
+  run *and* the `CustomStateSet` updated, so never read one synchronously after a press
+  (`image-comparer.test.ts`'s drag assertion is the reference). Reading such state right after a
+  `sendMouse({ type: 'down' })` is a live pattern in ~46 places; converting one is cheap, and the
+  sweep that finds them is a grep for an `expect(` within three lines of a mouse `down`.

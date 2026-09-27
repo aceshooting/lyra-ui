@@ -95,6 +95,8 @@
   `wa-*`/`sl-*` — where `rel` is a documented settable property. Because `migrate-wa.mjs` warns at
   tag granularity rather than member granularity, that divergence also refused **every**
   `<wa-button>`/`<sl-button>` in a migrating app, including ones with no `href` at all.
+  `app-rail-item.class.ts` still uses the simpler derive-only shape, which remains correct for a
+  control with no author `rel`. Never let `target` alone produce an anchor with no guard.
 - **Resolve CSS colors before assigning `ctx.fillStyle`/`strokeStyle`.** Canvas 2D's setter is a
   spec'd silent no-op on an unparseable string: it keeps the previous value, usually black, with
   no error. Any canvas path deriving a color from a `--lr-*` property, a consumer callback, or a
@@ -259,6 +261,19 @@
   automatically. A genuinely exceptional virtual-list or recursive boundary takes a
   `policy-allow(cross-root-part): reason` or `policy-allow(recursive-part-forwarding): reason`
   comment, respectively; these use the same marker shape as `check-source-policy.mjs`.
+- **Composed-child `exportparts` is on-demand, not blanket.** `::part()` pierces exactly one shadow
+  boundary, so a composed `lr-*` child's internals are unreachable unless the parent forwards them.
+  Only ~34 of ~321 composed-child edges forward, and that is deliberate: forwarding invents new
+  permanent public part names, and most composed children are decorative or single-purpose. The rule
+  is therefore **forward when the child is the primary surface a consumer must style** — the
+  discriminator `lr-document-library` demonstrates by forwarding `row`/`cell`/`header-cell` for its
+  `lr-table` while deliberately not forwarding its search input or tag filter. When you do forward,
+  use a **collision-resistant prefix**, because one wrapper part often covers several child types
+  (`lr-condition-builder`'s `part="value"` spans four different controls with different part
+  vocabularies); `lr-image-viewer`/`lr-lightbox`'s `frame-viewport`/`frame-content`/`frame-controls`
+  aliases are the reference. Do NOT retrofit forwarding speculatively — consumers reliably file when
+  genuinely blocked (that is how `lr-filter-bar`'s and `lr-tree`'s forwarding got added), and a part
+  name added on a guess is permanent public API nobody asked for.
 - **Granular, tree-shakeable exports.** Each component's `.class.ts` file is a side-effect-free class
   export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the pure package
   root, containing only curated named re-exports of classes/types/helpers. `src/all.ts` is the

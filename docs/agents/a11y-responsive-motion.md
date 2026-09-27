@@ -250,3 +250,10 @@ component and a release blocker for a new one.
   measured +79 KB gzip for `confirm()` alone in a real prior incident, back when the root was still
   side-effectful — a granular subpath cannot regress that way at all. When fixing one helper, check
   every sibling helper in the same file; the fix does not automatically propagate to neighbors.
+- **A new event or a changed event detail needs two more generators** that nothing else reminds
+  you about: `pnpm run events` (regenerates `src/events.ts`) and `pnpm run framework-types`
+  (regenerates the React/Vue/Svelte declarations). Both are blocking — `check:event-types` and
+  `check:framework-types` — so skipping them fails `pnpm lint` well after the change looks
+  finished. A new `@deprecated` member additionally needs a record in
+  `scripts/fixtures/component-metadata.json#deprecations`, whose `since` may not exceed the current
+  `package.json` version and whose `removalNotBefore` must clear one whole subsequent major.
