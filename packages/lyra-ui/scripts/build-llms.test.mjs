@@ -296,8 +296,8 @@ assert.match(
 );
 assert.match(
   sharedReference,
-  /every release after 9\.0\.0[\s\S]*\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\)/u,
-  'the shared status policy must route post-9.0 upgrades to the shipped changelog',
+  /Before upgrading, read the\s+package's \[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\)/u,
+  'the shared status policy must route upgrades to the shipped changelog',
 );
 assert.throws(
   () => rewriteSharedLinksForRoot('No changelog link.'),
@@ -663,7 +663,7 @@ assert.ok(tokens, 'build({ write: false }) must produce llms/tokens.md');
 assert.ok(full, 'build({ write: false }) must produce llms-full.txt');
 assert.match(
   full,
-  /package's shipped \[CHANGELOG\.md\]\(\.\/CHANGELOG\.md\) before upgrading/u,
+  /Before upgrading, read the\s+package's \[CHANGELOG\.md\]\(\.\/CHANGELOG\.md\)/u,
   'the package-root llms-full reference must resolve CHANGELOG.md beside itself',
 );
 assert.doesNotMatch(
