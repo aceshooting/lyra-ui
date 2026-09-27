@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import {
   access,
@@ -20,6 +21,9 @@ export const FRAMEWORK_PNPM_CONFIG = 'auto-install-peers=false\n';
 
 const repositoryRoot = fileURLToPath(new URL('..', import.meta.url));
 const packageRoot = join(repositoryRoot, 'packages', 'lyra-ui');
+// The examples must track the library's current major, so a release never leaves them pinned to a
+// range that resolves to an old major for anyone running a recipe outside this repository.
+const currentMajor = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')).version.split('.')[0];
 const recipesRoot = join(repositoryRoot, 'examples', 'frameworks');
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
@@ -90,9 +94,9 @@ async function validateRecipe(root, framework) {
     `package name must be lyra-framework-recipe-${framework}`,
   );
   assertRecipe(
-    typeof lyraVersion === 'string' && /^\^8\./u.test(lyraVersion),
+    typeof lyraVersion === 'string' && lyraVersion.startsWith(`^${currentMajor}.`),
     framework,
-    'the runnable example must declare a Lyra 8 dependency',
+    `the runnable example must declare a Lyra ${currentMajor} dependency (^${currentMajor}.x)`,
   );
   for (const script of ['dev', 'check', 'build']) {
     assertRecipe(

@@ -9,7 +9,7 @@
     "build": "pnpm run check && vite build"
   },
   "dependencies": {
-    "@aceshooting/lyra-ui": "^8.0.0",
+    "@aceshooting/lyra-ui": "^21.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

@@ -28,7 +28,7 @@ test('materialization replaces only the Lyra dependency with the packed artifact
     name: 'lyra-framework-recipe-react',
     private: true,
     dependencies: {
-      '@aceshooting/lyra-ui': '^8.0.0',
+      '@aceshooting/lyra-ui': '^21.0.0',
       react: '19.2.8',
     },
   };
@@ -40,7 +40,7 @@ test('materialization replaces only the Lyra dependency with the packed artifact
       '@aceshooting/lyra-ui': 'file:../../packages/lyra-ui.tgz',
     },
   });
-  assert.equal(original.dependencies['@aceshooting/lyra-ui'], '^8.0.0');
+  assert.equal(original.dependencies['@aceshooting/lyra-ui'], '^21.0.0');
 });
 
 test('the temporary workspace keeps optional-peer installation settings stable across pnpm runs', () => {
@@ -59,7 +59,7 @@ test('validation rejects a recipe that relies on the unstable family directory',
           name: `lyra-framework-recipe-${framework}`,
           private: true,
           scripts: { dev: 'vite', check: 'tool', build: 'tool && vite build' },
-          dependencies: { '@aceshooting/lyra-ui': '^8.0.0' },
+          dependencies: { '@aceshooting/lyra-ui': '^21.0.0' },
         })}\n`,
       );
       await writeFile(join(recipe, 'index.html'), '<main id="app"></main>\n');
