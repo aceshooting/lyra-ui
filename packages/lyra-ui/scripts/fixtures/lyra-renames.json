@@ -1,0 +1,17 @@
+{
+  "$comment": "Authored ledger of Lyra-only public names that change across a major release. Each profile drives lyra-ui-migrate --origin=<origin>, the generated llms/migration.md section and the packaged dist/cli/migration-contract.json. renames and reviews must each match an implemented, deprecated Lyra-only member and its component-metadata.json record (removalNotBefore in aliasRemovalMajor, since no later than toMajor.0.0); defaults, detailChanges and slotContent record changes that have no deprecation record. check-migration-coverage.mjs also requires every Lyra-only deprecation removed in aliasRemovalMajor to have a rename or review entry. Entries stay sorted by tag and name. See docs/rfcs/0003-lyra-v21-migration-profile.md.",
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "origin": "lyra-v21",
+      "fromMajor": 21,
+      "toMajor": 22,
+      "aliasRemovalMajor": 23,
+      "renames": [],
+      "defaults": [],
+      "detailChanges": [],
+      "reviews": [],
+      "slotContent": []
+    }
+  ]
+}

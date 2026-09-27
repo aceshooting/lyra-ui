@@ -1,0 +1,23 @@
+/* Theme overrides for the sample panel */
+:root {
+  --lr-sample-panel-background: #fafafa;
+  --lr-shared-gap: 8px;
+}
+lr-sample-panel {
+  --lr-shared-gap: 4px;
+}
+lr-sample-panel::part(close-button),
+lr-sample-panel[heading]::part(panel-body) {
+  color: inherit;
+}
+lr-sample-panel[arrow] { outline: 1px solid; }
+.sidebar lr-sample-panel::part(panel-body) { margin: 0; }
+.custom::part(body) { margin: 0; }
+lr-sample-legacy { display: block; }
+/* lyra-migrate-reviewed: RENAME_REVIEW:body */
+.reviewed::part(body) { margin: 0; }
+.also-reviewed::part(body) { margin: 0; } /* lyra-migrate-reviewed: RENAME_REVIEW:body */
+/* lyra-migrate-reviewed: body */
+.old-format::part(body) { margin: 0; }
+/* lyra-migrate-reviewed: DETAIL_SHAPE_REVIEW:body */
+.wrong-code::part(body) { margin: 0; }

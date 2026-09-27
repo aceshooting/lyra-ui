@@ -6,7 +6,7 @@ import { compactBuildCss } from './compact-build-css.mjs';
 import { compactBuildDeclarations } from './compact-build-declarations.mjs';
 import { compactBuildJavaScript } from './compact-build-js.mjs';
 import { checkLocalizationSlices, checkTranslationSlices } from './check-localization-slices.mjs';
-import { createMigrationRuntimeInventory } from './migrate-wa.mjs';
+import { createMigrationRuntimeInventory, readRenameLedger } from './migrate-wa.mjs';
 import {
   assertNormalizedMixinCount,
   normalizeMixinDeclarations,
@@ -105,25 +105,25 @@ console.log(
     `${compactedCss.stylesheets.toLocaleString('en')} stylesheets.`,
 );
 
-// The public migration executable is deliberately assembled from only its two runtime modules
+// The public migration executable is deliberately assembled from only its three runtime modules
 // and a compact, prevalidated migration projection. Publishing scripts/ wholesale would expose
 // contributor-only maintenance helpers, while publishing the 4+ MiB public-surface inventory
-// would violate the package budget for data the CLI never reads.
+// would violate the package budget for data the CLI never reads. The projection embeds the
+// authored Lyra rename ledger, validated against that inventory, for the `--origin=lyra-v*`
+// rename profiles.
 const migrationCliDir = join(packageDir, 'dist', 'cli');
 await mkdir(migrationCliDir, { recursive: true });
-await Promise.all([
-  cp(join(packageDir, 'scripts', 'migrate-wa.mjs'), join(migrationCliDir, 'migrate-wa.mjs')),
-  cp(
-    join(packageDir, 'scripts', 'component-inventory.mjs'),
-    join(migrationCliDir, 'component-inventory.mjs'),
+await Promise.all(
+  ['migrate-wa.mjs', 'component-inventory.mjs', 'lyra-rename-ledger.mjs'].map((module) =>
+    cp(join(packageDir, 'scripts', module), join(migrationCliDir, module)),
   ),
-]);
+);
 const componentInventory = JSON.parse(
   await readFile(join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'), 'utf8'),
 );
 await writeFile(
   join(migrationCliDir, 'migration-contract.json'),
-  `${JSON.stringify(createMigrationRuntimeInventory(componentInventory))}\n`,
+  `${JSON.stringify(createMigrationRuntimeInventory(componentInventory, { renameLedger: readRenameLedger() }))}\n`,
   'utf8',
 );
 await chmod(join(migrationCliDir, 'migrate-wa.mjs'), 0o755);

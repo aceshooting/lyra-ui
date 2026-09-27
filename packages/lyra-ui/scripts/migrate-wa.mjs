@@ -17,15 +17,29 @@ import {
   validateMappingNormalizations,
   validateMethodEdgeParity,
 } from './component-inventory.mjs';
+import {
+  LYRA_RENAME_ORIGINS,
+  compareVersions,
+  createRenameProfiles,
+  emptyRenameProjection,
+  projectRenameLedger,
+  validateRenameLedgerShape,
+} from './lyra-rename-ledger.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.resolve(scriptDir, '..');
 const packagedInventoryPath = path.join(scriptDir, 'migration-contract.json');
-const inventoryPath = fs.existsSync(packagedInventoryPath)
+const packagedRuntime = fs.existsSync(packagedInventoryPath);
+const inventoryPath = packagedRuntime
   ? packagedInventoryPath
   : path.join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
+const renameLedgerPath = path.join(packageDir, 'scripts', 'fixtures', 'lyra-renames.json');
 
 export const MIGRATION_REPORT_SCHEMA_VERSION = 1;
+export const MIGRATION_RUNTIME_SCHEMA_VERSION = 2;
+
+/** Every accepted `--origin` value: the opt-in Lyra defaults profiles plus the rename profiles. */
+export const MIGRATION_ORIGINS = Object.freeze([...LOCAL_MIGRATION_ORIGINS, ...LYRA_RENAME_ORIGINS]);
 
 const DEFAULT_EXTENSIONS = new Set([
   'html',
@@ -233,15 +247,38 @@ function runtimeDefaultSurfaces(mapping) {
   return { source, target };
 }
 
-export function buildMigrationContract(inventory) {
+/**
+ * Validates an inventory (the repository inventory or the packaged runtime projection) into the
+ * lookup structure every migration mode reads. `renameLedger` supplies the authored
+ * Lyra-to-Lyra rename ledger for a repository inventory; a packaged runtime inventory carries its
+ * own validated projection instead. Omitting it yields rename profiles with no entries.
+ * `lyraVersion`, the installed @aceshooting/lyra-ui version when known, withholds rename-profile
+ * entries that start in a later release.
+ */
+export function buildMigrationContract(inventory, { renameLedger = null, lyraVersion = null } = {}) {
   invariant(inventory?.schemaVersion === 1, 'schemaVersion must be 1');
   const runtimeInventory = Object.hasOwn(inventory, 'migrationRuntimeSchemaVersion');
   if (runtimeInventory) {
     invariant(
-      inventory.migrationRuntimeSchemaVersion === 1,
-      'migrationRuntimeSchemaVersion must be 1',
+      inventory.migrationRuntimeSchemaVersion === MIGRATION_RUNTIME_SCHEMA_VERSION,
+      `migrationRuntimeSchemaVersion must be ${MIGRATION_RUNTIME_SCHEMA_VERSION}`,
     );
+    invariant(renameLedger === null, 'a packaged runtime inventory carries its own rename projection');
+    const renameFindings = validateRenameLedgerShape(inventory.lyraRenames, { projected: true });
+    invariant(renameFindings.length === 0, renameFindings.join('; '));
   }
+  // Without a ledger there is nothing to cross-check, so the profiles are simply empty; the
+  // repository CLI, the build and check-migration-coverage.mjs always pass the authored ledger.
+  // Ledger completeness (every scheduled removal has an entry) is a lint concern and is not
+  // re-checked here, so an incomplete ledger never stops a build or a Web Awesome migration.
+  const renameProfiles = createRenameProfiles(
+    runtimeInventory
+      ? inventory.lyraRenames
+      : renameLedger
+        ? projectRenameLedger(renameLedger, inventory)
+        : emptyRenameProjection(),
+    { lyraVersion },
+  );
   invariant(Array.isArray(inventory.components), 'components must be an array');
   invariant(Array.isArray(inventory.mappings), 'mappings must be an array');
   invariant(inventory.upstreams && typeof inventory.upstreams === 'object', 'upstreams must be an object');
@@ -487,6 +524,7 @@ export function buildMigrationContract(inventory) {
     mappings,
     upstreamComponents,
     localMigrations,
+    renameProfiles,
     packageIdentities,
     packagesByEcosystem,
   };
@@ -495,21 +533,24 @@ export function buildMigrationContract(inventory) {
 /**
  * Produces the validated, migration-only data shipped beside the public CLI. Static analyzer
  * surfaces stay in the repository inventory; the package contains only registration metadata,
- * deterministic rewrite rules, parity/runtime requirements, and the opt-in local defaults.
+ * deterministic rewrite rules, parity/runtime requirements, the opt-in local defaults, and the
+ * projected Lyra rename ledger. The ledger is a required argument so a build can never silently
+ * publish a CLI whose rename profiles are empty.
  */
-export function createMigrationRuntimeInventory(inventory) {
+export function createMigrationRuntimeInventory(inventory, { renameLedger } = {}) {
   invariant(
     !Object.hasOwn(inventory ?? {}, 'migrationRuntimeSchemaVersion'),
     'cannot project an already-packaged migration runtime inventory',
   );
-  buildMigrationContract(inventory);
+  invariant(renameLedger && typeof renameLedger === 'object', 'createMigrationRuntimeInventory needs the rename ledger');
+  buildMigrationContract(inventory, { renameLedger });
 
   const targetTags = new Set(inventory.mappings.map((mapping) => mapping.targetTag).filter(Boolean));
   for (const profile of inventory.localMigrations) targetTags.add(profile.tag);
 
   return {
     schemaVersion: 1,
-    migrationRuntimeSchemaVersion: 1,
+    migrationRuntimeSchemaVersion: MIGRATION_RUNTIME_SCHEMA_VERSION,
     accessibilityProfiles: structuredClone(inventory.accessibilityProfiles),
     components: inventory.components
       .filter((component) => targetTags.has(component.tag))
@@ -547,7 +588,13 @@ export function createMigrationRuntimeInventory(inventory) {
       parity: structuredClone(mapping.parity),
       rewrites: structuredClone(mapping.rewrites),
     })),
+    lyraRenames: projectRenameLedger(renameLedger, inventory),
   };
+}
+
+/** Reads the authored rename ledger from a repository checkout. */
+export function readRenameLedger(file = renameLedgerPath) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
 // README mirror-table parsing is retained for documentation drift checks and inventory generation.
@@ -843,11 +890,11 @@ function scanMarkupTags(text, ignoredRanges) {
   return tokens;
 }
 
-function scanAllOpeningTags(text, ignoredRanges) {
+function scanAllOpeningTags(text, ignoredRanges, inside = (offset) => insideRanges(offset, ignoredRanges)) {
   const tokens = [];
   const regex = /<(?<tag>[a-z][a-z0-9.-]*)(?=[\s/>])/gi;
   for (const match of text.matchAll(regex)) {
-    if (insideRanges(match.index, ignoredRanges)) continue;
+    if (inside(match.index)) continue;
     const end = findTagEnd(text, match.index + match[0].length);
     if (end < 0) continue;
     const nameStart = match.index + 1;
@@ -2610,11 +2657,16 @@ function finalizeEdits(original, edits) {
       throw new Error(`Migration rewrite conflict at offsets ${unique[index - 1].start} and ${unique[index].start}`);
     }
   }
-  let content = original;
+  // Assembled from the end in one pass, exactly as applying each edit to the whole string in
+  // descending order would, but linear in the text size instead of in size times edit count.
+  const parts = [];
+  let cursor = original.length;
   for (const edit of [...unique].sort((left, right) => right.start - left.start || right.end - left.end)) {
-    content = content.slice(0, edit.start) + edit.replacement + content.slice(edit.end);
+    parts.push(original.slice(edit.end, cursor), edit.replacement);
+    cursor = edit.start;
   }
-  return content;
+  parts.push(original.slice(0, cursor));
+  return parts.reverse().join('');
 }
 
 function mappingMessage(mapping) {
@@ -2624,6 +2676,11 @@ function mappingMessage(mapping) {
 
 function localMigrationKey(origin, tag) {
   return `${origin}:${tag}`;
+}
+
+/** `lyra-v7` -> `v7`, the short release label used in migration messages. */
+function originLabel(origin) {
+  return String(origin).replace(/^lyra-/, '');
 }
 
 function localAttributeName(rawName) {
@@ -2653,7 +2710,7 @@ function scanLocalMigrationHazards(text, profiles, ignoredRanges, openingTokens)
       warningCode: 'ALIASED_MEMBER_REVIEW',
       message:
         `${match.groups.tag} is accessed through a DOM alias; review property assignments before ` +
-        'inserting v7 compatibility defaults.',
+        `inserting ${originLabel(profiles.get(match.groups.tag).origin)} compatibility defaults.`,
     });
   }
 
@@ -2743,7 +2800,7 @@ function migrateLocalText(original, contract, options) {
           token.tag,
           'insert-default',
           `${rule.member}=${String(rule.value)}`,
-          `Insert ${rule.member} to preserve the Lyra v7 default.`,
+          `Insert ${rule.member} to preserve the Lyra ${originLabel(origin)} default.`,
           null,
           rule.member,
         ),
@@ -2770,6 +2827,1301 @@ function migrateLocalText(original, contract, options) {
     bareImportEcosystems: new Set(),
     blockedLocalMigrations: blocked,
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Lyra-to-Lyra rename profiles (`--origin=lyra-v21`).
+//
+// Lyra-only names are short and shared: `open`, `base`, `lr-close` and many `--lr-*` properties
+// each belong to several components, so a rewrite must never change what a site reaches.
+//
+// - Attributes, properties and slots are rewritten on a proven owner: the element carrying the
+//   binding, the type selector in front of `[attr]`, or a `querySelector('lr-*')`-rooted call.
+// - `::part()` is rewritten only when its compound selector names the owning component; a part
+//   reached through a class, a foreign element or an `exportparts` forward is reported.
+// - Events bubble and custom properties inherit, so ownership alone does not bound their reach.
+//   A listener moves to the new name only when no other component already dispatches it, and an
+//   unowned listener or any custom-property occurrence only when, in addition, every component
+//   exposing the old name renamed it to that one target.
+// - A boolean replaced by its inverse is rewritten only from a static attribute that reaches the
+//   element as an attribute (HTML files and Lit templates); frameworks that assign properties
+//   would receive the string.
+//
+// Everything else is reported with a location. During the alias window an old name keeps working,
+// so a report is always safe and a wrong rewrite never is. A report is acknowledged in place with a
+// `lyra-migrate-reviewed: CODE:name` comment, which keeps `--check` usable as a CI gate.
+// ---------------------------------------------------------------------------------------------
+
+const RENAME_REVIEW = 'RENAME_REVIEW';
+const RENAME_TARGET_SHARED_REVIEW = 'RENAME_TARGET_SHARED_REVIEW';
+const NAME_GAINED_OWNER_REVIEW = 'NAME_GAINED_OWNER_REVIEW';
+const POLARITY_REVIEW = 'POLARITY_REVIEW';
+const DETAIL_SHAPE_REVIEW = 'DETAIL_SHAPE_REVIEW';
+const DEPRECATED_MEMBER_REVIEW = 'DEPRECATED_MEMBER_REVIEW';
+const DEPRECATED_CONTENT_REVIEW = 'DEPRECATED_CONTENT_REVIEW';
+const RENAME_CONFLICT_REVIEW = 'RENAME_CONFLICT_REVIEW';
+const UNUSED_ACKNOWLEDGEMENT = 'UNUSED_ACKNOWLEDGEMENT';
+const REVIEW_ACKNOWLEDGEMENT = /lyra-migrate-reviewed:\s*([^\n]*)/g;
+const ACKNOWLEDGEMENT_TOKEN = /^([A-Z][A-Z0-9_]*):(\S+)$/;
+const DEFAULT_SLOT_LABEL = '#default';
+const LISTENER_CALL_BEFORE = /(?:\b(?:add|remove)EventListener|\bHostListener)\s*\(\s*$/;
+// An application that constructs a Lyra event itself (tests, adapters, re-dispatch) keeps sending
+// the name it wrote; moving that name's listeners anywhere in the scanned set would disconnect them.
+const EVENT_CONSTRUCTION = /\bnew\s+(?:CustomEvent|Event)\s*(?:<[^>\n]+>)?\(\s*(['"`])(lr-[a-z0-9]+(?:-[a-z0-9]+)*)\1/g;
+const TAG_API_CALL_BEFORE =
+  /(?:\b(?:createElement|querySelector(?:All)?|closest|matches|unsafeStatic|literal)|\bcustomElements\s*\.\s*(?:get|whenDefined|define))\s*(?:<[^>\n]+>)?\(\s*$/;
+const ANCHORED_MEMBER =
+  /\b(?:querySelector|closest|createElement)\s*(?:<[^>\n]+>)?\(\s*(['"`])(lr-[a-z0-9]+(?:-[a-z0-9]+)*)\1\s*\)\s*!?\s*(?:\?\.|\.)\s*([A-Za-z_$][\w$]*)/g;
+const ATTRIBUTE_METHODS = new Set(['setAttribute', 'getAttribute', 'hasAttribute', 'removeAttribute', 'toggleAttribute']);
+const LISTENER_METHODS = new Set(['addEventListener', 'removeEventListener']);
+const STYLESHEET_FILE = /\.(?:css|scss|sass|less|pcss|styl)$/i;
+const MARKUP_FILE = /\.(?:html?|xhtml|md|markdown|vue|svelte)$/i;
+// Static attribute strings reach the element as attributes only in plain HTML (including Angular
+// templates and Markdown) and in Lit `html` templates. React 19, Vue and Svelte assign a string to
+// a same-named property, where "false" is truthy.
+const ATTRIBUTE_SEMANTICS_FILE = /\.(?:html?|xhtml|md|markdown)$/i;
+const LIT_TEMPLATE_FILE = /\.(?:[cm]?[jt]s)$/i;
+const SELECTOR_LOOKBEHIND = 256;
+
+const ackName = (member) => (member === '' ? DEFAULT_SLOT_LABEL : String(member));
+
+function mergeRanges(ranges) {
+  const merged = [];
+  for (const [start, end] of [...ranges].sort((left, right) => left[0] - right[0])) {
+    const last = merged.at(-1);
+    if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+    else merged.push([start, end]);
+  }
+  return merged;
+}
+
+/** A logarithmic membership test over merged, sorted ranges. */
+function rangeTester(merged) {
+  return (offset) => {
+    let low = 0;
+    let high = merged.length - 1;
+    while (low <= high) {
+      const middle = (low + high) >> 1;
+      if (merged[middle][1] <= offset) low = middle + 1;
+      else if (merged[middle][0] > offset) high = middle - 1;
+      else return true;
+    }
+    return false;
+  };
+}
+
+/** Index just past the template literal whose opening backtick is at `open`, including nested `${}`. */
+function templateLiteralEnd(text, open) {
+  let index = open + 1;
+  while (index < text.length) {
+    const character = text[index];
+    if (character === '\\') index += 2;
+    else if (character === '`') return index + 1;
+    else if (character === '$' && text[index + 1] === '{') index = templateExpressionEnd(text, index + 2);
+    else index += 1;
+  }
+  return text.length;
+}
+
+function templateExpressionEnd(text, index) {
+  let depth = 1;
+  while (index < text.length) {
+    const character = text[index];
+    if (character === '`') {
+      index = templateLiteralEnd(text, index);
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      index += 1;
+      while (index < text.length && text[index] !== character && text[index] !== '\n') index += text[index] === '\\' ? 2 : 1;
+      index += 1;
+      continue;
+    }
+    if (character === '{') depth += 1;
+    else if (character === '}' && --depth === 0) return index + 1;
+    index += 1;
+  }
+  return text.length;
+}
+
+/** Top-level template literals in a script, skipping comments and quoted strings. */
+function templateLiteralRanges(text, inComment) {
+  const ranges = [];
+  let index = 0;
+  while (index < text.length) {
+    const character = text[index];
+    if (inComment(index)) index += 1;
+    else if (character === '`') {
+      const end = templateLiteralEnd(text, index);
+      ranges.push([index, end]);
+      index = end;
+    } else if (character === '"' || character === "'") {
+      index += 1;
+      while (index < text.length && text[index] !== character && text[index] !== '\n') index += text[index] === '\\' ? 2 : 1;
+      index += 1;
+    } else index += 1;
+  }
+  return ranges;
+}
+
+/** [start, end] of every `tag`-tagged template literal body (Lit `html`, `svg` or `css`). */
+function taggedTemplateRanges(text, tags, inComment) {
+  const ranges = [];
+  for (const match of text.matchAll(new RegExp(`\\b(?:${tags.join('|')})\\s*\``, 'g'))) {
+    if (inComment(match.index)) continue;
+    const open = match.index + match[0].length - 1;
+    ranges.push([open, templateLiteralEnd(text, open)]);
+  }
+  return mergeRanges(ranges);
+}
+
+/**
+ * Comment ranges for the rename profile: the shared scanner's, plus HTML comments it cannot see --
+ * every `<!-- -->` in a markup file, and those inside template literals (Lit `html` templates,
+ * inline Angular templates) in a script. Names inside them are never rewritten, and they can carry
+ * acknowledgements.
+ */
+function renameIgnoredRanges(text, file) {
+  const base = mergeRanges(commentRanges(text));
+  const inBase = rangeTester(base);
+  const extra = [];
+  const addHtmlComments = (start, end) => {
+    let index = text.indexOf('<!--', start);
+    while (index >= 0 && index < end) {
+      const close = text.indexOf('-->', index + 4);
+      const finish = close < 0 || close + 3 > end ? end : close + 3;
+      if (!inBase(index)) extra.push([index, finish]);
+      index = text.indexOf('<!--', finish);
+    }
+  };
+  if (MARKUP_FILE.test(file)) addHtmlComments(0, text.length);
+  else if (!STYLESHEET_FILE.test(file)) for (const [start, end] of templateLiteralRanges(text, inBase)) addHtmlComments(start, end);
+  return mergeRanges([...base, ...extra]);
+}
+
+/**
+ * Acknowledgement comments. A `lyra-migrate-reviewed: CODE:name` token covers the comment's own
+ * lines; a comment alone on its line (a JSX `{/* ... *\/}` counts) also covers the next line; and a
+ * comment followed only by whitespace and an opening tag covers every line of that tag, so a
+ * reviewed element whose attributes wrap still takes a single comment.
+ */
+function scanReviewAcknowledgements(text, ignoredRanges, starts, openingTokens) {
+  const tokenAt = new Map(openingTokens.map((token) => [token.start, token]));
+  const records = [];
+  const byLine = new Map();
+  const cover = (line, record) => {
+    const list = byLine.get(line) ?? [];
+    if (!list.includes(record)) list.push(record);
+    byLine.set(line, list);
+  };
+  for (const [start, end] of ignoredRanges) {
+    const body = text.slice(start, end);
+    if (!body.includes('lyra-migrate-reviewed:')) continue;
+    const firstLine = locationAt(starts, start).line;
+    const lastLine = locationAt(starts, Math.max(start, end - 1)).line;
+    let next = end;
+    while (next < text.length && /[\s}]/.test(text[next])) next += 1;
+    const followingTag = tokenAt.get(next);
+    const standalone = /^\s*\{?\s*$/.test(text.slice(starts[firstLine - 1], start));
+    for (const match of body.matchAll(REVIEW_ACKNOWLEDGEMENT)) {
+      const tokens = match[1].replace(/(?:\*\/|-->|\*\/\s*\})[\s\S]*$/, '').split(/[\s,]+/).filter(Boolean);
+      const record = {
+        offset: start + match.index,
+        entries: tokens.map((token) => {
+          const parsed = ACKNOWLEDGEMENT_TOKEN.exec(token);
+          return { token, code: parsed?.[1] ?? null, name: parsed?.[2] ?? null, used: false };
+        }),
+      };
+      records.push(record);
+      for (let line = firstLine; line <= lastLine; line += 1) cover(line, record);
+      if (standalone) cover(lastLine + 1, record);
+      if (followingTag) {
+        const tagLast = locationAt(starts, followingTag.end).line;
+        for (let line = locationAt(starts, followingTag.start).line; line <= tagLast; line += 1) cover(line, record);
+      }
+    }
+  }
+  return {
+    consume(line, code, member) {
+      const name = ackName(member);
+      for (const record of byLine.get(line) ?? []) {
+        const entry = record.entries.find((candidate) => candidate.code === code && candidate.name === name);
+        if (entry) {
+          entry.used = true;
+          return true;
+        }
+      }
+      return false;
+    },
+    unused: () => records.flatMap((record) => record.entries.filter((entry) => !entry.used).map((entry) => ({ offset: record.offset, entry }))),
+  };
+}
+
+/** Single- and double-quoted string literals outside comments; template literals stay opaque. */
+function quotedStringRanges(text, inComment) {
+  const ranges = [];
+  let index = 0;
+  while (index < text.length) {
+    const quote = text[index];
+    if (inComment(index) || (quote !== '"' && quote !== "'" && quote !== '`')) {
+      index += 1;
+      continue;
+    }
+    const start = index;
+    index += 1;
+    while (index < text.length && text[index] !== quote && (quote === '`' || text[index] !== '\n')) {
+      if (text[index] === '\\') index += 1;
+      index += 1;
+    }
+    index += 1;
+    if (quote !== '`') ranges.push([start, index]);
+  }
+  return ranges;
+}
+
+function stylesheetRanges(text, file, inComment) {
+  if (STYLESHEET_FILE.test(file)) return [[0, text.length]];
+  const ranges = [];
+  for (const match of text.matchAll(/<style(?:\s[^>]*)?>[\s\S]*?<\/style\s*>/gi)) {
+    ranges.push([match.index, match.index + match[0].length]);
+  }
+  return mergeRanges([...ranges, ...taggedTemplateRanges(text, ['css'], inComment)]);
+}
+
+/** The type selector of the compound selector that ends at `index`, lowercased, or null. */
+function compoundTypeBefore(text, index) {
+  let start = index;
+  let brackets = 0;
+  let parens = 0;
+  const limit = Math.max(0, index - SELECTOR_LOOKBEHIND);
+  while (start > limit) {
+    const character = text[start - 1];
+    if (character === ']') brackets += 1;
+    else if (character === '[') {
+      if (brackets === 0) break;
+      brackets -= 1;
+    } else if (character === ')') parens += 1;
+    else if (character === '(') {
+      if (parens === 0) break;
+      parens -= 1;
+    } else if (brackets === 0 && parens === 0 && /[\s,>+~{};'"`]/.test(character)) break;
+    start -= 1;
+  }
+  if (start === limit && limit > 0) return null;
+  const compound = text.slice(start, index);
+  // Svelte scopes a component selector as `:global(lr-x)::part(y)`.
+  return (/^:global\(\s*([A-Za-z][\w-]*)\s*\)$/.exec(compound) ?? /^([A-Za-z][\w-]*)/.exec(compound))?.[1].toLowerCase() ?? null;
+}
+
+function mentionedTags(text, tags, inComment) {
+  const found = new Set();
+  for (const tag of tags) {
+    for (const match of text.matchAll(new RegExp(`(?<![\\w-])${tag}(?![\\w-])`, 'g'))) {
+      if (!inComment(match.index)) {
+        found.add(tag);
+        break;
+      }
+    }
+  }
+  return found;
+}
+
+function elementPairs(text, tag, inComment) {
+  const pairs = [];
+  const stack = [];
+  for (const match of text.matchAll(new RegExp(`<(/)?${tag}(?=[\\s/>])`, 'g'))) {
+    if (inComment(match.index)) continue;
+    const end = findTagEnd(text, match.index + match[0].length);
+    if (end < 0) continue;
+    if (match[1]) {
+      const opening = stack.pop();
+      if (opening) pairs.push({ opening, closingStart: match.index });
+    } else if (!/\/\s*>$/.test(text.slice(match.index, end + 1))) {
+      stack.push({ start: match.index, end });
+    }
+  }
+  return pairs;
+}
+
+function directChildTokens(text, start, end, inComment) {
+  const children = [];
+  const stack = [];
+  const pattern = /<(\/)?([A-Za-z][\w.:-]*)(?=[\s/>])/g;
+  pattern.lastIndex = start;
+  for (let match = pattern.exec(text); match && match.index < end; match = pattern.exec(text)) {
+    if (inComment(match.index)) continue;
+    const tokenEnd = findTagEnd(text, match.index + match[0].length);
+    if (tokenEnd < 0 || tokenEnd >= end) break;
+    const name = match[2].toLowerCase();
+    if (match[1]) {
+      const index = stack.lastIndexOf(name);
+      if (index >= 0) stack.length = index;
+    } else {
+      const nameStart = match.index + 1;
+      if (stack.length === 0) children.push({ tag: name, start: match.index, nameStart, nameEnd: nameStart + match[2].length, end: tokenEnd });
+      const selfClosing = /\/\s*>$/.test(text.slice(match.index, tokenEnd + 1));
+      if (!selfClosing && !VOID_HTML_TAGS.has(name)) stack.push(name);
+    }
+    pattern.lastIndex = tokenEnd + 1;
+  }
+  return children;
+}
+
+/** `{...}` groups at attribute-name position in an opening tag: JSX/Svelte spreads and Svelte shorthands. */
+function openingTagBraceGroups(text, token) {
+  const groups = [];
+  let index = token.nameEnd;
+  let quote = null;
+  while (index < token.end) {
+    const character = text[index];
+    if (quote) {
+      if (character === '\\') index += 1;
+      else if (character === quote) quote = null;
+      index += 1;
+      continue;
+    }
+    if (character === '"' || character === "'") quote = character;
+    else if (character === '{') {
+      const end = skipBalanced(text, index, '{', '}');
+      if (!/=\s*$/.test(text.slice(token.nameEnd, index)) && text[index - 1] !== '$') {
+        groups.push({ start: index, end, body: text.slice(index + 1, end - 1).trim() });
+      }
+      index = end;
+      continue;
+    }
+    index += 1;
+  }
+  return groups;
+}
+
+/** An event listener binding in any supported template syntax, or null. */
+function markupEventName(rawName) {
+  if (/^\(lr-[a-z0-9-]+\)$/.test(rawName)) return { name: rawName.slice(1, -1), offset: 1 };
+  if (/^onlr-/.test(rawName)) return { name: rawName.slice(2).replace(/Capture$/, ''), offset: 2 };
+  for (const [prefix, separator] of [['@', '.'], ['v-on:', '.'], ['on:', '|']]) {
+    if (rawName.startsWith(prefix)) return { name: rawName.slice(prefix.length).split(separator)[0], offset: prefix.length };
+  }
+  return null;
+}
+
+/**
+ * An attribute or property binding: `form` is `attribute`, `property`, or `member` (Vue's `:x`,
+ * which binds a property when the element has one and an attribute otherwise).
+ */
+function markupMemberBinding(attribute) {
+  const raw = attribute.rawName;
+  let match;
+  if (raw.startsWith('?')) return { form: 'attribute', offset: 1, name: raw.slice(1), dynamic: true };
+  if ((match = /^\[attr\.([^\]]+)\]$/.exec(raw))) return { form: 'attribute', offset: 6, name: match[1], dynamic: true };
+  if ((match = /^\[([A-Za-z_$][\w$]*)\]$/.exec(raw))) return { form: 'property', offset: 1, name: match[1], dynamic: true };
+  if (raw.startsWith('.')) return { form: 'property', offset: 1, name: raw.slice(1), dynamic: true };
+  if (raw.startsWith('bind:')) return { form: 'property', offset: 5, name: raw.slice(5).split('|')[0], dynamic: true };
+  for (const prefix of ['v-bind:', ':']) {
+    if (raw.startsWith(prefix)) return { form: 'member', offset: prefix.length, name: raw.slice(prefix.length).split('.')[0], dynamic: true };
+  }
+  if (!/^[A-Za-z][\w-]*$/.test(raw) || /^onlr-/.test(raw)) return null;
+  const dynamic = attribute.valueKind === 'expression' || /\$\{|\{\{/.test(attribute.value ?? '');
+  return { form: /[A-Z]/.test(raw) ? 'property' : 'attribute', offset: 0, name: raw, dynamic };
+}
+
+function attributeEnd(text, attribute) {
+  if (attribute.valueEnd === null) return attribute.nameEnd;
+  const quote = text[attribute.valueStart - 1];
+  return (quote === '"' || quote === "'") && text[attribute.valueEnd] === quote ? attribute.valueEnd + 1 : attribute.valueEnd;
+}
+
+function boundMemberNames(attributes) {
+  const names = new Set();
+  for (const attribute of attributes) {
+    const binding = markupMemberBinding(attribute);
+    if (binding) names.add(kebabCase(binding.name));
+  }
+  return names;
+}
+
+function sortReportEntries(entries, codeKey) {
+  return entries.sort((left, right) =>
+    left.line - right.line || left.column - right.column || String(left[codeKey]).localeCompare(String(right[codeKey])));
+}
+
+function migrateRenameText(original, contract, options) {
+  const file = options.file ?? '<memory>';
+  const origin = options.origin;
+  const profile = contract.renameProfiles.get(origin);
+  invariant(profile, `unknown migration origin ${String(origin)}`);
+  const result = {
+    content: original,
+    changes: [],
+    warnings: [],
+    acknowledged: 0,
+    usage: {
+      webawesome: { automatic: 0, manual: 0 },
+      shoelace: { automatic: 0, manual: 0 },
+    },
+    blockedMappings: new Set(),
+    blockedEcosystems: new Set(),
+    bareImportEcosystems: new Set(),
+    blockedLocalMigrations: new Set(),
+    constructedEvents: new Set(),
+  };
+  if (profile.isEmpty) return result;
+
+  const starts = lineStarts(original);
+  const ignoredRanges = renameIgnoredRanges(original, file);
+  const inComment = rangeTester(ignoredRanges);
+  const openingTokens = scanAllOpeningTags(original, ignoredRanges, inComment);
+  const acknowledgements = scanReviewAcknowledgements(original, ignoredRanges, starts, openingTokens);
+  const litTemplates = LIT_TEMPLATE_FILE.test(file) ? rangeTester(taggedTemplateRanges(original, ['html', 'svg'], inComment)) : () => false;
+  const attributeSemantics = (offset) => ATTRIBUTE_SEMANTICS_FILE.test(file) || litTemplates(offset);
+  const release = `Lyra ${profile.toMajor}`;
+  const removal = `${profile.aliasRemovalMajor}.0.0`;
+  for (const match of original.matchAll(EVENT_CONSTRUCTION)) {
+    if (!inComment(match.index) && profile.renamesNamed('event', match[2]).length) result.constructedEvents.add(match[2]);
+  }
+  const constructedEvents = new Set([...(options.constructedEvents ?? []), ...result.constructedEvents]);
+  const edits = [];
+  const seenWarnings = new Set();
+  const handledStrings = new Set();
+  const handledMembers = new Set();
+  const unique = (values) => [...new Set(values)];
+  const list = (values) => unique(values).join(', ');
+  const soleTag = (entries) => (unique(entries.map((entry) => entry.tag)).length === 1 ? entries[0].tag : null);
+  const hint = (code, member) => `After review, mark the site with a "lyra-migrate-reviewed: ${code}:${ackName(member)}" comment.`;
+
+  const rewrite = (start, end, replacement, { tag, member, action, target, message }) => {
+    edits.push({ start, end, replacement });
+    result.changes.push(reportEntry({
+      textStarts: starts,
+      file,
+      offset: start,
+      origin,
+      upstreamTag: tag,
+      upstreamMember: member,
+      action,
+      target,
+      message,
+    }));
+  };
+  const warn = (offset, { tag = null, member, code, target = null, message }) => {
+    const key = `${offset}:${code}:${member}`;
+    if (seenWarnings.has(key)) return;
+    seenWarnings.add(key);
+    if (acknowledgements.consume(locationAt(starts, offset).line, code, member)) {
+      result.acknowledged += 1;
+      return;
+    }
+    result.warnings.push(reportEntry({
+      textStarts: starts,
+      file,
+      offset,
+      origin,
+      upstreamTag: tag,
+      upstreamMember: member,
+      action: 'manual-review',
+      target,
+      warningCode: code,
+      message: `${message} ${hint(code, member)}`,
+    }));
+  };
+  const reviewMessage = (review) => {
+    const subject = review.kind === 'component'
+      ? `<${review.tag}>`
+      : review.kind === 'slot' && review.name === ''
+        ? `Content in the default slot of ${review.tag}`
+        : `The ${review.tag} ${review.kind} ${review.name}`;
+    return `${subject} is deprecated and scheduled for removal in ${review.removalNotBefore}; migrate to ${review.replacement} by hand.`;
+  };
+  const reportReview = (offset, review) =>
+    warn(offset, { tag: review.tag, member: review.name, code: DEPRECATED_MEMBER_REVIEW, target: review.replacement, message: reviewMessage(review) });
+  const unownedReviews = (kind, name, offset, owner) => {
+    const own = owner ? profile.reviewFor(owner, kind, name) : null;
+    if (own) reportReview(offset, own);
+    else if (!profile.exposes(kind, name, owner)) {
+      for (const review of profile.reviewsNamed(kind, name)) reportReview(offset, review);
+    }
+  };
+  const label = (kind) => (kind === 'css-property' ? 'custom property' : kind);
+  const detailNote = (name) => {
+    const details = profile.detailsNamed(name);
+    return details.length ? ` Its ${release} detail also changed: ${details.map((entry) => `${entry.tag}: ${entry.summary}`).join(' ')}` : '';
+  };
+
+  /**
+   * An old name at a site that does not bound its reach: an unowned listener, a listener on an
+   * element that does not dispatch it, or any custom-property occurrence. Rewrites only a global
+   * rename; otherwise reports which components moved and which did not.
+   */
+  const unownedMove = ({ kind, name, start, context, rewritable, action }) => {
+    const renames = profile.renamesNamed(kind, name);
+    const targets = unique(renames.map((entry) => entry.to));
+    const constructed = kind === 'event' && constructedEvents.has(name);
+    if (rewritable && !constructed && profile.isGlobal(kind, name)) {
+      rewrite(start, start + name.length, targets[0], {
+        tag: soleTag(renames),
+        member: name,
+        action,
+        target: targets[0],
+        message: `Rename ${name} to ${targets[0]}; every component exposing it renamed it, and no other component uses ${targets[0]}.`,
+      });
+      return targets[0];
+    }
+    const sourceKeepers = unique(targets.flatMap((to) => profile.sourceKeepers(kind, name, to)))
+      .filter((tag) => !renames.some((entry) => entry.tag === tag));
+    const targetKeepers = unique(targets.flatMap((to) => profile.targetKeepers(kind, name, to)));
+    const shared = targets.length === 1 && !sourceKeepers.length && targetKeepers.length > 0 && !renames.some((entry) => entry.polarity);
+    warn(start, {
+      tag: soleTag(renames),
+      member: name,
+      code: shared ? RENAME_TARGET_SHARED_REVIEW : RENAME_REVIEW,
+      target: targets.join(' | '),
+      message:
+        (kind === 'css-property'
+          ? 'Custom properties inherit into nested components. '
+          : context === 'listener'
+            ? 'This listener does not prove which element it listens to. '
+            : 'This string may name an event of any component. ') +
+        `${list(renames.map((entry) => entry.tag))} renamed the ${label(kind)} ${name} to ${targets.join(' or ')}` +
+        (sourceKeepers.length ? `, while ${list(sourceKeepers)} still ${sourceKeepers.length === 1 ? 'uses' : 'use'} ${name}` : '') +
+        (targetKeepers.length ? `; ${list(targetKeepers)} already ${targetKeepers.length === 1 ? 'uses' : 'use'} ${targets.join(' and ')}, which this site would start reaching` : '') +
+        (constructed ? `; the scanned code also dispatches ${name} itself, so its listeners and dispatches must move together` : '') +
+        `. Update it by hand for the components it is meant for; ${name} keeps working until ${removal}.` +
+        (kind === 'event' ? detailNote(targets[0]) : ''),
+    });
+    return null;
+  };
+
+  /** What an event listener on `owner` (or an unowned listener) would be rewritten to, without side effects. */
+  const eventMove = (name, owner, rewritable = true) => {
+    if (constructedEvents.has(name)) return null;
+    const own = owner ? profile.renameFor(owner, 'event', name) : null;
+    if (own) return profile.targetKeepers('event', name, own.to).length ? null : own.to;
+    if (!rewritable || !profile.renamesNamed('event', name).length || profile.exposes('event', name, owner)) return null;
+    return profile.isGlobal('event', name) ? profile.renamesNamed('event', name)[0].to : null;
+  };
+
+  const eventSite = ({ name, start, owner, context, rewritable = true, conflict = false }) => {
+    const own = owner ? profile.renameFor(owner, 'event', name) : null;
+    let current = name;
+    if (own) {
+      const keepers = profile.targetKeepers('event', name, own.to);
+      if (constructedEvents.has(name)) {
+        warn(start, {
+          tag: owner,
+          member: name,
+          code: RENAME_REVIEW,
+          target: own.to,
+          message:
+            `Not renamed: the scanned code dispatches ${name} itself, so this listener would stop hearing it. Rename the ` +
+            `dispatch and its listeners to ${own.to} together; ${name} keeps working until ${removal}.${detailNote(own.to)}`,
+        });
+      } else if (keepers.length) {
+        warn(start, {
+          tag: owner,
+          member: name,
+          code: RENAME_TARGET_SHARED_REVIEW,
+          target: own.to,
+          message:
+            `Not renamed: ${list(keepers)} also ${keepers.length === 1 ? 'dispatches' : 'dispatch'} ${own.to}, so this listener would ` +
+            `start receiving their events when they are nested inside this ${owner}. Rename it by hand and ignore events whose ` +
+            `target is not this ${owner}; ${name} keeps working until ${removal}.${detailNote(own.to)}`,
+        });
+      } else if (conflict) {
+        warn(start, {
+          tag: owner,
+          member: name,
+          code: RENAME_CONFLICT_REVIEW,
+          target: own.to,
+          message: `This ${owner} already listens to ${own.to}; merge the two handlers by hand. ${name} keeps working until ${removal}.`,
+        });
+      } else {
+        const narrowed = profile.sourceKeepers('event', name, own.to).filter((tag) => tag !== owner);
+        rewrite(start, start + name.length, own.to, {
+          tag: owner,
+          member: name,
+          action: 'rewrite-event',
+          target: own.to,
+          message:
+            `Rename the ${owner} event ${name} to ${own.to}.` +
+            (narrowed.length
+              ? ` ${list(narrowed)} still ${narrowed.length === 1 ? 'dispatches' : 'dispatch'} ${name}; this listener stops hearing theirs from nested elements.`
+              : ''),
+        });
+        current = own.to;
+      }
+    } else if (profile.renamesNamed('event', name).length && !profile.exposes('event', name, owner)) {
+      if (conflict) {
+        warn(start, {
+          tag: soleTag(profile.renamesNamed('event', name)),
+          member: name,
+          code: RENAME_CONFLICT_REVIEW,
+          target: profile.renamesNamed('event', name)[0].to,
+          message: `This element already listens to ${profile.renamesNamed('event', name)[0].to}; merge the two handlers by hand.`,
+        });
+      } else {
+        current = unownedMove({ kind: 'event', name, start, context, rewritable, action: 'rewrite-event' }) ?? name;
+      }
+    }
+    const details = profile.detailsNamed(current);
+    const ownDetail = owner ? profile.detailFor(owner, current) : null;
+    if (ownDetail || (details.length && !profile.exposes('event', current, owner))) {
+      const affected = ownDetail ? [ownDetail] : details;
+      warn(start, {
+        tag: ownDetail ? owner : soleTag(affected),
+        member: current,
+        code: DETAIL_SHAPE_REVIEW,
+        target: current,
+        message:
+          `The ${current} event detail changed in ${release} and cannot be aliased: ` +
+          affected.map((entry) => `${entry.tag}: ${entry.summary}`).join(' ') +
+          ` Update this handler if it reads the detail of ${ownDetail ? `the ${owner} event` : 'one of these components'}.`,
+      });
+    }
+    const gained = current === name ? profile.gainedOwners('event', name) : [];
+    if (gained.length && !profile.exposes('event', name, owner)) {
+      warn(start, {
+        tag: soleTag(gained.map((tag) => ({ tag }))),
+        member: name,
+        code: NAME_GAINED_OWNER_REVIEW,
+        target: name,
+        message:
+          `In ${release}, ${list(gained)} also ${gained.length === 1 ? 'dispatches' : 'dispatch'} ${name}. This ${context} does not prove ` +
+          'which element it listens to, so it may start receiving those events; ignore them by event target if it should not.',
+      });
+    }
+    unownedReviews('event', name, start, owner);
+  };
+
+  const memberSite = ({ owner, kind, name, start, forms, dynamic, removal: removalRange }) => {
+    const review = forms.map(([candidateKind, candidate]) => profile.reviewFor(owner, candidateKind, candidate)).find(Boolean);
+    if (review) reportReview(start, review);
+    const rule = forms.map(([candidateKind, candidate]) => profile.renameFor(owner, candidateKind, candidate)).find(Boolean);
+    if (!rule) return null;
+    if (rule.polarity === 'inverted' && (dynamic || !removalRange)) {
+      const target = kind === 'binding' ? memberStyle(name, rule.to) : rule.to;
+      warn(start, {
+        tag: owner,
+        member: rule.from,
+        code: POLARITY_REVIEW,
+        target: rule.to,
+        message:
+          `${target} is the inverse of ${name} on ${owner}, and this ${kind === 'binding' ? 'binding' : kind === 'property' ? 'property access' : 'attribute binding'} ` +
+          'is not a static attribute. ' +
+          `Bind the negated value to ${target} by hand; ${name} keeps working until ${removal}.`,
+      });
+      return null;
+    }
+    return rule;
+  };
+  const renamedMembers = (owner) => unique([
+    ...profile.data.renames.filter((entry) => entry.tag === owner && ['attribute', 'property', 'event'].includes(entry.kind)).map((entry) => entry.from),
+    ...profile.data.reviews.filter((entry) => entry.tag === owner && ['attribute', 'property', 'event'].includes(entry.kind)).map((entry) => entry.name),
+  ]);
+
+  // --- Markup: event listeners on any element; attributes, properties, spreads and exportparts on the owner.
+  const defaultTokens = [];
+  for (const token of openingTokens) {
+    const owner = token.tag.toLowerCase();
+    const attributes = parseTagAttributes(original, token);
+    const lyraOwner = profile.tags.has(owner);
+    const bound = lyraOwner ? boundMemberNames(attributes) : null;
+
+    // Plan first: a rename that binds one name twice on an element breaks the template (Lit throws
+    // on duplicate bindings, Vue and Svelte refuse to compile, TSX reports a duplicate prop).
+    const finalNames = new Map();
+    const planned = attributes.map((attribute) => {
+      const event = markupEventName(attribute.rawName);
+      let finalRaw = attribute.rawName;
+      if (event && /^lr-/.test(event.name)) {
+        const to = eventMove(event.name, owner);
+        if (to) finalRaw = attribute.rawName.slice(0, event.offset) + to + attribute.rawName.slice(event.offset + event.name.length);
+      } else if (lyraOwner) {
+        const binding = markupMemberBinding(attribute);
+        const rule = binding && !binding.form.startsWith('member') && profile.renameFor(owner, binding.form, binding.name);
+        if (rule && !rule.polarity) finalRaw = attribute.rawName.slice(0, binding.offset) + rule.to + attribute.rawName.slice(binding.offset + binding.name.length);
+      }
+      const key = finalRaw.toLowerCase();
+      finalNames.set(key, (finalNames.get(key) ?? 0) + 1);
+      return { attribute, event, key, renamed: finalRaw !== attribute.rawName };
+    });
+
+    if (lyraOwner && renamedMembers(owner).length) {
+      for (const group of openingTagBraceGroups(original, token)) {
+        const shorthand = /^[A-Za-z_$][\w$]*$/.exec(group.body)?.[0];
+        if (!shorthand) {
+          warn(group.start, {
+            tag: owner,
+            member: owner,
+            code: 'DYNAMIC_VALUE_REVIEW',
+            target: null,
+            message: `This spread on ${owner} may carry renamed or deprecated members (${list(renamedMembers(owner))}); rename them where the object is built.`,
+          });
+          continue;
+        }
+        const forms = [['property', camelCase(shorthand)], ['attribute', kebabCase(shorthand)]];
+        const review = forms.map(([kind, name]) => profile.reviewFor(owner, kind, name)).find(Boolean);
+        if (review) reportReview(group.start + 1, review);
+        const rule = forms.map(([kind, name]) => profile.renameFor(owner, kind, name)).find(Boolean);
+        if (rule) {
+          warn(group.start + 1, {
+            tag: owner,
+            member: rule.from,
+            code: rule.polarity ? POLARITY_REVIEW : RENAME_REVIEW,
+            target: rule.to,
+            message: `The shorthand {${shorthand}} binds the deprecated ${owner} ${rule.kind} ${rule.from}; write ${memberStyle(shorthand, rule.to)}={${rule.polarity ? `!${shorthand}` : shorthand}} by hand.`,
+          });
+        }
+      }
+    }
+
+    for (const { attribute, event, key, renamed } of planned) {
+      if (event) {
+        if (/^lr-/.test(event.name)) {
+          eventSite({
+            name: event.name,
+            start: attribute.nameStart + event.offset,
+            owner,
+            context: 'listener',
+            conflict: renamed && finalNames.get(key) > 1,
+          });
+        }
+        continue;
+      }
+      if (!lyraOwner) continue;
+      // A Lit element binding other than ref() may be a spread directive that sets members.
+      if (/^v-(?:bind|on)$/.test(attribute.rawName) || (attribute.rawName.startsWith('${') && !/^\$\{\s*ref\s*\(/.test(attribute.rawName))) {
+        if (renamedMembers(owner).length) {
+          warn(attribute.nameStart, {
+            tag: owner,
+            member: owner,
+            code: 'DYNAMIC_VALUE_REVIEW',
+            target: null,
+            message: `This object binding on ${owner} may carry renamed or deprecated members (${list(renamedMembers(owner))}); rename them where the object is built.`,
+          });
+        }
+        continue;
+      }
+      if (attribute.rawName === 'exportparts') {
+        if (attribute.valueKind !== 'literal' || /\$\{|\{\{/.test(attribute.value ?? '')) continue;
+        for (const match of (attribute.value ?? '').matchAll(/([^,\s:]+)(\s*:\s*[^,\s]+)?/g)) {
+          const inner = match[1];
+          const start = attribute.valueStart + match.index;
+          const review = profile.reviewFor(owner, 'part', inner);
+          if (review) reportReview(start, review);
+          const rule = profile.renameFor(owner, 'part', inner);
+          if (!rule) continue;
+          rewrite(start, start + inner.length, match[2] ? rule.to : `${rule.to}:${inner}`, {
+            tag: owner,
+            member: inner,
+            action: 'rewrite-part',
+            target: rule.to,
+            message: match[2]
+              ? `Forward the renamed ${owner} part ${rule.to} under the same exported name.`
+              : `Forward the renamed ${owner} part ${rule.to} under its previous exported name ${inner}.`,
+          });
+        }
+        continue;
+      }
+      const binding = markupMemberBinding(attribute);
+      if (!binding) continue;
+      const forms = binding.form === 'member'
+        ? [['property', camelCase(binding.name)], ['attribute', kebabCase(binding.name)]]
+        : [[binding.form, binding.name]];
+      const start = attribute.nameStart + binding.offset;
+      const staticAttribute = binding.form === 'attribute' && binding.offset === 0 && !binding.dynamic;
+      const rule = memberSite({
+        owner,
+        kind: binding.form === 'member' ? 'binding' : binding.form,
+        name: binding.name,
+        start,
+        forms,
+        dynamic: binding.dynamic,
+        removal: staticAttribute,
+      });
+      if (!rule) continue;
+      if (bound.has(kebabCase(rule.to)) || (renamed && finalNames.get(key) > 1)) {
+        warn(start, {
+          tag: owner,
+          member: rule.from,
+          code: RENAME_CONFLICT_REVIEW,
+          target: rule.to,
+          message: `This ${owner} already binds ${rule.to}; remove the deprecated ${rule.from} binding by hand.`,
+        });
+        continue;
+      }
+      if (rule.polarity === 'inverted') {
+        if (!attributeSemantics(token.start)) {
+          warn(start, {
+            tag: owner,
+            member: rule.from,
+            code: POLARITY_REVIEW,
+            target: rule.to,
+            message:
+              `${rule.to} is the inverse of ${rule.from}. In this template syntax a static value may be assigned to the ` +
+              `${camelCase(rule.from)} property as a string, where "false" is truthy, so set ${rule.to} by hand.`,
+          });
+          continue;
+        }
+        const value = (attribute.value ?? '').trim().toLowerCase();
+        const end = attributeEnd(original, attribute);
+        if (value === '' || value === 'true' || value === rule.from) {
+          let removeFrom = attribute.nameStart;
+          while (removeFrom > 0 && /\s/.test(original[removeFrom - 1])) removeFrom -= 1;
+          rewrite(removeFrom, end, '', {
+            tag: owner,
+            member: rule.from,
+            action: 'remove-attribute',
+            target: rule.to,
+            message: `Remove ${rule.from}: it restated the ${owner} default, and ${rule.to} is off by default.`,
+          });
+        } else if (value === 'false') {
+          rewrite(attribute.nameStart, end, rule.to, {
+            tag: owner,
+            member: rule.from,
+            action: 'rewrite-attribute',
+            target: rule.to,
+            message: `Replace ${rule.from}="false" with the presence of ${rule.to}.`,
+          });
+        } else {
+          warn(start, {
+            tag: owner,
+            member: rule.from,
+            code: POLARITY_REVIEW,
+            target: rule.to,
+            message: `${rule.from}="${attribute.value}" is not a boolean literal; set ${rule.to} to its inverse by hand.`,
+          });
+        }
+        continue;
+      }
+      const target = binding.form === 'member' ? memberStyle(binding.name, rule.to) : rule.to;
+      rewrite(start, start + binding.name.length, target, {
+        tag: owner,
+        member: rule.from,
+        action: `rewrite-${rule.kind}`,
+        target: rule.to,
+        message: `Rename the ${owner} ${rule.kind} ${rule.from} to ${rule.to}.`,
+      });
+    }
+    if (lyraOwner && profile.defaultsFor(owner).length) defaultTokens.push({ token, owner, bound });
+  }
+
+  // --- Slots: named-slot renames and reviews, default-slot reviews and deprecated slot content,
+  // on the direct children of the owning element.
+  const slotTags = [...profile.tags].filter((tag) =>
+    profile.slotContentFor(tag).length ||
+    [...profile.data.renames, ...profile.data.reviews].some((entry) => entry.tag === tag && entry.kind === 'slot'));
+  for (const tag of slotTags) {
+    for (const pair of elementPairs(original, tag, inComment)) {
+      for (const child of directChildTokens(original, pair.opening.end + 1, pair.closingStart, inComment)) {
+        let slot = '';
+        let start = child.nameStart;
+        for (const attribute of parseTagAttributes(original, child)) {
+          if (attribute.rawName === 'slot') {
+            slot = attribute.valueKind === 'literal' ? attribute.value ?? '' : null;
+            start = attribute.valueStart ?? attribute.nameStart;
+          } else if (attribute.rawName === 'v-slot') {
+            slot = '';
+          } else {
+            const prefix = ['v-slot:', '#'].find((candidate) => attribute.rawName.startsWith(candidate));
+            if (prefix) {
+              slot = attribute.rawName.slice(prefix.length);
+              start = attribute.nameStart + prefix.length;
+              if (slot === 'default') slot = '';
+            }
+          }
+        }
+        if (slot === null) continue;
+        const review = profile.reviewFor(tag, 'slot', slot);
+        if (review) reportReview(start, review);
+        const rule = slot === '' ? null : profile.renameFor(tag, 'slot', slot);
+        if (rule) {
+          rewrite(start, start + slot.length, rule.to, {
+            tag,
+            member: slot,
+            action: 'rewrite-slot',
+            target: rule.to,
+            message: `Rename the ${tag} slot ${slot} to ${rule.to}.`,
+          });
+        }
+        if (child.tag === 'template') continue;
+        for (const content of profile.slotContentFor(tag)) {
+          if (content.slot !== slot) continue;
+          const listed = (content.report ?? content.allow).includes(child.tag);
+          if (content.report ? !listed : listed) continue;
+          warn(child.nameStart, {
+            tag,
+            member: child.tag,
+            code: DEPRECATED_CONTENT_REVIEW,
+            target: null,
+            message: `<${child.tag}> in ${slot === '' ? 'the default slot' : `the ${slot} slot`} of ${tag}: ${content.summary}`,
+          });
+        }
+      }
+    }
+  }
+
+  // --- Stylesheets: `::part()`, custom properties, attribute selectors and custom states.
+  for (const match of original.matchAll(/::part\(([^)]*)\)/g)) {
+    if (inComment(match.index)) continue;
+    const owner = compoundTypeBefore(original, match.index);
+    const listStart = match.index + '::part('.length;
+    for (const nameMatch of match[1].matchAll(/\S+/g)) {
+      const name = nameMatch[0];
+      const start = listStart + nameMatch.index;
+      const own = owner ? profile.renameFor(owner, 'part', name) : null;
+      if (own) {
+        rewrite(start, start + name.length, own.to, {
+          tag: owner,
+          member: name,
+          action: 'rewrite-part',
+          target: own.to,
+          message: `Rename the ${owner} part ${name} to ${own.to}.`,
+        });
+      } else if (profile.renamesNamed('part', name).length && !profile.exposes('part', name, owner)) {
+        const renames = profile.renamesNamed('part', name);
+        const keepers = profile.exposers('part', name).filter((tag) => !renames.some((entry) => entry.tag === tag));
+        warn(start, {
+          tag: soleTag(renames),
+          member: name,
+          code: RENAME_REVIEW,
+          target: list(renames.map((entry) => entry.to)),
+          message:
+            `This ::part() selector does not name the component that owns the part. ${list(renames.map((entry) => entry.tag))} ` +
+            `renamed the part ${name} to ${list(renames.map((entry) => entry.to))}` +
+            (keepers.length ? `, while ${list(keepers)} still ${keepers.length === 1 ? 'exposes' : 'expose'} ${name}` : '') +
+            '. Rename it where the selector reaches a renamed component directly; a part forwarded through exportparts keeps its exported name.',
+        });
+      } else if (profile.gainedOwners('part', name).length && !owner?.startsWith('lr-')) {
+        const gained = profile.gainedOwners('part', name);
+        warn(start, {
+          tag: soleTag(gained.map((tag) => ({ tag }))),
+          member: name,
+          code: NAME_GAINED_OWNER_REVIEW,
+          target: name,
+          message: `In ${release}, ${list(gained)} also ${gained.length === 1 ? 'exposes' : 'expose'} the part ${name}, so this selector may start matching it.`,
+        });
+      }
+      unownedReviews('part', name, start, owner);
+    }
+  }
+
+  const cssNames = new Set([
+    ...profile.data.renames.filter((entry) => entry.kind === 'css-property').flatMap((entry) => [entry.from, entry.to]),
+    ...profile.data.reviews.filter((entry) => entry.kind === 'css-property').map((entry) => entry.name),
+  ]);
+  if (cssNames.size) {
+    for (const match of original.matchAll(/(?<![\w-])--[A-Za-z0-9_-]+/g)) {
+      const name = match[0];
+      if (!cssNames.has(name) || inComment(match.index)) continue;
+      if (profile.renamesNamed('css-property', name).length) {
+        unownedMove({ kind: 'css-property', name, start: match.index, context: 'custom property', rewritable: true, action: 'rewrite-css-property' });
+      }
+      const declaration = /^\s*['"]?\s*:/.test(original.slice(match.index + name.length, match.index + name.length + 16)) ||
+        /setProperty\s*\(\s*['"`]$/.test(original.slice(Math.max(0, match.index - 24), match.index));
+      const gained = profile.gainedOwners('css-property', name);
+      if (declaration && gained.length) {
+        warn(match.index, {
+          tag: soleTag(gained.map((tag) => ({ tag }))),
+          member: name,
+          code: NAME_GAINED_OWNER_REVIEW,
+          target: name,
+          message: `In ${release}, ${list(gained)} also ${gained.length === 1 ? 'reads' : 'read'} ${name}, so this declaration now reaches them when they are nested below it.`,
+        });
+      }
+      for (const review of profile.reviewsNamed('css-property', name)) reportReview(match.index, review);
+    }
+  }
+
+  for (const match of original.matchAll(/\[\s*([A-Za-z_][\w-]*)(?=\s*(?:[~|^$*]?=|\]))/g)) {
+    if (inComment(match.index)) continue;
+    const owner = compoundTypeBefore(original, match.index);
+    if (!owner || !profile.tags.has(owner)) continue;
+    const name = match[1];
+    const start = match.index + match[0].length - name.length;
+    const review = profile.reviewFor(owner, 'attribute', name);
+    if (review) reportReview(start, review);
+    const rule = profile.renameFor(owner, 'attribute', name);
+    if (!rule) continue;
+    if (rule.polarity === 'inverted') {
+      warn(start, {
+        tag: owner,
+        member: name,
+        code: POLARITY_REVIEW,
+        target: rule.to,
+        message: `${rule.to} is the inverse of ${name}; rewrite this ${owner} selector to test the opposite state (for example :not([${rule.to}])).`,
+      });
+      continue;
+    }
+    if (!rule.reflects) {
+      warn(start, {
+        tag: owner,
+        member: name,
+        code: RENAME_REVIEW,
+        target: rule.to,
+        message:
+          `${owner} does not reflect ${rule.to}, so [${rule.to}] matches only where markup sets it. Rename this selector once every ` +
+          `place that sets ${name} (markup, setAttribute) sets ${rule.to} instead.`,
+      });
+      continue;
+    }
+    rewrite(start, start + name.length, rule.to, {
+      tag: owner,
+      member: name,
+      action: 'rewrite-attribute',
+      target: rule.to,
+      message: `Rename the ${owner} attribute selector [${name}] to [${rule.to}]; ${owner} reflects ${rule.to}.`,
+    });
+  }
+
+  for (const match of original.matchAll(/:state\(\s*([a-z][a-z0-9-]*)\s*\)/g)) {
+    if (inComment(match.index)) continue;
+    const owner = compoundTypeBefore(original, match.index);
+    const review = owner ? profile.reviewFor(owner, 'css-state', match[1]) : null;
+    if (review) reportReview(match.index + match[0].indexOf(match[1]), review);
+  }
+
+  for (const review of profile.data.reviews.filter((entry) => entry.kind === 'component')) {
+    for (const match of original.matchAll(new RegExp(`(?<![\\w-])${review.tag}(?![\\w-])`, 'g'))) {
+      if (inComment(match.index) || original.slice(match.index - 2, match.index) === '</') continue;
+      reportReview(match.index, review);
+    }
+  }
+
+  // --- Scripts: calls rooted at querySelector/closest/createElement('lr-*') prove their element.
+  for (const match of original.matchAll(ANCHORED_MEMBER)) {
+    if (inComment(match.index)) continue;
+    const owner = match[2];
+    const member = match[3];
+    const start = match.index + match[0].length - member.length;
+    const after = start + member.length;
+    handledMembers.add(start);
+    if (LISTENER_METHODS.has(member) || ATTRIBUTE_METHODS.has(member)) {
+      const call = /^\s*\(\s*(['"`])([^'"`\n]+)\1/.exec(original.slice(after, after + 200));
+      if (!call) continue;
+      const valueStart = after + call[0].length - 1 - call[2].length;
+      handledStrings.add(valueStart - 1);
+      if (LISTENER_METHODS.has(member)) {
+        eventSite({ name: call[2], start: valueStart, owner, context: 'listener' });
+        continue;
+      }
+      const rule = memberSite({ owner, kind: 'attribute', name: call[2], start: valueStart, forms: [['attribute', call[2]]], dynamic: true });
+      if (rule) {
+        rewrite(valueStart, valueStart + call[2].length, rule.to, {
+          tag: owner,
+          member: rule.from,
+          action: 'rewrite-attribute',
+          target: rule.to,
+          message: `Rename the ${owner} attribute ${rule.from} to ${rule.to}.`,
+        });
+      }
+      continue;
+    }
+    if (!profile.tags.has(owner)) continue;
+    if (/^\s*\(/.test(original.slice(after, after + 64))) {
+      const review = profile.reviewFor(owner, 'method', member);
+      if (review) reportReview(start, review);
+      continue;
+    }
+    const rule = memberSite({ owner, kind: 'property', name: member, start, forms: [['property', member]], dynamic: true });
+    if (rule) {
+      rewrite(start, after, rule.to, {
+        tag: owner,
+        member: rule.from,
+        action: 'rewrite-property',
+        target: rule.to,
+        message: `Rename the ${owner} property ${rule.from} to ${rule.to}.`,
+      });
+    }
+  }
+
+  // Event names held in string literals outside an anchored call. A listener call on an unproven
+  // receiver -- including Angular's `@HostListener('document:lr-…')` -- may be rewritten globally;
+  // any other string (a constant, an event map key) is only reported, because the same text can
+  // be a tag name passed to a DOM API.
+  const eventNameMatters = (name) =>
+    profile.renamesNamed('event', name).length || profile.detailsNamed(name).length ||
+    profile.reviewsNamed('event', name).length || profile.gainedOwners('event', name).length;
+  for (const match of original.matchAll(/(['"`])(?:(window|document|body):)?(lr-[a-z0-9]+(?:-[a-z0-9]+)*)\1/g)) {
+    const name = match[3];
+    if (handledStrings.has(match.index) || inComment(match.index) || !eventNameMatters(name)) continue;
+    const before = original.slice(Math.max(0, match.index - 120), match.index);
+    if (!match[2] && TAG_API_CALL_BEFORE.test(before)) continue;
+    const listener = LISTENER_CALL_BEFORE.test(before);
+    eventSite({
+      name,
+      start: match.index + 1 + (match[2] ? match[2].length + 1 : 0),
+      owner: null,
+      context: listener ? 'listener' : 'event name string',
+      rewritable: listener,
+    });
+  }
+
+  // Member access on an unproven receiver, only in files that use a component renaming it.
+  const mentioned = mentionedTags(original, profile.tags, inComment);
+  const accessRules = new Map();
+  const addAccess = (name, candidate) => accessRules.set(name, [...(accessRules.get(name) ?? []), candidate]);
+  for (const entry of profile.data.renames) {
+    if (entry.kind === 'property' && mentioned.has(entry.tag)) addAccess(entry.from, { tag: entry.tag, rule: entry, call: false });
+  }
+  for (const entry of profile.data.reviews) {
+    if ((entry.kind === 'property' || entry.kind === 'method') && mentioned.has(entry.tag)) {
+      addAccess(entry.name, { tag: entry.tag, review: entry, call: entry.kind === 'method' });
+    }
+  }
+  if (accessRules.size) {
+    const inString = rangeTester(mergeRanges(quotedStringRanges(original, inComment)));
+    const inStylesheet = rangeTester(stylesheetRanges(original, file, inComment));
+    const inToken = rangeTester(mergeRanges(openingTokens.map((token) => [token.start + 1, token.end])));
+    for (const match of original.matchAll(/(?<=[\w$)\]])\s*(?:\?\.|!?\.)\s*([A-Za-z_$][\w$]*)/g)) {
+      const name = match[1];
+      const candidates = accessRules.get(name);
+      if (!candidates) continue;
+      const start = match.index + match[0].length - name.length;
+      if (handledMembers.has(start) || inComment(start) || inString(start) || inStylesheet(start) || inToken(start)) continue;
+      const call = /^\s*\(/.test(original.slice(start + name.length, start + name.length + 64));
+      for (const candidate of candidates) {
+        if (candidate.call !== call) continue;
+        if (candidate.review) {
+          reportReview(start, candidate.review);
+          continue;
+        }
+        const { rule } = candidate;
+        warn(start, {
+          tag: rule.tag,
+          member: name,
+          code: rule.polarity ? POLARITY_REVIEW : RENAME_REVIEW,
+          target: rule.to,
+          message:
+            `If this reads or writes an ${rule.tag}, ${rule.polarity ? `use the inverse property .${rule.to}` : `rename .${name} to .${rule.to}`}; ` +
+            `.${name} keeps working until ${removal}.`,
+        });
+      }
+    }
+  }
+
+  for (const match of original.matchAll(/\.\s*(?:set|get|has|remove|toggle)Attribute\s*\(\s*(['"`])([a-z][a-z0-9-]*)\1/g)) {
+    const name = match[2];
+    const start = match.index + match[0].length - 1 - name.length;
+    if (handledStrings.has(start - 1) || inComment(match.index)) continue;
+    for (const tag of mentioned) {
+      const review = profile.reviewFor(tag, 'attribute', name);
+      if (review) reportReview(start, review);
+      const rule = profile.renameFor(tag, 'attribute', name);
+      if (!rule) continue;
+      warn(start, {
+        tag,
+        member: name,
+        code: rule.polarity ? POLARITY_REVIEW : RENAME_REVIEW,
+        target: rule.to,
+        message:
+          `If this element is an ${tag}, ${rule.polarity ? `use the inverse attribute ${rule.to}` : `rename ${name} to ${rule.to}`}; ` +
+          `${name} keeps working until ${removal}.`,
+      });
+    }
+  }
+
+  // --- Defaults that changed in the target release: insert the previous value when absent,
+  // exactly as the Lyra 7 profile does, blocked by the same alias and spread hazards.
+  if (profile.data.defaults.length) {
+    const defaultProfiles = new Map(
+      [...new Set(profile.data.defaults.map((entry) => entry.tag))].map((tag) => [
+        tag,
+        {
+          origin,
+          tag,
+          defaults: profile.defaultsFor(tag).map((entry) => ({ member: entry.attribute, value: entry.value })),
+        },
+      ]),
+    );
+    const hazards = scanLocalMigrationHazards(
+      original,
+      defaultProfiles,
+      ignoredRanges,
+      defaultTokens.map(({ token }) => ({ ...token, tag: token.tag.toLowerCase() })),
+    );
+    const blocked = new Set([...(options.blockedLocalMigrations ?? []), ...hazards.blocked]);
+    result.blockedLocalMigrations = hazards.blocked;
+    for (const use of hazards.uses) {
+      warn(use.offset, { tag: use.tag, member: use.tag, code: use.warningCode, target: use.tag, message: use.message });
+    }
+    for (const { token, owner, bound } of defaultTokens) {
+      const renamedAttributes = profile.data.renames.filter((entry) => entry.tag === owner && entry.kind === 'attribute');
+      const missing = profile.defaultsFor(owner).filter((entry) => {
+        const aliases = new Set([entry.attribute]);
+        for (const rename of renamedAttributes) {
+          if (rename.from === entry.attribute) aliases.add(rename.to);
+          if (rename.to === entry.attribute) aliases.add(rename.from);
+        }
+        return ![...aliases].some((name) => bound.has(name));
+      });
+      if (!missing.length) continue;
+      if (blocked.has(localMigrationKey(origin, owner))) {
+        warn(token.nameStart, {
+          tag: owner,
+          member: owner,
+          code: 'MAPPING_REVIEW_BLOCKED',
+          target: owner,
+          message:
+            `${owner} did not receive its Lyra ${profile.fromMajor} defaults ` +
+            `(${missing.map((entry) => `${entry.attribute}=${String(entry.value)}`).join(', ')}) because the scanned target set ` +
+            'accesses it through a DOM alias or an opaque attribute spread. Add them by hand where the previous default matters.',
+        });
+        continue;
+      }
+      const insertions = [];
+      for (const entry of missing) {
+        insertions.push(serializeLocalDefault({ member: entry.attribute, value: entry.value }));
+        result.changes.push(reportEntry({
+          textStarts: starts,
+          file,
+          offset: token.end,
+          origin,
+          upstreamTag: owner,
+          upstreamMember: entry.attribute,
+          action: 'insert-default',
+          target: `${entry.attribute}=${String(entry.value)}`,
+          message: `Insert ${entry.attribute} to preserve the Lyra ${profile.fromMajor} default.`,
+        }));
+      }
+      if (insertions.length) {
+        const insertionOffset = original[token.end - 1] === '/' ? token.end - 1 : token.end;
+        // `<lr-x a={b} />` gains `a={b} size="s" />`, not a doubled space before the slash.
+        const replacement = /\s/.test(original[insertionOffset - 1])
+          ? `${insertions.join(' ')} `
+          : ` ${insertions.join(' ')}`;
+        edits.push({ start: insertionOffset, end: insertionOffset, replacement });
+      }
+    }
+  }
+
+  // An acknowledgement that matches nothing is stale or malformed; report it so it cannot hide a
+  // later report of a different kind. Entries withheld for an older installed release would make
+  // their acknowledgements look stale, so that run skips the check.
+  if (!profile.skipped.length) {
+    for (const { offset, entry } of acknowledgements.unused()) {
+      const key = `${offset}:${UNUSED_ACKNOWLEDGEMENT}:${entry.token}`;
+      if (seenWarnings.has(key)) continue;
+      seenWarnings.add(key);
+      result.warnings.push(reportEntry({
+        textStarts: starts,
+        file,
+        offset,
+        origin,
+        upstreamTag: null,
+        upstreamMember: entry.token,
+        action: 'manual-review',
+        target: null,
+        warningCode: UNUSED_ACKNOWLEDGEMENT,
+        message: entry.code
+          ? `The acknowledgement ${entry.token} matches no report on the lines it covers; remove it.`
+          : `The acknowledgement ${entry.token} is not of the form CODE:name, for example DETAIL_SHAPE_REVIEW:lr-close.`,
+      }));
+    }
+  }
+
+  result.content = finalizeEdits(original, edits);
+  sortReportEntries(result.changes, 'action');
+  sortReportEntries(result.warnings, 'warningCode');
+  return result;
 }
 
 /**
@@ -2877,6 +4229,7 @@ export function scanUnrewrittenUpstreamReferences(text) {
 }
 
 export function migrateText(original, contract, options = {}) {
+  if (options.origin && contract.renameProfiles?.has(options.origin)) return migrateRenameText(original, contract, options);
   if (options.origin) return migrateLocalText(original, contract, options);
   const file = options.file ?? '<memory>';
   const rewriteBarePackages = options.rewriteBarePackages ?? new Set();
@@ -3604,10 +4957,138 @@ export function migrateText(original, contract, options = {}) {
   };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Unified diff output for `--diff`.
+// ---------------------------------------------------------------------------------------------
+
+function diffLines(text) {
+  const lines = text.split('\n');
+  const eol = lines.at(-1) === '';
+  if (eol) lines.pop();
+  // The final line's terminator is part of its identity, so adding or removing the newline at the
+  // end of a file is a change rather than an invisible no-op.
+  return lines.map((line, index) => {
+    const terminated = index < lines.length - 1 || eol;
+    return { line, eol: terminated, key: terminated ? line : `${line}\u0000` };
+  });
+}
+
+/**
+ * Myers' O(ND) line diff. Each step's frontier holds only the diagonals that step can reach, so
+ * the retained trace is O(D^2) in the number of changed lines rather than O(D * file length).
+ */
+function diffOperations(before, after) {
+  let prefix = 0;
+  while (prefix < before.length && prefix < after.length && before[prefix].key === after[prefix].key) prefix += 1;
+  let suffix = 0;
+  while (
+    suffix < before.length - prefix &&
+    suffix < after.length - prefix &&
+    before[before.length - 1 - suffix].key === after[after.length - 1 - suffix].key
+  ) {
+    suffix += 1;
+  }
+  const a = before.slice(prefix, before.length - suffix);
+  const b = after.slice(prefix, after.length - suffix);
+  const goesDown = (frontier, diagonal, depth) =>
+    diagonal === -depth || (diagonal !== depth && frontier.get(diagonal - 1) < frontier.get(diagonal + 1));
+
+  const trace = [];
+  let frontier = new Map([[1, 0]]);
+  search: for (let depth = 0; depth <= a.length + b.length; depth += 1) {
+    trace.push(frontier);
+    const next = new Map();
+    for (let diagonal = -depth; diagonal <= depth; diagonal += 2) {
+      let x = goesDown(frontier, diagonal, depth) ? frontier.get(diagonal + 1) : frontier.get(diagonal - 1) + 1;
+      let y = x - diagonal;
+      while (x < a.length && y < b.length && a[x].key === b[y].key) {
+        x += 1;
+        y += 1;
+      }
+      next.set(diagonal, x);
+      if (x >= a.length && y >= b.length) break search;
+    }
+    frontier = next;
+  }
+
+  const middle = [];
+  let x = a.length;
+  let y = b.length;
+  for (let depth = trace.length - 1; depth >= 0; depth -= 1) {
+    const previous = trace[depth];
+    const diagonal = x - y;
+    const previousDiagonal = goesDown(previous, diagonal, depth) ? diagonal + 1 : diagonal - 1;
+    const previousX = previous.get(previousDiagonal);
+    const previousY = previousX - previousDiagonal;
+    while (x > previousX && y > previousY) {
+      x -= 1;
+      y -= 1;
+      middle.push({ type: ' ', before: prefix + x, after: prefix + y });
+    }
+    if (depth > 0) {
+      if (x === previousX) middle.push({ type: '+', after: prefix + y - 1 });
+      else middle.push({ type: '-', before: prefix + x - 1 });
+    }
+    x = previousX;
+    y = previousY;
+  }
+  middle.reverse();
+  const operations = [];
+  for (let index = 0; index < prefix; index += 1) operations.push({ type: ' ', before: index, after: index });
+  operations.push(...middle);
+  for (let index = suffix; index > 0; index -= 1) {
+    operations.push({ type: ' ', before: before.length - index, after: after.length - index });
+  }
+  return operations;
+}
+
+/** A `git apply`-compatible unified diff of one file, with three lines of context. */
+export function unifiedDiff(file, original, content, context = 3) {
+  if (original === content) return '';
+  const before = diffLines(original);
+  const after = diffLines(content);
+  const operations = diffOperations(before, after);
+  const beforeSeen = [0];
+  const afterSeen = [0];
+  for (const operation of operations) {
+    beforeSeen.push(beforeSeen.at(-1) + (operation.type === '+' ? 0 : 1));
+    afterSeen.push(afterSeen.at(-1) + (operation.type === '-' ? 0 : 1));
+  }
+  const hunks = [];
+  operations.forEach((operation, index) => {
+    if (operation.type === ' ') return;
+    const last = hunks.at(-1);
+    if (last && index - last.end <= context * 2 + 1) last.end = index;
+    else hunks.push({ start: index, end: index });
+  });
+  const output = [`--- a/${file}\n`, `+++ b/${file}\n`];
+  for (const hunk of hunks) {
+    const start = Math.max(0, hunk.start - context);
+    const end = Math.min(operations.length, hunk.end + context + 1);
+    const beforeCount = beforeSeen[end] - beforeSeen[start];
+    const afterCount = afterSeen[end] - afterSeen[start];
+    const beforeStart = beforeSeen[start] + (beforeCount ? 1 : 0);
+    const afterStart = afterSeen[start] + (afterCount ? 1 : 0);
+    output.push(`@@ -${beforeStart},${beforeCount} +${afterStart},${afterCount} @@\n`);
+    for (const operation of operations.slice(start, end)) {
+      const record = operation.type === '+' ? after[operation.after] : before[operation.before];
+      output.push(`${operation.type}${record.line}\n`);
+      if (!record.eol) output.push('\\ No newline at end of file\n');
+    }
+  }
+  return output.join('');
+}
+
 function reportPathName(file, cwd) {
   return (path.relative(cwd, file) || path.basename(file)).split(path.sep).join('/');
 }
 
+/**
+ * Migrates `files` in place (unless `dryRun`) and returns the stable JSON report. `renameLedger`
+ * is the authored ledger for a repository inventory; `lyraVersion` is the installed
+ * @aceshooting/lyra-ui version, when known. With `collectDiff`, the returned object also carries a
+ * unified `diff` of every changed file; the written report never includes it.
+ */
 export function migrateFiles({
   files,
   inventory,
@@ -3615,33 +5096,65 @@ export function migrateFiles({
   reportPath = null,
   cwd = process.cwd(),
   origin = null,
+  renameLedger = null,
+  lyraVersion = null,
+  collectDiff = false,
 }) {
-  const contract = buildMigrationContract(inventory);
+  if (collectDiff) {
+    // `git apply` rejects `a/../x`, so a patch is only produced for files below the working
+    // directory, whose relative paths it can apply (with --directory from a repository root).
+    const outside = files.filter((file) => {
+      const relative = path.relative(cwd, file);
+      return relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+    });
+    if (outside.length) {
+      throw new Error(`--diff needs every target inside the working directory; run it from a common parent of ${outside.join(', ')}.`);
+    }
+  }
+  const contract = buildMigrationContract(inventory, { renameLedger, lyraVersion });
   const originals = new Map(files.map((file) => [file, fs.readFileSync(file, 'utf8')]));
+  const diffs = [];
+  const noteDiff = (file, original, content) => {
+    if (collectDiff && content !== original) diffs.push(unifiedDiff(reportPathName(file, cwd), original, content));
+  };
+  const finish = (report) => {
+    if (reportPath) fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+    return collectDiff ? { ...report, diff: diffs.join('') } : report;
+  };
   if (origin !== null) {
-    invariant(contract.localMigrations.has(origin), `unknown local migration origin ${String(origin)}`);
+    const renameProfile = contract.renameProfiles.has(origin);
+    invariant(
+      contract.localMigrations.has(origin) || renameProfile,
+      `unknown local migration origin ${String(origin)}`,
+    );
     const blockedLocalMigrations = new Set();
+    const constructedEvents = new Set();
     for (const [file, original] of originals) {
       const analysis = migrateText(original, contract, {
         file: reportPathName(file, cwd),
         origin,
       });
       for (const key of analysis.blockedLocalMigrations) blockedLocalMigrations.add(key);
+      for (const name of analysis.constructedEvents ?? []) constructedEvents.add(name);
     }
 
     const changes = [];
     const warnings = [];
     let filesChanged = 0;
+    let acknowledged = 0;
     for (const [file, original] of originals) {
       const result = migrateText(original, contract, {
         file: reportPathName(file, cwd),
         origin,
         blockedLocalMigrations,
+        constructedEvents,
       });
       changes.push(...result.changes);
       warnings.push(...result.warnings);
+      acknowledged += result.acknowledged ?? 0;
       if (result.content !== original) {
         filesChanged += 1;
+        noteDiff(file, original, result.content);
         if (!dryRun) fs.writeFileSync(file, result.content, 'utf8');
       }
     }
@@ -3650,7 +5163,12 @@ export function migrateFiles({
       left.action.localeCompare(right.action));
     sortEntries(changes);
     sortEntries(warnings);
-    const report = {
+    const summary = { rewrites: changes.length, warnings: warnings.length };
+    if (renameProfile) {
+      summary.acknowledged = acknowledged;
+      if (lyraVersion !== null) summary.skipped = contract.renameProfiles.get(origin).skipped.length;
+    }
+    return finish({
       schemaVersion: MIGRATION_REPORT_SCHEMA_VERSION,
       origin,
       dryRun,
@@ -3658,10 +5176,8 @@ export function migrateFiles({
       filesChanged,
       changes,
       warnings,
-      summary: { rewrites: changes.length, warnings: warnings.length },
-    };
-    if (reportPath) fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-    return report;
+      summary,
+    });
   }
   const domFactoryBindings = buildProjectDomFactoryBindings(originals);
   const blockedMappings = new Set();
@@ -3744,6 +5260,7 @@ export function migrateFiles({
     warnings.push(...result.warnings);
     if (result.content !== original) {
       filesChanged += 1;
+      noteDiff(file, original, result.content);
       if (!dryRun) fs.writeFileSync(file, result.content, 'utf8');
     }
   }
@@ -3752,7 +5269,7 @@ export function migrateFiles({
     left.action.localeCompare(right.action));
   sortEntries(changes);
   sortEntries(warnings);
-  const report = {
+  return finish({
     schemaVersion: MIGRATION_REPORT_SCHEMA_VERSION,
     origin: null,
     dryRun,
@@ -3764,17 +5281,17 @@ export function migrateFiles({
       rewrites: changes.length,
       warnings: warnings.length,
     },
-  };
-  if (reportPath) fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-  return report;
+  });
 }
 
 export function parseArgs(argv) {
   const options = {
     check: false,
+    diff: false,
     dryRun: false,
     help: false,
     extensions: DEFAULT_EXTENSIONS,
+    lyraVersion: null,
     origin: null,
     report: null,
     targets: [],
@@ -3787,6 +5304,9 @@ export function parseArgs(argv) {
       options.dryRun = true;
     } else if (!positional && argument === '--check') {
       options.check = true;
+      options.dryRun = true;
+    } else if (!positional && argument === '--diff') {
+      options.diff = true;
       options.dryRun = true;
     } else if (!positional && (argument === '--help' || argument === '-h')) {
       options.help = true;
@@ -3801,10 +5321,15 @@ export function parseArgs(argv) {
     } else if (!positional && argument.startsWith('--report=')) {
       options.report = argument.slice('--report='.length);
       if (!options.report) throw new Error('--report requires a path');
+    } else if (!positional && argument.startsWith('--lyra-version=')) {
+      options.lyraVersion = argument.slice('--lyra-version='.length);
+      if (compareVersions(options.lyraVersion, options.lyraVersion) !== 0) {
+        throw new Error(`--lyra-version needs a version such as 22.0.0, got ${options.lyraVersion || 'nothing'}`);
+      }
     } else if (!positional && argument.startsWith('--origin=')) {
       options.origin = argument.slice('--origin='.length);
       if (!options.origin) throw new Error('--origin requires a value');
-      if (!LOCAL_MIGRATION_ORIGINS.includes(options.origin)) {
+      if (!MIGRATION_ORIGINS.includes(options.origin)) {
         throw new Error(`Unknown migration origin: ${options.origin}`);
       }
     } else if (!positional && argument.startsWith('-')) {
@@ -3817,21 +5342,52 @@ export function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log(`Usage: lyra-ui-migrate [--check] [--dry-run] [--origin=lyra-v7] [--report=path] [--ext=html,ts,...] targets...
+  console.log(`Usage: lyra-ui-migrate [--check] [--dry-run] [--diff] [--origin=${MIGRATION_ORIGINS.join('|')}] [--lyra-version=x.y.z] [--report=path] [--ext=html,ts,...] targets...
 
 Only exact and fully rewritten inventory mappings change automatically. Conceptual, unsafe,
 unsupported, unknown, and unresolved deep-import uses remain unchanged with source-located
 warnings. The optional JSON report has a stable schema for CI and review tooling.
 
 Without --origin, only Web Awesome and Shoelace migrations run. --origin=lyra-v7 performs the
-opt-in Lyra defaults migration and never rewrites tags or imports.
+opt-in Lyra defaults migration. --origin=lyra-v21 migrates deprecated Lyra 21 member names
+(attributes, properties, events, parts, custom properties and slots) where the rewrite cannot
+change what a site reaches, preserves changed defaults, and reports everything else, including
+listeners of events whose detail changed. Neither profile rewrites tags or imports. Run a Lyra
+profile with the CLI of the installed release, after upgrading.
 
-  --dry-run, -n     report changes without writing source files
-  --check           exit nonzero when rewrites or warnings remain; never write source files
-  --origin=lyra-v7  insert explicit attributes that preserve changed Lyra v7 defaults
-  --report=path     write the stable JSON migration report
-  --ext=a,b,c       extensions scanned for directory targets
-  --help, -h        show this message`);
+  --dry-run, -n        report changes without writing source files
+  --check              exit nonzero when rewrites or warnings remain; never write source files
+  --diff               print a unified diff of the changes instead of writing source files
+  --origin=lyra-v7     insert explicit attributes that preserve changed Lyra v7 defaults
+  --origin=lyra-v21    migrate names and defaults that change from Lyra 21 to Lyra 22
+  --lyra-version=x.y.z apply only rename entries available in this release (default: the
+                       @aceshooting/lyra-ui installed under the working directory, when found)
+  --report=path        write the stable JSON migration report
+  --ext=a,b,c          extensions scanned for directory targets
+  --help, -h           show this message
+
+A reviewed rename-profile warning is acknowledged by a "lyra-migrate-reviewed: CODE:name" comment
+(for example DETAIL_SHAPE_REVIEW:lr-close) on the reported line, alone on the line above it, or
+directly before the reported element's opening tag.`);
+}
+
+/** The version of the @aceshooting/lyra-ui installed at or above `directory`, or null. */
+export function detectInstalledLyraVersion(directory = process.cwd()) {
+  let current = path.resolve(directory);
+  for (;;) {
+    const manifest = path.join(current, 'node_modules', '@aceshooting', 'lyra-ui', 'package.json');
+    if (fs.existsSync(manifest)) {
+      try {
+        const version = JSON.parse(fs.readFileSync(manifest, 'utf8')).version;
+        return compareVersions(version, version) === 0 ? version : null;
+      } catch {
+        return null;
+      }
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
 }
 
 function walkDir(directory, filter) {
@@ -3912,28 +5468,45 @@ export function run(argv) {
   }
   try {
     const inventory = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+    const renameOrigin = LYRA_RENAME_ORIGINS.includes(options.origin);
+    const lyraVersion = renameOrigin ? options.lyraVersion ?? detectInstalledLyraVersion() : null;
     const report = migrateFiles({
       files,
       inventory,
       dryRun: options.dryRun,
       origin: options.origin,
+      renameLedger: packagedRuntime ? null : readRenameLedger(),
+      lyraVersion,
       reportPath: options.report ? path.resolve(options.report) : null,
+      collectDiff: options.diff,
     });
+    // With --diff, stdout carries only the patch so it can be redirected into a file or `git apply`.
+    const log = options.diff ? console.error : console.log;
+    if (options.diff) process.stdout.write(report.diff);
+    if (renameOrigin) {
+      log(
+        lyraVersion === null
+          ? 'No installed @aceshooting/lyra-ui found under the working directory; applying every entry of the profile.'
+          : `Applying entries available in @aceshooting/lyra-ui ${lyraVersion}` +
+            (report.summary.skipped ? `; ${report.summary.skipped} entr${report.summary.skipped === 1 ? 'y needs' : 'ies need'} a later release.` : '.'),
+      );
+    }
     for (const entry of report.changes) {
-      console.log(`${entry.file}:${entry.line}:${entry.column}  ${entry.action}: ${entry.message}`);
+      log(`${entry.file}:${entry.line}:${entry.column}  ${entry.action}: ${entry.message}`);
     }
     for (const entry of report.warnings) {
-      console.log(`${entry.file}:${entry.line}:${entry.column}  warning ${entry.warningCode}: ${entry.message}`);
+      log(`${entry.file}:${entry.line}:${entry.column}  warning ${entry.warningCode}: ${entry.message}`);
     }
-    console.log(
+    log(
       `${report.filesScanned} file(s) scanned, ${report.filesChanged} changed, ` +
-        `${report.summary.rewrites} rewrite(s), ${report.summary.warnings} warning(s).`,
+        `${report.summary.rewrites} rewrite(s), ${report.summary.warnings} warning(s)` +
+        (Object.hasOwn(report.summary, 'acknowledged') ? `, ${report.summary.acknowledged} acknowledged.` : '.'),
     );
-    if (options.dryRun && report.filesChanged) console.log('Dry run only -- no source files were written.');
-    if (options.report) console.log(`JSON report written to ${options.report}.`);
+    if (options.dryRun && report.filesChanged) log('Dry run only -- no source files were written.');
+    if (options.report) log(`JSON report written to ${options.report}.`);
     if (options.check) {
       const remaining = report.filesChanged > 0 || report.summary.warnings > 0;
-      console.log(
+      log(
         remaining
           ? `Migration check failed: ${report.filesChanged} file(s) need changes and ${report.summary.warnings} warning(s) require review.`
           : 'Migration check passed: no rewrites or warnings remain.',

@@ -1,0 +1,24 @@
+<!-- lr-sample-panel heading-text arrow lr-panel-close: names inside comments never change. -->
+<lr-sample-panel heading-text="Settings" arrow exportparts="close__button, body: outer-body" style="--lr-panel-bg: white; --lr-shared-gap: 4px">
+  <h2 slot="title">Settings</h2>
+  <lr-icon name="gear"></lr-icon>
+  <p slot="footer">Body</p>
+</lr-sample-panel>
+<lr-sample-panel arrow="false" size="l"></lr-sample-panel>
+<lr-sample-panel arrow="sometimes" without-arrow heading-text="Both" heading="Both" size="m"></lr-sample-panel>
+<lr-sample-other heading="Other" arrow>
+  <span>Default slot content</span>
+  <span slot="content">Named</span>
+</lr-sample-other>
+<my-card exportparts="close__button"></my-card>
+<details open><summary>Native elements keep their own attributes</summary></details>
+<style>
+  lr-sample-panel::part(close__button) { color: red; }
+  lr-sample-panel::part(body) { padding: 0; }
+  lr-sample-other::part(body) { padding: 0; }
+  .card::part(body) { margin: 0; }
+  my-card::part(close__button) { outline: none; }
+  lr-sample-panel[heading-text] { font-weight: bold; }
+  lr-sample-panel { --lr-shared-gap: 2px; }
+  :root { --lr-panel-bg: #fff; --lr-shared-gap: 8px; }
+</style>

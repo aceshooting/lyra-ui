@@ -541,6 +541,7 @@ async function verifyPackedMigrationCli(fixtureDir) {
   const cliFiles = (await readdir(join(packageRoot, 'dist', 'cli'))).sort();
   const expectedCliFiles = [
     'component-inventory.mjs',
+    'lyra-rename-ledger.mjs',
     'migrate-wa.mjs',
     'migration-contract.json',
   ];
@@ -567,6 +568,14 @@ async function verifyPackedMigrationCli(fixtureDir) {
   const executable = join(fixtureDir, 'node_modules', '.bin', binName('lyra-ui-migrate'));
   await run(executable, [migrationFixture], fixtureDir, 'packed migration CLI apply check');
   await run(executable, ['--check', migrationFixture], fixtureDir, 'packed migration CLI idempotence check');
+  // The Lyra rename profile must load from the packed projection alone; the migrated fixture uses
+  // only current names, so it has nothing to rewrite or report.
+  await run(
+    executable,
+    ['--origin=lyra-v21', '--check', migrationFixture],
+    fixtureDir,
+    'packed migration CLI Lyra rename profile check',
+  );
 
   const migrated = await Promise.all([
     readFile(registration, 'utf8'),

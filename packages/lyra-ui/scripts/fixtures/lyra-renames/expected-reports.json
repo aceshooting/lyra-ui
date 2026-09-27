@@ -1,0 +1,127 @@
+{
+  "$comment": "Location-aware changes and warnings each component.input.<ext> must produce under the synthetic ledger. Reviewed by hand; regenerate only after re-reviewing every line.",
+  "html": {
+    "changes": [
+      "2:18 rewrite-attribute heading-text -> heading",
+      "2:41 remove-attribute arrow -> without-arrow",
+      "2:61 rewrite-part close__button -> close-button",
+      "2:76 rewrite-part body -> panel-body",
+      "2:101 rewrite-css-property --lr-panel-bg -> --lr-sample-panel-background",
+      "2:144 insert-default size -> size=s",
+      "3:13 rewrite-slot title -> heading",
+      "7:18 rewrite-attribute arrow -> without-arrow",
+      "16:25 rewrite-part close__button -> close-button",
+      "17:25 rewrite-part body -> panel-body",
+      "21:19 rewrite-attribute heading-text -> heading",
+      "23:11 rewrite-css-property --lr-panel-bg -> --lr-sample-panel-background"
+    ],
+    "warnings": [
+      "2:123 RENAME_REVIEW --lr-shared-gap",
+      "4:4 DEPRECATED_CONTENT_REVIEW lr-icon",
+      "8:18 RENAME_CONFLICT_REVIEW arrow",
+      "8:50 RENAME_CONFLICT_REVIEW heading-text",
+      "10:4 DEPRECATED_MEMBER_REVIEW ",
+      "19:15 RENAME_REVIEW body",
+      "20:17 RENAME_REVIEW close__button",
+      "22:21 RENAME_REVIEW --lr-shared-gap",
+      "23:32 RENAME_REVIEW --lr-shared-gap"
+    ],
+    "acknowledged": 0
+  },
+  "ts": {
+    "changes": [
+      "7:27 rewrite-part close__button -> close-button",
+      "9:13 rewrite-css-property --lr-panel-bg -> --lr-sample-panel-background",
+      "17:10 rewrite-property headingText -> heading",
+      "20:10 rewrite-event lr-panel-open-change -> lr-open-change",
+      "25:21 rewrite-slot title -> heading",
+      "27:24 rewrite-attribute arrow -> without-arrow",
+      "34:73 rewrite-event lr-item-click -> lr-item-activate",
+      "35:55 rewrite-property headingText -> heading",
+      "37:30 rewrite-event lr-panel-open-change -> lr-open-change"
+    ],
+    "warnings": [
+      "8:18 RENAME_REVIEW close__button",
+      "18:10 POLARITY_REVIEW arrow",
+      "21:10 RENAME_CONFLICT_REVIEW lr-item-click",
+      "29:17 DETAIL_SHAPE_REVIEW lr-close",
+      "29:17 NAME_GAINED_OWNER_REVIEW lr-close",
+      "34:36 ALIASED_MEMBER_REVIEW lr-sample-panel",
+      "35:36 ALIASED_MEMBER_REVIEW lr-sample-panel",
+      "38:32 RENAME_REVIEW lr-item-click",
+      "39:24 RENAME_TARGET_SHARED_REVIEW lr-panel-close",
+      "41:11 DEPRECATED_MEMBER_REVIEW compact",
+      "42:11 DEPRECATED_MEMBER_REVIEW refresh",
+      "43:25 RENAME_REVIEW heading-text",
+      "46:27 RENAME_TARGET_SHARED_REVIEW lr-panel-close"
+    ],
+    "acknowledged": 1
+  },
+  "jsx": {
+    "changes": [
+      "4:24 rewrite-attribute heading-text -> heading",
+      "4:64 rewrite-event lr-panel-open-change -> lr-open-change",
+      "4:161 rewrite-css-property --lr-panel-bg -> --lr-sample-panel-background",
+      "5:19 rewrite-slot title -> heading",
+      "7:24 rewrite-property headingText -> heading"
+    ],
+    "warnings": [
+      "4:8 MAPPING_REVIEW_BLOCKED lr-sample-panel",
+      "4:48 POLARITY_REVIEW arrow",
+      "4:96 RENAME_CONFLICT_REVIEW lr-item-click",
+      "7:8 MAPPING_REVIEW_BLOCKED lr-sample-panel",
+      "7:44 DYNAMIC_VALUE_REVIEW lr-sample-panel",
+      "8:14 RENAME_TARGET_SHARED_REVIEW lr-panel-close"
+    ],
+    "acknowledged": 0
+  },
+  "vue": {
+    "changes": [
+      "2:21 rewrite-property headingText -> heading",
+      "2:98 rewrite-event lr-item-click -> lr-item-activate",
+      "3:16 rewrite-slot title -> heading",
+      "19:23 rewrite-part body -> panel-body"
+    ],
+    "warnings": [
+      "2:49 POLARITY_REVIEW arrow",
+      "2:68 RENAME_TARGET_SHARED_REVIEW lr-panel-close",
+      "8:5 DYNAMIC_VALUE_REVIEW lr-sample-panel"
+    ],
+    "acknowledged": 1
+  },
+  "svelte": {
+    "changes": [
+      "7:36 rewrite-attribute heading-text -> heading",
+      "7:85 rewrite-event lr-item-click -> lr-item-activate",
+      "8:13 rewrite-slot title -> heading",
+      "13:34 rewrite-part close__button -> close-button"
+    ],
+    "warnings": [
+      "7:60 RENAME_TARGET_SHARED_REVIEW lr-panel-close",
+      "10:19 RENAME_REVIEW headingText",
+      "10:32 POLARITY_REVIEW arrow"
+    ],
+    "acknowledged": 0
+  },
+  "css": {
+    "changes": [
+      "3:3 rewrite-css-property --lr-panel-bg -> --lr-sample-panel-background",
+      "9:23 rewrite-part close__button -> close-button",
+      "10:17 rewrite-attribute heading-text -> heading",
+      "10:37 rewrite-part body -> panel-body",
+      "14:32 rewrite-part body -> panel-body"
+    ],
+    "warnings": [
+      "4:3 RENAME_REVIEW --lr-shared-gap",
+      "7:3 RENAME_REVIEW --lr-shared-gap",
+      "13:17 POLARITY_REVIEW arrow",
+      "15:15 RENAME_REVIEW body",
+      "16:1 DEPRECATED_MEMBER_REVIEW lr-sample-legacy",
+      "20:4 UNUSED_ACKNOWLEDGEMENT body",
+      "21:19 RENAME_REVIEW body",
+      "22:4 UNUSED_ACKNOWLEDGEMENT DETAIL_SHAPE_REVIEW:body",
+      "23:19 RENAME_REVIEW body"
+    ],
+    "acknowledged": 2
+  }
+}

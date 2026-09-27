@@ -10,13 +10,16 @@ import { fileURLToPath } from 'node:url';
 
 import {
   MIGRATION_REPORT_SCHEMA_VERSION,
+  MIGRATION_RUNTIME_SCHEMA_VERSION,
   buildMigrationContract,
   collectFiles,
   createMigrationRuntimeInventory,
   migrateFiles,
   migrateText,
   parseArgs,
+  readRenameLedger,
 } from './migrate-wa.mjs';
+import { emptyRenameLedger } from './lyra-rename-ledger.mjs';
 import {
   analyzeMigrationCoverage,
   formatMigrationCoverageSummary,
@@ -187,7 +190,7 @@ test('the migration contract fails closed on accessibility profile drift', () =>
   staleComparison.mappings[0].parity.accessibility.comparison.status = 'target-additive';
   assert.throws(() => buildMigrationContract(staleComparison), /stored accessibility comparison is stale/);
 
-  const runtime = createMigrationRuntimeInventory(inventory);
+  const runtime = createMigrationRuntimeInventory(inventory, { renameLedger: emptyRenameLedger() });
   assert.deepEqual(runtime.accessibilityProfiles, inventory.accessibilityProfiles);
   assert.deepEqual(
     runtime.mappings.map((mapping) => mapping.parity.accessibility),
@@ -197,7 +200,7 @@ test('the migration contract fails closed on accessibility profile drift', () =>
 });
 
 test('C-576 packaged migration preserves and validates method-edge warning evidence', () => {
-  const runtime = createMigrationRuntimeInventory(inventory);
+  const runtime = createMigrationRuntimeInventory(inventory, { renameLedger: emptyRenameLedger() });
   const mapping = runtime.mappings.find(
     (entry) => entry.upstreamTag === 'wa-include',
   );
@@ -278,9 +281,19 @@ test('free and Pro package identities share the Web Awesome ecosystem without co
 });
 
 test('the packaged runtime projection stays narrow, complete, and fail-closed', () => {
-  const runtimeInventory = createMigrationRuntimeInventory(checkedInventory);
+  const runtimeInventory = createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger() });
   const runtimeContract = buildMigrationContract(runtimeInventory);
-  assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, 1);
+  assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, MIGRATION_RUNTIME_SCHEMA_VERSION);
+  assert.deepEqual(
+    runtimeInventory.lyraRenames.profiles.map((profile) => profile.origin),
+    ['lyra-v21'],
+    'the packaged CLI must carry every rename profile, projected from the authored ledger',
+  );
+  assert.throws(
+    () => createMigrationRuntimeInventory(checkedInventory),
+    /needs the rename ledger/,
+    'a build that forgets the ledger must fail instead of publishing empty rename profiles',
+  );
   assert.equal(runtimeContract.mappings.size, checkedInventory.mappings.length);
   assert.deepEqual(
     runtimeContract.packageIdentities.get('@awesome.me/webawesome-pro'),
@@ -311,9 +324,13 @@ test('the packaged runtime executes from its adjacent projected contract', () =>
       path.join(scriptDir, 'component-inventory.mjs'),
       path.join(cliDir, 'component-inventory.mjs'),
     );
+    fs.copyFileSync(
+      path.join(scriptDir, 'lyra-rename-ledger.mjs'),
+      path.join(cliDir, 'lyra-rename-ledger.mjs'),
+    );
     fs.writeFileSync(
       path.join(cliDir, 'migration-contract.json'),
-      `${JSON.stringify(createMigrationRuntimeInventory(checkedInventory))}\n`,
+      `${JSON.stringify(createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger() }))}\n`,
     );
 
     const source = path.join(sourceDir, 'component.ts');
@@ -2396,9 +2413,11 @@ test('aliased elements and opaque attribute spreads block local defaults across 
 test('CLI argument parsing includes check mode, dry-run, and a stable report target', () => {
   assert.deepEqual(parseArgs(['--check', '--origin=lyra-v7', '--report=out/report.json', '--ext=.ts,vue', '--', 'src']), {
     check: true,
+    diff: false,
     dryRun: true,
     help: false,
     extensions: new Set(['ts', 'vue']),
+    lyraVersion: null,
     origin: 'lyra-v7',
     report: 'out/report.json',
     targets: ['src'],

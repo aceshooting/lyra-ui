@@ -1,0 +1,139 @@
+{
+  "$comment": "Synthetic rename ledger for lyra-rename-ledger.test.mjs, validated against components.json.",
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "origin": "lyra-v21",
+      "fromMajor": 21,
+      "toMajor": 22,
+      "aliasRemovalMajor": 23,
+      "renames": [
+        {
+          "tag": "lr-sample-panel",
+          "kind": "attribute",
+          "from": "arrow",
+          "to": "without-arrow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "attribute",
+          "from": "heading-text",
+          "to": "heading"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "css-property",
+          "from": "--lr-panel-bg",
+          "to": "--lr-sample-panel-background"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "css-property",
+          "from": "--lr-shared-gap",
+          "to": "--lr-sample-panel-gap"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "event",
+          "from": "lr-item-click",
+          "to": "lr-item-activate"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "event",
+          "from": "lr-panel-close",
+          "to": "lr-close"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "event",
+          "from": "lr-panel-open-change",
+          "to": "lr-open-change"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "part",
+          "from": "body",
+          "to": "panel-body"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "part",
+          "from": "close__button",
+          "to": "close-button"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "property",
+          "from": "arrow",
+          "to": "withoutArrow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "property",
+          "from": "headingText",
+          "to": "heading"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "slot",
+          "from": "title",
+          "to": "heading"
+        }
+      ],
+      "defaults": [
+        {
+          "tag": "lr-sample-panel",
+          "attribute": "size",
+          "value": "s"
+        }
+      ],
+      "detailChanges": [
+        {
+          "tag": "lr-sample-panel",
+          "event": "lr-close",
+          "summary": "the detail is now an object { reason } instead of the reason string."
+        }
+      ],
+      "reviews": [
+        {
+          "tag": "lr-sample-legacy",
+          "kind": "component",
+          "name": "lr-sample-legacy"
+        },
+        {
+          "tag": "lr-sample-other",
+          "kind": "slot",
+          "name": ""
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "method",
+          "name": "refresh"
+        },
+        {
+          "tag": "lr-sample-panel",
+          "kind": "property",
+          "name": "compact"
+        }
+      ],
+      "slotContent": [
+        {
+          "tag": "lr-sample-panel",
+          "slot": "",
+          "report": [
+            "lr-icon"
+          ],
+          "summary": "An icon in the default slot is deprecated; move it to the start slot."
+        }
+      ]
+    }
+  ]
+}

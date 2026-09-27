@@ -1,0 +1,752 @@
+{
+  "$comment": "Synthetic Lyra components appended to ../migrate-wa/inventory.json by lyra-rename-ledger.test.mjs. Their deprecated aliases and policy records exercise every rename, review, detail-change and default category of the Lyra rename profile; none of them is a real component.",
+  "components": [
+    {
+      "tag": "lr-sample-legacy",
+      "registrationModule": "src/components/layout/sample-legacy/sample-legacy.ts",
+      "rootIncluded": true,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "stable",
+        "deprecated": {
+          "tag": "lr-sample-legacy",
+          "kind": "component",
+          "name": "lr-sample-legacy",
+          "since": "21.1.0",
+          "replacement": {
+            "kind": "component",
+            "name": "lr-sample-panel",
+            "usage": "<lr-sample-panel>"
+          },
+          "removalNotBefore": "23.0.0",
+          "rationale": "Synthetic component deprecation that exercises the Lyra 21 to 22 rename profile."
+        },
+        "deprecations": [
+          {
+            "tag": "lr-sample-legacy",
+            "kind": "component",
+            "name": "lr-sample-legacy",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "component",
+              "name": "lr-sample-panel",
+              "usage": "<lr-sample-panel>"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic component deprecation that exercises the Lyra 21 to 22 rename profile."
+          }
+        ]
+      },
+      "surface": {
+        "attributes": [],
+        "properties": [],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          }
+        ],
+        "events": [],
+        "parts": [],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": []
+      }
+    },
+    {
+      "tag": "lr-sample-other",
+      "registrationModule": "src/components/layout/sample-other/sample-other.ts",
+      "rootIncluded": true,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "stable",
+        "deprecated": null,
+        "deprecations": [
+          {
+            "tag": "lr-sample-other",
+            "kind": "slot",
+            "name": "",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "slot",
+              "name": "content",
+              "usage": "slot=\"content\""
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic slot deprecation that exercises the Lyra 21 to 22 rename profile."
+          }
+        ]
+      },
+      "surface": {
+        "attributes": [
+          {
+            "name": "heading",
+            "property": "heading",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "heading",
+            "attribute": "heading",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": {
+              "tag": "lr-sample-other",
+              "kind": "slot",
+              "name": "",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "slot",
+                "name": "content",
+                "usage": "slot=\"content\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic slot deprecation that exercises the Lyra 21 to 22 rename profile."
+            }
+          },
+          {
+            "name": "content",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-close",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": null,
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-item-click",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": null,
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": null,
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "body",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-shared-gap",
+            "deprecated": null
+          }
+        ],
+        "cssStates": [],
+        "methods": []
+      }
+    },
+    {
+      "tag": "lr-sample-panel",
+      "registrationModule": "src/components/layout/sample-panel/sample-panel.ts",
+      "rootIncluded": true,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "stable",
+        "deprecated": null,
+        "deprecations": [
+          {
+            "tag": "lr-sample-panel",
+            "kind": "css-property",
+            "name": "--lr-panel-bg",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "css-property",
+              "name": "--lr-sample-panel-background",
+              "usage": "--lr-sample-panel-background"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic css-property deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "css-property",
+            "name": "--lr-shared-gap",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "css-property",
+              "name": "--lr-sample-panel-gap",
+              "usage": "--lr-sample-panel-gap"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic css-property deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "event",
+            "name": "lr-item-click",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-item-activate",
+              "usage": "addEventListener('lr-item-activate', ...)"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic event deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "event",
+            "name": "lr-panel-close",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-close",
+              "usage": "addEventListener('lr-close', ...)"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic event deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "event",
+            "name": "lr-panel-open-change",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-open-change",
+              "usage": "addEventListener('lr-open-change', ...)"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic event deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "method",
+            "name": "refresh",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "method",
+              "name": "reload",
+              "usage": "reload()"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic method deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "part",
+            "name": "body",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "part",
+              "name": "panel-body",
+              "usage": "::part(panel-body)"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic part deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "part",
+            "name": "close__button",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "part",
+              "name": "close-button",
+              "usage": "::part(close-button)"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic part deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "property",
+            "name": "arrow",
+            "attribute": "arrow",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "property",
+              "name": "withoutArrow",
+              "usage": "without-arrow"
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "property",
+            "name": "compact",
+            "attribute": "compact",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "attribute",
+              "name": "size",
+              "usage": "size=\"s\""
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "property",
+            "name": "headingText",
+            "attribute": "heading-text",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "property",
+              "name": "heading",
+              "usage": "heading=\"...\""
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+          },
+          {
+            "tag": "lr-sample-panel",
+            "kind": "slot",
+            "name": "title",
+            "since": "21.1.0",
+            "replacement": {
+              "kind": "slot",
+              "name": "heading",
+              "usage": "slot=\"heading\""
+            },
+            "removalNotBefore": "23.0.0",
+            "rationale": "Synthetic slot deprecation that exercises the Lyra 21 to 22 rename profile."
+          }
+        ]
+      },
+      "surface": {
+        "attributes": [
+          {
+            "name": "arrow",
+            "property": "arrow",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "property",
+              "name": "arrow",
+              "attribute": "arrow",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "property",
+                "name": "withoutArrow",
+                "usage": "without-arrow"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "compact",
+            "property": "compact",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "property",
+              "name": "compact",
+              "attribute": "compact",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "attribute",
+                "name": "size",
+                "usage": "size=\"s\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "heading",
+            "property": "heading",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "heading-text",
+            "property": "headingText",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "property",
+              "name": "headingText",
+              "attribute": "heading-text",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "property",
+                "name": "heading",
+                "usage": "heading=\"...\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "hasDefault": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "'s' | 'm' | 'l'",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "without-arrow",
+            "property": "withoutArrow",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "arrow",
+            "attribute": "arrow",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "property",
+              "name": "arrow",
+              "attribute": "arrow",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "property",
+                "name": "withoutArrow",
+                "usage": "without-arrow"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "compact",
+            "attribute": "compact",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "property",
+              "name": "compact",
+              "attribute": "compact",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "attribute",
+                "name": "size",
+                "usage": "size=\"s\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "heading",
+            "attribute": "heading",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "headingText",
+            "attribute": "heading-text",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "property",
+              "name": "headingText",
+              "attribute": "heading-text",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "property",
+                "name": "heading",
+                "usage": "heading=\"...\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic property deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "hasDefault": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "'s' | 'm' | 'l'",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "withoutArrow",
+            "attribute": "without-arrow",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          },
+          {
+            "name": "heading",
+            "deprecated": null
+          },
+          {
+            "name": "title",
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "slot",
+              "name": "title",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "slot",
+                "name": "heading",
+                "usage": "slot=\"heading\""
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic slot deprecation that exercises the Lyra 21 to 22 rename profile."
+            }
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-close",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": null,
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-item-activate",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": null,
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-item-click",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "event",
+              "name": "lr-item-click",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-item-activate",
+                "usage": "addEventListener('lr-item-activate', ...)"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic event deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-open-change",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": null,
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-panel-close",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "event",
+              "name": "lr-panel-close",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-close",
+                "usage": "addEventListener('lr-close', ...)"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic event deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-panel-open-change",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "event",
+              "name": "lr-panel-open-change",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-open-change",
+                "usage": "addEventListener('lr-open-change', ...)"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic event deprecation that exercises the Lyra 21 to 22 rename profile."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent",
+            "cancelable": "never",
+            "deprecated": null,
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "body",
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "part",
+              "name": "body",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "part",
+                "name": "panel-body",
+                "usage": "::part(panel-body)"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic part deprecation that exercises the Lyra 21 to 22 rename profile."
+            }
+          },
+          {
+            "name": "close-button",
+            "deprecated": null
+          },
+          {
+            "name": "close__button",
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "part",
+              "name": "close__button",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "part",
+                "name": "close-button",
+                "usage": "::part(close-button)"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic part deprecation that exercises the Lyra 21 to 22 rename profile."
+            }
+          },
+          {
+            "name": "panel-body",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-panel-bg",
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "css-property",
+              "name": "--lr-panel-bg",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "css-property",
+                "name": "--lr-sample-panel-background",
+                "usage": "--lr-sample-panel-background"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic css-property deprecation that exercises the Lyra 21 to 22 rename profile."
+            }
+          },
+          {
+            "name": "--lr-sample-panel-background",
+            "deprecated": null
+          },
+          {
+            "name": "--lr-sample-panel-gap",
+            "deprecated": null
+          },
+          {
+            "name": "--lr-shared-gap",
+            "deprecated": {
+              "tag": "lr-sample-panel",
+              "kind": "css-property",
+              "name": "--lr-shared-gap",
+              "since": "21.1.0",
+              "replacement": {
+                "kind": "css-property",
+                "name": "--lr-sample-panel-gap",
+                "usage": "--lr-sample-panel-gap"
+              },
+              "removalNotBefore": "23.0.0",
+              "rationale": "Synthetic css-property deprecation that exercises the Lyra 21 to 22 rename profile."
+            }
+          }
+        ],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "refresh",
+            "overloads": []
+          },
+          {
+            "name": "reload",
+            "overloads": []
+          }
+        ]
+      }
+    }
+  ]
+}

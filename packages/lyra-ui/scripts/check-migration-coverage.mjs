@@ -3,6 +3,10 @@
 // every upstream tag has exactly one exact/rewritten/warning/conceptual/unsupported decision, and
 // only the first two classifications are automatic migration inputs. README mirror rows remain
 // documentation relationships and must agree with that inventory; they are not a rename allowlist.
+// It also gates the Lyra-to-Lyra rename ledger (scripts/fixtures/lyra-renames.json): every entry
+// must match an implemented, deprecated alias and its policy record, every deprecation removed in
+// a profile's alias-removal major must have an entry, and a rename that flips a boolean's meaning
+// must say so.
 // Run: node scripts/check-migration-coverage.mjs
 
 import fs from 'node:fs';
@@ -10,7 +14,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { isMainModule } from './is-main-module.mjs';
-import { buildMigrationContract, buildMirrorMap } from './migrate-wa.mjs';
+import { buildMigrationContract, buildMirrorMap, readRenameLedger } from './migrate-wa.mjs';
+import { validateRenameLedger } from './lyra-rename-ledger.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLASSIFICATIONS = [
@@ -110,6 +115,51 @@ export function invertedName(name) {
   return null;
 }
 
+function kebabName(name) {
+  return name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+/**
+ * Ledger findings -- including completeness: every Lyra-only deprecation scheduled for a profile's
+ * alias-removal major needs an entry -- plus the prefix polarity rule for Lyra-only renames. A
+ * `with-`/`without-` rename is how v22 retires true-defaulting booleans, and it is only safe because
+ * the codemod knows to invert the value; an undeclared inversion would be rewritten as a plain
+ * rename and silently flip every migrated element. A negating prefix against an asserting prefix
+ * or against none (`arrow` -> `without-arrow`) must be declared; a declared inversion between two
+ * prefixed names that agree is the opposite mistake. Unprefixed pairs (`editable` -> `readonly`)
+ * are judged by the ledger's default check instead: a boolean defaulting to true that becomes one
+ * defaulting to false must be declared inverted or keep its default through a `defaults` entry.
+ */
+export function analyzeRenameLedger(renameLedger, inventory, { sharedTokens = null } = {}) {
+  const errors = validateRenameLedger(renameLedger, { inventory, requireCoverage: true, sharedTokens });
+  const summary = {};
+  for (const profile of Array.isArray(renameLedger?.profiles) ? renameLedger.profiles : []) {
+    summary[profile.origin] = {
+      renames: profile.renames?.length ?? 0,
+      defaults: profile.defaults?.length ?? 0,
+      detailChanges: profile.detailChanges?.length ?? 0,
+      reviews: profile.reviews?.length ?? 0,
+      slotContent: profile.slotContent?.length ?? 0,
+    };
+    for (const entry of profile.renames ?? []) {
+      if (entry?.kind !== 'attribute' && entry?.kind !== 'property') continue;
+      const from = kebabName(String(entry.from));
+      const to = kebabName(String(entry.to));
+      const inverted = hasInvertedPolarity(from, to);
+      if (inverted && entry.polarity !== 'inverted') {
+        errors.push(
+          `${profile.origin}: ${entry.tag} ${entry.kind} ${entry.from} -> ${entry.to} inverts its meaning; declare "polarity": "inverted"`,
+        );
+      } else if (!inverted && entry.polarity === 'inverted' && polarity(from) !== 0 && polarity(to) !== 0) {
+        errors.push(
+          `${profile.origin}: ${entry.tag} ${entry.kind} ${entry.from} -> ${entry.to} is declared inverted but both names carry the same polarity`,
+        );
+      }
+    }
+  }
+  return { errors, summary };
+}
+
 /** tag -> the set of attribute names custom-elements.json says that tag accepts. */
 function manifestAttributes(manifest) {
   const attributes = new Map();
@@ -153,7 +203,7 @@ function namedReadmeUpstream(readme) {
  * Returns every migration-coverage defect without mutating its inputs. This is exported so the
  * safety assertions can be exercised with synthetic fixtures rather than by rewriting repo files.
  */
-export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme }) {
+export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme, renameLedger = null, sharedTokens = null }) {
   const errors = [];
   const polarityCheckablePairs = [];
   const expected = catalog(upstreamTags);
@@ -383,9 +433,12 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
       inventoryMappings.filter((mapping) => mapping.classification === classification).length,
     ]),
   );
+  const renameAnalysis = renameLedger ? analyzeRenameLedger(renameLedger, inventory, { sharedTokens }) : null;
+  if (renameAnalysis) errors.push(...renameAnalysis.errors);
   return {
     errors: [...new Set(errors)].sort(),
     summary: {
+      ...(renameAnalysis ? { lyraRenames: renameAnalysis.summary } : {}),
       webawesome: expected.filter((entry) => entry.ecosystem === 'webawesome').length,
       shoelace: expected.filter((entry) => entry.ecosystem === 'shoelace').length,
       relationships: readmeRelationships.size,
@@ -406,7 +459,14 @@ export function formatMigrationCoverageSummary(summary, upstreamTags) {
     `(${upstreamTags.webawesome.version}) and Shoelace ${summary.shoelace}/${summary.shoelace} ` +
     `(${upstreamTags.shoelace.version}) tags classified; ${summary.automatic} automatic, ` +
     `${summary.manual} manual, ${summary.relationships} README relationships, ` +
-    `${summary.polarityCheckable} polarity-checkable pair(s) examined.`
+    `${summary.polarityCheckable} polarity-checkable pair(s) examined.` +
+    Object.entries(summary.lyraRenames ?? {})
+      .map(
+        ([origin, counts]) =>
+          ` Lyra rename ledger ${origin}: ${counts.renames} rename(s), ${counts.defaults} default(s), ` +
+          `${counts.detailChanges} detail change(s), ${counts.reviews} review(s), ${counts.slotContent} slot-content review(s).`,
+      )
+      .join('')
   );
 }
 
@@ -419,6 +479,8 @@ function run() {
     upstreamTags,
     lyraManifest: readJson('custom-elements.json'),
     readme: fs.readFileSync(path.join(packageDir, 'README.md'), 'utf8'),
+    renameLedger: readRenameLedger(),
+    sharedTokens: new Set(Object.keys(readJson('tokens', 'canonical-tokens.json').tokens)),
   });
 
   if (result.errors.length) {

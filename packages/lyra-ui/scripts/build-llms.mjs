@@ -31,6 +31,7 @@ import {
 import { formatDeprecationSubject } from './component-metadata.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { isMainModule } from './is-main-module.mjs';
+import { deprecationRecordFor, validateRenameLedger } from './lyra-rename-ledger.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const llmsDir = path.join(packageDir, 'llms');
@@ -593,8 +594,134 @@ function parseReadmeMirrorNotes(readmeText) {
   return notes;
 }
 
+/**
+ * Consumer reference for the Lyra-to-Lyra rename profiles, generated from the same ledger the CLI
+ * embeds, so a documented rename can never differ from the one the codemod performs. Ledger
+ * completeness is gated by check-migration-coverage.mjs, not here, so docs still build while a
+ * deprecation waits for its entry.
+ */
+export function buildLyraRenameReference(renameLedger, inventory) {
+  const findings = validateRenameLedger(renameLedger, { inventory });
+  if (findings.length) throw new Error(`Cannot build migration reference: ${findings.join('; ')}`);
+  const cell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
+  const lines = [];
+  for (const profile of renameLedger.profiles) {
+    const from = `Lyra ${profile.fromMajor}`;
+    const to = `Lyra ${profile.toMajor}`;
+    lines.push(
+      `## Migrating from ${from} to ${to} (\`--origin=${profile.origin}\`)`,
+      '',
+      `${to} renames some Lyra-only attributes, properties, events, CSS parts, custom properties and`,
+      `slots. Each previous name keeps working as a deprecated alias throughout the ${to} line and is`,
+      `removed in Lyra ${profile.aliasRemovalMajor}. Names mirrored from Web Awesome or Shoelace, and their defaults, never`,
+      `change. Upgrade to ${to} first, then run the CLI of the installed package:`,
+      '',
+      '```bash',
+      `npx lyra-ui-migrate --origin=${profile.origin} --diff src > ${profile.origin}.patch`,
+      `npx lyra-ui-migrate --origin=${profile.origin} --check --report=${profile.origin}-migration.json src`,
+      '```',
+      '',
+      '`--diff` prints a patch and writes nothing. The profile rewrites a name only where the rewrite',
+      'cannot change what the site reaches: attribute, property and slot bindings on the component in',
+      'HTML, Lit, JSX, Vue, Svelte and Angular templates; `exportparts` and `::part()` or attribute',
+      'selectors that name the component; and calls rooted at `querySelector(\'lr-…\')`, `closest()` or',
+      '`createElement()`. Events bubble and custom properties inherit, so a listener moves only when no',
+      'other component already dispatches the new name, and an unowned listener or any custom-property',
+      'use only when, in addition, every component with the old name renamed it the same way and the',
+      'scanned code never dispatches the old name itself. Everything else is reported with a location;',
+      'the old name keeps working meanwhile.',
+      '',
+      '| Code | Reported when |',
+      '|---|---|',
+      '| `RENAME_REVIEW` | An old name at a site that does not prove its component, or where another component keeps the name. |',
+      '| `RENAME_TARGET_SHARED_REVIEW` | The new name is already used by another component, so renaming would widen the site. |',
+      '| `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or declaration of a name that more components use after the upgrade. |',
+      '| `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |',
+      '| `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |',
+      '| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |',
+      '| `RENAME_CONFLICT_REVIEW` | The element already binds the new name. |',
+      '| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |',
+      '',
+      'After reviewing a site, add a comment containing `lyra-migrate-reviewed: CODE:name` (for example',
+      '`DETAIL_SHAPE_REVIEW:lr-close`) on the reported line, alone on the line above it, or directly before',
+      'the element\'s opening tag. Acknowledged reports no longer fail `--check`. Re-running the profile',
+      'is idempotent. Templates rendered on the server must be re-rendered after migrating, because Lit',
+      'hydration compares template strings.',
+      '',
+    );
+    const total = [profile.renames, profile.defaults, profile.detailChanges, profile.reviews, profile.slotContent]
+      .reduce((sum, entries) => sum + entries.length, 0);
+    if (total === 0) {
+      lines.push(`No ${from} names are scheduled to change yet.`, '');
+      continue;
+    }
+    if (profile.renames.length) {
+      const components = new Map(inventory.components.map((component) => [component.tag, component]));
+      lines.push(
+        `| Component | Kind | ${from} name | ${to} name | Handling |`,
+        '|---|---|---|---|---|',
+        ...profile.renames.map((entry) => {
+          const handling = entry.polarity === 'inverted'
+            ? 'Inverted boolean: static HTML and Lit attributes rewritten, everything else reported'
+            : entry.kind === 'css-property' || entry.kind === 'event'
+              ? 'Rewritten where the reach is unchanged, otherwise reported'
+              : entry.kind === 'attribute' && !components.get(entry.tag)?.surface?.attributes?.find((attribute) => attribute.name === entry.to)?.reflects
+                ? 'Rewritten on the component; selectors reported (not reflected)'
+                : 'Rewritten where the component is proven';
+          return `| \`<${entry.tag}>\` | ${entry.kind} | \`${cell(entry.from)}\` | \`${cell(entry.to)}\` | ${handling} |`;
+        }),
+        '',
+      );
+    }
+    if (profile.defaults.length) {
+      lines.push(
+        `| Component | Attribute | Inserted when absent to keep the ${from} default |`,
+        '|---|---|---|',
+        ...profile.defaults.map((entry) =>
+          `| \`<${entry.tag}>\` | \`${entry.attribute}\` | ${entry.value === true ? `presence \`${entry.attribute}\`` : `\`${entry.attribute}="${cell(entry.value)}"\``} |`),
+        '',
+      );
+    }
+    if (profile.detailChanges.length) {
+      lines.push(
+        `| Component | Event | Detail change in ${to} (reported, never rewritten) |`,
+        '|---|---|---|',
+        ...profile.detailChanges.map((entry) => `| \`<${entry.tag}>\` | \`${entry.event}\` | ${cell(entry.summary)} |`),
+        '',
+      );
+    }
+    if (profile.reviews.length) {
+      const components = new Map(inventory.components.map((component) => [component.tag, component]));
+      lines.push(
+        `| Component | Kind | Deprecated name | Replacement (manual) |`,
+        '|---|---|---|---|',
+        ...profile.reviews.map((entry) => {
+          const record = deprecationRecordFor(components.get(entry.tag), entry.kind, entry.name);
+          const replacement = record?.replacement?.usage || record?.replacement?.name || '';
+          const name = entry.kind === 'slot' && entry.name === '' ? '(default slot)' : `\`${cell(entry.name)}\``;
+          return `| \`<${entry.tag}>\` | ${entry.kind} | ${name} | \`${cell(replacement)}\` |`;
+        }),
+        '',
+      );
+    }
+    if (profile.slotContent.length) {
+      lines.push(
+        '| Component | Slot | Reported content | Change |',
+        '|---|---|---|---|',
+        ...profile.slotContent.map((entry) =>
+          `| \`<${entry.tag}>\` | ${entry.slot === '' ? 'default' : `\`${cell(entry.slot)}\``} | ` +
+          `${entry.report ? entry.report.map((element) => `\`<${element}>\``).join(', ') : `anything but ${entry.allow.map((element) => `\`<${element}>\``).join(', ')}`} | ` +
+          `${cell(entry.summary)} |`),
+        '',
+      );
+    }
+  }
+  return lines;
+}
+
 export function buildMigration() {
   const inventory = JSON.parse(read('scripts', 'fixtures', 'component-inventory.json'));
+  const renameLedger = JSON.parse(read('scripts', 'fixtures', 'lyra-renames.json'));
   const readmeNotes = parseReadmeMirrorNotes(read('README.md'));
   const classifications = [
     'exact',
@@ -762,7 +889,7 @@ export function buildMigration() {
     });
 
   return [
-    GENERATED('scripts/fixtures/component-inventory.json'),
+    GENERATED('scripts/fixtures/component-inventory.json + scripts/fixtures/lyra-renames.json'),
     '',
     '# Migrating to `lr-*`',
     '',
@@ -830,6 +957,7 @@ export function buildMigration() {
     '|---|---|---|',
     ...localProfileRows,
     '',
+    ...buildLyraRenameReference(renameLedger, inventory),
     '## Classification summary',
     '',
     '| Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |',
