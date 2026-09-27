@@ -2865,6 +2865,13 @@ const REVIEW_ACKNOWLEDGEMENT = /lyra-migrate-reviewed:\s*([^\n]*)/g;
 const ACKNOWLEDGEMENT_TOKEN = /^([A-Z][A-Z0-9_]*):(\S+)$/;
 const DEFAULT_SLOT_LABEL = '#default';
 const LISTENER_CALL_BEFORE = /(?:\b(?:add|remove)EventListener|\bHostListener)\s*\(\s*$/;
+// The receiver of `receiver.addEventListener(` / `removeEventListener(`: a member chain whose
+// segments may be calls with flat arguments (`document.querySelector('lr-x')`, `this.#card!`).
+const LISTENER_RECEIVER_BEFORE =
+  /([A-Za-z_$][\w$]*(?:\s*(?:\?\.|\.)\s*#?[A-Za-z_$][\w$]*|\s*\([^()\n]*\)|\s*!(?!=))*)\s*(?:\?\.|\.)\s*(?:add|remove)EventListener\s*\(\s*$/;
+// A handler argument that is a plain reference. A function expression creates a new function on
+// every call, so only a reference can make two registrations the same listener.
+const LISTENER_HANDLER_AFTER = /^\s*,\s*([A-Za-z_$][\w$]*(?:\s*(?:\?\.|\.)\s*#?[A-Za-z_$][\w$]*)*)\s*[,)]/;
 // An application that constructs a Lyra event itself (tests, adapters, re-dispatch) keeps sending
 // the name it wrote; moving that name's listeners anywhere in the scanned set would disconnect them.
 const EVENT_CONSTRUCTION = /\bnew\s+(?:CustomEvent|Event)\s*(?:<[^>\n]+>)?\(\s*(['"`])(lr-[a-z0-9]+(?:-[a-z0-9]+)*)\1/g;
@@ -3279,6 +3286,28 @@ function migrateRenameText(original, contract, options) {
     if (!inComment(match.index) && profile.renamesNamed('event', match[2]).length) result.constructedEvents.add(match[2]);
   }
   const constructedEvents = new Set([...(options.constructedEvents ?? []), ...result.constructedEvents]);
+  // Listener calls by receiver and handler text. One handler added for both an old name and its
+  // new name on one receiver runs twice per activation while both names fire; renamed, the DOM
+  // keeps only one of the two identical registrations and the handler would silently run once.
+  const listenerIdentity = (quote, name) => {
+    const receiver = LISTENER_RECEIVER_BEFORE.exec(original.slice(Math.max(0, quote - 200), quote))?.[1];
+    const handler = LISTENER_HANDLER_AFTER.exec(original.slice(quote + name.length + 2, quote + name.length + 202))?.[1];
+    return receiver && handler ? `${receiver.replace(/\s+/g, '')}\u0000${handler.replace(/\s+/g, '')}` : null;
+  };
+  const listenedNames = new Map();
+  if (profile.data.renames.some((entry) => entry.kind === 'event')) {
+    for (const match of original.matchAll(/(['"`])(lr-[a-z0-9]+(?:-[a-z0-9]+)*)\1/g)) {
+      if (inComment(match.index) || !LISTENER_CALL_BEFORE.test(original.slice(Math.max(0, match.index - 120), match.index))) continue;
+      const identity = listenerIdentity(match.index, match[2]);
+      if (identity) listenedNames.set(identity, new Set([...(listenedNames.get(identity) ?? []), match[2]]));
+    }
+  }
+  /** Whether this listener call's receiver already adds or removes the same handler for a new name of `name`. */
+  const sameHandlerListens = (quote, name) => {
+    if (!listenedNames.size) return false;
+    const names = listenedNames.get(listenerIdentity(quote, name));
+    return Boolean(names) && profile.renamesNamed('event', name).some((entry) => names.has(entry.to));
+  };
   const edits = [];
   const seenWarnings = new Set();
   const handledStrings = new Set();
@@ -3399,6 +3428,17 @@ function migrateRenameText(original, contract, options) {
     return profile.isGlobal('event', name) ? profile.renamesNamed('event', name)[0].to : null;
   };
 
+  /**
+   * `conflict` is true when the element binds the new name too, and `'same-handler'` when the
+   * listener call's receiver already adds or removes this same handler for the new name.
+   */
+  const conflictMessage = (conflict, subject, to) =>
+    conflict === 'same-handler'
+      ? `${subject} already listens to ${to} with this same handler; renamed, the two identical registrations would ` +
+        `collapse into one, so the handler would run once per activation instead of twice. Rename or remove this ` +
+        `call, and its add or remove counterpart, together by hand.`
+      : `${subject} already listens to ${to}; merge the two handlers by hand.`;
+
   const eventSite = ({ name, start, owner, context, rewritable = true, conflict = false }) => {
     const own = owner ? profile.renameFor(owner, 'event', name) : null;
     let current = name;
@@ -3431,7 +3471,7 @@ function migrateRenameText(original, contract, options) {
           member: name,
           code: RENAME_CONFLICT_REVIEW,
           target: own.to,
-          message: `This ${owner} already listens to ${own.to}; merge the two handlers by hand. ${name} keeps working until ${removal}.`,
+          message: `${conflictMessage(conflict, `This ${owner}`, own.to)} ${name} keeps working until ${removal}.`,
         });
       } else {
         const narrowed = profile.sourceKeepers('event', name, own.to).filter((tag) => tag !== owner);
@@ -3455,7 +3495,7 @@ function migrateRenameText(original, contract, options) {
           member: name,
           code: RENAME_CONFLICT_REVIEW,
           target: profile.renamesNamed('event', name)[0].to,
-          message: `This element already listens to ${profile.renamesNamed('event', name)[0].to}; merge the two handlers by hand.`,
+          message: conflictMessage(conflict, conflict === 'same-handler' ? 'This receiver' : 'This element', profile.renamesNamed('event', name)[0].to),
         });
       } else {
         current = unownedMove({ kind: 'event', name, start, context, rewritable, action: 'rewrite-event' }) ?? name;
@@ -3915,7 +3955,7 @@ function migrateRenameText(original, contract, options) {
       const valueStart = after + call[0].length - 1 - call[2].length;
       handledStrings.add(valueStart - 1);
       if (LISTENER_METHODS.has(member)) {
-        eventSite({ name: call[2], start: valueStart, owner, context: 'listener' });
+        eventSite({ name: call[2], start: valueStart, owner, context: 'listener', conflict: sameHandlerListens(valueStart - 1, call[2]) && 'same-handler' });
         continue;
       }
       const rule = memberSite({ owner, kind: 'attribute', name: call[2], start: valueStart, forms: [['attribute', call[2]]], dynamic: true });
@@ -3967,6 +4007,7 @@ function migrateRenameText(original, contract, options) {
       owner: null,
       context: listener ? 'listener' : 'event name string',
       rewritable: listener,
+      conflict: listener && !match[2] && sameHandlerListens(match.index, name) && 'same-handler',
     });
   }
 

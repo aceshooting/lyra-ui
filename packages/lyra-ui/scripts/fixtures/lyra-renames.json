@@ -1,5 +1,5 @@
 {
-  "$comment": "Authored ledger of Lyra-only public names that change across a major release. Each profile drives lyra-ui-migrate --origin=<origin>, the generated llms/migration.md section and the packaged dist/cli/migration-contract.json. renames and reviews must each match an implemented, deprecated Lyra-only member and its component-metadata.json record (removalNotBefore in aliasRemovalMajor, since no later than toMajor.0.0); defaults, detailChanges and slotContent record changes that have no deprecation record. check-migration-coverage.mjs also requires every Lyra-only deprecation removed in aliasRemovalMajor to have a rename or review entry. Entries stay sorted by tag and name. See docs/rfcs/0003-lyra-v21-migration-profile.md.",
+  "$comment": "Authored ledger of Lyra-only public names that change across a major release. Each profile drives lyra-ui-migrate --origin=<origin>, the generated llms/migration.md section and the packaged dist/cli/migration-contract.json. renames and reviews must each match an implemented, deprecated Lyra-only member and its component-metadata.json record (removalNotBefore in aliasRemovalMajor, since no later than toMajor.0.0 or 'unreleased'); defaults, detailChanges and slotContent record changes that have no member deprecation record, and a slotContent entry for a slot whose content carries a slot-content record keeps exactly that record's permittedContent as allow. check-migration-coverage.mjs also requires every Lyra-only deprecation removed in aliasRemovalMajor to have a rename or review entry (a slotContent entry for a slot-content record). Entries stay sorted by tag and name. See docs/rfcs/0003-lyra-v21-migration-profile.md.",
   "schemaVersion": 1,
   "profiles": [
     {
@@ -7,11 +7,154 @@
       "fromMajor": 21,
       "toMajor": 22,
       "aliasRemovalMajor": 23,
-      "renames": [],
+      "renames": [
+        {
+          "tag": "lr-markdown",
+          "kind": "attribute",
+          "from": "code-block-chrome",
+          "to": "code-block-header"
+        },
+        {
+          "tag": "lr-markdown",
+          "kind": "property",
+          "from": "codeBlockChrome",
+          "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-markdown-core",
+          "kind": "attribute",
+          "from": "code-block-chrome",
+          "to": "code-block-header"
+        },
+        {
+          "tag": "lr-markdown-core",
+          "kind": "property",
+          "from": "codeBlockChrome",
+          "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-media-card",
+          "kind": "event",
+          "from": "lr-before-media-download",
+          "to": "lr-media-download-request"
+        },
+        {
+          "tag": "lr-message-parts",
+          "kind": "attribute",
+          "from": "code-block-chrome",
+          "to": "code-block-header"
+        },
+        {
+          "tag": "lr-message-parts",
+          "kind": "property",
+          "from": "codeBlockChrome",
+          "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-mutation-observer",
+          "kind": "attribute",
+          "from": "character-data",
+          "to": "char-data"
+        },
+        {
+          "tag": "lr-mutation-observer",
+          "kind": "property",
+          "from": "characterData",
+          "to": "charData"
+        },
+        {
+          "tag": "lr-streaming-text",
+          "kind": "attribute",
+          "from": "code-block-chrome",
+          "to": "code-block-header"
+        },
+        {
+          "tag": "lr-streaming-text",
+          "kind": "property",
+          "from": "codeBlockChrome",
+          "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-streaming-text-core",
+          "kind": "attribute",
+          "from": "code-block-chrome",
+          "to": "code-block-header"
+        },
+        {
+          "tag": "lr-streaming-text-core",
+          "kind": "property",
+          "from": "codeBlockChrome",
+          "to": "codeBlockHeader"
+        }
+      ],
       "defaults": [],
       "detailChanges": [],
-      "reviews": [],
-      "slotContent": []
+      "reviews": [
+        {
+          "tag": "lr-geojson-view",
+          "kind": "component",
+          "name": "lr-geojson-view"
+        },
+        {
+          "tag": "lr-icon",
+          "kind": "attribute",
+          "name": "fixed-width"
+        },
+        {
+          "tag": "lr-icon",
+          "kind": "css-property",
+          "name": "--lr-icon-fixed-width"
+        },
+        {
+          "tag": "lr-icon",
+          "kind": "property",
+          "name": "fixedWidth"
+        },
+        {
+          "tag": "lr-mutation-observer",
+          "kind": "attribute",
+          "name": "attributes"
+        },
+        {
+          "tag": "lr-mutation-observer",
+          "kind": "property",
+          "name": "observeAttributes"
+        },
+        {
+          "tag": "lr-sparkline",
+          "kind": "css-property",
+          "name": "--lr-sparkline-stroke-width"
+        },
+        {
+          "tag": "lr-sparkline",
+          "kind": "part",
+          "name": "area"
+        },
+        {
+          "tag": "lr-split-panel",
+          "kind": "part",
+          "name": "split-panel"
+        },
+        {
+          "tag": "lr-stat",
+          "kind": "slot",
+          "name": ""
+        }
+      ],
+      "slotContent": [
+        {
+          "tag": "lr-menu",
+          "slot": "",
+          "allow": [
+            "hr",
+            "lr-divider",
+            "lr-dropdown-item",
+            "lr-menu-item",
+            "lr-menu-label"
+          ],
+          "summary": "Only items, labels and separators belong in the menu list; move other content to slot=\"header\" or slot=\"footer\", which render it outside role=\"menu\"."
+        }
+      ]
     }
   ]
 }

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 // The Lyra-to-Lyra rename ledger, its projection, and the `--origin=lyra-v21` profile of the
-// migration CLI. The checked-in ledger starts empty, so every rewrite category is proven here
-// against synthetic components (scripts/fixtures/lyra-renames/components.json) whose deprecated
-// aliases and policy records mirror what a real v22 rename must ship.
+// migration CLI. Every rewrite category is proven here against synthetic components
+// (scripts/fixtures/lyra-renames/components.json) whose deprecated aliases and policy records
+// mirror what a real v22 rename must ship; the checked-in ledger's own entries are exercised
+// against the real inventory by lyra-v21.input.html.
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -233,6 +234,79 @@ test('completeness is required only where asked: lint, never the build or the CL
   assert.doesNotThrow(() => createMigrationRuntimeInventory(inventory, { renameLedger: removedRename }));
   assert.doesNotThrow(() => buildMigrationContract(inventory, { renameLedger: emptyRenameLedger() }));
   assert.doesNotThrow(() => buildLyraRenameReference(emptyRenameLedger(), inventory));
+});
+
+test('a slot-content record is migrated by a slotContent entry that keeps its permitted content', () => {
+  const withRecord = syntheticInventory();
+  panelOf(withRecord).maturity.deprecations.push({
+    tag: 'lr-sample-panel',
+    kind: 'slot-content',
+    name: '',
+    permittedContent: ['lr-sample-item', 'span'],
+    since: '21.1.0',
+    replacement: { kind: 'slot', name: 'heading', usage: 'slot="heading"' },
+    removalNotBefore: '23.0.0',
+    rationale: 'Synthetic slot-content deprecation that exercises the Lyra 21 to 22 rename profile.',
+  });
+  // The synthetic entry reports icons instead of keeping exactly the content the record permits.
+  assertFinding(
+    validateRenameLedger(ledger, { inventory: withRecord }),
+    /slot content lr-sample-panel "": its deprecation record permits lr-sample-item, span; allow must list exactly those elements/,
+  );
+  const matching = syntheticLedger();
+  matching.profiles[0].slotContent[0] = {
+    tag: 'lr-sample-panel',
+    slot: '',
+    allow: ['lr-sample-item', 'span'],
+    summary: 'Only items and spans belong in the default slot of this panel.',
+  };
+  assert.deepEqual(validateRenameLedger(matching, { inventory: withRecord, requireCoverage: true }), []);
+  const missing = syntheticLedger();
+  missing.profiles[0].slotContent = [];
+  assert.deepEqual(validateRenameLedger(missing, { inventory: withRecord }), [], 'completeness is a lint concern only');
+  assertFinding(
+    validateRenameLedger(missing, { inventory: withRecord, requireCoverage: true }),
+    /lr-sample-panel slot-content "" is removed in 23\.0\.0 but has no slotContent entry/,
+  );
+});
+
+test('an unreleased record passes the window, projects as unreleased, and applies only while the release is unknown', () => {
+  const unreleased = syntheticInventory();
+  for (const component of unreleased.components) {
+    for (const record of component.maturity?.deprecations ?? []) if (record.since === '21.1.0') record.since = 'unreleased';
+  }
+  assert.deepEqual(validateRenameLedger(ledger, { inventory: unreleased, requireCoverage: true }), []);
+  const projection = projectRenameLedger(ledger, unreleased);
+  const profile = projection.profiles[0];
+  assert.ok([...profile.renames, ...profile.reviews].every((entry) => entry.since === 'unreleased'));
+  assert.ok([...profile.defaults, ...profile.detailChanges, ...profile.slotContent].every((entry) => entry.since === '22.0.0'));
+
+  const unknown = createRenameProfiles(projection).get('lyra-v21');
+  assert.equal(unknown.skipped.length, 0);
+  assert.equal(unknown.renameFor('lr-sample-panel', 'attribute', 'heading-text')?.to, 'heading');
+  // A known version cannot show whether the installed build is the unreleased one, so even a
+  // later version withholds the entry rather than rewrite toward a name that may not exist.
+  for (const lyraVersion of ['21.0.0', '22.0.0', '99.0.0']) {
+    const known = createRenameProfiles(projection, { lyraVersion }).get('lyra-v21');
+    assert.equal(known.renameFor('lr-sample-panel', 'attribute', 'heading-text'), null, lyraVersion);
+    assert.equal(known.reviewFor('lr-sample-legacy', 'component', 'lr-sample-legacy'), null, lyraVersion);
+    assert.equal(
+      known.skipped.filter((entry) => entry.since === 'unreleased').length,
+      profile.renames.length + profile.reviews.length,
+      lyraVersion,
+    );
+  }
+
+  // An inverted rename that needs its companion default still waits for the target major.
+  const { target, renames } = invertedDefaultFixture();
+  for (const record of panelOf(target).maturity.deprecations) record.since = 'unreleased';
+  const inverted = projectRenameLedger(renames, target).profiles[0];
+  assert.equal(rename(inverted, 'attribute', 'arrow').since, '22.0.0');
+  assert.equal(rename(inverted, 'attribute', 'heading-text').since, 'unreleased');
+
+  const tampered = structuredClone(projection);
+  tampered.profiles[0].renames[0].since = 'next';
+  assert.throws(() => createRenameProfiles(tampered), /since must be a version or "unreleased"/);
 });
 
 test('the migration-coverage gate adds completeness and the prefix polarity rule', () => {
@@ -970,6 +1044,102 @@ test('the packaged CLI previews with --diff, gates with --check, applies, and cl
   }
 });
 
+test('the checked-in lyra-v21 entries rewrite exact aliases and report every other retired name', () => {
+  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger() });
+  const input = fixture('lyra-v21.input.html');
+  const result = run(input, 'lyra-v21.html', checkedContract);
+  assert.equal(result.content, fixture('lyra-v21.expected.html'));
+  assert.deepEqual(describeChanges(result.changes), [
+    '6:24 rewrite-attribute character-data -> char-data',
+    '9:14 rewrite-attribute code-block-chrome -> code-block-header',
+    '11:23 rewrite-attribute character-data -> char-data',
+    '28:61 rewrite-event lr-before-media-download -> lr-media-download-request',
+    '29:47 rewrite-property codeBlockChrome -> codeBlockHeader',
+  ]);
+  // Every retired name without an exact, reach-preserving replacement is reported instead: the
+  // lr-sparkline and lr-split-panel part aliases (their canonical parts are shared with other
+  // components), the unprefixed --line-width replacement, attr="*" (it replaces attributeFilter),
+  // fixed-width geometry, the lr-geojson-view tag, lr-stat's unnamed icon and lr-menu content. A
+  // listener whose receiver already listens to the new name with the same handler is reported
+  // too: renamed, the DOM would drop one of the two identical registrations.
+  assert.deepEqual(describeWarnings(result.warnings), [
+    '3:22 DEPRECATED_MEMBER_REVIEW area',
+    '4:24 DEPRECATED_MEMBER_REVIEW split-panel',
+    '5:18 DEPRECATED_MEMBER_REVIEW --lr-sparkline-stroke-width',
+    '7:18 DEPRECATED_MEMBER_REVIEW --lr-icon-fixed-width',
+    '10:19 RENAME_CONFLICT_REVIEW code-block-chrome',
+    '11:38 DEPRECATED_MEMBER_REVIEW attributes',
+    '14:22 DEPRECATED_MEMBER_REVIEW fixed-width',
+    '15:2 DEPRECATED_MEMBER_REVIEW lr-geojson-view',
+    '17:4 DEPRECATED_MEMBER_REVIEW ',
+    '23:4 DEPRECATED_CONTENT_REVIEW div',
+    '33:26 RENAME_CONFLICT_REVIEW lr-before-media-download',
+  ]);
+  const messageOf = (member) => result.warnings.find((entry) => entry.upstreamMember === member)?.message ?? '';
+  // The report quotes the record's usage, so the usage must be the whole instruction: attr="*"
+  // would replace an attributeFilter, and a fixed-width box or stroke keeps the author's value.
+  assert.match(
+    messageOf('attributes'),
+    /The lr-mutation-observer attribute attributes is deprecated and scheduled for removal in 23\.0\.0; migrate to attr="\*" \(or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set\) by hand\./,
+  );
+  assert.match(messageOf('fixed-width'), /migrate to inline-size: var\(--lr-size-1-5em\) on that icon \(or the --lr-icon-fixed-width value it used\) by hand/);
+  assert.match(messageOf('--lr-icon-fixed-width'), /migrate to inline-size \(the same value, on the fixed-width icons only\) by hand/);
+  assert.match(messageOf('--lr-sparkline-stroke-width'), /migrate to --line-width \(the same value, declared on lr-sparkline itself\) by hand/);
+  assert.match(messageOf('split-panel'), /migrate to ::part\(base\) by hand/);
+  assert.match(messageOf('div'), /<div> in the default slot of lr-menu: Only items, labels and separators belong in the menu list/);
+  assert.match(messageOf('lr-before-media-download'), /already listens to lr-media-download-request with this same handler; .*run once per activation instead of twice/);
+
+  const rerun = run(result.content, 'lyra-v21.html', checkedContract);
+  assert.equal(rerun.content, result.content, 'a rerun is byte-identical');
+  assert.deepEqual(rerun.changes, []);
+  assert.deepEqual(
+    rerun.warnings.map((entry) => `${entry.warningCode} ${entry.upstreamMember}`),
+    result.warnings.map((entry) => `${entry.warningCode} ${entry.upstreamMember}`),
+  );
+
+  // Before the release that ships these records, a known 21.0.0 install withholds every entry.
+  const released = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), lyraVersion: '21.0.0' });
+  const early = run(input, 'lyra-v21.html', released);
+  assert.equal(early.content, input);
+  assert.deepEqual(early.warnings, []);
+});
+
+test('a listener is reported, not renamed, where its receiver already listens to the new name with the same handler', () => {
+  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger() });
+  const source = [
+    "card.addEventListener('lr-media-download-request', onDownload);",
+    "card.addEventListener('lr-before-media-download', onDownload);",
+    "card.removeEventListener('lr-before-media-download', onDownload);",
+    "other.addEventListener('lr-before-media-download', onDownload);",
+    "card.addEventListener('lr-before-media-download', onOther);",
+    "card.addEventListener('lr-before-media-download', (event) => onDownload(event));",
+    "document.querySelector('lr-media-card').addEventListener('lr-media-download-request', this.onDownload);",
+    "document.querySelector('lr-media-card')?.addEventListener('lr-before-media-download', this.onDownload);",
+    "// card.addEventListener('lr-media-download-request', commented);",
+    "card.addEventListener('lr-before-media-download', commented);",
+    '',
+  ].join('\n');
+  const result = run(source, 'listeners.ts', checkedContract);
+  // Both names fire from one activation, so today onDownload runs twice. Renamed, the second
+  // identical registration would be dropped by the DOM and the handler would run once, and the
+  // matching removeEventListener must stay paired with its add.
+  assert.deepEqual(describeWarnings(result.warnings), [
+    '2:24 RENAME_CONFLICT_REVIEW lr-before-media-download',
+    '3:27 RENAME_CONFLICT_REVIEW lr-before-media-download',
+    '8:60 RENAME_CONFLICT_REVIEW lr-before-media-download',
+  ]);
+  assert.match(result.warnings[0].message, /^This receiver already listens to lr-media-download-request with this same handler;/);
+  assert.match(result.warnings[2].message, /^This lr-media-card already listens to lr-media-download-request with this same handler;/);
+  // Another receiver, another handler, or a function expression (a new function on every call)
+  // registers a distinct listener, and a commented-out call registers nothing, so those move.
+  assert.deepEqual(describeChanges(result.changes), [
+    '4:25 rewrite-event lr-before-media-download -> lr-media-download-request',
+    '5:24 rewrite-event lr-before-media-download -> lr-media-download-request',
+    '6:24 rewrite-event lr-before-media-download -> lr-media-download-request',
+    '10:24 rewrite-event lr-before-media-download -> lr-media-download-request',
+  ]);
+});
+
 test('the repository CLI accepts --origin=lyra-v21 with the checked-in ledger', () => {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-renames-repo-cli-'));
   try {
@@ -1008,6 +1178,11 @@ test('the repository CLI accepts --origin=lyra-v21 with the checked-in ledger', 
 test('the migration reference is generated from the ledger and its deprecation records', () => {
   const reference = buildLyraRenameReference(ledger, inventory).join('\n');
   assert.match(reference, /## Migrating from Lyra 21 to Lyra 22 \(`--origin=lyra-v21`\)/);
+  // Renames ship in Lyra 21 minors, so the reference never tells a reader to wait for Lyra 22.
+  assert.match(reference, /Lyra 21 minor releases and Lyra 22 rename some Lyra-only attributes/);
+  assert.match(reference, /Run the CLI of the installed package after upgrading, within Lyra 21 or to Lyra 22\. It\napplies only the entries the installed release ships/);
+  assert.doesNotMatch(reference, /Upgrade to Lyra 22 first/);
+  assert.match(reference, /\| Component \| Kind \| Deprecated name \| New name \| Handling \|/);
   assert.match(reference, /npx lyra-ui-migrate --origin=lyra-v21 --diff src > lyra-v21\.patch/);
   assert.match(reference, /`lyra-migrate-reviewed: CODE:name`/);
   assert.match(reference, /\| `RENAME_TARGET_SHARED_REVIEW` \|/);

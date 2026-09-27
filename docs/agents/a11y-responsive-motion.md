@@ -256,4 +256,6 @@ component and a release blocker for a new one.
   `check:framework-types` — so skipping them fails `pnpm lint` well after the change looks
   finished. A new `@deprecated` member additionally needs a record in
   `scripts/fixtures/component-metadata.json#deprecations`, whose `since` may not exceed the current
-  `package.json` version and whose `removalNotBefore` must clear one whole subsequent major.
+  `package.json` version and whose `removalNotBefore` must clear one whole subsequent major. A
+  record that retires a Lyra-only name in 23.0.0 also needs its rename-ledger entry in the same
+  change (see [upstream-parity.md](upstream-parity.md)).

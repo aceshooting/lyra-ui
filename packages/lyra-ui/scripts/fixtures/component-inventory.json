@@ -64203,7 +64203,7 @@
             "replacement": {
               "kind": "host-css-property",
               "name": "inline-size",
-              "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+              "usage": "inline-size (the same value, on the fixed-width icons only)"
             },
             "removalNotBefore": "23.0.0",
             "rationale": "This property only sizes the box while the deprecated fixed-width attribute is set, so it shares that attribute's removal window. A host inline-size declaration reproduces the wider box without a component-specific custom property; a glyph wider than 1em then keeps its intrinsic width instead of being squeezed to 1em."
@@ -64231,7 +64231,7 @@
             "replacement": {
               "kind": "host-css-property",
               "name": "inline-size",
-              "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+              "usage": "inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)"
             },
             "removalNotBefore": "23.0.0",
             "rationale": "fixed-width predates the mirrored canvas vocabulary, whose default fixed canvas already gives every icon the same 1.25em box so a column of icons lines its labels up. Where the wider 1.5em box matters, a host inline-size reproduces it, except that a glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em. Neither pinned upstream publishes fixed-width, so it is a Lyra-only spelling."
@@ -64333,7 +64333,7 @@
               "replacement": {
                 "kind": "host-css-property",
                 "name": "inline-size",
-                "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+                "usage": "inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)"
               },
               "removalNotBefore": "23.0.0",
               "rationale": "fixed-width predates the mirrored canvas vocabulary, whose default fixed canvas already gives every icon the same 1.25em box so a column of icons lines its labels up. Where the wider 1.5em box matters, a host inline-size reproduces it, except that a glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em. Neither pinned upstream publishes fixed-width, so it is a Lyra-only spelling."
@@ -64508,7 +64508,7 @@
               "replacement": {
                 "kind": "host-css-property",
                 "name": "inline-size",
-                "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+                "usage": "inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)"
               },
               "removalNotBefore": "23.0.0",
               "rationale": "fixed-width predates the mirrored canvas vocabulary, whose default fixed canvas already gives every icon the same 1.25em box so a column of icons lines its labels up. Where the wider 1.5em box matters, a host inline-size reproduces it, except that a glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em. Neither pinned upstream publishes fixed-width, so it is a Lyra-only spelling."
@@ -64869,7 +64869,7 @@
               "replacement": {
                 "kind": "host-css-property",
                 "name": "inline-size",
-                "usage": "lr-icon { inline-size: var(--lr-size-1-5em); }"
+                "usage": "inline-size (the same value, on the fixed-width icons only)"
               },
               "removalNotBefore": "23.0.0",
               "rationale": "This property only sizes the box while the deprecated fixed-width attribute is set, so it shares that attribute's removal window. A host inline-size declaration reproduces the wider box without a component-specific custom property; a glyph wider than 1em then keeps its intrinsic width instead of being squeezed to 1em."
@@ -83492,7 +83492,7 @@
             "replacement": {
               "kind": "property",
               "name": "attr",
-              "usage": "attr=\"*\""
+              "usage": "attr=\"*\" (or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set)"
             },
             "removalNotBefore": "23.0.0",
             "rationale": "attributes is a Lyra-only boolean spelling of the mirrored attr=\"*\" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr=\"*\" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning."
@@ -83563,7 +83563,7 @@
               "replacement": {
                 "kind": "property",
                 "name": "attr",
-                "usage": "attr=\"*\""
+                "usage": "attr=\"*\" (or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set)"
               },
               "removalNotBefore": "23.0.0",
               "rationale": "attributes is a Lyra-only boolean spelling of the mirrored attr=\"*\" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr=\"*\" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning."
@@ -83774,7 +83774,7 @@
               "replacement": {
                 "kind": "property",
                 "name": "attr",
-                "usage": "attr=\"*\""
+                "usage": "attr=\"*\" (or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set)"
               },
               "removalNotBefore": "23.0.0",
               "rationale": "attributes is a Lyra-only boolean spelling of the mirrored attr=\"*\" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr=\"*\" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning."
@@ -118174,7 +118174,7 @@
             "replacement": {
               "kind": "css-property",
               "name": "--line-width",
-              "usage": "lr-sparkline { --line-width: 2px; }"
+              "usage": "--line-width (the same value, declared on lr-sparkline itself)"
             },
             "removalNotBefore": "23.0.0",
             "rationale": "--lr-sparkline-stroke-width predates the mirrored Web Awesome --line-width and is read only as its fallback, so it has no effect wherever --line-width is set. Scope the replacement to lr-sparkline, because the unprefixed --line-width also reaches any other element that reads it. It keeps working through the 22.x line; a stylesheet cannot be observed using it, so it never logs a warning."
@@ -118516,7 +118516,7 @@
               "replacement": {
                 "kind": "css-property",
                 "name": "--line-width",
-                "usage": "lr-sparkline { --line-width: 2px; }"
+                "usage": "--line-width (the same value, declared on lr-sparkline itself)"
               },
               "removalNotBefore": "23.0.0",
               "rationale": "--lr-sparkline-stroke-width predates the mirrored Web Awesome --line-width and is read only as its fallback, so it has no effect wherever --line-width is set. Scope the replacement to lr-sparkline, because the unprefixed --line-width also reaches any other element that reads it. It keeps working through the 22.x line; a stylesheet cannot be observed using it, so it never logs a warning."

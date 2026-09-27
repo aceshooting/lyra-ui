@@ -611,10 +611,12 @@ export function buildLyraRenameReference(renameLedger, inventory) {
     lines.push(
       `## Migrating from ${from} to ${to} (\`--origin=${profile.origin}\`)`,
       '',
-      `${to} renames some Lyra-only attributes, properties, events, CSS parts, custom properties and`,
-      `slots. Each previous name keeps working as a deprecated alias throughout the ${to} line and is`,
-      `removed in Lyra ${profile.aliasRemovalMajor}. Names mirrored from Web Awesome or Shoelace, and their defaults, never`,
-      `change. Upgrade to ${to} first, then run the CLI of the installed package:`,
+      `${from} minor releases and ${to} rename some Lyra-only attributes, properties, events, CSS parts,`,
+      'custom properties and slots. Each previous name keeps working as a deprecated alias until',
+      `Lyra ${profile.aliasRemovalMajor} removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never`,
+      `change. Run the CLI of the installed package after upgrading, within ${from} or to ${to}. It`,
+      'applies only the entries the installed release ships, so running it again after a later upgrade',
+      'picks up the rest:',
       '',
       '```bash',
       `npx lyra-ui-migrate --origin=${profile.origin} --diff src > ${profile.origin}.patch`,
@@ -639,7 +641,7 @@ export function buildLyraRenameReference(renameLedger, inventory) {
       '| `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |',
       '| `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |',
       '| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |',
-      '| `RENAME_CONFLICT_REVIEW` | The element already binds the new name. |',
+      '| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |',
       '| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |',
       '',
       'After reviewing a site, add a comment containing `lyra-migrate-reviewed: CODE:name` (for example',
@@ -658,7 +660,7 @@ export function buildLyraRenameReference(renameLedger, inventory) {
     if (profile.renames.length) {
       const components = new Map(inventory.components.map((component) => [component.tag, component]));
       lines.push(
-        `| Component | Kind | ${from} name | ${to} name | Handling |`,
+        '| Component | Kind | Deprecated name | New name | Handling |',
         '|---|---|---|---|---|',
         ...profile.renames.map((entry) => {
           const handling = entry.polarity === 'inverted'

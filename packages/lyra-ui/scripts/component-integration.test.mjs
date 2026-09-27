@@ -246,3 +246,10 @@ test('prints only the KiB figure for a measured row, not the raw bytes or digest
   assert.ok(!markdown.includes('1024 bytes'));
   assert.ok(!markdown.includes('a'.repeat(64)));
 });
+
+test('table cells escape backslashes before pipes', async () => {
+  const { escapeTableCell } = await import('./component-integration.mjs');
+  assert.equal(escapeTableCell('a|b'), 'a\\|b');
+  assert.equal(escapeTableCell('a\\|b'), 'a\\\\\\|b');
+  assert.equal(escapeTableCell('end\\'), 'end\\\\');
+});

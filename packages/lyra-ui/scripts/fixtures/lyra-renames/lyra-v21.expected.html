@@ -1,0 +1,34 @@
+<!-- Real lyra-v21 ledger entries: renamed aliases are rewritten, everything else is reported. -->
+<style>
+  lr-sparkline::part(area) { opacity: 0.5; }
+  lr-split-panel::part(split-panel) { gap: 0; }
+  lr-sparkline { --lr-sparkline-stroke-width: 3px; }
+  lr-mutation-observer[char-data] { display: contents; }
+  lr-icon.wide { --lr-icon-fixed-width: 2em; }
+</style>
+<lr-markdown code-block-header></lr-markdown>
+<lr-message-parts code-block-chrome code-block-header></lr-message-parts>
+<lr-mutation-observer char-data attributes>
+  <p>Observed</p>
+</lr-mutation-observer>
+<lr-icon name="star" fixed-width></lr-icon>
+<lr-geojson-view src="regions.json"></lr-geojson-view>
+<lr-stat>
+  <lr-icon name="users"></lr-icon>
+  <span slot="caption">Active users</span>
+</lr-stat>
+<lr-menu>
+  <lr-menu-item>Open</lr-menu-item>
+  <hr>
+  <div class="menu-note">Custom note</div>
+  <p slot="footer">Footer</p>
+</lr-menu>
+<lr-media-card src="report.pdf"></lr-media-card>
+<script type="module">
+  document.querySelector('lr-media-card').addEventListener('lr-media-download-request', (event) => event.preventDefault());
+  document.querySelector('lr-streaming-text').codeBlockHeader = true;
+  const card = document.querySelector('lr-media-card');
+  const logDownload = (event) => console.info(event.detail.filename);
+  card.addEventListener('lr-media-download-request', logDownload);
+  card.addEventListener('lr-before-media-download', logDownload);
+</script>

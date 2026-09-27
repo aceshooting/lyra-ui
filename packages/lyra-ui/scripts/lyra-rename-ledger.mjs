@@ -6,13 +6,21 @@
 // (reached here through the inventory's `maturity.deprecations` projection), and -- checked by
 // check-migration-coverage.mjs only, so an incomplete ledger fails lint rather than every build --
 // every deprecation scheduled for removal in the profile's alias-removal major must be named by
-// exactly one entry. That pairing keeps the codemod, the deprecated alias metadata and the
+// exactly one entry (a rename or review entry for a member, a slotContent entry for a
+// `slot-content` record). That pairing keeps the codemod, the deprecated alias metadata and the
 // generated migration reference from drifting apart.
 //
 // This module is copied beside migrate-wa.mjs into dist/cli, so it stays dependency-free and never
 // reads the filesystem itself.
 
 export const LYRA_RENAME_LEDGER_SCHEMA_VERSION = 1;
+
+/**
+ * The `since` of a deprecation record that lands after the current release tag
+ * (component-metadata.mjs). The version bump stamps the released version in its place before the
+ * build, so only a build made between two releases projects it, and a published CLI never does.
+ */
+export const UNRELEASED_VERSION = 'unreleased';
 
 /** Every supported Lyra-to-Lyra rename profile. The ledger must contain exactly these, in order. */
 export const LYRA_RENAME_PROFILES = Object.freeze([
@@ -156,7 +164,9 @@ function validateName(findings, label, kind, field, value) {
 }
 
 function validateProjectedSince(findings, label, entry, projected) {
-  if (projected && !parseVersion(entry.since)) findings.push(`${label}: since must be a version`);
+  if (projected && entry.since !== UNRELEASED_VERSION && !parseVersion(entry.since)) {
+    findings.push(`${label}: since must be a version or ${JSON.stringify(UNRELEASED_VERSION)}`);
+  }
 }
 
 function validateRenameEntry(findings, label, entry, projected) {
@@ -507,6 +517,12 @@ export function validateRenameLedger(ledger, { inventory, requireCoverage = fals
       if (!removalMajorMatches(record)) {
         findings.push(`${label}: its deprecation record must set removalNotBefore to ${profile.aliasRemovalMajor}.0.0`);
       }
+      // An unreleased record ships in the next release. component-metadata.mjs accepts one only
+      // while the current release is tagged, and only with a removal floor two majors above the
+      // current major; a removal in aliasRemovalMajor (toMajor + 1) therefore leaves that next
+      // release no later than toMajor.0.0. The version bump stamps the released version, which
+      // the comparison below then checks.
+      if (record?.since === UNRELEASED_VERSION) return;
       const since = compareVersions(record?.since, release);
       if (since === null || since > 0) {
         findings.push(`${label}: its deprecation record must start no later than ${release} (since ${JSON.stringify(record?.since)})`);
@@ -603,8 +619,20 @@ export function validateRenameLedger(ledger, { inventory, requireCoverage = fals
     for (const entry of profile.slotContent) {
       const label = entryLabel(origin, 'slotContent', entry);
       const component = components.get(entry.tag);
-      if (!component) findings.push(`${label}: component is not in the inventory`);
-      else if (!surfaceEntry(component, 'slot', entry.slot)) findings.push(`${label}: the slot is not on the public surface`);
+      if (!component) {
+        findings.push(`${label}: component is not in the inventory`);
+        continue;
+      }
+      if (!surfaceEntry(component, 'slot', entry.slot)) findings.push(`${label}: the slot is not on the public surface`);
+      // A `slot-content` deprecation record is migrated by this entry. When the record lists the
+      // content that stays, the codemod must keep exactly that list, or its reports would disagree
+      // with the documented deprecation.
+      const record = deprecationRecordFor(component, 'slot-content', entry.slot);
+      if (!record) continue;
+      covered.add(`${entry.tag}\u0000slot-content\u0000${entry.slot}`);
+      if (Array.isArray(record.permittedContent) && JSON.stringify(entry.allow ?? null) !== JSON.stringify(record.permittedContent)) {
+        findings.push(`${label}: its deprecation record permits ${record.permittedContent.join(', ')}; allow must list exactly those elements`);
+      }
     }
 
     for (const entry of profile.defaults) {
@@ -641,7 +669,8 @@ export function validateRenameLedger(ledger, { inventory, requireCoverage = fals
           if (kind !== 'component' && mirrorOf(component.tag, kind, name)) continue;
           if (!covered.has(`${component.tag}\u0000${kind}\u0000${name}`)) {
             findings.push(
-              `${origin}: ${component.tag} ${kind} ${JSON.stringify(name)} is removed in ${profile.aliasRemovalMajor}.0.0 but has no rename or review entry`,
+              `${origin}: ${component.tag} ${kind} ${JSON.stringify(name)} is removed in ${profile.aliasRemovalMajor}.0.0 ` +
+                `but has no ${kind === 'slot-content' ? 'slotContent' : 'rename or review'} entry`,
             );
           }
         }
@@ -683,10 +712,12 @@ export function projectRenameLedger(ledger, inventory) {
           );
           // The alias can ship before the default changes. Removing it before the companion
           // default applies would change the meaning of an explicitly set boolean in that release.
+          // An unreleased record ships no later than `release` (see checkRecordWindow).
           const since = recordFor(entry, entry.kind, entry.from).since;
+          const beforeRelease = since === UNRELEASED_VERSION || compareVersions(since, release) < 0;
           return {
             ...structuredClone(entry),
-            since: preservesDefault && compareVersions(since, release) < 0 ? release : since,
+            since: preservesDefault && beforeRelease ? release : since,
             ...(entry.kind === 'attribute' ? { reflects: Boolean(target?.reflects) } : {}),
           };
         }),
@@ -742,9 +773,13 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
   const profiles = new Map();
   for (const full of projection.profiles) {
     const skipped = [];
+    // An unreleased entry exists only in a build made after the last release tag, and a known
+    // installed version cannot show whether that build is the one installed, so it is withheld
+    // like any entry from a later release. Only an unknown version applies it.
     const available = (list) =>
       full[list].filter((entry) => {
-        if (lyraVersion === null || compareVersions(entry.since, lyraVersion) <= 0) return true;
+        if (lyraVersion === null) return true;
+        if (entry.since !== UNRELEASED_VERSION && compareVersions(entry.since, lyraVersion) <= 0) return true;
         skipped.push({ list, ...entry });
         return false;
       });

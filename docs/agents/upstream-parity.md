@@ -79,6 +79,23 @@ while doing something else. The vocabulary rules apply to every component, mirro
   fixture first. Run `./package.sh` to regenerate `llms/migration.md` and the packaged reference
   in the same change as the table edit.
 
+- **Lyra-only renames are ledger data too.** A `component-metadata.json#deprecations` record that
+  retires a Lyra-only name in 23.0.0 lands with its `scripts/fixtures/lyra-renames.json` entry in
+  the same change, or `check-migration-coverage.mjs` fails `pnpm lint`; the entry drives
+  `lyra-ui-migrate --origin=lyra-v21` and the generated `llms/migration.md` section. Use `renames`
+  only for an exact alias of the same member with the same type and behavior; for an event, part
+  or custom property the target must also be a name no other component exposes, because the
+  codemod reports every unowned selector or declaration of a shared target as newly reaching the
+  renamed component (a `split-panel` → `base` rename would flag every `.x::part(base)`).
+  Everything else — a changed type or value, geometry, a tag, an unprefixed custom property, the
+  default slot — gets a `reviews` entry. Its report quotes the record's `replacement.usage`, so
+  make that usage the whole instruction for one reported site: name the condition under which the
+  replacement differs (`attr="*"` replaces an `attributeFilter`), and keep the author's value
+  rather than a sample one (`--line-width (the same value, declared on lr-sparkline itself)`, not
+  `lr-sparkline { --line-width: 2px; }`). Deprecated slot content gets a `slotContent` entry whose
+  `allow` list equals the record's `permittedContent`.
+  [RFC 0003](../rfcs/0003-lyra-v21-migration-profile.md) holds the full rewrite rules.
+
 - **A capability an upstream exposes publicly does not live only in `src/internal/`.** Both
   upstreams publish their anchored-positioning primitive, their screen-reader-only wrapper, and
   their icon-library registry as consumer-reachable API. Where lyra has the same logic but only as

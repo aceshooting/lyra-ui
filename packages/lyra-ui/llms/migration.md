@@ -70,10 +70,12 @@ set with a warning. Expand or classify them before applying, then rerun to verif
 
 ## Migrating from Lyra 21 to Lyra 22 (`--origin=lyra-v21`)
 
-Lyra 22 renames some Lyra-only attributes, properties, events, CSS parts, custom properties and
-slots. Each previous name keeps working as a deprecated alias throughout the Lyra 22 line and is
-removed in Lyra 23. Names mirrored from Web Awesome or Shoelace, and their defaults, never
-change. Upgrade to Lyra 22 first, then run the CLI of the installed package:
+Lyra 21 minor releases and Lyra 22 rename some Lyra-only attributes, properties, events, CSS parts,
+custom properties and slots. Each previous name keeps working as a deprecated alias until
+Lyra 23 removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never
+change. Run the CLI of the installed package after upgrading, within Lyra 21 or to Lyra 22. It
+applies only the entries the installed release ships, so running it again after a later upgrade
+picks up the rest:
 
 ```bash
 npx lyra-ui-migrate --origin=lyra-v21 --diff src > lyra-v21.patch
@@ -98,7 +100,7 @@ the old name keeps working meanwhile.
 | `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |
 | `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
-| `RENAME_CONFLICT_REVIEW` | The element already binds the new name. |
+| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
 
 After reviewing a site, add a comment containing `lyra-migrate-reviewed: CODE:name` (for example
@@ -107,7 +109,38 @@ the element's opening tag. Acknowledged reports no longer fail `--check`. Re-run
 is idempotent. Templates rendered on the server must be re-rendered after migrating, because Lit
 hydration compares template strings.
 
-No Lyra 21 names are scheduled to change yet.
+| Component | Kind | Deprecated name | New name | Handling |
+|---|---|---|---|---|
+| `<lr-markdown>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-markdown>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-markdown-core>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-markdown-core>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-media-card>` | event | `lr-before-media-download` | `lr-media-download-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-message-parts>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-message-parts>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-mutation-observer>` | attribute | `character-data` | `char-data` | Rewritten where the component is proven |
+| `<lr-mutation-observer>` | property | `characterData` | `charData` | Rewritten where the component is proven |
+| `<lr-streaming-text>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-streaming-text>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-streaming-text-core>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-streaming-text-core>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+
+| Component | Kind | Deprecated name | Replacement (manual) |
+|---|---|---|---|
+| `<lr-geojson-view>` | component | `lr-geojson-view` | `<lr-geojson-viewer>` |
+| `<lr-icon>` | attribute | `fixed-width` | `inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)` |
+| `<lr-icon>` | css-property | `--lr-icon-fixed-width` | `inline-size (the same value, on the fixed-width icons only)` |
+| `<lr-icon>` | property | `fixedWidth` | `inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)` |
+| `<lr-mutation-observer>` | attribute | `attributes` | `attr="*" (or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set)` |
+| `<lr-mutation-observer>` | property | `observeAttributes` | `attr="*" (or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set)` |
+| `<lr-sparkline>` | css-property | `--lr-sparkline-stroke-width` | `--line-width (the same value, declared on lr-sparkline itself)` |
+| `<lr-sparkline>` | part | `area` | `::part(fill)` |
+| `<lr-split-panel>` | part | `split-panel` | `::part(base)` |
+| `<lr-stat>` | slot | (default slot) | `slot="start"` |
+
+| Component | Slot | Reported content | Change |
+|---|---|---|---|
+| `<lr-menu>` | default | anything but `<hr>`, `<lr-divider>`, `<lr-dropdown-item>`, `<lr-menu-item>`, `<lr-menu-label>` | Only items, labels and separators belong in the menu list; move other content to slot="header" or slot="footer", which render it outside role="menu". |
 
 ## Classification summary
 

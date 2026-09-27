@@ -230,8 +230,9 @@ export function validateComponentIntegration(ledger, inventory, analysis) {
   return findings;
 }
 
-function escapeTableCell(value) {
-  return value.replace(/\|/g, '\\|');
+export function escapeTableCell(value) {
+  // Escape backslashes first so a trailing `\` cannot swallow the pipe escape that follows.
+  return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 }
 
 export function renderIntegrationCards(ledger) {
