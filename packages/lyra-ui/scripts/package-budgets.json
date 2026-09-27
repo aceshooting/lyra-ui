@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-26 on the integrated 21.0.0 source tree before the version bump: 9,072,236 packed bytes, 36,903,298 unpacked bytes, 4,184 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short; the 21.0.0 release tree must be re-measured before publishing. The approved exception still fails closed above this exact reviewed ceiling.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-27 on the version-bumped 21.1.0 release tree (CHANGELOG section and release metadata included): 9,118,643 packed bytes, 4,189 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,15 +10,15 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 9072236,
+    "reviewedMeasurementBytes": 9118643,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928,
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
-      "approvedOn": "2026-09-26",
-      "reason": "Re-measured on the integrated 21.0.0 source tree before the version bump, to keep main green while the release is prepared: 9072236 packed and 36903298 unpacked bytes, 4184 files. The growth is twenty additional translation catalogs (whole-catalog and per-family slice modules with declarations), the new lr-menubar, lr-toggle, lr-toggle-group, lr-context-menu, lr-navigation-menu and tool-call-block surfaces, the shared keyboard-focus and top-layer escape modules, theme presets and typography utilities, plus the regenerated manifest, editor data and llms references that describe them. The maintainer approved this ceiling with the usual drift headroom and asked for a re-measurement on the version-bumped 21.0.0 release tree, where the CHANGELOG section is included.",
-      "approvedMaximumPackedBytes": 9106236
+      "approvedOn": "2026-09-27",
+      "reason": "Re-measured on the version-bumped 21.1.0 release tree: 9118643 packed bytes, 4189 files. The growth over 21.0.0 is the lyra-v21 migration profile (the rename ledger and its CLI module shipped in dist/cli, and the generated migration reference), the deprecation records and development warnings for the aliases removed in 23.0.0, the new lr-map fitBounds, tool-call display name and incomplete status, popover top-layer and chart right-to-left label isolation surfaces, and the 21.1.0 CHANGELOG section. The maintainer approved raising the ceiling to this measurement with the usual drift headroom.",
+      "approvedMaximumPackedBytes": 9152643
     }
   },
   "unpackedBudgetPolicy": {
@@ -38,7 +38,7 @@
     "entrypointHeadroom": 1099
   },
   "maximum": {
-    "packedBytes": 9106236,
+    "packedBytes": 9152643,
     "unpackedBytes": 37043298,
     "fileCount": 4191
   }
