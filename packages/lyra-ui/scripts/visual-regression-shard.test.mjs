@@ -23,8 +23,8 @@ test('builds the complete retained-baseline/evidence plan without changing enrol
 
   assert.equal(new Set(captures.map(({ story }) => story.id)).size, 109);
   assert.equal(captures.length, 313);
-  assert.equal(evidenceOnly.length, 202);
-  assert.equal(captures.length - evidenceOnly.length, 111);
+  assert.equal(evidenceOnly.length, 196);
+  assert.equal(captures.length - evidenceOnly.length, 117);
 });
 
 test('enrolls the exact required canaries on their intended visual axes', () => {

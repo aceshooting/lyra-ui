@@ -806,7 +806,7 @@ jobs:
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
   # packages/lyra-ui/visual-baselines/README.md): the manifest's 109 stories now produce 313
   # live light/dark/RTL plus applicable forced-colors/narrow captures. Pending human review leaves
-  # 111 compared with retained baselines and 202 as explicit ephemeral semantic/pixel evidence; all
+  # 117 compared with retained baselines and 196 as explicit ephemeral semantic/pixel evidence; all
   # capture or console errors remain blocking. The axis-level capture inventory is sorted and
   # round-robin partitioned into three deterministic shards (105/104/104 captures) so the historical
   # ~3.5min browser sweep no longer sits on one runner's critical path.

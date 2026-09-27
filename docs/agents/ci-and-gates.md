@@ -270,7 +270,7 @@ the PR checks list tells you which of these to reproduce locally:
    while removing their former 214-second + 248-second serial chain from one runner.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
    `packages/lyra-ui/visual-baselines/README.md`). The 109 stories expand to 313 axis-level
-   captures: 111 compare against tracked baselines and 202 are evidence-only. They are lexically
+   captures: 117 compare against tracked baselines and 196 are evidence-only. They are lexically
    sorted and round-robin partitioned across a three-leg matrix (105/104/104 captures), so the
    historical ~3.5min sweep no longer sits on one runner's critical path. Each leg downloads the
    `storybook-static/` artifact `docs_build` (point 5) already built, runs
